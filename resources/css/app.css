@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+@theme {
+    --color-background: #ffffff;
+    --color-foreground: #09090b;
+
+    --color-card: #ffffff;
+    --color-card-foreground: #09090b;
+
+    --color-primary: #1a1a1e;
+    --color-primary-foreground: #fafafa;
+
+    --color-secondary: #f4f4f5;
+    --color-secondary-foreground: #18181b;
+
+    --color-muted: #f4f4f5;
+    --color-muted-foreground: #71717a;
+
+    --color-accent: #f4f4f5;
+    --color-accent-foreground: #18181b;
+
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #fafafa;
+
+    --color-border: #eeeff1;
+    --color-input: #eeeff1;
+    --color-ring: #18181b;
+
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --ease-premium: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+    --color-background: #09090b;
+    --color-foreground: #fafafa;
+
+    --color-card: #09090b;
+    --color-card-foreground: #fafafa;
+
+    --color-primary: #fafafa;
+    --color-primary-foreground: #1a1a1e;
+
+    --color-secondary: #27272a;
+    --color-secondary-foreground: #fafafa;
+
+    --color-muted: #27272a;
+    --color-muted-foreground: #a1a1aa;
+
+    --color-accent: #27272a;
+    --color-accent-foreground: #fafafa;
+
+    --color-border: #27272a;
+    --color-input: #27272a;
+    --color-ring: #d4d4d8;
+}
+
+@layer base {
+    body {
+        @apply bg-background text-foreground antialiased;
+    }
+
+    * {
+        @apply border-border;
+    }
+}
+
+@layer utilities {
+    .premium-gradient-text {
+        @apply bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent font-bold;
+    }
+
+    .surface-card {
+        @apply rounded-[2rem] border border-border/40 bg-card/30 text-card-foreground backdrop-blur-xl relative overflow-hidden;
+        box-shadow:
+            0 10px 30px -10px rgb(0 0 0 / 0.1),
+            0 0 0 1px rgb(255 255 255 / 0.05) inset;
+    }
+
+    .premium-hover {
+        @apply transition-all duration-500 ease-premium;
+    }
+
+    .premium-hover:hover {
+        @apply -translate-y-1 scale-[1.01] shadow-xl;
+    }
+
+    .animate-fade-up {
+        animation: fadeUp 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
+    }
+
+    .stagger-1 {
+        animation-delay: 0ms;
+    }
+
+    .stagger-2 {
+        animation-delay: 100ms;
+    }
+
+    .stagger-3 {
+        animation-delay: 200ms;
+    }
+
+    .stagger-4 {
+        animation-delay: 300ms;
+    }
+
+    .stagger-5 {
+        animation-delay: 400ms;
+    }
+}
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Theme transition ripple effect */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+    z-index: 1;
+}
+
+::view-transition-new(root) {
+    z-index: 2;
+}
+
+.dark::view-transition-old(root) {
+    z-index: 2;
+}
+
+.dark::view-transition-new(root) {
+    z-index: 1;
+}
