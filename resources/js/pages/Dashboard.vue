@@ -29,6 +29,41 @@ import { usePage } from '@inertiajs/vue3';
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
 
+interface Course {
+    id: number;
+    name: string;
+    progress: number;
+    completedLessons: number;
+    totalLessons: number;
+    xpEarned: number;
+    nextDeadline: string;
+}
+
+interface Assignment {
+    id: number;
+    title: string;
+    description: string;
+    dueDate: string;
+    isOverdue: boolean;
+    submitted: boolean;
+    status: string;
+    grade: string | null;
+}
+
+interface LeaderboardUser {
+    id: number;
+    name: string;
+    xp: number;
+    trend: 'up' | 'down' | 'stable';
+    isCurrentUser: boolean;
+}
+
+interface Announcement {
+    id: number;
+    title: string;
+    description: string;
+}
+
 const props = defineProps<{
     userStats: {
         totalXP: number;
@@ -36,41 +71,25 @@ const props = defineProps<{
         currentXP: number;
         maxXPForLevel: number;
         rank: string;
+        rankNumber: number;
+        totalPlayers: number;
         achievements: number;
         points: number;
-    }
+    };
+    announcements: Announcement[];
+    courses: Course[];
+    assignments: Assignment[];
+    leaderboardUsers: LeaderboardUser[];
 }>();
 
 const userStats = computed(() => props.userStats);
 const progressPercentage = computed(() => (userStats.value.currentXP / userStats.value.maxXPForLevel) * 100);
 const totalXPProgress = computed(() => Math.min(100, (userStats.value.totalXP / 500000) * 100));
 
-const announcements = ref([
-    { id: 1, title: 'Season 6: The Great Ascent', description: 'New milestone rewards have been unlocked. Reach Level 15 to claim your exclusive emblem.' }
-]);
-
-const courses = ref([
-    { id: 1, name: 'Full-Stack Development', progress: 65, completedLessons: 13, totalLessons: 20, xpEarned: 1200, nextDeadline: 'Tomorrow' },
-    { id: 2, name: 'UI/UX Design Principles', progress: 30, completedLessons: 6, totalLessons: 20, xpEarned: 600, nextDeadline: 'Friday' }
-]);
-
-const assignments = ref([
-    { id: 1, title: 'Database Migration Project', description: 'Complete the schema design and migration scripts.', dueDate: 'Mar 12', isOverdue: false, submitted: false, status: 'Pending', grade: null },
-    { id: 2, title: 'Frontend UI Polish', description: 'Apply GSAP animations to the main dashboard sections.', dueDate: 'Mar 10', isOverdue: true, submitted: false, status: 'Pending', grade: null }
-]);
-
-const leaderboardUsers = ref([
-    { id: 1, name: 'Alex Rivera', xp: 25000, trend: 'up' as const },
-    { id: 2, name: 'Sarah Chen', xp: 22000, trend: 'up' as const },
-    { id: 3, name: 'Jordan Hayes', xp: 21500, trend: 'down' as const },
-    { id: 4, name: 'User', xp: 12540, trend: 'stable' as const, isCurrentUser: true },
-    { id: 5, name: 'Michael Scott', xp: 11000, trend: 'up' as const },
-    { id: 6, name: 'Pam Beesly', xp: 9500, trend: 'stable' as const },
-    { id: 7, name: 'Dwight Schrute', xp: 9200, trend: 'up' as const },
-    { id: 8, name: 'Jim Halpert', xp: 8800, trend: 'down' as const },
-    { id: 9, name: 'Kelly Kapoor', xp: 8500, trend: 'up' as const },
-    { id: 10, name: 'Stanley Hudson', xp: 7400, trend: 'stable' as const }
-]);
+const announcements = computed(() => props.announcements);
+const courses = computed(() => props.courses);
+const assignments = computed(() => props.assignments);
+const leaderboardUsers = computed(() => props.leaderboardUsers);
 
 const streak = ref({
     currentStreak: 5,
@@ -163,7 +182,11 @@ const handleQuickAction = (action: string) => {
 
             <!-- Improved Leaderboard -->
             <div class="animate-section stagger-3">
-                <ImprovedLeaderboard :users="leaderboardUsers" />
+                <ImprovedLeaderboard 
+                    :users="leaderboardUsers" 
+                    :user-rank="userStats.rankNumber"
+                    :total-players="userStats.totalPlayers"
+                />
             </div>
 
             <!-- Main Content Grid -->

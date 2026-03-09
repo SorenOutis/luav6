@@ -24,7 +24,7 @@ interface Assignment {
     isOverdue: boolean;
     submitted: boolean;
     status: string;
-    grade: number | null;
+    grade: string | null;
 }
 
 interface Props {
@@ -51,8 +51,12 @@ const handleAssignmentClick = (assignment: Assignment) => {
             <CardDescription>Your current learning journey</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
-            <div v-if="courses.length === 0 && assignments.length === 0" class="text-center py-8">
-                <p class="text-muted-foreground">No active courses or assignments yet.</p>
+            <div v-if="courses.length === 0 && assignments.length === 0" class="text-center py-16 px-4 animate-fade-in">
+                <div class="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-border/40">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                </div>
+                <h3 class="text-lg font-bold mb-1">All Caught Up!</h3>
+                <p class="text-sm text-muted-foreground max-w-[250px] mx-auto">You have no active courses or pending assignments at the moment.</p>
             </div>
 
             <!-- Courses Section -->
@@ -80,6 +84,9 @@ const handleAssignmentClick = (assignment: Assignment) => {
             <!-- Assignments Section -->
             <div v-if="assignments.length > 0" class="space-y-2">
                 <div v-if="courses.length > 0" class="border-t pt-4">
+                    <h5 class="text-sm font-bold mb-2">Pending Tasks</h5>
+                </div>
+                <div v-else>
                     <h5 class="text-sm font-bold mb-2">Pending Tasks</h5>
                 </div>
                 <div v-for="assignment in assignments" :key="assignment.id"

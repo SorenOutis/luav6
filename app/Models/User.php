@@ -25,6 +25,7 @@ class User extends Authenticatable
         'points',
         'exp',
         'level',
+        'is_admin',
     ];
 
     /**
@@ -61,6 +62,21 @@ class User extends Authenticatable
         return $this->belongsToMany(Badge::class);
     }
 
+    /**
+     * Get the courses associated with the user.
+     */
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class)->withPivot('completed_lessons', 'xp_earned', 'next_deadline')->withTimestamps();
+    }
+
+    /**
+     * Get the assignments associated with the user.
+     */
+    public function assignments()
+    {
+        return $this->belongsToMany(Assignment::class)->withPivot('submitted', 'status', 'grade')->withTimestamps();
+    }
     /**
      * Get the rewards associated with the user.
      */
