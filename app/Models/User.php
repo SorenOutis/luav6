@@ -22,6 +22,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'points',
+        'exp',
+        'level',
     ];
 
     /**
@@ -48,5 +51,21 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the badges associated with the user.
+     */
+    public function badges()
+    {
+        return $this->belongsToMany(Badge::class);
+    }
+
+    /**
+     * Get the rewards associated with the user.
+     */
+    public function rewards()
+    {
+        return $this->belongsToMany(Reward::class);
     }
 }

@@ -24,17 +24,24 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const dashboardContainer = ref<HTMLElement | null>(null);
 
-// Mock Data
-const userName = ref('User');
-const userStats = ref({
-    totalXP: 12540,
-    level: 12,
-    currentXP: 450,
-    maxXPForLevel: 1000,
-    rank: 'Elite Learner',
-    achievements: 8
-});
+import { usePage } from '@inertiajs/vue3';
 
+const page = usePage();
+const userName = computed(() => page.props.auth.user?.name || 'User');
+
+const props = defineProps<{
+    userStats: {
+        totalXP: number;
+        level: number;
+        currentXP: number;
+        maxXPForLevel: number;
+        rank: string;
+        achievements: number;
+        points: number;
+    }
+}>();
+
+const userStats = computed(() => props.userStats);
 const progressPercentage = computed(() => (userStats.value.currentXP / userStats.value.maxXPForLevel) * 100);
 const totalXPProgress = computed(() => Math.min(100, (userStats.value.totalXP / 500000) * 100));
 

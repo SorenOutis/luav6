@@ -11,6 +11,7 @@ interface Announcement {
 interface UserStats {
     level: number;
     totalXP: number;
+    points: number;
 }
 
 interface Props {

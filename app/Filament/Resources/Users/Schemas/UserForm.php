@@ -20,6 +20,15 @@ class UserForm
                     ->email()
                     ->required(),
                 DateTimePicker::make('email_verified_at'),
+                TextInput::make('points')
+                    ->numeric()
+                    ->default(0),
+                TextInput::make('exp')
+                    ->numeric()
+                    ->default(0),
+                TextInput::make('level')
+                    ->numeric()
+                    ->default(1),
                 TextInput::make('password')
                     ->password()
                     ->dehydrated(fn($state) => filled($state))

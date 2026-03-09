@@ -10,6 +10,7 @@ interface UserStats {
     maxXPForLevel: number;
     rank: string;
     achievements: number;
+    points: number;
 }
 
 interface StreakData {
@@ -29,7 +30,7 @@ const props = defineProps<Props>();
 const animLevel = useNumberAnimation(() => props.userStats.level);
 const animXP = useNumberAnimation(() => props.userStats.totalXP);
 const animStreak = useNumberAnimation(() => props.streak?.currentStreak || 0);
-const animAchievements = useNumberAnimation(() => props.userStats.achievements);
+const animPoints = useNumberAnimation(() => props.userStats.points);
 
 const displayStats = computed(() => [
     { 
@@ -42,7 +43,7 @@ const displayStats = computed(() => [
         detail: props.userStats.rank
     },
     { 
-        label: 'Total Energy', 
+        label: 'Total Exp', 
         value: animXP.value.toLocaleString(), 
         suffix: ' XP',
         icon: Zap, 
@@ -60,13 +61,13 @@ const displayStats = computed(() => [
         detail: `Personal best: ${props.streak?.longestStreak || 0}`
     },
     { 
-        label: 'Milestones', 
-        value: animAchievements.value, 
-        suffix: '',
+        label: 'Total Points', 
+        value: animPoints.value.toLocaleString(), 
+        suffix: ' Pts',
         icon: Trophy, 
         color: 'text-purple-500', 
         bg: 'bg-purple-500/10',
-        detail: 'Badges unlocked'
+        detail: 'Available to spend'
     }
 ]);
 </script>

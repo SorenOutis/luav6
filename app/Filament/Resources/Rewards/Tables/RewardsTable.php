@@ -1,15 +1,14 @@
 <?php
 
-namespace App\Filament\Resources\Users\Tables;
+namespace App\Filament\Resources\Rewards\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class UsersTable
+class RewardsTable
 {
     public static function configure(Table $table): Table
     {
@@ -17,20 +16,8 @@ class UsersTable
             ->columns([
                 TextColumn::make('name')
                     ->searchable(),
-                TextColumn::make('email')
-                    ->label('Email address')
-                    ->searchable(),
-                TextColumn::make('email_verified_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('level')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('points')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('exp')
-                    ->numeric()
+                TextColumn::make('points_cost')
+                    ->money()
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -45,9 +32,7 @@ class UsersTable
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
                 EditAction::make(),
-                \Filament\Actions\DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
