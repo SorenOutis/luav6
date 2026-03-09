@@ -42,6 +42,15 @@ const handleCourseClick = (course: Course) => {
 const handleAssignmentClick = (assignment: Assignment) => {
     emit('assignment-click', assignment);
 };
+
+const handleMouseMove = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+};
 </script>
 
 <template>
@@ -61,9 +70,17 @@ const handleAssignmentClick = (assignment: Assignment) => {
 
             <!-- Courses Section -->
             <div v-if="courses.length > 0" class="space-y-4">
-                <div v-for="course in courses" :key="course.id"
-                    class="space-y-2 p-3 rounded-xl border border-transparent hover:border-primary/20 hover:bg-primary/5 cursor-pointer transition-all"
-                    @click="handleCourseClick(course)">
+                <div v-for="(course, idx) in courses" :key="course.id"
+                    class="group/course relative overflow-hidden space-y-2 p-4 rounded-2xl border border-sidebar-border/30 hover:border-primary/40 bg-card/50 hover:bg-primary/[0.02] cursor-pointer transition-all animate-fade-up"
+                    :class="`stagger-${idx + 1}`"
+                    @click="handleCourseClick(course)"
+                    @mousemove="handleMouseMove">
+                    
+                    <!-- Bloom Effect -->
+                    <div class="absolute inset-0 opacity-0 group-hover/course:opacity-100 transition-opacity duration-700 pointer-events-none"
+                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
+                    </div>
+
                     <div class="flex items-center justify-between">
                         <div>
                             <h4 class="font-bold text-sm">{{ course.name }}</h4>
@@ -74,7 +91,7 @@ const handleAssignmentClick = (assignment: Assignment) => {
                         </div>
                     </div>
                     <Progress :value="course.progress" class="h-2" />
-                    <div class="flex items-center justify-between text-xs text-muted-foreground">
+                    <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
                         <span>{{ course.progress }}% complete</span>
                         <span>Due: {{ course.nextDeadline }}</span>
                     </div>
@@ -89,9 +106,17 @@ const handleAssignmentClick = (assignment: Assignment) => {
                 <div v-else>
                     <h5 class="text-sm font-bold mb-2">Pending Tasks</h5>
                 </div>
-                <div v-for="assignment in assignments" :key="assignment.id"
-                    class="p-3 rounded-lg border border-sidebar-border/50 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all"
-                    @click="handleAssignmentClick(assignment)">
+                <div v-for="(assignment, idx) in assignments" :key="assignment.id"
+                    class="group/task relative overflow-hidden p-4 rounded-xl border border-sidebar-border/50 hover:border-primary/40 bg-card/30 hover:bg-primary/[0.01] cursor-pointer transition-all animate-fade-up"
+                    :class="`stagger-${idx + courses.length + 1}`"
+                    @click="handleAssignmentClick(assignment)"
+                    @mousemove="handleMouseMove">
+                    
+                    <!-- Bloom Effect -->
+                    <div class="absolute inset-0 opacity-0 group-hover/task:opacity-100 transition-opacity duration-700 pointer-events-none"
+                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.05), transparent 40%)">
+                    </div>
+
                     <div class="flex items-center justify-between">
                         <div class="flex-1 min-w-0">
                             <h4 class="font-semibold text-sm truncate">{{ assignment.title }}</h4>

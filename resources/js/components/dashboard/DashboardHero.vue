@@ -86,14 +86,29 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
 
                 <!-- Level & Progress Visual -->
                 <div class="flex items-center gap-6">
-                    <div class="relative shrink-0">
-                        <!-- Orbiting Ring Wrapper -->
-                        <div class="absolute inset-0 -m-3 border border-dashed border-primary/20 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                    <div class="relative shrink-0 p-4 group/level">
+                        <!-- Orbiting Glow Bloom -->
+                        <div class="absolute inset-0 bg-primary/20 rounded-full blur-[30px] opacity-0 group-hover/level:opacity-100 transition-opacity duration-700 scale-50 group-hover/level:scale-110"></div>
                         
-                        <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-border/40 bg-card/50 flex flex-col items-center justify-center shadow-2xl relative z-10 backdrop-blur-xl">
-                            <span class="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Level</span>
-                            <span class="text-3xl sm:text-4xl font-black font-mono tracking-tighter leading-none">{{ animatedLevel }}</span>
-                            <Award class="w-4 h-4 text-primary mt-2 drop-shadow-[0_0_8px_rgba(var(--primary),0.3)]" />
+                        <!-- Futuristic Orbital System -->
+                        <div class="absolute inset-0">
+                            <!-- Outer Tech Ring -->
+                            <div class="absolute inset-2 border border-dashed border-primary/20 rounded-full animate-[spin_20s_linear_infinite]"></div>
+                            <!-- Middle Pulse Ring -->
+                            <div class="absolute inset-4 border border-primary/10 rounded-full animate-[pulse_4s_ease-in-out_infinite]"></div>
+                            <!-- Inner Data Ring -->
+                            <div class="absolute inset-0 border-2 border-dotted border-primary/10 rounded-full animate-[spin-reverse_15s_linear_infinite]"></div>
+                        </div>
+                        
+                        <!-- Core Level Chip -->
+                        <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-primary/20 bg-card/40 flex flex-col items-center justify-center shadow-[0_0_50px_-12px_rgba(var(--primary),0.2)] relative z-10 backdrop-blur-2xl group-hover:border-primary/40 transition-colors duration-500">
+                            <div class="absolute inset-0 rounded-full bg-gradient-to-b from-primary/5 to-transparent"></div>
+                            <span class="text-[10px] uppercase font-black tracking-[0.2em] text-primary/60 mb-1">Level</span>
+                            <span class="text-3xl sm:text-4xl font-black font-mono tracking-tighter leading-none premium-gradient-text">{{ animatedLevel }}</span>
+                            <div class="mt-2 flex items-center justify-center relative">
+                                <div class="absolute inset-0 blur-lg bg-primary/20 rounded-full animate-pulse"></div>
+                                <Award class="w-4 h-4 text-primary relative z-10" />
+                            </div>
                         </div>
                     </div>
 
@@ -113,8 +128,10 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
                             <!-- Inner Glow -->
                             <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
                             
-                            <div class="h-full bg-primary transition-all duration-1000 ease-out relative" 
+                            <div class="h-full bg-primary transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
                                 :style="{ width: `${xpPercentage}%` }">
+                                <!-- Ghost Shimmer -->
+                                <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_infinite]"></div>
                                 <!-- Pulsing tip -->
                                 <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse"></div>
                             </div>
@@ -130,5 +147,16 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+@keyframes spin-reverse {
+    from { transform: rotate(360deg); }
+    to { transform: rotate(0deg); }
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+    100% { transform: translateX(100%); }
 }
 </style>

@@ -54,8 +54,17 @@ interface LeaderboardUser {
     id: number;
     name: string;
     xp: number;
+    completionRate: number;
+    streak: number;
+    joinedAt: string;
+    weeklyXp: number;
     trend: 'up' | 'down' | 'stable';
     isCurrentUser: boolean;
+}
+
+interface Season {
+    id: number;
+    name: string;
 }
 
 interface Announcement {
@@ -75,11 +84,14 @@ const props = defineProps<{
         totalPlayers: number;
         achievements: number;
         points: number;
+        streak: number;
+        joinedAt: string;
     };
     announcements: Announcement[];
     courses: Course[];
     assignments: Assignment[];
     leaderboardUsers: LeaderboardUser[];
+    activeSeason: Season | null;
 }>();
 
 const userStats = computed(() => props.userStats);
@@ -91,11 +103,11 @@ const courses = computed(() => props.courses);
 const assignments = computed(() => props.assignments);
 const leaderboardUsers = computed(() => props.leaderboardUsers);
 
-const streak = ref({
-    currentStreak: 5,
-    longestStreak: 12,
+const streak = computed(() => ({
+    currentStreak: props.userStats.streak || 0,
+    longestStreak: 12, // Still mock for now, can be clarified
     loginDates: ['2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08', '2026-03-09']
-});
+}));
 
 const timeBasedGreeting = computed(() => {
     const hour = new Date().getHours();
@@ -186,6 +198,7 @@ const handleQuickAction = (action: string) => {
                     :users="leaderboardUsers" 
                     :user-rank="userStats.rankNumber"
                     :total-players="userStats.totalPlayers"
+                    :active-season-name="activeSeason?.name"
                 />
             </div>
 

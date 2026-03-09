@@ -26,7 +26,36 @@ class User extends Authenticatable
         'exp',
         'level',
         'is_admin',
+        'current_streak',
+        'longest_streak',
+        'last_login_at',
     ];
+
+    public function seasonProgress()
+    {
+        return $this->hasMany(SeasonProgress::class);
+    }
+
+    public function currentSeasonProgress()
+    {
+        $currentSeason = Season::where('is_active', true)->first() ?? Season::first();
+        $seasonId = $currentSeason?->id;
+
+        return $this->hasOne(SeasonProgress::class)
+            ->where('season_id', $seasonId);
+    }
+
+    public function activeSeasonProgress()
+    {
+        $currentSeason = Season::current();
+        if (!$currentSeason)
+            return null;
+
+        return $this->seasonProgress()->firstOrCreate(
+            ['season_id' => $currentSeason->id],
+            ['exp' => 0, 'level' => 1, 'points' => 0]
+        );
+    }
 
     /**
      * The attributes that should be hidden for serialization.
@@ -51,6 +80,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'last_login_at' => 'datetime',
         ];
     }
 

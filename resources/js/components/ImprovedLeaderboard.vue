@@ -8,6 +8,10 @@ interface LeaderboardUser {
     name: string;
     xp: number;
     avatar?: string;
+    completionRate: number;
+    streak: number;
+    joinedAt: string;
+    weeklyXp: number;
     trend: 'up' | 'down' | 'stable';
     isCurrentUser?: boolean;
 }
@@ -16,6 +20,7 @@ interface Props {
     users: LeaderboardUser[];
     userRank: number;
     totalPlayers: number;
+    activeSeasonName?: string;
 }
 
 const props = defineProps<Props>();
@@ -23,6 +28,50 @@ const props = defineProps<Props>();
 // Mock data extension for richer visuals
 const top3 = computed(() => props.users.slice(0, 3));
 
+// Animated XP for top 3
+const animXP1 = useNumberAnimation(() => top3.value[0]?.xp || 0);
+const animXP2 = useNumberAnimation(() => top3.value[1]?.xp || 0);
+const animXP3 = useNumberAnimation(() => top3.value[2]?.xp || 0);
+
+const getAnimXP = (idx: number) => {
+    if (idx === 0) return animXP1;
+    if (idx === 1) return animXP2;
+    if (idx === 2) return animXP3;
+    return { value: top3.value[idx]?.xp || 0 };
+};
+
+const handleMouseMove = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+};
+
+const handleMagnetic = (e: MouseEvent) => {
+    const btn = e.currentTarget as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    
+    gsap.to(btn, {
+        x: x * 0.3,
+        y: y * 0.3,
+        duration: 0.3,
+        ease: 'power2.out'
+    });
+};
+
+const resetMagnetic = (e: MouseEvent) => {
+    const btn = e.currentTarget as HTMLElement;
+    gsap.to(btn, {
+        x: 0,
+        y: 0,
+        duration: 0.5,
+        ease: 'elastic.out(1, 0.3)'
+    });
+};
 </script>
 
 <template>
@@ -39,7 +88,11 @@ const top3 = computed(() => props.users.slice(0, 3));
                     Competition is fierce. You are ranked <span class="text-foreground font-bold">#{{ props.userRank }}</span> out of {{ props.totalPlayers.toLocaleString() }}.
                 </p>
             </div>
-            <button class="text-xs font-bold px-4 py-2 rounded-xl border border-border/40 bg-card hover:bg-muted transition-colors">
+            <button 
+                @mousemove="handleMagnetic" 
+                @mouseleave="resetMagnetic"
+                class="text-xs font-bold px-4 py-2 rounded-xl border border-border/40 bg-card hover:bg-muted transition-colors relative z-10"
+            >
                 View All Time
             </button>
         </div>
@@ -92,23 +145,23 @@ const top3 = computed(() => props.users.slice(0, 3));
                     <div class="space-y-1 mb-6">
                         <h3 class="font-bold text-lg truncate w-full px-4">{{ user.name }}</h3>
                         <div class="flex items-center justify-center gap-1.5">
-                            <span class="text-xs font-bold text-primary">{{ user.xp.toLocaleString() }} XP</span>
+                            <span class="text-xs font-bold text-primary">{{ getAnimXP(idx).value.toLocaleString() }} XP</span>
                             <div class="w-1 h-1 rounded-full bg-muted-foreground/30"></div>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Season 6</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{{ activeSeasonName || 'Season 1' }}</span>
                         </div>
                     </div>
 
                     <!-- Stats Bar -->
                     <div class="w-full grid grid-cols-2 gap-2 border-t border-border/20 pt-4 mt-auto">
                         <div class="text-left">
-                            <p class="text-[8px] font-bold uppercase text-muted-foreground">Win Rate</p>
-                            <p class="text-xs font-black">94%</p>
+                            <p class="text-[8px] font-bold uppercase text-muted-foreground">Completion</p>
+                            <p class="text-xs font-black">{{ user.completionRate }}%</p>
                         </div>
                         <div class="text-right">
                             <p class="text-[8px] font-bold uppercase text-muted-foreground">Streak</p>
                             <div class="flex items-center justify-end gap-1">
                                 <Sparkles class="w-2.5 h-2.5 text-primary" />
-                                <span class="text-xs font-black">12d</span>
+                                <span class="text-xs font-black">{{ user.streak }}d</span>
                             </div>
                         </div>
                     </div>
@@ -126,9 +179,15 @@ const top3 = computed(() => props.users.slice(0, 3));
                 
                 <div class="divide-y divide-border/10">
                     <div v-for="(user, idx) in users" :key="user.id"
-                        class="group px-6 py-4 flex items-center justify-between hover:bg-primary/[0.02] transition-colors cursor-default animate-fade-up"
+                        class="group px-6 py-4 flex items-center justify-between hover:bg-primary/[0.02] transition-colors cursor-default animate-fade-up relative overflow-hidden"
                         :class="[`stagger-${idx + 4}`, { 'bg-primary/[0.03]': user.isCurrentUser }]"
+                        @mousemove="handleMouseMove"
                     >
+                        <!-- Row Bloom Effect -->
+                        <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                            style="background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.05), transparent 40%)">
+                        </div>
+
                         <div class="flex items-center gap-6">
                             <span class="text-sm font-black text-muted-foreground/40 w-6">#{{ idx + 1 }}</span>
                             <div class="flex items-center gap-3">
@@ -142,7 +201,7 @@ const top3 = computed(() => props.users.slice(0, 3));
                                         <span v-if="user.isCurrentUser" class="text-[8px] uppercase px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-black">You</span>
                                     </h4>
                                     <div class="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                        <span>Joined Sept 2025</span>
+                                        <span>Joined {{ user.joinedAt }}</span>
                                         <div class="w-0.5 h-0.5 rounded-full bg-muted-foreground/30"></div>
                                         <span class="flex items-center gap-1">
                                             <Award class="w-3 h-3 text-primary" /> Silver III
@@ -165,7 +224,7 @@ const top3 = computed(() => props.users.slice(0, 3));
                             <!-- Data Column -->
                             <div class="text-right min-w-[100px]">
                                 <p class="text-sm font-black tabular-nums">{{ user.xp.toLocaleString() }} <span class="text-[10px] font-bold text-muted-foreground">XP</span></p>
-                                <p class="text-[9px] font-bold text-emerald-500">+1.2k weekly</p>
+                                <p class="text-[9px] font-bold text-emerald-500">+{{ user.weeklyXp >= 1000 ? (user.weeklyXp / 1000).toFixed(1) + 'k' : user.weeklyXp }} weekly</p>
                             </div>
 
                             <!-- Action -->
@@ -177,7 +236,11 @@ const top3 = computed(() => props.users.slice(0, 3));
                 </div>
                 
                 <div class="p-4 bg-muted/5 text-center">
-                    <button class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors">
+                    <button 
+                        @mousemove="handleMagnetic" 
+                        @mouseleave="resetMagnetic"
+                        class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
+                    >
                         Load More Rankings
                     </button>
                 </div>

@@ -10,12 +10,36 @@ Route::inertia('/', 'Welcome', [
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
+        $currentSeason = \App\Models\Season::current();
+
+        // --- Streak Logic ---
+        $now = now();
+        if (!$user->last_login_at) {
+            $user->update(['current_streak' => 1, 'last_login_at' => $now]);
+        } elseif (!$user->last_login_at->isToday()) {
+            if ($user->last_login_at->isYesterday()) {
+                $user->increment('current_streak');
+            } else {
+                $user->update(['current_streak' => 1]);
+            }
+            $user->update(['last_login_at' => $now]);
+        }
+
+        // --- Seasonal Progress ---
+        $seasonalProgress = $user->activeSeasonProgress();
+        $seasonalExp = $seasonalProgress?->exp ?? 0;
+        $seasonalLevel = $seasonalProgress?->level ?? 1;
+        $seasonalPoints = $seasonalProgress?->points ?? 0;
 
         // 1. Announcements (Active)
         $announcements = \App\Models\Announcement::where('is_active', true)->get();
 
-        // 2. Courses (Enrolled by user)
-        $courses = $user->courses()->get()->map(function ($course) {
+        // 2. Courses (Enrolled by user, scoped to season if id exists)
+        $coursesResource = $user->courses();
+        if ($currentSeason) {
+            $coursesResource->wherePivot('season_id', $currentSeason->id);
+        }
+        $courses = $coursesResource->get()->map(function ($course) {
             return [
                 'id' => $course->id,
                 'name' => $course->name,
@@ -41,37 +65,72 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ];
         });
 
-        // 4. Leaderboard (All users by XP)
-        $leaderboardUsers = \App\Models\User::where('is_admin', false)->orderByDesc('exp')->get()->map(function ($u) use ($user) {
-            return [
-                'id' => $u->id,
-                'name' => $u->name,
-                'xp' => $u->exp,
-                'trend' => 'stable', // Can become dynamic later
-                'isCurrentUser' => $u->id === $user->id,
-            ];
-        });
+        // 4. Leaderboard (Scoped to Current Season)
+        if ($currentSeason) {
+            $leaderboardUsers = \App\Models\SeasonProgress::with('user')
+                ->where('season_id', $currentSeason->id)
+                ->whereHas('user', fn($q) => $q->where('is_admin', false))
+                ->orderByDesc('exp')
+                ->get()
+                ->map(function ($progress) use ($user) {
+                    $u = $progress->user;
+                    // Completion rate = lessons completed / total available in season? 
+                    // Let's just do a dummy calc for now based on user's courses
+                    $totalLessons = $u->courses()->sum('total_lessons');
+                    $completedLessons = $u->courses()->sum('completed_lessons');
+                    $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
 
-        // Current User Rank among non-admins
-        $userRank = \App\Models\User::where('is_admin', false)->where('exp', '>', $user->exp)->count() + 1;
-        $totalNonAdmins = \App\Models\User::where('is_admin', false)->count();
+                    // Weekly XP: xp earned in last 7 days from courses
+                    $weeklyXp = $u->courses()
+                        ->wherePivot('updated_at', '>=', now()->subDays(7))
+                        ->sum('xp_earned');
+
+                    return [
+                        'id' => $u->id,
+                        'name' => $u->name,
+                        'xp' => $progress->exp,
+                        'level' => $progress->level,
+                        'completionRate' => $completionRate,
+                        'streak' => $u->current_streak,
+                        'joinedAt' => $u->created_at->format('M Y'),
+                        'weeklyXp' => $weeklyXp,
+                        'trend' => 'stable',
+                        'isCurrentUser' => $u->id === $user->id,
+                    ];
+                });
+
+            $userRank = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
+                ->where('exp', '>', $seasonalExp)
+                ->count() + 1;
+            $totalPlayers = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)->count();
+        } else {
+            $leaderboardUsers = collect();
+            $userRank = 0;
+            $totalPlayers = 0;
+        }
 
         return inertia('Dashboard', [
             'userStats' => [
-                'totalXP' => $user->exp,
-                'level' => $user->level,
-                'currentXP' => $user->exp % 1000, // Assuming 1000 XP per level for simplicity
-                'maxXPForLevel' => 1000,
+                'totalXP' => $seasonalExp,
+                'level' => $seasonalLevel,
+                'currentXP' => $seasonalExp % 100,
+                'maxXPForLevel' => 100,
                 'rank' => 'Player',
                 'rankNumber' => $userRank,
-                'totalPlayers' => $totalNonAdmins,
-                'achievements' => $user->badges()->count(),
-                'points' => $user->points,
+                'totalPlayers' => $totalPlayers,
+                'achievements' => $user->badges()->when($currentSeason, fn($q) => $q->wherePivot('season_id', $currentSeason->id))->count(),
+                'points' => $seasonalPoints,
+                'streak' => $user->current_streak,
+                'joinedAt' => $user->created_at->format('M Y'),
             ],
             'announcements' => $announcements,
             'courses' => $courses,
             'assignments' => $assignments,
             'leaderboardUsers' => $leaderboardUsers,
+            'activeSeason' => $currentSeason ? [
+                'id' => $currentSeason->id,
+                'name' => $currentSeason->name,
+            ] : null,
         ]);
     })->name('dashboard');
 });

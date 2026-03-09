@@ -26,6 +26,15 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const handleMouseMove = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+};
+
 // Animated values
 const animLevel = useNumberAnimation(() => props.userStats.level);
 const animXP = useNumberAnimation(() => props.userStats.totalXP);
@@ -40,7 +49,7 @@ const displayStats = computed(() => [
         icon: Award, 
         color: 'text-blue-500', 
         bg: 'bg-blue-500/10',
-        detail: props.userStats.rank
+        detail: 'Level ' + props.userStats.level
     },
     { 
         label: 'Total Exp', 
@@ -49,7 +58,7 @@ const displayStats = computed(() => [
         icon: Zap, 
         color: 'text-amber-500', 
         bg: 'bg-amber-500/10',
-        detail: 'Lifetime progress'
+        detail: 'Season progress'
     },
     { 
         label: 'Day Streak', 
@@ -77,7 +86,13 @@ const displayStats = computed(() => [
         <div v-for="(stat, idx) in displayStats" :key="stat.label"
             class="surface-card p-6 premium-hover group animate-fade-up relative overflow-hidden"
             :class="`stagger-${idx + 1}`"
+            @mousemove="handleMouseMove"
         >
+            <!-- Hover Bloom Effect -->
+            <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), ${stat.bg.replace('/10', '/30')}, transparent 40%)` }">
+            </div>
+
             <!-- Silhouette Background Icon - Moved to Upper Right -->
             <div class="absolute -right-6 -top-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
                 <component :is="stat.icon" class="w-32 h-32 rotate-12" />
