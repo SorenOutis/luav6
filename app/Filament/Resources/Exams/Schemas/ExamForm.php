@@ -11,18 +11,23 @@ class ExamForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(2)
             ->components([
                 \Filament\Forms\Components\TextInput::make('title')
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->columnSpanFull(),
                 \Filament\Forms\Components\Textarea::make('description')
-                    ->maxLength(65535),
+                    ->maxLength(65535)
+                    ->columnSpanFull(),
                 \Filament\Forms\Components\DateTimePicker::make('exam_date')
-                    ->required(),
+                    ->required()
+                    ->columnSpan(1),
                 \Filament\Forms\Components\TextInput::make('duration_minutes')
                     ->required()
                     ->numeric()
-                    ->default(60),
+                    ->default(60)
+                    ->columnSpan(1),
                 \Filament\Forms\Components\Select::make('status')
                     ->options([
                         'draft' => 'Draft',
@@ -30,42 +35,51 @@ class ExamForm
                         'closed' => 'Closed',
                     ])
                     ->required()
-                    ->default('draft'),
+                    ->default('draft')
+                    ->columnSpan(1),
                 \Filament\Forms\Components\TextInput::make('url')
                     ->url()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    ->columnSpan(1),
                 \Filament\Schemas\Components\Section::make('Exam Parts')
                     ->description('Add parts/sections to this exam. Each part can contain multiple questions.')
+                    ->columnSpanFull()
                     ->schema([
                         \Filament\Forms\Components\Repeater::make('parts')
                             ->relationship('parts')
+                            ->columns(1)
                             ->schema([
                                 \Filament\Forms\Components\TextInput::make('title')
                                     ->label('Part Title')
                                     ->placeholder('e.g., Part I - Multiple Choice')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->columnSpanFull(),
                                 \Filament\Forms\Components\Textarea::make('instructions')
                                     ->label('Part Instructions')
                                     ->placeholder('Instructions for this part...')
-                                    ->maxLength(65535),
+                                    ->maxLength(65535)
+                                    ->columnSpanFull(),
                                 \Filament\Forms\Components\Repeater::make('questions')
-                                    ->label('Questions')
-                                    ->schema([
-                                        \Filament\Forms\Components\TextInput::make('text')
-                                            ->label('Question')
-                                            ->required()
-                                            ->placeholder('Enter the question text'),
-                                        \Filament\Forms\Components\Select::make('type')
-                                            ->label('Type')
-                                            ->options([
-                                                'multiple_choice' => 'Multiple Choice',
-                                                'identification' => 'Identification',
-                                                'essay' => 'Essay',
-                                                'true_false' => 'True/False',
-                                            ])
-                                            ->required()
-                                            ->live(),
+                                     ->label('Questions')
+                                     ->columns(2)
+                                     ->schema([
+                                         \Filament\Forms\Components\TextInput::make('text')
+                                             ->label('Question')
+                                             ->required()
+                                             ->placeholder('Enter the question text')
+                                             ->columnSpanFull(),
+                                         \Filament\Forms\Components\Select::make('type')
+                                             ->label('Type')
+                                             ->options([
+                                                 'multiple_choice' => 'Multiple Choice',
+                                                 'identification' => 'Identification',
+                                                 'essay' => 'Essay',
+                                                 'true_false' => 'True/False',
+                                             ])
+                                             ->required()
+                                             ->live()
+                                             ->columnSpan(1),
                                         \Filament\Forms\Components\Repeater::make('options')
                                             ->label('Choices')
                                             ->schema([
@@ -80,9 +94,10 @@ class ExamForm
                                             ->itemLabel(fn(array $state): ?string => $state['text'] ?? null)
                                             ->collapsible(),
                                         \Filament\Forms\Components\TextInput::make('correct_answer')
-                                            ->label('Correct Answer')
-                                            ->visible(fn($get) => $get('type') === 'identification')
-                                            ->maxLength(255),
+                                             ->label('Correct Answer')
+                                             ->visible(fn($get) => $get('type') === 'identification')
+                                             ->maxLength(255)
+                                             ->columnSpan(1),
                                     ])
                                     ->itemLabel(fn(array $state): ?string => $state['text'] ?? 'New Question')
                                     ->collapsible()
