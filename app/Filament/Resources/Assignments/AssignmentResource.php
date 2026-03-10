@@ -35,7 +35,7 @@ class AssignmentResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            AssignmentResource\RelationManagers\SubmissionsRelationManager::class,
         ];
     }
 

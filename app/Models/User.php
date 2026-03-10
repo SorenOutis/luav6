@@ -105,7 +105,12 @@ class User extends Authenticatable
      */
     public function assignments()
     {
-        return $this->belongsToMany(Assignment::class)->withPivot('submitted', 'status', 'grade')->withTimestamps();
+        return $this->belongsToMany(Assignment::class)->withPivot('submitted', 'status', 'grade', 'file_path', 'submitted_at')->withTimestamps();
+    }
+
+    public function submissions()
+    {
+        return $this->hasMany(Submission::class);
     }
     /**
      * Get the rewards associated with the user.

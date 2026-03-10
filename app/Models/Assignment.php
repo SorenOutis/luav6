@@ -15,6 +15,11 @@ class Assignment extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('submitted', 'status', 'grade')->withTimestamps();
+        return $this->belongsToMany(User::class)->withPivot('submitted', 'status', 'grade', 'file_path', 'submitted_at')->withTimestamps();
+    }
+
+    public function submissions()
+    {
+        return $this->hasMany(Submission::class);
     }
 }

@@ -17,9 +17,10 @@ class AssignmentsTable
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('due_date')
-                    ->searchable(),
-                TextColumn::make('course_id')
-                    ->numeric()
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('course.name')
+                    ->label('Course')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()

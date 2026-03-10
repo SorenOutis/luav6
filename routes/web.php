@@ -133,6 +133,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ] : null,
         ]);
     })->name('dashboard');
+
+    Route::get('assignments', [\App\Http\Controllers\AssignmentController::class, 'index'])->name('assignments.index');
+    Route::post('assignments/{assignment}/submit', [\App\Http\Controllers\AssignmentController::class, 'store'])->name('assignments.submit');
 });
 
 require __DIR__ . '/settings.php';

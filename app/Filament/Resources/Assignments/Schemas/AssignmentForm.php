@@ -17,8 +17,11 @@ class AssignmentForm
                 Textarea::make('description')
                     ->columnSpanFull(),
                 TextInput::make('due_date'),
-                TextInput::make('course_id')
-                    ->numeric(),
+                \Filament\Forms\Components\Select::make('course_id')
+                    ->relationship('course', 'name')
+                    ->searchable()
+                    ->required()
+                    ->label('Course'),
             ]);
     }
 }
