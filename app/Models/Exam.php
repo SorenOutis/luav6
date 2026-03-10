@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Exam extends Model
+{
+    protected $fillable = [
+        'title',
+        'description',
+        'exam_date',
+        'duration_minutes',
+        'status',
+        'url',
+    ];
+
+    protected $casts = [
+        'exam_date' => 'datetime',
+    ];
+
+    public function parts()
+    {
+        return $this->hasMany(ExamPart::class)->orderBy('sort_order');
+    }
+}

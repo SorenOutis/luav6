@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ExamController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -43,7 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             return [
                 'id' => $course->id,
                 'name' => $course->name,
-                'progress' => $course->total_lessons > 0 ? round(($course->pivot->completed_lessons / $course->total_lessons) * 100) : 0,
+                'progress' => $course->total_lessons > 0 ? round(($course->pivot->completed_lessons / $course->total_lessons) * 100) :
+                    0,
                 'completedLessons' => $course->pivot->completed_lessons,
                 'totalLessons' => $course->total_lessons,
                 'xpEarned' => $course->pivot->xp_earned,
@@ -74,8 +76,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->get()
                 ->map(function ($progress) use ($user) {
                     $u = $progress->user;
-                    // Completion rate = lessons completed / total available in season? 
-                    // Let's just do a dummy calc for now based on user's courses
+                    // Completion rate = lessons completed / total available in season?
+// Let's just do a dummy calc for now based on user's courses
                     $totalLessons = $u->courses()->sum('total_lessons');
                     $completedLessons = $u->courses()->sum('completed_lessons');
                     $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
@@ -118,7 +120,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'rank' => 'Player',
                 'rankNumber' => $userRank,
                 'totalPlayers' => $totalPlayers,
-                'achievements' => $user->badges()->when($currentSeason, fn($q) => $q->wherePivot('season_id', $currentSeason->id))->count(),
+                'achievements' => $user->badges()->when($currentSeason, fn($q) => $q->wherePivot(
+                    'season_id',
+                    $currentSeason->id
+                ))->count(),
                 'points' => $seasonalPoints,
                 'streak' => $user->current_streak,
                 'joinedAt' => $user->created_at->format('M Y'),
@@ -136,6 +141,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('assignments', [\App\Http\Controllers\AssignmentController::class, 'index'])->name('assignments.index');
     Route::post('assignments/{assignment}/submit', [\App\Http\Controllers\AssignmentController::class, 'store'])->name('assignments.submit');
+
+    Route::get('exams', [ExamController::class, 'index'])->name('exams.index');
+    Route::get('exams/{exam}', [ExamController::class, 'show'])->name('exams.show');
 });
 
 require __DIR__ . '/settings.php';
