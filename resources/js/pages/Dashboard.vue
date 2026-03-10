@@ -117,46 +117,61 @@ const timeBasedGreeting = computed(() => {
 });
 
 onMounted(() => {
-    if (dashboardContainer.value) {
-        // Premium Staggered Entrance Timeline
-        const tl = gsap.timeline({
-            defaults: { ease: "power4.out", duration: 1.2 }
-        });
+    if (!dashboardContainer.value) return;
 
-        tl.fromTo('.animate-section', 
-            { 
-                opacity: 0, 
-                y: 40,
-                scale: 0.98,
-                rotationX: -10,
-                visibility: 'visible'
-            },
-            { 
-                opacity: 1, 
-                y: 0, 
-                scale: 1,
-                rotationX: 0,
-                stagger: 0.2,
-                duration: 1.2,
-                ease: "power4.out",
-                clearProps: "all"
-            },
-            "+=0.1"
-        );
+    const tl = gsap.timeline({
+        defaults: { ease: 'power4.out', duration: 1.1 }
+    });
 
-        // Background orb animation refinement
-        const orbs = dashboardContainer.value.querySelectorAll('.orb');
-        orbs.forEach((orb, i) => {
-            gsap.to(orb, {
-                x: `random(-60, 60)`,
-                y: `random(-60, 60)`,
-                duration: 15 + i * 5,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut"
-            });
+    gsap.set('.dashboard-hero', { opacity: 0, y: 40, scale: 0.98 });
+    gsap.set('.dashboard-stats', { opacity: 0, y: 30, scale: 0.97 });
+    gsap.set('.dashboard-leaderboard', { opacity: 0, y: 30, scale: 0.97 });
+    gsap.set('.dashboard-main-grid', {
+        opacity: 0,
+        y: 40,
+        scale: 0.97,
+        rotationX: -8,
+        transformOrigin: 'center top'
+    });
+
+    tl.to('.dashboard-hero', { opacity: 1, y: 0, scale: 1 });
+
+    tl.to(
+        '.dashboard-stats',
+        { opacity: 1, y: 0, scale: 1, clearProps: 'transform,opacity' },
+        '-=0.6'
+    );
+
+    tl.to(
+        '.dashboard-leaderboard',
+        { opacity: 1, y: 0, scale: 1, clearProps: 'transform,opacity' },
+        '-=0.4'
+    );
+
+    tl.to(
+        '.dashboard-main-grid',
+        {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            rotationX: 0,
+            clearProps: 'transform,opacity'
+        },
+        '-=0.3'
+    );
+
+    // Background orb animation refinement
+    const orbs = dashboardContainer.value.querySelectorAll('.orb');
+    orbs.forEach((orb, i) => {
+        gsap.to(orb, {
+            x: `random(-60, 60)`,
+            y: `random(-60, 60)`,
+            duration: 15 + i * 5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut'
         });
-    }
+    });
 });
 
 const handleQuickAction = (action: string) => {
@@ -175,7 +190,7 @@ const handleQuickAction = (action: string) => {
 
             <!-- Hero Banner Section -->
             <DashboardHero 
-                class="animate-section"
+                class="animate-section dashboard-hero"
                 :user-name="userName"
                 :user-stats="userStats"
                 :announcements="announcements"
@@ -186,14 +201,14 @@ const handleQuickAction = (action: string) => {
 
             <!-- Header Section with User Stats -->
             <DashboardStats 
-                class="animate-section stagger-2"
+                class="animate-section stagger-2 dashboard-stats"
                 :user-stats="userStats"
                 :streak="streak"
                 :progress-percentage="progressPercentage"
             />
 
             <!-- Improved Leaderboard -->
-            <div class="animate-section stagger-3">
+            <div class="animate-section stagger-3 dashboard-leaderboard">
                 <ImprovedLeaderboard 
                     :users="leaderboardUsers" 
                     :user-rank="userStats.rankNumber"
@@ -203,7 +218,7 @@ const handleQuickAction = (action: string) => {
             </div>
 
             <!-- Main Content Grid -->
-            <div class="grid gap-8 lg:grid-cols-3 animate-section stagger-4">
+            <div class="grid gap-8 lg:grid-cols-3 animate-section stagger-4 dashboard-main-grid">
                 <!-- Courses Progress - Main Section -->
                 <div class="lg:col-span-2 space-y-8">
                     <!-- Streak Heatmap Card -->

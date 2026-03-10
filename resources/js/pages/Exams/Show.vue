@@ -86,15 +86,47 @@ const formatType = (type: string) => type.replace(/_/g, ' ');
 const selectPart = (part: ExamPart) => {
     selectedPart.value = part;
     examStarted.value = false;
+
     setTimeout(() => {
-        gsap.fromTo('.part-detail', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
+        gsap.fromTo(
+            '.ready-card',
+            { opacity: 0, y: 30, scale: 0.95 },
+            {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: 0.6,
+                ease: 'power3.out',
+                clearProps: 'transform,opacity'
+            }
+        );
     }, 10);
 };
 
 const startPart = () => {
     examStarted.value = true;
+
     setTimeout(() => {
-        gsap.fromTo('.question-card', { opacity: 0, y: 20 }, { opacity: 1, y: 0, stagger: 0.08, duration: 0.45, ease: 'power3.out' });
+        gsap.fromTo(
+            '.question-card',
+            {
+                opacity: 0,
+                y: 35,
+                scale: 0.97,
+                rotationX: -4,
+                transformOrigin: 'center top'
+            },
+            {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                rotationX: 0,
+                duration: 0.5,
+                stagger: 0.08,
+                ease: 'power3.out',
+                clearProps: 'transform,opacity'
+            }
+        );
     }, 10);
 };
 
@@ -104,8 +136,46 @@ const goBackToList = () => {
 };
 
 onMounted(() => {
+    // Base state for subtle fade-up
     gsap.set('.animate-up', { opacity: 0, y: 25 });
-    gsap.to('.animate-up', { opacity: 1, y: 0, stagger: 0.08, duration: 1, ease: 'power4.out' });
+
+    const tl = gsap.timeline({
+        defaults: { ease: 'power4.out', duration: 1.0 }
+    });
+
+    // Hero: main card in first
+    tl.to('.exam-hero', { opacity: 1, y: 0, duration: 0.9 });
+
+    // Hero left content
+    tl.fromTo(
+        '.exam-hero-left',
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0 },
+        '-=0.6'
+    );
+
+    // Hero stats
+    tl.fromTo(
+        '.exam-stat',
+        { opacity: 0, y: 30, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, stagger: 0.12, clearProps: 'transform,opacity' },
+        '-=0.5'
+    );
+
+    // Parts list cards (only visible when not selected)
+    tl.fromTo(
+        '.exam-part-card',
+        { opacity: 0, y: 50, scale: 0.96, rotationX: -6, transformOrigin: 'center top' },
+        {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            rotationX: 0,
+            stagger: 0.08,
+            clearProps: 'transform,opacity'
+        },
+        '-=0.3'
+    );
 });
 </script>
 
@@ -141,23 +211,28 @@ onMounted(() => {
                 </div>
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
-                <div class="animate-up relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-card/80 via-card/60 to-primary/5 backdrop-blur-xl p-8 md:p-10">
+                <div class="animate-up exam-hero relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card/90 to-primary/5 backdrop-blur-2xl p-7 md:p-9 shadow-[0_18px_55px_rgba(0,0,0,0.45)]">
                     <!-- Large decorative icon -->
-                    <div class="absolute -right-6 -top-6 opacity-[0.04]">
-                        <GraduationCap class="w-56 h-56" />
+                    <div class="pointer-events-none absolute -right-10 -top-10 opacity-[0.05] md:opacity-[0.06]">
+                        <GraduationCap class="w-64 h-64 text-primary" />
                     </div>
                     <!-- Shimmer stripe -->
                     <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
 
-                    <div class="relative flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-                        <div class="space-y-3 flex-1">
+                    <div class="relative flex flex-col md:flex-row md:items-start md:justify-between gap-8">
+                        <div class="space-y-4 flex-1 exam-hero-left">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="px-3 py-1 rounded-full bg-primary/15 border border-primary/25 text-[11px] font-bold text-primary tracking-widest uppercase">
+                                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-[11px] font-bold text-primary tracking-[0.16em] uppercase">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
                                     {{ exam.status }}
                                 </span>
                             </div>
-                            <h1 class="text-3xl md:text-5xl font-black tracking-tight">{{ exam.title }}</h1>
-                            <p class="text-muted-foreground text-base leading-relaxed max-w-xl">{{ exam.description }}</p>
+                            <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight">
+                                {{ selectedPart ? selectedPart.title : exam.title }}
+                            </h1>
+                            <p class="text-muted-foreground text-base leading-relaxed max-w-xl">
+                                {{ exam.description }}
+                            </p>
                             <div class="flex items-center gap-2 text-sm text-muted-foreground pt-1">
                                 <Calendar class="w-4 h-4 text-primary" />
                                 {{ formatDateTime(exam.exam_date) }}
@@ -165,20 +240,20 @@ onMounted(() => {
                         </div>
 
                         <!-- Stats grid -->
-                        <div class="grid grid-cols-3 md:grid-cols-1 gap-3 md:min-w-[140px]">
-                            <div class="flex flex-col items-center md:items-end text-center md:text-right">
-                                <div class="flex items-center gap-1.5 text-2xl font-black">
+                        <div class="exam-hero-stats grid grid-cols-3 md:grid-cols-1 gap-3 md:min-w-[170px]">
+                            <div class="exam-stat px-1 py-1 flex flex-col items-center md:items-end text-center md:text-right">
+                                <div class="flex items-center gap-1.5 text-xl md:text-2xl font-black">
                                     <Clock class="w-5 h-5 text-primary" />
                                     {{ exam.duration_minutes }}
                                 </div>
                                 <div class="text-[10px] text-muted-foreground uppercase tracking-widest">Minutes</div>
                             </div>
-                            <div class="flex flex-col items-center md:items-end text-center md:text-right">
-                                <div class="text-2xl font-black">{{ exam.parts.length }}</div>
+                            <div class="exam-stat px-1 py-1 flex flex-col items-center md:items-end text-center md:text-right">
+                                <div class="text-xl md:text-2xl font-black">{{ exam.parts.length }}</div>
                                 <div class="text-[10px] text-muted-foreground uppercase tracking-widest">Part{{ exam.parts.length !== 1 ? 's' : '' }}</div>
                             </div>
-                            <div class="flex flex-col items-center md:items-end text-center md:text-right">
-                                <div class="text-2xl font-black">{{ totalQuestions }}</div>
+                            <div class="exam-stat px-1 py-1 flex flex-col items-center md:items-end text-center md:text-right">
+                                <div class="text-xl md:text-2xl font-black">{{ totalQuestions }}</div>
                                 <div class="text-[10px] text-muted-foreground uppercase tracking-widest">Questions</div>
                             </div>
                         </div>
@@ -199,44 +274,44 @@ onMounted(() => {
                         </span>
                     </div>
 
-                    <div class="grid gap-4">
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <div
                             v-for="(part, index) in exam.parts"
                             :key="part.id"
                             @click="selectPart(part)"
-                            class="animate-up relative overflow-hidden rounded-2xl border bg-gradient-to-br cursor-pointer group transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-black/20"
+                            class="exam-part-card animate-up relative overflow-hidden rounded-3xl border bg-gradient-to-br from-card via-card/80 to-muted cursor-pointer group transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-black/10 h-full"
                             :class="getPartColor(index)"
                         >
                             <!-- Top shimmer on hover -->
                             <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                            <div class="p-5 flex items-center gap-5">
-                                <!-- Icon box -->
-                                <div class="flex-shrink-0 w-14 h-14 rounded-xl bg-black/20 border border-white/5 flex items-center justify-center">
-                                    <component :is="getPartIcon(part.type)" class="w-7 h-7 transition-colors" :class="getIconColor(index)" />
-                                </div>
+                            <!-- Silhouette background icon -->
+                            <div class="pointer-events-none absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-10 transition-opacity">
+                                <component :is="getPartIcon(part.type)" class="w-24 h-24 text-foreground" />
+                            </div>
 
+                            <div class="relative p-5 flex flex-col gap-3 h-full">
                                 <!-- Content -->
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Part {{ index + 1 }}</div>
-                                    <h3 class="text-base font-bold truncate group-hover:text-white transition-colors">{{ part.title }}</h3>
+                                    <div class="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-1">Part {{ index + 1 }}</div>
+                                    <h3 class="text-base font-bold truncate text-foreground group-hover:text-primary transition-colors">{{ part.title }}</h3>
                                     <div class="flex flex-wrap items-center gap-1.5 mt-2">
                                         <span
                                             v-for="type in getQuestionTypes(part)"
                                             :key="type"
-                                            class="px-2 py-0.5 rounded-md bg-black/20 text-[10px] font-semibold text-white/60 capitalize border border-white/5"
+                                            class="px-2 py-0.5 rounded-md bg-muted/80 text-[10px] font-semibold text-muted-foreground capitalize border border-border/50"
                                         >
                                             {{ formatType(type) }}
                                         </span>
-                                        <span class="text-[11px] text-white/40">
+                                        <span class="text-[11px] text-muted-foreground/80">
                                             · {{ part.questions?.length ?? 0 }} question{{ (part.questions?.length ?? 0) !== 1 ? 's' : '' }}
                                         </span>
                                     </div>
                                 </div>
 
                                 <!-- Arrow indicator -->
-                                <div class="flex-shrink-0 w-9 h-9 rounded-full bg-black/20 border border-white/5 flex items-center justify-center opacity-60 group-hover:opacity-100 group-hover:bg-white/10 transition-all">
-                                    <ArrowRight class="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" />
+                                <div class="flex-shrink-0 self-end w-9 h-9 rounded-full bg-muted/70 border border-border/60 flex items-center justify-center opacity-80 group-hover:opacity-100 group-hover:bg-primary/10 group-hover:border-primary/40 transition-all">
+                                    <ArrowRight class="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
                                 </div>
                             </div>
                         </div>
@@ -255,83 +330,14 @@ onMounted(() => {
                 <!--  PART DETAIL STATE (before start)                       -->
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <template v-else-if="!examStarted">
-                    <div class="part-detail grid md:grid-cols-3 gap-6">
-                        <!-- Left: Part info -->
-                        <div class="md:col-span-2 space-y-4">
-                            <div class="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-xl p-7 space-y-5">
-                                <div>
-                                    <div class="text-[10px] font-bold text-primary/80 uppercase tracking-widest mb-2">Section Overview</div>
-                                    <h2 class="text-2xl font-black">{{ selectedPart.title }}</h2>
-                                </div>
-
-                                <div v-if="selectedPart.instructions" class="p-4 rounded-xl bg-muted/40 border border-border/30">
-                                    <p class="text-sm text-muted-foreground leading-relaxed italic">"{{ selectedPart.instructions }}"</p>
-                                </div>
-
-                                <div class="flex flex-wrap gap-2">
-                                    <span
-                                        v-for="type in getQuestionTypes(selectedPart)"
-                                        :key="type"
-                                        class="px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary capitalize"
-                                    >
-                                        {{ formatType(type) }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Question preview list -->
-                            <div class="rounded-2xl border border-border/40 bg-card/60 backdrop-blur-xl overflow-hidden">
-                                <div class="px-6 py-4 border-b border-border/30 flex items-center justify-between">
-                                    <span class="text-sm font-semibold">Questions Preview</span>
-                                    <span class="text-xs text-muted-foreground">{{ selectedPart.questions?.length ?? 0 }} total</span>
-                                </div>
-                                <div class="divide-y divide-border/20">
-                                    <div
-                                        v-for="(q, i) in selectedPart.questions"
-                                        :key="i"
-                                        class="px-6 py-3.5 flex items-center gap-4"
-                                    >
-                                        <div class="w-7 h-7 rounded-lg bg-muted/50 flex items-center justify-center text-xs font-bold text-muted-foreground flex-shrink-0">
-                                            {{ i + 1 }}
-                                        </div>
-                                        <p class="text-sm text-muted-foreground flex-1 truncate">{{ q.text }}</p>
-                                        <span class="text-[10px] px-2 py-0.5 rounded bg-muted/50 text-muted-foreground/60 capitalize flex-shrink-0">
-                                            {{ formatType(q.type) }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right: Start card -->
-                        <div class="space-y-4">
-                            <div class="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-7 space-y-6 sticky top-6">
-                                <div class="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-                                    <PlayCircle class="w-7 h-7 text-primary" />
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-lg">Ready to begin?</h3>
-                                    <p class="text-sm text-muted-foreground mt-1">Once started, answer every question to the best of your ability.</p>
-                                </div>
-                                <div class="space-y-2 text-sm">
-                                    <div class="flex justify-between">
-                                        <span class="text-muted-foreground">Questions</span>
-                                        <span class="font-semibold">{{ selectedPart.questions?.length ?? 0 }}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-muted-foreground">Part</span>
-                                        <span class="font-semibold truncate max-w-[120px] text-right">{{ selectedPart.title }}</span>
-                                    </div>
-                                </div>
-                                <button
-                                    @click="startPart"
-                                    class="w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
-                                >
-                                    <PlayCircle class="w-5 h-5" />
-                                    Start This Part
-                                </button>
-                            </div>
-                        </div>
+                    <div class="ready-card animate-up flex justify-center">
+                        <button
+                            @click="startPart"
+                            class="w-full max-w-md py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
+                        >
+                            <PlayCircle class="w-5 h-5" />
+                            Start This Part
+                        </button>
                     </div>
                 </template>
 
@@ -346,7 +352,7 @@ onMounted(() => {
                         </span>
                     </div>
 
-                    <div class="grid gap-5">
+                    <div class="grid gap-5 lg:grid-cols-2 lg:gap-6">
                         <div
                             v-for="(question, qIndex) in selectedPart!.questions"
                             :key="qIndex"

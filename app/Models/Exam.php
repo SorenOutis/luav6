@@ -23,4 +23,9 @@ class Exam extends Model
     {
         return $this->hasMany(ExamPart::class)->orderBy('sort_order');
     }
+
+    public function submissions()
+    {
+        return $this->hasMany(ExamSubmission::class);
+    }
 }

@@ -25,4 +25,9 @@ class ExamPart extends Model
     {
         return $this->belongsTo(Exam::class);
     }
+
+    public function submissions()
+    {
+        return $this->hasMany(ExamSubmission::class);
+    }
 }

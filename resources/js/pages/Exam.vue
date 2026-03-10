@@ -5,7 +5,7 @@ import { onMounted, ref, computed } from 'vue';
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
-import { Calendar, Clock, ExternalLink, GraduationCap, AlertCircle } from 'lucide-vue-next';
+import { Calendar, Clock, ExternalLink, AlertCircle } from 'lucide-vue-next';
 
 interface ExamPart {
     id: number;
@@ -49,45 +49,51 @@ const formatDateTime = (dateStr: string) => {
 };
 
 onMounted(() => {
-    if (examContainer.value) {
-        const tl = gsap.timeline({
-            defaults: { ease: "power4.out", duration: 1.2 }
-        });
+    if (!examContainer.value) return;
 
-        tl.fromTo('.animate-section', 
-            { 
-                opacity: 0, 
-                y: 40,
-                scale: 0.98,
-                rotationX: -10,
-                visibility: 'visible'
-            },
-            { 
-                opacity: 1, 
-                y: 0, 
-                scale: 1,
-                rotationX: 0,
-                stagger: 0.15,
-                duration: 1.2,
-                ease: "power4.out",
-                clearProps: "all"
-            },
-            "+=0.1"
-        );
+    const tl = gsap.timeline({
+        defaults: { ease: 'power4.out', duration: 1.1 }
+    });
 
-        // Background orb animation
-        const orbs = examContainer.value.querySelectorAll('.orb');
-        orbs.forEach((orb, i) => {
-            gsap.to(orb, {
-                x: `random(-60, 60)`,
-                y: `random(-60, 60)`,
-                duration: 15 + i * 5,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut"
-            });
+    // Initial states
+    gsap.set('.exam-hero', { opacity: 0, y: 40, scale: 0.98 });
+    gsap.set('.exam-card', {
+        opacity: 0,
+        y: 60,
+        scale: 0.96,
+        rotationX: -8,
+        transformOrigin: 'center top'
+    });
+
+    // Hero entrance
+    tl.to('.exam-hero', { opacity: 1, y: 0, scale: 1 });
+
+    // Card entrance with depth and stagger
+    tl.to(
+        '.exam-card',
+        {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            rotationX: 0,
+            stagger: 0.15,
+            clearProps: 'transform,opacity'
+        },
+        '-=0.4'
+    );
+
+    // Background orb animation
+    const orbs = examContainer.value.querySelectorAll('.orb');
+    orbs.forEach((orb, i) => {
+        gsap.to(orb, {
+            x: `random(-60, 60)`,
+            y: `random(-60, 60)`,
+            duration: 15 + i * 5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut'
         });
-    }
+    });
 });
 </script>
 
@@ -101,13 +107,8 @@ onMounted(() => {
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
             <!-- Header Section -->
-            <div class="animate-section space-y-2">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
-                        <GraduationCap class="w-6 h-6 " />
-                    </div>
-                    <h1 class="text-3xl font-bold tracking-tight">Upcoming Exams</h1>
-                </div>
+            <div class="animate-section exam-hero space-y-2">
+                <h1 class="text-3xl font-bold tracking-tight">Upcoming Exams</h1>
                 <p class="text-muted-foreground text-lg">Manage your assessments and upcoming academic challenges.</p>
             </div>
 
@@ -116,7 +117,7 @@ onMounted(() => {
                 <div 
                     v-for="exam in exams" 
                     :key="exam.id"
-                    class="animate-section surface-card group p-6 flex flex-col justify-between hover:border-primary/50 transition-all duration-500 overflow-hidden relative"
+                    class="animate-section exam-card surface-card group p-6 flex flex-col justify-between hover:border-primary/50 transition-all duration-500 overflow-hidden relative"
                 >
                     <!-- Glossy accent -->
                     <div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500"></div>

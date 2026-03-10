@@ -35,7 +35,7 @@ class ExamResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            \App\Filament\Resources\Exams\RelationManagers\SubmissionsRelationManager::class,
         ];
     }
 

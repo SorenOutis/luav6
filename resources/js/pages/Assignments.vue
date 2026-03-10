@@ -193,27 +193,68 @@ const handleMouseMove = (e: MouseEvent) => {
 };
 
 onMounted(() => {
-    if (container.value) {
-        const tl = gsap.timeline({
-            defaults: { ease: "power4.out", duration: 1 }
-        });
+    if (!container.value) return;
 
-        tl.fromTo('.header-content', { opacity: 0, y: -20 }, { opacity: 1, y: 0 });
-        tl.fromTo('.stats-card', { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, stagger: 0.1 }, "-=0.5");
-        tl.fromTo('.tabs-nav', { opacity: 0, y: 10 }, { opacity: 1, y: 0 }, "-=0.5");
+    const tl = gsap.timeline({
+        defaults: { ease: 'power4.out', duration: 1.0 }
+    });
 
-        const orbs = container.value.querySelectorAll('.orb');
-        orbs.forEach((orb, i) => {
-            gsap.to(orb, {
-                x: `random(-40, 40)`,
-                y: `random(-40, 40)`,
-                duration: 10 + i * 5,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut"
-            });
+    // Hero/header entrance
+    gsap.set('.assignments-hero', { opacity: 0, y: 30, scale: 0.98 });
+    gsap.set('.stats-card', { opacity: 0, y: 30, scale: 0.96 });
+    gsap.set('.tabs-nav', { opacity: 0, y: 20 });
+    gsap.set('.assignment-card', {
+        opacity: 0,
+        y: 40,
+        scale: 0.97,
+        rotationX: -6,
+        transformOrigin: 'center top'
+    });
+
+    tl.to('.assignments-hero', { opacity: 1, y: 0, scale: 1 });
+
+    tl.to(
+        '.stats-card',
+        {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            stagger: 0.12,
+            clearProps: 'transform,opacity'
+        },
+        '-=0.5'
+    );
+
+    tl.to(
+        '.tabs-nav',
+        { opacity: 1, y: 0, clearProps: 'transform,opacity' },
+        '-=0.4'
+    );
+
+    tl.to(
+        '.assignment-card',
+        {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            rotationX: 0,
+            stagger: 0.08,
+            clearProps: 'transform,opacity'
+        },
+        '-=0.2'
+    );
+
+    const orbs = container.value.querySelectorAll('.orb');
+    orbs.forEach((orb, i) => {
+        gsap.to(orb, {
+            x: `random(-40, 40)`,
+            y: `random(-40, 40)`,
+            duration: 10 + i * 5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut'
         });
-    }
+    });
 });
 </script>
 
@@ -231,7 +272,7 @@ declare const route: any;
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-            <div class="header-content flex flex-col md:flex-row md:items-center justify-between gap-6 z-10">
+            <div class="assignments-hero header-content flex flex-col md:flex-row md:items-center justify-between gap-6 z-10">
                 <div>
                     <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent uppercase">
                         Mission Briefings
