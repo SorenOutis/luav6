@@ -19,8 +19,24 @@ class ExamController extends Controller
             }
         ])->where('status', '!=', 'draft')->get();
 
+        // Get submission counts for the current user
+        $userId = auth()->id();
+        $examsData = $exams->map(function ($exam) use ($userId) {
+            $submittedPartsCount = ExamSubmission::where('user_id', $userId)
+                ->where('exam_id', $exam->id)
+                ->distinct('exam_part_id')
+                ->count();
+            
+            return [
+                ...($exam->toArray()),
+                'submitted_parts_count' => $submittedPartsCount,
+                'total_parts' => count($exam->parts),
+                'is_locked' => $submittedPartsCount === count($exam->parts) && count($exam->parts) > 0,
+            ];
+        });
+
         return Inertia::render('Exam', [
-            'exams' => $exams,
+            'exams' => $examsData,
         ]);
     }
 
@@ -36,8 +52,16 @@ class ExamController extends Controller
             abort(404);
         }
 
+        // Get submissions for the current user
+        $userId = auth()->id();
+        $submissions = ExamSubmission::where('user_id', $userId)
+            ->where('exam_id', $exam->id)
+            ->pluck('status', 'exam_part_id')
+            ->toArray();
+
         return Inertia::render('Exams/Show', [
             'exam' => $exam,
+            'submissions' => $submissions,
         ]);
     }
 

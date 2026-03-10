@@ -5,7 +5,7 @@ import { onMounted, ref, computed } from 'vue';
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
-import { Calendar, Clock, ExternalLink, AlertCircle } from 'lucide-vue-next';
+import { Calendar, Clock, ExternalLink, AlertCircle, Lock } from 'lucide-vue-next';
 
 interface ExamPart {
     id: number;
@@ -24,6 +24,9 @@ interface Exam {
     status: string;
     url: string | null;
     parts: ExamPart[];
+    submitted_parts_count?: number;
+    total_parts?: number;
+    is_locked?: boolean;
 }
 
 const props = defineProps<{
@@ -117,15 +120,29 @@ onMounted(() => {
                 <div 
                     v-for="exam in exams" 
                     :key="exam.id"
-                    class="animate-section exam-card surface-card group p-6 flex flex-col justify-between hover:border-primary/50 transition-all duration-500 overflow-hidden relative"
+                    class="animate-section exam-card surface-card p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden relative"
+                    :class="exam.is_locked 
+                        ? 'opacity-70 cursor-not-allowed' 
+                        : 'group hover:border-primary/50'"
                 >
                     <!-- Glossy accent -->
-                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500"></div>
+                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl"
+                        :class="!exam.is_locked && 'group-hover:bg-primary/10 transition-colors duration-500'">
+                    </div>
+
+                    <!-- Lock overlay for completed exams -->
+                    <div v-if="exam.is_locked" class="absolute inset-0 rounded-2xl bg-gradient-to-br from-background/40 to-background/20 backdrop-blur-sm z-[5] pointer-events-none"></div>
                     
                     <div class="space-y-4 relative z-10">
                         <div class="flex justify-between items-start">
-                            <div class="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary uppercase tracking-wider">
-                                {{ exam.status }}
+                            <div class="flex items-center gap-2">
+                                <div class="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary uppercase tracking-wider">
+                                    {{ exam.status }}
+                                </div>
+                                <div v-if="exam.is_locked" class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/40 text-[10px] font-semibold text-yellow-600 uppercase tracking-wider">
+                                    <Lock class="w-3 h-3" />
+                                    Completed
+                                </div>
                             </div>
                             <div class="flex items-center text-muted-foreground text-xs gap-1">
                                 <Clock class="w-3.5 h-3.5" />
@@ -134,8 +151,28 @@ onMounted(() => {
                         </div>
 
                         <div>
-                            <h3 class="text-xl font-bold group-hover:text-primary transition-colors duration-300">{{ exam.title }}</h3>
+                            <h3 class="text-xl font-bold"
+                                :class="!exam.is_locked && 'group-hover:text-primary transition-colors duration-300'">
+                                {{ exam.title }}
+                            </h3>
                             <p class="text-muted-foreground text-sm line-clamp-2 mt-1">{{ exam.description }}</p>
+                        </div>
+
+                        <!-- Progress bar for exam completion -->
+                        <div v-if="exam.total_parts && exam.total_parts > 0" class="pt-2">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                                    Progress
+                                </span>
+                                <span class="text-[10px] font-semibold text-muted-foreground/70">
+                                    {{ exam.submitted_parts_count }}/{{ exam.total_parts }}
+                                </span>
+                            </div>
+                            <div class="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-500"
+                                    :style="{ width: `${(exam.submitted_parts_count || 0) / exam.total_parts * 100}%` }">
+                                </div>
+                            </div>
                         </div>
 
                         <div class="space-y-3 pt-2">
@@ -163,8 +200,16 @@ onMounted(() => {
                     </div>
 
                     <div class="pt-6 relative z-10">
+                        <button 
+                            v-if="exam.is_locked"
+                            disabled
+                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-muted text-muted-foreground font-semibold cursor-not-allowed opacity-60"
+                        >
+                            <Lock class="w-4 h-4" />
+                            Exam Completed
+                        </button>
                         <a 
-                            v-if="exam.url" 
+                            v-else-if="exam.url" 
                             :href="exam.url" 
                             target="_blank"
                             class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20"

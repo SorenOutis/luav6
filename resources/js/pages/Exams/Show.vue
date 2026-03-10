@@ -7,7 +7,7 @@ import type { BreadcrumbItem } from '@/types';
 import {
     Calendar, Clock, ChevronLeft, ChevronRight, BookOpen,
     CheckCircle2, HelpCircle, FileText, Settings2, GraduationCap,
-    PlayCircle, ArrowRight, Layers, ListChecks, Users2, Trophy
+    PlayCircle, ArrowRight, Layers, ListChecks, Users2, Trophy, Lock, CheckSquare2
 } from 'lucide-vue-next';
 
 interface Question {
@@ -35,7 +35,10 @@ interface Exam {
     parts: ExamPart[];
 }
 
-const props = defineProps<{ exam: Exam }>();
+const props = defineProps<{ 
+    exam: Exam;
+    submissions: Record<number, string>;
+}>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
@@ -52,6 +55,18 @@ const isSubmitting = ref(false);
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
 );
+
+const submittedPartsCount = computed(() =>
+    Object.keys(props.submissions).length
+);
+
+const allPartsSubmitted = computed(() =>
+    submittedPartsCount.value === props.exam.parts.length && props.exam.parts.length > 0
+);
+
+const isPartSubmitted = (partId: number) => {
+    return !!props.submissions[partId];
+};
 
 const formatDateTime = (dateStr: string) => new Date(dateStr).toLocaleString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -86,6 +101,11 @@ const getQuestionTypes = (part: ExamPart) =>
 const formatType = (type: string) => type.replace(/_/g, ' ');
 
 const selectPart = (part: ExamPart) => {
+    // Prevent selecting if part is already submitted
+    if (isPartSubmitted(part.id)) {
+        return;
+    }
+
     selectedPart.value = part;
     examStarted.value = false;
 
@@ -314,8 +334,13 @@ onMounted(() => {
 
                     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part)"
-                            class="exam-part-card animate-up relative overflow-hidden rounded-3xl border bg-gradient-to-br from-card via-card/80 to-muted cursor-pointer group transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-black/10 h-full"
-                            :class="getPartColor(index)">
+                            class="exam-part-card animate-up relative overflow-hidden rounded-3xl border bg-gradient-to-br from-card via-card/80 to-muted group transition-all duration-300 h-full"
+                            :class="[
+                                isPartSubmitted(part.id) 
+                                    ? 'opacity-60 cursor-not-allowed' 
+                                    : 'cursor-pointer hover:scale-[1.01] hover:shadow-xl hover:shadow-black/10',
+                                getPartColor(index)
+                            ]">
                             <!-- Top shimmer on hover -->
                             <div
                                 class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
@@ -330,11 +355,18 @@ onMounted(() => {
                             <div class="relative p-5 flex flex-col gap-3 h-full">
                                 <!-- Content -->
                                 <div class="flex-1 min-w-0">
-                                    <div
-                                        class="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-1">
-                                        Part {{ index + 1 }}</div>
+                                    <div class="flex items-center gap-2 justify-between mb-1">
+                                        <div
+                                            class="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest">
+                                            Part {{ index + 1 }}</div>
+                                        <div v-if="isPartSubmitted(part.id)" class="flex items-center gap-1">
+                                            <CheckSquare2 class="w-3.5 h-3.5 text-green-500" />
+                                            <span class="text-[9px] font-semibold text-green-600 uppercase tracking-widest">Submitted</span>
+                                        </div>
+                                    </div>
                                     <h3
-                                        class="text-base font-bold truncate text-foreground group-hover:text-primary transition-colors">
+                                        class="text-base font-bold truncate transition-colors"
+                                        :class="isPartSubmitted(part.id) ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary'">
                                         {{ part.title }}</h3>
                                     <div class="flex flex-wrap items-center gap-1.5 mt-2">
                                         <span v-for="type in getQuestionTypes(part)" :key="type"
@@ -348,11 +380,17 @@ onMounted(() => {
                                     </div>
                                 </div>
 
-                                <!-- Arrow indicator -->
+                                <!-- Arrow or Lock indicator -->
                                 <div
-                                    class="flex-shrink-0 self-end w-9 h-9 rounded-full bg-muted/70 border border-border/60 flex items-center justify-center opacity-80 group-hover:opacity-100 group-hover:bg-primary/10 group-hover:border-primary/40 transition-all">
-                                    <ArrowRight
-                                        class="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
+                                    class="flex-shrink-0 self-end w-9 h-9 rounded-full flex items-center justify-center transition-all"
+                                    :class="isPartSubmitted(part.id)
+                                        ? 'bg-muted/50 border border-border/40 opacity-60'
+                                        : 'bg-muted/70 border border-border/60 opacity-80 group-hover:opacity-100 group-hover:bg-primary/10 group-hover:border-primary/40'">
+                                    <component :is="isPartSubmitted(part.id) ? Lock : ArrowRight"
+                                        class="w-4 h-4 transition-colors"
+                                        :class="isPartSubmitted(part.id)
+                                            ? 'text-muted-foreground/70'
+                                            : 'text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5'" />
                                 </div>
                             </div>
                         </div>
