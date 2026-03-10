@@ -35,7 +35,28 @@ class SubmissionsRelationManager extends RelationManager
                     ->label('Exam Part'),
                 Forms\Components\Textarea::make('answers')
                     ->label('Answers')
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->disabled()
+                    ->formatStateUsing(function ($state) {
+                        // Convert array of answer objects to readable format
+                        $answers = is_array($state) ? $state : json_decode($state, true) ?? [];
+                        
+                        if (empty($answers)) {
+                            return 'No answers provided';
+                        }
+                        
+                        $formatted = [];
+                        foreach ($answers as $answer) {
+                            $qNum = $answer['question_number'] ?? '?';
+                            $qText = $answer['question_text'] ?? 'Unknown Question';
+                            $qType = $answer['question_type'] ?? 'unknown';
+                            $ans = $answer['answer'] ?? 'No answer provided';
+                            
+                            $formatted[] = "Q{$qNum} ({$qType}): {$qText}\nAnswer: {$ans}";
+                        }
+                        
+                        return implode("\n" . str_repeat('-', 50) . "\n", $formatted);
+                    }),
                 Forms\Components\Select::make('status')
                     ->options([
                         'submitted' => 'Submitted',

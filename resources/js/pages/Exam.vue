@@ -211,4 +211,8 @@ onMounted(() => {
 .animate-section {
     will-change: transform, opacity;
 }
+
+.exam-card {
+    opacity: 1;
+}
 </style>

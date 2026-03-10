@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 use App\Models\Exam;
+use App\Models\ExamPart;
+use App\Models\ExamSubmission;
 use Inertia\Inertia;
 
 class ExamController extends Controller
@@ -37,5 +39,28 @@ class ExamController extends Controller
         return Inertia::render('Exams/Show', [
             'exam' => $exam,
         ]);
+    }
+
+    public function submitPart(Request $request, Exam $exam, ExamPart $examPart)
+    {
+        // Validate the request
+        $validated = $request->validate([
+            'answers' => 'required|array',
+        ]);
+
+        // Create or update submission
+        $submission = ExamSubmission::updateOrCreate(
+            [
+                'user_id' => $request->user()->id,
+                'exam_id' => $exam->id,
+                'exam_part_id' => $examPart->id,
+            ],
+            [
+                'answers' => json_encode($validated['answers']),
+                'status' => 'submitted',
+            ]
+        );
+
+        return redirect()->back();
     }
 }

@@ -144,6 +144,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('exams', [ExamController::class, 'index'])->name('exams.index');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->name('exams.show');
+    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->name('exams.submitPart');
+
+    // Admin routes
+    Route::get('admin/exams/submissions', [\App\Http\Controllers\Admin\ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');
+    Route::get('admin/exams/{exam}/submissions', [\App\Http\Controllers\Admin\ExamSubmissionController::class, 'examSubmissions'])->name('admin.exams.submissions.by-exam');
 });
 
 require __DIR__ . '/settings.php';
