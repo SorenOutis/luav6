@@ -67,6 +67,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ];
         });
 
+        // 5. Upcoming Exams (Published exams, ordered by date)
+        $upcomingExams = \App\Models\Exam::where('status', '!=', 'draft')
+            ->orderBy('exam_date', 'asc')
+            ->limit(3)
+            ->get()
+            ->map(function ($exam) use ($user) {
+                $submittedPartsCount = \App\Models\ExamSubmission::where('user_id', $user->id)
+                    ->where('exam_id', $exam->id)
+                    ->distinct('exam_part_id')
+                    ->count();
+                
+                $totalParts = $exam->parts()->count();
+                
+                return [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'description' => $exam->description,
+                    'exam_date' => $exam->exam_date->format('M d, Y'),
+                    'duration_minutes' => $exam->duration_minutes,
+                    'status' => $exam->status,
+                    'parts_count' => $totalParts,
+                    'submitted_parts' => $submittedPartsCount,
+                    'is_completed' => $submittedPartsCount === $totalParts && $totalParts > 0,
+                ];
+            });
+        
+
         // 4. Leaderboard (Scoped to Current Season)
         if ($currentSeason) {
             $leaderboardUsers = \App\Models\SeasonProgress::with('user')
@@ -131,6 +158,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'announcements' => $announcements,
             'courses' => $courses,
             'assignments' => $assignments,
+            'upcomingExams' => $upcomingExams,
             'leaderboardUsers' => $leaderboardUsers,
             'activeSeason' => $currentSeason ? [
                 'id' => $currentSeason->id,

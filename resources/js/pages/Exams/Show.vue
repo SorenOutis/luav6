@@ -51,6 +51,9 @@ const examStarted = ref(false);
 const container = ref<HTMLElement | null>(null);
 const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
 const isSubmitting = ref(false);
+const showSuccessModal = ref(false);
+const successModalRef = ref<HTMLElement | null>(null);
+const partsPendingCount = ref(0);
 
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
@@ -62,6 +65,10 @@ const submittedPartsCount = computed(() =>
 
 const allPartsSubmitted = computed(() =>
     submittedPartsCount.value === props.exam.parts.length && props.exam.parts.length > 0
+);
+
+const remainingPartsCount = computed(() =>
+    props.exam.parts.length - submittedPartsCount.value
 );
 
 const isPartSubmitted = (partId: number) => {
@@ -175,13 +182,54 @@ const submitPart = async () => {
             answers: detailedAnswers,
         }, {
             onSuccess: () => {
-                // Reset and go back to parts list
-                Object.keys(answers).forEach(key => delete answers[key]);
-                goBackToList();
+                // Show success modal
+                showSuccessModal.value = true;
+                partsPendingCount.value = remainingPartsCount.value - 1;
+
+                // Animate modal
+                setTimeout(() => {
+                    if (successModalRef.value) {
+                        gsap.fromTo(
+                            successModalRef.value,
+                            { opacity: 0, scale: 0.85, y: 30 },
+                            { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
+                        );
+
+                        // Bounce animation for checkmark
+                        gsap.fromTo(
+                            '.success-checkmark',
+                            { scale: 0, rotate: -180 },
+                            { scale: 1, rotate: 0, duration: 0.8, delay: 0.2, ease: 'elastic.out(1.2, 0.4)' }
+                        );
+                    }
+                }, 10);
+
+                // Auto close after 4 seconds
+                setTimeout(() => {
+                    closeSuccessModal();
+                }, 4000);
             },
         });
     } finally {
         isSubmitting.value = false;
+    }
+};
+
+const closeSuccessModal = () => {
+    if (successModalRef.value) {
+        gsap.to(successModalRef.value, {
+            opacity: 0,
+            scale: 0.85,
+            y: 30,
+            duration: 0.4,
+            ease: 'power2.in',
+            onComplete: () => {
+                showSuccessModal.value = false;
+                // Reset and go back to parts list
+                Object.keys(answers).forEach(key => delete answers[key]);
+                goBackToList();
+            }
+        });
     }
 };
 
@@ -494,6 +542,68 @@ onMounted(() => {
                 </template>
 
             </div>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!--  SUCCESS MODAL OVERLAY                                  -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <transition name="modal-fade">
+                <div v-if="showSuccessModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div ref="successModalRef" 
+                        class="relative max-w-md w-full rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card/95 to-primary/5 backdrop-blur-2xl p-8 shadow-2xl overflow-hidden">
+                        
+                        <!-- Decorative background elements -->
+                        <div class="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
+                        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+                        
+                        <!-- Content -->
+                        <div class="relative z-10 flex flex-col items-center gap-6 text-center">
+                            <!-- Success Checkmark -->
+                            <div class="success-checkmark relative w-20 h-20 flex items-center justify-center">
+                                <div class="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/30 dark:to-primary/10 animate-pulse"></div>
+                                <div class="absolute inset-0 rounded-full border-2 border-primary/30 dark:border-primary/50"></div>
+                                <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+
+                            <!-- Message -->
+                            <div class="space-y-2">
+                                <h3 class="text-2xl font-bold text-foreground">Part Submitted</h3>
+                                <p class="text-muted-foreground text-sm leading-relaxed">
+                                    Great job! Your answers have been saved successfully.
+                                </p>
+                            </div>
+
+                            <!-- Progress Info -->
+                            <div v-if="partsPendingCount > 0" class="w-full pt-4 border-t border-border/30">
+                                <div class="flex items-center justify-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-primary/80 dark:bg-primary animate-pulse"></div>
+                                    <span class="text-sm font-semibold text-primary/80 dark:text-primary">
+                                        {{ partsPendingCount }} {{ partsPendingCount === 1 ? 'part' : 'parts' }} remaining
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- All Complete Message -->
+                            <div v-else class="w-full pt-4 border-t border-border/30">
+                                <div class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/40">
+                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                    <span class="text-sm font-semibold text-primary">Exam Complete!</span>
+                                </div>
+                            </div>
+
+                            <!-- Action Button -->
+                            <button @click="closeSuccessModal"
+                                class="w-full mt-4 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2">
+                                {{ partsPendingCount > 0 ? 'Continue' : 'Back to Exams' }}
+                                <ChevronRight class="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
         </div>
     </AppLayout>
 </template>
@@ -507,5 +617,20 @@ onMounted(() => {
 
 .animate-up {
     will-change: transform, opacity;
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+.modal-fade-enter-to,
+.modal-fade-leave-from {
+    opacity: 1;
 }
 </style>

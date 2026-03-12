@@ -24,7 +24,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const dashboardContainer = ref<HTMLElement | null>(null);
 
-import { usePage } from '@inertiajs/vue3';
+import { usePage, Link } from '@inertiajs/vue3';
+import { BookOpen, Clock } from 'lucide-vue-next';
+import { index as examsIndex, show as examsShow } from '@/routes/exams';
 
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
@@ -73,6 +75,18 @@ interface Announcement {
     description: string;
 }
 
+interface Exam {
+    id: number;
+    title: string;
+    description: string;
+    exam_date: string;
+    duration_minutes: number;
+    status: string;
+    parts_count: number;
+    submitted_parts: number;
+    is_completed: boolean;
+}
+
 const props = defineProps<{
     userStats: {
         totalXP: number;
@@ -90,6 +104,7 @@ const props = defineProps<{
     announcements: Announcement[];
     courses: Course[];
     assignments: Assignment[];
+    upcomingExams: Exam[];
     leaderboardUsers: LeaderboardUser[];
     activeSeason: Season | null;
 }>();
@@ -101,6 +116,7 @@ const totalXPProgress = computed(() => Math.min(100, (userStats.value.totalXP / 
 const announcements = computed(() => props.announcements);
 const courses = computed(() => props.courses);
 const assignments = computed(() => props.assignments);
+const upcomingExams = computed(() => props.upcomingExams);
 const leaderboardUsers = computed(() => props.leaderboardUsers);
 
 const streak = computed(() => ({
@@ -248,6 +264,7 @@ const handleQuickAction = (action: string) => {
                     :unread-notification-count="3"
                     :weekly-x-p="userStats.currentXP" 
                     :weekly-goal="1000"
+                    :upcoming-exams="upcomingExams"
                     @quick-action="handleQuickAction"
                 />
             </div>
