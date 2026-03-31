@@ -59,6 +59,66 @@ const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
 );
 
+// ─── LIVE TIMER LOGIC ───────────────────────────────────────
+const timeLeftSeconds = ref(props.exam.duration_minutes * 60);
+const timerInterval = ref<ReturnType<typeof setInterval> | null>(null);
+
+const formattedTime = computed(() => {
+    const mins = Math.floor(timeLeftSeconds.value / 60);
+    const secs = timeLeftSeconds.value % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+});
+
+const startTimer = () => {
+    if (timerInterval.value) return;
+    timerInterval.value = setInterval(() => {
+        if (timeLeftSeconds.value > 0) {
+            timeLeftSeconds.value--;
+        } else {
+            stopTimer();
+            if (examStarted.value && !isSubmitting.value) {
+                submitPart(); // Auto-submit on timeout
+            }
+        }
+    }, 1000);
+};
+
+const stopTimer = () => {
+    if (timerInterval.value) {
+        clearInterval(timerInterval.value);
+        timerInterval.value = null;
+    }
+};
+
+// ─── PROGRESS NAVIGATOR LOGIC ──────────────────────────────────
+const getQuestionStatus = (index: number) => {
+    if (answers[index] !== undefined && answers[index] !== '') return 'answered';
+    return 'pending';
+};
+
+// ─── INTEGRITY & ANTI-CHEATING ───────────────────────────────
+const integrityWarnings = ref(0);
+const showIntegrityAlert = ref(false);
+
+const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden' && examStarted.value) {
+        integrityWarnings.value++;
+        showIntegrityAlert.value = true;
+        
+        // Auto-close alert after 5 seconds
+        setTimeout(() => {
+            showIntegrityAlert.value = false;
+        }, 5000);
+    }
+};
+
+const preventCheatingActions = (e: Event) => {
+    if (examStarted.value) {
+        e.preventDefault();
+        return false;
+    }
+};
+
 const submittedPartsCount = computed(() =>
     Object.keys(props.submissions).length
 );
@@ -119,6 +179,7 @@ const selectPart = (part: ExamPart) => {
 
 const startPart = () => {
     examStarted.value = true;
+    startTimer(); // Start the countdown when the first section begins
 
     setTimeout(() => {
         gsap.fromTo(
@@ -143,6 +204,12 @@ const startPart = () => {
         );
     }, 10);
 };
+
+onMounted(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('contextmenu', preventCheatingActions);
+    document.addEventListener('copy', preventCheatingActions);
+});
 
 const goBackToList = () => {
     selectedPart.value = null;
@@ -292,17 +359,27 @@ onMounted(() => {
             <div class="flex-1 flex flex-col p-4 md:p-8 gap-6 relative z-10">
 
                 <!-- ─── BREADCRUMB NAV ─────────────────────────────────── -->
-                <div class="animate-up">
-                    <button v-if="selectedPart" @click="goBackToList"
-                        class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group px-3 py-1.5 rounded-lg hover:bg-muted/50">
-                        <ChevronLeft class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                        Back to Parts
-                    </button>
-                    <Link v-else href="/exams"
-                        class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group px-3 py-1.5 rounded-lg hover:bg-muted/50">
-                        <ChevronLeft class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                        All Exams
-                    </Link>
+                <div class="animate-up flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <button v-if="selectedPart" @click="goBackToList"
+                            class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group px-3 py-1.5 rounded-lg hover:bg-muted/50">
+                            <ChevronLeft class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                            Back to Parts
+                        </button>
+                        <Link v-else href="/exams"
+                            class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group px-3 py-1.5 rounded-lg hover:bg-muted/50">
+                            <ChevronLeft class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                            All Exams
+                        </Link>
+                    </div>
+
+                    <!-- Live Floating Timer -->
+                    <div v-if="examStarted" 
+                        class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-500"
+                        :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse' : 'text-primary'">
+                        <Clock class="w-4 h-4" />
+                        <span class="font-black text-base tracking-widest tabular-nums">{{ formattedTime }}</span>
+                    </div>
                 </div>
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
@@ -482,73 +559,117 @@ onMounted(() => {
                     </div>
                 </template>
 
-
-
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <!--  QUESTIONS STATE (after start)                          -->
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <template v-else>
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-bold">{{ selectedPart!.title }}</h2>
-                        <span
-                            class="text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full border border-border/50">
-                            {{ selectedPart!.questions?.length ?? 0 }} Question{{ (selectedPart!.questions?.length ?? 0)
-                            !== 1 ? 's' : '' }}
-                        </span>
-                    </div>
-
-                    <div class="flex flex-col gap-3">
-                        <div v-for="(question, qIndex) in selectedPart!.questions" :key="qIndex"
-                            class="question-card rounded-xl border border-border/40 bg-card/40 backdrop-blur-md p-4 md:p-5 flex flex-col md:flex-row gap-4 md:items-center">
-                            <!-- Question index & type -->
-                            <div class="flex items-center gap-3 flex-shrink-0">
-                                <div
-                                    class="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-base font-black text-primary">
-                                    {{ qIndex + 1 }}
-                                </div>
-                                <div class="md:hidden">
-                                    <span
-                                        class="text-[9px] px-2 py-0.5 rounded-md bg-primary/5 text-primary/60 uppercase font-bold tracking-widest border border-primary/10">{{
-                                        formatType(question.type) }}</span>
-                                </div>
+                    <div class="flex flex-col lg:flex-row lg:items-start gap-8">
+                        <!-- Main Question List -->
+                        <div class="flex-1 space-y-6">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-lg font-bold flex items-center gap-2">
+                                    <Layers class="w-4 h-4 text-primary" />
+                                    {{ selectedPart!.title }}
+                                </h2>
+                                <span
+                                    class="text-[10px] font-black text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg border border-border/40 uppercase tracking-widest">
+                                    {{ selectedPart!.questions?.length ?? 0 }} Tasks
+                                </span>
                             </div>
 
-                            <!-- Question text -->
-                            <div class="flex-1 min-w-0">
-                                <div class="hidden md:flex items-center gap-2 mb-1">
-                                    <span
-                                        class="text-[9px] px-2 py-0.5 rounded-md bg-primary/5 text-primary/60 uppercase font-bold tracking-widest border border-primary/10">{{
-                                        formatType(question.type) }}</span>
-                                </div>
-                                <p class="text-base font-bold leading-tight text-foreground/90 truncate md:whitespace-normal">{{ question.text }}</p>
-                            </div>
+                            <div class="flex flex-col gap-3">
+                                <div v-for="(question, qIndex) in selectedPart!.questions" :key="qIndex"
+                                    :id="`q-${qIndex}`"
+                                    class="question-card rounded-xl border border-border/40 bg-card/10 backdrop-blur-md p-4 md:p-5 flex flex-col md:flex-row gap-4 md:items-center transition-all"
+                                    :class="getQuestionStatus(qIndex) === 'answered' ? 'border-primary/20 bg-primary/2' : ''">
+                                    
+                                    <!-- Question identifier -->
+                                    <div class="flex items-center gap-3 flex-shrink-0">
+                                        <div
+                                            class="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-base font-black text-primary">
+                                            {{ qIndex + 1 }}
+                                        </div>
+                                    </div>
 
-                            <!-- Answer Area (Compact) -->
-                            <div class="flex-shrink-0 w-full md:w-auto md:min-w-[300px]">
-                                <!-- Multiple Choice / True-False (Small row) -->
-                                <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'"
-                                    class="flex flex-wrap gap-2">
-                                    <label v-for="(option, oIndex) in question.options" :key="option.text"
-                                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all has-[:checked]:border-primary/60 has-[:checked]:bg-primary/10">
-                                        <input type="radio" :name="`q-${qIndex}`" :value="oIndex"
-                                            v-model.number="answers[qIndex]" class="sr-only" />
-                                        <span class="text-xs font-semibold">{{ option.text }}</span>
-                                    </label>
-                                </div>
+                                    <!-- Question text -->
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span
+                                                class="text-[9px] px-2 py-0.5 rounded-md bg-primary/5 text-primary/60 uppercase font-black tracking-[0.1em] border border-primary/10">{{
+                                                formatType(question.type) }}</span>
+                                        </div>
+                                        <p class="text-base font-bold leading-tight text-foreground/90 truncate md:whitespace-normal">{{ question.text }}</p>
+                                    </div>
 
-                                <!-- Identification (Tiny input) -->
-                                <div v-else-if="question.type === 'identification'">
-                                    <input v-model="answers[qIndex]" type="text" placeholder="Short answer..."
-                                        class="w-full px-4 py-2 rounded-lg border border-border/40 bg-muted/30 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-sm" />
-                                </div>
+                                    <!-- Answer Area -->
+                                    <div class="flex-shrink-0 w-full md:w-auto md:min-w-[300px]">
+                                        <!-- Multiple Choice / True-False -->
+                                        <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'"
+                                            class="flex flex-wrap gap-2">
+                                            <label v-for="(option, oIndex) in question.options" :key="option.text"
+                                                class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/50 bg-muted/10 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all has-[:checked]:border-primary/60 has-[:checked]:bg-primary/10">
+                                                <input type="radio" :name="`q-${qIndex}`" :value="oIndex"
+                                                    v-model.number="answers[qIndex]" class="sr-only" />
+                                                <span class="text-xs font-bold">{{ option.text }}</span>
+                                            </label>
+                                        </div>
 
-                                <!-- Essay (Small textarea) -->
-                                <div v-else-if="question.type === 'essay'">
-                                    <textarea v-model="answers[qIndex]" rows="2" placeholder="Write answer..."
-                                        class="w-full px-4 py-2 rounded-lg border border-border/40 bg-muted/30 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-sm resize-none"></textarea>
+                                        <!-- Identification -->
+                                        <div v-else-if="question.type === 'identification'">
+                                            <input v-model="answers[qIndex]" type="text" placeholder="Type answer..."
+                                                class="w-full px-4 py-2 rounded-lg border border-border/40 bg-muted/20 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-sm font-medium" />
+                                        </div>
+
+                                        <!-- Essay -->
+                                        <div v-else-if="question.type === 'essay'">
+                                            <textarea v-model="answers[qIndex]" rows="2" placeholder="Write response..."
+                                                class="w-full px-4 py-2 rounded-lg border border-border/40 bg-muted/20 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-sm font-medium resize-none"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Progress Navigator (Mini-Map) -->
+                        <div class="hidden lg:block sticky top-8 w-64 space-y-4">
+                            <div class="p-5 rounded-2xl border border-white/5 bg-card/30 backdrop-blur-2xl shadow-xl">
+                                <h3 class="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4">Navigator</h3>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <a v-for="(_, qIndex) in selectedPart!.questions" :key="qIndex"
+                                        :href="`#q-${qIndex}`"
+                                        class="aspect-square rounded-lg flex items-center justify-center text-xs font-black transition-all border border-border/40"
+                                        :class="[
+                                            getQuestionStatus(qIndex) === 'answered'
+                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                : 'bg-muted/30 text-muted-foreground hover:border-primary/50'
+                                        ]">
+                                        {{ qIndex + 1 }}
+                                    </a>
+                                </div>
+                                <div class="mt-6 pt-4 border-t border-border/10 space-y-2">
+                                    <div class="flex items-center justify-between text-[10px] font-bold">
+                                        <span class="text-muted-foreground uppercase opacity-60">Completion</span>
+                                        <span>{{ Math.round((Object.keys(answers).length / selectedPart!.questions!.length) * 100) }}%</span>
+                                    </div>
+                                    <div class="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                        <div class="h-full bg-primary transition-all duration-500" 
+                                            :style="{ width: `${(Object.keys(answers).length / selectedPart!.questions!.length) * 100}%` }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mobile Bottom Bar Navigator (Small) -->
+                    <div class="lg:hidden fixed bottom-0 left-0 right-0 p-4 z-40">
+                         <div class="bg-black/80 backdrop-blur-2xl rounded-2xl border border-white/10 p-3 shadow-2xl flex items-center gap-3 overflow-x-auto no-scrollbar">
+                            <div class="text-[9px] font-black uppercase text-muted-foreground vertical-writing rotate-180 mr-1">NAV</div>
+                            <div v-for="(_, qIndex) in selectedPart!.questions" :key="qIndex"
+                                class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black border border-white/5 transition-all"
+                                :class="getQuestionStatus(qIndex) === 'answered' ? 'bg-primary text-primary-foreground' : 'bg-white/5 text-white/40'">
+                                {{ qIndex + 1 }}
+                            </div>
+                         </div>
                     </div>
 
                     <!-- Submit bar -->
