@@ -592,13 +592,13 @@ onMounted(() => {
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
                 <div
-                    class="animate-up exam-hero relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-gradient-to-br from-card/80 via-card/40 to-primary/5 backdrop-blur-3xl p-5 md:px-10 md:py-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
+                    class="animate-up exam-hero relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-gradient-to-br from-card/80 via-card/40 to-primary/5 backdrop-blur-3xl p-4 md:px-8 md:py-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
                     <!-- Dynamic background glow -->
                     <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/15 rounded-full blur-3xl pointer-events-none"></div>
                     
                     <!-- Decorative Large Icon -->
                     <div class="pointer-events-none absolute -right-6 -top-6 opacity-5 md:opacity-10 rotate-12">
-                        <GraduationCap class="w-72 h-72 text-primary" />
+                        <GraduationCap class="w-48 h-48 text-primary" />
                     </div>
 
                     <!-- Inner Glow / Border Highlight -->
@@ -614,7 +614,7 @@ onMounted(() => {
                                 </span>
                             </div>
                             
-                            <h1 class="text-2xl md:text-5xl font-black tracking-tight leading-[1.1] premium-gradient-text max-w-3xl">
+                            <h1 class="text-xl md:text-3xl font-black tracking-tight leading-[1.1] premium-gradient-text max-w-3xl">
                                 {{ selectedPart ? selectedPart.title : exam.title }}
                             </h1>
                             
@@ -637,9 +637,9 @@ onMounted(() => {
                                     <div class="p-1 md:p-1.5 rounded-lg bg-green-500/10 text-green-500">
                                         <Trophy class="w-3.5 h-3.5 md:w-4 md:h-4" />
                                     </div>
-                                    <div class="text-lg md:text-2xl font-black text-green-500">{{ totalScore }}/{{ totalPossiblePoints }}</div>
+                                    <div class="text-lg md:text-xl font-black text-green-500">{{ totalScore }}/{{ totalPossiblePoints }}</div>
                                 </div>
-                                <div class="text-[8px] md:text-[9px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Score</div>
+                                <div class="text-[7px] md:text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Score</div>
                             </div>
                             
                             <div v-if="allPartsSubmitted" class="hidden md:block w-px h-10 bg-white/5"></div>
@@ -696,9 +696,9 @@ onMounted(() => {
                         </span>
                     </div>
 
-                    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
-                            class="exam-part-card animate-up surface-card premium-hover group h-full p-6 md:p-8"
+                            class="exam-part-card animate-up surface-card premium-hover group h-full p-4 md:p-6"
                             :class="[
                                 (isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index))
                                     ? 'opacity-60 cursor-not-allowed grayscale-[0.5]' 
@@ -711,8 +711,8 @@ onMounted(() => {
 
                             <!-- Silhouette background icon -->
                             <div
-                                class="pointer-events-none absolute -right-6 -bottom-6 opacity-5 group-hover:opacity-15 group-hover:scale-110 transition-all duration-700">
-                                <component :is="getPartIcon(part.type)" class="w-40 h-40 text-foreground" />
+                                class="pointer-events-none absolute -right-3 -bottom-3 opacity-5 group-hover:opacity-15 group-hover:scale-110 transition-all duration-700">
+                                <component :is="getPartIcon(part.type)" class="w-24 h-24 text-foreground" />
                             </div>
 
                             <div class="relative flex flex-col gap-6 h-full">
@@ -756,7 +756,7 @@ onMounted(() => {
                                 <!-- Center: Title & Types -->
                                 <div class="flex-1 space-y-3">
                                     <h3
-                                        class="text-xl md:text-2xl font-black leading-tight transition-colors"
+                                        class="text-lg md:text-xl font-black leading-tight transition-colors"
                                         :class="isPartSubmitted(part.id) || isPartLocked(index) ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary'">
                                         {{ part.title }}
                                     </h3>

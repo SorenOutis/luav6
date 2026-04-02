@@ -67,7 +67,7 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
         </TransitionGroup>
 
         <!-- Bespoke Hero Section -->
-        <div class="surface-card p-6 sm:p-10 relative overflow-hidden group">
+        <div class="surface-card p-4 sm:p-7 relative overflow-hidden group">
             <!-- Decorative Elements -->
             <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[100px] transition-transform duration-1000 group-hover:scale-150"></div>
             
@@ -76,10 +76,10 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
                     <div class="flex items-center gap-2 mb-1">
                         <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase">System Online</span>
                     </div>
-                    <h1 class="text-4xl sm:text-5xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
+                    <h1 class="text-3xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
                         {{ timeBasedGreeting }}, {{ userName }}
                     </h1>
-                    <p class="text-muted-foreground text-sm sm:text-base font-medium max-w-md leading-relaxed">
+                    <p class="text-muted-foreground text-xs sm:text-sm font-medium max-w-sm leading-relaxed">
                         Ready to transcend your limits? Your learning engine is primed and at <span class="text-foreground font-bold">peak performance</span>.
                     </p>
                 </div>
@@ -101,13 +101,13 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
                         </div>
                         
                         <!-- Core Level Chip -->
-                        <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border border-primary/20 bg-card/40 flex flex-col items-center justify-center shadow-[0_0_50px_-12px_rgba(var(--primary),0.2)] relative z-10 backdrop-blur-2xl group-hover:border-primary/40 transition-colors duration-500">
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-primary/20 bg-card/40 flex flex-col items-center justify-center shadow-[0_0_50px_-12px_rgba(var(--primary),0.2)] relative z-10 backdrop-blur-2xl group-hover:border-primary/40 transition-colors duration-500">
                             <div class="absolute inset-0 rounded-full bg-gradient-to-b from-primary/5 to-transparent"></div>
-                            <span class="text-[10px] uppercase font-black tracking-[0.2em] text-primary/60 mb-1">Level</span>
-                            <span class="text-3xl sm:text-4xl font-black font-mono tracking-tighter leading-none premium-gradient-text">{{ animatedLevel }}</span>
-                            <div class="mt-2 flex items-center justify-center relative">
+                            <span class="text-[8px] uppercase font-black tracking-[0.2em] text-primary/60 mb-0.5">Level</span>
+                            <span class="text-xl sm:text-2xl font-black font-mono tracking-tighter leading-none premium-gradient-text">{{ animatedLevel }}</span>
+                            <div class="mt-1 flex items-center justify-center relative">
                                 <div class="absolute inset-0 blur-lg bg-primary/20 rounded-full animate-pulse"></div>
-                                <Award class="w-4 h-4 text-primary relative z-10" />
+                                <Award class="w-3 h-3 text-primary relative z-10" />
                             </div>
                         </div>
                     </div>
@@ -115,8 +115,8 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
                     <div class="flex-1 md:w-64 space-y-3">
                         <div class="flex justify-between items-end">
                             <div class="space-y-0.5">
-                                <p class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Energy Levels</p>
-                                <p class="text-sm font-bold">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground font-medium">/ {{ maxXPForLevel.toLocaleString() }} XP</span></p>
+                                <p class="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Energy Levels</p>
+                                <p class="text-xs font-bold">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground font-medium">/ {{ maxXPForLevel.toLocaleString() }} XP</span></p>
                             </div>
                             <div class="flex items-center gap-1 text-[10px] font-bold text-primary">
                                 <Zap class="w-3 h-3 fill-current" />

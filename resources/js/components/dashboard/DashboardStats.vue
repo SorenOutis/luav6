@@ -82,9 +82,9 @@ const displayStats = computed(() => [
 </script>
 
 <template>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div v-for="(stat, idx) in displayStats" :key="stat.label"
-            class="surface-card p-6 premium-hover group animate-fade-up relative overflow-hidden"
+            class="surface-card p-4 sm:p-5 premium-hover group animate-fade-up relative overflow-hidden"
             :class="`stagger-${idx + 1}`"
             @mousemove="handleMouseMove"
         >
@@ -94,12 +94,12 @@ const displayStats = computed(() => [
             </div>
 
             <!-- Silhouette Background Icon - Moved to Upper Right -->
-            <div class="absolute -right-6 -top-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
-                <component :is="stat.icon" class="w-32 h-32 rotate-12" />
+            <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
+                <component :is="stat.icon" class="w-20 h-20 rotate-12" />
             </div>
 
             <div class="relative z-10">
-                <div class="flex items-start mb-8">
+                <div class="flex items-start mb-4">
                     <!-- Showing only the trending badge on the left -->
                     <div class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-bold border border-emerald-500/10">
                         <TrendingUp class="w-3 h-3" />
@@ -107,10 +107,10 @@ const displayStats = computed(() => [
                     </div>
                 </div>
 
-                <div class="space-y-1.5">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 leading-none">{{ stat.label }}</p>
+                <div class="space-y-1">
+                    <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 leading-none">{{ stat.label }}</p>
                     <div class="flex items-baseline gap-1.5">
-                        <h3 class="text-4xl font-black tracking-tighter leading-none">
+                        <h3 class="text-2xl sm:text-3xl font-black tracking-tighter leading-none">
                             {{ stat.value }}
                         </h3>
                         <span class="text-[10px] font-black uppercase tracking-wider text-muted-foreground/40">{{ stat.suffix }}</span>
@@ -118,7 +118,7 @@ const displayStats = computed(() => [
                 </div>
 
                 <!-- Subtle Detail Bar -->
-                <div class="mt-6 pt-6 border-t border-border/10 flex items-center justify-between">
+                <div class="mt-4 pt-4 border-t border-border/10 flex items-center justify-between">
                     <span class="text-[10px] font-bold text-muted-foreground/50 tracking-wide uppercase">{{ stat.detail }}</span>
                     <Sparkles class="w-3 h-3 text-muted-foreground/30 group-hover:text-primary group-hover:scale-110 transition-all duration-500" />
                 </div>

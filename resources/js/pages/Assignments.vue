@@ -274,10 +274,10 @@ declare const route: any;
 
             <div class="assignments-hero header-content flex flex-col md:flex-row md:items-center justify-between gap-6 z-10">
                 <div>
-                    <h1 class="text-3xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent uppercase">
+                    <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent uppercase">
                         Mission Briefings
                     </h1>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mt-1">Complete your objectives to earn XP and advance your rank.</p>
+                    <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mt-0.5">Complete your objectives to earn XP and advance your rank.</p>
                 </div>
                 
                 <div class="flex items-center gap-4">
@@ -314,57 +314,57 @@ declare const route: any;
 
             <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 z-10">
-                <div class="stats-card surface-card p-6 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
+                <div class="stats-card surface-card p-4 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
                     <!-- Hover Bloom Effect -->
                     <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
                         :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.1), transparent 40%)` }">
                     </div>
-                    <div class="absolute -right-6 -top-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
-                        <Clock class="w-32 h-32 rotate-12" />
+                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
+                        <Clock class="w-16 h-16 rotate-12" />
                     </div>
                     <div class="relative z-10">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">Active Objectives</p>
-                        <h3 class="text-4xl font-black tracking-tighter mt-2">
+                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">Active Objectives</p>
+                        <h3 class="text-2xl font-black tracking-tighter mt-1">
                             {{ assignments.filter(a => !a.submission?.submitted).length }}
                         </h3>
-                        <div class="mt-4 pt-4 border-t border-border/10">
-                            <span class="text-[10px] font-bold text-muted-foreground/50 tracking-wide uppercase">Immediate priority</span>
+                        <div class="mt-3 pt-3 border-t border-border/10">
+                            <span class="text-[9px] font-bold text-muted-foreground/50 tracking-wide uppercase">Immediate priority</span>
                         </div>
                     </div>
                 </div>
                 
-                <div class="stats-card surface-card p-6 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
+                <div class="stats-card surface-card p-4 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
                     <!-- Hover Bloom Effect -->
                     <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
                         :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.05), transparent 40%)` }">
                     </div>
-                    <div class="absolute -right-6 -top-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
-                        <CheckCircle2 class="w-32 h-32 rotate-12" />
+                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
+                        <CheckCircle2 class="w-16 h-16 rotate-12" />
                     </div>
                     <div class="relative z-10">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">Completed Missions</p>
-                        <h3 class="text-4xl font-black tracking-tighter mt-2">
+                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">Completed Missions</p>
+                        <h3 class="text-2xl font-black tracking-tighter mt-1">
                             {{ assignments.filter(a => a.submission?.submitted).length }}
                         </h3>
-                        <div class="mt-4 pt-4 border-t border-border/10">
-                            <span class="text-[10px] font-bold text-muted-foreground/50 tracking-wide uppercase">Objectives achieved</span>
+                        <div class="mt-3 pt-3 border-t border-border/10">
+                            <span class="text-[9px] font-bold text-muted-foreground/50 tracking-wide uppercase">Objectives achieved</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="stats-card surface-card p-6 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
+                <div class="stats-card surface-card p-4 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
                     <!-- Hover Bloom Effect -->
                     <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
                         :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.1), transparent 40%)` }">
                     </div>
-                    <div class="absolute -right-6 -top-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
-                        <Sparkles class="w-32 h-32 rotate-12" />
+                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
+                        <Sparkles class="w-16 h-16 rotate-12" />
                     </div>
                     <div class="relative z-10">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">Performance Rank</p>
-                        <h3 class="text-4xl font-black tracking-tighter mt-2">A+</h3>
-                        <div class="mt-4 pt-4 border-t border-border/10">
-                            <span class="text-[10px] font-bold text-muted-foreground/50 tracking-wide uppercase">Top 1% of battalion</span>
+                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">Performance Rank</p>
+                        <h3 class="text-2xl font-black tracking-tighter mt-1">A+</h3>
+                        <div class="mt-3 pt-3 border-t border-border/10">
+                            <span class="text-[9px] font-bold text-muted-foreground/50 tracking-wide uppercase">Top 1% of battalion</span>
                         </div>
                     </div>
                 </div>
@@ -401,7 +401,7 @@ declare const route: any;
                     leave-active-class="animate-out fade-out slide-out-to-top-4 duration-300 absolute"
                 >
                     <div v-for="assignment in filteredAssignments" :key="assignment.id" 
-                        class="assignment-card surface-card p-8 group premium-hover relative overflow-hidden"
+                        class="assignment-card surface-card p-5 md:p-6 group premium-hover relative overflow-hidden"
                         @mousemove="handleMouseMove"
                     >
                         <!-- Hover Bloom Effect -->
@@ -410,26 +410,26 @@ declare const route: any;
                         </div>
 
                         <!-- Silhouette Background Icon -->
-                        <div class="absolute -right-12 -bottom-12 opacity-[0.03] group-hover:opacity-[0.05] transition-all duration-700 pointer-events-none rotate-12 group-hover:rotate-0 scale-110">
-                            <BookOpen class="w-64 h-64" />
+                        <div class="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:opacity-[0.05] transition-all duration-700 pointer-events-none rotate-12 group-hover:rotate-0 scale-110">
+                            <BookOpen class="w-32 h-32" />
                         </div>
 
                         <div class="relative z-10 h-full flex flex-col">
-                            <div class="flex items-start justify-between mb-6">
-                                <div class="space-y-3">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="space-y-2">
                                     <div class="flex items-center gap-2">
-                                        <div class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20">
+                                        <div class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20">
                                             {{ assignment.course?.name || 'General' }}
                                         </div>
                                         <div :class="[
-                                            'px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border', 
+                                            'px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border', 
                                             getStatusColor(assignment.submission?.status || 'Pending').split(' ').filter(c => !c.includes('bg-')).join(' '),
                                             getStatusColor(assignment.submission?.status || 'Pending').split(' ').find(c => c.includes('bg-'))?.replace('/10', '/20')
                                         ]">
                                             {{ assignment.submission?.status || 'Pending' }}
                                         </div>
                                     </div>
-                                    <h3 class="text-2xl font-black tracking-tighter leading-tight group-hover:text-primary transition-colors duration-500">
+                                    <h3 class="text-xl font-black tracking-tighter leading-tight group-hover:text-primary transition-colors duration-500">
                                         {{ assignment.title }}
                                     </h3>
                                 </div>
@@ -444,11 +444,11 @@ declare const route: any;
                                 </div>
                             </div>
 
-                            <p class="text-muted-foreground/70 text-sm leading-relaxed line-clamp-2 mb-8 flex-grow font-medium">
+                            <p class="text-muted-foreground/70 text-xs leading-relaxed line-clamp-2 mb-4 flex-grow font-medium">
                                 {{ assignment.description || 'No specialized mission intelligence provided for this objective. Proceed with standard operational procedures.' }}
                             </p>
 
-                            <div class="flex items-center justify-between mt-auto pt-8 border-t border-border/10">
+                            <div class="flex items-center justify-between mt-auto pt-4 border-t border-border/10">
                                 <!-- Enhanced Mission Status -->
                                 <div v-if="assignment.submission?.submitted" class="flex items-center gap-3">
                                     <div class="w-10 h-10 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center">

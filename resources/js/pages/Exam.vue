@@ -110,17 +110,17 @@ onMounted(() => {
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
             <!-- Header Section -->
-            <div class="animate-section exam-hero space-y-2">
-                <h1 class="text-3xl font-bold tracking-tight">Upcoming Exams</h1>
-                <p class="text-muted-foreground text-lg">Manage your assessments and upcoming academic challenges.</p>
+            <div class="animate-section exam-hero space-y-1">
+                <h1 class="text-2xl font-bold tracking-tight">Upcoming Exams</h1>
+                <p class="text-muted-foreground text-base">Manage your assessments and upcoming academic challenges.</p>
             </div>
 
             <!-- Exam Grid -->
-            <div v-if="exams.length > 0" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div v-if="exams.length > 0" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div 
                     v-for="exam in exams" 
                     :key="exam.id"
-                    class="animate-section exam-card surface-card p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden relative"
+                    class="animate-section exam-card surface-card p-4 md:p-5 flex flex-col justify-between transition-all duration-500 overflow-hidden relative"
                     :class="exam.is_locked 
                         ? 'opacity-70 cursor-not-allowed' 
                         : 'group hover:border-primary/50'"
@@ -133,94 +133,93 @@ onMounted(() => {
                     <!-- Lock overlay for completed exams -->
                     <div v-if="exam.is_locked" class="absolute inset-0 rounded-2xl bg-gradient-to-br from-background/40 to-background/20 backdrop-blur-sm z-[5] pointer-events-none"></div>
                     
-                    <div class="space-y-4 relative z-10">
+                    <div class="space-y-3 relative z-10">
                         <div class="flex justify-between items-start">
                             <div class="flex items-center gap-2">
-                                <div class="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary uppercase tracking-wider">
+                                <div class="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-bold text-primary uppercase tracking-wider">
                                     {{ exam.status }}
                                 </div>
-                                <div v-if="exam.is_locked" class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/40 text-[10px] font-semibold text-yellow-600 uppercase tracking-wider">
+                                <div v-if="exam.is_locked" class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 border border-yellow-500/40 text-[9px] font-bold text-yellow-600 uppercase tracking-wider">
                                     <Lock class="w-3 h-3" />
-                                    Completed
+                                    Done
                                 </div>
                             </div>
-                            <div class="flex items-center text-muted-foreground text-xs gap-1">
-                                <Clock class="w-3.5 h-3.5" />
-                                {{ exam.duration_minutes }} mins
+                            <div class="flex items-center text-muted-foreground text-[10px] gap-1">
+                                <Clock class="w-3 h-3" />
+                                {{ exam.duration_minutes }}m
                             </div>
                         </div>
 
                         <div>
-                            <h3 class="text-xl font-bold"
+                            <h3 class="text-lg font-bold"
                                 :class="!exam.is_locked && 'group-hover:text-primary transition-colors duration-300'">
                                 {{ exam.title }}
                             </h3>
-                            <p class="text-muted-foreground text-sm line-clamp-2 mt-1">{{ exam.description }}</p>
+                            <p class="text-muted-foreground text-xs line-clamp-2 mt-0.5">{{ exam.description }}</p>
                         </div>
 
                         <!-- Progress bar for exam completion -->
-                        <div v-if="exam.total_parts && exam.total_parts > 0" class="pt-2">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                        <div v-if="exam.total_parts && exam.total_parts > 0" class="pt-1">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-[9px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
                                     Progress
                                 </span>
-                                <span class="text-[10px] font-semibold text-muted-foreground/70">
+                                <span class="text-[9px] font-semibold text-muted-foreground/70">
                                     {{ exam.submitted_parts_count }}/{{ exam.total_parts }}
                                 </span>
                             </div>
-                            <div class="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                            <div class="w-full h-1 rounded-full bg-muted/50 overflow-hidden">
                                 <div class="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-500"
                                     :style="{ width: `${(exam.submitted_parts_count || 0) / exam.total_parts * 100}%` }">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="space-y-3 pt-2">
-                            <div class="flex items-center gap-3 text-sm text-foreground/80">
-                                <Calendar class="w-4 h-4 text-primary" />
+                        <div class="space-y-2 pt-1">
+                            <div class="flex items-center gap-2.5 text-xs text-foreground/80">
+                                <Calendar class="w-3.5 h-3.5 text-primary" />
                                 {{ formatDateTime(exam.exam_date) }}
                             </div>
 
                             <!-- Exam Parts Summary -->
-                            <div v-if="exam.parts.length > 0" class="pt-4 space-y-2 border-t border-border/30">
-                                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">Exam Structure</p>
-                                <div class="flex flex-wrap gap-2">
+                            <div v-if="exam.parts.length > 0" class="pt-3 space-y-1.5 border-t border-border/30">
+                                <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">Structure</p>
+                                <div class="flex flex-wrap gap-1.5">
                                     <div 
                                         v-for="part in exam.parts" 
                                         :key="part.id"
-                                        class="px-2 py-1 rounded bg-muted/50 border border-border/30 text-[10px] flex items-center gap-1.5"
+                                        class="px-1.5 py-0.5 rounded bg-muted/50 border border-border/30 text-[9px] flex items-center gap-1.5"
                                     >
                                         <div class="w-1 h-1 rounded-full bg-primary/40"></div>
                                         <span class="font-medium">{{ part.title }}</span>
-                                        <span class="text-muted-foreground/70 opacity-60">({{ (part.questions?.length ?? 0) }} q)</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="pt-6 relative z-10">
+                    <div class="pt-3 relative z-10">
                         <button 
                             v-if="exam.is_locked"
                             disabled
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-muted text-muted-foreground font-semibold cursor-not-allowed opacity-60"
+                            class="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-muted text-muted-foreground font-semibold cursor-not-allowed opacity-60 text-xs"
                         >
-                            <Lock class="w-4 h-4" />
-                            {{ exam.status === 'closed' ? 'Exam Closed' : 'Exam Completed' }}
+                            <Lock class="w-3.5 h-3.5" />
+                            {{ exam.status === 'closed' ? 'Closed' : 'Completed' }}
                         </button>
                         <a 
                             v-else-if="exam.url" 
                             :href="exam.url" 
                             target="_blank"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                            class="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-xs"
                         >
                             Start Exam
-                            <ExternalLink class="w-4 h-4" />
+                            <ExternalLink class="w-3.5 h-3.5" />
                         </a>
                         <Link 
                             v-else
                             :href="examsShow(exam.id).url"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                            class="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-xs"
                         >
                             Start Exam
                         </Link>
