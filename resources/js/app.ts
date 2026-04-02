@@ -14,11 +14,11 @@ const { isVisible, show, hide, hideWhenReady } = useLoader();
  * Handle Global Navigation Transitions for the Boot Loader
  */
 router.on('start', (event) => {
-    const destination = event.detail.visit.url.pathname;
     const isFromAuth = window.location.pathname.includes('/login') || window.location.pathname.includes('/register');
-    const isHeadingToDashboard = destination.includes('/dashboard') || destination === '/';
 
-    if (isHeadingToDashboard || isFromAuth) {
+    // Only show the loading screen when coming FROM an auth page (post-login/register).
+    // Prevent it from triggering on regular in-app navigation (e.g. already logged-in user clicking Dashboard).
+    if (isFromAuth) {
         show();
     }
 });
