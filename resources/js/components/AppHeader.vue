@@ -122,24 +122,24 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
-// const rightNavItems: NavItem[] = [
-//     {
-//         title: 'Repository',
-//         href: 'https://github.com/laravel/vue-starter-kit',
-//         icon: Folder,
-//     },
-//     {
-//         title: 'Documentation',
-//         href: 'https://laravel.com/docs/starter-kits#vue',
-//         icon: BookOpen,
-//     },
-// ];
+const rightNavItems: NavItem[] = [
+    {
+        title: 'Repository',
+        href: 'https://github.com/laravel/vue-starter-kit',
+        icon: Folder,
+    },
+    {
+        title: 'Documentation',
+        href: 'https://laravel.com/docs/starter-kits#vue',
+        icon: BookOpen,
+    },
+];
 </script>
 
 <template>
     <div>
         <div class="border-b border-sidebar-border/80">
-            <div class="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
+            <div class="mx-auto flex h-14 items-center px-4 md:max-w-7xl">
                 <!-- Mobile Menu -->
                 <div class="lg:hidden">
                     <Sheet>
@@ -320,10 +320,10 @@ const mainNavItems: NavItem[] = [
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                class="relative size-10 w-auto rounded-full p-1 focus-within:ring-2 focus-within:ring-primary"
+                                class="relative size-9 w-auto rounded-full p-1 focus-within:ring-2 focus-within:ring-primary"
                             >
                                 <Avatar
-                                    class="size-8 overflow-hidden rounded-full"
+                                    class="size-7 overflow-hidden rounded-full"
                                 >
                                     <AvatarImage
                                         v-if="auth.user.avatar"
@@ -351,7 +351,7 @@ const mainNavItems: NavItem[] = [
             class="flex w-full border-b border-sidebar-border/70"
         >
             <div
-                class="mx-auto flex h-12 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl"
+                class="mx-auto flex h-10 w-full items-center justify-start px-4 text-neutral-500 md:max-w-7xl"
             >
                 <Breadcrumbs :breadcrumbs="breadcrumbs" />
             </div>

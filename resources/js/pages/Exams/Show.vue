@@ -98,18 +98,38 @@ const calculatePace = () => {
     if (!partStartTime.value || !selectedPart.value) return;
     
     const answeredCount = Object.keys(answers).length;
-    if (answeredCount === 0) return;
+    if (answeredCount === 0) {
+        estimatedFinishMinutes.value = props.exam.duration_minutes;
+        return;
+    }
 
     const elapsedSeconds = (Date.now() - partStartTime.value) / 1000;
     const avgSecondsPerQuestion = elapsedSeconds / answeredCount;
-    const remainingQuestions = (selectedPart.value.questions?.length ?? 0) - answeredCount;
     
-    if (remainingQuestions > 0) {
-        estimatedFinishMinutes.value = Math.ceil((remainingQuestions * avgSecondsPerQuestion) / 60);
+    // Estimate based on ALL questions in the exam, not just the current part
+    const remainingQuestionsTotal = totalQuestions.value - (submittedPartsCount.value * 1) - answeredCount; // Simplified: assumes uniform distribution or just current part context
+    const remainingQuestionsInPart = (selectedPart.value.questions?.length ?? 0) - answeredCount;
+    
+    if (remainingQuestionsInPart > 0) {
+        estimatedFinishMinutes.value = Math.ceil((remainingQuestionsInPart * avgSecondsPerQuestion) / 60);
     } else {
         estimatedFinishMinutes.value = 0;
     }
 };
+
+const formattedFinishTime = computed(() => {
+    if (!examStarted.value) return null;
+    const now = new Date();
+    // Use the remaining duration if pace isn't established, otherwise use pace
+    const minsToAdd = estimatedFinishMinutes.value !== null ? estimatedFinishMinutes.value : Math.ceil(timeLeftSeconds.value / 60);
+    const finishDate = new Date(now.getTime() + minsToAdd * 60000);
+    return finishDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+});
+
+const overallProgress = computed(() => {
+    if (props.exam.parts.length === 0) return 0;
+    return (submittedPartsCount.value / props.exam.parts.length) * 100;
+});
 
 const stopTimer = () => {
     if (timerInterval.value) {
@@ -149,6 +169,12 @@ const saveDraft = () => {
     };
     localStorage.setItem(getDraftKey(), JSON.stringify(draft));
     lastSavedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    
+    // Pulse animation for sync heartbeat
+    gsap.fromTo('.sync-heartbeat', 
+        { scale: 1, opacity: 0.5 }, 
+        { scale: 1.2, opacity: 1, duration: 0.3, yoyo: true, repeat: 1, ease: 'power2.out' }
+    );
 };
 
 const loadDraft = () => {
@@ -209,6 +235,35 @@ const submittedPartsCount = computed(() =>
 const allPartsSubmitted = computed(() =>
     submittedPartsCount.value === props.exam.parts.length && props.exam.parts.length > 0
 );
+
+// Trigger unlock animation when progress changes
+watch(submittedPartsCount, (newCount, oldCount) => {
+    if (newCount > oldCount) {
+        // Find the newly unlocked card (the one at index newCount)
+        setTimeout(() => {
+            const unlockedCard = document.querySelectorAll('.exam-part-card')[newCount];
+            if (unlockedCard) {
+                gsap.fromTo(unlockedCard, 
+                    { x: -10, filter: 'brightness(0.5)' }, 
+                    { x: 0, filter: 'brightness(1)', duration: 0.8, ease: 'elastic.out(1, 0.3)' }
+                );
+                
+                // Animate the lock icon specifically if visible
+                const lockIcon = unlockedCard.querySelector('.lucide-lock');
+                if (lockIcon) {
+                    gsap.to(lockIcon, { 
+                        rotate: 15, 
+                        scale: 0, 
+                        opacity: 0, 
+                        duration: 0.5, 
+                        delay: 0.2,
+                        onComplete: () => lockIcon.remove() 
+                    });
+                }
+            }
+        }, 100);
+    }
+});
 
 const totalScore = computed(() => 
     Object.values(props.submissions).reduce((sum, s) => sum + (s.score ?? 0), 0)
@@ -602,82 +657,92 @@ onMounted(() => {
                     </div>
 
                     <!-- Inner Glow / Border Highlight -->
-                    <div class="absolute inset-0 rounded-[2.5rem] border border-white/5 pointer-events-none"></div>
+                    <div class="absolute inset-0 rounded-[1.5rem] border border-white/5 pointer-events-none"></div>
 
                     <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-8">
-                        <div class="space-y-3 md:space-y-4 flex-1 exam-hero-left">
-                            <div class="flex flex-wrap items-center gap-3">
+                        <div class="space-y-3 flex-1 exam-hero-left">
+                            <div class="flex flex-wrap items-center gap-2">
                                 <span
-                                    class="inline-flex items-center gap-2 px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[9px] md:text-[10px] font-bold text-primary tracking-[0.2em] uppercase backdrop-blur-md">
+                                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-bold text-primary tracking-[0.2em] uppercase backdrop-blur-md">
                                     <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
                                     {{ exam.status }}
                                 </span>
                             </div>
                             
-                            <h1 class="text-lg md:text-2xl font-black tracking-tight leading-[1.1] premium-gradient-text max-w-3xl">
-                                {{ selectedPart ? selectedPart.title : exam.title }}
-                            </h1>
+                            <div class="space-y-1">
+                                <h1 class="text-lg md:text-2xl font-black tracking-tight leading-[1.1] premium-gradient-text max-w-3xl">
+                                    {{ selectedPart ? selectedPart.title : exam.title }}
+                                </h1>
+                                
+                                <p v-if="!selectedPart" class="text-[10px] md:text-xs text-muted-foreground leading-relaxed max-w-2xl opacity-80 line-clamp-1">
+                                    {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
+                                </p>
+
+                                <div v-if="examStarted && formattedFinishTime" class="flex items-center gap-2 text-[10px] font-bold text-primary/80 animate-pulse">
+                                    <Zap class="w-3 h-3" />
+                                    <span>Mission Intel: Finish at {{ formattedFinishTime }}</span>
+                                </div>
+                            </div>
                             
-                            <p class="text-[10px] md:text-xs text-muted-foreground leading-relaxed max-w-2xl opacity-80">
-                                {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
-                            </p>
-                            
-                            <div class="flex flex-wrap items-center gap-4 pt-1 md:pt-0">
-                                <div class="flex items-center gap-2 md:gap-2.5 text-[10px] md:text-xs font-medium text-muted-foreground bg-muted/30 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-border/40">
-                                    <Calendar class="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" />
+                            <div v-if="!selectedPart" class="flex flex-wrap items-center gap-4">
+                                <div class="flex items-center gap-2 text-[10px] font-medium text-muted-foreground bg-muted/20 px-3 py-1 rounded-xl border border-border/40">
+                                    <Calendar class="w-3.5 h-3.5 text-primary" />
                                     {{ formatDateTime(exam.exam_date) }}
                                 </div>
                             </div>
                         </div>
 
                         <!-- Stats Dashboard Bar -->
-                        <div class="exam-hero-stats grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 md:gap-4 lg:gap-5 bg-black/20 dark:bg-white/5 backdrop-blur-xl p-3 md:px-4 md:py-3 rounded-xl md:rounded-[1.2rem] border border-white/5 shadow-inner self-stretch md:self-auto lg:self-center">
-                            <div v-if="allPartsSubmitted" class="exam-stat group flex flex-col items-center md:items-start transition-all">
-                                <div class="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
-                                    <div class="p-1 md:p-1.5 rounded-lg bg-green-500/10 text-green-500">
-                                        <Trophy class="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                    </div>
-                                    <div class="text-lg md:text-xl font-black text-green-500">{{ totalScore }}/{{ totalPossiblePoints }}</div>
+                        <div class="exam-hero-stats flex flex-nowrap items-center gap-4 bg-black/20 dark:bg-white/5 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/5 shadow-inner self-stretch lg:self-center">
+                            <div v-if="allPartsSubmitted" class="exam-stat flex flex-col items-start transition-all">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <Trophy class="w-3.5 h-3.5 text-green-500" />
+                                    <div class="text-base font-black text-green-500">{{ totalScore }}/{{ totalPossiblePoints }}</div>
                                 </div>
-                                <div class="text-[7px] md:text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Score</div>
+                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Score</div>
                             </div>
                             
-                            <div v-if="allPartsSubmitted" class="hidden md:block w-px h-10 bg-white/5"></div>
+                            <div v-if="allPartsSubmitted" class="w-px h-6 bg-white/5"></div>
 
-                            <div class="exam-stat group flex flex-col items-center md:items-start transition-all">
-                                <div class="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
-                                    <div class="p-1 md:p-1.5 rounded-lg bg-primary/10 text-primary">
-                                        <Clock class="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                    </div>
-                                    <div class="text-lg md:text-2xl font-black">{{ exam.duration_minutes }}</div>
+                            <div class="exam-stat flex flex-col items-start transition-all">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <Clock class="w-3.5 h-3.5 text-primary" />
+                                    <div class="text-base md:text-lg font-black">{{ exam.duration_minutes }}</div>
                                 </div>
-                                <div class="text-[8px] md:text-[9px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Mins</div>
+                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Mins</div>
                             </div>
 
-                            <div class="hidden md:block w-px h-10 bg-white/5"></div>
+                            <div class="w-px h-6 bg-white/5"></div>
 
-                            <div class="exam-stat group flex flex-col items-center md:items-start transition-all">
-                                <div class="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
-                                    <div class="p-1 md:p-1.5 rounded-lg bg-primary/10 text-primary">
-                                        <Layers class="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                    </div>
-                                    <div class="text-lg md:text-2xl font-black">{{ exam.parts.length }}</div>
+                            <div class="exam-stat flex flex-col items-start transition-all">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <Layers class="w-3.5 h-3.5 text-primary" />
+                                    <div class="text-base md:text-lg font-black">{{ exam.parts.length }}</div>
                                 </div>
-                                <div class="text-[8px] md:text-[9px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Secs</div>
+                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Secs</div>
                             </div>
 
-                            <div class="hidden md:block w-px h-10 bg-white/5"></div>
+                            <div class="w-px h-6 bg-white/5"></div>
 
-                            <div class="exam-stat group flex flex-col items-center md:items-start transition-all">
-                                <div class="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
-                                    <div class="p-1 md:p-1.5 rounded-lg bg-primary/10 text-primary">
-                                        <ListChecks class="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                    </div>
-                                    <div class="text-lg md:text-2xl font-black">{{ totalQuestions }}</div>
+                            <div class="exam-stat flex flex-col items-start transition-all">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <ListChecks class="w-3.5 h-3.5 text-primary" />
+                                    <div class="text-base md:text-lg font-black">{{ totalQuestions }}</div>
                                 </div>
-                                <div class="text-[8px] md:text-[9px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Ques</div>
+                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Ques</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Global Progress Bar -->
+                <div v-if="!allPartsSubmitted && examStarted" class="animate-up w-full mt-2 space-y-1">
+                    <div class="flex items-center justify-between px-1">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Mission Progress</span>
+                        <span class="text-[8px] font-black text-primary">{{ Math.round(overallProgress) }}%</span>
+                    </div>
+                    <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                        <div class="h-full bg-primary transition-all duration-1000 ease-out" :style="{ width: `${overallProgress}%` }"></div>
                     </div>
                 </div>
 
@@ -686,19 +751,19 @@ onMounted(() => {
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <template v-if="!selectedPart">
                     <div class="animate-up flex items-center justify-between">
-                        <h2 class="text-lg font-bold flex items-center gap-2">
-                            <Layers class="w-5 h-5 text-primary" />
+                        <h2 class="text-base font-bold flex items-center gap-2">
+                            <Layers class="w-4 h-4 text-primary" />
                             Exam Parts
                         </h2>
                         <span
-                            class="text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full border border-border/50">
+                            class="text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full border border-border/50">
                             {{ exam.parts.length }} Section{{ exam.parts.length !== 1 ? 's' : '' }}
                         </span>
                     </div>
 
-                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
-                            class="exam-part-card animate-up surface-card premium-hover group h-full p-3 md:p-4"
+                            class="exam-part-card animate-up surface-card premium-hover group h-full p-2 md:p-3"
                             :class="[
                                 (isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index))
                                     ? 'opacity-60 cursor-not-allowed grayscale-[0.5]' 
@@ -712,82 +777,81 @@ onMounted(() => {
                             <!-- Silhouette background icon -->
                             <div
                                 class="pointer-events-none absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-15 group-hover:scale-110 transition-all duration-700">
-                                <component :is="getPartIcon(part.type)" class="w-16 h-16 text-foreground" />
+                                <component :is="getPartIcon(part.type)" class="w-12 h-12 text-foreground" />
                             </div>
 
-                            <div class="relative flex flex-col gap-4 h-full">
+                            <div class="relative flex flex-col gap-3 h-full">
                                 <!-- Top: Part Label & Status -->
                                 <div class="flex items-center justify-between">
-                                    <div class="px-3 py-1 rounded-lg bg-primary/5 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10">
+                                    <div class="px-2 py-0.5 rounded-md bg-primary/5 text-[8px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10">
                                         Part {{ index + 1 }}
                                     </div>
                                     <div v-if="isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index)" class="flex flex-col items-end gap-1">
                                         <div v-if="exam.status === 'closed' && !isPartSubmitted(part.id)" class="flex items-center gap-1.5 text-red-500">
-                                            <Lock class="w-4 h-4" />
-                                            <span class="text-[10px] font-black uppercase tracking-widest">LOCKED</span>
+                                            <Lock class="w-3 h-3" />
+                                            <span class="text-[9px] font-black uppercase tracking-widest">LOCKED</span>
                                         </div>
-                                        <div v-else-if="isPartLocked(index)" class="flex flex-col items-end gap-1 mt-0.5">
-                                            <div class="flex items-center gap-1.5 text-muted-foreground/60">
-                                                <Lock class="w-3.5 h-3.5" />
-                                                <span class="text-[10px] font-black uppercase tracking-widest">LOCKED</span>
+                                        <div v-else-if="isPartLocked(index)" class="flex flex-col items-end gap-0.5 mt-0.5">
+                                            <div class="flex items-center gap-1 text-muted-foreground/60">
+                                                <Lock class="w-2.5 h-2.5" />
+                                                <span class="text-[8px] font-black uppercase tracking-widest">LOCKED</span>
                                             </div>
-                                            <span class="text-[8px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
+                                            <span class="text-[7px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
                                                 Answer Part {{ index }} to unlock
                                             </span>
                                         </div>
-                                        <div v-else-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1.5 text-amber-500">
-                                            <Clock class="w-4 h-4" />
-                                            <span class="text-[10px] font-black uppercase tracking-widest">PENDING REVIEW</span>
+                                        <div v-else-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1 text-amber-500">
+                                            <Clock class="w-3 h-3" />
+                                            <span class="text-[9px] font-black uppercase tracking-widest">PENDING REVIEW</span>
                                         </div>
-                                        <div v-else class="flex items-center gap-1.5 text-green-500">
-                                            <CheckSquare2 class="w-4 h-4" />
-                                            <span class="text-[10px] font-black uppercase tracking-widest">COMPLETED</span>
+                                        <div v-else class="flex items-center gap-1 text-green-500">
+                                            <CheckSquare2 class="w-3 h-3" />
+                                            <span class="text-[9px] font-black uppercase tracking-widest">COMPLETED</span>
                                         </div>
-                                        <div v-if="isPartSubmitted(part.id)" class="text-[10px] font-bold text-muted-foreground/80">
+                                        <div v-if="isPartSubmitted(part.id)" class="text-[8px] font-bold text-muted-foreground/80">
                                             Score: <span class="text-foreground">{{ submissions[part.id]?.score ?? 0 }}</span> / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
-                                            <span v-if="submissions[part.id]?.status === 'pending_review'" class="text-[9px] opacity-70 ml-1">(+ Essay)</span>
                                         </div>
                                     </div>
                                     <div v-else class="flex items-center gap-1.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
-                                        <span class="text-[10px] font-bold uppercase tracking-widest">READY</span>
+                                        <span class="text-[9px] font-bold uppercase tracking-widest">READY</span>
                                     </div>
                                 </div>
 
                                 <!-- Center: Title & Types -->
-                                <div class="flex-1 space-y-3">
+                                <div class="flex-1 space-y-1.5">
                                     <h3
-                                        class="text-base md:text-lg font-black leading-tight transition-colors"
+                                        class="text-sm md:text-base font-black leading-tight transition-colors"
                                         :class="isPartSubmitted(part.id) || isPartLocked(index) ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary'">
                                         {{ part.title }}
                                     </h3>
                                     
-                                    <div class="flex flex-wrap items-center gap-2">
+                                    <div class="flex flex-wrap items-center gap-1.5">
                                         <span v-for="type in getQuestionTypes(part)" :key="type"
-                                            class="px-3 py-1 rounded-lg bg-muted text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider border border-border/40">
+                                            class="px-2 py-0.5 rounded-md bg-muted text-[8px] font-bold text-muted-foreground/80 uppercase tracking-wider border border-border/40">
                                             {{ formatType(type).toUpperCase() }}
                                         </span>
                                     </div>
                                 </div>
 
                                 <!-- Bottom: Footer Info & Action -->
-                                <div class="flex items-center justify-between pt-4 border-t border-border/10">
-                                    <div class="flex items-center gap-1.5 text-sm text-muted-foreground font-medium">
+                                <div class="flex items-center justify-between pt-2 border-t border-border/10">
+                                    <div class="flex items-center gap-1 text-xs text-muted-foreground font-medium">
                                         <span class="text-foreground/80 font-black">{{ part.questions?.length ?? 0 }}</span>
                                         <span class="opacity-60">Tasks</span>
                                     </div>
                                     
                                     <div v-if="!isPartSubmitted(part.id)"
-                                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all"
+                                        class="flex items-center gap-1 px-3 py-1 rounded-lg transition-all"
                                         :class="isPartLocked(index) 
                                             ? 'bg-muted/40 text-muted-foreground/40 cursor-not-allowed border border-border/20' 
-                                            : 'bg-primary text-primary-foreground font-bold text-[10px] shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
-                                        <span class="text-[10px] font-bold">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
-                                        <Lock v-if="isPartLocked(index)" class="w-3 h-3" />
-                                        <ArrowRight v-else class="w-3 h-3" />
+                                            : 'bg-primary text-primary-foreground font-bold text-[9px] shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
+                                        <span class="text-[9px] font-bold">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
+                                        <Lock v-if="isPartLocked(index)" class="w-2.5 h-2.5" />
+                                        <ArrowRight v-else class="w-2.5 h-2.5" />
                                     </div>
                                     <div v-else
-                                        class="w-10 h-10 rounded-full flex items-center justify-center bg-muted border border-border/60">
-                                        <CheckCircle2 class="w-5 h-5 text-green-500" />
+                                        class="w-8 h-8 rounded-full flex items-center justify-center bg-muted border border-border/60">
+                                        <CheckCircle2 class="w-4 h-4 text-green-500" />
                                     </div>
                                 </div>
                             </div>
@@ -796,11 +860,10 @@ onMounted(() => {
 
                     <!-- Instructions footer -->
                     <div
-                        class="animate-up mt-2 rounded-xl border border-border/30 bg-muted/20 p-4 flex items-start gap-3">
-                        <ListChecks class="w-5 h-5 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
-                        <p class="text-sm text-muted-foreground/70 leading-relaxed">
-                            Click <strong>START</strong> on a section to begin. Each part may contain multiple question types. Read the instructions
-                            carefully before starting each section.
+                        class="animate-up mt-2 rounded-xl border border-border/20 bg-muted/10 p-3 flex items-start gap-3">
+                        <ListChecks class="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
+                        <p class="text-[11px] text-muted-foreground/70 leading-relaxed">
+                            Click <strong>START</strong> to begin. Sections unlock sequentially. Work is auto-saved locally.
                         </p>
                     </div>
                 </template>
@@ -813,12 +876,18 @@ onMounted(() => {
                         <!-- Main Question List -->
                         <div class="flex-1 space-y-6">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-lg font-bold flex items-center gap-2">
-                                    <Layers class="w-4 h-4 text-primary" />
-                                    {{ selectedPart!.title }}
-                                </h2>
+                                <div class="flex items-center gap-3">
+                                    <h2 class="text-base font-bold flex items-center gap-2">
+                                        <Layers class="w-4 h-4 text-primary" />
+                                        {{ selectedPart!.title }}
+                                    </h2>
+                                    <div v-if="lastSavedAt" class="sync-heartbeat flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        <CheckCircle2 class="w-2.5 h-2.5 text-emerald-500" />
+                                        <span class="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Synced {{ lastSavedAt }}</span>
+                                    </div>
+                                </div>
                                 <span
-                                    class="text-[10px] font-black text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg border border-border/40 uppercase tracking-widest">
+                                    class="text-[9px] font-black text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg border border-border/40 uppercase tracking-widest">
                                     {{ selectedPart!.questions?.length ?? 0 }} Tasks
                                 </span>
                             </div>
