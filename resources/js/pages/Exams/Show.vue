@@ -56,6 +56,7 @@ const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
 const successModalRef = ref<HTMLElement | null>(null);
 const partsPendingCount = ref(0);
+const displayedScore = ref(0); // For GSAP counter animation
 
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
@@ -257,6 +258,26 @@ const submitPart = async () => {
                             { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
                         );
 
+                        // If all parts are done, animate the total score
+                        if (partsPendingCount.value === 0) {
+                            displayedScore.value = 0;
+                            gsap.to(displayedScore, {
+                                value: totalScore.value,
+                                duration: 2,
+                                ease: 'power4.out',
+                                delay: 0.6,
+                                onUpdate: () => {
+                                    displayedScore.value = Math.floor(displayedScore.value);
+                                }
+                            });
+
+                            // Decorative pop for the score box
+                            gsap.fromTo('.final-score-box',
+                                { scale: 0.8, opacity: 0, y: 20 },
+                                { scale: 1, opacity: 1, y: 0, duration: 1.2, delay: 0.5, ease: 'elastic.out(1, 0.5)' }
+                            );
+                        }
+
                         // Bounce animation for checkmark
                         gsap.fromTo(
                             '.success-checkmark',
@@ -266,10 +287,6 @@ const submitPart = async () => {
                     }
                 }, 10);
 
-                // Auto close after 4 seconds
-                setTimeout(() => {
-                    closeSuccessModal();
-                }, 4000);
             },
         });
     } finally {
@@ -288,7 +305,7 @@ const closeSuccessModal = () => {
             onComplete: () => {
                 showSuccessModal.value = false;
                 // Reset and go back to parts list
-                Object.keys(answers).forEach(key => delete answers[key]);
+                Object.keys(answers).forEach(key => delete answers[Number(key)]);
                 goBackToList();
             }
         });
@@ -758,14 +775,20 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <!-- All Complete Message -->
-                            <div v-else class="w-full pt-4 border-t border-border/30">
-                                <div class="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/40">
-                                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                    <span class="text-sm font-semibold text-primary">Exam Complete!</span>
+                            <!-- All Complete Message & Score Reveal -->
+                            <div v-else class="w-full pt-4 border-t border-border/30 flex flex-col items-center gap-4">
+                                <div class="final-score-box flex flex-col items-center p-6 rounded-3xl bg-primary/5 border border-primary/20 shadow-inner w-full">
+                                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2">Final Exam Score</span>
+                                    <div class="flex items-baseline gap-1">
+                                        <span class="text-6xl font-black text-primary tabular-nums tracking-tighter">{{ displayedScore }}</span>
+                                        <span class="text-xl font-bold text-primary/40">/ {{ totalPossiblePoints }}</span>
+                                    </div>
+                                    <div class="mt-4 flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                                        <Trophy class="w-3.5 h-3.5 text-primary" />
+                                        <span class="text-[10px] font-bold text-primary uppercase tracking-wider">Exam Completed!</span>
+                                    </div>
                                 </div>
+                                <p class="text-[11px] text-muted-foreground/70 font-medium">Your total achievement across all sections</p>
                             </div>
 
                             <!-- Action Button -->
