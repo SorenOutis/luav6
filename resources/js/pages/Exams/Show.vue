@@ -246,7 +246,7 @@ const submitPart = async () => {
             onSuccess: () => {
                 // Show success modal
                 showSuccessModal.value = true;
-                partsPendingCount.value = remainingPartsCount.value - 1;
+                partsPendingCount.value = remainingPartsCount.value;
 
                 // Animate modal
                 setTimeout(() => {
