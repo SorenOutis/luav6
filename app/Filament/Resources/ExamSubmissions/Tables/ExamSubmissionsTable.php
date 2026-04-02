@@ -66,6 +66,52 @@ class ExamSubmissionsTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
+            ])
+            ->headerActions([
+                \Filament\Actions\Action::make('exportTotalScores')
+                    ->label('Export Total Scores')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->action(function ($livewire) {
+                        // Get the current filtered query from the table
+                        $query = $livewire->getFilteredTableQuery();
+                        
+                        // We need to re-query with aggregation
+                        // Note: toBase() is safer for aggregates in some cases, 
+                        // but we want the models for relationships.
+                        $data = \App\Models\ExamSubmission::query()
+                            ->whereIn('id', $query->pluck('id'))
+                            ->select('user_id', 'exam_id', \Illuminate\Support\Facades\DB::raw('SUM(score) as total_score'))
+                            ->groupBy('user_id', 'exam_id')
+                            ->with(['user', 'exam'])
+                            ->get();
+
+                        $filename = 'exam_total_scores_' . now()->format('Y-m-d_H-i') . '.csv';
+                        
+                        return response()->streamDownload(function () {
+                            $handle = fopen('php://memory', 'w');
+                            fputcsv($handle, ['Student Name', 'Exam', 'Total Score']);
+                            
+                            // Re-fetch data inside the stream for memory efficiency if it was larger, 
+                            // but here we already have it.
+                            $data = \App\Models\ExamSubmission::query()
+                                ->select('user_id', 'exam_id', \Illuminate\Support\Facades\DB::raw('SUM(score) as total_score'))
+                                ->groupBy('user_id', 'exam_id')
+                                ->with(['user', 'exam'])
+                                ->get();
+                                
+                            foreach ($data as $row) {
+                                fputcsv($handle, [
+                                    $row->user?->name ?? 'Unknown',
+                                    $row->exam?->title ?? 'Unknown',
+                                    $row->total_score,
+                                ]);
+                            }
+                            
+                            rewind($handle);
+                            fpassthru($handle);
+                            fclose($handle);
+                        }, $filename, ['Content-Type' => 'text/csv']);
+                    }),
             ]);
     }
 }
