@@ -150,6 +150,12 @@ const isPartSubmitted = (partId: number) => {
     return !!props.submissions[partId];
 };
 
+const isPartLocked = (index: number) => {
+    if (index === 0) return false;
+    const previousPart = props.exam.parts[index - 1];
+    return !isPartSubmitted(previousPart.id);
+};
+
 const formatDateTime = (dateStr: string) => new Date(dateStr).toLocaleString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
 });
@@ -182,9 +188,9 @@ const getQuestionTypes = (part: ExamPart) =>
 
 const formatType = (type: string) => type.replace(/_/g, ' ');
 
-const selectPart = (part: ExamPart) => {
-    // Prevent selecting if exam is closed or part is already submitted
-    if (props.exam.status === 'closed' || isPartSubmitted(part.id)) {
+const selectPart = (part: ExamPart, index: number) => {
+    // Prevent selecting if exam is closed, part is already submitted, or part is locked
+    if (props.exam.status === 'closed' || isPartSubmitted(part.id) || isPartLocked(index)) {
         return;
     }
 
@@ -521,17 +527,17 @@ onMounted(() => {
                     </div>
 
                     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                        <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part)"
+                        <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
                             class="exam-part-card animate-up surface-card premium-hover group h-full p-6 md:p-8"
                             :class="[
-                                (isPartSubmitted(part.id) || exam.status === 'closed')
+                                (isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index))
                                     ? 'opacity-60 cursor-not-allowed grayscale-[0.5]' 
                                     : 'cursor-pointer hover:border-primary/40',
                                 getPartColor(index)
                             ]">
                             
                             <!-- Light Sweep Animation -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                            <div v-if="!isPartLocked(index) && !isPartSubmitted(part.id)" class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
 
                             <!-- Silhouette background icon -->
                             <div
@@ -545,10 +551,19 @@ onMounted(() => {
                                     <div class="px-3 py-1 rounded-lg bg-primary/5 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10">
                                         Part {{ index + 1 }}
                                     </div>
-                                    <div v-if="isPartSubmitted(part.id) || exam.status === 'closed'" class="flex flex-col items-end gap-1">
+                                    <div v-if="isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index)" class="flex flex-col items-end gap-1">
                                         <div v-if="exam.status === 'closed' && !isPartSubmitted(part.id)" class="flex items-center gap-1.5 text-red-500">
                                             <Lock class="w-4 h-4" />
                                             <span class="text-[10px] font-black uppercase tracking-widest">LOCKED</span>
+                                        </div>
+                                        <div v-else-if="isPartLocked(index)" class="flex flex-col items-end gap-1 mt-0.5">
+                                            <div class="flex items-center gap-1.5 text-muted-foreground/60">
+                                                <Lock class="w-3.5 h-3.5" />
+                                                <span class="text-[10px] font-black uppercase tracking-widest">LOCKED</span>
+                                            </div>
+                                            <span class="text-[8px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
+                                                Answer Part {{ index }} to unlock
+                                            </span>
                                         </div>
                                         <div v-else-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1.5 text-amber-500">
                                             <Clock class="w-4 h-4" />
@@ -564,7 +579,6 @@ onMounted(() => {
                                         </div>
                                     </div>
                                     <div v-else class="flex items-center gap-1.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
-                                        <Lock v-if="false" class="w-3.5 h-3.5" />
                                         <span class="text-[10px] font-bold uppercase tracking-widest">READY</span>
                                     </div>
                                 </div>
@@ -573,7 +587,7 @@ onMounted(() => {
                                 <div class="flex-1 space-y-3">
                                     <h3
                                         class="text-xl md:text-2xl font-black leading-tight transition-colors"
-                                        :class="isPartSubmitted(part.id) ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary'">
+                                        :class="isPartSubmitted(part.id) || isPartLocked(index) ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary'">
                                         {{ part.title }}
                                     </h3>
                                     
@@ -593,9 +607,13 @@ onMounted(() => {
                                     </div>
                                     
                                     <div v-if="!isPartSubmitted(part.id)"
-                                        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95] transition-all">
-                                        START
-                                        <ArrowRight class="w-3.5 h-3.5" />
+                                        class="flex items-center gap-2 px-4 py-2 rounded-xl transition-all"
+                                        :class="isPartLocked(index) 
+                                            ? 'bg-muted/40 text-muted-foreground/40 cursor-not-allowed border border-border/20' 
+                                            : 'bg-primary text-primary-foreground font-bold text-xs shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
+                                        <span class="text-xs font-bold">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
+                                        <Lock v-if="isPartLocked(index)" class="w-3.5 h-3.5" />
+                                        <ArrowRight v-else class="w-3.5 h-3.5" />
                                     </div>
                                     <div v-else
                                         class="w-10 h-10 rounded-full flex items-center justify-center bg-muted border border-border/60">
