@@ -237,7 +237,7 @@ const submitPart = async () => {
             question_number: index + 1,
             question_text: question.text,
             question_type: question.type,
-            answer: answers[index] || null,
+            answer: (answers[index] !== undefined && answers[index] !== null) ? answers[index] : null,
         }));
 
         router.post(`/exams/${props.exam.id}/parts/${selectedPart.value.id}/submit`, {
