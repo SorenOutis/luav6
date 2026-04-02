@@ -15,6 +15,7 @@ interface Question {
     type: string;
     options: { text: string; is_correct: boolean }[] | null;
     correct_answer: string | null;
+    points: number;
 }
 
 interface ExamPart {
@@ -23,6 +24,7 @@ interface ExamPart {
     instructions: string | null;
     type: string;
     questions: Question[] | null;
+    points: number;
 }
 
 interface Exam {
@@ -37,7 +39,7 @@ interface Exam {
 
 const props = defineProps<{ 
     exam: Exam;
-    submissions: Record<number, string>;
+    submissions: Record<number, { status: string; score: number }>;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -125,6 +127,14 @@ const submittedPartsCount = computed(() =>
 
 const allPartsSubmitted = computed(() =>
     submittedPartsCount.value === props.exam.parts.length && props.exam.parts.length > 0
+);
+
+const totalScore = computed(() => 
+    Object.values(props.submissions).reduce((sum, s) => sum + (s.score ?? 0), 0)
+);
+
+const totalPossiblePoints = computed(() => 
+    props.exam.parts.reduce((sum, p) => sum + (p.questions?.reduce((qSum, q) => qSum + (q.points ?? p.points ?? 1), 0) ?? 0), 0)
 );
 
 const remainingPartsCount = computed(() =>
@@ -424,6 +434,18 @@ onMounted(() => {
 
                         <!-- Stats Dashboard Bar -->
                         <div class="exam-hero-stats grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 md:gap-4 lg:gap-6 bg-black/20 dark:bg-white/5 backdrop-blur-xl p-4 md:px-6 md:py-5 rounded-2xl md:rounded-[1.5rem] border border-white/5 shadow-inner self-stretch md:self-auto lg:self-center">
+                            <div v-if="allPartsSubmitted" class="exam-stat group flex flex-col items-center md:items-start transition-all">
+                                <div class="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
+                                    <div class="p-1 md:p-1.5 rounded-lg bg-green-500/10 text-green-500">
+                                        <Trophy class="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                    </div>
+                                    <div class="text-lg md:text-2xl font-black text-green-500">{{ totalScore }}/{{ totalPossiblePoints }}</div>
+                                </div>
+                                <div class="text-[8px] md:text-[9px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Score</div>
+                            </div>
+                            
+                            <div v-if="allPartsSubmitted" class="hidden md:block w-px h-10 bg-white/5"></div>
+
                             <div class="exam-stat group flex flex-col items-center md:items-start transition-all">
                                 <div class="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
                                     <div class="p-1 md:p-1.5 rounded-lg bg-primary/10 text-primary">
@@ -501,9 +523,14 @@ onMounted(() => {
                                     <div class="px-3 py-1 rounded-lg bg-primary/5 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10">
                                         Part {{ index + 1 }}
                                     </div>
-                                    <div v-if="isPartSubmitted(part.id)" class="flex items-center gap-1.5 text-green-500">
-                                        <CheckSquare2 class="w-4 h-4" />
-                                        <span class="text-[10px] font-black uppercase tracking-widest">COMPLETED</span>
+                                    <div v-if="isPartSubmitted(part.id)" class="flex flex-col items-end gap-1">
+                                        <div class="flex items-center gap-1.5 text-green-500">
+                                            <CheckSquare2 class="w-4 h-4" />
+                                            <span class="text-[10px] font-black uppercase tracking-widest">COMPLETED</span>
+                                        </div>
+                                        <div class="text-[10px] font-bold text-muted-foreground/80">
+                                            Score: <span class="text-foreground">{{ submissions[part.id]?.score ?? 0 }}</span> / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
+                                        </div>
                                     </div>
                                     <div v-else class="flex items-center gap-1.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
                                         <Lock v-if="false" class="w-3.5 h-3.5" />
@@ -597,6 +624,9 @@ onMounted(() => {
                                             <span
                                                 class="text-[9px] px-2 py-0.5 rounded-md bg-primary/5 text-primary/60 uppercase font-black tracking-[0.1em] border border-primary/10">{{
                                                 formatType(question.type) }}</span>
+                                            <span class="text-[9px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground/80 uppercase font-black tracking-[0.1em] border border-border/40">
+                                                {{ question.points ?? selectedPart!.points ?? 1 }} Pts
+                                            </span>
                                         </div>
                                         <p class="text-base font-bold leading-tight text-foreground/90 truncate md:whitespace-normal">{{ question.text }}</p>
                                     </div>

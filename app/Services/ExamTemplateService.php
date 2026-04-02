@@ -20,7 +20,8 @@ class ExamTemplateService
             'Question Text',
             'Type',
             'Choices (Pipe | Separated)',
-            'Correct Choice/Answer'
+            'Correct Choice/Answer',
+            'Points'
         ]);
 
         // Example Rows
@@ -30,7 +31,8 @@ class ExamTemplateService
             'What is the capital of France?',
             'multiple_choice',
             'Berlin|Madrid|Paris|Rome',
-            'Paris'
+            'Paris',
+            '1'
         ]);
         
         fputcsv($handle, [
@@ -39,7 +41,8 @@ class ExamTemplateService
             'Which planet is known as the Red Planet?',
             'multiple_choice',
             'Earth|Mars|Jupiter|Saturn',
-            'Mars'
+            'Mars',
+            '1'
         ]);
 
         fputcsv($handle, [
@@ -48,7 +51,8 @@ class ExamTemplateService
             'The sun is a star.',
             'true_false',
             'True|False',
-            'True'
+            'True',
+            '1'
         ]);
 
         fputcsv($handle, [
@@ -57,7 +61,8 @@ class ExamTemplateService
             'Who wrote "Noli Me Tangere"?',
             'identification',
             '',
-            'Jose Rizal'
+            'Jose Rizal',
+            '5'
         ]);
 
         rewind($handle);
@@ -108,7 +113,8 @@ class ExamTemplateService
                     'text' => $questionText,
                     'type' => $type,
                     'options' => [],
-                    'correct_answer' => null
+                    'correct_answer' => null,
+                    'points' => (int) ($row['Points'] ?? 1)
                 ];
 
                 if (in_array($type, ['multiple_choice', 'true_false'])) {
@@ -132,7 +138,8 @@ class ExamTemplateService
                     'instructions' => $data['instructions'],
                     'questions' => $data['questions'],
                     'sort_order' => $data['sort_order'],
-                    'type' => 'section' // Default from ExamForm
+                    'type' => 'section', // Default from ExamForm
+                    'points' => (int) ($data['questions'][0]['points'] ?? 1) // Default part points to first question's points
                 ]);
             }
         });

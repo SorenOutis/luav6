@@ -21,18 +21,17 @@ class ExamController extends Controller
 
         // Get submission counts for the current user
         $userId = auth()->id();
-        $examsData = $exams->map(function ($exam) use ($userId) {
+        $examsData = $exams->map(function (\App\Models\Exam $exam) use ($userId) {
             $submittedPartsCount = ExamSubmission::where('user_id', $userId)
                 ->where('exam_id', $exam->id)
                 ->distinct('exam_part_id')
                 ->count();
             
-            return [
-                ...($exam->toArray()),
+            return array_merge($exam->toArray(), [
                 'submitted_parts_count' => $submittedPartsCount,
-                'total_parts' => count($exam->parts),
-                'is_locked' => $submittedPartsCount === count($exam->parts) && count($exam->parts) > 0,
-            ];
+                'total_parts' => $exam->parts->count(),
+                'is_locked' => $submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0,
+            ]);
         });
 
         return Inertia::render('Exam', [
@@ -56,7 +55,8 @@ class ExamController extends Controller
         $userId = auth()->id();
         $submissions = ExamSubmission::where('user_id', $userId)
             ->where('exam_id', $exam->id)
-            ->pluck('status', 'exam_part_id')
+            ->get(['exam_part_id', 'status', 'score'])
+            ->keyBy('exam_part_id')
             ->toArray();
 
         return Inertia::render('Exams/Show', [
@@ -72,6 +72,38 @@ class ExamController extends Controller
             'answers' => 'required|array',
         ]);
 
+        // Calculate score
+        $score = 0;
+        $totalPossible = 0;
+        $questions = is_array($examPart->questions) ? $examPart->questions : $examPart->questions ?? [];
+        $answers = $validated['answers'];
+
+        foreach ($questions as $index => $question) {
+            $questionPoints = (int) ($question['points'] ?? $examPart->points ?? 1);
+            $totalPossible += $questionPoints;
+            
+            // Find the answer for this question number (offset 1)
+            $submittedAnswer = collect($answers)->firstWhere('question_number', $index + 1)['answer'] ?? null;
+            
+            if ($submittedAnswer === null) continue;
+
+            $isCorrect = false;
+            if ($question['type'] === 'multiple_choice' || $question['type'] === 'true_false') {
+                $correctIndex = collect($question['options'] ?? [])->search(fn($opt) => ($opt['is_correct'] ?? false) === true);
+                if ($correctIndex !== false && (int)$submittedAnswer === (int)$correctIndex) {
+                    $isCorrect = true;
+                }
+            } elseif ($question['type'] === 'identification') {
+                if (trim(strtolower($submittedAnswer)) === trim(strtolower($question['correct_answer'] ?? ''))) {
+                    $isCorrect = true;
+                }
+            }
+
+            if ($isCorrect) {
+                $score += $questionPoints;
+            }
+        }
+
         // Create or update submission
         $submission = ExamSubmission::updateOrCreate(
             [
@@ -82,6 +114,7 @@ class ExamController extends Controller
             [
                 'answers' => json_encode($validated['answers']),
                 'status' => 'submitted',
+                'score' => $score,
             ]
         );
 

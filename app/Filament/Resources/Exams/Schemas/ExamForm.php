@@ -56,10 +56,15 @@ class ExamForm
                                     ->maxLength(255)
                                     ->columnSpanFull(),
                                 \Filament\Forms\Components\Textarea::make('instructions')
-                                    ->label('Part Instructions')
                                     ->placeholder('Instructions for this part...')
                                     ->maxLength(65535)
                                     ->columnSpanFull(),
+                                \Filament\Forms\Components\TextInput::make('points')
+                                    ->label('Default Points Per Question')
+                                    ->numeric()
+                                    ->default(1)
+                                    ->required()
+                                    ->columnSpan(1),
                                 \Filament\Forms\Components\Repeater::make('questions')
                                      ->label('Questions')
                                      ->columns(2)
@@ -79,6 +84,12 @@ class ExamForm
                                              ])
                                              ->required()
                                              ->live()
+                                             ->columnSpan(1),
+                                         \Filament\Forms\Components\TextInput::make('points')
+                                             ->label('Points')
+                                             ->numeric()
+                                             ->default(fn($get) => $get('../../points') ?? 1)
+                                             ->required()
                                              ->columnSpan(1),
                                         \Filament\Forms\Components\Repeater::make('options')
                                             ->label('Choices')

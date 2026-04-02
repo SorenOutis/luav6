@@ -14,6 +14,7 @@ class ExamPart extends Model
         'sort_order',
         'options',
         'questions',
+        'points',
     ];
 
     protected $casts = [
