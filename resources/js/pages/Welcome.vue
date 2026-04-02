@@ -128,7 +128,7 @@ const coreFeatures = [
         </header>
 
         <!-- Main Operational Interface -->
-        <main class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-6 pt-20 pb-32 lg:px-16 lg:pt-52">
+        <main class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-6 pt-12 pb-32 lg:px-16 lg:pt-28">
             
             <!-- Hero Monolith -->
             <div class="max-w-6xl">
