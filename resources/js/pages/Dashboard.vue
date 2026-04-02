@@ -154,13 +154,13 @@ onMounted(() => {
 
     tl.to(
         '.dashboard-stats',
-        { opacity: 1, y: 0, scale: 1, clearProps: 'transform,opacity' },
+        { opacity: 1, y: 0, scale: 1 },
         '-=0.6'
     );
 
     tl.to(
         '.dashboard-leaderboard',
-        { opacity: 1, y: 0, scale: 1, clearProps: 'transform,opacity' },
+        { opacity: 1, y: 0, scale: 1, duration: 0.8 },
         '-=0.4'
     );
 
@@ -170,8 +170,7 @@ onMounted(() => {
             opacity: 1,
             y: 0,
             scale: 1,
-            rotationX: 0,
-            clearProps: 'transform,opacity'
+            rotationX: 0
         },
         '-=0.3'
     );

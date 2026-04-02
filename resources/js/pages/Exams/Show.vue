@@ -202,9 +202,43 @@ const clearDraft = () => {
     localStorage.removeItem(getDraftKey());
 };
 
-watch(answers, () => {
-    saveDraft();
-}, { deep: true });
+// Re-trigger entrance animations when returning to list view
+const runEntranceAnimations = () => {
+    const tl = gsap.timeline({
+        defaults: { ease: 'power4.out', duration: 1.0 }
+    });
+
+    // Reset base state to hidden before animating
+    gsap.set('.animate-up', { opacity: 0, y: 25 });
+    gsap.set('.exam-part-card', { opacity: 0, y: 40, scale: 0.98 });
+
+    // Hero: main card in first
+    tl.to('.exam-hero', { opacity: 1, y: 0, duration: 0.9 });
+
+    // Hero components
+    tl.fromTo('.exam-hero-left', { opacity: 0, y: 30 }, { opacity: 1, y: 0 }, '-=0.6');
+    tl.fromTo('.exam-hero-stats', { opacity: 0, scale: 0.9, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.8 }, '-=0.7');
+    tl.fromTo('.exam-stat', { opacity: 0, x: -10 }, { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, '-=0.4');
+
+    // Parts list cards
+    tl.fromTo('.exam-part-card', 
+        { opacity: 0, y: 40, scale: 0.98 }, 
+        { 
+            opacity: 1, 
+            y: 0, 
+            scale: 1, 
+            stagger: 0.08, 
+            duration: 0.8 
+        }, 
+        '-=0.5'
+    );
+};
+
+watch(selectedPart, (newVal) => {
+    if (newVal === null) {
+        setTimeout(runEntranceAnimations, 50);
+    }
+});
 
 // ─── INTEGRITY & ANTI-CHEATING ───────────────────────────────
 const integrityWarnings = ref(0);
@@ -341,8 +375,7 @@ const startPart = () => {
                 rotationX: 0,
                 duration: 0.5,
                 stagger: 0.08,
-                ease: 'power3.out',
-                clearProps: 'transform,opacity'
+                ease: 'power3.out'
             }
         );
     }, 10);
@@ -543,54 +576,11 @@ const closeSuccessModal = () => {
 };
 
 onMounted(() => {
-    // Base state for subtle fade-up
-    gsap.set('.animate-up', { opacity: 0, y: 25 });
-
-    const tl = gsap.timeline({
-        defaults: { ease: 'power4.out', duration: 1.0 }
-    });
-
-    // Hero: main card in first
-    tl.to('.exam-hero', { opacity: 1, y: 0, duration: 0.9 });
-
-    // Hero left content
-    tl.fromTo(
-        '.exam-hero-left',
-        { opacity: 0, y: 30 },
-        { opacity: 1, y: 0 },
-        '-=0.6'
-    );
-
-    // Hero stats dashboard
-    tl.fromTo(
-        '.exam-hero-stats',
-        { opacity: 0, scale: 0.9, y: 20 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.8 },
-        '-=0.7'
-    );
-
-    // Individual stat items inside the dashboard
-    tl.fromTo(
-        '.exam-stat',
-        { opacity: 0, x: -10 },
-        { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 },
-        '-=0.4'
-    );
-
-    // Parts list cards
-    tl.fromTo(
-        '.exam-part-card',
-        { opacity: 0, y: 40, scale: 0.98 },
-        {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            stagger: 0.1,
-            duration: 0.8,
-            clearProps: 'transform,opacity'
-        },
-        '-=0.5'
-    );
+    runEntranceAnimations();
+    
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('contextmenu', preventCheatingActions);
+    window.addEventListener('keydown', handleGlobalKeydown);
 });
 </script>
 

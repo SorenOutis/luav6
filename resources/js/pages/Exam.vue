@@ -59,19 +59,25 @@ onMounted(() => {
     });
 
     // Initial states
-    gsap.set('.exam-hero', { opacity: 0, y: 40, scale: 0.98 });
+    gsap.set('.exam-hero', { opacity: 0, y: 30, filter: 'blur(5px)' });
     gsap.set('.exam-card', {
         opacity: 0,
-        y: 60,
-        scale: 0.96,
-        rotationX: -8,
+        y: 50,
+        scale: 0.95,
+        rotationX: -10,
+        filter: 'blur(10px)',
         transformOrigin: 'center top'
     });
 
     // Hero entrance
-    tl.to('.exam-hero', { opacity: 1, y: 0, scale: 1 });
+    tl.to('.exam-hero', { 
+        opacity: 1, 
+        y: 0, 
+        filter: 'blur(0px)', 
+        duration: 0.8 
+    });
 
-    // Card entrance with depth and stagger
+    // Card entrance with depth and liquid stagger
     tl.to(
         '.exam-card',
         {
@@ -79,10 +85,16 @@ onMounted(() => {
             y: 0,
             scale: 1,
             rotationX: 0,
-            stagger: 0.15,
-            clearProps: 'transform,opacity'
+            filter: 'blur(0px)',
+            stagger: {
+                each: 0.08,
+                from: "start",
+                ease: "power2.inOut"
+            },
+            duration: 1.2,
+            ease: 'elastic.out(1, 0.75)'
         },
-        '-=0.4'
+        '-=0.5'
     );
 
     // Background orb animation
@@ -254,9 +266,5 @@ onMounted(() => {
 
 .animate-section {
     will-change: transform, opacity;
-}
-
-.exam-card {
-    opacity: 1;
 }
 </style>
