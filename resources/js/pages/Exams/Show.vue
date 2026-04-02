@@ -63,6 +63,7 @@ const flaggedQuestions = ref<Set<number>>(new Set());
 const partStartTime = ref<number | null>(null);
 const estimatedFinishMinutes = ref<number | null>(null);
 const lastSavedAt = ref<string | null>(null);
+const pendingUnlockIndex = ref<number | null>(null);
 
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
@@ -236,32 +237,11 @@ const allPartsSubmitted = computed(() =>
     submittedPartsCount.value === props.exam.parts.length && props.exam.parts.length > 0
 );
 
-// Trigger unlock animation when progress changes
+// Trigger unlock animation setup when progress changes
 watch(submittedPartsCount, (newCount, oldCount) => {
     if (newCount > oldCount) {
-        // Find the newly unlocked card (the one at index newCount)
-        setTimeout(() => {
-            const unlockedCard = document.querySelectorAll('.exam-part-card')[newCount];
-            if (unlockedCard) {
-                gsap.fromTo(unlockedCard, 
-                    { x: -10, filter: 'brightness(0.5)' }, 
-                    { x: 0, filter: 'brightness(1)', duration: 0.8, ease: 'elastic.out(1, 0.3)' }
-                );
-                
-                // Animate the lock icon specifically if visible
-                const lockIcon = unlockedCard.querySelector('.lucide-lock');
-                if (lockIcon) {
-                    gsap.to(lockIcon, { 
-                        rotate: 15, 
-                        scale: 0, 
-                        opacity: 0, 
-                        duration: 0.5, 
-                        delay: 0.2,
-                        onComplete: () => lockIcon.remove() 
-                    });
-                }
-            }
-        }, 100);
+        // Queue the next index for animation once we return to the list view
+        pendingUnlockIndex.value = newCount;
     }
 });
 
@@ -528,6 +508,35 @@ const closeSuccessModal = () => {
                 // Reset and go back to parts list
                 Object.keys(answers).forEach(key => delete answers[Number(key)]);
                 goBackToList();
+                
+                // If there's a pending unlock, animate it now that we are back in the grid
+                if (pendingUnlockIndex.value !== null) {
+                    const nextIndex = pendingUnlockIndex.value;
+                    pendingUnlockIndex.value = null; // Reset
+                    
+                    setTimeout(() => {
+                        const unlockedCard = document.querySelectorAll('.exam-part-card')[nextIndex];
+                        if (unlockedCard) {
+                            gsap.fromTo(unlockedCard, 
+                                { x: -20, scale: 0.95, filter: 'brightness(0.5)' }, 
+                                { x: 0, scale: 1, filter: 'brightness(1)', duration: 1.2, ease: 'elastic.out(1, 0.4)' }
+                            );
+                            
+                            // Animate the lock icon breaking away
+                            const lockIcon = unlockedCard.querySelector('.lucide-lock');
+                            if (lockIcon) {
+                                gsap.to(lockIcon, { 
+                                    rotate: 30, 
+                                    scale: 0, 
+                                    opacity: 0, 
+                                    duration: 0.6, 
+                                    delay: 0.1,
+                                    onComplete: () => lockIcon.remove() 
+                                });
+                            }
+                        }
+                    }, 500); // Give Inertia/Vue a moment to render the grid
+                }
             }
         });
     }
