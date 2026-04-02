@@ -592,13 +592,13 @@ onMounted(() => {
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
                 <div
-                    class="animate-up exam-hero relative overflow-hidden rounded-[1.5rem] md:rounded-[2rem] border border-white/10 bg-gradient-to-br from-card/80 via-card/40 to-primary/5 backdrop-blur-3xl p-4 md:px-8 md:py-6 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
+                    class="animate-up exam-hero relative overflow-hidden rounded-[1.2rem] md:rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-card/80 via-card/40 to-primary/5 backdrop-blur-3xl p-3 md:px-6 md:py-3 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
                     <!-- Dynamic background glow -->
                     <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/15 rounded-full blur-3xl pointer-events-none"></div>
                     
                     <!-- Decorative Large Icon -->
                     <div class="pointer-events-none absolute -right-6 -top-6 opacity-5 md:opacity-10 rotate-12">
-                        <GraduationCap class="w-48 h-48 text-primary" />
+                        <GraduationCap class="w-32 h-32 text-primary" />
                     </div>
 
                     <!-- Inner Glow / Border Highlight -->
@@ -614,11 +614,11 @@ onMounted(() => {
                                 </span>
                             </div>
                             
-                            <h1 class="text-xl md:text-3xl font-black tracking-tight leading-[1.1] premium-gradient-text max-w-3xl">
+                            <h1 class="text-lg md:text-2xl font-black tracking-tight leading-[1.1] premium-gradient-text max-w-3xl">
                                 {{ selectedPart ? selectedPart.title : exam.title }}
                             </h1>
                             
-                            <p class="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-2xl opacity-80">
+                            <p class="text-[10px] md:text-xs text-muted-foreground leading-relaxed max-w-2xl opacity-80">
                                 {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
                             </p>
                             
@@ -631,7 +631,7 @@ onMounted(() => {
                         </div>
 
                         <!-- Stats Dashboard Bar -->
-                        <div class="exam-hero-stats grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 md:gap-4 lg:gap-6 bg-black/20 dark:bg-white/5 backdrop-blur-xl p-4 md:px-6 md:py-5 rounded-2xl md:rounded-[1.5rem] border border-white/5 shadow-inner self-stretch md:self-auto lg:self-center">
+                        <div class="exam-hero-stats grid grid-cols-3 md:flex md:flex-nowrap items-center gap-2 md:gap-4 lg:gap-5 bg-black/20 dark:bg-white/5 backdrop-blur-xl p-3 md:px-4 md:py-3 rounded-xl md:rounded-[1.2rem] border border-white/5 shadow-inner self-stretch md:self-auto lg:self-center">
                             <div v-if="allPartsSubmitted" class="exam-stat group flex flex-col items-center md:items-start transition-all">
                                 <div class="flex items-center gap-2 md:gap-3 mb-0.5 md:mb-1">
                                     <div class="p-1 md:p-1.5 rounded-lg bg-green-500/10 text-green-500">
@@ -696,9 +696,9 @@ onMounted(() => {
                         </span>
                     </div>
 
-                    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
-                            class="exam-part-card animate-up surface-card premium-hover group h-full p-4 md:p-6"
+                            class="exam-part-card animate-up surface-card premium-hover group h-full p-3 md:p-4"
                             :class="[
                                 (isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index))
                                     ? 'opacity-60 cursor-not-allowed grayscale-[0.5]' 
@@ -711,11 +711,11 @@ onMounted(() => {
 
                             <!-- Silhouette background icon -->
                             <div
-                                class="pointer-events-none absolute -right-3 -bottom-3 opacity-5 group-hover:opacity-15 group-hover:scale-110 transition-all duration-700">
-                                <component :is="getPartIcon(part.type)" class="w-24 h-24 text-foreground" />
+                                class="pointer-events-none absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-15 group-hover:scale-110 transition-all duration-700">
+                                <component :is="getPartIcon(part.type)" class="w-16 h-16 text-foreground" />
                             </div>
 
-                            <div class="relative flex flex-col gap-6 h-full">
+                            <div class="relative flex flex-col gap-4 h-full">
                                 <!-- Top: Part Label & Status -->
                                 <div class="flex items-center justify-between">
                                     <div class="px-3 py-1 rounded-lg bg-primary/5 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10">
@@ -756,7 +756,7 @@ onMounted(() => {
                                 <!-- Center: Title & Types -->
                                 <div class="flex-1 space-y-3">
                                     <h3
-                                        class="text-lg md:text-xl font-black leading-tight transition-colors"
+                                        class="text-base md:text-lg font-black leading-tight transition-colors"
                                         :class="isPartSubmitted(part.id) || isPartLocked(index) ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary'">
                                         {{ part.title }}
                                     </h3>
@@ -777,13 +777,13 @@ onMounted(() => {
                                     </div>
                                     
                                     <div v-if="!isPartSubmitted(part.id)"
-                                        class="flex items-center gap-2 px-4 py-2 rounded-xl transition-all"
+                                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all"
                                         :class="isPartLocked(index) 
                                             ? 'bg-muted/40 text-muted-foreground/40 cursor-not-allowed border border-border/20' 
-                                            : 'bg-primary text-primary-foreground font-bold text-xs shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
-                                        <span class="text-xs font-bold">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
-                                        <Lock v-if="isPartLocked(index)" class="w-3.5 h-3.5" />
-                                        <ArrowRight v-else class="w-3.5 h-3.5" />
+                                            : 'bg-primary text-primary-foreground font-bold text-[10px] shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
+                                        <span class="text-[10px] font-bold">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
+                                        <Lock v-if="isPartLocked(index)" class="w-3 h-3" />
+                                        <ArrowRight v-else class="w-3 h-3" />
                                     </div>
                                     <div v-else
                                         class="w-10 h-10 rounded-full flex items-center justify-center bg-muted border border-border/60">
