@@ -238,10 +238,11 @@ const submitPart = async () => {
 
     try {
         // Build detailed answers with question information
-        const detailedAnswers = (selectedPart.value.questions || []).map((question, index) => ({
+        const detailedAnswers = (selectedPart.value?.questions || []).map((question, index) => ({
             question_number: index + 1,
             question_text: question.text,
             question_type: question.type,
+            points: question.points ?? selectedPart.value?.points ?? 1,
             answer: (answers[index] !== undefined && answers[index] !== null) ? answers[index] : null,
         }));
 
