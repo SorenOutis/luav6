@@ -30,7 +30,7 @@ class ExamController extends Controller
             return array_merge($exam->toArray(), [
                 'submitted_parts_count' => $submittedPartsCount,
                 'total_parts' => $exam->parts->count(),
-                'is_locked' => $submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0,
+                'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
             ]);
         });
 
@@ -67,6 +67,11 @@ class ExamController extends Controller
 
     public function submitPart(Request $request, Exam $exam, ExamPart $examPart)
     {
+        // Prevent submissions if exam is closed
+        if ($exam->status === 'closed') {
+            abort(403, 'This exam is currently closed.');
+        }
+
         // Validate the request
         $validated = $request->validate([
             'answers' => 'required|array',

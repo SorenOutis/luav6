@@ -183,8 +183,8 @@ const getQuestionTypes = (part: ExamPart) =>
 const formatType = (type: string) => type.replace(/_/g, ' ');
 
 const selectPart = (part: ExamPart) => {
-    // Prevent selecting if part is already submitted
-    if (isPartSubmitted(part.id)) {
+    // Prevent selecting if exam is closed or part is already submitted
+    if (props.exam.status === 'closed' || isPartSubmitted(part.id)) {
         return;
     }
 
@@ -523,7 +523,7 @@ onMounted(() => {
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part)"
                             class="exam-part-card animate-up surface-card premium-hover group h-full p-6 md:p-8"
                             :class="[
-                                isPartSubmitted(part.id) 
+                                (isPartSubmitted(part.id) || exam.status === 'closed')
                                     ? 'opacity-60 cursor-not-allowed grayscale-[0.5]' 
                                     : 'cursor-pointer hover:border-primary/40',
                                 getPartColor(index)
@@ -544,8 +544,12 @@ onMounted(() => {
                                     <div class="px-3 py-1 rounded-lg bg-primary/5 text-[10px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10">
                                         Part {{ index + 1 }}
                                     </div>
-                                    <div v-if="isPartSubmitted(part.id)" class="flex flex-col items-end gap-1">
-                                        <div v-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1.5 text-amber-500">
+                                    <div v-if="isPartSubmitted(part.id) || exam.status === 'closed'" class="flex flex-col items-end gap-1">
+                                        <div v-if="exam.status === 'closed' && !isPartSubmitted(part.id)" class="flex items-center gap-1.5 text-red-500">
+                                            <Lock class="w-4 h-4" />
+                                            <span class="text-[10px] font-black uppercase tracking-widest">LOCKED</span>
+                                        </div>
+                                        <div v-else-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1.5 text-amber-500">
                                             <Clock class="w-4 h-4" />
                                             <span class="text-[10px] font-black uppercase tracking-widest">PENDING REVIEW</span>
                                         </div>
@@ -553,7 +557,7 @@ onMounted(() => {
                                             <CheckSquare2 class="w-4 h-4" />
                                             <span class="text-[10px] font-black uppercase tracking-widest">COMPLETED</span>
                                         </div>
-                                        <div class="text-[10px] font-bold text-muted-foreground/80">
+                                        <div v-if="isPartSubmitted(part.id)" class="text-[10px] font-bold text-muted-foreground/80">
                                             Score: <span class="text-foreground">{{ submissions[part.id]?.score ?? 0 }}</span> / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
                                             <span v-if="submissions[part.id]?.status === 'pending_review'" class="text-[9px] opacity-70 ml-1">(+ Essay)</span>
                                         </div>

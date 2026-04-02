@@ -206,7 +206,7 @@ onMounted(() => {
                             class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-muted text-muted-foreground font-semibold cursor-not-allowed opacity-60"
                         >
                             <Lock class="w-4 h-4" />
-                            Exam Completed
+                            {{ exam.status === 'closed' ? 'Exam Closed' : 'Exam Completed' }}
                         </button>
                         <a 
                             v-else-if="exam.url" 
