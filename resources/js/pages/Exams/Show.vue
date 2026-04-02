@@ -736,11 +736,11 @@ onMounted(() => {
                     <!-- Submit bar -->
                     <div class="sticky bottom-6 flex justify-end pt-4">
                         <button @click="submitPart" :disabled="isSubmitting"
-                            class="group px-12 py-5 rounded-[2rem] bg-primary text-primary-foreground font-black shadow-[0_20px_40px_-10px_rgba(0,0,0,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span class="text-base tracking-wide">{{ isSubmitting ? 'SECURELY SUBMITTING...' : 'FINISH SECTION' }}</span>
+                            class="group px-6 py-3.5 md:px-12 md:py-5 rounded-2xl md:rounded-[2.5rem] bg-primary text-primary-foreground font-black shadow-[0_20px_40px_-10px_rgba(0,0,0,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 md:gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span class="text-sm md:text-base tracking-wide">{{ isSubmitting ? 'SECURELY SUBMITTING...' : 'FINISH SECTION' }}</span>
                             <div class="p-1 rounded-full bg-primary-foreground/10 group-hover:bg-primary-foreground/20 transition-colors">
-                                <ArrowRight v-if="!isSubmitting" class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                <div v-else class="w-5 h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin"></div>
+                                <ArrowRight v-if="!isSubmitting" class="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
+                                <div v-else class="w-4 h-4 md:w-5 md:h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin"></div>
                             </div>
                         </button>
                     </div>
