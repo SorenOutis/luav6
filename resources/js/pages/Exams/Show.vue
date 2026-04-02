@@ -7,8 +7,10 @@ import type { BreadcrumbItem } from '@/types';
 import {
     Calendar, Clock, ChevronLeft, ChevronRight, BookOpen,
     CheckCircle2, HelpCircle, FileText, Settings2, GraduationCap,
-    PlayCircle, ArrowRight, Layers, ListChecks, Users2, Trophy, Lock, CheckSquare2
+    PlayCircle, ArrowRight, Layers, ListChecks, Users2, Trophy, Lock, CheckSquare2,
+    Flag, Zap, BarChart3, RotateCcw
 } from 'lucide-vue-next';
+import { watch } from 'vue';
 
 interface Question {
     text: string;
@@ -57,6 +59,10 @@ const showSuccessModal = ref(false);
 const successModalRef = ref<HTMLElement | null>(null);
 const partsPendingCount = ref(0);
 const displayedScore = ref(0); // For GSAP counter animation
+const flaggedQuestions = ref<Set<number>>(new Set());
+const partStartTime = ref<number | null>(null);
+const estimatedFinishMinutes = ref<number | null>(null);
+const lastSavedAt = ref<string | null>(null);
 
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
@@ -74,9 +80,11 @@ const formattedTime = computed(() => {
 
 const startTimer = () => {
     if (timerInterval.value) return;
+    partStartTime.value = Date.now();
     timerInterval.value = setInterval(() => {
         if (timeLeftSeconds.value > 0) {
             timeLeftSeconds.value--;
+            calculatePace();
         } else {
             stopTimer();
             if (examStarted.value && !isSubmitting.value) {
@@ -84,6 +92,23 @@ const startTimer = () => {
             }
         }
     }, 1000);
+};
+
+const calculatePace = () => {
+    if (!partStartTime.value || !selectedPart.value) return;
+    
+    const answeredCount = Object.keys(answers).length;
+    if (answeredCount === 0) return;
+
+    const elapsedSeconds = (Date.now() - partStartTime.value) / 1000;
+    const avgSecondsPerQuestion = elapsedSeconds / answeredCount;
+    const remainingQuestions = (selectedPart.value.questions?.length ?? 0) - answeredCount;
+    
+    if (remainingQuestions > 0) {
+        estimatedFinishMinutes.value = Math.ceil((remainingQuestions * avgSecondsPerQuestion) / 60);
+    } else {
+        estimatedFinishMinutes.value = 0;
+    }
 };
 
 const stopTimer = () => {
@@ -95,9 +120,64 @@ const stopTimer = () => {
 
 // ─── PROGRESS NAVIGATOR LOGIC ──────────────────────────────────
 const getQuestionStatus = (index: number) => {
-    if (answers[index] !== undefined && answers[index] !== '') return 'answered';
+    if (flaggedQuestions.value.has(index)) return 'flagged';
+    if (answers[index] !== undefined && answers[index] !== '' && answers[index] !== null) return 'answered';
     return 'pending';
 };
+
+const toggleFlag = (index: number) => {
+    if (flaggedQuestions.value.has(index)) {
+        flaggedQuestions.value.delete(index);
+    } else {
+        flaggedQuestions.value.add(index);
+    }
+    saveDraft();
+};
+
+// ─── AUTO-SAVE LOGIC ───────────────────────────────────────
+const DRAFT_KEY_PREFIX = 'exam_draft_';
+
+const getDraftKey = () => `${DRAFT_KEY_PREFIX}${props.exam.id}_${selectedPart.value?.id}`;
+
+const saveDraft = () => {
+    if (!selectedPart.value) return;
+    const draft = {
+        answers: { ...answers },
+        flagged: Array.from(flaggedQuestions.value),
+        timeLeft: timeLeftSeconds.value,
+        timestamp: Date.now()
+    };
+    localStorage.setItem(getDraftKey(), JSON.stringify(draft));
+    lastSavedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+};
+
+const loadDraft = () => {
+    if (!selectedPart.value) return;
+    const saved = localStorage.getItem(getDraftKey());
+    if (saved) {
+        try {
+            const draft = JSON.parse(saved);
+            // Only load if recent (e.g., within the last 2 hours)
+            if (Date.now() - draft.timestamp < 2 * 60 * 60 * 1000) {
+                Object.assign(answers, draft.answers);
+                flaggedQuestions.value = new Set(draft.flagged || []);
+                // If the saved time is significantly different, we could sync it, 
+                // but usually the server-side timer is authority. 
+                // For now, we trust the props timer unless it's a refresh.
+            }
+        } catch (e) {
+            console.error('Failed to load draft', e);
+        }
+    }
+};
+
+const clearDraft = () => {
+    localStorage.removeItem(getDraftKey());
+};
+
+watch(answers, () => {
+    saveDraft();
+}, { deep: true });
 
 // ─── INTEGRITY & ANTI-CHEATING ───────────────────────────────
 const integrityWarnings = ref(0);
@@ -199,8 +279,15 @@ const selectPart = (part: ExamPart, index: number) => {
 };
 
 const startPart = () => {
+    // Reset state for the new part
+    Object.keys(answers).forEach(key => delete answers[Number(key)]);
+    flaggedQuestions.value.clear();
+    estimatedFinishMinutes.value = null;
+    lastSavedAt.value = null;
+
     examStarted.value = true;
     startTimer(); // Start the countdown when the first section begins
+    loadDraft(); // Load any saved progress
 
     setTimeout(() => {
         gsap.fromTo(
@@ -230,7 +317,67 @@ onMounted(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', preventCheatingActions);
     document.addEventListener('copy', preventCheatingActions);
+    document.addEventListener('keydown', handleGlobalKeydown);
 });
+
+const handleGlobalKeydown = (e: KeyboardEvent) => {
+    if (!examStarted.value || isSubmitting.value) return;
+
+    const activeElem = document.activeElement;
+    const isInput = activeElem?.tagName === 'INPUT' || activeElem?.tagName === 'TEXTAREA';
+
+    // Numbers 1-9 for picking MCQ options
+    if (!isInput && /^[1-9]$/.test(e.key)) {
+        const cards = document.querySelectorAll('.question-card');
+        const middle = window.innerHeight / 2;
+        let bestCard = null;
+        let minDistance = Infinity;
+
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const distance = Math.abs(rect.top + rect.height / 2 - middle);
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestCard = card;
+            }
+        });
+        
+        if (bestCard) {
+            const idParts = (bestCard as HTMLElement).id.split('-');
+            const qIndex = parseInt(idParts[1]);
+            const optionIndex = parseInt(e.key) - 1;
+            const question = selectedPart.value?.questions?.[qIndex];
+            if (question && (question.type === 'multiple_choice' || question.type === 'true_false')) {
+                if (question.options && optionIndex < question.options.length) {
+                    answers[qIndex] = optionIndex;
+                }
+            }
+        }
+    }
+
+    // 'F' for Flagging
+    if (!isInput && e.key.toLowerCase() === 'f') {
+        const cards = document.querySelectorAll('.question-card');
+        const middle = window.innerHeight / 2;
+        let bestCard = null;
+        let minDistance = Infinity;
+
+        cards.forEach(card => {
+            const rect = card.getBoundingClientRect();
+            const distance = Math.abs(rect.top + rect.height / 2 - middle);
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestCard = card;
+            }
+        });
+
+        if (bestCard) {
+            const idParts = (bestCard as HTMLElement).id.split('-');
+            const qIndex = parseInt(idParts[1]);
+            toggleFlag(qIndex);
+        }
+    }
+};
 
 const goBackToList = () => {
     selectedPart.value = null;
@@ -239,6 +386,13 @@ const goBackToList = () => {
 
 const submitPart = async () => {
     if (!selectedPart.value) return;
+
+    // Smart Review Nudge
+    const unansweredCount = (selectedPart.value.questions?.length ?? 0) - Object.keys(answers).length;
+    if (unansweredCount > 0 && !isSubmitting.value) {
+        const confirmResult = confirm(`You have ${unansweredCount} unanswered questions in this section. Are you sure you want to proceed to the next part?`);
+        if (!confirmResult) return;
+    }
 
     isSubmitting.value = true;
 
@@ -256,6 +410,7 @@ const submitPart = async () => {
             answers: detailedAnswers,
         }, {
             onSuccess: () => {
+                clearDraft(); // Clean up successfully submitted draft
                 // Show success modal
                 showSuccessModal.value = true;
                 partsPendingCount.value = remainingPartsCount.value;
@@ -411,12 +566,27 @@ onMounted(() => {
                         </Link>
                     </div>
 
-                    <!-- Live Floating Timer -->
+                    <!-- Live Floating Timer & Smart Stats -->
                     <div v-if="examStarted" 
-                        class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-500"
-                        :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse' : 'text-primary'">
-                        <Clock class="w-4 h-4" />
-                        <span class="font-black text-base tracking-widest tabular-nums">{{ formattedTime }}</span>
+                        class="flex items-center gap-3 md:gap-5 px-4 py-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-500">
+                        
+                        <!-- Draft Status (Desktop Only) -->
+                        <div v-if="lastSavedAt" class="hidden md:flex items-center gap-1.5 text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest border-r border-white/10 pr-4">
+                            <RotateCcw class="w-3 h-3" />
+                            Draft Saved {{ lastSavedAt }}
+                        </div>
+
+                        <!-- Pace Indicator -->
+                        <div v-if="estimatedFinishMinutes !== null && estimatedFinishMinutes > 0" 
+                            class="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                            <Zap class="w-3.5 h-3.5 fill-amber-400/20" />
+                            <span class="hidden md:inline">Finish In</span> ~{{ estimatedFinishMinutes }}m
+                        </div>
+
+                        <div class="flex items-center gap-3" :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse' : 'text-primary'">
+                            <Clock class="w-4 h-4" />
+                            <span class="font-black text-base tracking-widest tabular-nums">{{ formattedTime }}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -665,6 +835,12 @@ onMounted(() => {
                                             class="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-base font-black text-primary">
                                             {{ qIndex + 1 }}
                                         </div>
+                                        <!-- Smart Flag Button -->
+                                        <button @click="toggleFlag(qIndex)"
+                                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all bg-muted border border-border/40 hover:bg-amber-500/10 hover:border-amber-500/50 group/flag"
+                                            :class="flaggedQuestions.has(qIndex) ? 'bg-amber-500/20 border-amber-500/60 text-amber-500' : 'text-muted-foreground/40'">
+                                            <Flag class="w-4 h-4" :class="flaggedQuestions.has(qIndex) ? 'fill-amber-500' : ''" />
+                                        </button>
                                     </div>
 
                                     <!-- Question text -->
@@ -714,15 +890,20 @@ onMounted(() => {
                             <div class="p-5 rounded-2xl border border-white/5 bg-card/30 backdrop-blur-2xl shadow-xl">
                                 <h3 class="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4">Navigator</h3>
                                 <div class="grid grid-cols-4 gap-2">
-                                    <a v-for="(_, qIndex) in selectedPart!.questions" :key="qIndex"
+                                        <a v-for="(_, qIndex) in selectedPart!.questions" :key="qIndex"
                                         :href="`#q-${qIndex}`"
-                                        class="aspect-square rounded-lg flex items-center justify-center text-xs font-black transition-all border border-border/40"
+                                        class="aspect-square rounded-lg flex items-center justify-center text-xs font-black transition-all border border-border/40 relative shadow-sm"
                                         :class="[
                                             getQuestionStatus(qIndex) === 'answered'
-                                                ? 'bg-primary text-primary-foreground border-primary'
+                                                ? 'bg-primary text-primary-foreground border-primary shadow-primary/20'
+                                                : getQuestionStatus(qIndex) === 'flagged'
+                                                ? 'bg-amber-500 text-white border-amber-500 shadow-amber-500/20'
                                                 : 'bg-muted/30 text-muted-foreground hover:border-primary/50'
                                         ]">
                                         {{ qIndex + 1 }}
+                                        <!-- Flag indicator bubble -->
+                                        <div v-if="flaggedQuestions.has(qIndex)" 
+                                            class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 border border-white dark:border-black shadow-sm"></div>
                                     </a>
                                 </div>
                                 <div class="mt-6 pt-4 border-t border-border/10 space-y-2">
@@ -744,9 +925,14 @@ onMounted(() => {
                          <div class="bg-black/80 backdrop-blur-2xl rounded-2xl border border-white/10 p-3 shadow-2xl flex items-center gap-3 overflow-x-auto no-scrollbar">
                             <div class="text-[9px] font-black uppercase text-muted-foreground vertical-writing rotate-180 mr-1">NAV</div>
                             <div v-for="(_, qIndex) in selectedPart!.questions" :key="qIndex"
-                                class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black border border-white/5 transition-all"
-                                :class="getQuestionStatus(qIndex) === 'answered' ? 'bg-primary text-primary-foreground' : 'bg-white/5 text-white/40'">
+                                class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black border border-white/5 transition-all relative"
+                                :class="[
+                                    getQuestionStatus(qIndex) === 'answered' ? 'bg-primary text-primary-foreground' : 
+                                    getQuestionStatus(qIndex) === 'flagged' ? 'bg-amber-500 text-white' : 
+                                    'bg-white/5 text-white/40'
+                                ]">
                                 {{ qIndex + 1 }}
+                                <div v-if="flaggedQuestions.has(qIndex)" class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500 border border-black shadow-sm"></div>
                             </div>
                          </div>
                     </div>
