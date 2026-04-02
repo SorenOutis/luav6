@@ -89,9 +89,9 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="flex items-center gap-2 sm:gap-4">
-            <div class="flex flex-col items-end justify-center">
-                <span class="text-[10px] sm:text-xs font-bold text-foreground font-mono tracking-tight">{{ currentTime }}</span>
-                <span class="text-[8px] sm:text-[10px] font-semibold text-muted-foreground uppercase tracking-wider font-sans">{{ currentDate }}</span>
+            <div class="flex flex-col items-end justify-center leading-none">
+                <span class="text-[11px] sm:text-xs font-black text-foreground tracking-tighter uppercase">{{ currentTime }}</span>
+                <span class="text-[8px] sm:text-[9px] font-bold text-muted-foreground/80 uppercase tracking-widest mt-0.5">{{ currentDate }}</span>
             </div>
             
             <button
