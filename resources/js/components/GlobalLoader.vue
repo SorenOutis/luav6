@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import gsap from 'gsap';
-import { Terminal, Command, Cpu } from 'lucide-vue-next';
+import { Terminal, Command } from 'lucide-vue-next';
 import { useLoader } from '@/composables/useLoader';
+
+const TITLE = 'KOAMISHIN.ORG';
 
 const props = defineProps<{
     show: boolean;
@@ -11,8 +13,8 @@ const props = defineProps<{
 const { pendingHide, hide } = useLoader();
 
 const loaderContainer = ref<HTMLElement | null>(null);
-const mainText = ref<HTMLElement | null>(null);
 const structuralLines = ref<HTMLElement[]>([]);
+const letterEls = ref<HTMLElement[]>([]);
 const progress = ref(0);
 const isMounted = ref(false);
 
@@ -29,6 +31,8 @@ const tryExit = () => {
 
 onMounted(() => {
     isMounted.value = true;
+    // Reset letter refs before each mount
+    letterEls.value = [];
     gsap.set(loaderContainer.value, { y: '-100%', display: 'none' });
 
     if (props.show) {
@@ -51,14 +55,16 @@ const startEntrance = () => {
     progressDone = false;
     serverDone = false;
 
-    const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.2 } });
+    const tl = gsap.timeline();
 
     gsap.set(loaderContainer.value, { display: 'flex', y: '0%', opacity: 1 });
     gsap.set('.loader-reveal', { y: 20, opacity: 0 });
     gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
-    gsap.set(mainText.value, { clipPath: 'inset(100% 0 0 0)' });
+    // Each letter starts clipped (hidden below its container)
+    gsap.set(letterEls.value, { y: '110%', opacity: 0 });
     progress.value = 0;
 
+    // Structural lines sweep in
     tl.to(structuralLines.value, {
         scaleX: 1,
         scaleY: 1,
@@ -66,20 +72,24 @@ const startEntrance = () => {
         duration: 0.8,
         ease: 'power4.inOut'
     })
-    .to(mainText.value, {
-        clipPath: 'inset(0% 0 0 0)',
-        duration: 1.5,
-        ease: 'expo.inOut'
-    }, '-=0.4')
+    // Letters drop-in one by one
+    .to(letterEls.value, {
+        y: '0%',
+        opacity: 1,
+        stagger: 0.06,
+        duration: 0.9,
+        ease: 'expo.out'
+    }, '-=0.3')
+    // Status row fades up
     .to('.loader-reveal', {
         y: 0,
         opacity: 1,
         stagger: 0.1,
-        duration: 1
-    }, '-=1');
+        duration: 0.8,
+        ease: 'expo.out'
+    }, '-=0.4');
 
     // Progress always runs the full journey: 0 → 100% over ~2.8s
-    // Uses a slight ease so it feels organic (fast start, slows near end)
     gsap.to(progress, {
         value: 100,
         duration: 2.8,
@@ -136,19 +146,17 @@ watch(pendingHide, (isPending) => {
 
         <main class="relative z-10 flex flex-col items-center gap-12 px-6">
             <!-- Monolithic Branding -->
-            <div class="flex flex-col items-center gap-4">
-                <div class="h-14 w-14 flex items-center justify-center bg-primary text-primary-foreground loader-reveal shadow-2xl">
-                    <Cpu class="h-8 w-8 animate-pulse" />
-                </div>
-                
-                <div class="overflow-hidden flex flex-col items-center">
-                    <h1 
-                        ref="mainText"
-                        class="text-[12vw] md:text-8xl lg:text-[10rem] font-black tracking-[-0.04em] leading-none uppercase text-center"
-                    >
-                        KOAMISHIN.ORG
-                    </h1>
-                </div>
+            <div class="flex flex-col items-center">
+                <!-- Per-character animated title -->
+                <h1 class="flex items-end overflow-hidden text-[12vw] md:text-8xl lg:text-[10rem] font-black tracking-[-0.04em] leading-none uppercase select-none">
+                    <span
+                        v-for="(char, i) in TITLE"
+                        :key="i"
+                        :ref="(el) => { if (el) letterEls[i] = el as HTMLElement }"
+                        class="inline-block"
+                        :class="{ 'mx-[0.01em]': char === '.' }"
+                    >{{ char }}</span>
+                </h1>
             </div>
 
             <!-- Initialization Status -->
