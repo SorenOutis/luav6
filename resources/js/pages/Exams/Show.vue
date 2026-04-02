@@ -134,6 +134,10 @@ const totalScore = computed(() =>
     Object.values(props.submissions).reduce((sum, s) => sum + (s.score ?? 0), 0)
 );
 
+const isExamPendingReview = computed(() => 
+    Object.values(props.submissions).some(s => s.status === 'pending_review')
+);
+
 const totalPossiblePoints = computed(() => 
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.reduce((qSum, q) => qSum + (q.points ?? p.points ?? 1), 0) ?? 0), 0)
 );
@@ -541,12 +545,17 @@ onMounted(() => {
                                         Part {{ index + 1 }}
                                     </div>
                                     <div v-if="isPartSubmitted(part.id)" class="flex flex-col items-end gap-1">
-                                        <div class="flex items-center gap-1.5 text-green-500">
+                                        <div v-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1.5 text-amber-500">
+                                            <Clock class="w-4 h-4" />
+                                            <span class="text-[10px] font-black uppercase tracking-widest">PENDING REVIEW</span>
+                                        </div>
+                                        <div v-else class="flex items-center gap-1.5 text-green-500">
                                             <CheckSquare2 class="w-4 h-4" />
                                             <span class="text-[10px] font-black uppercase tracking-widest">COMPLETED</span>
                                         </div>
                                         <div class="text-[10px] font-bold text-muted-foreground/80">
                                             Score: <span class="text-foreground">{{ submissions[part.id]?.score ?? 0 }}</span> / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
+                                            <span v-if="submissions[part.id]?.status === 'pending_review'" class="text-[9px] opacity-70 ml-1">(+ Essay)</span>
                                         </div>
                                     </div>
                                     <div v-else class="flex items-center gap-1.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
@@ -778,17 +787,28 @@ onMounted(() => {
                             <!-- All Complete Message & Score Reveal -->
                             <div v-else class="w-full pt-4 border-t border-border/30 flex flex-col items-center gap-4">
                                 <div class="final-score-box flex flex-col items-center p-6 rounded-3xl bg-primary/5 border border-primary/20 shadow-inner w-full">
-                                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2">Final Exam Score</span>
+                                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2">
+                                        {{ isExamPendingReview ? 'Initial Exam Score' : 'Final Exam Score' }}
+                                    </span>
                                     <div class="flex items-baseline gap-1">
                                         <span class="text-6xl font-black text-primary tabular-nums tracking-tighter">{{ displayedScore }}</span>
                                         <span class="text-xl font-bold text-primary/40">/ {{ totalPossiblePoints }}</span>
                                     </div>
-                                    <div class="mt-4 flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-                                        <Trophy class="w-3.5 h-3.5 text-primary" />
-                                        <span class="text-[10px] font-bold text-primary uppercase tracking-wider">Exam Completed!</span>
+                                    <div class="mt-4 flex flex-col items-center gap-2">
+                                        <div v-if="isExamPendingReview" class="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+                                            <Clock class="w-3.5 h-3.5 text-amber-500" />
+                                            <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Awaiting Teacher Review</span>
+                                        </div>
+                                        <div v-else class="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                                            <Trophy class="w-3.5 h-3.5 text-primary" />
+                                            <span class="text-[10px] font-bold text-primary uppercase tracking-wider">Exam Completed!</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <p class="text-[11px] text-muted-foreground/70 font-medium">Your total achievement across all sections</p>
+                                <p v-if="isExamPendingReview" class="text-[11px] text-muted-foreground/70 font-medium text-center px-4">
+                                    Some parts (like essays) need to be reviewed by your teacher. Your final score will be updated soon.
+                                </p>
+                                <p v-else class="text-[11px] text-muted-foreground/70 font-medium">Your total achievement across all sections</p>
                             </div>
 
                             <!-- Action Button -->

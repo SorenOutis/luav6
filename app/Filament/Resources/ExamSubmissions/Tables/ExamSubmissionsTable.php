@@ -34,6 +34,7 @@ class ExamSubmissionsTable
                 \Filament\Tables\Columns\SelectColumn::make('status')
                     ->options([
                         'submitted' => 'Submitted',
+                        'pending_review' => 'Pending Review',
                         'graded' => 'Graded',
                     ])
                     ->sortable(),

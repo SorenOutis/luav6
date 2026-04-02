@@ -77,10 +77,16 @@ class ExamController extends Controller
         $totalPossible = 0;
         $questions = is_array($examPart->questions) ? $examPart->questions : $examPart->questions ?? [];
         $answers = $validated['answers'];
+        $hasEssay = false;
 
         foreach ($questions as $index => $question) {
             $questionPoints = (int) ($question['points'] ?? $examPart->points ?? 1);
             $totalPossible += $questionPoints;
+
+            if ($question['type'] === 'essay') {
+                $hasEssay = true;
+                continue;
+            }
             
             // Find the answer for this question number (offset 1)
             $submittedAnswer = collect($answers)->firstWhere('question_number', $index + 1)['answer'] ?? null;
@@ -113,7 +119,7 @@ class ExamController extends Controller
             ],
             [
                 'answers' => json_encode($validated['answers']),
-                'status' => 'submitted',
+                'status' => $hasEssay ? 'pending_review' : 'submitted',
                 'score' => $score,
             ]
         );
