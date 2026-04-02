@@ -2,10 +2,13 @@
 import { ref, onMounted, watch } from 'vue';
 import gsap from 'gsap';
 import { Terminal, Command, Cpu } from 'lucide-vue-next';
+import { useLoader } from '@/composables/useLoader';
 
 const props = defineProps<{
     show: boolean;
 }>();
+
+const { pendingHide, hide } = useLoader();
 
 const loaderContainer = ref<HTMLElement | null>(null);
 const mainText = ref<HTMLElement | null>(null);
@@ -13,11 +16,21 @@ const structuralLines = ref<HTMLElement[]>([]);
 const progress = ref(0);
 const isMounted = ref(false);
 
+// Two gates that must BOTH be true before exit plays
+let progressDone = false;
+let serverDone = false;
+
+const tryExit = () => {
+    if (progressDone && serverDone) {
+        console.log('[GlobalLoader] Both gates open — starting exit');
+        startExit();
+    }
+};
+
 onMounted(() => {
     isMounted.value = true;
-    // Initial state: hidden off-screen
     gsap.set(loaderContainer.value, { y: '-100%', display: 'none' });
-    
+
     if (props.show) {
         startEntrance();
     }
@@ -27,16 +40,19 @@ watch(() => props.show, (newVal) => {
     console.log('[GlobalLoader] Prop "show" changed to:', newVal);
     if (newVal) {
         startEntrance();
-    } else {
-        startExit();
     }
+    // Exit is now only triggered via the dual-gate (pendingHide + progress)
 });
 
 const startEntrance = () => {
     console.log('[GlobalLoader] Starting Entrance Animation');
+
+    // Reset gates
+    progressDone = false;
+    serverDone = false;
+
     const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.2 } });
 
-    // Reset and show
     gsap.set(loaderContainer.value, { display: 'flex', y: '0%', opacity: 1 });
     gsap.set('.loader-reveal', { y: 20, opacity: 0 });
     gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
@@ -54,21 +70,27 @@ const startEntrance = () => {
         clipPath: 'inset(0% 0 0 0)',
         duration: 1.5,
         ease: 'expo.inOut'
-    }, "-=0.4")
+    }, '-=0.4')
     .to('.loader-reveal', {
         y: 0,
         opacity: 1,
         stagger: 0.1,
         duration: 1
-    }, "-=1");
+    }, '-=1');
 
-    // Simulate progress
+    // Progress always runs the full journey: 0 → 100% over ~2.8s
+    // Uses a slight ease so it feels organic (fast start, slows near end)
     gsap.to(progress, {
         value: 100,
-        duration: 3,
-        ease: 'none',
+        duration: 2.8,
+        ease: 'power1.inOut',
         onUpdate: () => {
             progress.value = Math.floor(progress.value);
+        },
+        onComplete: () => {
+            console.log('[GlobalLoader] Progress reached 100%');
+            progressDone = true;
+            tryExit();
         }
     });
 };
@@ -79,13 +101,22 @@ const startExit = () => {
         y: '-100%',
         duration: 1.2,
         ease: 'expo.inOut',
-        delay: 0.8, // Hold for a bit so they see the branding
+        delay: 0.4, // Let user see 100% for a brief moment
         onComplete: () => {
-             console.log('[GlobalLoader] Exit Animation Complete');
-             gsap.set(loaderContainer.value, { display: 'none' });
+            console.log('[GlobalLoader] Exit Animation Complete');
+            gsap.set(loaderContainer.value, { display: 'none' });
+            hide();
         }
     });
 };
+
+// Gate 2: server signals it's done
+watch(pendingHide, (isPending) => {
+    if (!isPending) return;
+    console.log('[GlobalLoader] Server done — gate 2 open');
+    serverDone = true;
+    tryExit();
+});
 </script>
 
 <template>

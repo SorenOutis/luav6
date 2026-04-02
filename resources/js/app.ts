@@ -8,7 +8,7 @@ import GlobalLoader from '@/components/GlobalLoader.vue';
 import { useLoader } from '@/composables/useLoader';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
-const { isVisible, show, hide } = useLoader();
+const { isVisible, show, hide, hideWhenReady } = useLoader();
 
 /**
  * Handle Global Navigation Transitions for the Boot Loader
@@ -24,8 +24,8 @@ router.on('start', (event) => {
 });
 
 router.on('finish', () => {
-    // Delay to let the loader animation play out
-    setTimeout(() => hide(), 500);
+    // Signal the loader to hide — it will wait until progress bar hits 100%
+    hideWhenReady();
 });
 
 router.on('error', () => {
