@@ -134,8 +134,8 @@ const coreFeatures = [
             <div class="max-w-6xl">
                 <div class="hero-reveal overflow-hidden mb-2 lg:mb-4">
                     <h1 class="reveal-content text-[15vw] sm:text-8xl lg:text-[12rem] font-black tracking-[-0.04em] leading-[0.8] uppercase flex flex-col">
-                        <span>Learning</span>
-                        <span class="text-muted-foreground/20 italic">Architect</span>
+                        <span>Learning Systems</span>
+                        <span class="text-muted-foreground/20 italic">Intelligence</span>
                     </h1>
                 </div>
                 
