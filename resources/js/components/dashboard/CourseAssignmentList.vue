@@ -1,9 +1,4 @@
 <script setup lang="ts">
-import Card from '@/components/ui/card/Card.vue';
-import CardContent from '@/components/ui/card/CardContent.vue';
-import CardDescription from '@/components/ui/card/CardDescription.vue';
-import CardHeader from '@/components/ui/card/CardHeader.vue';
-import CardTitle from '@/components/ui/card/CardTitle.vue';
 import Progress from '@/components/ui/progress/Progress.vue';
 
 interface Course {
@@ -54,83 +49,88 @@ const handleMouseMove = (e: MouseEvent) => {
 </script>
 
 <template>
-    <Card class="border-sidebar-border/70 dark:border-sidebar-border transition-all duration-200 hover:border-sidebar-border hover:shadow-md dark:hover:shadow-lg">
-        <CardHeader>
-            <CardTitle>Active Courses & Assignments</CardTitle>
-            <CardDescription>Your current learning journey</CardDescription>
-        </CardHeader>
-        <CardContent class="space-y-4">
-            <div v-if="courses.length === 0 && assignments.length === 0" class="text-center py-16 px-4 animate-fade-in">
-                <div class="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-border/40">
+    <div class="surface-card p-6 md:p-8 flex flex-col relative overflow-hidden group/board" @mousemove="handleMouseMove">
+        <!-- Hover Bloom Effect -->
+        <div class="absolute inset-0 opacity-0 group-hover/board:opacity-100 transition-opacity duration-700 pointer-events-none"
+            :style="{ background: `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.05), transparent 40%)` }">
+        </div>
+
+        <div class="mb-8 relative z-10 border-b border-border/10 pb-4">
+            <h3 class="text-xl font-black tracking-tighter flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                Mission Control
+            </h3>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mt-1">Your learning trajectory and active assignments</p>
+        </div>
+
+        <div class="space-y-8 relative z-10">
+            <div v-if="courses.length === 0 && assignments.length === 0" class="text-center py-16 px-4 animate-fade-in border border-dashed border-border/20 rounded-2xl bg-muted/5">
+                <div class="w-16 h-16 bg-muted/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-border/20">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                 </div>
-                <h3 class="text-lg font-bold mb-1">All Caught Up!</h3>
-                <p class="text-sm text-muted-foreground max-w-[250px] mx-auto">You have no active courses or pending assignments at the moment.</p>
+                <h3 class="text-sm font-black tracking-widest uppercase mb-1">Queue Empty</h3>
+                <p class="text-[10px] font-bold tracking-wider text-muted-foreground max-w-[250px] mx-auto uppercase">No active objectives available at this time.</p>
             </div>
 
             <!-- Courses Section -->
             <div v-if="courses.length > 0" class="space-y-4">
+                <h4 class="text-[10px] font-black tracking-[0.2em] uppercase text-foreground/80 mb-3 border-l-2 border-primary pl-2">Active Modules</h4>
                 <div v-for="(course, idx) in courses" :key="course.id"
-                    class="group/course relative overflow-hidden space-y-2 p-4 rounded-2xl border border-sidebar-border/30 hover:border-primary/40 bg-card/50 hover:bg-primary/[0.02] cursor-pointer transition-all animate-fade-up"
+                    class="group/course relative overflow-hidden space-y-3 p-5 rounded-2xl border border-border/30 hover:border-primary/40 bg-card/10 hover:bg-white/[0.02] cursor-pointer transition-all duration-500 animate-fade-up premium-hover"
                     :class="`stagger-${idx + 1}`"
                     @click="handleCourseClick(course)"
                     @mousemove="handleMouseMove">
                     
-                    <!-- Bloom Effect -->
+                    <!-- Item Bloom Effect -->
                     <div class="absolute inset-0 opacity-0 group-hover/course:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
+                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08), transparent 40%)">
                     </div>
 
-                    <div class="flex items-center justify-between">
+                    <div class="flex items-center justify-between relative z-10">
                         <div>
-                            <h4 class="font-bold text-sm">{{ course.name }}</h4>
-                            <p class="text-xs text-muted-foreground">{{ course.completedLessons }} / {{ course.totalLessons }} lessons</p>
+                            <h4 class="font-bold text-sm tracking-tight group-hover/course:text-primary transition-colors">{{ course.name }}</h4>
+                            <p class="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-0.5">{{ course.completedLessons }} of {{ course.totalLessons }} Units complete</p>
                         </div>
                         <div class="text-right">
-                            <div class="text-lg font-bold text-primary">+{{ course.xpEarned }} XP</div>
+                            <div class="text-xs font-black text-primary px-2 py-1 bg-primary/10 rounded-lg border border-primary/20 shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]">+{{ course.xpEarned }} XP</div>
                         </div>
                     </div>
-                    <Progress :value="course.progress" class="h-2" />
-                    <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
-                        <span>{{ course.progress }}% complete</span>
-                        <span>Due: {{ course.nextDeadline }}</span>
+                    <Progress :value="course.progress" class="h-1.5 relative z-10" />
+                    <div class="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 relative z-10">
+                        <span class="text-foreground">{{ course.progress }}% completion route</span>
+                        <span>Terminal: {{ course.nextDeadline }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Assignments Section -->
-            <div v-if="assignments.length > 0" class="space-y-2">
-                <div v-if="courses.length > 0" class="border-t pt-4">
-                    <h5 class="text-sm font-bold mb-2">Pending Tasks</h5>
-                </div>
-                <div v-else>
-                    <h5 class="text-sm font-bold mb-2">Pending Tasks</h5>
-                </div>
+            <div v-if="assignments.length > 0" class="space-y-3 pt-2">
+                <h4 class="text-[10px] font-black tracking-[0.2em] uppercase text-foreground/80 mb-3 border-l-2 border-destructive/80 pl-2">Pending Transmissions</h4>
                 <div v-for="(assignment, idx) in assignments" :key="assignment.id"
-                    class="group/task relative overflow-hidden p-4 rounded-xl border border-sidebar-border/50 hover:border-primary/40 bg-card/30 hover:bg-primary/[0.01] cursor-pointer transition-all animate-fade-up"
+                    class="group/task relative overflow-hidden p-5 rounded-2xl border border-border/30 hover:border-primary/40 bg-card/10 hover:bg-white/[0.02] cursor-pointer transition-all duration-500 animate-fade-up premium-hover"
                     :class="`stagger-${idx + courses.length + 1}`"
                     @click="handleAssignmentClick(assignment)"
                     @mousemove="handleMouseMove">
                     
-                    <!-- Bloom Effect -->
+                    <!-- Item Bloom Effect -->
                     <div class="absolute inset-0 opacity-0 group-hover/task:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.05), transparent 40%)">
+                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.05), transparent 40%)">
                     </div>
 
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-semibold text-sm truncate">{{ assignment.title }}</h4>
-                            <p class="text-xs text-muted-foreground truncate">{{ assignment.description }}</p>
+                    <div class="flex items-center justify-between relative z-10">
+                        <div class="flex-1 min-w-0 pr-4">
+                            <h4 class="font-bold text-sm truncate tracking-tight group-hover/task:text-primary transition-colors">{{ assignment.title }}</h4>
+                            <p class="text-[11px] text-muted-foreground truncate font-medium mt-0.5">{{ assignment.description }}</p>
                         </div>
-                        <div class="text-right ml-4">
-                             <p :class="['text-xs font-bold px-2 py-0.5 rounded-full', assignment.isOverdue ? 'bg-red-500/10 text-red-500' : 'bg-yellow-500/10 text-yellow-500']">
-                                {{ assignment.isOverdue ? 'Overdue' : 'Due' }}
+                        <div class="text-right flex-shrink-0 flex flex-col items-end">
+                             <p :class="['text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border', assignment.isOverdue ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20']">
+                                {{ assignment.isOverdue ? 'Critical' : 'Pending' }}
                             </p>
-                            <p class="text-[10px] text-muted-foreground mt-1">{{ assignment.dueDate }}</p>
+                            <p class="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1.5 tabular-nums">{{ assignment.dueDate }}</p>
                         </div>
                     </div>
                 </div>
             </div>
-        </CardContent>
-    </Card>
+        </div>
+    </div>
 </template>

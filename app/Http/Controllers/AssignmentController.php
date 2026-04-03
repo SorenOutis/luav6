@@ -38,7 +38,7 @@ class AssignmentController extends Controller
     public function store(Request $request, Assignment $assignment)
     {
         $request->validate([
-            'file' => 'required|file|max:10240', // 10MB limit
+            'file' => 'required|file|mimes:pdf,doc,docx,txt,png,jpg,jpeg|max:10240', // 10MB limit, restricted types
         ]);
 
         $user = auth()->user();

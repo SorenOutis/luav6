@@ -172,7 +172,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('exams', [ExamController::class, 'index'])->name('exams.index');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->name('exams.show');
-    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->name('exams.submitPart');
+    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->name('exams.submitPart')->middleware('throttle:10,1');
 
     // Admin routes
     Route::get('admin/exams/submissions', [\App\Http\Controllers\Admin\ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');

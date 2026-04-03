@@ -33,7 +33,7 @@ const emit = defineEmits(['quick-action']);
 
 <template>
     <div class="space-y-4">
-        <Card class="border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-primary/5 to-transparent">
+        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-xl">
             <CardHeader class="pb-2">
                 <CardTitle class="text-sm font-bold">Quick Actions</CardTitle>
             </CardHeader>
@@ -53,7 +53,7 @@ const emit = defineEmits(['quick-action']);
             </CardContent>
         </Card>
 
-        <Card v-if="weeklyGoal" class="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
+        <Card v-if="weeklyGoal" class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative backdrop-blur-xl">
             <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
             <CardHeader class="pb-2">
                 <CardTitle class="text-sm font-bold">Weekly Goal</CardTitle>
@@ -73,7 +73,7 @@ const emit = defineEmits(['quick-action']);
         </Card>
 
         <!-- Upcoming Exams Card -->
-        <Card v-if="upcomingExams && upcomingExams.length > 0" class="border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
+        <Card v-if="upcomingExams && upcomingExams.length > 0" class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative backdrop-blur-xl">
             <div class="absolute -right-12 -top-12 w-28 h-28 bg-primary/5 rounded-full blur-2xl"></div>
             <CardHeader class="pb-3 flex flex-row items-center justify-between">
                 <CardTitle class="text-sm font-bold flex items-center gap-2">

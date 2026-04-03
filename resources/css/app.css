@@ -59,7 +59,25 @@
 
 @layer base {
     body {
-        @apply bg-background text-foreground antialiased;
+        @apply bg-background text-foreground antialiased min-h-screen relative;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.02;
+        background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+        background-size: 60px 60px;
+    }
+
+    html.dark body::before {
+        opacity: 0.04;
     }
 
     * {
