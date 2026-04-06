@@ -28,6 +28,11 @@ const props = defineProps<Props>();
 // Mock data extension for richer visuals
 const top3 = computed(() => props.users.slice(0, 3));
 
+const showAllRankings = ref(false);
+const displayedUsers = computed(() => {
+    return showAllRankings.value ? props.users : props.users.slice(0, 10);
+});
+
 // Animated XP for top 3
 const animXP1 = useNumberAnimation(() => top3.value[0]?.xp || 0);
 const animXP2 = useNumberAnimation(() => top3.value[1]?.xp || 0);
@@ -178,7 +183,7 @@ const resetMagnetic = (e: MouseEvent) => {
                 </div>
                 
                 <div class="divide-y divide-border/10">
-                    <div v-for="(user, idx) in users" :key="user.id"
+                    <div v-for="(user, idx) in displayedUsers" :key="user.id"
                         class="group px-6 py-4 flex items-center justify-between hover:bg-primary/[0.02] transition-colors cursor-default animate-fade-up relative overflow-hidden"
                         :class="[`stagger-${idx + 4}`, { 'bg-primary/[0.03]': user.isCurrentUser }]"
                         @mousemove="handleMouseMove"
@@ -235,13 +240,14 @@ const resetMagnetic = (e: MouseEvent) => {
                     </div>
                 </div>
                 
-                <div class="p-4 bg-muted/5 text-center">
+                <div class="p-4 bg-muted/5 text-center" v-if="users.length > 10">
                     <button 
+                        @click="showAllRankings = !showAllRankings"
                         @mousemove="handleMagnetic" 
                         @mouseleave="resetMagnetic"
                         class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
                     >
-                        Load More Rankings
+                        {{ showAllRankings ? 'Show Less Rankings' : 'Load More Rankings' }}
                     </button>
                 </div>
             </div>
