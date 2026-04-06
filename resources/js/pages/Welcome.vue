@@ -2,8 +2,9 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { dashboard, login, register } from '@/routes';
 import { onMounted, ref } from 'vue';
+import { useAppearance } from '@/composables/useAppearance';
 import gsap from 'gsap';
-import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target } from 'lucide-vue-next';
+import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon } from 'lucide-vue-next';
 
 withDefaults(
     defineProps<{
@@ -19,6 +20,49 @@ const heroSub = ref<HTMLElement | null>(null);
 const heroCta = ref<HTMLElement | null>(null);
 const featureCards = ref<HTMLElement[]>([]);
 const structuralLines = ref<HTMLElement[]>([]);
+
+// Appearance Management
+const { appearance, updateAppearance } = useAppearance();
+
+const toggleTheme = (event: MouseEvent) => {
+    const newTheme = appearance.value === 'dark' ? 'light' : 'dark';
+    
+    if (!document.startViewTransition) {
+        updateAppearance(newTheme);
+        return;
+    }
+
+    const x = event.clientX;
+    const y = event.clientY;
+    const endRadius = Math.hypot(
+        Math.max(x, innerWidth - x),
+        Math.max(y, innerHeight - y)
+    );
+
+    const transition = document.startViewTransition(() => {
+        updateAppearance(newTheme);
+    });
+
+    transition.ready.then(() => {
+        const clipPath = [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+        ];
+        
+        document.documentElement.animate(
+            {
+                clipPath: newTheme === 'dark' ? [...clipPath].reverse() : clipPath,
+            },
+            {
+                duration: 500,
+                easing: 'ease-in-out',
+                pseudoElement: newTheme === 'dark'
+                    ? '::view-transition-old(root)'
+                    : '::view-transition-new(root)',
+            }
+        );
+    });
+};
 
 // Typing Animation Logic
 const words = ['Peak Performance.', 'Operational Elite.', 'Architectural Might.', 'System Synergy.', 'High Precision.'];
@@ -137,10 +181,10 @@ const coreFeatures = [
         <div class="fixed inset-x-0 bottom-1/4 h-px bg-border/20 z-0 hidden lg:block origin-right" ref="structuralLines"></div>
 
         <!-- Global Header -->
-        <header class="relative z-20 flex w-full items-center justify-between px-6 py-6 lg:px-16 border-b border-border/5 backdrop-blur-xl">
+        <header class="relative z-20 flex w-full items-center justify-between px-6 py-6 lg:px-16 border-b border-border/5 backdrop-blur-xl transition-colors duration-500">
             <div class="nav-item flex items-center gap-3 lg:gap-4 group cursor-pointer">
-                <div class="flex h-9 w-9 lg:h-10 lg:w-10 items-center justify-center rounded-none bg-primary text-primary-foreground transition-all duration-700 group-hover:rotate-[180deg]">
-                    <Command class="h-4 w-4 lg:h-5 lg:w-5" />
+                <div class="flex h-10 w-10 items-center justify-center text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
+                    <Command class="h-6 w-6 lg:h-7 lg:w-7" />
                 </div>
                 <div class="flex flex-col leading-none">
                     <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LUAV Engine</span>
@@ -148,7 +192,17 @@ const coreFeatures = [
                 </div>
             </div>
 
-            <nav class="flex items-center gap-4 lg:gap-12">
+            <nav class="flex items-center gap-4 lg:gap-8">
+                <!-- Theme Toggle Button - always visible -->
+                <button 
+                    @click="toggleTheme" 
+                    class="p-2 text-muted-foreground hover:text-foreground transition-all active:scale-90"
+                    aria-label="Toggle Theme"
+                >
+                    <Sun v-if="appearance === 'dark'" class="h-4 w-4 lg:h-5 lg:w-5" />
+                    <Moon v-else class="h-4 w-4 lg:h-5 lg:w-5" />
+                </button>
+
                 <template v-if="$page.props.auth.user">
                     <Link :href="dashboard()" class="nav-item text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-muted-foreground hover:text-primary transition-all flex items-center gap-2">
                         <div class="h-1 w-1 rounded-full bg-emerald-500 animate-pulse"></div>
