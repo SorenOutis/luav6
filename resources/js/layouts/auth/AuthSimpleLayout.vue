@@ -67,10 +67,12 @@ onMounted(() => {
                     <Link :href="home()" class="group flex flex-col items-center gap-4">
                         <div class="relative">
                             <div class="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-0 group-hover:scale-150 transition-transform duration-700"></div>
-                            <div class="relative flex h-14 w-14 items-center justify-center bg-primary text-primary-foreground transition-all duration-700 group-hover:rotate-[90deg] shadow-[0_0_30px_rgba(var(--primary),0.4)]">
-                                <Command class="h-7 w-7" />
+                            <div class="relative flex h-14 w-14 items-center justify-center text-foreground transition-all duration-700 group-hover:rotate-[90deg]">
+                                <Command class="h-10 w-10" />
                             </div>
                         </div>
+
+
                         <div class="flex flex-col items-center leading-none mt-2">
                              <span class="text-[10px] font-black uppercase tracking-[0.6em] text-foreground/50">Security Protocol</span>
                              <span class="text-[11px] font-black text-primary uppercase mt-1 tracking-widest leading-none">NODE_ACCESS_064</span>
