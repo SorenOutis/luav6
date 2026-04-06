@@ -15,7 +15,17 @@ class SeasonProgress extends Model
         static::creating(function (SeasonProgress $progress) {
             if (!$progress->season_id) {
                 $season = Season::where('is_active', true)->first() ?? Season::first();
-                $progress->season_id = $season?->id;
+                
+                if (!$season) {
+                    $season = Season::create([
+                        'name' => 'Season 1',
+                        'start_date' => now(),
+                        'end_date' => now()->addMonths(3),
+                        'is_active' => true,
+                    ]);
+                }
+                
+                $progress->season_id = $season->id;
             }
         });
 
