@@ -156,10 +156,10 @@ const coreFeatures = [
                             <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6" />
                         </Link>
                         
-                        <a href="https://laravel.com/docs" target="_blank" class="group flex items-center justify-between gap-8 lg:gap-10 border border-border px-8 lg:px-10 py-5 lg:py-6 transition-all hover:bg-muted/30 active:scale-95 text-muted-foreground">
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em]">Documentation</span>
-                            <BookOpen class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
-                        </a>
+                        <Link v-if="!$page.props.auth.user && canRegister" :href="register()" class="group flex items-center justify-between gap-8 lg:gap-10 border border-border px-8 lg:px-10 py-5 lg:py-6 transition-all hover:bg-muted/30 active:scale-95 text-muted-foreground">
+                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em]">Register Account</span>
+                            <LayoutDashboard class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                        </Link>
                     </div>
                 </div>
             </div>
