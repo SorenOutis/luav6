@@ -15,10 +15,11 @@ const { isVisible, show, hide, hideWhenReady } = useLoader();
  */
 router.on('start', (event) => {
     const isFromAuth = window.location.pathname.includes('/login') || window.location.pathname.includes('/register');
+    const isPostMethod = event.detail.visit.method === 'post';
 
-    // Only show the loading screen when coming FROM an auth page (post-login/register).
-    // Prevent it from triggering on regular in-app navigation (e.g. already logged-in user clicking Dashboard).
-    if (isFromAuth) {
+    // Only show the loading screen when submitting an auth form (post-login/register).
+    // Prevent it from triggering on regular GET navigation (e.g. from /login to /register).
+    if (isFromAuth && isPostMethod) {
         show();
     }
 });
