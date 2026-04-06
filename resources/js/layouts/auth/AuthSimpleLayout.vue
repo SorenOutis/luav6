@@ -55,17 +55,13 @@ onMounted(() => {
         <div class="fixed left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-border/10 z-0 origin-top" ref="structuralLines"></div>
         <div class="fixed left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border/10 z-0 origin-left" ref="structuralLines"></div>
 
-        <!-- Corner Accents for Central Box -->
-        <div class="absolute inset-0 z-0 pointer-events-none flex items-center justify-center p-6 md:p-10">
-            <div class="relative w-full max-w-md h-[500px] border border-border/5">
-                <div class="absolute -top-px -left-px w-8 h-8 border-t-2 border-l-2 border-primary/40"></div>
-                <div class="absolute -top-px -right-px w-8 h-8 border-t-2 border-r-2 border-primary/40"></div>
-                <div class="absolute -bottom-px -left-px w-8 h-8 border-b-2 border-l-2 border-primary/40"></div>
-                <div class="absolute -bottom-px -right-px w-8 h-8 border-b-2 border-r-2 border-primary/40"></div>
-            </div>
-        </div>
+        <main class="relative z-10 w-full max-w-md px-10 py-10" ref="terminalRef">
+            <!-- Corner Accents - Now fitted to the container edges -->
+            <div class="absolute -top-0 -left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40 pointer-events-none"></div>
+            <div class="absolute -top-0 -right-0 w-8 h-8 border-t-2 border-r-2 border-primary/40 pointer-events-none"></div>
+            <div class="absolute -bottom-0 -left-0 w-8 h-8 border-b-2 border-l-2 border-primary/40 pointer-events-none"></div>
+            <div class="absolute -bottom-0 -right-0 w-8 h-8 border-b-2 border-r-2 border-primary/40 pointer-events-none"></div>
 
-        <main class="relative z-10 w-full max-w-sm px-6 py-10" ref="terminalRef">
             <div class="flex flex-col gap-10">
                 <!-- Branding Header -->
                 <div class="flex flex-col items-center gap-6">
