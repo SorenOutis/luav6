@@ -133,14 +133,14 @@ const coreFeatures = [
             <!-- Hero Monolith -->
             <div class="max-w-6xl">
                 <div class="hero-reveal overflow-hidden mb-2 lg:mb-4">
-                    <h1 class="reveal-content text-[15vw] sm:text-8xl lg:text-[12rem] font-black tracking-[-0.04em] leading-[0.8] uppercase flex flex-col">
+                    <h1 class="reveal-content text-[12vw] sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.8] uppercase flex flex-col">
                         <span>Learning Systems</span>
                         <span class="text-muted-foreground/20 italic">Intelligence</span>
                     </h1>
                 </div>
                 
                 <div class="hero-reveal overflow-hidden mb-10 lg:mb-16 lg:pl-2">
-                    <p class="reveal-content max-w-2xl text-lg font-medium text-muted-foreground sm:text-2xl lg:text-3xl leading-relaxed tracking-tight">
+                    <p class="reveal-content max-w-2xl text-base font-medium text-muted-foreground sm:text-xl lg:text-2xl leading-relaxed tracking-tight">
                         Experience the high-precision assessment engine designed for <span class="text-foreground font-black uppercase tracking-widest">Peak Performance</span> and architectural growth.
                     </p>
                 </div>
