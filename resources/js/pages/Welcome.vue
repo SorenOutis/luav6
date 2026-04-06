@@ -20,8 +20,48 @@ const heroCta = ref<HTMLElement | null>(null);
 const featureCards = ref<HTMLElement[]>([]);
 const structuralLines = ref<HTMLElement[]>([]);
 
+// Typing Animation Logic
+const words = ['Peak Performance.', 'Operational Elite.', 'Architectural Might.', 'System Synergy.', 'High Precision.'];
+const currentWordIndex = ref(0);
+const currentCharIndex = ref(words[0].length);
+const isTyping = ref(false);
+const typedText = ref(words[0]);
+let typingTimeout: any = null;
+
+const type = () => {
+    const currentWord = words[currentWordIndex.value];
+    
+    if (isTyping.value) {
+        typedText.value = currentWord.substring(0, currentCharIndex.value + 1);
+        currentCharIndex.value++;
+        
+        if (currentCharIndex.value === currentWord.length) {
+            isTyping.value = false;
+            typingTimeout = setTimeout(type, 2000); // Wait at end
+            return;
+        }
+    } else {
+        typedText.value = currentWord.substring(0, currentCharIndex.value - 1);
+        currentCharIndex.value--;
+        
+        if (currentCharIndex.value === 0) {
+            isTyping.value = true;
+            currentWordIndex.value = (currentWordIndex.value + 1) % words.length;
+            typingTimeout = setTimeout(type, 500); // Wait at start
+            return;
+        }
+    }
+    
+    const delay = isTyping.value ? 100 : 50;
+    typingTimeout = setTimeout(type, delay);
+};
+
 onMounted(() => {
+    // Start typing after initial load
+    setTimeout(type, 2500);
+
     const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.4 } });
+
 
     // 1. Initial State
     gsap.set('.reveal-content', { y: '100%', opacity: 0 });
@@ -139,11 +179,26 @@ const coreFeatures = [
                     </h1>
                 </div>
                 
-                <div class="hero-reveal overflow-hidden mb-10 lg:mb-16 lg:pl-2">
-                    <p class="reveal-content max-w-2xl text-base font-medium text-muted-foreground sm:text-xl lg:text-2xl leading-relaxed tracking-tight">
-                        Experience the high-precision assessment engine designed for <span class="text-foreground font-black uppercase tracking-widest">Peak Performance</span> and architectural growth.
+                <div class="hero-reveal mb-10 lg:mb-16 lg:pl-2 relative">
+                    <!-- Invisible Shadow Element: Reserves the maximum possible space to prevent layout shifts -->
+                    <p class="max-w-3xl text-base font-medium sm:text-xl lg:text-2xl leading-relaxed tracking-tight opacity-0 pointer-events-none select-none invisible whitespace-pre-wrap">
+                        Access the industrial-grade assessment engine engineered for high-fidelity performance and architectural growth in 
+                        <span class="font-black uppercase tracking-widest inline-flex items-center">
+                            Architectural Might.<span class="ml-1 w-1 h-[0.8em] bg-primary"></span>
+                        </span> 
+                    </p>
+                    
+                    <!-- Visible Animated Element: Positioned absolutely within the reserved space -->
+                    <p class="reveal-content absolute inset-0 max-w-3xl text-base font-medium text-muted-foreground sm:text-xl lg:text-2xl leading-relaxed tracking-tight">
+                        Access the industrial-grade assessment engine engineered for high-fidelity performance and architectural growth in 
+                        <span class="text-foreground font-black uppercase tracking-widest inline-flex items-center">
+                            {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite]"></span>
+                        </span> 
                     </p>
                 </div>
+
+
+
 
                 <div class="hero-reveal overflow-hidden">
                     <div class="reveal-content flex flex-col sm:flex-row gap-3 lg:gap-4">
