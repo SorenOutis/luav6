@@ -6,6 +6,45 @@ use Symfony\Component\Console\Input\ArgvInput;
 
 define('LARAVEL_START', microtime(true));
 
+if (PHP_OS_FAMILY === 'Windows') {
+    // Basic signal constants
+    if (!defined('SIGINT')) define('SIGINT', 2);
+    if (!defined('SIGTERM')) define('SIGTERM', 15);
+    if (!defined('SIGHUP')) define('SIGHUP', 1);
+    if (!defined('SIGQUIT')) define('SIGQUIT', 3);
+    if (!defined('SIGUSR1')) define('SIGUSR1', 10);
+    if (!defined('SIGUSR2')) define('SIGUSR2', 12);
+    if (!defined('SIGCHLD')) define('SIGCHLD', 17);
+    if (!defined('SIGCONT')) define('SIGCONT', 18);
+    if (!defined('SIGTSTP')) define('SIGTSTP', 20);
+    if (!defined('SIGPIPE')) define('SIGPIPE', 13);
+    if (!defined('SIGALRM')) define('SIGALRM', 14);
+    if (!defined('SIG_IGN')) define('SIG_IGN', 1);
+    if (!defined('SIG_DFL')) define('SIG_DFL', 0);
+    if (!defined('SIG_ERR')) define('SIG_ERR', -1);
+
+    // Polyfills for ext-pcntl
+    if (!function_exists('pcntl_signal')) {
+        function pcntl_signal($signo, $handler) { return true; }
+    }
+    if (!function_exists('pcntl_signal_get_handler')) {
+        function pcntl_signal_get_handler($signo) { return SIG_DFL; }
+    }
+    if (!function_exists('pcntl_async_signals')) {
+        function pcntl_async_signals($on) { return true; }
+    }
+
+    // Polyfills for ext-posix
+    if (!function_exists('posix_getpid')) {
+        function posix_getpid() { return getmypid(); }
+    }
+    if (!function_exists('posix_kill')) {
+        function posix_kill($pid, $sig) { return true; }
+    }
+}
+
+
+
 // Register the Composer autoloader...
 require __DIR__.'/vendor/autoload.php';
 
