@@ -29,7 +29,7 @@ const mainNavItems: NavItem[] = [
         icon: ClipboardList,
     },
     {
-        title: 'Exams',
+        title: 'Activities',
         href: '/exams',
         icon: GraduationCap,
     },

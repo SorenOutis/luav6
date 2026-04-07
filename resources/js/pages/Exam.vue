@@ -123,7 +123,7 @@ onMounted(() => {
 
             <!-- Header Section -->
             <div class="animate-section exam-hero space-y-1">
-                <h1 class="text-2xl font-bold tracking-tight">Upcoming Exams</h1>
+                <h1 class="text-2xl font-bold tracking-tight">Upcoming Activities</h1>
                 <p class="text-muted-foreground text-base">Manage your assessments and upcoming academic challenges.</p>
             </div>
 
@@ -225,7 +225,7 @@ onMounted(() => {
                             target="_blank"
                             class="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-xs"
                         >
-                            Start Exam
+                            Start
                             <ExternalLink class="w-3.5 h-3.5" />
                         </a>
                         <Link 
@@ -233,7 +233,7 @@ onMounted(() => {
                             :href="examsShow(exam.id).url"
                             class="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-xs"
                         >
-                            Start Exam
+                            Start
                         </Link>
                     </div>
                 </div>

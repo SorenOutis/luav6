@@ -78,7 +78,7 @@ const emit = defineEmits(['quick-action']);
             <CardHeader class="pb-3 flex flex-row items-center justify-between">
                 <CardTitle class="text-sm font-bold flex items-center gap-2">
                     <BookOpen class="w-4 h-4 text-primary" />
-                    Upcoming Exams
+                    Upcoming Activities
                 </CardTitle>
                 <Link :href="examsIndex().url" class="text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors">
                     All →
