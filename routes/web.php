@@ -94,11 +94,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
         
 
-        // 4. Leaderboard (Scoped to Current Season)
+        // 4. Leaderboard (Scoped to Current Season and Section)
         if ($currentSeason) {
             $leaderboardUsers = \App\Models\SeasonProgress::with('user')
                 ->where('season_id', $currentSeason->id)
-                ->whereHas('user', fn($q) => $q->where('is_admin', false))
+                ->whereHas('user', function($q) use ($user) {
+                    $q->where('is_admin', false);
+                    if ($user->section_id) {
+                        $q->where('section_id', $user->section_id);
+                    }
+                })
                 ->orderByDesc('exp')
                 ->get()
                 ->map(function ($progress) use ($user) {
@@ -130,9 +135,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 });
 
             $userRank = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
+                ->whereHas('user', function($q) use ($user) {
+                    if ($user->section_id) {
+                        $q->where('section_id', $user->section_id);
+                    }
+                })
                 ->where('exp', '>', $seasonalExp)
                 ->count() + 1;
-            $totalPlayers = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)->count();
+            
+            $totalPlayers = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
+                ->whereHas('user', function($q) use ($user) {
+                    if ($user->section_id) {
+                        $q->where('section_id', $user->section_id);
+                    }
+                })
+                ->count();
         } else {
             $leaderboardUsers = collect();
             $userRank = 0;
@@ -165,6 +182,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'id' => $currentSeason->id,
                 'name' => $currentSeason->name,
             ] : null,
+            'sectionName' => $user->section?->name,
         ]);
     })->name('dashboard');
 

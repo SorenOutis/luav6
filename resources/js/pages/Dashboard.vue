@@ -107,6 +107,7 @@ const props = defineProps<{
     upcomingExams: Exam[];
     leaderboardUsers: LeaderboardUser[];
     activeSeason: Season | null;
+    sectionName?: string | null;
 }>();
 
 const userStats = computed(() => props.userStats);
@@ -229,6 +230,7 @@ const handleQuickAction = (action: string) => {
                     :user-rank="userStats.rankNumber"
                     :total-players="userStats.totalPlayers"
                     :active-season-name="activeSeason?.name"
+                    :section-name="sectionName"
                 />
             </div>
 

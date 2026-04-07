@@ -21,6 +21,7 @@ interface Props {
     userRank: number;
     totalPlayers: number;
     activeSeasonName?: string;
+    sectionName?: string | null;
 }
 
 const props = defineProps<Props>();
@@ -86,9 +87,13 @@ const resetMagnetic = (e: MouseEvent) => {
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <Trophy class="w-4 h-4 text-primary" />
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-primary">Global Rankings</span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-primary">
+                        {{ props.sectionName ? `${props.sectionName} Rankings` : 'Global Rankings' }}
+                    </span>
                 </div>
-                <h2 class="text-3xl font-black tracking-tighter">Elite Assembly</h2>
+                <h2 class="text-3xl font-black tracking-tighter">
+                    {{ props.sectionName ? 'Section Elite' : 'Elite Assembly' }}
+                </h2>
                 <p class="text-sm text-muted-foreground font-medium mt-1">
                     Competition is fierce. You are ranked <span class="text-foreground font-bold">#{{ props.userRank }}</span> out of {{ props.totalPlayers.toLocaleString() }}.
                 </p>
