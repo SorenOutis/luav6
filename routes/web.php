@@ -117,6 +117,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     return [
                         'id' => $u->id,
                         'name' => $u->name,
+                        'avatar' => $u->avatar,
                         'xp' => $progress->exp,
                         'level' => $progress->level,
                         'completionRate' => $completionRate,

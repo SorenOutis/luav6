@@ -29,6 +29,7 @@ class User extends Authenticatable
         'current_streak',
         'longest_streak',
         'last_login_at',
+        'avatar',
     ];
 
     public function seasonProgress()
@@ -119,4 +120,18 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Reward::class);
     }
+    /**
+     * Get the user's avatar URL.
+     *
+     * @return string|null
+     */
+    public function getAvatarAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        return asset('storage/' . $value);
+    }
 }
+

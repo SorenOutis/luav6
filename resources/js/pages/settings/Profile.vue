@@ -5,9 +5,13 @@ import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileCo
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useInitials } from '@/composables/useInitials';
+import { Camera, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { edit } from '@/routes/profile';
@@ -30,6 +34,21 @@ const breadcrumbItems: BreadcrumbItem[] = [
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const { getInitials } = useInitials();
+
+const fileInput = ref<HTMLInputElement | null>(null);
+const previewUrl = ref<string | null>(null);
+
+const handleFileChange = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) {
+        previewUrl.value = URL.createObjectURL(file);
+    }
+};
+
+const triggerFileInput = () => {
+    fileInput.value?.click();
+};
 </script>
 
 <template>
@@ -49,8 +68,48 @@ const user = computed(() => page.props.auth.user);
                 <Form
                     v-bind="ProfileController.update.form()"
                     class="space-y-6"
+                    enc-type="multipart/form-data"
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
+                    <!-- Avatar Upload Section -->
+                    <div class="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-border/40">
+                        <div class="relative group">
+                            <Avatar class="h-24 w-24 border-2 border-border/50 group-hover:border-primary/50 transition-colors duration-300">
+                                <AvatarImage v-if="previewUrl || user.avatar" :src="previewUrl || user.avatar" :alt="user.name" class="object-cover" />
+                                <AvatarFallback class="text-xl font-bold bg-muted text-foreground">
+                                    {{ getInitials(user.name) }}
+                                </AvatarFallback>
+                            </Avatar>
+                            
+                            <button 
+                                type="button"
+                                @click="triggerFileInput"
+                                class="absolute inset-0 flex items-center justify-center bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                            >
+                                <Camera class="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div class="space-y-2 text-center sm:text-left">
+                            <h4 class="text-sm font-bold">Profile Picture</h4>
+                            <p class="text-xs text-muted-foreground">Recommend: Square PNG or JPG, max 5MB.</p>
+                            <div class="flex items-center gap-2 justify-center sm:justify-start">
+                                <Button type="button" variant="outline" size="sm" @click="triggerFileInput">
+                                    Change Photo
+                                </Button>
+                                <input 
+                                    type="file" 
+                                    ref="fileInput" 
+                                    name="avatar" 
+                                    class="hidden" 
+                                    accept="image/*"
+                                    @change="handleFileChange"
+                                />
+                            </div>
+                            <InputError :message="errors.avatar" />
+                        </div>
+                    </div>
+
                     <div class="grid gap-2">
                         <Label for="name">Name</Label>
                         <Input
