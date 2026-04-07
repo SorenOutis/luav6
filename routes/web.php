@@ -183,8 +183,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'name' => $currentSeason->name,
             ] : null,
             'sectionName' => $user->section?->name,
+            'allSections' => \App\Models\Section::all(['id', 'name']),
         ]);
     })->name('dashboard');
+
+    Route::patch('profile/section', [\App\Http\Controllers\Settings\ProfileController::class, 'updateSection'])->name('profile.section.update');
 
     Route::get('assignments', [\App\Http\Controllers\AssignmentController::class, 'index'])->name('assignments.index');
     Route::post('assignments/{assignment}/submit', [\App\Http\Controllers\AssignmentController::class, 'store'])->name('assignments.submit');

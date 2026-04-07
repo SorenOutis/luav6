@@ -21,5 +21,9 @@ class DatabaseSeeder extends Seeder
             'password' => \Illuminate\Support\Facades\Hash::make('password'),
             'is_admin' => true,
         ]);
+
+        \App\Models\Section::firstOrCreate(['name' => 'Section A']);
+        \App\Models\Section::firstOrCreate(['name' => 'Section B']);
+        \App\Models\Section::firstOrCreate(['name' => 'Section C']);
     }
 }

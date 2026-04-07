@@ -69,4 +69,20 @@ class ProfileController extends Controller
 
         return redirect('/');
     }
+
+    /**
+     * Update the user's section.
+     */
+    public function updateSection(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'section_id' => ['required', 'exists:sections,id'],
+        ]);
+
+        $request->user()->update([
+            'section_id' => $request->section_id,
+        ]);
+
+        return back();
+    }
 }

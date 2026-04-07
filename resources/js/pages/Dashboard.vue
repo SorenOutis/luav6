@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -17,6 +17,7 @@ import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import { Calendar } from 'lucide-vue-next';
+import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard() },
@@ -108,6 +109,7 @@ const props = defineProps<{
     leaderboardUsers: LeaderboardUser[];
     activeSeason: Season | null;
     sectionName?: string | null;
+    allSections: Array<{ id: number, name: string }>;
 }>();
 
 const userStats = computed(() => props.userStats);
@@ -133,7 +135,24 @@ const timeBasedGreeting = computed(() => {
     return 'Good Evening';
 });
 
+const showSectionModal = ref(false);
+
+watch(() => props.sectionName, (newSection) => {
+    if (newSection) {
+        showSectionModal.value = false;
+    }
+}, { immediate: true });
+
 onMounted(() => {
+    if (!props.sectionName) {
+        setTimeout(() => {
+            // Only show if still missing a section after the delay
+            if (!props.sectionName) {
+                showSectionModal.value = true;
+            }
+        }, 1500);
+    }
+
     if (!dashboardContainer.value) return;
 
     const tl = gsap.timeline({
@@ -270,6 +289,11 @@ const handleQuickAction = (action: string) => {
                 />
             </div>
         </div>
+
+        <SectionSelectionModal 
+            :show="showSectionModal" 
+            :sections="allSections" 
+        />
     </AppLayout>
 </template>
 
