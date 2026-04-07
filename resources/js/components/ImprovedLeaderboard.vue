@@ -113,58 +113,58 @@ const resetMagnetic = (e: MouseEvent) => {
 
         <template v-else>
             <!-- Elite Top 3 Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-3 gap-2 sm:gap-6">
                 <div v-for="(user, idx) in top3" :key="user.id"
-                    class="relative surface-card p-6 flex flex-col items-center text-center group transition-all duration-500 hover:-translate-y-2 animate-fade-up"
+                    class="relative surface-card p-2 sm:p-6 flex flex-col items-center text-center group transition-all duration-500 hover:-translate-y-2 animate-fade-up overflow-hidden"
                     :class="[
-                        idx === 0 ? 'md:order-2 border-primary/20 scale-105 shadow-2xl shadow-primary/5' : (idx === 1 ? 'md:order-1' : 'md:order-3'),
+                        idx === 0 ? 'order-2 border-primary/20 scale-105 sm:scale-110 shadow-2xl shadow-primary/5 z-20' : (idx === 1 ? 'order-1' : 'order-3'),
                         `stagger-${idx + 1}`
                     ]"
                 >
                     <!-- Rank Medal/Crown Overlay -->
-                    <div class="absolute -top-4 px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-xl"
+                    <div class="absolute -top-3 sm:-top-4 px-2 sm:px-4 py-0.5 sm:py-1 rounded-full text-[7px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.2em] shadow-xl whitespace-nowrap"
                         :class="idx === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border border-border/40'"
                     >
-                        Rank #{{ idx + 1 }}
+                        #{{ idx + 1 }}
                     </div>
 
                     <!-- Avatar Visual -->
-                    <div class="relative mb-6 mt-2">
-                        <div class="absolute inset-0 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-40"
+                    <div class="relative mb-2 sm:mb-6 mt-1 sm:mt-2">
+                        <div class="absolute inset-0 rounded-full blur-xl sm:blur-2xl opacity-20 transition-opacity group-hover:opacity-40"
                             :class="idx === 0 ? 'bg-primary' : 'bg-muted-foreground'"
                         ></div>
-                        <div class="relative w-24 h-24 rounded-full border-2 p-1 transition-transform duration-500 group-hover:scale-110"
+                        <div class="relative w-12 h-12 sm:w-24 sm:h-24 rounded-full border-2 p-0.5 sm:p-1 transition-transform duration-500 group-hover:scale-110"
                             :class="idx === 0 ? 'border-primary/50' : 'border-border/50'"
                         >
                             <div class="w-full h-full rounded-full bg-muted/30 flex items-center justify-center overflow-hidden">
                                 <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover" />
-                                <User v-else class="w-10 h-10 text-muted-foreground/40" />
+                                <User v-else class="w-5 h-5 sm:w-10 sm:h-10 text-muted-foreground/40" />
                             </div>
                         </div>
                         <!-- Icon Overlay -->
-                        <div v-if="idx === 0" class="absolute -bottom-1 -right-1 p-2 bg-primary rounded-xl shadow-lg animate-bounce">
-                            <Crown class="w-4 h-4 text-primary-foreground" />
+                        <div v-if="idx === 0" class="absolute -bottom-1 -right-1 p-1 sm:p-2 bg-primary rounded-lg sm:rounded-xl shadow-lg animate-bounce">
+                            <Crown class="w-3 h-3 sm:w-4 h-4 text-primary-foreground" />
                         </div>
                     </div>
 
-                    <div class="space-y-1 mb-6">
-                        <h3 class="font-bold text-lg truncate w-full px-4">{{ user.name }}</h3>
-                        <div class="flex items-center justify-center gap-1.5">
-                            <span class="text-xs font-bold text-primary">{{ getAnimXP(idx).value.toLocaleString() }} XP</span>
-                            <div class="w-1 h-1 rounded-full bg-muted-foreground/30"></div>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{{ activeSeasonName || 'Season 1' }}</span>
+                    <div class="space-y-0.5 sm:space-y-1 mb-2 sm:mb-6 w-full">
+                        <h3 class="font-bold text-[10px] sm:text-lg truncate w-full px-1 sm:px-4">{{ user.name }}</h3>
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 leading-none">
+                            <span class="text-[8px] sm:text-xs font-bold text-primary">{{ getAnimXP(idx).value.toLocaleString() }} XP</span>
+                            <div class="hidden sm:block w-1 h-1 rounded-full bg-muted-foreground/30"></div>
+                            <span class="text-[7px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground opacity-60 sm:opacity-100">{{ activeSeasonName || 'Season 1' }}</span>
                         </div>
                     </div>
 
                     <!-- Stats Bar -->
-                    <div class="w-full grid grid-cols-2 gap-2 border-t border-border/20 pt-4 mt-auto">
-                        <div class="text-left">
-                            <p class="text-[8px] font-bold uppercase text-muted-foreground">Completion</p>
-                            <p class="text-xs font-black">{{ user.completionRate }}%</p>
+                    <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2 border-t border-border/10 sm:border-border/20 pt-2 sm:pt-4 mt-auto">
+                        <div class="text-center sm:text-left">
+                            <p class="text-[7px] sm:text-[8px] font-bold uppercase text-muted-foreground opacity-50">Completion</p>
+                            <p class="text-[9px] sm:text-xs font-black">{{ user.completionRate }}%</p>
                         </div>
-                        <div class="text-right">
-                            <p class="text-[8px] font-bold uppercase text-muted-foreground">Streak</p>
-                            <div class="flex items-center justify-end gap-1">
+                        <div class="text-center sm:text-right hidden sm:block">
+                            <p class="text-[8px] font-bold uppercase text-muted-foreground opacity-50">Streak</p>
+                            <div class="flex items-center justify-center sm:justify-end gap-1">
                                 <Sparkles class="w-2.5 h-2.5 text-primary" />
                                 <span class="text-xs font-black">{{ user.streak }}d</span>
                             </div>

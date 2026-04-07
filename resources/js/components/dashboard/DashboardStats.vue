@@ -82,7 +82,7 @@ const displayStats = computed(() => [
 </script>
 
 <template>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div v-for="(stat, idx) in displayStats" :key="stat.label"
             class="surface-card p-4 sm:p-5 premium-hover group animate-fade-up relative overflow-hidden"
             :class="`stagger-${idx + 1}`"
