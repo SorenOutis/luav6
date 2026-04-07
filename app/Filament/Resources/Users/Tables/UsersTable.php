@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -67,6 +68,17 @@ class UsersTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('assign_section')
+                        ->label('Assign Section')
+                        ->icon('heroicon-o-folder-plus')
+                        ->form([
+                            \Filament\Forms\Components\Select::make('section_id')
+                                ->label('Section')
+                                ->options(\App\Models\Section::pluck('name', 'id'))
+                                ->required(),
+                        ])
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records, array $data) => $records->each->update(['section_id' => $data['section_id']]))
+                        ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),
             ]);
