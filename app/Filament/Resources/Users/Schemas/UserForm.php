@@ -27,6 +27,12 @@ class UserForm
                     ->email()
                     ->required(),
                 DateTimePicker::make('email_verified_at'),
+                \Filament\Forms\Components\Select::make('section_id')
+                    ->relationship('section', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->placeholder('No Section')
+                    ->label('Section'),
                 Section::make('Seasonal Progress')
                     ->description('Stats for the currently active season')
                     ->relationship('currentSeasonProgress')

@@ -25,6 +25,13 @@ class UsersTable
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
+                TextColumn::make('section.name')
+                    ->label('Section')
+                    ->badge()
+                    ->color('success')
+                    ->placeholder('None')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable(),
@@ -47,7 +54,11 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                \Filament\Tables\Filters\SelectFilter::make('section')
+                    ->relationship('section', 'name')
+                    ->label('Filter by Section')
+                    ->searchable()
+                    ->preload(),
             ])
             ->recordActions([
                 ViewAction::make(),

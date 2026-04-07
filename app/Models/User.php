@@ -30,6 +30,7 @@ class User extends Authenticatable
         'longest_streak',
         'last_login_at',
         'avatar',
+        'section_id',
     ];
 
     public function seasonProgress()
@@ -132,6 +133,14 @@ class User extends Authenticatable
         }
 
         return asset('storage/' . $value);
+    }
+
+    /**
+     * Get the section associated with the user.
+     */
+    public function section()
+    {
+        return $this->belongsTo(Section::class);
     }
 }
 
