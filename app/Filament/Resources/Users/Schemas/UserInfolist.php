@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -11,6 +12,10 @@ class UserInfolist
     {
         return $schema
             ->components([
+                ImageEntry::make('avatar')
+                    ->label('Avatar')
+                    ->circular()
+                    ->disk('public'),
                 TextEntry::make('name'),
                 TextEntry::make('email')
                     ->label('Email address'),
