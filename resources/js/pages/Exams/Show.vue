@@ -894,38 +894,47 @@ onMounted(() => {
                             <div class="flex flex-col gap-3">
                                 <div v-for="(question, qIndex) in selectedPart!.questions" :key="qIndex"
                                     :id="`q-${qIndex}`"
-                                    class="question-card rounded-xl border border-border/40 bg-card/10 backdrop-blur-md p-4 md:p-5 flex flex-col md:flex-row gap-4 md:items-center transition-all"
-                                    :class="getQuestionStatus(qIndex) === 'answered' ? 'border-primary/20 bg-primary/2' : ''">
+                                    :class="[
+                                        'question-card rounded-xl border border-border/40 bg-card/10 backdrop-blur-md p-4 md:p-5 flex flex-col gap-4 transition-all',
+                                        question.type !== 'essay' ? 'md:flex-row md:items-center' : 'md:items-stretch',
+                                        getQuestionStatus(qIndex) === 'answered' ? 'border-primary/20 bg-primary/2' : ''
+                                    ]">
                                     
-                                    <!-- Question identifier -->
-                                    <div class="flex items-center gap-3 flex-shrink-0">
-                                        <div
-                                            class="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-base font-black text-primary">
-                                            {{ qIndex + 1 }}
+                                    <!-- Question Content (ID + Text) -->
+                                    <div class="flex flex-1 gap-4 items-start min-w-0">
+                                        <!-- Question identifier -->
+                                        <div class="flex items-center gap-3 flex-shrink-0">
+                                            <div
+                                                class="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-base font-black text-primary">
+                                                {{ qIndex + 1 }}
+                                            </div>
+                                            <!-- Smart Flag Button -->
+                                            <button @click="toggleFlag(qIndex)"
+                                                class="w-8 h-8 rounded-lg flex items-center justify-center transition-all bg-muted border border-border/40 hover:bg-amber-500/10 hover:border-amber-500/50 group/flag"
+                                                :class="flaggedQuestions.has(qIndex) ? 'bg-amber-500/20 border-amber-500/60 text-amber-500' : 'text-muted-foreground/40'">
+                                                <Flag class="w-4 h-4" :class="flaggedQuestions.has(qIndex) ? 'fill-amber-500' : ''" />
+                                            </button>
                                         </div>
-                                        <!-- Smart Flag Button -->
-                                        <button @click="toggleFlag(qIndex)"
-                                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all bg-muted border border-border/40 hover:bg-amber-500/10 hover:border-amber-500/50 group/flag"
-                                            :class="flaggedQuestions.has(qIndex) ? 'bg-amber-500/20 border-amber-500/60 text-amber-500' : 'text-muted-foreground/40'">
-                                            <Flag class="w-4 h-4" :class="flaggedQuestions.has(qIndex) ? 'fill-amber-500' : ''" />
-                                        </button>
-                                    </div>
 
-                                    <!-- Question text -->
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 mb-1">
-                                            <span
-                                                class="text-[9px] px-2 py-0.5 rounded-md bg-primary/5 text-primary/60 uppercase font-black tracking-[0.1em] border border-primary/10">{{
-                                                formatType(question.type) }}</span>
-                                            <span class="text-[9px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground/80 uppercase font-black tracking-[0.1em] border border-border/40">
-                                                {{ question.points ?? selectedPart!.points ?? 1 }} Pts
-                                            </span>
+                                        <!-- Question text -->
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <span
+                                                    class="text-[9px] px-2 py-0.5 rounded-md bg-primary/5 text-primary/60 uppercase font-black tracking-[0.1em] border border-primary/10">{{
+                                                    formatType(question.type) }}</span>
+                                                <span class="text-[9px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground/80 uppercase font-black tracking-[0.1em] border border-border/40">
+                                                    {{ question.points ?? selectedPart!.points ?? 1 }} Pts
+                                                </span>
+                                            </div>
+                                            <p class="text-base font-bold leading-snug text-foreground/90">{{ question.text }}</p>
                                         </div>
-                                        <p class="text-base font-bold leading-tight text-foreground/90 truncate md:whitespace-normal">{{ question.text }}</p>
                                     </div>
 
                                     <!-- Answer Area -->
-                                    <div class="flex-shrink-0 w-full md:w-auto md:min-w-[300px]">
+                                    <div :class="[
+                                        'flex-shrink-0 w-full',
+                                        question.type !== 'essay' ? 'md:w-auto md:min-w-[300px]' : 'mt-2'
+                                    ]">
                                         <!-- Multiple Choice / True-False -->
                                         <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'"
                                             class="flex flex-wrap gap-2">
@@ -943,10 +952,9 @@ onMounted(() => {
                                                 class="w-full px-4 py-2 rounded-lg border border-border/40 bg-muted/20 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-sm font-medium" />
                                         </div>
 
-                                        <!-- Essay -->
-                                        <div v-else-if="question.type === 'essay'">
-                                            <textarea v-model="answers[qIndex]" rows="2" placeholder="Write response..."
-                                                class="w-full px-4 py-2 rounded-lg border border-border/40 bg-muted/20 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-sm font-medium resize-none"></textarea>
+                                        <div v-else-if="question.type === 'essay'" class="w-full">
+                                            <textarea v-model="answers[qIndex]" rows="8" placeholder="Write your detailed response here..."
+                                                class="w-full px-4 py-3 rounded-xl border border-border/40 bg-muted/20 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-base font-medium resize-y min-h-[150px]"></textarea>
                                         </div>
                                     </div>
                                 </div>
