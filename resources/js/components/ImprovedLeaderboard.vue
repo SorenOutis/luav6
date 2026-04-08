@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award } from 'lucide-vue-next';
+import { Link } from '@inertiajs/vue3';
 
 interface LeaderboardUser {
     id: number;
@@ -138,14 +139,14 @@ const resetMagnetic = (e: MouseEvent) => {
                         <div class="absolute inset-0 rounded-full blur-xl sm:blur-2xl opacity-20 transition-opacity group-hover:opacity-40"
                             :class="idx === 0 ? 'bg-primary' : 'bg-muted-foreground'"
                         ></div>
-                        <div class="relative w-12 h-12 sm:w-24 sm:h-24 rounded-full border-2 p-0.5 sm:p-1 transition-transform duration-500 group-hover:scale-110"
+                        <Link :href="`/u/${user.id}`" class="block relative w-12 h-12 sm:w-24 sm:h-24 rounded-full border-2 p-0.5 sm:p-1 transition-transform duration-500 group-hover:scale-110"
                             :class="idx === 0 ? 'border-primary/50' : 'border-border/50'"
                         >
                             <div class="w-full h-full rounded-full bg-muted/30 flex items-center justify-center overflow-hidden">
                                 <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover" />
                                 <User v-else class="w-5 h-5 sm:w-10 sm:h-10 text-muted-foreground/40" />
                             </div>
-                        </div>
+                        </Link>
                         <!-- Icon Overlay -->
                         <div v-if="idx === 0" class="absolute -bottom-1 -right-1 p-1 sm:p-2 bg-primary rounded-lg sm:rounded-xl shadow-lg animate-bounce">
                             <Crown class="w-3 h-3 sm:w-4 h-4 text-primary-foreground" />
@@ -153,7 +154,7 @@ const resetMagnetic = (e: MouseEvent) => {
                     </div>
 
                     <div class="space-y-0.5 sm:space-y-1 mb-2 sm:mb-6 w-full">
-                        <h3 class="font-bold text-[10px] sm:text-lg truncate w-full px-1 sm:px-4">{{ user.name }}</h3>
+                        <h3 class="font-bold text-[10px] sm:text-lg truncate w-full px-1 sm:px-4"><Link :href="`/u/${user.id}`" class="hover:underline">{{ user.name }}</Link></h3>
                         <div class="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 leading-none">
                             <span class="text-[8px] sm:text-xs font-bold text-primary">{{ getAnimXP(idx).value.toLocaleString() }} XP</span>
                             <div class="hidden sm:block w-1 h-1 rounded-full bg-muted-foreground/30"></div>
@@ -201,10 +202,10 @@ const resetMagnetic = (e: MouseEvent) => {
                         <div class="flex items-center gap-6">
                             <span class="text-sm font-black text-muted-foreground/40 w-6">#{{ idx + 1 }}</span>
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-muted/30 border border-border/20 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                                <Link :href="`/u/${user.id}`" class="w-10 h-10 rounded-xl bg-muted/30 border border-border/20 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform block">
                                     <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover" />
                                     <User v-else class="w-5 h-5 text-muted-foreground/40" />
-                                </div>
+                                </Link>
                                 <div>
                                     <h4 class="text-sm font-bold flex items-center gap-2">
                                         {{ user.name }}
@@ -238,9 +239,9 @@ const resetMagnetic = (e: MouseEvent) => {
                             </div>
 
                             <!-- Action -->
-                            <button class="p-2 rounded-xl text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100">
+                            <Link :href="`/u/${user.id}`" class="flex p-2 rounded-xl text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100">
                                  <TrendingUp class="w-4 h-4 rotate-45" />
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </div>

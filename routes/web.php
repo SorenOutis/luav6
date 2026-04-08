@@ -187,6 +187,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ]);
     })->name('dashboard');
 
+    Route::get('u/{user}', [\App\Http\Controllers\PublicProfileController::class, 'show'])->name('users.show');
     Route::patch('profile/section', [\App\Http\Controllers\Settings\ProfileController::class, 'updateSection'])->name('profile.section.update');
 
     Route::get('assignments', [\App\Http\Controllers\AssignmentController::class, 'index'])->name('assignments.index');
