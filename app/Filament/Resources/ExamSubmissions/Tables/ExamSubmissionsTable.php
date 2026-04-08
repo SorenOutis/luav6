@@ -17,6 +17,10 @@ class ExamSubmissionsTable
                     ->label('Student')
                     ->searchable()
                     ->sortable(),
+                \Filament\Tables\Columns\TextColumn::make('user.section.name')
+                    ->label('Section')
+                    ->searchable()
+                    ->sortable(),
                 \Filament\Tables\Columns\TextColumn::make('exam.title')
                     ->label('Exam')
                     ->searchable()
@@ -44,6 +48,12 @@ class ExamSubmissionsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->groups([
+                \Filament\Tables\Grouping\Group::make('user.section.name')
+                    ->label('Section')
+                    ->collapsible(),
+                \Filament\Tables\Grouping\Group::make('status')
+                    ->label('Status')
+                    ->collapsible(),
                 \Filament\Tables\Grouping\Group::make('user.name')
                     ->label('Student')
                     ->collapsible(),
@@ -51,7 +61,7 @@ class ExamSubmissionsTable
                     ->label('Exam')
                     ->collapsible(),
             ])
-            ->defaultGroup('user.name')
+            ->defaultGroup('user.section.name')
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('user_id')
                     ->label('Student')
