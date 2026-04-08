@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePoll } from '@inertiajs/vue3';
 import { show as examsShow } from '@/routes/exams';
 import { onMounted, ref, computed } from 'vue';
+
+usePoll(10000, {
+    only: ['exams']
+});
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';

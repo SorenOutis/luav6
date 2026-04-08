@@ -25,9 +25,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 const dashboardContainer = ref<HTMLElement | null>(null);
 
-import { usePage, Link } from '@inertiajs/vue3';
+import { usePage, Link, usePoll } from '@inertiajs/vue3';
 import { BookOpen, Clock } from 'lucide-vue-next';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
+
+usePoll(10000, {
+    only: ['userStats', 'announcements', 'courses', 'assignments', 'upcomingExams', 'leaderboardUsers', 'activeSeason']
+});
 
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
