@@ -22,6 +22,13 @@ class UserForm
                     ->maxSize(10240)
                     ->formatStateUsing(fn ($record) => $record?->getRawOriginal('avatar'))
                     ->label('Profile Picture'),
+                FileUpload::make('cover_photo')
+                    ->image()
+                    ->disk('public')
+                    ->directory('covers')
+                    ->maxSize(10240)
+                    ->formatStateUsing(fn ($record) => $record?->getRawOriginal('cover_photo'))
+                    ->label('Cover Photo'),
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('email')

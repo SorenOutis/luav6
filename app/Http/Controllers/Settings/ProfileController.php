@@ -44,6 +44,16 @@ class ProfileController extends Controller
             $user->avatar = $path;
         }
 
+        if ($request->hasFile('cover_photo')) {
+            // Delete old cover photo if it exists
+            if ($user->getRawOriginal('cover_photo')) {
+                Storage::disk('public')->delete($user->getRawOriginal('cover_photo'));
+            }
+
+            $path = $request->file('cover_photo')->store('covers', 'public');
+            $user->cover_photo = $path;
+        }
+
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
         }

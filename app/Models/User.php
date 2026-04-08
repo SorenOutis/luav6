@@ -30,6 +30,7 @@ class User extends Authenticatable
         'longest_streak',
         'last_login_at',
         'avatar',
+        'cover_photo',
         'section_id',
     ];
 
@@ -141,6 +142,20 @@ class User extends Authenticatable
     public function section()
     {
         return $this->belongsTo(Section::class);
+    }
+
+    /**
+     * Get the user's cover photo URL.
+     *
+     * @return string|null
+     */
+    public function getCoverPhotoAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+
+        return asset('storage/' . $value);
     }
 }
 

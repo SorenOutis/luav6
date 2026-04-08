@@ -27,6 +27,7 @@ const props = defineProps<{
         id: number;
         name: string;
         avatar: string | null;
+        cover_photo: string | null;
         section: string | null;
         streak: number;
         joinedAt: string;
@@ -64,8 +65,11 @@ const breadcrumbItems = [
             <div class="relative mb-20 md:mb-24">
                 <!-- Profile Banner -->
                 <div class="relative w-full h-48 md:h-64 rounded-2xl md:rounded-[2rem] bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/10 overflow-hidden">
+                    
+                    <img v-if="profileUser.cover_photo" :src="profileUser.cover_photo" class="absolute inset-0 w-full h-full object-cover z-0" />
+                    
                     <!-- Abstract patterns -->
-                    <div class="absolute inset-0 opacity-20 dark:opacity-10 mix-blend-overlay">
+                    <div class="absolute inset-0 opacity-20 dark:opacity-10 mix-blend-overlay z-10 pointer-events-none">
                         <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                             <polygon fill="currentColor" points="0,100 100,0 100,100"/>
                         </svg>

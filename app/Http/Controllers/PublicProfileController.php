@@ -73,6 +73,7 @@ class PublicProfileController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'avatar' => $user->avatar,
+                'cover_photo' => $user->cover_photo,
                 'section' => $user->section?->name,
                 'streak' => $user->current_streak ?? 0,
                 'joinedAt' => $user->created_at ? $user->created_at->format('M Y') : 'Unknown',
