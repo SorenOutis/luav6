@@ -92,7 +92,7 @@ const triggerFileInput = () => {
 
                         <div class="space-y-2 text-center sm:text-left">
                             <h4 class="text-sm font-bold">Profile Picture</h4>
-                            <p class="text-xs text-muted-foreground">Recommend: Square PNG or JPG, max 5MB.</p>
+                            <p class="text-xs text-muted-foreground">Recommend: Square PNG, JPG, or GIF, max 10MB.</p>
                             <div class="flex items-center gap-2 justify-center sm:justify-start">
                                 <Button type="button" variant="outline" size="sm" @click="triggerFileInput">
                                     Change Photo

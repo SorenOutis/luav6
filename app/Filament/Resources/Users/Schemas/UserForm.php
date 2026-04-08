@@ -19,6 +19,7 @@ class UserForm
                     ->avatar()
                     ->disk('public')
                     ->directory('avatars')
+                    ->maxSize(10240)
                     ->formatStateUsing(fn ($record) => $record?->getRawOriginal('avatar'))
                     ->label('Profile Picture'),
                 TextInput::make('name')
