@@ -385,6 +385,7 @@ onMounted(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', preventCheatingActions);
     document.addEventListener('copy', preventCheatingActions);
+    document.addEventListener('paste', preventCheatingActions);
     document.addEventListener('keydown', handleGlobalKeydown);
 });
 
@@ -580,6 +581,8 @@ onMounted(() => {
     
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('contextmenu', preventCheatingActions);
+    window.addEventListener('copy', preventCheatingActions);
+    window.addEventListener('paste', preventCheatingActions);
     window.addEventListener('keydown', handleGlobalKeydown);
 });
 </script>
