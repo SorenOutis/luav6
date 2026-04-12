@@ -21,9 +21,10 @@ class ExamController extends Controller
         ])
         ->where('status', '!=', 'draft')
         ->when(!$user->is_admin, function ($query) use ($user) {
-            $query->where(function ($query) use ($user) {
+            $sectionIds = $user->sections()->pluck('sections.id')->toArray();
+            $query->where(function ($query) use ($sectionIds) {
                 $query->whereNull('section_id')
-                      ->orWhere('section_id', $user->section_id);
+                      ->orWhereIn('section_id', $sectionIds);
             });
         })
         ->get();
@@ -53,7 +54,7 @@ class ExamController extends Controller
         $user = auth()->user();
 
         // Check section access
-        if (!$user->is_admin && $exam->section_id && $exam->section_id !== $user->section_id) {
+        if (!$user->is_admin && $exam->section_id && !$user->sections()->where('sections.id', $exam->section_id)->exists()) {
             abort(403, 'You do not have access to this exam.');
         }
 

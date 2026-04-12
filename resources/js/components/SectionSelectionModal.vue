@@ -30,16 +30,25 @@ const props = defineProps<{
     show: boolean;
 }>();
 
-const selectedSection = ref<string | null>(null);
+const selectedSections = ref<number[]>([]);
 
 const form = useForm({
-    section_id: null as number | null,
+    section_ids: [] as number[],
 });
 
+const toggleSection = (id: number) => {
+    const index = selectedSections.value.indexOf(id);
+    if (index > -1) {
+        selectedSections.value.splice(index, 1);
+    } else {
+        selectedSections.value.push(id);
+    }
+};
+
 const submit = () => {
-    if (!selectedSection.value) return;
+    if (selectedSections.value.length === 0) return;
     
-    form.section_id = parseInt(selectedSection.value);
+    form.section_ids = selectedSections.value;
     form.patch(updateSectionRoute().url, {
         preserveScroll: true,
         onSuccess: () => {
@@ -62,34 +71,46 @@ const submit = () => {
                     Welcome to the Academy
                 </DialogTitle>
                 <DialogDescription class="text-muted-foreground/80 pt-2 text-sm leading-relaxed">
-                    To personalize your experience and track your progress on the leaderboard, please select your assigned section.
+                    To personalize your experience and track your progress on the leaderboard, please select your assigned sections.
                 </DialogDescription>
             </DialogHeader>
 
             <div class="grid gap-4 py-8 relative z-50">
                 <div class="space-y-4">
                     <label class="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
-                        Choose your section
+                        Choose your sections
                     </label>
-                    <Select v-model="selectedSection">
-                        <SelectTrigger class="w-full h-14 bg-muted/30 border-border/50 focus:ring-primary/20 transition-all font-medium text-base">
-                            <SelectValue placeholder="Select a section..." />
-                        </SelectTrigger>
-                        <SelectContent 
-                            class="z-[10000] bg-white dark:bg-zinc-950 border-primary/20 shadow-2xl opacity-100" 
-                            position="popper" 
-                            :side-offset="8"
+                    
+                    <div class="grid grid-cols-1 gap-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+                        <button
+                            v-for="section in sections"
+                            :key="section.id"
+                            @click="toggleSection(section.id)"
+                            type="button"
+                            :class="[
+                                'flex items-center justify-between w-full p-4 rounded-xl border transition-all duration-200 text-left group',
+                                selectedSections.includes(section.id)
+                                    ? 'bg-primary/10 border-primary shadow-[0_0_15px_rgba(var(--primary),0.1)]'
+                                    : 'bg-muted/30 border-border/50 hover:border-primary/40 hover:bg-muted/50'
+                            ]"
                         >
-                            <SelectItem 
-                                v-for="section in sections" 
-                                :key="section.id" 
-                                :value="section.id.toString()"
-                                class="h-12 focus:bg-primary/10 transition-colors"
-                            >
+                            <span :class="[
+                                'font-bold transition-colors',
+                                selectedSections.includes(section.id) ? 'text-primary' : 'text-foreground/70 group-hover:text-foreground'
+                            ]">
                                 {{ section.name }}
-                            </SelectItem>
-                        </SelectContent>
-                    </Select>
+                            </span>
+                            <div :class="[
+                                'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all',
+                                selectedSections.includes(section.id)
+                                    ? 'bg-primary border-primary scale-110'
+                                    : 'border-muted-foreground/30'
+                            ]">
+                                <Check v-if="selectedSections.includes(section.id)" class="w-3.5 h-3.5 text-primary-foreground stroke-[4px]" />
+                            </div>
+                        </button>
+                    </div>
+
                     <p v-if="sections.length === 0" class="text-xs text-destructive mt-1 font-medium italic">
                         No sections available. Please contact your admin.
                     </p>
@@ -100,7 +121,7 @@ const submit = () => {
                 <Button 
                     @click="submit" 
                     class="w-full h-14 text-base font-black uppercase tracking-wider shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50"
-                    :disabled="!selectedSection || form.processing"
+                    :disabled="selectedSections.length === 0 || form.processing"
                 >
                     <template v-if="form.processing">
                         <Loader2 class="mr-2 h-5 w-5 animate-spin" />
@@ -115,3 +136,19 @@ const submit = () => {
         </DialogContent>
     </Dialog>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(var(--primary), 0.1);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--primary), 0.2);
+}
+</style>

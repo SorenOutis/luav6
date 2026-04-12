@@ -31,7 +31,6 @@ class User extends Authenticatable
         'last_login_at',
         'avatar',
         'cover_photo',
-        'section_id',
     ];
 
     public function seasonProgress()
@@ -139,9 +138,9 @@ class User extends Authenticatable
     /**
      * Get the section associated with the user.
      */
-    public function section()
+    public function sections()
     {
-        return $this->belongsTo(Section::class);
+        return $this->belongsToMany(Section::class);
     }
 
     /**

@@ -175,13 +175,11 @@ watch(() => props.sectionName, (newSection) => {
 }, { immediate: true });
 
 onMounted(() => {
+    // If user has no sections, show the selection modal immediately but after initial dashboard animations start
     if (!props.sectionName) {
         setTimeout(() => {
-            // Only show if still missing a section after the delay
-            if (!props.sectionName) {
-                showSectionModal.value = true;
-            }
-        }, 1500);
+            showSectionModal.value = true;
+        }, 800); // Slightly faster for immediate engagement
     }
 
     if (!dashboardContainer.value) return;

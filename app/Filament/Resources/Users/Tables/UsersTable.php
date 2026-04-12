@@ -26,8 +26,8 @@ class UsersTable
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
-                TextColumn::make('section.name')
-                    ->label('Section')
+                TextColumn::make('sections.name')
+                    ->label('Sections')
                     ->badge()
                     ->color('success')
                     ->placeholder('None')
@@ -55,9 +55,10 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('section')
-                    ->relationship('section', 'name')
-                    ->label('Filter by Section')
+                \Filament\Tables\Filters\SelectFilter::make('sections')
+                    ->relationship('sections', 'name')
+                    ->label('Filter by Sections')
+                    ->multiple()
                     ->searchable()
                     ->preload(),
             ])
@@ -69,15 +70,16 @@ class UsersTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('assign_section')
-                        ->label('Assign Section')
+                        ->label('Assign Sections')
                         ->icon('heroicon-o-folder-plus')
                         ->form([
-                            \Filament\Forms\Components\Select::make('section_id')
-                                ->label('Section')
+                            \Filament\Forms\Components\Select::make('sections')
+                                ->label('Sections')
+                                ->multiple()
                                 ->options(\App\Models\Section::pluck('name', 'id'))
                                 ->required(),
                         ])
-                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records, array $data) => $records->each->update(['section_id' => $data['section_id']]))
+                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records, array $data) => $records->each->sections()->sync($data['sections']))
                         ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),

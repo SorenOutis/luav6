@@ -15,7 +15,7 @@ class PublicProfileController extends Controller
         $viewer = $request->user();
         $currentSeason = Season::current();
         
-        $user->load(['section', 'badges' => function ($q) use ($currentSeason) {
+        $user->load(['sections', 'badges' => function ($q) use ($currentSeason) {
             if ($currentSeason) {
                 $q->wherePivot('season_id', $currentSeason->id);
             }
@@ -31,27 +31,36 @@ class PublicProfileController extends Controller
             $seasonalExp = $progress?->exp ?? 0;
             $seasonalLevel = $progress?->level ?? 1;
 
+            $primarySectionId = $user->sections()->first()?->id;
+
             $userRank = SeasonProgress::where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($user) {
+                ->whereHas('user', function($q) use ($primarySectionId) {
                     $q->where('is_admin', false);
-                    if ($user->section_id) {
-                        $q->where('section_id', $user->section_id);
+                    if ($primarySectionId) {
+                        $q->whereHas('sections', function($sq) use ($primarySectionId) {
+                            $sq->where('sections.id', $primarySectionId);
+                        });
                     }
                 })
                 ->where('exp', '>', $seasonalExp)
                 ->count() + 1;
             
             $totalPlayers = SeasonProgress::where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($user) {
+                ->whereHas('user', function($q) use ($primarySectionId) {
                     $q->where('is_admin', false);
-                    if ($user->section_id) {
-                        $q->where('section_id', $user->section_id);
+                    if ($primarySectionId) {
+                        $q->whereHas('sections', function($sq) use ($primarySectionId) {
+                            $sq->where('sections.id', $primarySectionId);
+                        });
                     }
                 })
                 ->count();
         }
 
-        $isSameSection = $viewer->section_id === $user->section_id && $viewer->section_id !== null;
+        $viewerSectionIds = $viewer->sections()->pluck('sections.id')->toArray();
+        $userSectionIds = $user->sections()->pluck('sections.id')->toArray();
+        $sharedSections = array_intersect($viewerSectionIds, $userSectionIds);
+        $isSameSection = !empty($sharedSections);
 
         $courses = [];
         if ($isSameSection && $currentSeason) {
@@ -74,7 +83,7 @@ class PublicProfileController extends Controller
                 'name' => $user->name,
                 'avatar' => $user->avatar,
                 'cover_photo' => $user->cover_photo,
-                'section' => $user->section?->name,
+                'section' => $user->sections->map(fn($s) => $s->name)->join(', ') ?: 'None',
                 'streak' => $user->current_streak ?? 0,
                 'joinedAt' => $user->created_at ? $user->created_at->format('M Y') : 'Unknown',
                 'isCurrentUser' => $user->id === $viewer->id,

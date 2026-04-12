@@ -32,6 +32,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $seasonalLevel = $seasonalProgress?->level ?? 1;
         $seasonalPoints = $seasonalProgress?->points ?? 0;
 
+        $sectionIds = $user->sections()->pluck('sections.id');
+
         // 1. Announcements (Active)
         $announcements = \App\Models\Announcement::where('is_active', true)->get();
 
@@ -69,10 +71,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // 5. Upcoming Exams (Published exams, ordered by date)
         $upcomingExams = \App\Models\Exam::where('status', '!=', 'draft')
-            ->when(!$user->is_admin, function ($query) use ($user) {
-                $query->where(function ($query) use ($user) {
+            ->when(!$user->is_admin, function ($query) use ($sectionIds) {
+                $query->where(function ($query) use ($sectionIds) {
                     $query->whereNull('section_id')
-                          ->orWhere('section_id', $user->section_id);
+                          ->orWhereIn('section_id', $sectionIds);
                 });
             })
             ->orderBy('exam_date', 'asc')
@@ -104,10 +106,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         if ($currentSeason) {
             $leaderboardUsers = \App\Models\SeasonProgress::with('user')
                 ->where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($user) {
+                ->whereHas('user', function($q) use ($user, $sectionIds) {
                     $q->where('is_admin', false);
-                    if ($user->section_id) {
-                        $q->where('section_id', $user->section_id);
+                    if ($sectionIds->isNotEmpty()) {
+                        $q->whereHas('sections', function($q) use ($sectionIds) {
+                            $q->whereIn('sections.id', $sectionIds);
+                        });
                     }
                 })
                 ->orderByDesc('exp')
@@ -141,18 +145,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 });
 
             $userRank = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($user) {
-                    if ($user->section_id) {
-                        $q->where('section_id', $user->section_id);
+                ->whereHas('user', function($q) use ($sectionIds) {
+                    if ($sectionIds->isNotEmpty()) {
+                        $q->whereHas('sections', function($q) use ($sectionIds) {
+                            $q->whereIn('sections.id', $sectionIds);
+                        });
                     }
                 })
                 ->where('exp', '>', $seasonalExp)
                 ->count() + 1;
             
             $totalPlayers = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($user) {
-                    if ($user->section_id) {
-                        $q->where('section_id', $user->section_id);
+                ->whereHas('user', function($q) use ($sectionIds) {
+                    if ($sectionIds->isNotEmpty()) {
+                        $q->whereHas('sections', function($q) use ($sectionIds) {
+                            $q->whereIn('sections.id', $sectionIds);
+                        });
                     }
                 })
                 ->count();
@@ -188,7 +196,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'id' => $currentSeason->id,
                 'name' => $currentSeason->name,
             ] : null,
-            'sectionName' => $user->section?->name,
+            'sectionName' => $user->sections->pluck('name')->join(', '),
             'allSections' => \App\Models\Section::all(['id', 'name']),
         ]);
     })->name('dashboard');

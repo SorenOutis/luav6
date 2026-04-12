@@ -36,12 +36,13 @@ class UserForm
                     ->email()
                     ->required(),
                 DateTimePicker::make('email_verified_at'),
-                \Filament\Forms\Components\Select::make('section_id')
-                    ->relationship('section', 'name')
+                \Filament\Forms\Components\Select::make('sections')
+                    ->relationship('sections', 'name')
+                    ->multiple()
                     ->searchable()
                     ->preload()
                     ->placeholder('No Section')
-                    ->label('Section'),
+                    ->label('Sections'),
                 Section::make('Seasonal Progress')
                     ->description('Stats for the currently active season')
                     ->relationship('currentSeasonProgress')
