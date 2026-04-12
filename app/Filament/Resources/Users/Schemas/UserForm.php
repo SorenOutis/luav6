@@ -26,6 +26,7 @@ class UserForm
                         ->disk('public')
                         ->directory('avatars')
                         ->maxSize(10240)
+                        ->dehydrated(fn ($state) => filled($state))
                         ->label('Change Profile Picture'),
                 ])
                 ->from('md')
@@ -40,6 +41,7 @@ class UserForm
                         ->disk('public')
                         ->directory('covers')
                         ->maxSize(10240)
+                        ->dehydrated(fn ($state) => filled($state))
                         ->label('Change Cover Photo'),
                 ])
                 ->from('md')
