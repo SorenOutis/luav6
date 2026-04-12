@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import gsap from 'gsap';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';

@@ -27,16 +27,50 @@ const dashboardContainer = ref<HTMLElement | null>(null);
 const backgroundGrid = ref<HTMLElement | null>(null);
 const mouseGlow = ref<HTMLElement | null>(null);
 
-import { usePage, Link, usePoll } from '@inertiajs/vue3';
-import { BookOpen, Clock } from 'lucide-vue-next';
+import { usePage, Link, usePoll, router } from '@inertiajs/vue3';
+import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
+import { edit as profileEdit } from '@/routes/profile';
+import { index as assignmentsIndex } from '@/routes/assignments';
 
-usePoll(10000, {
-    only: ['userStats', 'announcements', 'courses', 'assignments', 'upcomingExams', 'leaderboardUsers', 'activeSeason']
+const lastSyncTime = ref(new Date());
+const isRefreshing = ref(false);
+
+const { stop, start } = usePoll(10000, {
+    only: ['userStats', 'announcements', 'courses', 'assignments', 'upcomingExams', 'leaderboardUsers', 'activeSeason'],
+    onStart: () => { isRefreshing.value = true; },
+    onFinish: () => { 
+        isRefreshing.value = false;
+        lastSyncTime.value = new Date();
+    }
 });
+
+const manualRefresh = () => {
+    isRefreshing.value = true;
+    router.reload({
+        only: ['userStats', 'announcements', 'courses', 'assignments', 'upcomingExams', 'leaderboardUsers', 'activeSeason'],
+        onFinish: () => {
+            isRefreshing.value = false;
+            lastSyncTime.value = new Date();
+        }
+    });
+};
 
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
+
+// Personalized greeting based on stats
+const personalizedGreeting = computed(() => {
+    const hour = new Date().getHours();
+    let base = 'Good Evening';
+    if (hour < 12) base = 'Good Morning';
+    else if (hour < 18) base = 'Good Afternoon';
+
+    const streak = props.userStats.streak;
+    if (streak > 5) return `${base}, Champ!`;
+    if (streak > 0) return `${base}, keep it up!`;
+    return base;
+});
 
 // Interactive Background Logic
 const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -155,13 +189,6 @@ const streak = computed(() => ({
     loginDates: ['2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08', '2026-03-09']
 }));
 
-const timeBasedGreeting = computed(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-});
-
 const showSectionModal = ref(false);
 
 watch(() => props.sectionName, (newSection) => {
@@ -252,7 +279,25 @@ onMounted(() => {
 });
 
 const handleQuickAction = (action: string) => {
-    console.log('Quick action:', action);
+    switch (action) {
+        case 'resume':
+            if (props.courses.length > 0) {
+                // Navigate to the first course or resume last
+                console.log('Resuming course...');
+            }
+            break;
+        case 'assignments':
+            router.get(assignmentsIndex().url);
+            break;
+        case 'leaderboard':
+            // If there's a specific leaderboard route, navigate there
+            // Otherwise maybe just scroll to leaderboard
+            document.querySelector('.dashboard-leaderboard')?.scrollIntoView({ behavior: 'smooth' });
+            break;
+        case 'settings':
+            router.get(profileEdit().url);
+            break;
+    }
 };
 </script>
 
@@ -281,15 +326,35 @@ const handleQuickAction = (action: string) => {
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
             <!-- Hero Banner Section -->
-            <DashboardHero 
-                class="animate-section dashboard-hero"
-                :user-name="userName"
-                :user-stats="userStats"
-                :announcements="announcements"
-                :total-x-p-progress="totalXPProgress"
-                :time-based-greeting="timeBasedGreeting"
-                @close-announcement="announcements = []"
-            />
+            <div class="relative">
+                <DashboardHero 
+                    class="animate-section dashboard-hero"
+                    :user-name="userName"
+                    :user-stats="userStats"
+                    :announcements="announcements"
+                    :total-x-p-progress="totalXPProgress"
+                    :time-based-greeting="personalizedGreeting"
+                    @close-announcement="announcements = []"
+                />
+                
+                <!-- System Status & Refresh Indicator -->
+                <div class="absolute top-4 right-4 flex items-center gap-3 z-10">
+                    <div class="hidden sm:flex flex-col items-end">
+                        <span class="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Last Synced</span>
+                        <span class="text-[10px] font-medium text-muted-foreground/40">{{ lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+                    </div>
+                    <button 
+                        @click="manualRefresh"
+                        class="p-2.5 rounded-xl bg-card/40 border border-border/20 hover:border-primary/40 hover:bg-card/60 transition-all group/refresh disabled:opacity-50"
+                        :disabled="isRefreshing"
+                    >
+                        <RefreshCw 
+                            class="w-4 h-4 text-muted-foreground group-hover/refresh:text-primary transition-colors"
+                            :class="{ 'animate-spin': isRefreshing }"
+                        />
+                    </button>
+                </div>
+            </div>
 
             <!-- Header Section with User Stats -->
             <DashboardStats 
