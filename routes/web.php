@@ -103,72 +103,74 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
 
         // 4. Leaderboard (Scoped to Current Season and Section)
+        $sectionLeaderboards = [];
         if ($currentSeason) {
-            $leaderboardUsers = \App\Models\SeasonProgress::with('user')
-                ->where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($user, $sectionIds) {
-                    $q->where('is_admin', false);
-                    if ($sectionIds->isNotEmpty()) {
-                        $q->whereHas('sections', function($q) use ($sectionIds) {
-                            $q->whereIn('sections.id', $sectionIds);
-                        });
-                    }
-                })
-                ->orderByDesc('exp')
-                ->get()
-                ->map(function ($progress) use ($user) {
-                    $u = $progress->user;
-                    // Completion rate = lessons completed / total available in season?
-// Let's just do a dummy calc for now based on user's courses
-                    $totalLessons = $u->courses()->sum('total_lessons');
-                    $completedLessons = $u->courses()->sum('completed_lessons');
-                    $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
-
-                    // Weekly XP: xp earned in last 7 days from courses
-                    $weeklyXp = $u->courses()
-                        ->wherePivot('updated_at', '>=', now()->subDays(7))
-                        ->sum('xp_earned');
-
-                    return [
-                        'id' => $u->id,
-                        'name' => $u->name,
-                        'avatar' => $u->avatar,
-                        'xp' => $progress->exp,
-                        'level' => $progress->level,
-                        'completionRate' => $completionRate,
-                        'streak' => $u->current_streak,
-                        'joinedAt' => $u->created_at->format('M Y'),
-                        'weeklyXp' => $weeklyXp,
-                        'trend' => 'stable',
-                        'isCurrentUser' => $u->id === $user->id,
-                    ];
-                });
-
-            $userRank = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($sectionIds) {
-                    if ($sectionIds->isNotEmpty()) {
-                        $q->whereHas('sections', function($q) use ($sectionIds) {
-                            $q->whereIn('sections.id', $sectionIds);
-                        });
-                    }
-                })
-                ->where('exp', '>', $seasonalExp)
-                ->count() + 1;
+            $userSections = $user->sections()->get();
             
-            $totalPlayers = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
-                ->whereHas('user', function($q) use ($sectionIds) {
-                    if ($sectionIds->isNotEmpty()) {
-                        $q->whereHas('sections', function($q) use ($sectionIds) {
-                            $q->whereIn('sections.id', $sectionIds);
+            foreach ($userSections as $section) {
+                $leaderboardUsers = \App\Models\SeasonProgress::with('user')
+                    ->where('season_id', $currentSeason->id)
+                    ->whereHas('user', function($q) use ($section) {
+                        $q->where('is_admin', false)
+                          ->whereHas('sections', function($q) use ($section) {
+                              $q->where('sections.id', $section->id);
+                          });
+                    })
+                    ->orderByDesc('exp')
+                    ->get()
+                    ->map(function ($progress) use ($user) {
+                        $u = $progress->user;
+                        $totalLessons = $u->courses()->sum('total_lessons');
+                        $completedLessons = $u->courses()->sum('completed_lessons');
+                        $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
+                        $weeklyXp = $u->courses()
+                            ->wherePivot('updated_at', '>=', now()->subDays(7))
+                            ->sum('xp_earned');
+
+                        return [
+                            'id' => $u->id,
+                            'name' => $u->name,
+                            'avatar' => $u->avatar,
+                            'xp' => $progress->exp,
+                            'level' => $progress->level,
+                            'completionRate' => $completionRate,
+                            'streak' => $u->current_streak,
+                            'joinedAt' => $u->created_at->format('M Y'),
+                            'weeklyXp' => $weeklyXp,
+                            'trend' => 'stable',
+                            'isCurrentUser' => $u->id === $user->id,
+                        ];
+                    });
+
+                $userRank = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
+                    ->whereHas('user', function($q) use ($section) {
+                        $q->whereHas('sections', function($q) use ($section) {
+                            $q->where('sections.id', $section->id);
                         });
-                    }
-                })
-                ->count();
-        } else {
-            $leaderboardUsers = collect();
-            $userRank = 0;
-            $totalPlayers = 0;
+                    })
+                    ->where('exp', '>', $seasonalExp)
+                    ->count() + 1;
+                
+                $totalPlayers = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
+                    ->whereHas('user', function($q) use ($section) {
+                        $q->whereHas('sections', function($q) use ($section) {
+                            $q->where('sections.id', $section->id);
+                        });
+                    })
+                    ->count();
+
+                $sectionLeaderboards[] = [
+                    'sectionId' => $section->id,
+                    'sectionName' => $section->name,
+                    'users' => $leaderboardUsers,
+                    'userRank' => $userRank,
+                    'totalPlayers' => $totalPlayers,
+                ];
+            }
         }
+
+        // If no sections, we can provide a default empty state or global if desired
+        // For now, if no sections, the list will just be empty.
 
         return inertia('Dashboard', [
             'userStats' => [
@@ -177,8 +179,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'currentXP' => $seasonalExp % 100,
                 'maxXPForLevel' => 100,
                 'rank' => 'Player',
-                'rankNumber' => $userRank,
-                'totalPlayers' => $totalPlayers,
+                'rankNumber' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['userRank'] : 0,
+                'totalPlayers' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['totalPlayers'] : 0,
                 'achievements' => $user->badges()->when($currentSeason, fn($q) => $q->wherePivot(
                     'season_id',
                     $currentSeason->id
@@ -191,7 +193,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'courses' => $courses,
             'assignments' => $assignments,
             'upcomingExams' => $upcomingExams,
-            'leaderboardUsers' => $leaderboardUsers,
+            'sectionLeaderboards' => $sectionLeaderboards,
             'activeSeason' => $currentSeason ? [
                 'id' => $currentSeason->id,
                 'name' => $currentSeason->name,

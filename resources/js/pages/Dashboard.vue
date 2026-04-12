@@ -84,16 +84,12 @@ interface Assignment {
     grade: string | null;
 }
 
-interface LeaderboardUser {
-    id: number;
-    name: string;
-    xp: number;
-    completionRate: number;
-    streak: number;
-    joinedAt: string;
-    weeklyXp: number;
-    trend: 'up' | 'down' | 'stable';
-    isCurrentUser: boolean;
+interface LeaderboardData {
+    sectionId: number;
+    sectionName: string;
+    users: LeaderboardUser[];
+    userRank: number;
+    totalPlayers: number;
 }
 
 interface Season {
@@ -137,7 +133,7 @@ const props = defineProps<{
     courses: Course[];
     assignments: Assignment[];
     upcomingExams: Exam[];
-    leaderboardUsers: LeaderboardUser[];
+    sectionLeaderboards: LeaderboardData[];
     activeSeason: Season | null;
     sectionName?: string | null;
     allSections: Array<{ id: number, name: string }>;
@@ -151,7 +147,7 @@ const announcements = computed(() => props.announcements);
 const courses = computed(() => props.courses);
 const assignments = computed(() => props.assignments);
 const upcomingExams = computed(() => props.upcomingExams);
-const leaderboardUsers = computed(() => props.leaderboardUsers);
+const sectionLeaderboards = computed(() => props.sectionLeaderboards);
 
 const streak = computed(() => ({
     currentStreak: props.userStats.streak || 0,
@@ -306,11 +302,8 @@ const handleQuickAction = (action: string) => {
             <!-- Improved Leaderboard -->
             <div class="animate-section stagger-3 dashboard-leaderboard">
                 <ImprovedLeaderboard 
-                    :users="leaderboardUsers" 
-                    :user-rank="userStats.rankNumber"
-                    :total-players="userStats.totalPlayers"
+                    :section-leaderboards="sectionLeaderboards" 
                     :active-season-name="activeSeason?.name"
-                    :section-name="sectionName"
                 />
             </div>
 

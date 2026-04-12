@@ -79,7 +79,11 @@ class UsersTable
                                 ->options(\App\Models\Section::pluck('name', 'id'))
                                 ->required(),
                         ])
-                        ->action(fn(\Illuminate\Database\Eloquent\Collection $records, array $data) => $records->each->sections()->sync($data['sections']))
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                            $records->each(function ($record) use ($data) {
+                                $record->sections()->sync($data['sections']);
+                            });
+                        })
                         ->deselectRecordsAfterCompletion(),
                     DeleteBulkAction::make(),
                 ]),

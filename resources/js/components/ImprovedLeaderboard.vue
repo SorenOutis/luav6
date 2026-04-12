@@ -17,22 +17,38 @@ interface LeaderboardUser {
     isCurrentUser?: boolean;
 }
 
-interface Props {
+interface LeaderboardData {
+    sectionId: number;
+    sectionName: string;
     users: LeaderboardUser[];
     userRank: number;
     totalPlayers: number;
+}
+
+interface Props {
+    sectionLeaderboards: LeaderboardData[];
     activeSeasonName?: string;
-    sectionName?: string | null;
 }
 
 const props = defineProps<Props>();
 
+const activeTabIndex = ref(0);
+
+const activeLeaderboard = computed(() => {
+    return props.sectionLeaderboards[activeTabIndex.value] || null;
+});
+
+const users = computed(() => activeLeaderboard.value?.users || []);
+const userRank = computed(() => activeLeaderboard.value?.userRank || 0);
+const totalPlayers = computed(() => activeLeaderboard.value?.totalPlayers || 0);
+const sectionName = computed(() => activeLeaderboard.value?.sectionName || '');
+
 // Mock data extension for richer visuals
-const top3 = computed(() => props.users.slice(0, 3));
+const top3 = computed(() => users.value.slice(0, 3));
 
 const showAllRankings = ref(false);
 const displayedUsers = computed(() => {
-    return showAllRankings.value ? props.users : props.users.slice(0, 10);
+    return showAllRankings.value ? users.value : users.value.slice(0, 10);
 });
 
 // Animated XP for top 3
@@ -83,20 +99,40 @@ const resetMagnetic = (e: MouseEvent) => {
 
 <template>
     <div class="space-y-8">
+        <!-- Section Tabs (Only if more than 1 section) -->
+        <div v-if="sectionLeaderboards.length > 1" class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
+            <button 
+                v-for="(section, idx) in sectionLeaderboards" 
+                :key="section.sectionId"
+                @click="activeTabIndex = idx"
+                :class="[
+                    'px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 border shrink-0',
+                    activeTabIndex === idx 
+                        ? 'bg-primary text-primary-foreground border-primary shadow-[0_8px_20px_-6px_rgba(var(--primary),0.4)] scale-105' 
+                        : 'bg-card text-muted-foreground border-border/40 hover:border-primary/40 hover:text-foreground'
+                ]"
+            >
+                {{ section.sectionName }}
+            </button>
+        </div>
+
         <!-- Header -->
         <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 px-2">
             <div>
                 <div class="flex items-center gap-2 mb-1">
                     <Trophy class="w-4 h-4 text-primary" />
                     <span class="text-[10px] font-bold uppercase tracking-widest text-primary">
-                        {{ props.sectionName ? `${props.sectionName} Rankings` : 'Global Rankings' }}
+                        {{ sectionName ? `${sectionName} Rankings` : 'Global Rankings' }}
                     </span>
                 </div>
                 <h2 class="text-3xl font-black tracking-tighter">
-                    {{ props.sectionName ? 'Section Elite' : 'Elite Assembly' }}
+                    {{ sectionName ? 'Section Elite' : 'Elite Assembly' }}
                 </h2>
-                <p class="text-sm text-muted-foreground font-medium mt-1">
-                    Competition is fierce. You are ranked <span class="text-foreground font-bold">#{{ props.userRank }}</span> out of {{ props.totalPlayers.toLocaleString() }}.
+                <p v-if="totalPlayers > 0" class="text-sm text-muted-foreground font-medium mt-1">
+                    Competition is fierce. You are ranked <span class="text-foreground font-bold">#{{ userRank }}</span> out of {{ totalPlayers.toLocaleString() }}.
+                </p>
+                <p v-else class="text-sm text-muted-foreground font-medium mt-1">
+                    Join a section to see your ranking.
                 </p>
             </div>
             <button 
