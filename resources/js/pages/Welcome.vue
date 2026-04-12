@@ -20,6 +20,9 @@ const heroSub = ref<HTMLElement | null>(null);
 const heroCta = ref<HTMLElement | null>(null);
 const featureCards = ref<HTMLElement[]>([]);
 const structuralLines = ref<HTMLElement[]>([]);
+const mainContainer = ref<HTMLElement | null>(null);
+const backgroundGrid = ref<HTMLElement | null>(null);
+const mouseGlow = ref<HTMLElement | null>(null);
 
 // Appearance Management
 const { appearance, updateAppearance } = useAppearance();
@@ -61,6 +64,88 @@ const toggleTheme = (event: MouseEvent) => {
                     : '::view-transition-new(root)',
             }
         );
+    });
+};
+
+// Interaction Logic
+const handleMagnetic = (e: MouseEvent) => {
+    const btn = e.currentTarget as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    
+    gsap.to(btn, {
+        x: x * 0.4,
+        y: y * 0.4,
+        duration: 0.3,
+        ease: 'power2.out'
+    });
+};
+
+const resetMagnetic = (e: MouseEvent) => {
+    const btn = e.currentTarget as HTMLElement;
+    gsap.to(btn, {
+        x: 0,
+        y: 0,
+        duration: 0.5,
+        ease: 'elastic.out(1, 0.3)'
+    });
+};
+
+const handleGlobalMouseMove = (e: MouseEvent) => {
+    if (!mouseGlow.value || !backgroundGrid.value) return;
+
+    const { clientX, clientY } = e;
+    const xPercent = clientX / window.innerWidth;
+    const yPercent = clientY / window.innerHeight;
+
+    // Background Glow
+    gsap.to(mouseGlow.value, {
+        x: clientX,
+        y: clientY,
+        duration: 1.2,
+        ease: 'power3.out'
+    });
+
+    // Grid Parallax
+    gsap.to(backgroundGrid.value, {
+        x: (xPercent - 0.5) * 40,
+        y: (yPercent - 0.5) * 40,
+        duration: 1.5,
+        ease: 'power2.out'
+    });
+};
+
+const handleFeatureMouseMove = (e: MouseEvent, index: number) => {
+    const card = e.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const xPercent = (x / rect.width - 0.5) * 2;
+    const yPercent = (y / rect.height - 0.5) * 2;
+
+    // 3D Tilt
+    gsap.to(card, {
+        rotateY: xPercent * 5,
+        rotateX: -yPercent * 5,
+        transformPerspective: 1000,
+        duration: 0.4,
+        ease: 'power2.out'
+    });
+
+    // Local Glow
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+};
+
+const resetFeatureMouse = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    gsap.to(card, {
+        rotateY: 0,
+        rotateX: 0,
+        duration: 0.8,
+        ease: 'power4.out'
     });
 };
 
@@ -110,6 +195,7 @@ onMounted(() => {
     // 1. Initial State
     gsap.set('.reveal-content', { y: '100%', opacity: 0 });
     gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
+    gsap.set('.footer-reveal', { opacity: 0, y: 30 });
 
     // 2. Animate Structural Lines
     tl.to(structuralLines.value, {
@@ -133,14 +219,25 @@ onMounted(() => {
         stagger: 0.2,
         duration: 1.5
     }, "-=1")
-    // 5. Build Feature Grid
+    // 5. Build Feature Grid with advanced stagger
     .from(featureCards.value, {
-        y: 40,
+        y: 60,
         opacity: 0,
-        stagger: 0.1,
-        duration: 1,
+        stagger: {
+            each: 0.1,
+            from: "center"
+        },
+        duration: 1.2,
+        ease: 'power4.out',
         clearProps: "all"
-    }, "-=1.2");
+    }, "-=1.2")
+    // 6. Reveal Footer
+    .to('.footer-reveal', {
+        opacity: 1,
+        y: 0,
+        stagger: 0.1,
+        duration: 1
+    }, "-=0.8");
 });
 
 const coreFeatures = [
@@ -168,9 +265,19 @@ const coreFeatures = [
 <template>
     <Head title="Welcome | LUAV Learning Engine" />
     
-    <div class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20 transition-colors duration-500">
+    <div 
+        ref="mainContainer"
+        @mousemove="handleGlobalMouseMove"
+        class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20 transition-colors duration-500"
+    >
+        <!-- Global Mouse Glow -->
+        <div 
+            ref="mouseGlow"
+            class="pointer-events-none fixed -left-[150px] -top-[150px] z-0 h-[300px] w-[300px] rounded-full bg-primary/5 blur-[120px] will-change-transform dark:bg-primary/10"
+        ></div>
+
         <!-- Monolithic Grid Overlay -->
-        <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06]">
+        <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] will-change-transform">
             <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
         </div>
 
@@ -204,17 +311,29 @@ const coreFeatures = [
                 </button>
 
                 <template v-if="$page.props.auth.user">
-                    <Link :href="dashboard()" class="nav-item text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-muted-foreground hover:text-primary transition-all flex items-center gap-2">
+                    <Link :href="dashboard()" 
+                        @mousemove="handleMagnetic" 
+                        @mouseleave="resetMagnetic"
+                        class="nav-item text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-muted-foreground hover:text-primary transition-all flex items-center gap-2"
+                    >
                         <div class="h-1 w-1 rounded-full bg-emerald-500 animate-pulse"></div>
                         <span class="hidden sm:inline">Access Engine</span>
                         <span class="sm:hidden">Engine</span>
                     </Link>
                 </template>
                 <template v-else>
-                    <Link :href="login()" class="nav-item text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors">
+                    <Link :href="login()" 
+                        @mousemove="handleMagnetic" 
+                        @mouseleave="resetMagnetic"
+                        class="nav-item text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
+                    >
                         Login
                     </Link>
-                    <Link v-if="canRegister" :href="register()" class="nav-item bg-foreground text-background px-4 lg:px-8 py-2 lg:py-3 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary transition-all shadow-2xl">
+                    <Link v-if="canRegister" :href="register()" 
+                        @mousemove="handleMagnetic" 
+                        @mouseleave="resetMagnetic"
+                        class="nav-item bg-foreground text-background px-4 lg:px-8 py-2 lg:py-3 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary transition-all shadow-2xl"
+                    >
                         Init
                     </Link>
                 </template>
@@ -256,16 +375,28 @@ const coreFeatures = [
 
                 <div class="hero-reveal overflow-hidden">
                     <div class="reveal-content flex flex-col sm:flex-row gap-3 lg:gap-4">
-                        <Link v-if="$page.props.auth.user" :href="dashboard()" class="group flex items-center justify-between gap-8 lg:gap-12 bg-primary px-8 lg:px-10 py-5 lg:py-6 text-primary-foreground transition-all hover:gap-12 lg:hover:gap-16 active:scale-95 shadow-2xl">
+                        <Link v-if="$page.props.auth.user" :href="dashboard()" 
+                            @mousemove="handleMagnetic" 
+                            @mouseleave="resetMagnetic"
+                            class="group flex items-center justify-between gap-8 lg:gap-12 bg-primary px-8 lg:px-10 py-5 lg:py-6 text-primary-foreground transition-all hover:gap-12 lg:hover:gap-16 active:scale-95 shadow-2xl"
+                        >
                             <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em]">Initialize Dashboard</span>
                             <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6" />
                         </Link>
-                        <Link v-else :href="login()" class="group flex items-center justify-between gap-8 lg:gap-12 bg-foreground px-8 lg:px-10 py-5 lg:py-6 text-background transition-all hover:gap-12 lg:hover:gap-16 active:scale-95 shadow-2xl">
+                        <Link v-else :href="login()" 
+                            @mousemove="handleMagnetic" 
+                            @mouseleave="resetMagnetic"
+                            class="group flex items-center justify-between gap-8 lg:gap-12 bg-foreground px-8 lg:px-10 py-5 lg:py-6 text-background transition-all hover:gap-12 lg:hover:gap-16 active:scale-95 shadow-2xl"
+                        >
                             <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em]">Authenticate System</span>
                             <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6" />
                         </Link>
                         
-                        <Link v-if="!$page.props.auth.user && canRegister" :href="register()" class="group flex items-center justify-between gap-8 lg:gap-10 border border-border px-8 lg:px-10 py-5 lg:py-6 transition-all hover:bg-muted/30 active:scale-95 text-muted-foreground">
+                        <Link v-if="!$page.props.auth.user && canRegister" :href="register()" 
+                            @mousemove="handleMagnetic" 
+                            @mouseleave="resetMagnetic"
+                            class="group flex items-center justify-between gap-8 lg:gap-10 border border-border px-8 lg:px-10 py-5 lg:py-6 transition-all hover:bg-muted/30 active:scale-95 text-muted-foreground"
+                        >
                             <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em]">Register Account</span>
                             <LayoutDashboard class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
                         </Link>
@@ -279,9 +410,16 @@ const coreFeatures = [
                     v-for="(feature, index) in coreFeatures" 
                     :key="index"
                     ref="featureCards"
-                    class="group relative flex flex-col p-8 lg:p-20 border-border/10 transition-all hover:bg-muted/20"
+                    @mousemove="handleFeatureMouseMove($event, index)"
+                    @mouseleave="resetFeatureMouse"
+                    class="group relative flex flex-col p-8 lg:p-20 border-border/10 transition-all hover:bg-muted/20 overflow-hidden"
                     :class="{ 'border-b lg:border-b-0 lg:border-r': index !== coreFeatures.length - 1 }"
                 >
+                    <!-- Local Card Glow -->
+                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                        :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--glow-color), transparent 40%)` }">
+                    </div>
+
                     <!-- Module Indicator -->
                     <div class="absolute top-8 left-8 lg:left-20 flex items-center gap-3">
                          <span class="text-[9px] font-black tracking-widest text-primary leading-none">{{ feature.code }}</span>
@@ -311,7 +449,7 @@ const coreFeatures = [
 
         <!-- System Registry (Footer) -->
         <footer class="relative z-10 border-t border-border/5 bg-background/50 py-16 lg:py-24 px-6 lg:px-16 backdrop-blur-sm">
-            <div class="mx-auto flex max-w-[1500px] flex-col lg:flex-row items-start justify-between gap-12 lg:gap-20">
+            <div class="footer-reveal mx-auto flex max-w-[1500px] flex-col lg:flex-row items-start justify-between gap-12 lg:gap-20">
                 <div class="flex flex-col gap-6 lg:gap-8">
                     <div class="flex items-center gap-4 lg:gap-5">
                         <div class="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></div>
@@ -361,10 +499,12 @@ const coreFeatures = [
     :root {
         --color-background: #ffffff;
         --color-foreground: #09090b;
+        --glow-color: rgba(0, 0, 0, 0.05);
     }
     .dark {
         --color-background: #09090b;
         --color-foreground: #fafafa;
+        --glow-color: rgba(255, 255, 255, 0.08);
     }
 }
 </style>
