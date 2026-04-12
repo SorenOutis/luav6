@@ -57,6 +57,15 @@ const answers = reactive<Record<number, string | number>>({}); // Store answers 
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
 const successModalRef = ref<HTMLElement | null>(null);
+
+const showStartModal = ref(false);
+const startModalRef = ref<HTMLElement | null>(null);
+const pendingPart = ref<ExamPart | null>(null);
+const pendingIndex = ref<number | null>(null);
+const isFullscreen = ref(false);
+const showFullscreenLockout = ref(false);
+const lockoutModalRef = ref<HTMLElement | null>(null);
+
 const partsPendingCount = ref(0);
 const displayedScore = ref(0); // For GSAP counter animation
 const flaggedQuestions = ref<Set<number>>(new Set());
@@ -280,7 +289,7 @@ watch(submittedPartsCount, (newCount, oldCount) => {
 });
 
 const totalScore = computed(() => 
-    Object.values(props.submissions).reduce((sum, s) => sum + (s.score ?? 0), 0)
+    Object.values(props.submissions).reduce((sum, s) => sum + (Number(s.score) || 0), 0)
 );
 
 const isExamPendingReview = computed(() => 
@@ -343,8 +352,82 @@ const selectPart = (part: ExamPart, index: number) => {
         return;
     }
 
-    selectedPart.value = part;
-    startPart(); // Directly start the part now
+    pendingPart.value = part;
+    pendingIndex.value = index;
+    showStartModal.value = true;
+
+    // Animate start confirmation modal
+    setTimeout(() => {
+        if (startModalRef.value) {
+            gsap.fromTo(
+                startModalRef.value,
+                { opacity: 0, scale: 0.85, y: 30 },
+                { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
+            );
+        }
+    }, 10);
+};
+
+const confirmStart = async () => {
+    if (!pendingPart.value) return;
+
+    try {
+        await reEnterFullscreen();
+    } catch (err) {
+        console.warn('Fullscreen request failed:', err);
+    }
+
+    selectedPart.value = pendingPart.value;
+    showStartModal.value = false;
+    startPart();
+};
+
+const reEnterFullscreen = async () => {
+    const element = document.documentElement;
+    if (element.requestFullscreen) {
+        await element.requestFullscreen();
+    } else if ((element as any).webkitRequestFullscreen) {
+        await (element as any).webkitRequestFullscreen();
+    } else if ((element as any).msRequestFullscreen) {
+        await (element as any).msRequestFullscreen();
+    }
+    isFullscreen.value = true;
+    showFullscreenLockout.value = false;
+};
+
+const handleFullscreenChange = () => {
+    isFullscreen.value = !!document.fullscreenElement;
+    
+    // If they exit full screen while the exam is in progress (any part started and not yet all finished)
+    const isExamInProgress = examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value);
+    
+    if (!isFullscreen.value && isExamInProgress) {
+        showFullscreenLockout.value = true;
+        integrityWarnings.value++;
+        showIntegrityAlert.value = true;
+        
+        // Animate lockout modal
+        setTimeout(() => {
+            if (lockoutModalRef.value) {
+                gsap.fromTo(
+                    lockoutModalRef.value,
+                    { opacity: 0, scale: 0.9, y: 50 },
+                    { opacity: 1, scale: 1, y: 0, duration: 0.8, ease: 'elastic.out(1, 0.7)' }
+                );
+            }
+        }, 10);
+
+        setTimeout(() => { showIntegrityAlert.value = false; }, 5000);
+    }
+};
+
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const isExamInProgress = examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value);
+    if (isExamInProgress && !isSubmitting.value) {
+        e.preventDefault();
+        e.returnValue = 'Mission Protocol Active: You have not completed all parts of the exam. Exiting now will compromise your submission. Are you sure?';
+        return e.returnValue;
+    }
 };
 
 const startPart = () => {
@@ -381,15 +464,13 @@ const startPart = () => {
     }, 10);
 };
 
-onMounted(() => {
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('contextmenu', preventCheatingActions);
-    document.addEventListener('copy', preventCheatingActions);
-    document.addEventListener('paste', preventCheatingActions);
-    document.addEventListener('keydown', handleGlobalKeydown);
-});
-
 const handleGlobalKeydown = (e: KeyboardEvent) => {
+    // Block Esc key during exam to prevent exiting full screen
+    if (e.key === 'Escape' && (examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value))) {
+        e.preventDefault();
+        return;
+    }
+
     if (!examStarted.value || isSubmitting.value) return;
 
     const activeElem = document.activeElement;
@@ -480,6 +561,25 @@ const submitPart = async () => {
         }, {
             onSuccess: () => {
                 clearDraft(); // Clean up successfully submitted draft
+                
+                // Exit full screen mode only if ALL parts are completed
+                if (remainingPartsCount.value === 0) {
+                    // Set examStarted to false BEFORE exiting fullscreen
+                    // to prevent the handleFullscreenChange from triggering the lockout modal
+                    examStarted.value = false;
+                    
+                    if (document.fullscreenElement) {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen();
+                        } else if ((document as any).webkitExitFullscreen) {
+                            (document as any).webkitExitFullscreen();
+                        } else if ((document as any).msExitFullscreen) {
+                            (document as any).msExitFullscreen();
+                        }
+                    }
+                    isFullscreen.value = false;
+                }
+
                 // Show success modal
                 showSuccessModal.value = true;
                 partsPendingCount.value = remainingPartsCount.value;
@@ -496,8 +596,10 @@ const submitPart = async () => {
                         // If all parts are done, animate the total score
                         if (partsPendingCount.value === 0) {
                             displayedScore.value = 0;
+                            const targetScore = Number(totalScore.value) || 0;
+                            
                             gsap.to(displayedScore, {
-                                value: totalScore.value,
+                                value: targetScore,
                                 duration: 2,
                                 ease: 'power4.out',
                                 delay: 0.6,
@@ -584,6 +686,11 @@ onMounted(() => {
     window.addEventListener('copy', preventCheatingActions);
     window.addEventListener('paste', preventCheatingActions);
     window.addEventListener('keydown', handleGlobalKeydown);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 });
 </script>
 
@@ -608,41 +715,56 @@ onMounted(() => {
 
             <div class="flex-1 flex flex-col p-4 md:p-8 gap-6 relative z-10">
 
+                <!-- Integrity Alert Overlay -->
+                <transition name="modal-fade">
+                    <div v-if="showIntegrityAlert" class="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 pointer-events-none">
+                        <div class="bg-red-500/90 backdrop-blur-xl border border-white/20 rounded-2xl p-4 shadow-2xl flex items-center gap-4 text-white animate-bounce">
+                            <div class="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                                <AlertCircle class="w-6 h-6" />
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="text-sm font-black uppercase tracking-widest">Security Warning</h4>
+                                <p class="text-[10px] font-bold opacity-90">Potential integrity breach detected. Your session activity is being logged. Please return to full screen and do not leave the page.</p>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+
                 <!-- ─── BREADCRUMB NAV ─────────────────────────────────── -->
                 <div class="animate-up flex items-center justify-between">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-3">
                         <button v-if="selectedPart" @click="goBackToList"
-                            class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group px-3 py-1.5 rounded-lg hover:bg-muted/50">
-                            <ChevronLeft class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                            Back to Parts
+                            class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
+                            <ChevronLeft class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+                            Return to Mission Briefing
                         </button>
                         <Link v-else href="/exams"
-                            class="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group px-3 py-1.5 rounded-lg hover:bg-muted/50">
-                            <ChevronLeft class="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-                            All Exams
+                            class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
+                            <ChevronLeft class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
+                            All Assessments
                         </Link>
                     </div>
 
                     <!-- Live Floating Timer & Smart Stats -->
                     <div v-if="examStarted" 
-                        class="flex items-center gap-3 md:gap-5 px-4 py-2 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-xl shadow-2xl transition-all duration-500">
+                        class="flex items-center gap-4 md:gap-6 px-6 py-3 rounded-[1.5rem] bg-black/60 border border-white/10 backdrop-blur-2xl shadow-2xl transition-all duration-500 hover:border-primary/40 group/timer">
                         
                         <!-- Draft Status (Desktop Only) -->
-                        <div v-if="lastSavedAt" class="hidden md:flex items-center gap-1.5 text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest border-r border-white/10 pr-4">
-                            <RotateCcw class="w-3 h-3" />
-                            Draft Saved {{ lastSavedAt }}
+                        <div v-if="lastSavedAt" class="hidden lg:flex items-center gap-2 text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] border-r border-white/10 pr-6">
+                            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            Synced {{ lastSavedAt }}
                         </div>
 
                         <!-- Pace Indicator -->
                         <div v-if="estimatedFinishMinutes !== null && estimatedFinishMinutes > 0" 
-                            class="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
-                            <Zap class="w-3.5 h-3.5 fill-amber-400/20" />
-                            <span class="hidden md:inline">Finish In</span> ~{{ estimatedFinishMinutes }}m
+                            class="hidden md:flex items-center gap-2 text-amber-400 font-black text-[10px] uppercase tracking-[0.2em]">
+                            <Zap class="w-4 h-4 fill-amber-400/20 group-hover/timer:scale-110 transition-transform" />
+                            <span class="hidden lg:inline">Est. Finish</span> {{ estimatedFinishMinutes }}m
                         </div>
 
-                        <div class="flex items-center gap-3" :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse' : 'text-primary'">
-                            <Clock class="w-4 h-4" />
-                            <span class="font-black text-base tracking-widest tabular-nums">{{ formattedTime }}</span>
+                        <div class="flex items-center gap-3 px-3 py-1 rounded-xl bg-primary/10 border border-primary/20" :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse bg-red-500/10' : 'text-primary'">
+                            <Clock class="w-4 h-4 group-hover/timer:rotate-12 transition-transform" />
+                            <span class="font-black text-lg tracking-[0.15em] tabular-nums">{{ formattedTime }}</span>
                         </div>
                     </div>
                 </div>
@@ -1032,78 +1154,173 @@ onMounted(() => {
             </div>
 
             <!-- ═══════════════════════════════════════════════════════ -->
+            <!--  START CONFIRMATION MODAL                               -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <transition name="modal-fade">
+                <div v-if="showStartModal" class="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div ref="startModalRef" 
+                        class="relative max-w-md w-full rounded-none border-2 border-primary/20 bg-card p-6 md:p-10 shadow-[0_0_50px_rgba(var(--primary),0.1)] overflow-hidden">
+                        
+                        <!-- Futuristic Corner Accents -->
+                        <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary"></div>
+                        <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary"></div>
+                        <div class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary"></div>
+                        <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-center gap-6 text-center">
+                            <div class="relative w-16 h-16 flex items-center justify-center border-2 border-amber-500/50 rotate-45">
+                                <AlertCircle class="w-8 h-8 text-amber-500 -rotate-45" />
+                            </div>
+
+                            <div class="space-y-3">
+                                <h3 class="text-xl md:text-3xl font-black text-foreground tracking-tighter uppercase italic">Security Protocol</h3>
+                                <div class="h-0.5 w-16 bg-primary mx-auto"></div>
+                                <p class="text-muted-foreground text-xs md:text-sm font-bold leading-relaxed max-w-sm mx-auto uppercase tracking-wider">
+                                    Initiating <span class="text-primary font-black underline decoration-2">Part {{ (pendingIndex || 0) + 1 }}: {{ pendingPart?.title }}</span>.
+                                </p>
+                            </div>
+
+                            <div class="w-full grid gap-3 p-4 bg-muted/50 border border-border/50 text-left font-mono">
+                                <div class="flex items-start gap-3">
+                                    <span class="text-amber-500 font-black text-[10px]">[!]</span>
+                                    <p class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-tight">Persistence Required: No exit allowed until completion.</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="text-amber-500 font-black text-[10px]">[!]</span>
+                                    <p class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-tight">Secure Environment: Auto-enabling Full Screen mode.</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="text-amber-500 font-black text-[10px]">[!]</span>
+                                    <p class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-tight">Integrity Monitoring: Unauthorized exits will be flagged.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col w-full gap-3">
+                                <button @click="confirmStart"
+                                    class="w-full px-6 py-4 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 group/btn uppercase tracking-[0.2em] text-xs skew-x-[-12deg]">
+                                    <span class="skew-x-[12deg]">Initialize Now</span>
+                                    <ArrowRight class="w-5 h-5 group-hover/btn:translate-x-2 transition-transform skew-x-[12deg]" />
+                                </button>
+                                <button @click="showStartModal = false"
+                                    class="w-full py-2 text-muted-foreground font-black hover:text-foreground transition-colors text-[9px] uppercase tracking-[0.3em]">
+                                    Abort Mission
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!--  FULLSCREEN LOCKOUT MODAL                               -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <transition name="modal-fade">
+                <div v-if="showFullscreenLockout" class="fixed inset-0 bg-red-950/90 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+                    <div ref="lockoutModalRef" 
+                        class="relative max-w-md w-full rounded-none border-2 border-red-600 bg-black p-6 md:p-10 shadow-[0_0_100px_rgba(220,38,38,0.5)] overflow-hidden">
+                        
+                        <!-- Warning Scanline Effect -->
+                        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-center gap-8 text-center">
+                            <div class="relative w-20 h-20 flex items-center justify-center border-2 border-red-600 animate-pulse">
+                                <Lock class="w-10 h-10 text-red-600" />
+                                <div class="absolute -top-1 -left-1 w-2 h-2 bg-red-600"></div>
+                                <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-red-600"></div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <h3 class="text-3xl font-black text-red-600 tracking-tighter uppercase italic animate-pulse">Access Denied</h3>
+                                <div class="h-0.5 w-full bg-red-600/30">
+                                    <div class="h-full bg-red-600 w-1/3 animate-[shimmer_2s_infinite]"></div>
+                                </div>
+                                <p class="text-red-500 text-base font-black leading-relaxed uppercase tracking-widest">
+                                    Secure Mode Compromised
+                                </p>
+                                <p class="text-red-500/60 text-[9px] font-black max-w-xs mx-auto uppercase tracking-[0.1em] leading-relaxed">
+                                    Mandatory Full Screen Protocol Active. All assessment activities suspended until re-entry.
+                                </p>
+                            </div>
+
+                            <button @click="reEnterFullscreen"
+                                class="w-full px-6 py-5 bg-red-600 text-white font-black hover:bg-red-700 transition-all flex items-center justify-center gap-4 group/btn uppercase tracking-[0.3em] text-xs shadow-[0_0_30px_rgba(220,38,38,0.4)]">
+                                <Zap class="w-5 h-5 animate-bounce" />
+                                <span>Restore Protocol</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
             <!--  SUCCESS MODAL OVERLAY                                  -->
             <!-- ═══════════════════════════════════════════════════════ -->
             <transition name="modal-fade">
-                <div v-if="showSuccessModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div v-if="showSuccessModal" class="fixed inset-0 bg-background/90 backdrop-blur-2xl z-50 flex items-center justify-center p-4">
                     <div ref="successModalRef" 
-                        class="relative max-w-md w-full rounded-3xl border border-border/40 bg-gradient-to-br from-card via-card/95 to-primary/5 backdrop-blur-2xl p-8 shadow-2xl overflow-hidden">
+                        class="relative max-w-md w-full rounded-none border-2 border-primary/30 bg-card p-6 md:p-10 shadow-[0_0_80px_rgba(var(--primary),0.15)] overflow-hidden">
                         
-                        <!-- Decorative background elements -->
-                        <div class="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
-                        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+                        <!-- Futuristic Grid Background -->
+                        <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[length:40px_40px] bg-[linear-gradient(to_right,#888_1px,transparent_1px),linear-gradient(to_bottom,#888_1px,transparent_1px)]"></div>
                         
-                        <!-- Content -->
-                        <div class="relative z-10 flex flex-col items-center gap-6 text-center">
-                            <!-- Success Checkmark -->
-                            <div class="success-checkmark relative w-20 h-20 flex items-center justify-center">
-                                <div class="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/30 dark:to-primary/10 animate-pulse"></div>
-                                <div class="absolute inset-0 rounded-full border-2 border-primary/30 dark:border-primary/50"></div>
-                                <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-
-                            <!-- Message -->
-                            <div class="space-y-2">
-                                <h3 class="text-2xl font-bold text-foreground">Part Submitted</h3>
-                                <p class="text-muted-foreground text-sm leading-relaxed">
-                                    Great job! Your answers have been saved successfully.
-                                </p>
-                            </div>
-
-                            <!-- Progress Info -->
-                            <div v-if="partsPendingCount > 0" class="w-full pt-4 border-t border-border/30">
-                                <div class="flex items-center justify-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-primary/80 dark:bg-primary animate-pulse"></div>
-                                    <span class="text-sm font-semibold text-primary/80 dark:text-primary">
-                                        {{ partsPendingCount }} {{ partsPendingCount === 1 ? 'part' : 'parts' }} remaining
-                                    </span>
+                        <div class="relative z-10 flex flex-col items-center gap-8 text-center">
+                            <!-- Animated Success Ring -->
+                            <div class="success-checkmark relative w-24 h-24 flex items-center justify-center">
+                                <div class="absolute inset-0 border border-dashed border-primary/40 rounded-full animate-[spin_10s_linear_infinite]"></div>
+                                <div class="absolute inset-1 border border-primary rounded-full"></div>
+                                <div class="w-16 h-16 bg-primary flex items-center justify-center shadow-[0_0_30px_rgba(var(--primary),0.5)]">
+                                    <svg class="w-8 h-8 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+                                    </svg>
                                 </div>
                             </div>
 
-                            <!-- All Complete Message & Score Reveal -->
-                            <div v-else class="w-full pt-4 border-t border-border/30 flex flex-col items-center gap-4">
-                                <div class="final-score-box flex flex-col items-center p-6 rounded-3xl bg-primary/5 border border-primary/20 shadow-inner w-full">
-                                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60 mb-2">
-                                        {{ isExamPendingReview ? 'Initial Exam Score' : 'Final Exam Score' }}
-                                    </span>
-                                    <div class="flex items-baseline gap-1">
-                                        <span class="text-6xl font-black text-primary tabular-nums tracking-tighter">{{ displayedScore }}</span>
-                                        <span class="text-xl font-bold text-primary/40">/ {{ totalPossiblePoints }}</span>
+                            <div class="space-y-3">
+                                <h3 class="text-3xl md:text-4xl font-black text-foreground tracking-tighter uppercase italic">Mission Complete</h3>
+                                <div class="flex items-center justify-center gap-3">
+                                    <div class="h-px w-8 bg-primary"></div>
+                                    <span class="text-[9px] font-black text-primary uppercase tracking-[0.4em]">Data Synchronized</span>
+                                    <div class="h-px w-8 bg-primary"></div>
+                                </div>
+                            </div>
+
+                            <!-- Progress / Score Info -->
+                            <div v-if="partsPendingCount > 0" class="w-full pt-6 border-t border-border">
+                                <div class="flex flex-col items-center gap-4">
+                                    <div class="flex items-center gap-3 px-4 py-2 border-2 border-primary text-primary font-black uppercase tracking-[0.2em] text-[10px] skew-x-[-10deg]">
+                                        <span class="skew-x-[10deg]">{{ partsPendingCount }} Part{{ partsPendingCount === 1 ? '' : 's' }} Remaining</span>
                                     </div>
-                                    <div class="mt-4 flex flex-col items-center gap-2">
-                                        <div v-if="isExamPendingReview" class="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-                                            <Clock class="w-3.5 h-3.5 text-amber-500" />
-                                            <span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Awaiting Teacher Review</span>
+                                    <p class="text-[9px] text-muted-foreground font-black uppercase tracking-[0.3em] animate-pulse">Preparing next deployment phase...</p>
+                                </div>
+                            </div>
+
+                            <!-- Final Score Reveal -->
+                            <div v-else class="w-full pt-6 border-t border-border flex flex-col items-center gap-6">
+                                <div class="final-score-box flex flex-col items-center p-8 bg-muted/50 border border-border shadow-inner w-full relative group">
+                                    <span class="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/50 mb-4 italic">Performance Analytics</span>
+                                    
+                                    <div class="flex items-baseline gap-3">
+                                        <span class="text-6xl md:text-7xl font-black text-primary tabular-nums tracking-tighter leading-none">{{ displayedScore }}</span>
+                                        <span class="text-2xl font-black text-muted-foreground/30">/ {{ totalPossiblePoints }}</span>
+                                    </div>
+
+                                    <div class="mt-6 flex flex-col items-center gap-3">
+                                        <div v-if="isExamPendingReview" class="flex items-center gap-3 px-4 py-2 border border-amber-500/50 bg-amber-500/5">
+                                            <Clock class="w-4 h-4 text-amber-500" />
+                                            <span class="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">Validation Pending</span>
                                         </div>
-                                        <div v-else class="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
-                                            <Trophy class="w-3.5 h-3.5 text-primary" />
-                                            <span class="text-[10px] font-bold text-primary uppercase tracking-wider">Exam Completed!</span>
+                                        <div v-else class="flex items-center gap-3 px-4 py-2 border border-primary/50 bg-primary/5">
+                                            <Trophy class="w-4 h-4 text-primary" />
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Excellence Achieved</span>
                                         </div>
                                     </div>
                                 </div>
-                                <p v-if="isExamPendingReview" class="text-[11px] text-muted-foreground/70 font-medium text-center px-4">
-                                    Some parts (like essays) need to be reviewed by your teacher. Your final score will be updated soon.
-                                </p>
-                                <p v-else class="text-[11px] text-muted-foreground/70 font-medium">Your total achievement across all sections</p>
                             </div>
 
-                            <!-- Action Button -->
                             <button @click="closeSuccessModal"
-                                class="w-full mt-4 px-6 py-4 rounded-2xl bg-primary text-primary-foreground font-black hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-lg shadow-primary/20">
-                                <span class="tracking-widest uppercase">{{ partsPendingCount > 0 ? 'Next Section' : 'Return to Home' }}</span>
-                                <ChevronRight class="w-5 h-5" />
+                                class="w-full px-8 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs skew-x-[-12deg] shadow-[0_15px_30px_rgba(var(--primary),0.3)]">
+                                <span class="skew-x-[12deg]">{{ partsPendingCount > 0 ? 'Next Deployment' : 'Return to Base' }}</span>
+                                <ChevronRight class="w-5 h-5 skew-x-[12deg]" />
                             </button>
                         </div>
                     </div>
