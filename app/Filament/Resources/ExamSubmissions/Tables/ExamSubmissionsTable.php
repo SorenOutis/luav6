@@ -2,10 +2,19 @@
 
 namespace App\Filament\Resources\ExamSubmissions\Tables;
 
+use App\Models\ExamSubmission;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\SelectColumn;
+use Filament\Tables\Columns\Summarizers\Sum;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\TextInputColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\DB;
 
 class ExamSubmissionsTable
 {
@@ -13,60 +22,59 @@ class ExamSubmissionsTable
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Student')
                     ->searchable()
                     ->sortable(),
-                \Filament\Tables\Columns\TextColumn::make('user.section.name')
+                TextColumn::make('user.section.name')
                     ->label('Section')
                     ->searchable()
                     ->sortable(),
-                \Filament\Tables\Columns\TextColumn::make('exam.title')
+                TextColumn::make('exam.title')
                     ->label('Exam')
                     ->searchable()
                     ->sortable(),
-                \Filament\Tables\Columns\TextColumn::make('examPart.title')
+                TextColumn::make('examPart.title')
                     ->label('Part')
                     ->searchable()
                     ->sortable(),
-                \Filament\Tables\Columns\TextInputColumn::make('score')
+                TextInputColumn::make('score')
                     ->label('Score')
                     ->type('number')
                     ->sortable()
-                    ->summarize(\Filament\Tables\Columns\Summarizers\Sum::make()
+                    ->summarize(Sum::make()
                         ->label('Total Score')),
-                \Filament\Tables\Columns\SelectColumn::make('status')
+                SelectColumn::make('status')
                     ->options([
                         'submitted' => 'Submitted',
                         'pending_review' => 'Pending Review',
                         'graded' => 'Graded',
                     ])
                     ->sortable(),
-                \Filament\Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->groups([
-                \Filament\Tables\Grouping\Group::make('user.section.name')
+                Group::make('user.section.name')
                     ->label('Section')
                     ->collapsible(),
-                \Filament\Tables\Grouping\Group::make('status')
+                Group::make('status')
                     ->label('Status')
                     ->collapsible(),
-                \Filament\Tables\Grouping\Group::make('user.name')
+                Group::make('user.name')
                     ->label('Student')
                     ->collapsible(),
-                \Filament\Tables\Grouping\Group::make('exam.title')
+                Group::make('exam.title')
                     ->label('Exam')
                     ->collapsible(),
             ])
-            ->defaultGroup('user.section.name')
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('user_id')
+                SelectFilter::make('user_id')
                     ->label('Student')
                     ->relationship('user', 'name'),
-                \Filament\Tables\Filters\SelectFilter::make('exam_id')
+                SelectFilter::make('exam_id')
                     ->label('Exam')
                     ->relationship('exam', 'title'),
             ])
@@ -79,37 +87,37 @@ class ExamSubmissionsTable
                 ]),
             ])
             ->headerActions([
-                \Filament\Actions\Action::make('exportTotalScores')
+                Action::make('exportTotalScores')
                     ->label('Export Total Scores')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(function ($livewire) {
                         // Get the current filtered query from the table
                         $query = $livewire->getFilteredTableQuery();
-                        
+
                         // We need to re-query with aggregation
-                        // Note: toBase() is safer for aggregates in some cases, 
+                        // Note: toBase() is safer for aggregates in some cases,
                         // but we want the models for relationships.
-                        $data = \App\Models\ExamSubmission::query()
+                        $data = ExamSubmission::query()
                             ->whereIn('id', $query->pluck('id'))
-                            ->select('user_id', 'exam_id', \Illuminate\Support\Facades\DB::raw('SUM(score) as total_score'))
+                            ->select('user_id', 'exam_id', DB::raw('SUM(score) as total_score'))
                             ->groupBy('user_id', 'exam_id')
                             ->with(['user', 'exam'])
                             ->get();
 
-                        $filename = 'exam_total_scores_' . now()->format('Y-m-d_H-i') . '.csv';
-                        
+                        $filename = 'exam_total_scores_'.now()->format('Y-m-d_H-i').'.csv';
+
                         return response()->streamDownload(function () {
                             $handle = fopen('php://memory', 'w');
                             fputcsv($handle, ['Student Name', 'Exam', 'Total Score']);
-                            
-                            // Re-fetch data inside the stream for memory efficiency if it was larger, 
+
+                            // Re-fetch data inside the stream for memory efficiency if it was larger,
                             // but here we already have it.
-                            $data = \App\Models\ExamSubmission::query()
-                                ->select('user_id', 'exam_id', \Illuminate\Support\Facades\DB::raw('SUM(score) as total_score'))
+                            $data = ExamSubmission::query()
+                                ->select('user_id', 'exam_id', DB::raw('SUM(score) as total_score'))
                                 ->groupBy('user_id', 'exam_id')
                                 ->with(['user', 'exam'])
                                 ->get();
-                                
+
                             foreach ($data as $row) {
                                 fputcsv($handle, [
                                     $row->user?->name ?? 'Unknown',
@@ -117,7 +125,7 @@ class ExamSubmissionsTable
                                     $row->total_score,
                                 ]);
                             }
-                            
+
                             rewind($handle);
                             fpassthru($handle);
                             fclose($handle);
