@@ -6,6 +6,8 @@ use App\Models\User;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Flex;
+use Filament\Schemas\Components\Image;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -15,21 +17,36 @@ class UserForm
     {
         return $schema
             ->components([
-                FileUpload::make('avatar')
-                    ->image()
-                    ->avatar()
-                    ->disk('public')
-                    ->directory('avatars')
-                    ->maxSize(10240)
-                    ->formatStateUsing(fn ($state, $record) => $record?->getRawOriginal('avatar'))
-                    ->label('Profile Picture'),
-                FileUpload::make('cover_photo')
-                    ->image()
-                    ->disk('public')
-                    ->directory('covers')
-                    ->maxSize(10240)
-                    ->formatStateUsing(fn ($state, $record) => $record?->getRawOriginal('cover_photo'))
-                    ->label('Cover Photo'),
+                Flex::make([
+                    Image::make(fn ($record) => $record?->avatar ?? '', 'Profile Picture')
+                        ->imageSize(120)
+                        ->visible(fn ($record) => $record?->avatar),
+                    FileUpload::make('avatar')
+                        ->image()
+                        ->disk('public')
+                        ->directory('avatars')
+                        ->maxSize(10240)
+                        ->formatStateUsing(fn ($state, $record) => $record?->getRawOriginal('avatar'))
+                        ->label('Change Profile Picture'),
+                ])
+                ->from('md')
+                ->gap()
+                ->alignCenter(),
+                Flex::make([
+                    Image::make(fn ($record) => $record?->cover_photo ?? '', 'Cover Photo')
+                        ->imageHeight(120)
+                        ->visible(fn ($record) => $record?->cover_photo),
+                    FileUpload::make('cover_photo')
+                        ->image()
+                        ->disk('public')
+                        ->directory('covers')
+                        ->maxSize(10240)
+                        ->formatStateUsing(fn ($state, $record) => $record?->getRawOriginal('cover_photo'))
+                        ->label('Change Cover Photo'),
+                ])
+                ->from('md')
+                ->gap()
+                ->alignCenter(),
                 TextInput::make('name')
                     ->required(),
                 TextInput::make('email')
