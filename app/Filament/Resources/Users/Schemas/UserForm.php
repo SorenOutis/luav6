@@ -42,10 +42,7 @@ class UserForm
                     ->searchable()
                     ->preload()
                     ->placeholder('No Section')
-                    ->label('Sections')
-                    ->saveRelationshipsUsing(function ($model, $state) {
-                        $model->sections()->sync($state);
-                    }),
+                    ->label('Sections'),
                 Section::make('Seasonal Progress')
                     ->description('Stats for the currently active season')
                     ->relationship('currentSeasonProgress')
