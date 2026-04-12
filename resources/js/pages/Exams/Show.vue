@@ -771,102 +771,90 @@ onMounted(() => {
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
                 <div
-                    class="animate-up exam-hero relative overflow-hidden rounded-[1.2rem] md:rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-card/80 via-card/40 to-primary/5 backdrop-blur-3xl p-3 md:px-6 md:py-3 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)]">
-                    <!-- Dynamic background glow -->
-                    <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/15 rounded-full blur-3xl pointer-events-none"></div>
+                    class="animate-up exam-hero relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-6 md:p-8 shadow-[0_32px_64px_-16px_rgba(var(--primary),0.1)] group">
                     
-                    <!-- Decorative Large Icon -->
-                    <div class="pointer-events-none absolute -right-6 -top-6 opacity-5 md:opacity-10 rotate-12">
-                        <GraduationCap class="w-32 h-32 text-primary" />
-                    </div>
+                    <!-- Futuristic Corner Accents -->
+                    <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary/40 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary/40 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
                     <!-- Inner Glow / Border Highlight -->
-                    <div class="absolute inset-0 rounded-[1.5rem] border border-white/5 pointer-events-none"></div>
+                    <div class="absolute inset-0 rounded-2xl border border-white/5 pointer-events-none"></div>
 
-                    <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-8">
-                        <div class="space-y-3 flex-1 exam-hero-left">
-                            <div class="flex flex-wrap items-center gap-2">
+                    <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-12">
+                        <div class="space-y-4 flex-1">
+                            <div class="flex flex-wrap items-center gap-3">
                                 <span
-                                    class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-bold text-primary tracking-[0.2em] uppercase backdrop-blur-md">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                                    {{ exam.status }}
+                                    class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 text-[9px] font-black text-primary tracking-[0.2em] uppercase skew-x-[-12deg]">
+                                    <span class="skew-x-[12deg] flex items-center gap-2">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                        {{ exam.status }}
+                                    </span>
                                 </span>
-                            </div>
-                            
-                            <div class="space-y-1">
-                                <h1 class="text-lg md:text-2xl font-black tracking-tight leading-[1.1] premium-gradient-text max-w-3xl">
-                                    {{ selectedPart ? selectedPart.title : exam.title }}
-                                </h1>
-                                
-                                <p v-if="!selectedPart" class="text-[10px] md:text-xs text-muted-foreground leading-relaxed max-w-2xl opacity-80 line-clamp-1">
-                                    {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
-                                </p>
-
-                                <div v-if="examStarted && formattedFinishTime" class="flex items-center gap-2 text-[10px] font-bold text-primary/80 animate-pulse">
-                                    <Zap class="w-3 h-3" />
-                                    <span>Mission Intel: Finish at {{ formattedFinishTime }}</span>
+                                <div v-if="examStarted && formattedFinishTime" class="flex items-center gap-2 text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-3 py-1 border border-amber-500/20">
+                                    <Zap class="w-3 h-3 animate-pulse" />
+                                    <span>Deadline: {{ formattedFinishTime }}</span>
                                 </div>
                             </div>
                             
-                            <div v-if="!selectedPart" class="flex flex-wrap items-center gap-4">
-                                <div class="flex items-center gap-2 text-[10px] font-medium text-muted-foreground bg-muted/20 px-3 py-1 rounded-xl border border-border/40">
-                                    <Calendar class="w-3.5 h-3.5 text-primary" />
+                            <div class="space-y-2">
+                                <h1 class="text-2xl md:text-4xl font-black tracking-tighter leading-none uppercase italic text-foreground">
+                                    {{ selectedPart ? selectedPart.title : exam.title }}
+                                </h1>
+                                
+                                <p v-if="!selectedPart" class="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-2xl font-medium opacity-70">
+                                    {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
+                                </p>
+                            </div>
+                            
+                            <div v-if="!selectedPart" class="flex flex-wrap items-center gap-6">
+                                <div class="flex items-center gap-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                                    <Calendar class="w-4 h-4 text-primary" />
                                     {{ formatDateTime(exam.exam_date) }}
                                 </div>
                             </div>
                         </div>
 
                         <!-- Stats Dashboard Bar -->
-                        <div class="exam-hero-stats flex flex-nowrap items-center gap-4 bg-black/20 dark:bg-white/5 backdrop-blur-xl px-4 py-2 rounded-xl border border-white/5 shadow-inner self-stretch lg:self-center">
-                            <div v-if="allPartsSubmitted" class="exam-stat flex flex-col items-start transition-all">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <Trophy class="w-3.5 h-3.5 text-green-500" />
-                                    <div class="text-base font-black text-green-500">{{ totalScore }}/{{ totalPossiblePoints }}</div>
-                                </div>
-                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Score</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-muted/30 p-6 border border-border/50 relative">
+                             <!-- Stat Decoration -->
+                             <div class="absolute -top-1 -left-1 w-2 h-2 bg-primary"></div>
+                             <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-primary"></div>
+
+                            <div v-if="allPartsSubmitted" class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Achievement</span>
+                                <div class="text-xl font-black text-primary">{{ totalScore }}/{{ totalPossiblePoints }}</div>
                             </div>
                             
-                            <div v-if="allPartsSubmitted" class="w-px h-6 bg-white/5"></div>
-
-                            <div class="exam-stat flex flex-col items-start transition-all">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <Clock class="w-3.5 h-3.5 text-primary" />
-                                    <div class="text-base md:text-lg font-black">{{ exam.duration_minutes }}</div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Time Limit</span>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="text-xl font-black">{{ exam.duration_minutes }}</span>
+                                    <span class="text-[8px] font-black text-muted-foreground uppercase">Min</span>
                                 </div>
-                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Mins</div>
                             </div>
 
-                            <div class="w-px h-6 bg-white/5"></div>
-
-                            <div class="exam-stat flex flex-col items-start transition-all">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <Layers class="w-3.5 h-3.5 text-primary" />
-                                    <div class="text-base md:text-lg font-black">{{ exam.parts.length }}</div>
-                                </div>
-                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Secs</div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Sections</span>
+                                <div class="text-xl font-black">{{ exam.parts.length }}</div>
                             </div>
 
-                            <div class="w-px h-6 bg-white/5"></div>
-
-                            <div class="exam-stat flex flex-col items-start transition-all">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <ListChecks class="w-3.5 h-3.5 text-primary" />
-                                    <div class="text-base md:text-lg font-black">{{ totalQuestions }}</div>
-                                </div>
-                                <div class="text-[7px] text-muted-foreground font-bold uppercase tracking-widest opacity-60">Ques</div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Total Tasks</span>
+                                <div class="text-xl font-black">{{ totalQuestions }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Global Progress Bar -->
-                <div v-if="!allPartsSubmitted && examStarted" class="animate-up w-full mt-2 space-y-1">
+                <div v-if="!allPartsSubmitted && examStarted" class="animate-up w-full mt-2 space-y-2">
                     <div class="flex items-center justify-between px-1">
-                        <span class="text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Mission Progress</span>
-                        <span class="text-[8px] font-black text-primary">{{ Math.round(overallProgress) }}%</span>
+                        <span class="text-[9px] font-black uppercase tracking-[0.4em] text-primary">System Integrity</span>
+                        <span class="text-[9px] font-black text-primary">{{ Math.round(overallProgress) }}% COMPLETED</span>
                     </div>
-                    <div class="w-full h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                        <div class="h-full bg-primary transition-all duration-1000 ease-out" :style="{ width: `${overallProgress}%` }"></div>
+                    <div class="w-full h-1.5 bg-muted/50 overflow-hidden border border-primary/20 relative">
+                        <div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
+                        <div class="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(var(--primary),0.5)]" :style="{ width: `${overallProgress}%` }"></div>
                     </div>
                 </div>
 
@@ -1016,70 +1004,90 @@ onMounted(() => {
                                 </span>
                             </div>
 
-                            <div class="flex flex-col gap-3">
+                            <div class="flex flex-col gap-6">
                                 <div v-for="(question, qIndex) in selectedPart!.questions" :key="qIndex"
                                     :id="`q-${qIndex}`"
                                     :class="[
-                                        'question-card rounded-xl border border-border/40 bg-card/10 backdrop-blur-md p-4 md:p-5 flex flex-col gap-4 transition-all',
-                                        question.type !== 'essay' ? 'md:flex-row md:items-center' : 'md:items-stretch',
-                                        getQuestionStatus(qIndex) === 'answered' ? 'border-primary/20 bg-primary/2' : ''
+                                        'question-card relative rounded-none border-l-4 border-r border-t border-b p-6 md:p-8 flex flex-col gap-8 transition-all duration-500',
+                                        getQuestionStatus(qIndex) === 'answered' 
+                                            ? 'border-l-primary border-primary/20 bg-primary/[0.02] shadow-[0_0_40px_rgba(var(--primary),0.05)]' 
+                                            : 'border-l-muted border-border/40 bg-card/40'
                                     ]">
                                     
-                                    <!-- Question Content (ID + Text) -->
-                                    <div class="flex flex-1 gap-4 items-start min-w-0">
-                                        <!-- Question identifier -->
-                                        <div class="flex items-center gap-3 flex-shrink-0">
-                                            <div
-                                                class="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-base font-black text-primary">
-                                                {{ qIndex + 1 }}
+                                    <!-- Decorative elements -->
+                                    <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary/20"></div>
+
+                                    <!-- Question Content -->
+                                    <div class="flex flex-col md:flex-row gap-6 items-start">
+                                        <!-- ID & Flag -->
+                                        <div class="flex items-center gap-4 flex-shrink-0">
+                                            <div class="w-14 h-14 flex items-center justify-center border-2 border-primary/40 bg-primary/5 text-xl font-black text-primary rotate-45">
+                                                <span class="-rotate-45">{{ qIndex + 1 }}</span>
                                             </div>
-                                            <!-- Smart Flag Button -->
                                             <button @click="toggleFlag(qIndex)"
-                                                class="w-8 h-8 rounded-lg flex items-center justify-center transition-all bg-muted border border-border/40 hover:bg-amber-500/10 hover:border-amber-500/50 group/flag"
-                                                :class="flaggedQuestions.has(qIndex) ? 'bg-amber-500/20 border-amber-500/60 text-amber-500' : 'text-muted-foreground/40'">
+                                                class="w-10 h-10 flex items-center justify-center transition-all duration-300 border border-border/40 hover:bg-amber-500/10 hover:border-amber-500/50"
+                                                :class="flaggedQuestions.has(qIndex) ? 'bg-amber-500/20 border-amber-500/60 text-amber-500' : 'text-muted-foreground/30'">
                                                 <Flag class="w-4 h-4" :class="flaggedQuestions.has(qIndex) ? 'fill-amber-500' : ''" />
                                             </button>
                                         </div>
 
-                                        <!-- Question text -->
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <span
-                                                    class="text-[9px] px-2 py-0.5 rounded-md bg-primary/5 text-primary/60 uppercase font-black tracking-[0.1em] border border-primary/10">{{
-                                                    formatType(question.type) }}</span>
-                                                <span class="text-[9px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground/80 uppercase font-black tracking-[0.1em] border border-border/40">
-                                                    {{ question.points ?? selectedPart!.points ?? 1 }} Pts
+                                        <!-- Text & Type -->
+                                        <div class="flex-1 space-y-4">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-2 py-0.5 border border-primary/20 italic">
+                                                    {{ formatType(question.type) }}
+                                                </span>
+                                                <span class="text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em]">
+                                                    Value: {{ question.points ?? selectedPart!.points ?? 1 }} Units
                                                 </span>
                                             </div>
-                                            <p class="text-base font-bold leading-snug text-foreground/90">{{ question.text }}</p>
+                                            <p class="text-lg md:text-xl font-black leading-tight text-foreground/90 uppercase italic tracking-tight">
+                                                {{ question.text }}
+                                            </p>
                                         </div>
                                     </div>
 
                                     <!-- Answer Area -->
-                                    <div :class="[
-                                        'flex-shrink-0 w-full',
-                                        question.type !== 'essay' ? 'md:w-auto md:min-w-[300px]' : 'mt-2'
-                                    ]">
+                                    <div class="w-full pl-0 md:pl-20">
                                         <!-- Multiple Choice / True-False -->
                                         <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'"
-                                            class="flex flex-wrap gap-2">
+                                            class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <label v-for="(option, oIndex) in question.options" :key="option.text"
-                                                class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border/50 bg-muted/10 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all has-[:checked]:border-primary/60 has-[:checked]:bg-primary/10">
-                                                <input type="radio" :name="`q-${qIndex}`" :value="oIndex"
-                                                    v-model.number="answers[qIndex]" class="sr-only" />
-                                                <span class="text-xs font-bold">{{ option.text }}</span>
+                                                class="flex items-center gap-4 px-6 py-4 border border-border/60 bg-muted/20 hover:border-primary/60 hover:bg-primary/5 cursor-pointer transition-all duration-300 group/option relative overflow-hidden has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+                                                
+                                                <!-- Background Decoration -->
+                                                <div class="absolute right-0 bottom-0 w-8 h-8 bg-primary/5 -rotate-45 translate-x-4 translate-y-4 group-hover/option:bg-primary/10 transition-colors"></div>
+
+                                                <div class="relative flex items-center justify-center w-5 h-5 border-2 border-border/60 group-hover/option:border-primary/40 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary">
+                                                    <input type="radio" :name="`q-${qIndex}`" :value="oIndex"
+                                                        v-model.number="answers[qIndex]" class="sr-only" />
+                                                    <Check v-if="answers[qIndex] === oIndex" class="w-3 h-3 text-primary-foreground" />
+                                                </div>
+                                                <span class="relative text-sm font-black uppercase tracking-wider text-muted-foreground group-hover/option:text-foreground transition-colors has-[:checked]:text-primary">{{ option.text }}</span>
                                             </label>
                                         </div>
 
                                         <!-- Identification -->
-                                        <div v-else-if="question.type === 'identification'">
-                                            <input v-model="answers[qIndex]" type="text" placeholder="Type answer..."
-                                                class="w-full px-4 py-2 rounded-lg border border-border/40 bg-muted/20 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-sm font-medium" />
+                                        <div v-else-if="question.type === 'identification'" class="max-w-xl">
+                                            <div class="relative group/input">
+                                                <input v-model="answers[qIndex]" type="text" placeholder="ENTER RESPONSE..."
+                                                    class="w-full px-6 py-4 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-sm font-black uppercase tracking-widest placeholder:text-muted-foreground/30" />
+                                                <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within/input:opacity-100 transition-opacity">
+                                                    <Zap class="w-4 h-4 text-primary animate-pulse" />
+                                                </div>
+                                            </div>
                                         </div>
 
+                                        <!-- Essay -->
                                         <div v-else-if="question.type === 'essay'" class="w-full">
-                                            <textarea v-model="answers[qIndex]" rows="8" placeholder="Write your detailed response here..."
-                                                class="w-full px-4 py-3 rounded-xl border border-border/40 bg-muted/20 focus:ring-2 focus:ring-primary/10 focus:border-primary/50 outline-none transition-all text-base font-medium resize-y min-h-[150px]"></textarea>
+                                            <div class="relative group/textarea">
+                                                <textarea v-model="answers[qIndex]" rows="10" placeholder="INITIALIZE DETAILED RESPONSE..."
+                                                    class="w-full px-8 py-6 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-base font-bold leading-relaxed resize-y min-h-[300px] placeholder:text-muted-foreground/30"></textarea>
+                                                <div class="absolute bottom-4 right-6 flex items-center gap-3 text-[9px] font-black text-primary uppercase tracking-[0.4em] opacity-40">
+                                                    <Terminal class="w-3 h-3" />
+                                                    SECURE DATA ENTRY
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1087,36 +1095,85 @@ onMounted(() => {
                         </div>
 
                         <!-- Progress Navigator (Mini-Map) -->
-                        <div class="hidden lg:block sticky top-8 w-64 space-y-4">
-                            <div class="p-5 rounded-2xl border border-white/5 bg-card/30 backdrop-blur-2xl shadow-xl">
-                                <h3 class="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4">Navigator</h3>
-                                <div class="grid grid-cols-4 gap-2">
+                        <div class="hidden lg:block sticky top-8 w-80 space-y-6">
+                            <div class="p-8 rounded-none border border-primary/20 bg-card shadow-2xl relative overflow-hidden group">
+                                <!-- Background Glow -->
+                                <div class="absolute -top-20 -right-20 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-700"></div>
+                                
+                                <div class="relative space-y-8">
+                                    <div class="flex items-center justify-between">
+                                        <h3 class="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em]">Tactical Overlay</h3>
+                                        <div class="px-2 py-1 bg-primary/10 border border-primary/20 text-[9px] font-black text-primary uppercase italic tracking-widest">
+                                            {{ Object.keys(answers).length }}/{{ selectedPart!.questions!.length }}
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-5 gap-3">
                                         <a v-for="(_, qIndex) in selectedPart!.questions" :key="qIndex"
-                                        :href="`#q-${qIndex}`"
-                                        class="aspect-square rounded-lg flex items-center justify-center text-xs font-black transition-all border border-border/40 relative shadow-sm"
-                                        :class="[
-                                            getQuestionStatus(qIndex) === 'answered'
-                                                ? 'bg-primary text-primary-foreground border-primary shadow-primary/20'
-                                                : getQuestionStatus(qIndex) === 'flagged'
-                                                ? 'bg-amber-500 text-white border-amber-500 shadow-amber-500/20'
-                                                : 'bg-muted/30 text-muted-foreground hover:border-primary/50'
-                                        ]">
-                                        {{ qIndex + 1 }}
-                                        <!-- Flag indicator bubble -->
-                                        <div v-if="flaggedQuestions.has(qIndex)" 
-                                            class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 border border-white dark:border-black shadow-sm"></div>
-                                    </a>
-                                </div>
-                                <div class="mt-6 pt-4 border-t border-border/10 space-y-2">
-                                    <div class="flex items-center justify-between text-[10px] font-bold">
-                                        <span class="text-muted-foreground uppercase opacity-60">Completion</span>
-                                        <span>{{ Math.round((Object.keys(answers).length / selectedPart!.questions!.length) * 100) }}%</span>
+                                            :href="`#q-${qIndex}`"
+                                            class="aspect-square rounded-none flex items-center justify-center text-xs font-black transition-all duration-300 border border-border/40 relative group/nav-item"
+                                            :class="[
+                                                getQuestionStatus(qIndex) === 'answered'
+                                                    ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(var(--primary),0.3)] scale-105'
+                                                    : getQuestionStatus(qIndex) === 'flagged'
+                                                    ? 'bg-amber-500 text-white border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                                                    : 'bg-muted/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50'
+                                            ]">
+                                            {{ qIndex + 1 }}
+                                            
+                                            <!-- Flag indicator -->
+                                            <div v-if="flaggedQuestions.has(qIndex)" 
+                                                class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 border border-card shadow-sm"></div>
+                                        </a>
                                     </div>
-                                    <div class="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                                        <div class="h-full bg-primary transition-all duration-500" 
-                                            :style="{ width: `${(Object.keys(answers).length / selectedPart!.questions!.length) * 100}%` }"></div>
+
+                                    <div class="space-y-4 pt-6 border-t border-border/20">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.4em] opacity-60 italic">Current Progress</span>
+                                                <span class="text-xl font-black text-foreground italic">{{ Math.round((Object.keys(answers).length / selectedPart!.questions!.length) * 100) }}%</span>
+                                            </div>
+                                            <Trophy class="w-6 h-6 text-primary/20" />
+                                        </div>
+                                        <div class="h-1.5 w-full bg-muted/30 rounded-none overflow-hidden border border-border/40">
+                                            <div class="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]" 
+                                                :style="{ width: `${(Object.keys(answers).length / selectedPart!.questions!.length) * 100}%` }"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quick Stats -->
+                                    <div class="grid grid-cols-2 gap-4 pt-2">
+                                        <div class="flex flex-col gap-1">
+                                            <span class="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-40 italic">Flagged</span>
+                                            <span class="text-xs font-black text-amber-500 flex items-center gap-2">
+                                                <Flag class="w-3 h-3 fill-amber-500/20" />
+                                                {{ flaggedQuestions.size }} Units
+                                            </span>
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <span class="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-40 italic">Mission Clock</span>
+                                            <span class="text-xs font-black text-primary flex items-center gap-2">
+                                                <Zap class="w-3 h-3 animate-pulse" />
+                                                {{ estimatedFinishMinutes || '--' }}m Est.
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Tips/Shortcuts card -->
+                            <div class="p-6 rounded-none border border-border/20 bg-muted/20">
+                                <h4 class="text-[9px] font-black text-muted-foreground uppercase tracking-[0.4em] mb-4 italic">Protocol Shortcuts</h4>
+                                <ul class="space-y-3">
+                                    <li class="flex items-center gap-3 text-[9px] font-bold text-muted-foreground/80 uppercase tracking-widest">
+                                        <div class="w-6 h-6 rounded-none bg-primary/10 flex items-center justify-center font-black text-primary border border-primary/20">1-9</div>
+                                        Selection Input
+                                    </li>
+                                    <li class="flex items-center gap-3 text-[9px] font-bold text-muted-foreground/80 uppercase tracking-widest">
+                                        <div class="w-6 h-6 rounded-none bg-primary/10 flex items-center justify-center font-black text-primary border border-primary/20">F</div>
+                                        Integrity Flag
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -1139,14 +1196,19 @@ onMounted(() => {
                     </div>
 
                     <!-- Submit bar -->
-                    <div class="sticky bottom-6 flex justify-end pt-4">
+                    <div class="sticky bottom-6 flex justify-end pt-8">
                         <button @click="submitPart" :disabled="isSubmitting"
-                            class="group px-6 py-3.5 md:px-12 md:py-5 rounded-2xl md:rounded-[2.5rem] bg-primary text-primary-foreground font-black shadow-[0_20px_40px_-10px_rgba(0,0,0,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 md:gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span class="text-sm md:text-base tracking-wide">{{ isSubmitting ? 'SECURELY SUBMITTING...' : 'FINISH SECTION' }}</span>
-                            <div class="p-1 rounded-full bg-primary-foreground/10 group-hover:bg-primary-foreground/20 transition-colors">
-                                <ArrowRight v-if="!isSubmitting" class="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
-                                <div v-else class="w-4 h-4 md:w-5 md:h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin"></div>
+                            class="group relative px-10 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center gap-6 disabled:opacity-50 disabled:cursor-not-allowed skew-x-[-12deg] shadow-[0_20px_40px_-10px_rgba(var(--primary),0.4)]">
+                            
+                            <span class="skew-x-[12deg] text-base tracking-[0.2em] uppercase">{{ isSubmitting ? 'Transmitting Data...' : 'Finalize Section' }}</span>
+                            
+                            <div class="skew-x-[12deg] p-1.5 bg-primary-foreground/20 group-hover:bg-primary-foreground/30 transition-colors">
+                                <ArrowRight v-if="!isSubmitting" class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                <div v-else class="w-5 h-5 border-3 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin"></div>
                             </div>
+
+                            <!-- Decorative Button Edge -->
+                            <div class="absolute -right-1 -top-1 w-2 h-2 bg-primary group-hover:scale-150 transition-transform"></div>
                         </button>
                     </div>
                 </template>
