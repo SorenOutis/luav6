@@ -26,7 +26,7 @@ class ExamSubmissionsTable
                     ->label('Student')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('user.section.name')
+                TextColumn::make('exam.section.name')
                     ->label('Section')
                     ->searchable()
                     ->sortable(),
@@ -57,7 +57,7 @@ class ExamSubmissionsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->groups([
-                Group::make('user.section.name')
+                Group::make('exam.section.name')
                     ->label('Section')
                     ->collapsible(),
                 Group::make('status')

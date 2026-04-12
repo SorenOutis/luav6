@@ -30,15 +30,15 @@ class ListExamSubmissions extends ListRecords
             $sectionId = $section->id;
             $tabs['section_'.$sectionId] = Tab::make($section->name)
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
-                    'user',
-                    fn (Builder $q) => $q->whereHas('sections', fn ($sq) => $sq->where('sections.id', $sectionId)),
+                    'exam',
+                    fn (Builder $q) => $q->where('section_id', $sectionId),
                 ));
         }
 
         $tabs['no_section'] = Tab::make('No section')
             ->modifyQueryUsing(fn (Builder $query) => $query->whereHas(
-                'user',
-                fn (Builder $q) => $q->whereDoesntHave('sections'),
+                'exam',
+                fn (Builder $q) => $q->whereNull('section_id'),
             ));
 
         return $tabs;
