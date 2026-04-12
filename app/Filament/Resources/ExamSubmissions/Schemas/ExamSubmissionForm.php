@@ -2,6 +2,11 @@
 
 namespace App\Filament\Resources\ExamSubmissions\Schemas;
 
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
 class ExamSubmissionForm
@@ -10,60 +15,68 @@ class ExamSubmissionForm
     {
         return $schema
             ->components([
-                \Filament\Forms\Components\Select::make('user_id')
+                Select::make('user_id')
                     ->relationship('user', 'name')
                     ->disabled()
                     ->required(),
-                \Filament\Forms\Components\Select::make('exam_id')
+                Select::make('exam_id')
                     ->relationship('exam', 'title')
                     ->disabled()
                     ->required(),
-                \Filament\Forms\Components\Select::make('exam_part_id')
+                Select::make('exam_part_id')
                     ->relationship('examPart', 'title')
                     ->disabled()
                     ->required(),
-                \Filament\Forms\Components\TextInput::make('score')
+                TextInput::make('score')
                     ->numeric()
                     ->required(),
-                \Filament\Forms\Components\Select::make('status')
+                Select::make('status')
                     ->options([
                         'submitted' => 'Submitted',
                         'pending_review' => 'Pending Review',
                         'graded' => 'Graded',
                     ])
                     ->required(),
-                \Filament\Forms\Components\Textarea::make('feedback')
+                Textarea::make('feedback')
                     ->maxLength(65535)
                     ->columnSpanFull(),
-                \Filament\Forms\Components\Placeholder::make('answers_display')
-                    ->label('Student Submission Content')
+                Repeater::make('answers')
+                    ->label('Student answers')
                     ->columnSpanFull()
-                    ->content(function ($record) {
-                        if (!$record || !$record->answers) return 'No answers recorded.';
-                        
-                        $answers = is_array($record->answers) ? $record->answers : json_decode($record->answers, true);
-                        if (!$answers) return 'Invalid answer format.';
-
-                        $output = '';
-                        foreach ($answers as $answer) {
-                            $type = strtoupper($answer['question_type'] ?? 'N/A');
-                            $qNum = $answer['question_number'] ?? '?';
-                            $qText = $answer['question_text'] ?? 'No text';
-                            $studentAns = $answer['answer'] ?? 'No answer';
-                            $qPts = $answer['points'] ?? '?';
-                            
-                            $output .= "<div class='p-4 mb-4 rounded-xl border border-border/40 bg-muted/20'>";
-                            $output .= "<div class='flex items-center justify-between mb-2'>";
-                            $output .= "<p class='text-[10px] font-black uppercase tracking-[0.1em] text-primary/60'>Question {$qNum} - {$type}</p>";
-                            $output .= "<p class='text-[10px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-widest'>{$qPts} PTS MAX</p>";
-                            $output .= "</div>";
-                            $output .= "<p class='font-bold mb-3'>{$qText}</p>";
-                            $output .= "<div class='p-3 rounded-lg bg-card border border-border/20'><p class='text-sm italic text-foreground/80 leading-relaxed'>{$studentAns}</p></div>";
-                            $output .= "</div>";
-                        }
-                        
-                        return new \Illuminate\Support\HtmlString($output);
-                    }),
+                    ->defaultItems(0)
+                    ->reorderable(false)
+                    ->addActionLabel('Add answer row')
+                    ->table([
+                        TableColumn::make('#'),
+                        TableColumn::make('Type'),
+                        TableColumn::make('Question'),
+                        TableColumn::make('Max pts'),
+                        TableColumn::make('Answer'),
+                    ])
+                    ->schema([
+                        TextInput::make('question_number')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(),
+                        Select::make('question_type')
+                            ->options([
+                                'multiple_choice' => 'Multiple choice',
+                                'true_false' => 'True / false',
+                                'essay' => 'Essay',
+                                'identification' => 'Identification',
+                            ])
+                            ->required(),
+                        Textarea::make('question_text')
+                            ->rows(2)
+                            ->required(),
+                        TextInput::make('points')
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(),
+                        Textarea::make('answer')
+                            ->rows(2)
+                            ->nullable(),
+                    ]),
             ]);
     }
 }
