@@ -13,14 +13,23 @@ class ExamController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
         $exams = Exam::with([
             'parts' => function ($query) {
                 $query->orderBy('sort_order');
             }
-        ])->where('status', '!=', 'draft')->get();
+        ])
+        ->where('status', '!=', 'draft')
+        ->when(!$user->is_admin, function ($query) use ($user) {
+            $query->where(function ($query) use ($user) {
+                $query->whereNull('section_id')
+                      ->orWhere('section_id', $user->section_id);
+            });
+        })
+        ->get();
 
         // Get submission counts for the current user
-        $userId = auth()->id();
+        $userId = $user->id;
         $examsData = $exams->map(function (\App\Models\Exam $exam) use ($userId) {
             $submittedPartsCount = ExamSubmission::where('user_id', $userId)
                 ->where('exam_id', $exam->id)
@@ -41,6 +50,13 @@ class ExamController extends Controller
 
     public function show(Exam $exam)
     {
+        $user = auth()->user();
+
+        // Check section access
+        if (!$user->is_admin && $exam->section_id && $exam->section_id !== $user->section_id) {
+            abort(403, 'You do not have access to this exam.');
+        }
+
         $exam->load([
             'parts' => function ($query) {
                 $query->orderBy('sort_order');

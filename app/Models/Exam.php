@@ -13,11 +13,17 @@ class Exam extends Model
         'duration_minutes',
         'status',
         'url',
+        'section_id',
     ];
 
     protected $casts = [
         'exam_date' => 'datetime',
     ];
+
+    public function section()
+    {
+        return $this->belongsTo(Section::class);
+    }
 
     public function parts()
     {

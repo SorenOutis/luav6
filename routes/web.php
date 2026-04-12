@@ -69,6 +69,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // 5. Upcoming Exams (Published exams, ordered by date)
         $upcomingExams = \App\Models\Exam::where('status', '!=', 'draft')
+            ->when(!$user->is_admin, function ($query) use ($user) {
+                $query->where(function ($query) use ($user) {
+                    $query->whereNull('section_id')
+                          ->orWhere('section_id', $user->section_id);
+                });
+            })
             ->orderBy('exam_date', 'asc')
             ->limit(3)
             ->get()

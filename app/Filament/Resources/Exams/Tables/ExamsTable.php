@@ -15,6 +15,10 @@ class ExamsTable
             ->columns([
                 \Filament\Tables\Columns\TextColumn::make('title')
                     ->searchable(),
+                \Filament\Tables\Columns\TextColumn::make('section.name')
+                    ->label('Section')
+                    ->placeholder('All Sections')
+                    ->sortable(),
                 \Filament\Tables\Columns\TextColumn::make('exam_date')
                     ->dateTime()
                     ->sortable(),
@@ -31,7 +35,8 @@ class ExamsTable
                     }),
             ])
             ->filters([
-                //
+                \Filament\Tables\Filters\SelectFilter::make('section')
+                    ->relationship('section', 'name'),
             ])
             ->recordActions([
                 EditAction::make(),

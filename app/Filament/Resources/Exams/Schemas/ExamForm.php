@@ -17,6 +17,12 @@ class ExamForm
                     ->required()
                     ->maxLength(255)
                     ->columnSpanFull(),
+                \Filament\Forms\Components\Select::make('section_id')
+                    ->relationship('section', 'name')
+                    ->label('Section')
+                    ->placeholder('Select a section (Optional)')
+                    ->helperText('If selected, only students in this section can see and take this exam.')
+                    ->columnSpanFull(),
                 \Filament\Forms\Components\Textarea::make('description')
                     ->maxLength(65535)
                     ->columnSpanFull(),

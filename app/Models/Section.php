@@ -20,4 +20,12 @@ class Section extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    /**
+     * Get the exams associated with the section.
+     */
+    public function exams()
+    {
+        return $this->hasMany(Exam::class);
+    }
 }
