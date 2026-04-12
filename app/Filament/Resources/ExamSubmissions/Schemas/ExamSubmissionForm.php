@@ -2,11 +2,13 @@
 
 namespace App\Filament\Resources\ExamSubmissions\Schemas;
 
+use App\Support\ExamPartAnswerLabels;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Schema;
 
 class ExamSubmissionForm
@@ -57,7 +59,8 @@ class ExamSubmissionForm
                         TextInput::make('question_number')
                             ->numeric()
                             ->minValue(1)
-                            ->required(),
+                            ->required()
+                            ->live(onBlur: true),
                         Select::make('question_type')
                             ->options([
                                 'multiple_choice' => 'Multiple choice',
@@ -65,7 +68,8 @@ class ExamSubmissionForm
                                 'essay' => 'Essay',
                                 'identification' => 'Identification',
                             ])
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Textarea::make('question_text')
                             ->rows(2)
                             ->required(),
@@ -73,9 +77,26 @@ class ExamSubmissionForm
                             ->numeric()
                             ->minValue(0)
                             ->required(),
-                        Textarea::make('answer')
-                            ->rows(2)
-                            ->nullable(),
+                        Group::make([
+                            Select::make('response_choice')
+                                ->label('Answer')
+                                ->options(fn (callable $get): array => ExamPartAnswerLabels::choiceOptionsForRowWithCurrent($get))
+                                ->visible(fn (callable $get): bool => in_array($get('question_type'), ['multiple_choice', 'true_false'], true))
+                                ->dehydrated(fn (callable $get): bool => in_array($get('question_type'), ['multiple_choice', 'true_false'], true))
+                                ->native(false)
+                                ->searchable()
+                                ->placeholder("Select the student's answer")
+                                ->helperText(fn (callable $get): ?string => ExamPartAnswerLabels::correctChoiceHint($get)),
+                            Textarea::make('response_text')
+                                ->label('Answer')
+                                ->rows(4)
+                                ->visible(fn (callable $get): bool => ! in_array($get('question_type'), ['multiple_choice', 'true_false'], true))
+                                ->dehydrated(fn (callable $get): bool => ! in_array($get('question_type'), ['multiple_choice', 'true_false'], true))
+                                ->placeholder(fn (callable $get): string => match ($get('question_type')) {
+                                    'essay' => 'Student essay response',
+                                    default => 'Student answer',
+                                }),
+                        ]),
                     ]),
             ]);
     }
