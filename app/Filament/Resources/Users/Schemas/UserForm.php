@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Models\User;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -20,14 +21,14 @@ class UserForm
                     ->disk('public')
                     ->directory('avatars')
                     ->maxSize(10240)
-                    ->formatStateUsing(fn ($record) => $record?->getRawOriginal('avatar'))
+                    ->formatStateUsing(fn ($state, $record) => $record?->getRawOriginal('avatar'))
                     ->label('Profile Picture'),
                 FileUpload::make('cover_photo')
                     ->image()
                     ->disk('public')
                     ->directory('covers')
                     ->maxSize(10240)
-                    ->formatStateUsing(fn ($record) => $record?->getRawOriginal('cover_photo'))
+                    ->formatStateUsing(fn ($state, $record) => $record?->getRawOriginal('cover_photo'))
                     ->label('Cover Photo'),
                 TextInput::make('name')
                     ->required(),
