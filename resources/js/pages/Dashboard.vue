@@ -24,6 +24,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const dashboardContainer = ref<HTMLElement | null>(null);
+const backgroundGrid = ref<HTMLElement | null>(null);
+const mouseGlow = ref<HTMLElement | null>(null);
 
 import { usePage, Link, usePoll } from '@inertiajs/vue3';
 import { BookOpen, Clock } from 'lucide-vue-next';
@@ -35,6 +37,31 @@ usePoll(10000, {
 
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
+
+// Interactive Background Logic
+const handleGlobalMouseMove = (e: MouseEvent) => {
+    if (!mouseGlow.value || !backgroundGrid.value) return;
+
+    const { clientX, clientY } = e;
+    const xPercent = clientX / window.innerWidth;
+    const yPercent = clientY / window.innerHeight;
+
+    // Background Glow
+    gsap.to(mouseGlow.value, {
+        x: clientX,
+        y: clientY,
+        duration: 1.2,
+        ease: 'power3.out'
+    });
+
+    // Grid Parallax
+    gsap.to(backgroundGrid.value, {
+        x: (xPercent - 0.5) * 30,
+        y: (yPercent - 0.5) * 30,
+        duration: 1.5,
+        ease: 'power2.out'
+    });
+};
 
 interface Course {
     id: number;
@@ -160,32 +187,48 @@ onMounted(() => {
     if (!dashboardContainer.value) return;
 
     const tl = gsap.timeline({
-        defaults: { ease: 'power4.out', duration: 1.1 }
+        defaults: { ease: 'expo.out', duration: 1.4 }
     });
 
+    // Reset initial states
     gsap.set('.dashboard-hero', { opacity: 0, y: 40, scale: 0.98 });
     gsap.set('.dashboard-stats', { opacity: 0, y: 30, scale: 0.97 });
     gsap.set('.dashboard-leaderboard', { opacity: 0, y: 30, scale: 0.97 });
     gsap.set('.dashboard-main-grid', {
         opacity: 0,
-        y: 40,
+        y: 60,
         scale: 0.97,
-        rotationX: -8,
+        rotationX: -10,
         transformOrigin: 'center top'
     });
 
-    tl.to('.dashboard-hero', { opacity: 1, y: 0, scale: 1 });
+    tl.to('.dashboard-hero', { 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        duration: 1.2
+    });
 
     tl.to(
         '.dashboard-stats',
-        { opacity: 1, y: 0, scale: 1 },
-        '-=0.6'
+        { 
+            opacity: 1, 
+            y: 0, 
+            scale: 1,
+            duration: 1
+        },
+        '-=0.8'
     );
 
     tl.to(
         '.dashboard-leaderboard',
-        { opacity: 1, y: 0, scale: 1, duration: 0.8 },
-        '-=0.4'
+        { 
+            opacity: 1, 
+            y: 0, 
+            scale: 1, 
+            duration: 1
+        },
+        '-=0.6'
     );
 
     tl.to(
@@ -194,18 +237,19 @@ onMounted(() => {
             opacity: 1,
             y: 0,
             scale: 1,
-            rotationX: 0
+            rotationX: 0,
+            duration: 1.4
         },
-        '-=0.3'
+        '-=0.4'
     );
 
     // Background orb animation refinement
     const orbs = dashboardContainer.value.querySelectorAll('.orb');
     orbs.forEach((orb, i) => {
         gsap.to(orb, {
-            x: `random(-60, 60)`,
-            y: `random(-60, 60)`,
-            duration: 15 + i * 5,
+            x: `random(-100, 100)`,
+            y: `random(-100, 100)`,
+            duration: 12 + i * 4,
             repeat: -1,
             yoyo: true,
             ease: 'sine.inOut'
@@ -222,7 +266,22 @@ const handleQuickAction = (action: string) => {
     <Head title="Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div ref="dashboardContainer" class="flex h-full flex-1 flex-col gap-8 p-4 md:p-10 relative overflow-hidden bg-background perspective-[1000px]">
+        <div 
+            ref="dashboardContainer" 
+            @mousemove="handleGlobalMouseMove"
+            class="flex h-full flex-1 flex-col gap-8 p-4 md:p-10 relative overflow-hidden bg-background perspective-[1500px]"
+        >
+            <!-- Global Mouse Glow -->
+            <div 
+                ref="mouseGlow"
+                class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px] will-change-transform dark:bg-primary/10"
+            ></div>
+
+            <!-- Monolithic Grid Overlay -->
+            <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] will-change-transform">
+                <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
+            </div>
+
             <!-- Glassy background decorative orbs -->
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
