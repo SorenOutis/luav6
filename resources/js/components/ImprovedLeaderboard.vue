@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import gsap from 'gsap';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award, Search } from 'lucide-vue-next';
@@ -35,6 +35,26 @@ const props = defineProps<Props>();
 
 const activeTabIndex = ref(0);
 const searchQuery = ref('');
+
+// Persist active tab index in localStorage
+const STORAGE_KEY = 'leaderboard_active_section_id';
+
+onMounted(() => {
+    const savedSectionId = localStorage.getItem(STORAGE_KEY);
+    if (savedSectionId) {
+        const index = props.sectionLeaderboards.findIndex(s => s.sectionId === parseInt(savedSectionId));
+        if (index !== -1) {
+            activeTabIndex.value = index;
+        }
+    }
+});
+
+watch(activeTabIndex, (newIndex) => {
+    const section = props.sectionLeaderboards[newIndex];
+    if (section) {
+        localStorage.setItem(STORAGE_KEY, section.sectionId.toString());
+    }
+});
 
 const activeLeaderboard = computed(() => {
     return props.sectionLeaderboards[activeTabIndex.value] || null;
