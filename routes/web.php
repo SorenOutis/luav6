@@ -237,6 +237,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('exams/{exam}', [ExamController::class, 'show'])->name('exams.show');
     Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->name('exams.submitPart')->middleware('throttle:10,1');
 
+    Route::get('ngl', [\App\Http\Controllers\AnonymousMessageController::class, 'index'])->name('ngl.index');
+    Route::post('ngl', [\App\Http\Controllers\AnonymousMessageController::class, 'store'])->name('ngl.store');
+    Route::post('ngl/{message}/like', [\App\Http\Controllers\AnonymousMessageController::class, 'like'])->name('ngl.like');
+
     // Admin routes
     Route::get('admin/exams/submissions', [\App\Http\Controllers\Admin\ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');
     Route::get('admin/exams/{exam}/submissions', [\App\Http\Controllers\Admin\ExamSubmissionController::class, 'examSubmissions'])->name('admin.exams.submissions.by-exam');
