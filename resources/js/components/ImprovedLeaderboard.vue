@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import gsap from 'gsap';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
-import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award } from 'lucide-vue-next';
+import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award, Search } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
 
 interface LeaderboardUser {
@@ -34,22 +34,32 @@ interface Props {
 const props = defineProps<Props>();
 
 const activeTabIndex = ref(0);
+const searchQuery = ref('');
 
 const activeLeaderboard = computed(() => {
     return props.sectionLeaderboards[activeTabIndex.value] || null;
 });
 
 const users = computed(() => activeLeaderboard.value?.users || []);
+
+const filteredUsers = computed(() => {
+    if (!searchQuery.value.trim()) return users.value;
+    const query = searchQuery.value.toLowerCase().trim();
+    return users.value.filter(user => 
+        user.name.toLowerCase().includes(query)
+    );
+});
+
 const userRank = computed(() => activeLeaderboard.value?.userRank || 0);
 const totalPlayers = computed(() => activeLeaderboard.value?.totalPlayers || 0);
 const sectionName = computed(() => activeLeaderboard.value?.sectionName || '');
 
 // Mock data extension for richer visuals
-const top3 = computed(() => users.value.slice(0, 3));
+const top3 = computed(() => filteredUsers.value.slice(0, 3));
 
 const showAllRankings = ref(false);
 const displayedUsers = computed(() => {
-    return showAllRankings.value ? users.value : users.value.slice(0, 10);
+    return showAllRankings.value ? filteredUsers.value : filteredUsers.value.slice(0, 10);
 });
 
 // Animated XP for top 3
@@ -136,13 +146,27 @@ const resetMagnetic = (e: MouseEvent) => {
                     Join a section to see your ranking.
                 </p>
             </div>
-            <button 
-                @mousemove="handleMagnetic" 
-                @mouseleave="resetMagnetic"
-                class="text-xs font-bold px-4 py-2 rounded-xl border border-border/40 bg-card hover:bg-muted transition-colors relative z-10"
-            >
-                View All Time
-            </button>
+            <div class="flex items-center gap-3">
+                <!-- Search Bar -->
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <Search class="w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                    </div>
+                    <input 
+                        type="text" 
+                        v-model="searchQuery" 
+                        placeholder="Search warriors..."
+                        class="pl-10 pr-4 py-2 bg-card border border-border/40 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full sm:w-64 shadow-sm"
+                    />
+                </div>
+                <button 
+                    @mousemove="handleMagnetic" 
+                    @mouseleave="resetMagnetic"
+                    class="text-xs font-bold px-4 py-2 rounded-xl border border-border/40 bg-card hover:bg-muted transition-colors relative z-10 whitespace-nowrap"
+                >
+                    View All Time
+                </button>
+            </div>
         </div>
 
         <!-- Empty State Filter -->
@@ -155,9 +179,20 @@ const resetMagnetic = (e: MouseEvent) => {
         </div>
 
         <template v-else>
-            <!-- Elite Top 3 Cards -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-6">
-                <div v-for="(user, idx) in top3" :key="user.id"
+            <!-- No Search Results -->
+            <div v-if="filteredUsers.length === 0" class="surface-card p-12 flex flex-col items-center justify-center text-center animate-fade-in border border-border/50 rounded-2xl">
+                <div class="w-16 h-16 mb-4 bg-muted/30 rounded-full flex items-center justify-center">
+                    <Search class="w-8 h-8 text-muted-foreground/40" />
+                </div>
+                <h3 class="text-xl font-bold tracking-tight mb-1">No warriors found</h3>
+                <p class="text-sm text-muted-foreground">We couldn't find anyone matching "{{ searchQuery }}". Try another name!</p>
+                <button @click="searchQuery = ''" class="mt-4 text-xs font-bold text-primary hover:underline transition-all hover:scale-105 active:scale-95">Clear search</button>
+            </div>
+
+            <template v-else>
+                <!-- Elite Top 3 Cards -->
+                <div class="grid grid-cols-3 gap-2 sm:gap-6">
+                    <div v-for="(user, idx) in top3" :key="user.id"
                     class="relative surface-card p-2 sm:p-6 flex flex-col items-center text-center group transition-all duration-500 hover:-translate-y-2 animate-fade-up overflow-hidden"
                     :class="[
                         idx === 0 ? 'order-2 border-primary/20 scale-105 sm:scale-110 shadow-2xl shadow-primary/5 z-20' : (idx === 1 ? 'order-1' : 'order-3'),
@@ -295,6 +330,7 @@ const resetMagnetic = (e: MouseEvent) => {
                 </div>
             </div>
         </template>
+    </template>
     </div>
 </template>
 

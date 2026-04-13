@@ -108,7 +108,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $userSections = $user->sections()->get();
             
             foreach ($userSections as $section) {
-                $leaderboardUsers = \App\Models\SeasonProgress::with('user')
+                $leaderboardProgress = \App\Models\SeasonProgress::with(['user:id,name,avatar,current_streak,created_at'])
                     ->where('season_id', $currentSeason->id)
                     ->whereHas('user', function($q) use ($section) {
                         $q->where('is_admin', false)
@@ -117,30 +117,54 @@ Route::middleware(['auth', 'verified'])->group(function () {
                           });
                     })
                     ->orderByDesc('exp')
-                    ->get()
-                    ->map(function ($progress) use ($user) {
-                        $u = $progress->user;
-                        $totalLessons = $u->courses()->sum('total_lessons');
-                        $completedLessons = $u->courses()->sum('completed_lessons');
-                        $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
-                        $weeklyXp = $u->courses()
-                            ->wherePivot('updated_at', '>=', now()->subDays(7))
-                            ->sum('xp_earned');
+                    ->get();
 
-                        return [
-                            'id' => $u->id,
-                            'name' => $u->name,
-                            'avatar' => $u->avatar,
-                            'xp' => $progress->exp,
-                            'level' => $progress->level,
-                            'completionRate' => $completionRate,
-                            'streak' => $u->current_streak,
-                            'joinedAt' => $u->created_at->format('M Y'),
-                            'weeklyXp' => $weeklyXp,
-                            'trend' => 'stable',
-                            'isCurrentUser' => $u->id === $user->id,
-                        ];
-                    });
+                $userIds = $leaderboardProgress->pluck('user_id')->unique();
+
+                // Get total lessons sum for all users in one query
+                $totalLessonsMap = \Illuminate\Support\Facades\DB::table('course_user')
+                    ->join('courses', 'course_user.course_id', '=', 'courses.id')
+                    ->whereIn('course_user.user_id', $userIds)
+                    ->select('course_user.user_id', \Illuminate\Support\Facades\DB::raw('SUM(courses.total_lessons) as total'))
+                    ->groupBy('course_user.user_id')
+                    ->pluck('total', 'user_id');
+
+                // Get completed lessons sum for all users in one query
+                $completedLessonsMap = \Illuminate\Support\Facades\DB::table('course_user')
+                    ->whereIn('user_id', $userIds)
+                    ->select('user_id', \Illuminate\Support\Facades\DB::raw('SUM(completed_lessons) as total'))
+                    ->groupBy('user_id')
+                    ->pluck('total', 'user_id');
+
+                // Get weekly XP for all users in one query
+                $weeklyXpMap = \Illuminate\Support\Facades\DB::table('course_user')
+                    ->whereIn('user_id', $userIds)
+                    ->where('updated_at', '>=', now()->subDays(7))
+                    ->select('user_id', \Illuminate\Support\Facades\DB::raw('SUM(xp_earned) as total'))
+                    ->groupBy('user_id')
+                    ->pluck('total', 'user_id');
+
+                $leaderboardUsers = $leaderboardProgress->map(function ($progress) use ($totalLessonsMap, $completedLessonsMap, $weeklyXpMap) {
+                    $u = $progress->user;
+                    $totalLessons = $totalLessonsMap[$u->id] ?? 0;
+                    $completedLessons = $completedLessonsMap[$u->id] ?? 0;
+                    $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
+                    $weeklyXp = $weeklyXpMap[$u->id] ?? 0;
+
+                    return [
+                        'id' => $u->id,
+                        'name' => $u->name,
+                        'avatar' => $u->avatar,
+                        'xp' => $progress->exp,
+                        'level' => $progress->level,
+                        'completionRate' => $completionRate,
+                        'streak' => $u->current_streak,
+                        'joinedAt' => $u->created_at->format('M Y'),
+                        'weeklyXp' => $weeklyXp,
+                        'trend' => 'stable',
+                        'isCurrentUser' => $u->id === auth()->id(),
+                    ];
+                });
 
                 $userRank = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
                     ->whereHas('user', function($q) use ($section) {
