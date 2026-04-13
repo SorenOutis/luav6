@@ -38,24 +38,6 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
 
 <template>
     <div class="space-y-6">
-        <!-- Dashboard Header Actions -->
-        <div class="flex items-center justify-end px-2 mb-2">
-            <div class="flex items-center gap-4 bg-card/30 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-sm">
-                <div class="flex flex-col items-end">
-                    <span class="text-[8px] font-black uppercase tracking-widest text-muted-foreground leading-none">System Sync</span>
-                    <span v-if="lastSyncTime" class="text-[10px] font-bold text-foreground">{{ lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
-                </div>
-                <button 
-                    @click="emit('refresh')"
-                    class="p-1.5 rounded-lg bg-background border border-border/40 hover:border-primary/40 transition-all duration-300 group/refresh"
-                    :disabled="isRefreshing"
-                    title="Manual Refresh"
-                >
-                    <RefreshCw class="w-3.5 h-3.5 text-muted-foreground group-hover/refresh:text-primary transition-colors" :class="{ 'animate-spin': isRefreshing }" />
-                </button>
-            </div>
-        </div>
-
         <!-- Integrated Announcement -->
         <TransitionGroup 
             enter-active-class="transition duration-500 ease-out"
@@ -66,7 +48,7 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
             leave-to-class="opacity-0 scale-95"
         >
             <div v-for="item in announcements.slice(0, 1)" :key="item.id" 
-                class="relative group glass-morphism rounded-3xl p-4 sm:p-5 border border-primary/10 overflow-hidden shadow-2xl shadow-primary/5 hover:border-primary/30 transition-all duration-500"
+                class="relative group glass-morphism rounded-3xl p-4 sm:p-5 border border-primary/10 overflow-hidden shadow-2xl shadow-primary/5 hover:border-primary/30 transition-all duration-500 mb-4"
             >
                 <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent"></div>
                 <div class="relative flex items-center justify-between gap-4">
@@ -107,16 +89,34 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
             <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[100px] transition-transform duration-1000 group-hover:scale-150"></div>
             
             <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div class="space-y-2">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase">System Online</span>
+                <div class="space-y-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-black tracking-widest uppercase border border-primary/20">
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                            System Online
+                        </div>
+                        
+                        <!-- System Sync Indicator -->
+                        <div class="flex items-center gap-2 px-3 py-0.5 rounded-full bg-muted/30 text-muted-foreground text-[10px] font-black tracking-widest uppercase border border-border/40 group/sync">
+                            <span>Sync: {{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
+                            <button 
+                                @click="emit('refresh')"
+                                class="hover:text-primary transition-colors"
+                                :disabled="isRefreshing"
+                            >
+                                <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isRefreshing }" />
+                            </button>
+                        </div>
                     </div>
-                    <h1 class="text-3xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
-                        {{ timeBasedGreeting }}, {{ userName }}
-                    </h1>
-                    <p class="text-muted-foreground text-xs sm:text-sm font-medium max-w-sm leading-relaxed">
-                        Ready to transcend your limits? Your learning engine is primed and at <span class="text-foreground font-bold">peak performance</span>.
-                    </p>
+
+                    <div class="space-y-1">
+                        <h1 class="text-3xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
+                            {{ timeBasedGreeting }}, {{ userName }}
+                        </h1>
+                        <p class="text-muted-foreground text-xs sm:text-sm font-medium max-w-sm leading-relaxed opacity-80">
+                            Ready to transcend your limits? Your learning engine is primed and at <span class="text-foreground font-black">peak performance</span>.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Level & Progress Visual -->
