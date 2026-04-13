@@ -135,6 +135,7 @@ interface Announcement {
     id: number;
     title: string;
     description: string;
+    link?: string;
 }
 
 interface Exam {
@@ -326,7 +327,7 @@ const handleQuickAction = (action: string) => {
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
             <!-- Hero Banner Section -->
-            <div class="relative">
+            <div class="relative space-y-6">
                 <DashboardHero 
                     class="animate-section dashboard-hero"
                     :user-name="userName"
@@ -334,26 +335,11 @@ const handleQuickAction = (action: string) => {
                     :announcements="announcements"
                     :total-x-p-progress="totalXPProgress"
                     :time-based-greeting="personalizedGreeting"
+                    :is-refreshing="isRefreshing"
+                    :last-sync-time="lastSyncTime"
                     @close-announcement="announcements = []"
+                    @refresh="manualRefresh"
                 />
-                
-                <!-- System Status & Refresh Indicator -->
-                <div class="absolute top-4 right-4 flex items-center gap-3 z-10">
-                    <div class="hidden sm:flex flex-col items-end">
-                        <span class="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">Last Synced</span>
-                        <span class="text-[10px] font-medium text-muted-foreground/40">{{ lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
-                    </div>
-                    <button 
-                        @click="manualRefresh"
-                        class="p-2.5 rounded-xl bg-card/40 border border-border/20 hover:border-primary/40 hover:bg-card/60 transition-all group/refresh disabled:opacity-50"
-                        :disabled="isRefreshing"
-                    >
-                        <RefreshCw 
-                            class="w-4 h-4 text-muted-foreground group-hover/refresh:text-primary transition-colors"
-                            :class="{ 'animate-spin': isRefreshing }"
-                        />
-                    </button>
-                </div>
             </div>
 
             <!-- Header Section with User Stats -->

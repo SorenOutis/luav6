@@ -17,6 +17,11 @@ class AnnouncementForm
                     ->required(),
                 Textarea::make('description')
                     ->columnSpanFull(),
+                TextInput::make('link')
+                    ->label('Link URL')
+                    ->placeholder('https://example.com or /ngl')
+                    ->helperText('Students will be redirected to this link when they click the announcement.')
+                    ->columnSpanFull(),
                 Toggle::make('is_active')
                     ->required(),
             ]);

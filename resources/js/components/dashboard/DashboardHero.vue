@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
-import { X, Sparkles, Zap, Award } from 'lucide-vue-next';
+import { X, Sparkles, Zap, Award, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
+import { Link } from '@inertiajs/vue3';
 
 interface Announcement {
     id: number;
     title: string;
     description?: string;
+    link?: string;
 }
 
 interface UserStats {
@@ -20,10 +22,12 @@ interface Props {
     announcements: Announcement[];
     totalXPProgress: number;
     timeBasedGreeting: string;
+    isRefreshing?: boolean;
+    lastSyncTime?: Date;
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits(['close-announcement']);
+const emit = defineEmits(['close-announcement', 'refresh']);
 
 const animatedLevel = useNumberAnimation(() => props.userStats.level);
 const animatedXP = useNumberAnimation(() => props.userStats.totalXP);
@@ -34,6 +38,24 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
 
 <template>
     <div class="space-y-6">
+        <!-- Dashboard Header Actions -->
+        <div class="flex items-center justify-end px-2 mb-2">
+            <div class="flex items-center gap-4 bg-card/30 backdrop-blur-md px-4 py-2 rounded-2xl border border-border/40 shadow-sm">
+                <div class="flex flex-col items-end">
+                    <span class="text-[8px] font-black uppercase tracking-widest text-muted-foreground leading-none">System Sync</span>
+                    <span v-if="lastSyncTime" class="text-[10px] font-bold text-foreground">{{ lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+                </div>
+                <button 
+                    @click="emit('refresh')"
+                    class="p-1.5 rounded-lg bg-background border border-border/40 hover:border-primary/40 transition-all duration-300 group/refresh"
+                    :disabled="isRefreshing"
+                    title="Manual Refresh"
+                >
+                    <RefreshCw class="w-3.5 h-3.5 text-muted-foreground group-hover/refresh:text-primary transition-colors" :class="{ 'animate-spin': isRefreshing }" />
+                </button>
+            </div>
+        </div>
+
         <!-- Integrated Announcement -->
         <TransitionGroup 
             enter-active-class="transition duration-500 ease-out"
@@ -44,24 +66,37 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
             leave-to-class="opacity-0 scale-95"
         >
             <div v-for="item in announcements.slice(0, 1)" :key="item.id" 
-                class="relative group glass-morphism rounded-3xl p-4 sm:p-5 border border-primary/10 overflow-hidden shadow-2xl shadow-primary/5"
+                class="relative group glass-morphism rounded-3xl p-4 sm:p-5 border border-primary/10 overflow-hidden shadow-2xl shadow-primary/5 hover:border-primary/30 transition-all duration-500"
             >
                 <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent"></div>
                 <div class="relative flex items-center justify-between gap-4">
-                    <div class="flex items-center gap-4">
-                        <div class="hidden sm:flex shrink-0 w-12 h-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-inner">
-                            <Sparkles class="w-6 h-6 animate-pulse" />
+                    <div class="flex items-center flex-1 gap-4">
+                        <div class="hidden sm:flex shrink-0 w-12 h-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
+                            <Megaphone class="w-6 h-6" />
                         </div>
-                        <div>
-                            <h4 class="text-sm font-bold text-foreground">{{ item.title }}</h4>
-                            <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5">{{ item.description }}</p>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h4 class="text-sm font-black tracking-tight text-foreground truncate uppercase tracking-widest">{{ item.title }}</h4>
+                                <span class="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[8px] font-black uppercase tracking-widest animate-pulse">New</span>
+                            </div>
+                            <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-medium line-clamp-1 italic">"{{ item.description }}"</p>
                         </div>
                     </div>
-                    <button @click="emit('close-announcement', item.id)" 
-                        class="p-2 rounded-xl hover:bg-foreground/5 transition-colors text-muted-foreground hover:text-foreground"
-                    >
-                        <X class="w-4 h-4" />
-                    </button>
+                    
+                    <div class="flex items-center gap-2">
+                        <Link v-if="item.link" :href="item.link" 
+                            class="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 group/link"
+                        >
+                            Explore
+                            <ArrowRight class="w-3 h-3 group-hover/link:translate-x-1 transition-transform" />
+                        </Link>
+                        <button @click="emit('close-announcement', item.id)" 
+                            class="p-2 rounded-xl hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive group/close"
+                            title="Dismiss"
+                        >
+                            <X class="w-4 h-4 group-hover/close:rotate-90 transition-transform" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </TransitionGroup>
