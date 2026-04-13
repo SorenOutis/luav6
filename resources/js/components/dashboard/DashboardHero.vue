@@ -48,35 +48,35 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
             leave-to-class="opacity-0 scale-95"
         >
             <div v-for="item in announcements.slice(0, 1)" :key="item.id" 
-                class="relative group glass-morphism rounded-3xl p-4 sm:p-5 border border-primary/10 overflow-hidden shadow-2xl shadow-primary/5 hover:border-primary/30 transition-all duration-500 mb-4"
+                class="relative group glass-morphism rounded-2xl sm:rounded-3xl p-3 sm:p-5 border border-primary/10 overflow-hidden shadow-2xl shadow-primary/5 hover:border-primary/30 transition-all duration-500 mb-4"
             >
                 <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent"></div>
-                <div class="relative flex items-center justify-between gap-4">
-                    <div class="flex items-center flex-1 gap-4">
-                        <div class="hidden sm:flex shrink-0 w-12 h-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
-                            <Megaphone class="w-6 h-6" />
+                <div class="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+                    <div class="flex items-center flex-1 gap-3 sm:gap-4 w-full sm:w-auto">
+                        <div class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl bg-primary/10 text-primary shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
+                            <Megaphone class="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2">
-                                <h4 class="text-sm font-black tracking-tight text-foreground truncate uppercase tracking-widest">{{ item.title }}</h4>
-                                <span class="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[8px] font-black uppercase tracking-widest animate-pulse">New</span>
+                            <div class="flex items-center flex-wrap gap-2">
+                                <h4 class="text-xs sm:text-sm font-black tracking-tight text-foreground truncate uppercase tracking-widest">{{ item.title }}</h4>
+                                <span class="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[7px] sm:text-[8px] font-black uppercase tracking-widest animate-pulse shrink-0">New</span>
                             </div>
-                            <p v-if="item.description" class="text-xs text-muted-foreground mt-0.5 font-medium line-clamp-1 italic">"{{ item.description }}"</p>
+                            <p v-if="item.description" class="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium line-clamp-1 italic opacity-70">"{{ item.description }}"</p>
                         </div>
                     </div>
                     
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-primary/5 sm:border-0">
                         <Link v-if="item.link" :href="item.link" 
-                            class="flex items-center gap-2 px-4 py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 group/link"
+                            class="flex items-center justify-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 group/link flex-1 sm:flex-none"
                         >
                             Explore
                             <ArrowRight class="w-3 h-3 group-hover/link:translate-x-1 transition-transform" />
                         </Link>
                         <button @click="emit('close-announcement', item.id)" 
-                            class="p-2 rounded-xl hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive group/close"
+                            class="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive group/close shrink-0"
                             title="Dismiss"
                         >
-                            <X class="w-4 h-4 group-hover/close:rotate-90 transition-transform" />
+                            <X class="w-3.5 h-3.5 sm:w-4 h-4 group-hover/close:rotate-90 transition-transform" />
                         </button>
                     </div>
                 </div>
