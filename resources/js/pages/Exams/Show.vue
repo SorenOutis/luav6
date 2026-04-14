@@ -142,6 +142,12 @@ const overallProgress = computed(() => {
     return (submittedPartsCount.value / props.exam.parts.length) * 100;
 });
 
+const partProgress = computed(() => {
+    if (!selectedPart.value || !selectedPart.value.questions) return 0;
+    const answeredCount = Object.keys(answers).length;
+    return (answeredCount / selectedPart.value.questions.length) * 100;
+});
+
 const stopTimer = () => {
     if (timerInterval.value) {
         clearInterval(timerInterval.value);
@@ -896,14 +902,28 @@ const hideSidebar = computed(() => isExamInProgress.value);
                 </div>
 
                 <!-- Global Progress Bar -->
-                <div v-if="!allPartsSubmitted && examStarted" class="animate-up w-full mt-2 space-y-2">
-                    <div class="flex items-center justify-between px-1">
-                        <span class="text-[9px] font-black uppercase tracking-[0.4em] text-primary">System Integrity</span>
-                        <span class="text-[9px] font-black text-primary">{{ Math.round(overallProgress) }}% COMPLETED</span>
+                <div v-if="!allPartsSubmitted && examStarted" class="animate-up w-full mt-2 space-y-4">
+                    <!-- Overall Mission Progress -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between px-1">
+                            <span class="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60">System Integrity</span>
+                            <span class="text-[9px] font-black text-primary/60">{{ Math.round(overallProgress) }}% COMPLETED</span>
+                        </div>
+                        <div class="w-full h-1 bg-muted/30 overflow-hidden border border-primary/10 relative">
+                            <div class="h-full bg-primary/40 transition-all duration-1000 ease-out" :style="{ width: `${overallProgress}%` }"></div>
+                        </div>
                     </div>
-                    <div class="w-full h-1.5 bg-muted/50 overflow-hidden border border-primary/20 relative">
-                        <div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
-                        <div class="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(var(--primary),0.5)]" :style="{ width: `${overallProgress}%` }"></div>
+
+                    <!-- Current Section Progress -->
+                    <div v-if="selectedPart" class="space-y-2">
+                        <div class="flex items-center justify-between px-1">
+                            <span class="text-[9px] font-black uppercase tracking-[0.4em] text-primary">Section Deployment</span>
+                            <span class="text-[9px] font-black text-primary">{{ Math.round(partProgress) }}% INITIALIZED</span>
+                        </div>
+                        <div class="w-full h-2 bg-muted/50 overflow-hidden border border-primary/20 relative">
+                            <div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
+                            <div class="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_15px_rgba(var(--primary),0.5)]" :style="{ width: `${partProgress}%` }"></div>
+                        </div>
                     </div>
                 </div>
 
