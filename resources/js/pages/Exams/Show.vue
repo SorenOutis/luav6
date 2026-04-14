@@ -1010,6 +1010,27 @@ onMounted(() => {
                                 </span>
                             </div>
 
+                            <!-- Part Instructions -->
+                            <div v-if="selectedPart!.instructions" class="p-5 bg-primary/5 border border-primary/10 rounded-none border-l-4 border-l-primary relative overflow-hidden group">
+                                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                    <FileText class="w-20 h-20 text-primary" />
+                                </div>
+                                <div class="relative flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-none bg-primary/10 flex items-center justify-center border border-primary/20 flex-shrink-0">
+                                        <FileText class="w-5 h-5 text-primary" />
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <h4 class="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
+                                            Instructions
+                                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                        </h4>
+                                        <p class="text-sm text-muted-foreground font-bold leading-relaxed uppercase tracking-tight italic">
+                                            {{ selectedPart!.instructions }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="flex flex-col gap-6">
                                 <div v-for="(question, qIndex) in selectedPart!.questions" :key="qIndex"
                                     :id="`q-${qIndex}`"
