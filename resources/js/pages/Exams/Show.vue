@@ -650,8 +650,8 @@ const submitPart = async () => {
                                 
                                 gsap.to(displayedScore, {
                                     value: targetScore,
-                                    duration: 1.5,
-                                    ease: 'power4.out',
+                                    duration: 1.2,
+                                    ease: 'none',
                                     onUpdate: () => {
                                         displayedScore.value = Math.floor(displayedScore.value);
                                     },
