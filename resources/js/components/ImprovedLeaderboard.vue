@@ -241,7 +241,7 @@ const resetMagnetic = (e: MouseEvent) => {
                     </div>
 
                     <!-- Background Decorative Element for Top 1 -->
-                    <div v-if="idx === 0" class="absolute -top-20 -right-20 w-60 h-60 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/20 transition-colors"></div>
+                    <div v-if="idx === 0" class="absolute -top-20 -right-20 w-60 h-60 bg-primary/[0.05] rounded-full blur-3xl pointer-events-none transition-colors group-hover:bg-primary/[0.08]"></div>
 
                     <!-- Tech Rank Badge (Clipped Corner) -->
                     <div class="absolute top-0 left-0 z-30">
@@ -323,9 +323,9 @@ const resetMagnetic = (e: MouseEvent) => {
                         <!-- Streak Indicator -->
                         <div class="flex items-center justify-between">
                             <p class="text-[8px] sm:text-[10px] font-mono font-black uppercase text-muted-foreground tracking-tighter">STREAK</p>
-                            <div class="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)] group-hover:shadow-amber-500/20 transition-shadow">
-                                <Flame class="w-3 h-3 sm:w-5 h-5 fill-current animate-pulse" />
-                                <span class="text-xs sm:text-lg font-mono font-black">{{ user.streak }}D</span>
+                            <div class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-primary/[0.03] border border-primary/10 text-foreground hover:bg-primary/[0.05] hover:border-primary/20 transition-all group/streak relative overflow-hidden shadow-sm">
+                                <Flame class="w-3 h-3 sm:w-5 h-5 fill-primary/10 text-primary group-hover/streak:scale-110 transition-transform" />
+                                <span class="text-xs sm:text-lg font-mono font-black tabular-nums">{{ user.streak }}D</span>
                             </div>
                         </div>
                     </div>
@@ -380,7 +380,7 @@ const resetMagnetic = (e: MouseEvent) => {
                             <div class="hidden sm:flex flex-col items-center">
                                 <component :is="user.trend === 'up' ? TrendingUp : (user.trend === 'down' ? TrendingDown : Minus)" 
                                     class="w-4 h-4" 
-                                    :class="user.trend === 'up' ? 'text-emerald-500' : (user.trend === 'down' ? 'text-destructive' : 'text-muted-foreground')"
+                                    :class="user.trend === 'up' ? 'text-primary' : (user.trend === 'down' ? 'text-destructive' : 'text-muted-foreground')"
                                 />
                                 <span class="text-[8px] font-bold uppercase mt-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">Trend</span>
                             </div>
@@ -388,7 +388,7 @@ const resetMagnetic = (e: MouseEvent) => {
                             <!-- Data Column -->
                             <div class="text-right min-w-[100px]">
                                 <p class="text-sm font-black tabular-nums">{{ user.xp.toLocaleString() }} <span class="text-[10px] font-bold text-muted-foreground">XP</span></p>
-                                <p class="text-[9px] font-bold text-emerald-500">+{{ user.weeklyXp >= 1000 ? (user.weeklyXp / 1000).toFixed(1) + 'k' : user.weeklyXp }} weekly</p>
+                                <p class="text-[9px] font-bold text-primary opacity-80">+{{ user.weeklyXp >= 1000 ? (user.weeklyXp / 1000).toFixed(1) + 'k' : user.weeklyXp }} weekly</p>
                             </div>
 
                             <!-- Action -->
