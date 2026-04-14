@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import gsap from 'gsap';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
-import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award, Search, Flame } from 'lucide-vue-next';
+import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award, Search, Flame, Cpu, Terminal, Activity } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
 
 interface LeaderboardUser {
@@ -210,97 +210,122 @@ const resetMagnetic = (e: MouseEvent) => {
             </div>
 
             <template v-else>
-                <!-- Elite Top 3 Cards -->
-                <div class="grid grid-cols-3 gap-2 sm:gap-6">
+                <!-- Elite Top 3 Cards (Landscape Tech Mode) -->
+                <div class="flex flex-col gap-4">
                     <div v-for="(user, idx) in top3" :key="user.id"
-                    class="relative surface-card p-2 sm:p-6 flex flex-col items-center text-center group transition-all duration-500 hover:-translate-y-2 animate-fade-up overflow-hidden"
+                    class="relative surface-card p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-6 group transition-all duration-700 hover:translate-x-2 animate-fade-up overflow-hidden"
                     :class="[
-                        idx === 0 ? 'order-2 border-primary/20 scale-105 sm:scale-110 shadow-2xl shadow-primary/5 z-20' : (idx === 1 ? 'order-1' : 'order-3'),
+                        idx === 0 ? 'border-primary/40 shadow-2xl shadow-primary/10 z-20 scale-[1.02]' : 'border-border/40',
                         `stagger-${idx + 1}`
                     ]"
                     @mousemove="handleMouseMove"
                 >
+                    <!-- Tech Grid Background -->
+                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none">
+                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                            <defs>
+                                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#grid)" />
+                        </svg>
+                    </div>
+
+                    <!-- Tech Scanning Line -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-40 h-full -translate-x-full group-hover:animate-scan-horizontal pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
                     <!-- Card Shine/Bloom Effect -->
                     <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.05), transparent 40%)">
+                        style="background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
                     </div>
 
                     <!-- Background Decorative Element for Top 1 -->
-                    <div v-if="idx === 0" class="absolute -top-20 -right-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/20 transition-colors"></div>
+                    <div v-if="idx === 0" class="absolute -top-20 -right-20 w-60 h-60 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/20 transition-colors"></div>
 
-                    <!-- Rank Badge -->
-                    <div class="absolute top-0 right-0 p-2 sm:p-4 z-30">
-                        <div class="flex items-center justify-center w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl font-black text-[9px] sm:text-sm shadow-lg border backdrop-blur-md transition-transform group-hover:rotate-12"
+                    <!-- Tech Rank Badge (Clipped Corner) -->
+                    <div class="absolute top-0 left-0 z-30">
+                        <div class="flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 font-mono font-black text-xs sm:text-xl shadow-lg border backdrop-blur-md transition-all group-hover:scale-110 tech-badge-left"
                             :class="[
-                                idx === 0 ? 'bg-primary text-primary-foreground border-primary/50' : 
-                                'bg-muted/80 text-foreground border-border/50'
+                                idx === 0 ? 'bg-primary text-primary-foreground border-primary/50 shadow-primary/20' : 
+                                'bg-card/80 text-foreground border-border/50 shadow-black/10'
                             ]"
                         >
-                            #{{ idx + 1 }}
+                            {{ idx + 1 }}
                         </div>
                     </div>
 
-                    <!-- Avatar Visual -->
-                    <div class="relative mb-3 sm:mb-8 mt-2 sm:mt-6">
-                        <div class="absolute inset-0 rounded-full blur-xl sm:blur-2xl opacity-20 transition-opacity group-hover:opacity-40"
-                            :class="idx === 0 ? 'bg-primary scale-125' : 'bg-muted-foreground'"
+                    <!-- Left Side: Avatar with Tech Frame -->
+                    <div class="relative group-hover:scale-105 transition-transform duration-500 shrink-0 ml-4 sm:ml-8">
+                        <!-- Frame Accents -->
+                        <div class="absolute -inset-2 border-t-2 border-l-2 border-primary/20 rounded-tl-xl transition-all group-hover:-inset-1 group-hover:border-primary"></div>
+                        <div class="absolute -inset-2 border-b-2 border-r-2 border-primary/20 rounded-br-xl transition-all group-hover:-inset-1 group-hover:border-primary"></div>
+                        
+                        <div class="absolute inset-0 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-50"
+                            :class="idx === 0 ? 'bg-primary' : 'bg-muted-foreground'"
                         ></div>
                         
-                        <Link :href="`/u/${user.id}`" class="block relative w-14 h-14 sm:w-28 sm:h-28 rounded-2xl sm:rounded-[2rem] border-2 p-0.5 sm:p-1 transition-all duration-500 group-hover:scale-105 group-hover:rounded-full"
-                            :class="idx === 0 ? 'border-primary shadow-lg shadow-primary/20' : 'border-border/50'"
+                        <Link :href="`/u/${user.id}`" class="block relative w-16 h-16 sm:w-24 sm:h-24 rounded-xl border-2 p-1 transition-all duration-700 group-hover:rounded-lg overflow-hidden"
+                            :class="idx === 0 ? 'border-primary shadow-xl shadow-primary/20 bg-primary/5' : 'border-border/50 bg-muted/20'"
                         >
-                            <div class="w-full h-full rounded-[0.9rem] sm:rounded-[1.8rem] bg-muted/30 flex items-center justify-center overflow-hidden transition-all duration-500 group-hover:rounded-full">
-                                <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover" />
-                                <User v-else class="w-6 h-6 sm:w-12 sm:h-12 text-muted-foreground/40" />
+                            <div class="w-full h-full rounded-lg bg-muted/40 flex items-center justify-center overflow-hidden transition-all duration-700">
+                                <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                <User v-else class="w-8 h-8 sm:w-12 sm:h-12 text-muted-foreground/40" />
                             </div>
                         </Link>
 
-                        <!-- Icon Overlay -->
-                        <div v-if="idx === 0" class="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 p-1 sm:p-2 bg-primary rounded-lg sm:rounded-xl shadow-xl shadow-primary/40 animate-bounce-slow z-30">
-                            <Crown class="w-3 h-3 sm:w-5 h-5 text-primary-foreground" />
+                        <!-- Icon Overlay (Tech Style) -->
+                        <div v-if="idx === 0" class="absolute -bottom-2 -right-2 p-1.5 sm:p-2 bg-primary rounded-lg shadow-xl shadow-primary/40 animate-bounce-slow z-30 border border-white/20">
+                            <Cpu class="w-3 h-3 sm:w-5 sm:h-5 text-primary-foreground" />
                         </div>
                     </div>
 
-                    <div class="space-y-0.5 sm:space-y-1.5 mb-3 sm:mb-8 w-full relative z-10">
-                        <h3 class="font-black text-[10px] sm:text-lg truncate w-full px-1 sm:px-4 leading-tight">
+                    <!-- Middle: Identity & XP -->
+                    <div class="flex-1 text-center sm:text-left space-y-2 z-10">
+                        <div class="flex items-center justify-center sm:justify-start gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <Terminal class="w-3 h-3 text-primary" />
+                            <span class="text-[8px] sm:text-[10px] font-mono font-black uppercase tracking-widest">RANK_{{ idx + 1 }}_WARRIOR</span>
+                        </div>
+                        
+                        <h3 class="font-black text-lg sm:text-3xl truncate leading-tight tracking-tighter">
                             <Link :href="`/u/${user.id}`" class="hover:text-primary transition-colors">{{ user.name }}</Link>
                         </h3>
                         
-                        <div class="flex flex-col items-center gap-0 sm:gap-1">
-                            <div class="flex items-center gap-1 leading-none">
-                                <span class="text-[10px] sm:text-xl font-black text-foreground tabular-nums">{{ getAnimXP(idx).value.toLocaleString() }}</span>
-                                <span class="text-[7px] sm:text-[10px] font-bold text-primary uppercase tracking-widest">XP</span>
+                        <div class="flex items-center justify-center sm:justify-start gap-3">
+                            <div class="flex items-baseline gap-2 leading-none">
+                                <span class="text-xl sm:text-4xl font-mono font-black text-foreground tabular-nums tracking-tighter">{{ getAnimXP(idx).value.toLocaleString() }}</span>
+                                <span class="text-[10px] sm:text-sm font-mono font-bold text-primary uppercase">XP</span>
                             </div>
-                            
-                            <div class="px-1.5 sm:px-2 py-0 sm:py-0.5 rounded-full bg-muted/50 border border-border/40 text-[6px] sm:text-[8px] font-black uppercase tracking-widest text-muted-foreground">
-                                {{ activeSeasonName || 'Season 1' }}
+                            <div class="px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-[8px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] text-primary/70">
+                                {{ activeSeasonName || 'SEASON_01' }}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Enhanced Stats Section -->
-                    <div class="w-full space-y-2 sm:space-y-4 border-t border-border/10 sm:border-border/20 pt-2 sm:pt-6 mt-auto relative z-10">
+                    <!-- Right Side: Stats Panel -->
+                    <div class="w-full sm:w-64 space-y-4 sm:border-l sm:border-primary/10 sm:pl-8 z-10">
                         <!-- Completion Progress -->
-                        <div class="space-y-0.5 sm:space-y-1.5">
-                            <div class="flex justify-between items-end px-0.5">
-                                <p class="text-[6px] sm:text-[8px] font-black uppercase text-muted-foreground tracking-widest">Completion</p>
-                                <p class="text-[7px] sm:text-[10px] font-black text-foreground">{{ user.completionRate }}%</p>
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-end">
+                                <p class="text-[8px] sm:text-[10px] font-mono font-black uppercase text-muted-foreground tracking-tighter">SYNC_RATE</p>
+                                <p class="text-[10px] sm:text-sm font-mono font-black text-primary">{{ user.completionRate }}%</p>
                             </div>
-                            <div class="h-1 sm:h-2 w-full bg-muted/30 rounded-full overflow-hidden p-0.5 border border-border/10">
-                                <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
+                            <div class="h-2 sm:h-3 w-full bg-muted/20 rounded-sm overflow-hidden p-0.5 border border-primary/10 relative">
+                                <div class="h-full bg-primary rounded-sm transition-all duration-1500 ease-out relative"
                                     :style="{ width: `${user.completionRate}%` }"
                                 >
-                                    <div class="w-full h-full bg-white/20 animate-pulse"></div>
+                                    <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
+                                    <div class="absolute right-0 top-0 h-full w-1 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Streak Indicator -->
-                        <div class="flex items-center justify-between px-0.5">
-                            <p class="text-[6px] sm:text-[8px] font-black uppercase text-muted-foreground tracking-widest">Streak</p>
-                            <div class="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-2 py-0.5 rounded sm:rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
-                                <Flame class="w-2 h-2 sm:w-3.5 h-3.5 fill-current" />
-                                <span class="text-[8px] sm:text-xs font-black">{{ user.streak }}d</span>
+                        <div class="flex items-center justify-between">
+                            <p class="text-[8px] sm:text-[10px] font-mono font-black uppercase text-muted-foreground tracking-tighter">STREAK</p>
+                            <div class="flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.1)] group-hover:shadow-amber-500/20 transition-shadow">
+                                <Flame class="w-3 h-3 sm:w-5 h-5 fill-current animate-pulse" />
+                                <span class="text-xs sm:text-lg font-mono font-black">{{ user.streak }}D</span>
                             </div>
                         </div>
                     </div>
@@ -403,6 +428,37 @@ const resetMagnetic = (e: MouseEvent) => {
 
 .animate-bounce-slow {
     animation: bounce-slow 3s infinite ease-in-out;
+}
+
+.tech-badge {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 70% 100%, 0% 100%);
+}
+
+.tech-badge-left {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 30% 100%, 0% 70%);
+}
+
+@keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(500%); }
+}
+
+@keyframes scan-horizontal {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(1000%); }
+}
+
+@keyframes scan-fast {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+}
+
+.animate-scan {
+    animation: scan 4s linear infinite;
+}
+
+.animate-scan-fast {
+    animation: scan-fast 1.5s linear infinite;
 }
 
 @keyframes bounce-slow {
