@@ -133,9 +133,12 @@ class ExamTemplateService
                 if (in_array($type, ['multiple_choice', 'true_false'])) {
                     $choices = array_filter(array_map('trim', explode('|', $choicesStr)));
                     foreach ($choices as $choiceText) {
+                        // Case-insensitive comparison for correct answer
+                        $isCorrect = strcasecmp(trim($choiceText), trim($correctInput)) === 0;
+                        
                         $questionData['options'][] = [
                             'text' => $choiceText,
-                            'is_correct' => trim($choiceText) === trim($correctInput)
+                            'is_correct' => $isCorrect
                         ];
                     }
                 } elseif ($type === 'identification') {
