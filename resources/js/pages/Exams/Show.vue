@@ -75,6 +75,10 @@ const estimatedFinishMinutes = ref<number | null>(null);
 const lastSavedAt = ref<string | null>(null);
 const pendingUnlockIndex = ref<number | null>(null);
 
+const showUnansweredWarning = ref(false);
+const unansweredWarningRef = ref<HTMLElement | null>(null);
+const unansweredCount = ref(0);
+
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
 );
@@ -582,11 +586,24 @@ const goBackToList = () => {
 const submitPart = async () => {
     if (!selectedPart.value) return;
 
-    // Smart Review Nudge
-    const unansweredCount = (selectedPart.value.questions?.length ?? 0) - Object.keys(answers).length;
-    if (unansweredCount > 0 && !isSubmitting.value) {
-        const confirmResult = confirm(`You have ${unansweredCount} unanswered questions in this section. Are you sure you want to proceed to the next part?`);
-        if (!confirmResult) return;
+    // Smart Review Nudge - using custom modal to prevent fullscreen exit
+    const unanswered = (selectedPart.value.questions?.length ?? 0) - Object.keys(answers).length;
+    if (unanswered > 0 && !isSubmitting.value) {
+        unansweredCount.value = unanswered;
+        showUnansweredWarning.value = true;
+        
+        // Animate the warning modal
+        setTimeout(() => {
+            if (unansweredWarningRef.value) {
+                gsap.fromTo(
+                    unansweredWarningRef.value,
+                    { opacity: 0, scale: 0.9, y: 20 },
+                    { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: 'back.out' }
+                );
+            }
+        }, 10);
+        
+        return; // Wait for user interaction with custom modal
     }
 
     isSubmitting.value = true;
@@ -669,6 +686,115 @@ const submitPart = async () => {
                         }
 
                         // Bounce animation for checkmark
+                        gsap.fromTo(
+                            '.success-checkmark',
+                            { scale: 0, rotate: -180 },
+                            { scale: 1, rotate: 0, duration: 0.8, delay: 0.2, ease: 'elastic.out(1.2, 0.4)' }
+                        );
+                    }
+                }, 10);
+
+            },
+        });
+    } finally {
+        isSubmitting.value = false;
+    }
+};
+
+const closeUnansweredWarning = (proceed: boolean) => {
+    if (unansweredWarningRef.value) {
+        gsap.to(unansweredWarningRef.value, {
+            opacity: 0,
+            scale: 0.9,
+            y: 20,
+            duration: 0.3,
+            ease: 'power2.in',
+            onComplete: () => {
+                showUnansweredWarning.value = false;
+                if (proceed) {
+                    isSubmitting.value = true;
+                    submitPartFinal();
+                }
+            }
+        });
+    } else {
+        showUnansweredWarning.value = false;
+        if (proceed) {
+            isSubmitting.value = true;
+            submitPartFinal();
+        }
+    }
+};
+
+const submitPartFinal = async () => {
+    try {
+        const detailedAnswers = (selectedPart.value?.questions || []).map((question, index) => ({
+            question_number: index + 1,
+            question_text: question.text,
+            question_type: question.type,
+            points: question.points ?? selectedPart.value?.points ?? 1,
+            answer: (answers[index] !== undefined && answers[index] !== null) ? answers[index] : null,
+        }));
+
+        router.post(`/exams/${props.exam.id}/parts/${selectedPart.value.id}/submit`, {
+            answers: detailedAnswers,
+        }, {
+            onSuccess: () => {
+                clearDraft();
+                
+                if (remainingPartsCount.value === 0) {
+                    examStarted.value = false;
+                    
+                    if (document.fullscreenElement) {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen();
+                        } else if ((document as any).webkitExitFullscreen) {
+                            (document as any).webkitExitFullscreen();
+                        } else if ((document as any).msExitFullscreen) {
+                            (document as any).msExitFullscreen();
+                        }
+                    }
+                    isFullscreen.value = false;
+                }
+
+                showSuccessModal.value = true;
+                partsPendingCount.value = remainingPartsCount.value;
+
+                setTimeout(() => {
+                    if (successModalRef.value) {
+                        gsap.fromTo(
+                            successModalRef.value,
+                            { opacity: 0, scale: 0.85, y: 30 },
+                            { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
+                        );
+
+                        if (partsPendingCount.value === 0) {
+                            isCalculatingScore.value = true;
+                            displayedScore.value = 0;
+                            
+                            setTimeout(() => {
+                                isCalculatingScore.value = false;
+                                const targetScore = Number(totalScore.value) || 0;
+                                
+                                gsap.to(displayedScore, {
+                                    value: targetScore,
+                                    duration: 1.2,
+                                    ease: 'none',
+                                    onUpdate: () => {
+                                        displayedScore.value = Math.floor(displayedScore.value);
+                                    },
+                                    onComplete: () => {
+                                        displayedScore.value = targetScore;
+                                    }
+                                });
+
+                                gsap.fromTo('.final-score-box',
+                                    { scale: 0.8, opacity: 0, y: 20 },
+                                    { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
+                                );
+                            }, 3000);
+                        }
+
                         gsap.fromTo(
                             '.success-checkmark',
                             { scale: 0, rotate: -180 },
@@ -1118,7 +1244,7 @@ const feedbackContent = computed(() => {
                                     <div class="space-y-2 flex-1">
                                         <h4 class="text-[11px] font-black text-primary uppercase tracking-[0.4em] flex items-center gap-3">
                                             <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                                            Mission Briefing
+                                            Exam Briefing
                                             <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                                         </h4>
                                         <p class="text-base md:text-lg font-black text-foreground leading-relaxed uppercase tracking-tight">
@@ -1338,6 +1464,52 @@ const feedbackContent = computed(() => {
                 </template>
 
             </div>
+
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <!--  UNANSWERED WARNING MODAL                                -->
+            <!-- ═══════════════════════════════════════════════════════ -->
+            <transition name="modal-fade">
+                <div v-if="showUnansweredWarning" class="fixed inset-0 bg-amber-950/60 backdrop-blur-md z-[150] flex items-center justify-center p-4">
+                    <div ref="unansweredWarningRef"
+                        class="relative max-w-md w-full rounded-none border-2 border-amber-500/50 bg-card p-6 md:p-10 shadow-[0_0_50px_rgba(245,158,11,0.3)] overflow-hidden">
+
+                        <!-- Futuristic Corner Accents -->
+                        <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-amber-500"></div>
+                        <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-amber-500"></div>
+                        <div class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-amber-500"></div>
+                        <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-amber-500"></div>
+
+                        <div class="relative z-10 flex flex-col items-center gap-6 text-center">
+                            <div class="relative w-16 h-16 flex items-center justify-center border-2 border-amber-500/50 rotate-45">
+                                <AlertCircle class="w-8 h-8 text-amber-500 -rotate-45" />
+                            </div>
+
+                            <div class="space-y-3">
+                                <h3 class="text-xl md:text-3xl font-black text-foreground tracking-tighter uppercase italic">Unanswered Questions</h3>
+                                <div class="h-0.5 w-16 bg-amber-500 mx-auto"></div>
+                                <p class="text-muted-foreground text-xs md:text-sm font-bold leading-relaxed max-w-sm mx-auto uppercase tracking-wider">
+                                    You have <span class="text-amber-500 font-black text-lg">{{ unansweredCount }}</span> unanswered question{{ unansweredCount > 1 ? 's' : '' }} in this section.
+                                </p>
+                                <p class="text-[10px] text-muted-foreground/70 font-medium italic">
+                                    You may proceed, but these will be marked as incorrect.
+                                </p>
+                            </div>
+
+                            <div class="flex flex-col w-full gap-3 mt-4">
+                                <button @click="closeUnansweredWarning(true)"
+                                    class="w-full px-6 py-4 bg-amber-500 text-black font-black hover:bg-amber-400 transition-all flex items-center justify-center gap-4 group/btn uppercase tracking-[0.2em] text-xs skew-x-[-12deg]">
+                                    <span class="skew-x-[12deg]">Proceed Anyway</span>
+                                    <ArrowRight class="w-5 h-5 group-hover/btn:translate-x-2 transition-transform skew-x-[12deg]" />
+                                </button>
+                                <button @click="closeUnansweredWarning(false)"
+                                    class="w-full py-3 text-muted-foreground font-black hover:text-foreground transition-colors text-[10px] uppercase tracking-[0.3em]">
+                                    Return to Questions
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
 
             <!-- ═══════════════════════════════════════════════════════ -->
             <!--  START CONFIRMATION MODAL                               -->
