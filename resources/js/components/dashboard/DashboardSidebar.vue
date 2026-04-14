@@ -33,22 +33,30 @@ const emit = defineEmits(['quick-action']);
 
 <template>
     <div class="space-y-4">
-        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-primary/5 to-transparent backdrop-blur-xl">
-            <CardHeader class="pb-2">
-                <CardTitle class="text-sm font-bold">Quick Actions</CardTitle>
+        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-primary/10 via-transparent to-transparent backdrop-blur-xl relative overflow-hidden group/actions">
+            <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl group-hover/actions:scale-150 transition-transform duration-1000"></div>
+            <CardHeader class="pb-3">
+                <CardTitle class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center justify-between">
+                    Quick Actions
+                    <div class="w-1 h-1 rounded-full bg-primary animate-pulse"></div>
+                </CardTitle>
             </CardHeader>
             <CardContent class="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" class="flex items-center gap-2 justify-start h-10 glass-morphism border-none" @click="emit('quick-action', 'resume')">
-                    <span class="text-xs">Resume</span>
+                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'resume')">
+                    <RefreshCw class="w-4 h-4 text-primary group-hover/btn:rotate-180 transition-transform duration-500" />
+                    <span class="text-[9px] font-black uppercase tracking-widest">Resume</span>
                 </Button>
-                <Button variant="outline" size="sm" class="flex items-center gap-2 justify-start h-10 glass-morphism border-none" @click="emit('quick-action', 'assignments')">
-                    <span class="text-xs">Tasks</span>
+                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'assignments')">
+                    <BookOpen class="w-4 h-4 text-primary group-hover/btn:scale-110 transition-transform" />
+                    <span class="text-[9px] font-black uppercase tracking-widest">Tasks</span>
                 </Button>
-                <Button variant="outline" size="sm" class="flex items-center gap-2 justify-start h-10 glass-morphism border-none" @click="emit('quick-action', 'leaderboard')">
-                    <span class="text-xs">Ranks</span>
+                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'leaderboard')">
+                    <Trophy class="w-4 h-4 text-primary group-hover/btn:-translate-y-1 transition-transform" />
+                    <span class="text-[9px] font-black uppercase tracking-widest">Ranks</span>
                 </Button>
-                <Button variant="outline" size="sm" class="flex items-center gap-2 justify-start h-10 glass-morphism border-none" @click="emit('quick-action', 'settings')">
-                    <span class="text-xs">Profile</span>
+                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'settings')">
+                    <Sparkles class="w-4 h-4 text-primary group-hover/btn:rotate-12 transition-transform" />
+                    <span class="text-[9px] font-black uppercase tracking-widest">Profile</span>
                 </Button>
             </CardContent>
         </Card>

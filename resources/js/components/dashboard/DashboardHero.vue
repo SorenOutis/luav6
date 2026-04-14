@@ -110,6 +110,10 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
                     </div>
 
                     <div class="space-y-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest border border-emerald-500/20">Active Session</span>
+                            <span class="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest">{{ new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) }}</span>
+                        </div>
                         <h1 class="text-3xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
                             {{ timeBasedGreeting }}, {{ userName }}
                         </h1>
@@ -120,56 +124,69 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
                 </div>
 
                 <!-- Level & Progress Visual -->
-                <div class="flex items-center gap-6">
-                    <div class="relative shrink-0 p-4 group/level">
+                <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 bg-primary/5 p-5 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-primary/10 backdrop-blur-sm relative group/progress-box w-full lg:w-auto">
+                    <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover/progress-box:opacity-100 transition-opacity duration-700 rounded-[2rem] sm:rounded-[2.5rem]"></div>
+                    
+                    <div class="relative shrink-0 p-2 group/level">
                         <!-- Orbiting Glow Bloom -->
                         <div class="absolute inset-0 bg-primary/20 rounded-full blur-[30px] opacity-0 group-hover/level:opacity-100 transition-opacity duration-700 scale-50 group-hover/level:scale-110"></div>
                         
                         <!-- Futuristic Orbital System -->
                         <div class="absolute inset-0">
                             <!-- Outer Tech Ring -->
-                            <div class="absolute inset-2 border border-dashed border-primary/20 rounded-full animate-[spin_20s_linear_infinite]"></div>
+                            <div class="absolute inset-0 border border-dashed border-primary/30 rounded-full animate-[spin_20s_linear_infinite]"></div>
                             <!-- Middle Pulse Ring -->
-                            <div class="absolute inset-4 border border-primary/10 rounded-full animate-[pulse_4s_ease-in-out_infinite]"></div>
-                            <!-- Inner Data Ring -->
-                            <div class="absolute inset-0 border-2 border-dotted border-primary/10 rounded-full animate-[spin-reverse_15s_linear_infinite]"></div>
+                            <div class="absolute inset-2 border border-primary/20 rounded-full animate-[pulse_4s_ease-in-out_infinite]"></div>
                         </div>
                         
                         <!-- Core Level Chip -->
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border border-primary/20 bg-card/40 flex flex-col items-center justify-center shadow-[0_0_50px_-12px_rgba(var(--primary),0.2)] relative z-10 backdrop-blur-2xl group-hover:border-primary/40 transition-colors duration-500">
-                            <div class="absolute inset-0 rounded-full bg-gradient-to-b from-primary/5 to-transparent"></div>
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/30 bg-card/60 flex flex-col items-center justify-center shadow-[0_0_50px_-12px_rgba(var(--primary),0.3)] relative z-10 backdrop-blur-2xl group-hover:border-primary/60 transition-all duration-500 group-hover:scale-105">
+                            <div class="absolute inset-0 rounded-full bg-gradient-to-b from-primary/10 to-transparent"></div>
                             <span class="text-[8px] uppercase font-black tracking-[0.2em] text-primary/60 mb-0.5">Level</span>
                             <span class="text-xl sm:text-2xl font-black font-mono tracking-tighter leading-none premium-gradient-text">{{ animatedLevel }}</span>
                             <div class="mt-1 flex items-center justify-center relative">
-                                <div class="absolute inset-0 blur-lg bg-primary/20 rounded-full animate-pulse"></div>
+                                <div class="absolute inset-0 blur-lg bg-primary/30 rounded-full animate-pulse"></div>
                                 <Award class="w-3 h-3 text-primary relative z-10" />
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex-1 md:w-64 space-y-3">
-                        <div class="flex justify-between items-end">
-                            <div class="space-y-0.5">
-                                <p class="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Energy Levels</p>
-                                <p class="text-xs font-bold">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground font-medium">/ {{ maxXPForLevel.toLocaleString() }} XP</span></p>
+                    <div class="flex-1 w-full sm:w-64 lg:w-72 space-y-3 sm:space-y-4 relative z-10">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 sm:gap-0">
+                            <div class="space-y-1 w-full sm:w-auto">
+                                <div class="flex items-center flex-wrap gap-2">
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-primary">Neural Progress</p>
+                                    <span class="hidden sm:block w-1 h-1 rounded-full bg-primary/40"></span>
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{{ (maxXPForLevel - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
+                                </div>
+                                <p class="text-[11px] sm:text-xs font-black tracking-tight">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ maxXPForLevel.toLocaleString() }} XP</span></p>
                             </div>
-                            <div class="flex items-center gap-1 text-[10px] font-bold text-primary">
-                                <Zap class="w-3 h-3 fill-current" />
+                            <div class="flex items-center gap-1.5 text-xs sm:text-sm font-black text-primary self-end sm:self-auto">
+                                <Zap class="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current animate-pulse" />
                                 <span>{{ Math.round(xpPercentage) }}%</span>
                             </div>
                         </div>
                         
-                        <div class="relative h-3 w-full bg-muted/30 rounded-full overflow-hidden border border-border/20">
-                            <!-- Inner Glow -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"></div>
-                            
-                            <div class="h-full bg-primary transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.5)]" 
+                        <div class="relative h-3 sm:h-4 w-full bg-muted/40 rounded-full p-0.5 sm:p-1 border border-border/20 shadow-inner">
+                            <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_20px_rgba(var(--primary),0.4)]" 
                                 :style="{ width: `${xpPercentage}%` }">
                                 <!-- Ghost Shimmer -->
-                                <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-[shimmer_3s_infinite]"></div>
-                                <!-- Pulsing tip -->
-                                <div class="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/30 animate-pulse"></div>
+                                <div class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_3s_infinite]"></div>
                             </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4">
+                            <div class="flex items-center gap-3 sm:gap-4 overflow-hidden">
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <div class="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-primary"></div>
+                                    <span class="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Core</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <div class="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-primary/30"></div>
+                                    <span class="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-muted-foreground/60">Sub</span>
+                                </div>
+                            </div>
+                            <span class="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-primary animate-pulse whitespace-nowrap">Synchronizing...</span>
                         </div>
                     </div>
                 </div>
