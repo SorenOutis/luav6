@@ -1435,7 +1435,7 @@ const hideSidebar = computed(() => isExamInProgress.value);
                             </div>
 
                             <div class="space-y-3">
-                                <h3 class="text-3xl md:text-4xl font-black text-foreground tracking-tighter uppercase italic">Mission Complete</h3>
+                                <h3 class="text-3xl md:text-4xl font-black text-foreground tracking-tighter uppercase italic">Exam Complete</h3>
                                 <div class="flex items-center justify-center gap-3">
                                     <div class="h-px w-8 bg-primary"></div>
                                     <span class="text-[9px] font-black text-primary uppercase tracking-[0.4em]">Data Synchronized</span>
