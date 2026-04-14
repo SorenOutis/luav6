@@ -76,9 +76,22 @@ class ExamTemplateService
     {
         $rows = [];
         if (($handle = fopen($csvPath, 'r')) !== FALSE) {
+            // Check for BOM and skip it if present
+            $bom = fread($handle, 3);
+            if ($bom !== "\xEF\xBB\xBF") {
+                rewind($handle);
+            }
+
             $header = fgetcsv($handle);
+            if ($header) {
+                // Ensure header is UTF-8
+                $header = array_map(fn($h) => $this->ensureUtf8($h), $header);
+            }
+
             while (($data = fgetcsv($handle)) !== FALSE) {
                 if (count($header) === count($data)) {
+                    // Ensure data is UTF-8
+                    $data = array_map(fn($d) => $this->ensureUtf8($d), $data);
                     $rows[] = array_combine($header, $data);
                 }
             }
@@ -143,5 +156,23 @@ class ExamTemplateService
                 ]);
             }
         });
+    }
+
+    /**
+     * Ensure string is valid UTF-8, converting from other encodings if necessary.
+     */
+    private function ensureUtf8(?string $str): string
+    {
+        if ($str === null || $str === '') {
+            return '';
+        }
+
+        // Check if it's already valid UTF-8
+        if (mb_check_encoding($str, 'UTF-8')) {
+            return $str;
+        }
+
+        // Try to convert from Windows-1252 (very common in Excel CSVs) to UTF-8
+        return mb_convert_encoding($str, 'UTF-8', 'Windows-1252');
     }
 }
