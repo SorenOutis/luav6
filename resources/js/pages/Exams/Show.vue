@@ -77,7 +77,12 @@ const pendingUnlockIndex = ref<number | null>(null);
 
 const showUnansweredWarning = ref(false);
 const unansweredWarningRef = ref<HTMLElement | null>(null);
-const unansweredCount = ref(0);
+const hasShownUnansweredWarning = ref(false);
+
+const unansweredCount = computed(() => {
+    if (!selectedPart.value || !selectedPart.value.questions) return 0;
+    return selectedPart.value.questions.length - Object.keys(answers).length;
+});
 
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0)
@@ -587,10 +592,10 @@ const submitPart = async () => {
     if (!selectedPart.value) return;
 
     // Smart Review Nudge - using custom modal to prevent fullscreen exit
-    const unanswered = (selectedPart.value.questions?.length ?? 0) - Object.keys(answers).length;
-    if (unanswered > 0 && !isSubmitting.value) {
-        unansweredCount.value = unanswered;
+    // Use computed unansweredCount which dynamically updates
+    if (unansweredCount.value > 0 && !isSubmitting.value && !hasShownUnansweredWarning.value) {
         showUnansweredWarning.value = true;
+        hasShownUnansweredWarning.value = true;
         
         // Animate the warning modal
         setTimeout(() => {
@@ -711,6 +716,7 @@ const closeUnansweredWarning = (proceed: boolean) => {
             ease: 'power2.in',
             onComplete: () => {
                 showUnansweredWarning.value = false;
+                hasShownUnansweredWarning.value = false; // Reset so it can show again with updated count
                 if (proceed) {
                     isSubmitting.value = true;
                     submitPartFinal();
@@ -719,6 +725,7 @@ const closeUnansweredWarning = (proceed: boolean) => {
         });
     } else {
         showUnansweredWarning.value = false;
+        hasShownUnansweredWarning.value = false; // Reset so it can show again with updated count
         if (proceed) {
             isSubmitting.value = true;
             submitPartFinal();
@@ -1689,7 +1696,7 @@ const feedbackContent = computed(() => {
 
                             <button @click="closeSuccessModal" :disabled="isCalculatingScore"
                                 class="w-full px-8 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs skew-x-[-12deg] shadow-[0_15px_30px_rgba(var(--primary),0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
-                                <span class="skew-x-[12deg]">{{ isCalculatingScore ? 'Calculating...' : (partsPendingCount > 0 ? 'Next Deployment' : 'Return to Base') }}</span>
+                                <span class="skew-x-[12deg]">{{ isCalculatingScore ? 'Calculating...' : (partsPendingCount > 0 ? 'Next Deployment' : 'Return to Page') }}</span>
                                 <ChevronRight v-if="!isCalculatingScore" class="w-5 h-5 skew-x-[12deg]" />
                                 <div v-else class="w-5 h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin skew-x-[12deg]"></div>
                             </button>
