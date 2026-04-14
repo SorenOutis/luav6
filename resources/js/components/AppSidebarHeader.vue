@@ -15,47 +15,7 @@ withDefaults(
     },
 );
 
-const { appearance, updateAppearance } = useAppearance();
-
-const toggleTheme = (event: MouseEvent) => {
-    const newTheme = appearance.value === 'dark' ? 'light' : 'dark';
-    
-    if (!document.startViewTransition) {
-        updateAppearance(newTheme);
-        return;
-    }
-
-    const x = event.clientX;
-    const y = event.clientY;
-    const endRadius = Math.hypot(
-        Math.max(x, innerWidth - x),
-        Math.max(y, innerHeight - y)
-    );
-
-    const transition = document.startViewTransition(() => {
-        updateAppearance(newTheme);
-    });
-
-    transition.ready.then(() => {
-        const clipPath = [
-            `circle(0px at ${x}px ${y}px)`,
-            `circle(${endRadius}px at ${x}px ${y}px)`,
-        ];
-        
-        document.documentElement.animate(
-            {
-                clipPath: newTheme === 'dark' ? [...clipPath].reverse() : clipPath,
-            },
-            {
-                duration: 500,
-                easing: 'ease-in-out',
-                pseudoElement: newTheme === 'dark'
-                    ? '::view-transition-old(root)'
-                    : '::view-transition-new(root)',
-            }
-        );
-    });
-};
+const { appearance, toggleTheme } = useAppearance();
 
 const currentTime = ref('');
 const currentDate = ref('');
