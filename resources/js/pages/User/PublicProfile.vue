@@ -28,7 +28,7 @@ const props = defineProps<{
         name: string;
         avatar: string | null;
         cover_photo: string | null;
-        section: string | null;
+        sections: string[];
         streak: number;
         joinedAt: string;
         isCurrentUser: boolean;
@@ -92,9 +92,10 @@ const breadcrumbItems = [
                 <div class="space-y-6">
                     <div>
                         <h1 class="text-3xl md:text-4xl font-black tracking-tight">{{ profileUser.name }}</h1>
-                        <div class="flex flex-wrap items-center gap-3 mt-2">
+                        <div class="flex flex-wrap items-center gap-3 mt-3">
                             <span v-if="profileUser.isCurrentUser" class="px-2 py-0.5 rounded-md bg-muted text-xs font-bold text-muted-foreground uppercase tracking-widest border border-border/40">You</span>
-                            <span v-if="profileUser.section" class="px-3 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary uppercase tracking-widest border border-primary/20">{{ profileUser.section }}</span>
+                            <span v-for="section in profileUser.sections" :key="section" class="px-3 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary uppercase tracking-widest border border-primary/20">{{ section }}</span>
+                            <span v-if="profileUser.sections.length === 0" class="px-3 py-1 rounded-full bg-muted/50 text-xs font-bold text-muted-foreground uppercase tracking-widest border border-border/40">No Section</span>
                         </div>
                     </div>
 
