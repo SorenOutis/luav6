@@ -56,6 +56,7 @@ const container = ref<HTMLElement | null>(null);
 const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
+const isCalculatingScore = ref(false);
 const successModalRef = ref<HTMLElement | null>(null);
 
 const showStartModal = ref(false);
@@ -595,24 +596,29 @@ const submitPart = async () => {
 
                         // If all parts are done, animate the total score
                         if (partsPendingCount.value === 0) {
+                            isCalculatingScore.value = true;
                             displayedScore.value = 0;
-                            const targetScore = Number(totalScore.value) || 0;
                             
-                            gsap.to(displayedScore, {
-                                value: targetScore,
-                                duration: 2,
-                                ease: 'power4.out',
-                                delay: 0.6,
-                                onUpdate: () => {
-                                    displayedScore.value = Math.floor(displayedScore.value);
-                                }
-                            });
+                            // Simulate calculation delay
+                            setTimeout(() => {
+                                isCalculatingScore.value = false;
+                                const targetScore = Number(totalScore.value) || 0;
+                                
+                                gsap.to(displayedScore, {
+                                    value: targetScore,
+                                    duration: 2,
+                                    ease: 'power4.out',
+                                    onUpdate: () => {
+                                        displayedScore.value = Math.floor(displayedScore.value);
+                                    }
+                                });
 
-                            // Decorative pop for the score box
-                            gsap.fromTo('.final-score-box',
-                                { scale: 0.8, opacity: 0, y: 20 },
-                                { scale: 1, opacity: 1, y: 0, duration: 1.2, delay: 0.5, ease: 'elastic.out(1, 0.5)' }
-                            );
+                                // Decorative pop for the score box
+                                gsap.fromTo('.final-score-box',
+                                    { scale: 0.8, opacity: 0, y: 20 },
+                                    { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
+                                );
+                            }, 3000); // 3-second "calculation"
                         }
 
                         // Bounce animation for checkmark
@@ -1358,7 +1364,19 @@ onMounted(() => {
 
                             <!-- Final Score Reveal -->
                             <div v-else class="w-full pt-6 border-t border-border flex flex-col items-center gap-6">
-                                <div class="final-score-box flex flex-col items-center p-8 bg-muted/50 border border-border shadow-inner w-full relative group">
+                                <div v-if="isCalculatingScore" class="flex flex-col items-center gap-6 p-8 w-full">
+                                    <div class="relative w-16 h-16">
+                                        <div class="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+                                        <div class="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                        <Zap class="absolute inset-0 m-auto w-6 h-6 text-primary animate-pulse" />
+                                    </div>
+                                    <div class="space-y-2 text-center">
+                                        <p class="text-xs font-black text-primary uppercase tracking-[0.4em] animate-pulse">Calculating your score</p>
+                                        <p class="text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-60 italic">Excluding Manual Review Components</p>
+                                    </div>
+                                </div>
+
+                                <div v-else class="final-score-box flex flex-col items-center p-8 bg-muted/50 border border-border shadow-inner w-full relative group">
                                     <span class="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/50 mb-4 italic">Performance Analytics</span>
                                     
                                     <div class="flex items-baseline gap-3">
@@ -1379,10 +1397,11 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <button @click="closeSuccessModal"
-                                class="w-full px-8 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs skew-x-[-12deg] shadow-[0_15px_30px_rgba(var(--primary),0.3)]">
-                                <span class="skew-x-[12deg]">{{ partsPendingCount > 0 ? 'Next Deployment' : 'Return to Base' }}</span>
-                                <ChevronRight class="w-5 h-5 skew-x-[12deg]" />
+                            <button @click="closeSuccessModal" :disabled="isCalculatingScore"
+                                class="w-full px-8 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs skew-x-[-12deg] shadow-[0_15px_30px_rgba(var(--primary),0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
+                                <span class="skew-x-[12deg]">{{ isCalculatingScore ? 'Calculating...' : (partsPendingCount > 0 ? 'Next Deployment' : 'Return to Base') }}</span>
+                                <ChevronRight v-if="!isCalculatingScore" class="w-5 h-5 skew-x-[12deg]" />
+                                <div v-else class="w-5 h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin skew-x-[12deg]"></div>
                             </button>
                         </div>
                     </div>
