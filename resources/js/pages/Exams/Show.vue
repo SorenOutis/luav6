@@ -650,10 +650,13 @@ const submitPart = async () => {
                                 
                                 gsap.to(displayedScore, {
                                     value: targetScore,
-                                    duration: 2,
+                                    duration: 1.5,
                                     ease: 'power4.out',
                                     onUpdate: () => {
                                         displayedScore.value = Math.floor(displayedScore.value);
+                                    },
+                                    onComplete: () => {
+                                        displayedScore.value = targetScore;
                                     }
                                 });
 
@@ -747,6 +750,30 @@ const isExamInProgress = computed(() =>
 );
 
 const hideSidebar = computed(() => isExamInProgress.value);
+
+const scorePercentage = computed(() => {
+    if (totalPossiblePoints.value === 0) return 0;
+    return (totalScore.value / totalPossiblePoints.value) * 100;
+});
+
+const feedbackContent = computed(() => {
+    if (scorePercentage.value >= 75) {
+        return {
+            text: 'Excellence Achieved',
+            icon: Trophy,
+            color: 'text-primary',
+            border: 'border-primary/50',
+            bg: 'bg-primary/5'
+        };
+    }
+    return {
+        text: 'Keep Pushing Forward',
+        icon: Zap,
+        color: 'text-amber-500',
+        border: 'border-amber-500/50',
+        bg: 'bg-amber-500/5'
+    };
+});
 </script>
 
 <template>
@@ -1362,7 +1389,7 @@ const hideSidebar = computed(() => isExamInProgress.value);
                                 </button>
                                 <button @click="showStartModal = false"
                                     class="w-full py-2 text-muted-foreground font-black hover:text-foreground transition-colors text-[9px] uppercase tracking-[0.3em]">
-                                    Abort Mission
+                                    Abort
                                 </button>
                             </div>
                         </div>
@@ -1475,14 +1502,14 @@ const hideSidebar = computed(() => isExamInProgress.value);
                                         <span class="text-2xl font-black text-muted-foreground/30">/ {{ totalPossiblePoints }}</span>
                                     </div>
 
-                                    <div class="mt-6 flex flex-col items-center gap-3">
+                                    <div class="mt-6 flex flex-col items-center gap-3 w-full">
                                         <div v-if="isExamPendingReview" class="flex items-center gap-3 px-4 py-2 border border-amber-500/50 bg-amber-500/5">
                                             <Clock class="w-4 h-4 text-amber-500" />
                                             <span class="text-[10px] font-black text-amber-500 uppercase tracking-[0.2em]">Validation Pending</span>
                                         </div>
-                                        <div v-else class="flex items-center gap-3 px-4 py-2 border border-primary/50 bg-primary/5">
-                                            <Trophy class="w-4 h-4 text-primary" />
-                                            <span class="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Excellence Achieved</span>
+                                        <div v-else :class="['flex items-center gap-3 px-6 py-2 border w-full justify-center animate-in fade-in zoom-in duration-500', feedbackContent.border, feedbackContent.bg]">
+                                            <component :is="feedbackContent.icon" :class="['w-4 h-4', feedbackContent.color]" />
+                                            <span :class="['text-[11px] font-black uppercase tracking-[0.3em]', feedbackContent.color]">{{ feedbackContent.text }}</span>
                                         </div>
                                     </div>
                                 </div>
