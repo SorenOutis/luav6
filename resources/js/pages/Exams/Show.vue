@@ -385,28 +385,41 @@ const confirmStart = async () => {
 
 const reEnterFullscreen = async () => {
     const element = document.documentElement;
-    if (element.requestFullscreen) {
-        await element.requestFullscreen();
-    } else if ((element as any).webkitRequestFullscreen) {
-        await (element as any).webkitRequestFullscreen();
-    } else if ((element as any).msRequestFullscreen) {
-        await (element as any).msRequestFullscreen();
+    try {
+        if (element.requestFullscreen) {
+            await element.requestFullscreen();
+        } else if ((element as any).webkitRequestFullscreen) {
+            await (element as any).webkitRequestFullscreen();
+        } else if ((element as any).msRequestFullscreen) {
+            await (element as any).msRequestFullscreen();
+        }
+        
+        // Try to lock keyboard if supported (Chromium only, requires user gesture)
+        if ('keyboard' in navigator && (navigator as any).keyboard.lock) {
+            await (navigator as any).keyboard.lock(['Escape', 'F11', 'Tab']);
+        }
+        
+        isFullscreen.value = true;
+        showFullscreenLockout.value = false;
+    } catch (err) {
+        console.warn('Fullscreen/Keyboard lock failed:', err);
     }
-    isFullscreen.value = true;
-    showFullscreenLockout.value = false;
 };
 
 const handleFullscreenChange = () => {
     isFullscreen.value = !!document.fullscreenElement;
     
-    // If they exit full screen while the exam is in progress (any part started and not yet all finished)
-    const isExamInProgress = examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value);
-    
-    if (!isFullscreen.value && isExamInProgress) {
+    // If they exit full screen while the exam is in progress
+    if (!isFullscreen.value && isExamInProgress.value) {
         showFullscreenLockout.value = true;
         integrityWarnings.value++;
         showIntegrityAlert.value = true;
         
+        // Stop the keyboard lock if it was active
+        if ('keyboard' in navigator && (navigator as any).keyboard.unlock) {
+            (navigator as any).keyboard.unlock();
+        }
+
         // Animate lockout modal
         setTimeout(() => {
             if (lockoutModalRef.value) {
@@ -466,8 +479,33 @@ const startPart = () => {
 };
 
 const handleGlobalKeydown = (e: KeyboardEvent) => {
-    // Block Esc key during exam to prevent exiting full screen
-    if (e.key === 'Escape' && (examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value))) {
+    const isExamInProgress = examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value);
+
+    // Block Alt+Tab, Alt+Esc, and Alt+F4 during exam to prevent switching apps
+    if (isExamInProgress && e.key === 'Tab' && e.altKey) {
+        e.preventDefault();
+        return;
+    }
+
+    if (isExamInProgress && e.key === 'Escape' && e.altKey) {
+        e.preventDefault();
+        return;
+    }
+
+    // Block Alt key alone during exam
+    if (isExamInProgress && e.key === 'Alt') {
+        e.preventDefault();
+        return;
+    }
+
+    // Block ESC key during exam to prevent exiting full screen
+    if (isExamInProgress && e.key === 'Escape') {
+        e.preventDefault();
+        return;
+    }
+
+    // Block F5 and Ctrl+R during exam
+    if (isExamInProgress && (e.key === 'F5' || (e.key === 'r' && e.ctrlKey))) {
         e.preventDefault();
         return;
     }
@@ -698,13 +736,18 @@ onMounted(() => {
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
 });
+const isExamInProgress = computed(() => 
+    examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value)
+);
+
+const hideSidebar = computed(() => isExamInProgress.value);
 </script>
 
 <template>
 
     <Head :title="`${exam.title} — Exam`" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppLayout :breadcrumbs="breadcrumbs" :hide-sidebar="hideSidebar">
         <div ref="container" class="min-h-full flex flex-col gap-0 relative overflow-hidden bg-background">
             <!-- Ambient background decorations -->
             <div
@@ -1011,20 +1054,27 @@ onMounted(() => {
                             </div>
 
                             <!-- Part Instructions -->
-                            <div v-if="selectedPart!.instructions" class="p-5 bg-primary/5 border border-primary/10 rounded-none border-l-4 border-l-primary relative overflow-hidden group">
-                                <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                    <FileText class="w-20 h-20 text-primary" />
-                                </div>
-                                <div class="relative flex items-start gap-4">
-                                    <div class="w-10 h-10 rounded-none bg-primary/10 flex items-center justify-center border border-primary/20 flex-shrink-0">
-                                        <FileText class="w-5 h-5 text-primary" />
+                            <div v-if="selectedPart!.instructions" class="relative p-6 bg-gradient-to-br from-amber-500/10 via-primary/10 to-primary/5 border-2 border-primary/30 rounded-none shadow-[0_0_40px_rgba(var(--primary),0.15)] overflow-hidden">
+                                <!-- Animated gradient border effect -->
+                                <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(var(--primary),0.1),transparent)] animate-[shimmer_3s_linear_infinite] bg-[length:200%_100%] pointer-events-none"></div>
+                                
+                                <!-- Corner decorations -->
+                                <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary"></div>
+                                <div class="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-primary"></div>
+                                <div class="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-primary"></div>
+                                <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary"></div>
+                                
+                                <div class="relative flex items-start gap-5">
+                                    <div class="w-14 h-14 rounded-none bg-primary flex items-center justify-center border-2 border-primary shadow-[0_0_20px_rgba(var(--primary),0.4)] flex-shrink-0">
+                                        <FileText class="w-7 h-7 text-primary-foreground" />
                                     </div>
-                                    <div class="space-y-1.5">
-                                        <h4 class="text-[10px] font-black text-primary uppercase tracking-[0.3em] flex items-center gap-2">
-                                            Instructions
-                                            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                    <div class="space-y-2 flex-1">
+                                        <h4 class="text-[11px] font-black text-primary uppercase tracking-[0.4em] flex items-center gap-3">
+                                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                            Mission Briefing
+                                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                                         </h4>
-                                        <p class="text-sm text-muted-foreground font-bold leading-relaxed uppercase tracking-tight italic">
+                                        <p class="text-base md:text-lg font-black text-foreground leading-relaxed uppercase tracking-tight">
                                             {{ selectedPart!.instructions }}
                                         </p>
                                     </div>
@@ -1121,8 +1171,8 @@ onMounted(() => {
                             </div>
                         </div>
 
-                        <!-- Progress Navigator (Mini-Map) -->
-                        <div class="hidden lg:block sticky top-8 w-80 space-y-6">
+                        <!-- Progress Navigator (Mini-Map) - Only show when all parts are completed -->
+                        <div v-if="allPartsSubmitted" class="hidden lg:block sticky top-8 w-80 space-y-6">
                             <div class="p-8 rounded-none border border-primary/20 bg-card shadow-2xl relative overflow-hidden group">
                                 <!-- Background Glow -->
                                 <div class="absolute -top-20 -right-20 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-700"></div>
@@ -1205,8 +1255,8 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <!-- Mobile Bottom Bar Navigator (Small) -->
-                    <div class="lg:hidden fixed bottom-0 left-0 right-0 p-4 z-40">
+                    <!-- Mobile Bottom Bar Navigator (Small) - Only show when all parts are completed -->
+                    <div v-if="allPartsSubmitted" class="lg:hidden fixed bottom-0 left-0 right-0 p-4 z-40">
                          <div class="bg-black/80 backdrop-blur-2xl rounded-2xl border border-white/10 p-3 shadow-2xl flex items-center gap-3 overflow-x-auto no-scrollbar">
                             <div class="text-[9px] font-black uppercase text-muted-foreground vertical-writing rotate-180 mr-1">NAV</div>
                             <div v-for="(_, qIndex) in selectedPart!.questions" :key="qIndex"

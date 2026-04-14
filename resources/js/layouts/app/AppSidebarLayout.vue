@@ -8,20 +8,22 @@ import type { BreadcrumbItem } from '@/types';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
+    hideSidebar?: boolean;
 };
 
 withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
+    hideSidebar: false,
 });
 </script>
 
 <template>
     <AppShell variant="sidebar">
-        <AppSidebar />
-        <AppContent variant="sidebar" class="overflow-x-hidden pb-20 md:pb-0">
-            <AppSidebarHeader :breadcrumbs="breadcrumbs" />
+        <AppSidebar v-if="!hideSidebar" />
+        <AppContent variant="sidebar" :class="['overflow-x-hidden pb-20 md:pb-0', hideSidebar ? 'w-full ml-0' : '']">
+            <AppSidebarHeader v-if="!hideSidebar" :breadcrumbs="breadcrumbs" />
             <slot />
-            <MobileNav />
+            <MobileNav v-if="!hideSidebar" />
         </AppContent>
     </AppShell>
 </template>
