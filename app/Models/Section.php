@@ -28,4 +28,9 @@ class Section extends Model
     {
         return $this->hasMany(Exam::class);
     }
+
+    public function progress()
+    {
+        return $this->hasMany(SectionProgress::class);
+    }
 }

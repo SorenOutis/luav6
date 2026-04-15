@@ -67,6 +67,13 @@ class ExamSubmission extends Model
             $progress->increment('points', $delta);
             $progress->increment('exp', $delta);
         }
+
+        $exam = $submission->exam;
+        if ($exam && $exam->section_id) {
+            $sectionProgress = $user->activeSectionProgress($exam->section_id);
+            $sectionProgress->increment('points', $delta);
+            $sectionProgress->increment('exp', $delta);
+        }
     }
 
     public function user()

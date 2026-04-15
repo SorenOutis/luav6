@@ -108,18 +108,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $userSections = $user->sections()->get();
             
             foreach ($userSections as $section) {
-                $leaderboardProgress = \App\Models\SeasonProgress::with(['user:id,name,avatar,current_streak,created_at'])
-                    ->where('season_id', $currentSeason->id)
-                    ->whereHas('user', function($q) use ($section) {
-                        $q->where('is_admin', false)
-                          ->whereHas('sections', function($q) use ($section) {
-                              $q->where('sections.id', $section->id);
-                          });
-                    })
-                    ->orderByDesc('exp')
+                // Get all students in this section with their section-specific progress
+                $usersInSection = $section->users()
+                    ->where('is_admin', false)
+                    ->with(['sectionProgress' => function($q) use ($section) {
+                        $q->where('section_id', $section->id);
+                    }])
                     ->get();
 
-                $userIds = $leaderboardProgress->pluck('user_id')->unique();
+                $userIds = $usersInSection->pluck('id')->unique();
+
+                // Get current user's progress in this section for ranking
+                $currentUserSectionProgress = $user->activeSectionProgress($section->id);
+                $sectionExp = $currentUserSectionProgress?->exp ?? 0;
 
                 // Get total lessons sum for all users in one query
                 $totalLessonsMap = \Illuminate\Support\Facades\DB::table('course_user')
@@ -144,8 +145,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->groupBy('user_id')
                     ->pluck('total', 'user_id');
 
-                $leaderboardUsers = $leaderboardProgress->map(function ($progress) use ($totalLessonsMap, $completedLessonsMap, $weeklyXpMap) {
-                    $u = $progress->user;
+                $leaderboardUsers = $usersInSection->map(function ($u) use ($section, $totalLessonsMap, $completedLessonsMap, $weeklyXpMap) {
+                    $progress = $u->sectionProgress->first();
+                    $xp = $progress?->exp ?? 0;
+                    $level = $progress?->level ?? 1;
+
                     $totalLessons = $totalLessonsMap[$u->id] ?? 0;
                     $completedLessons = $completedLessonsMap[$u->id] ?? 0;
                     $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
@@ -155,8 +159,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                         'id' => $u->id,
                         'name' => $u->name,
                         'avatar' => $u->avatar,
-                        'xp' => $progress->exp,
-                        'level' => $progress->level,
+                        'xp' => (float) $xp,
+                        'level' => (int) $level,
                         'completionRate' => $completionRate,
                         'streak' => $u->current_streak,
                         'joinedAt' => $u->created_at->format('M Y'),
@@ -164,24 +168,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
                         'trend' => 'stable',
                         'isCurrentUser' => $u->id === auth()->id(),
                     ];
-                });
+                })->sortByDesc('xp')->values();
 
-                $userRank = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
-                    ->whereHas('user', function($q) use ($section) {
-                        $q->whereHas('sections', function($q) use ($section) {
-                            $q->where('sections.id', $section->id);
-                        });
+                $userRank = \App\Models\SectionProgress::where('section_id', $section->id)
+                    ->whereHas('user', function($q) {
+                        $q->where('is_admin', false);
                     })
-                    ->where('exp', '>', $seasonalExp)
+                    ->where('exp', '>', $sectionExp)
                     ->count() + 1;
                 
-                $totalPlayers = \App\Models\SeasonProgress::where('season_id', $currentSeason->id)
-                    ->whereHas('user', function($q) use ($section) {
-                        $q->whereHas('sections', function($q) use ($section) {
-                            $q->where('sections.id', $section->id);
-                        });
-                    })
-                    ->count();
+                $totalPlayers = $usersInSection->count();
 
                 $sectionLeaderboards[] = [
                     'sectionId' => $section->id,

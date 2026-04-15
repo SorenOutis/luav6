@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +11,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     /**
@@ -50,12 +51,26 @@ class User extends Authenticatable
     public function activeSeasonProgress()
     {
         $currentSeason = Season::current();
-        if (!$currentSeason)
+        if (! $currentSeason) {
             return null;
+        }
 
         return $this->seasonProgress()->firstOrCreate(
             ['season_id' => $currentSeason->id],
             ['exp' => 0, 'level' => 1, 'points' => 0]
+        );
+    }
+
+    public function sectionProgress()
+    {
+        return $this->hasMany(SectionProgress::class);
+    }
+
+    public function activeSectionProgress($sectionId)
+    {
+        return $this->sectionProgress()->firstOrCreate(
+            ['section_id' => $sectionId],
+            ['exp' => 0, 'points' => 0]
         );
     }
 
@@ -114,6 +129,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(Submission::class);
     }
+
     /**
      * Get the rewards associated with the user.
      */
@@ -121,6 +137,7 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Reward::class);
     }
+
     /**
      * Get the user's avatar URL.
      *
@@ -128,11 +145,11 @@ class User extends Authenticatable
      */
     public function getAvatarAttribute($value)
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
-        return asset('storage/' . $value);
+        return asset('storage/'.$value);
     }
 
     /**
@@ -150,11 +167,10 @@ class User extends Authenticatable
      */
     public function getCoverPhotoAttribute($value)
     {
-        if (!$value) {
+        if (! $value) {
             return null;
         }
 
-        return asset('storage/' . $value);
+        return asset('storage/'.$value);
     }
 }
-
