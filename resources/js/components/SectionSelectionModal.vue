@@ -81,32 +81,50 @@ const submit = () => {
                         Choose your sections
                     </label>
                     
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar p-1">
                         <button
                             v-for="section in sections"
                             :key="section.id"
                             @click="toggleSection(section.id)"
                             type="button"
                             :class="[
-                                'flex items-center justify-between w-full p-4 rounded-xl border transition-all duration-200 text-left group',
+                                'relative flex items-center justify-center min-h-[80px] p-6 rounded-2xl border transition-all duration-500 text-center overflow-hidden group/card',
                                 selectedSections.includes(section.id)
-                                    ? 'bg-primary/10 border-primary shadow-[0_0_15px_rgba(var(--primary),0.1)]'
+                                    ? 'bg-primary border-primary shadow-[0_0_25px_rgba(var(--primary-rgb),0.3)] scale-[1.02] z-10'
                                     : 'bg-muted/30 border-border/50 hover:border-primary/40 hover:bg-muted/50'
                             ]"
                         >
-                            <span :class="[
-                                'font-bold transition-colors',
-                                selectedSections.includes(section.id) ? 'text-primary' : 'text-foreground/70 group-hover:text-foreground'
-                            ]">
-                                {{ section.name }}
-                            </span>
-                            <div :class="[
-                                'w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all',
-                                selectedSections.includes(section.id)
-                                    ? 'bg-primary border-primary scale-110'
-                                    : 'border-muted-foreground/30'
-                            ]">
-                                <Check v-if="selectedSections.includes(section.id)" class="w-3.5 h-3.5 text-primary-foreground stroke-[4px]" />
+                            <!-- Tech Grid Background -->
+                            <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/card:opacity-[0.05] transition-opacity">
+                                <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                                    <defs>
+                                        <pattern :id="`modal-grid-${section.id}`" width="10" height="10" patternUnits="userSpaceOnUse">
+                                            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                        </pattern>
+                                    </defs>
+                                    <rect width="100%" height="100%" :fill="`url(#modal-grid-${section.id})`" />
+                                </svg>
+                            </div>
+
+                            <!-- Selection Glow (When Selected) -->
+                            <div v-if="selectedSections.includes(section.id)" class="absolute inset-0 bg-white/10 animate-pulse pointer-events-none"></div>
+
+                            <div class="relative z-10 space-y-1">
+                                <p class="text-[8px] font-black uppercase tracking-[0.3em] font-mono transition-colors"
+                                    :class="selectedSections.includes(section.id) ? 'text-primary-foreground/60' : 'text-muted-foreground/40 group-hover/card:text-primary/60'">
+                                    >_SECTION_NODE
+                                </p>
+                                <span :class="[
+                                    'text-sm font-black transition-all duration-300 uppercase tracking-tight block',
+                                    selectedSections.includes(section.id) ? 'text-primary-foreground scale-110' : 'text-foreground/70 group-hover/card:text-primary'
+                                ]">
+                                    {{ section.name }}
+                                </span>
+                            </div>
+
+                            <!-- Status Indicator -->
+                            <div v-if="selectedSections.includes(section.id)" class="absolute top-2 right-3">
+                                <div class="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-ping opacity-75"></div>
                             </div>
                         </button>
                     </div>
