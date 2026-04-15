@@ -281,10 +281,48 @@ const resetMagnetic = (e: MouseEvent) => {
                     </div>
 
                     <!-- Middle: Identity & XP -->
-                    <div class="flex-1 text-center sm:text-left space-y-2 z-10">
+                    <div class="flex-1 text-center sm:text-left space-y-2 z-10 relative group/middle">
+                        <!-- Tech Animation Centerpiece (New) -->
+                        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] opacity-[0.03] group-hover/middle:opacity-[0.08] transition-opacity duration-1000 pointer-events-none hidden sm:block overflow-hidden">
+                            <!-- Circuit Node Animation -->
+                            <svg viewBox="0 0 100 100" class="w-full h-full animate-spin-very-slow">
+                                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="0.2" stroke-dasharray="1 3" />
+                                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="10 5" class="animate-pulse" />
+                                <g class="text-primary">
+                                    <circle cx="50" cy="15" r="1.5" fill="currentColor" />
+                                    <circle cx="50" cy="85" r="1.5" fill="currentColor" />
+                                    <circle cx="15" cy="50" r="1.5" fill="currentColor" />
+                                    <circle cx="85" cy="50" r="1.5" fill="currentColor" />
+                                    <path d="M 50 15 L 50 35 M 50 65 L 50 85 M 15 50 L 35 50 M 65 50 L 85 50" stroke="currentColor" stroke-width="0.5" />
+                                </g>
+                                <!-- Rotating data rings -->
+                                <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" stroke-width="0.2" stroke-dasharray="2 10" class="animate-reverse-spin" />
+                            </svg>
+                            <!-- Pulsing data core -->
+                             <div class="absolute inset-0 flex items-center justify-center">
+                                 <div class="w-2 h-2 bg-primary rounded-full blur-[2px] animate-ping"></div>
+                                 <div class="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm animate-pulse"></div>
+                             </div>
+                         </div>
+
+                        <!-- Animated Data Stream (New) -->
+                        <div class="absolute inset-0 pointer-events-none hidden sm:block">
+                            <div v-for="n in 3" :key="n" 
+                                class="absolute h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent w-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
+                                :style="{ 
+                                    top: `${20 + n * 25}%`, 
+                                    animation: `scan-horizontal ${2 + n}s linear infinite`,
+                                    animationDelay: `${n * 0.5}s`
+                                }"
+                            ></div>
+                        </div>
+
                         <div class="flex items-center justify-center sm:justify-start gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
                             <Terminal class="w-3 h-3 text-primary" />
-                            <span class="text-[8px] sm:text-[10px] font-mono font-black uppercase tracking-widest">RANK_{{ idx + 1 }}_WARRIOR</span>
+                            <span class="text-[8px] sm:text-[10px] font-mono font-black uppercase tracking-widest flex items-center gap-2">
+                                RANK_{{ idx + 1 }}_WARRIOR
+                                <span v-if="idx === 0" class="text-primary/50 animate-pulse hidden lg:inline-block">// UPDATING_CORE_NODE...</span>
+                            </span>
                         </div>
                         
                         <h3 class="font-black text-lg sm:text-3xl truncate leading-tight tracking-tighter">
@@ -451,6 +489,25 @@ const resetMagnetic = (e: MouseEvent) => {
 @keyframes scan-fast {
     0% { transform: translateY(-100%); }
     100% { transform: translateY(100%); }
+}
+
+@keyframes spin-very-slow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes reverse-spin {
+    0% { transform: rotate(360deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.animate-spin-very-slow {
+    animation: spin-very-slow 20s linear infinite;
+}
+
+.animate-reverse-spin {
+    animation: reverse-spin 10s linear infinite;
+    transform-origin: center;
 }
 
 .animate-scan {
