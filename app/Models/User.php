@@ -72,10 +72,22 @@ class User extends Authenticatable
         $rewardExp = (float) ($section?->reward_exp ?? 0);
         $rewardPoints = (float) ($section?->reward_points ?? 0);
 
-        return $this->sectionProgress()->firstOrCreate(
+        $progress = $this->sectionProgress()->firstOrCreate(
             ['section_id' => $sectionId],
             ['exp' => $rewardExp, 'points' => $rewardPoints]
         );
+
+        if ($progress->wasRecentlyCreated && ($rewardExp > 0 || $rewardPoints > 0)) {
+            $this->recordGamificationHistory(
+                $rewardExp,
+                $rewardPoints,
+                'Section Enrollment',
+                "Enrolled in Section: " . ($section?->name ?? 'Unknown'),
+                $sectionId
+            );
+        }
+
+        return $progress;
     }
 
     /**
@@ -162,6 +174,31 @@ class User extends Authenticatable
     public function sections()
     {
         return $this->belongsToMany(Section::class);
+    }
+
+    public function gamificationHistories()
+    {
+        return $this->hasMany(GamificationHistory::class);
+    }
+
+    public function recordGamificationHistory($amountXp, $amountPoints, $reason, $description = null, $sectionId = null, $seasonId = null)
+    {
+        if (abs($amountXp) < 0.001 && abs($amountPoints) < 0.001) {
+            return null;
+        }
+
+        if (!$seasonId) {
+            $seasonId = Season::current()?->id;
+        }
+
+        return $this->gamificationHistories()->create([
+            'amount_xp' => $amountXp,
+            'amount_points' => $amountPoints,
+            'reason' => $reason,
+            'description' => $description,
+            'section_id' => $sectionId,
+            'season_id' => $seasonId,
+        ]);
     }
 
     /**

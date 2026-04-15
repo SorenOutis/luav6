@@ -51,6 +51,15 @@ class SeasonProgress extends Model
                         $user->increment('points', $pointsDelta);
                         $user->level = floor($user->exp / 100) + 1;
                         $user->save();
+
+                        $user->recordGamificationHistory(
+                            $expDelta,
+                            $pointsDelta,
+                            'Admin Adjustment',
+                            "Manual adjustment for Season: " . ($progress->season?->name ?? 'Unknown'),
+                            null,
+                            $progress->season_id
+                        );
                     }
                 }
             }
@@ -71,6 +80,15 @@ class SeasonProgress extends Model
                     $user->increment('points', $pointsDelta);
                     $user->level = floor($user->exp / 100) + 1;
                     $user->save();
+
+                    $user->recordGamificationHistory(
+                        $expDelta,
+                        $pointsDelta,
+                        'Season Reward',
+                        "Initial progress for Season: " . ($progress->season?->name ?? 'Unknown'),
+                        null,
+                        $progress->season_id
+                    );
                 }
             }
         });

@@ -22,6 +22,17 @@ interface Badge {
     icon: string;
 }
 
+interface HistoryItem {
+    id: number;
+    amount_xp: number;
+    amount_points: number;
+    reason: string;
+    description: string;
+    date: string;
+    full_date: string;
+    section: string | null;
+}
+
 const props = defineProps<{
     profileUser: {
         id: number;
@@ -42,6 +53,7 @@ const props = defineProps<{
     };
     badges: Badge[];
     courses: Course[];
+    history: HistoryItem[];
     isSameSection: boolean;
 }>();
 
@@ -51,6 +63,10 @@ const breadcrumbItems = [
     { title: 'Dashboard', href: dashboard() },
     { title: props.profileUser.name, href: `/u/${props.profileUser.id}` },
 ];
+
+const formatDelta = (value: number) => {
+    return value >= 0 ? `+${value}` : `${value}`;
+};
 </script>
 
 <template>
@@ -113,6 +129,39 @@ const breadcrumbItems = [
                             Rank #{{ stats.rank }} <span class="text-muted-foreground opacity-60">of {{ stats.totalPlayers }}</span>
                         </div>
                     </div>
+
+                    <!-- Gamification History Section (Desktop) -->
+                    <div class="hidden lg:block space-y-4 pt-4 border-t border-border/40">
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <Trophy class="w-5 h-5 text-primary" />
+                            History
+                        </h3>
+                        <div class="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                            <div v-if="history.length > 0" v-for="item in history" :key="item.id" class="p-3 rounded-xl bg-card border border-border/50 shadow-sm transition-colors hover:bg-muted/30 group">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="space-y-1">
+                                        <h4 class="text-xs font-black uppercase tracking-widest text-primary">{{ item.reason }}</h4>
+                                        <p class="text-xs font-bold leading-tight line-clamp-2">{{ item.description }}</p>
+                                        <p v-if="item.section" class="text-[10px] font-bold text-muted-foreground">{{ item.section }}</p>
+                                        <p class="text-[10px] text-muted-foreground opacity-60 font-medium" :title="item.full_date">{{ item.date }}</p>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-1">
+                                        <span class="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-black flex items-center gap-1" :class="{ 'text-red-500 bg-red-500/10': item.amount_xp < 0 }">
+                                            <Zap class="w-2.5 h-2.5" />
+                                            {{ formatDelta(item.amount_xp) }}
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[10px] font-black flex items-center gap-1" :class="{ 'text-red-500 bg-red-500/10': item.amount_points < 0 }">
+                                            <Trophy class="w-2.5 h-2.5" />
+                                            {{ formatDelta(item.amount_points) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="p-8 rounded-xl bg-card border border-dashed text-center text-muted-foreground text-xs font-medium">
+                                No history available yet.
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right Content Grid -->
@@ -131,6 +180,39 @@ const breadcrumbItems = [
                         <div class="p-6 rounded-2xl bg-card border border-border/50 shadow-sm flex flex-col justify-center items-center gap-2 md:col-span-1 col-span-2">
                             <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Badges</span>
                             <span class="text-4xl font-black text-amber-500">{{ stats.badgesCount }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Gamification History Section (Mobile) -->
+                    <div class="lg:hidden space-y-4 pt-4">
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <Trophy class="w-5 h-5 text-primary" />
+                            History
+                        </h3>
+                        <div class="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                            <div v-if="history.length > 0" v-for="item in history" :key="item.id" class="p-4 rounded-xl bg-card border border-border/50 shadow-sm transition-colors hover:bg-muted/30">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="space-y-1">
+                                        <h4 class="text-xs font-black uppercase tracking-widest text-primary">{{ item.reason }}</h4>
+                                        <p class="text-sm font-bold leading-tight">{{ item.description }}</p>
+                                        <p v-if="item.section" class="text-[10px] font-bold text-muted-foreground">{{ item.section }}</p>
+                                        <p class="text-[10px] text-muted-foreground opacity-60 font-medium">{{ item.date }}</p>
+                                    </div>
+                                    <div class="flex flex-col items-end gap-1.5 shrink-0">
+                                        <span class="px-2 py-1 rounded bg-primary/10 text-primary text-xs font-black flex items-center gap-1" :class="{ 'text-red-500 bg-red-500/10': item.amount_xp < 0 }">
+                                            <Zap class="w-3 h-3" />
+                                            {{ formatDelta(item.amount_xp) }}
+                                        </span>
+                                        <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-500 text-xs font-black flex items-center gap-1" :class="{ 'text-red-500 bg-red-500/10': item.amount_points < 0 }">
+                                            <Trophy class="w-3 h-3" />
+                                            {{ formatDelta(item.amount_points) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-else class="p-8 rounded-xl bg-card border border-dashed text-center text-muted-foreground text-sm">
+                                No history available yet.
+                            </div>
                         </div>
                     </div>
 
@@ -182,3 +264,22 @@ const breadcrumbItems = [
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.1);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.2);
+}
+</style>

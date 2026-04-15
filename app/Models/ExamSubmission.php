@@ -59,21 +59,29 @@ class ExamSubmission extends Model
 
         $user = $submission->user;
         $exam = $submission->exam;
+        $reason = "Exam Submission";
+        $description = "Earned from Exam: " . ($exam?->title ?? 'Unknown');
 
         if ($exam && $exam->section_id) {
             $sectionProgress = $user->activeSectionProgress($exam->section_id);
             $sectionProgress->increment('points', $delta);
             $sectionProgress->increment('exp', $delta);
             $sectionProgress->save(); // Trigger sync
+
+            $user->recordGamificationHistory($delta, $delta, $reason, $description, $exam->section_id);
         } elseif ($progress = $user->activeSeasonProgress()) {
             $progress->increment('points', $delta);
             $progress->increment('exp', $delta);
             $progress->save(); // Trigger sync
+
+            $user->recordGamificationHistory($delta, $delta, $reason, $description, null, $progress->season_id);
         } else {
             $user->increment('points', $delta);
             $user->increment('exp', $delta);
             $user->level = floor($user->exp / 100) + 1;
             $user->save();
+
+            $user->recordGamificationHistory($delta, $delta, $reason, $description);
         }
     }
 

@@ -77,6 +77,22 @@ class PublicProfileController extends Controller
                 ]);
         }
 
+        $history = $user->gamificationHistories()
+            ->with(['section', 'season'])
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(fn($h) => [
+                'id' => $h->id,
+                'amount_xp' => (float) $h->amount_xp,
+                'amount_points' => (float) $h->amount_points,
+                'reason' => $h->reason,
+                'description' => $h->description,
+                'date' => $h->created_at->diffForHumans(),
+                'full_date' => $h->created_at->format('M d, Y h:i A'),
+                'section' => $h->section?->name,
+            ]);
+
         return Inertia::render('User/PublicProfile', [
             'profileUser' => [
                 'id' => $user->id,
@@ -95,6 +111,7 @@ class PublicProfileController extends Controller
                 'totalPlayers' => $totalPlayers,
                 'badgesCount' => $user->badges->count(),
             ],
+            'history' => $history,
             'badges' => $user->badges->map(fn($b) => [
                 'id' => $b->id,
                 'name' => $b->name,

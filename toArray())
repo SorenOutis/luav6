@@ -3,20 +3,20 @@
 
   Unexpected end of input
 
-  at vendor\psy\psysh\src\Shell.php:1325
-    1321▕ 
-    1322▕         if (!$this->hasValidCode()) {
-    1323▕             $this->popCodeStack();
-    1324▕ 
-  ➜ 1325▕             throw new \InvalidArgumentException('Unexpected end of input');
-    1326▕         }
-    1327▕     }
-    1328▕ 
-    1329▕     /**
+  at vendor\psy\psysh\src\Shell.php:1475
+    1471▕ 
+    1472▕         if (!$this->hasValidCode()) {
+    1473▕             $this->popCodeStack();
+    1474▕ 
+  ➜ 1475▕             throw new \InvalidArgumentException('Unexpected end of input');
+    1476▕         }
+    1477▕     }
+    1478▕ 
+    1479▕     /**
 
-  1   vendor\psy\psysh\src\Shell.php:1865
-      Psy\Shell::setCode("print_r(App\Models\Season::first()-")
+  1   vendor\psy\psysh\src\Shell.php:2173
+      Psy\Shell::setCode("print_r(App\Models\GamificationHistory::all()-")
 
   2   vendor\laravel\tinker\src\Console\TinkerCommand.php:77
-      Psy\Shell::execute("print_r(App\Models\Season::first()-")
+      Psy\Shell::execute("print_r(App\Models\GamificationHistory::all()-")
 

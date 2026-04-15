@@ -28,6 +28,7 @@ class SectionProgress extends Model
                 if (abs($expDelta) > 0.001 || abs($pointsDelta) > 0.001) {
                     $user = $progress->user;
                     if ($user) {
+                        $wasAlreadySyncing = self::$isSyncing;
                         self::$isSyncing = true;
                         
                         $user->increment('exp', $expDelta);
@@ -42,7 +43,18 @@ class SectionProgress extends Model
                             $seasonProgress->save();
                         }
 
-                        self::$isSyncing = false;
+                        // Only record history if NOT syncing from elsewhere (e.g., admin manual edit)
+                        if (!$wasAlreadySyncing) {
+                            $user->recordGamificationHistory(
+                                $expDelta,
+                                $pointsDelta,
+                                'Admin Adjustment',
+                                "Manual adjustment for Section: " . ($progress->section?->name ?? 'Unknown'),
+                                $progress->section_id
+                            );
+                        }
+
+                        self::$isSyncing = $wasAlreadySyncing;
                     }
                 }
             }
@@ -55,6 +67,7 @@ class SectionProgress extends Model
             if ($expDelta > 0 || $pointsDelta > 0) {
                 $user = $progress->user;
                 if ($user) {
+                    $wasAlreadySyncing = self::$isSyncing;
                     self::$isSyncing = true;
 
                     $user->increment('exp', $expDelta);
@@ -69,7 +82,10 @@ class SectionProgress extends Model
                         $seasonProgress->save();
                     }
 
-                    self::$isSyncing = false;
+                    // No history here because activeSectionProgress handles Enrollment history
+                    // and ExamSubmission handles Exam history.
+
+                    self::$isSyncing = $wasAlreadySyncing;
                 }
             }
         });
