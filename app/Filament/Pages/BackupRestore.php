@@ -16,6 +16,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 
@@ -50,7 +51,6 @@ class BackupRestore extends Page implements HasTable, HasSchemas, HasActions
                 ->form([
                     FileUpload::make('backup_file')
                         ->label('Select SQLite File')
-                        ->acceptedFileTypes(['application/x-sqlite3', 'application/octet-stream'])
                         ->disk('local')
                         ->directory('backups')
                         ->visibility('private')
@@ -59,6 +59,16 @@ class BackupRestore extends Page implements HasTable, HasSchemas, HasActions
                 ])
                 ->action(function (array $data) {
                     $path = is_array($data['backup_file']) ? reset($data['backup_file']) : $data['backup_file'];
+                    
+                    if (pathinfo($path, PATHINFO_EXTENSION) !== 'sqlite') {
+                        Notification::make()
+                            ->title('Upload failed')
+                            ->body('The uploaded file must have a .sqlite extension.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
                     $this->restoreBackup($path);
                 }),
             Action::make('createBackup')
