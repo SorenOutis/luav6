@@ -136,7 +136,7 @@ const formatDelta = (value: number) => {
                             <Trophy class="w-5 h-5 text-primary" />
                             History
                         </h3>
-                        <div class="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                        <div class="max-h-[380px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
                             <div v-if="history.length > 0" v-for="item in history" :key="item.id" class="p-3 rounded-xl bg-card border border-border/50 shadow-sm transition-colors hover:bg-muted/30 group">
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="space-y-1">
@@ -189,7 +189,7 @@ const formatDelta = (value: number) => {
                             <Trophy class="w-5 h-5 text-primary" />
                             History
                         </h3>
-                        <div class="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                        <div class="max-h-[420px] overflow-y-auto pr-2 custom-scrollbar space-y-3">
                             <div v-if="history.length > 0" v-for="item in history" :key="item.id" class="p-4 rounded-xl bg-card border border-border/50 shadow-sm transition-colors hover:bg-muted/30">
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="space-y-1">
