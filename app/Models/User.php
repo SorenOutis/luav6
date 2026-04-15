@@ -68,9 +68,13 @@ class User extends Authenticatable
 
     public function activeSectionProgress($sectionId)
     {
+        $section = Section::find($sectionId);
+        $rewardExp = (float) ($section?->reward_exp ?? 0);
+        $rewardPoints = (float) ($section?->reward_points ?? 0);
+
         return $this->sectionProgress()->firstOrCreate(
             ['section_id' => $sectionId],
-            ['exp' => 0, 'points' => 0]
+            ['exp' => $rewardExp, 'points' => $rewardPoints]
         );
     }
 

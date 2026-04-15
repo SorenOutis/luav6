@@ -8,6 +8,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Flex;
@@ -92,6 +93,42 @@ class UserForm
                                                 ->gap()
                                                 ->alignCenter(),
                                             ]),
+                                    ]),
+                                Section::make('Section Progress')
+                                    ->description('Stats for each enrolled section')
+                                    ->schema([
+                                        Repeater::make('sectionProgress')
+                                            ->relationship('sectionProgress')
+                                            ->label('')
+                                            ->schema([
+                                                Grid::make(4)
+                                                    ->schema([
+                                                        Select::make('section_id')
+                                                            ->relationship('section', 'name')
+                                                            ->disabled()
+                                                            ->label('Section')
+                                                            ->columnSpan(1),
+                                                        TextInput::make('level')
+                                                            ->numeric()
+                                                            ->disabled()
+                                                            ->label('Level')
+                                                            ->columnSpan(1),
+                                                        TextInput::make('points')
+                                                            ->numeric()
+                                                            ->default(0)
+                                                            ->columnSpan(1),
+                                                        TextInput::make('exp')
+                                                            ->label('XP')
+                                                            ->hint('100 XP = 1 Level')
+                                                            ->numeric()
+                                                            ->default(0)
+                                                            ->columnSpan(1),
+                                                    ]),
+                                            ])
+                                            ->columnSpanFull()
+                                            ->addable(false)
+                                            ->deletable(false)
+                                            ->collapsible(),
                                     ]),
                             ]),
 

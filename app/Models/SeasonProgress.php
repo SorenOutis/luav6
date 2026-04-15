@@ -34,6 +34,46 @@ class SeasonProgress extends Model
             // Level 2: 100-199 XP
             $progress->level = floor($progress->exp / 100) + 1;
         });
+
+        static::updated(function (SeasonProgress $progress) {
+            if (SectionProgress::$isSyncing) {
+                return;
+            }
+
+            if ($progress->wasChanged('exp') || $progress->wasChanged('points')) {
+                $expDelta = (float) $progress->exp - (float) $progress->getOriginal('exp');
+                $pointsDelta = (float) $progress->points - (float) $progress->getOriginal('points');
+                
+                if (abs($expDelta) > 0.001 || abs($pointsDelta) > 0.001) {
+                    $user = $progress->user;
+                    if ($user) {
+                        $user->increment('exp', $expDelta);
+                        $user->increment('points', $pointsDelta);
+                        $user->level = floor($user->exp / 100) + 1;
+                        $user->save();
+                    }
+                }
+            }
+        });
+
+        static::created(function (SeasonProgress $progress) {
+            if (SectionProgress::$isSyncing) {
+                return;
+            }
+
+            $expDelta = (float) $progress->exp;
+            $pointsDelta = (float) $progress->points;
+            
+            if ($expDelta > 0 || $pointsDelta > 0) {
+                $user = $progress->user;
+                if ($user) {
+                    $user->increment('exp', $expDelta);
+                    $user->increment('points', $pointsDelta);
+                    $user->level = floor($user->exp / 100) + 1;
+                    $user->save();
+                }
+            }
+        });
     }
 
     public function user()

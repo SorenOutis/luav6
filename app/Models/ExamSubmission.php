@@ -58,21 +58,22 @@ class ExamSubmission extends Model
         }
 
         $user = $submission->user;
-
-        $user->increment('points', $delta);
-        $user->increment('exp', $delta);
-
-        $progress = $user->activeSeasonProgress();
-        if ($progress) {
-            $progress->increment('points', $delta);
-            $progress->increment('exp', $delta);
-        }
-
         $exam = $submission->exam;
+
         if ($exam && $exam->section_id) {
             $sectionProgress = $user->activeSectionProgress($exam->section_id);
             $sectionProgress->increment('points', $delta);
             $sectionProgress->increment('exp', $delta);
+            $sectionProgress->save(); // Trigger sync
+        } elseif ($progress = $user->activeSeasonProgress()) {
+            $progress->increment('points', $delta);
+            $progress->increment('exp', $delta);
+            $progress->save(); // Trigger sync
+        } else {
+            $user->increment('points', $delta);
+            $user->increment('exp', $delta);
+            $user->level = floor($user->exp / 100) + 1;
+            $user->save();
         }
     }
 
