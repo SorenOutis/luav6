@@ -10,7 +10,7 @@ interface LeaderboardUser {
     name: string;
     xp: number;
     avatar?: string;
-    completionRate: number;
+    xpProgress: number;
     streak: number;
     joinedAt: string;
     weeklyXp: number;
@@ -304,15 +304,15 @@ const resetMagnetic = (e: MouseEvent) => {
 
                     <!-- Right Side: Stats Panel -->
                     <div class="w-full sm:w-64 space-y-4 sm:border-l sm:border-primary/10 sm:pl-8 z-10">
-                        <!-- Completion Progress -->
+                        <!-- XP Progress -->
                         <div class="space-y-1.5">
                             <div class="flex justify-between items-end">
-                                <p class="text-[8px] sm:text-[10px] font-mono font-black uppercase text-muted-foreground tracking-tighter">SYNC_RATE</p>
-                                <p class="text-[10px] sm:text-sm font-mono font-black text-primary">{{ user.completionRate }}%</p>
+                                <p class="text-[8px] sm:text-[10px] font-mono font-black uppercase text-muted-foreground tracking-tighter">XP_PROGRESS</p>
+                                <p class="text-[10px] sm:text-sm font-mono font-black text-primary">{{ user.xpProgress }}%</p>
                             </div>
                             <div class="h-2 sm:h-3 w-full bg-muted/20 rounded-sm overflow-hidden p-0.5 border border-primary/10 relative">
                                 <div class="h-full bg-primary rounded-sm transition-all duration-1500 ease-out relative"
-                                    :style="{ width: `${user.completionRate}%` }"
+                                    :style="{ width: `${user.xpProgress}%` }"
                                 >
                                     <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
                                     <div class="absolute right-0 top-0 h-full w-1 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>

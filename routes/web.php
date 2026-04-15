@@ -122,21 +122,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 $currentUserSectionProgress = $user->activeSectionProgress($section->id);
                 $sectionExp = $currentUserSectionProgress?->exp ?? 0;
 
-                // Get total lessons sum for all users in one query
-                $totalLessonsMap = \Illuminate\Support\Facades\DB::table('course_user')
-                    ->join('courses', 'course_user.course_id', '=', 'courses.id')
-                    ->whereIn('course_user.user_id', $userIds)
-                    ->select('course_user.user_id', \Illuminate\Support\Facades\DB::raw('SUM(courses.total_lessons) as total'))
-                    ->groupBy('course_user.user_id')
-                    ->pluck('total', 'user_id');
-
-                // Get completed lessons sum for all users in one query
-                $completedLessonsMap = \Illuminate\Support\Facades\DB::table('course_user')
-                    ->whereIn('user_id', $userIds)
-                    ->select('user_id', \Illuminate\Support\Facades\DB::raw('SUM(completed_lessons) as total'))
-                    ->groupBy('user_id')
-                    ->pluck('total', 'user_id');
-
                 // Get weekly XP for all users in one query
                 $weeklyXpMap = \Illuminate\Support\Facades\DB::table('course_user')
                     ->whereIn('user_id', $userIds)
@@ -145,14 +130,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->groupBy('user_id')
                     ->pluck('total', 'user_id');
 
-                $leaderboardUsers = $usersInSection->map(function ($u) use ($section, $totalLessonsMap, $completedLessonsMap, $weeklyXpMap) {
+                $leaderboardUsers = $usersInSection->map(function ($u) use ($section, $weeklyXpMap) {
                     $progress = $u->sectionProgress->first();
                     $xp = $progress?->exp ?? 0;
                     $level = $progress?->level ?? 1;
 
-                    $totalLessons = $totalLessonsMap[$u->id] ?? 0;
-                    $completedLessons = $completedLessonsMap[$u->id] ?? 0;
-                    $completionRate = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
+                    $xpProgress = (int) ($xp % 100); // 100 XP per level
                     $weeklyXp = $weeklyXpMap[$u->id] ?? 0;
 
                     return [
@@ -161,7 +144,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                         'avatar' => $u->avatar,
                         'xp' => (float) $xp,
                         'level' => (int) $level,
-                        'completionRate' => $completionRate,
+                        'xpProgress' => $xpProgress,
                         'streak' => $u->current_streak,
                         'joinedAt' => $u->created_at->format('M Y'),
                         'weeklyXp' => $weeklyXp,
