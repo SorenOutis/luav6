@@ -29,18 +29,20 @@ class ExamController extends Controller
         })
         ->get();
 
-        // Get submission counts for the current user
+        // Get submission counts and details for the current user
         $userId = $user->id;
         $examsData = $exams->map(function (\App\Models\Exam $exam) use ($userId) {
-            $submittedPartsCount = ExamSubmission::where('user_id', $userId)
+            $submissions = ExamSubmission::where('user_id', $userId)
                 ->where('exam_id', $exam->id)
-                ->distinct('exam_part_id')
-                ->count();
+                ->get();
+            
+            $submittedPartsCount = $submissions->unique('exam_part_id')->count();
             
             return array_merge($exam->toArray(), [
                 'submitted_parts_count' => $submittedPartsCount,
                 'total_parts' => $exam->parts->count(),
                 'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
+                'submissions' => $submissions->toArray(),
             ]);
         });
 
