@@ -61,27 +61,27 @@ const submit = () => {
 <template>
     <Dialog :open="show">
         <DialogContent 
-            class="w-[95vw] max-w-[425px] border-primary/20 bg-background shadow-2xl p-6 sm:p-8"
+            class="w-[95vw] sm:max-w-[700px] border-primary/20 bg-background shadow-2xl p-6 sm:p-10"
             :show-close-button="false"
             @pointer-down-outside.prevent
             @escape-key-down.prevent
         >
-            <DialogHeader>
-                <DialogTitle class="text-2xl font-black bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+            <DialogHeader class="sm:text-center">
+                <DialogTitle class="text-2xl sm:text-3xl font-black bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
                     Welcome to the Academy
                 </DialogTitle>
-                <DialogDescription class="text-muted-foreground/80 pt-2 text-sm leading-relaxed">
+                <DialogDescription class="text-muted-foreground/80 pt-2 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
                     To personalize your experience and track your progress on the leaderboard, please select your assigned sections.
                 </DialogDescription>
             </DialogHeader>
 
-            <div class="grid gap-4 py-8 relative z-50">
+            <div class="grid gap-4 py-6 sm:py-8 relative z-50">
                 <div class="space-y-4">
-                    <label class="text-xs font-black uppercase tracking-widest text-muted-foreground/60">
+                    <label class="text-xs font-black uppercase tracking-widest text-muted-foreground/60 block sm:text-center">
                         Choose your sections
                     </label>
                     
-                    <div class="grid grid-cols-1 gap-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                         <button
                             v-for="section in sections"
                             :key="section.id"
@@ -117,10 +117,10 @@ const submit = () => {
                 </div>
             </div>
 
-            <DialogFooter class="relative z-0 pt-2">
+            <DialogFooter class="relative z-0 pt-4 flex flex-col sm:items-center">
                 <Button 
                     @click="submit" 
-                    class="w-full h-14 text-base font-black uppercase tracking-wider shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50"
+                    class="w-full sm:max-w-sm h-14 text-base font-black uppercase tracking-wider shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50"
                     :disabled="selectedSections.length === 0 || form.processing"
                 >
                     <template v-if="form.processing">
