@@ -53,6 +53,16 @@ const breadcrumbs: BreadcrumbItem[] = [
 const selectedPart = ref<ExamPart | null>(null);
 const examStarted = ref(false);
 const container = ref<HTMLElement | null>(null);
+
+const handleMouseMove = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+};
+
 const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
 const isSubmitting = ref(false);
 const showSuccessModal = ref(false);
@@ -962,100 +972,127 @@ const feedbackContent = computed(() => {
 
                     <!-- Live Floating Timer & Smart Stats -->
                     <div v-if="examStarted" 
-                        class="flex items-center gap-4 md:gap-6 px-6 py-3 rounded-[1.5rem] bg-black/60 border border-white/10 backdrop-blur-2xl shadow-2xl transition-all duration-500 hover:border-primary/40 group/timer">
+                        class="flex items-center gap-4 md:gap-6 px-6 py-3 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-2xl shadow-2xl transition-all duration-500 hover:border-primary/40 group/timer relative overflow-hidden">
+                        
+                        <!-- Pulse decoration for timer -->
+                        <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover/timer:opacity-100 transition-opacity"></div>
                         
                         <!-- Draft Status (Desktop Only) -->
-                        <div v-if="lastSavedAt" class="hidden lg:flex items-center gap-2 text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] border-r border-white/10 pr-6">
+                        <div v-if="lastSavedAt" class="hidden lg:flex items-center gap-2 text-[8px] font-black text-muted-foreground/60 uppercase tracking-[0.2em] border-r border-white/10 pr-6 font-mono">
                             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                            Synced {{ lastSavedAt }}
+                            SYNCED_{{ lastSavedAt.replace(/:/g, '_') }}
                         </div>
 
                         <!-- Pace Indicator -->
                         <div v-if="estimatedFinishMinutes !== null && estimatedFinishMinutes > 0" 
-                            class="hidden md:flex items-center gap-2 text-amber-400 font-black text-[10px] uppercase tracking-[0.2em]">
+                            class="hidden md:flex items-center gap-2 text-amber-400 font-black text-[9px] uppercase tracking-[0.2em] font-mono">
                             <Zap class="w-4 h-4 fill-amber-400/20 group-hover/timer:scale-110 transition-transform" />
-                            <span class="hidden lg:inline">Est. Finish</span> {{ estimatedFinishMinutes }}m
+                            <span class="hidden lg:inline">EST_FINISH:</span> {{ estimatedFinishMinutes }}M
                         </div>
 
-                        <div class="flex items-center gap-3 px-3 py-1 rounded-xl bg-primary/10 border border-primary/20" :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse bg-red-500/10' : 'text-primary'">
+                        <div class="flex items-center gap-3 px-3 py-1 rounded-xl bg-primary/10 border border-primary/20 relative z-10" :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse bg-red-500/10' : 'text-primary'">
                             <Clock class="w-4 h-4 group-hover/timer:rotate-12 transition-transform" />
-                            <span class="font-black text-lg tracking-[0.15em] tabular-nums">{{ formattedTime }}</span>
+                            <span class="font-black text-lg tracking-[0.15em] tabular-nums font-mono">{{ formattedTime }}</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
                 <div
-                    class="animate-up exam-hero relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-6 md:p-8 shadow-[0_32px_64px_-16px_rgba(var(--primary),0.1)] group">
+                    class="animate-up exam-hero relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-6 md:p-8 shadow-[0_32px_64px_-16px_rgba(var(--primary),0.1)] group/hero"
+                    @mousemove="handleMouseMove"
+                >
+                    <!-- Tech Grid Background (New) -->
+                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/hero:opacity-[0.05] transition-opacity">
+                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                            <defs>
+                                <pattern id="hero-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" fill="url(#hero-grid)" />
+                        </svg>
+                    </div>
+
+                    <!-- Tech Scanning Line (New) -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-40 h-full -translate-x-full group-hover/hero:animate-scan-horizontal pointer-events-none opacity-0 group-hover/hero:opacity-100 transition-opacity"></div>
+
+                    <!-- Card Shine/Bloom Effect (New) -->
+                    <div class="absolute inset-0 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-700 pointer-events-none"
+                        style="background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
+                    </div>
                     
                     <!-- Futuristic Corner Accents -->
-                    <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary/40 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary/40 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                    <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-700"></div>
+                    <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/40 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-700"></div>
 
                     <!-- Inner Glow / Border Highlight -->
                     <div class="absolute inset-0 rounded-2xl border border-white/5 pointer-events-none"></div>
 
-                    <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-12">
+                    <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-12 z-10">
                         <div class="space-y-4 flex-1">
                             <div class="flex flex-wrap items-center gap-3">
                                 <span
-                                    class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 text-[9px] font-black text-primary tracking-[0.2em] uppercase skew-x-[-12deg]">
+                                    class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 text-[9px] font-black text-primary tracking-[0.2em] uppercase skew-x-[-12deg] shadow-sm">
                                     <span class="skew-x-[12deg] flex items-center gap-2">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                                        {{ exam.status }}
+                                        <div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                                        MISSION_READY_PROTOCOL
                                     </span>
                                 </span>
                                 <div v-if="examStarted && formattedFinishTime" class="flex items-center gap-2 text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-3 py-1 border border-amber-500/20">
                                     <Zap class="w-3 h-3 animate-pulse" />
-                                    <span>Deadline: {{ formattedFinishTime }}</span>
+                                    <span class="font-mono">DEADLINE: {{ formattedFinishTime }}</span>
                                 </div>
                             </div>
                             
                             <div class="space-y-2">
-                                <h1 class="text-2xl md:text-4xl font-black tracking-tighter leading-none uppercase italic text-foreground">
+                                <h1 class="text-2xl md:text-5xl font-black tracking-tighter leading-none uppercase group-hover/hero:text-primary transition-colors duration-300">
                                     {{ selectedPart ? selectedPart.title : exam.title }}
                                 </h1>
                                 
-                                <p v-if="!selectedPart" class="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-2xl font-medium opacity-70">
+                                <p v-if="!selectedPart" class="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-2xl font-medium opacity-80">
                                     {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
                                 </p>
                             </div>
                             
                             <div v-if="!selectedPart" class="flex flex-wrap items-center gap-6">
-                                <div class="flex items-center gap-3 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
-                                    <Calendar class="w-4 h-4 text-primary" />
-                                    {{ formatDateTime(exam.exam_date) }}
+                                <div class="flex items-center gap-3 text-[10px] font-black text-foreground/70 group-hover/hero:text-foreground transition-colors">
+                                    <Calendar class="w-4 h-4 text-primary/70" />
+                                    <span class="font-mono uppercase tracking-widest">{{ formatDateTime(exam.exam_date) }}</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Stats Dashboard Bar -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-muted/30 p-6 border border-border/50 relative">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-muted/30 p-6 border border-border/50 relative backdrop-blur-md overflow-hidden group/stats">
+                             <!-- Inner Glow for stats -->
+                             <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover/stats:opacity-100 transition-opacity duration-500"></div>
+                             
                              <!-- Stat Decoration -->
                              <div class="absolute -top-1 -left-1 w-2 h-2 bg-primary"></div>
                              <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-primary"></div>
 
-                            <div v-if="allPartsSubmitted" class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Achievement</span>
-                                <div class="text-xl font-black text-primary">{{ totalScore }}/{{ totalPossiblePoints }}</div>
+                            <div v-if="allPartsSubmitted" class="flex flex-col gap-1 relative z-10">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_ACHIEVEMENT</span>
+                                <div class="text-xl font-black text-primary font-mono tabular-nums">{{ totalScore }}/{{ totalPossiblePoints }}</div>
                             </div>
                             
-                            <div class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Time Limit</span>
+                            <div class="flex flex-col gap-1 relative z-10">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_TIME_LIMIT</span>
                                 <div class="flex items-baseline gap-1">
-                                    <span class="text-xl font-black">{{ exam.duration_minutes }}</span>
-                                    <span class="text-[8px] font-black text-muted-foreground uppercase">Min</span>
+                                    <span class="text-xl font-black font-mono tabular-nums">{{ exam.duration_minutes }}</span>
+                                    <span class="text-[8px] font-black text-primary uppercase font-mono">MIN</span>
                                 </div>
                             </div>
 
-                            <div class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Sections</span>
-                                <div class="text-xl font-black">{{ exam.parts.length }}</div>
+                            <div class="flex flex-col gap-1 relative z-10">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_SECTIONS</span>
+                                <div class="text-xl font-black font-mono tabular-nums">{{ exam.parts.length }}</div>
                             </div>
 
-                            <div class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em]">Total Tasks</span>
-                                <div class="text-xl font-black">{{ totalQuestions }}</div>
+                            <div class="flex flex-col gap-1 relative z-10">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_TOTAL_TASKS</span>
+                                <div class="text-xl font-black font-mono tabular-nums">{{ totalQuestions }}</div>
                             </div>
                         </div>
                     </div>
@@ -1104,71 +1141,89 @@ const feedbackContent = computed(() => {
 
                     <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
-                            class="exam-part-card animate-up surface-card premium-hover group h-full p-2 md:p-3"
+                            class="exam-part-card animate-up surface-card premium-hover group/part-card h-full p-2 md:p-3 relative overflow-hidden transition-all duration-500"
                             :class="[
                                 (isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index))
                                     ? 'opacity-60 cursor-not-allowed grayscale-[0.5]' 
-                                    : 'cursor-pointer hover:border-primary/40',
+                                    : 'cursor-pointer hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1',
                                 getPartColor(index)
-                            ]">
-                            
-                            <!-- Light Sweep Animation -->
-                            <div v-if="!isPartLocked(index) && !isPartSubmitted(part.id)" class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                            ]"
+                            @mousemove="handleMouseMove"
+                        >
+                            <!-- Tech Grid Background (New) -->
+                            <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/part-card:opacity-[0.05] transition-opacity">
+                                <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                                    <defs>
+                                        <pattern :id="`grid-${part.id}`" width="15" height="15" patternUnits="userSpaceOnUse">
+                                            <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                        </pattern>
+                                    </defs>
+                                    <rect width="100%" height="100%" :fill="`url(#grid-${part.id})`" />
+                                </svg>
+                            </div>
+
+                            <!-- Tech Scanning Line (New) -->
+                            <div v-if="!isPartLocked(index) && !isPartSubmitted(part.id)" class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-24 h-full -translate-x-full group-hover/part-card:animate-scan-horizontal pointer-events-none opacity-0 group-hover/part-card:opacity-100 transition-opacity"></div>
+
+                            <!-- Card Shine/Bloom Effect (New) -->
+                            <div class="absolute inset-0 opacity-0 group-hover/part-card:opacity-100 transition-opacity duration-700 pointer-events-none"
+                                style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
+                            </div>
 
                             <!-- Silhouette background icon -->
                             <div
-                                class="pointer-events-none absolute -right-2 -bottom-2 opacity-5 group-hover:opacity-15 group-hover:scale-110 transition-all duration-700">
+                                class="pointer-events-none absolute -right-2 -bottom-2 opacity-5 group-hover/part-card:opacity-15 group-hover/part-card:scale-110 transition-all duration-700">
                                 <component :is="getPartIcon(part.type)" class="w-12 h-12 text-foreground" />
                             </div>
 
-                            <div class="relative flex flex-col gap-3 h-full">
+                            <div class="relative flex flex-col gap-3 h-full z-10">
                                 <!-- Top: Part Label & Status -->
                                 <div class="flex items-center justify-between">
-                                    <div class="px-2 py-0.5 rounded-md bg-primary/5 text-[8px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10">
-                                        Part {{ index + 1 }}
+                                    <div class="px-2 py-0.5 rounded-md bg-primary/5 text-[8px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10 font-mono">
+                                        PART_0{{ index + 1 }}_DATA
                                     </div>
                                     <div v-if="isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index)" class="flex flex-col items-end gap-1">
                                         <div v-if="exam.status === 'closed' && !isPartSubmitted(part.id)" class="flex items-center gap-1.5 text-red-500">
                                             <Lock class="w-3 h-3" />
-                                            <span class="text-[9px] font-black uppercase tracking-widest">LOCKED</span>
+                                            <span class="text-[9px] font-black uppercase tracking-widest font-mono">LOCKED</span>
                                         </div>
                                         <div v-else-if="isPartLocked(index)" class="flex flex-col items-end gap-0.5 mt-0.5">
                                             <div class="flex items-center gap-1 text-muted-foreground/60">
                                                 <Lock class="w-2.5 h-2.5" />
-                                                <span class="text-[8px] font-black uppercase tracking-widest">LOCKED</span>
+                                                <span class="text-[8px] font-black uppercase tracking-widest font-mono">LOCKED</span>
                                             </div>
                                             <span class="text-[7px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
-                                                Answer Part {{ index }} to unlock
+                                                Complete P0{{ index }} to unlock
                                             </span>
                                         </div>
                                         <div v-else-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1 text-amber-500">
                                             <Clock class="w-3 h-3" />
-                                            <span class="text-[9px] font-black uppercase tracking-widest">PENDING REVIEW</span>
+                                            <span class="text-[9px] font-black uppercase tracking-widest font-mono">PENDING_REVIEW</span>
                                         </div>
                                         <div v-else class="flex items-center gap-1 text-green-500">
                                             <CheckSquare2 class="w-3 h-3" />
-                                            <span class="text-[9px] font-black uppercase tracking-widest">COMPLETED</span>
+                                            <span class="text-[9px] font-black uppercase tracking-widest font-mono">COMPLETED</span>
                                         </div>
-                                        <div v-if="isPartSubmitted(part.id)" class="text-[8px] font-bold text-muted-foreground/80">
-                                            Score: <span class="text-foreground">{{ submissions[part.id]?.score ?? 0 }}</span> / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
+                                        <div v-if="isPartSubmitted(part.id)" class="text-[8px] font-bold text-muted-foreground/80 font-mono">
+                                            SCORE: <span class="text-foreground">{{ submissions[part.id]?.score ?? 0 }}</span> / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
                                         </div>
                                     </div>
-                                    <div v-else class="flex items-center gap-1.5 text-muted-foreground/40 group-hover:text-primary/60 transition-colors">
-                                        <span class="text-[9px] font-bold uppercase tracking-widest">READY</span>
+                                    <div v-else class="flex items-center gap-1.5 text-muted-foreground/40 group-hover/part-card:text-primary/60 transition-colors">
+                                        <span class="text-[9px] font-black uppercase tracking-widest font-mono">READY_FOR_OPS</span>
                                     </div>
                                 </div>
 
                                 <!-- Center: Title & Types -->
                                 <div class="flex-1 space-y-1.5">
                                     <h3
-                                        class="text-sm md:text-base font-black leading-tight transition-colors"
-                                        :class="isPartSubmitted(part.id) || isPartLocked(index) ? 'text-muted-foreground' : 'text-foreground group-hover:text-primary'">
+                                        class="text-sm md:text-base font-black leading-tight transition-colors uppercase tracking-tight"
+                                        :class="isPartSubmitted(part.id) || isPartLocked(index) ? 'text-muted-foreground' : 'text-foreground group-hover/part-card:text-primary'">
                                         {{ part.title }}
                                     </h3>
                                     
                                     <div class="flex flex-wrap items-center gap-1.5">
                                         <span v-for="type in getQuestionTypes(part)" :key="type"
-                                            class="px-2 py-0.5 rounded-md bg-muted text-[8px] font-bold text-muted-foreground/80 uppercase tracking-wider border border-border/40">
+                                            class="px-2 py-0.5 rounded-md bg-muted text-[8px] font-bold text-muted-foreground/80 uppercase tracking-wider border border-border/40 font-mono">
                                             {{ formatType(type).toUpperCase() }}
                                         </span>
                                     </div>
@@ -1176,19 +1231,19 @@ const feedbackContent = computed(() => {
 
                                 <!-- Bottom: Footer Info & Action -->
                                 <div class="flex items-center justify-between pt-2 border-t border-border/10">
-                                    <div class="flex items-center gap-1 text-xs text-muted-foreground font-medium">
-                                        <span class="text-foreground/80 font-black">{{ part.questions?.length ?? 0 }}</span>
-                                        <span class="opacity-60">Tasks</span>
+                                    <div class="flex items-center gap-1 text-[9px] text-muted-foreground font-black uppercase font-mono">
+                                        <span class="text-foreground/80">{{ part.questions?.length ?? 0 }}</span>
+                                        <span class="opacity-60">TASKS_LOADED</span>
                                     </div>
                                     
                                     <div v-if="!isPartSubmitted(part.id)"
-                                        class="flex items-center gap-1 px-3 py-1 rounded-lg transition-all"
+                                        class="flex items-center gap-1 px-3 py-1 rounded-lg transition-all group/btn"
                                         :class="isPartLocked(index) 
                                             ? 'bg-muted/40 text-muted-foreground/40 cursor-not-allowed border border-border/20' 
-                                            : 'bg-primary text-primary-foreground font-bold text-[9px] shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
-                                        <span class="text-[9px] font-bold">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
+                                            : 'bg-primary text-primary-foreground font-black text-[9px] shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
+                                        <span class="text-[9px] font-black uppercase tracking-widest">{{ isPartLocked(index) ? 'LOCKED' : 'EXECUTE' }}</span>
                                         <Lock v-if="isPartLocked(index)" class="w-2.5 h-2.5" />
-                                        <ArrowRight v-else class="w-2.5 h-2.5" />
+                                        <ArrowRight v-else class="w-2.5 h-2.5 transition-transform group-hover/btn:translate-x-0.5" />
                                     </div>
                                     <div v-else
                                         class="w-8 h-8 rounded-full flex items-center justify-center bg-muted border border-border/60">
@@ -1717,6 +1772,15 @@ const feedbackContent = computed(() => {
 
 .animate-up {
     will-change: transform, opacity;
+}
+
+@keyframes scan-horizontal {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(1000%); }
+}
+
+.animate-scan-horizontal {
+    animation: scan-horizontal 3s linear infinite;
 }
 
 .modal-fade-enter-active,

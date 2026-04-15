@@ -272,12 +272,15 @@ declare const route: any;
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-            <div class="assignments-hero header-content flex flex-col md:flex-row md:items-center justify-between gap-6 z-10">
-                <div>
-                    <h1 class="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent uppercase">
-                        Mission Briefings
-                    </h1>
-                    <p class="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mt-0.5">Complete your objectives to earn XP and advance your rank.</p>
+            <div class="assignments-hero header-content flex flex-col md:flex-row md:items-end justify-between gap-6 z-10 relative group/hero">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-[2px] bg-primary/40 rounded-full group-hover/hero:w-12 transition-all duration-500"></div>
+                        <h1 class="text-2xl font-black tracking-tighter uppercase">Mission_Briefings</h1>
+                    </div>
+                    <p class="text-muted-foreground text-sm font-medium pl-11 border-l-2 border-primary/10 group-hover/hero:border-primary/30 transition-colors uppercase tracking-widest text-[9px]">
+                        Complete your objectives to earn XP and advance your rank.
+                    </p>
                 </div>
                 
                 <div class="flex items-center gap-4">
@@ -286,85 +289,78 @@ declare const route: any;
                         @click="selectedAssignment = null; selectedAssignmentId = ''; showUploadModal = true"
                         variant="default" 
                         size="sm" 
-                        class="h-10 px-6 rounded-xl gap-2 text-[10px] font-extrabold uppercase tracking-[0.15em] shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all duration-500 bg-primary text-primary-foreground border border-primary/20"
+                        class="h-10 px-6 rounded-xl gap-2 text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all duration-500 bg-primary text-primary-foreground border border-primary/20 group/btn"
                     >
-                        <FileUp class="w-4 h-4" />
-                        Submit Intel
+                        <FileUp class="w-4 h-4 transition-transform group-hover/btn:-translate-y-0.5" />
+                        SUBMIT_INTEL
                     </Button>
 
                     <!-- Month Filter -->
-                    <div class="flex items-center gap-3 px-4 py-2 rounded-2xl surface-card border-border/10 h-10">
-                        <Calendar class="w-3.5 h-3.5 text-muted-foreground/60" />
+                    <div class="flex items-center gap-3 px-4 py-2 rounded-2xl bg-muted/30 border border-border/50 h-10 group/filter">
+                        <Calendar class="w-3.5 h-3.5 text-primary/60 group-hover/filter:text-primary transition-colors" />
                         <select 
                             v-model="selectedMonth"
-                            class="bg-transparent border-none text-[10px] font-bold uppercase tracking-widest focus:ring-0 cursor-pointer appearance-none pr-6 h-full"
+                            class="bg-transparent border-none text-[10px] font-black uppercase tracking-widest focus:ring-0 cursor-pointer appearance-none pr-6 h-full font-mono"
                         >
-                            <option v-for="month in months" :key="month.value" :value="month.value" class="bg-background text-foreground">
-                                {{ month.label }}
+                            <option v-for="month in months" :key="month.value" :value="month.value" class="bg-[#0a0a0a] text-foreground">
+                                {{ month.label.toUpperCase() }}
                             </option>
                         </select>
                     </div>
 
-                    <div class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 h-10">
+                    <div class="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 border border-primary/10 h-10 font-mono">
                         <TrendingUp class="w-3.5 h-3.5 text-primary" />
-                        <span class="text-[10px] font-bold uppercase tracking-wider">Rank: Vanguard</span>
+                        <span class="text-[9px] font-black uppercase tracking-widest">RANK:VANGUARD</span>
                     </div>
                 </div>
             </div>
 
             <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 z-10">
-                <div class="stats-card surface-card p-4 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
-                    <!-- Hover Bloom Effect -->
-                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.1), transparent 40%)` }">
+                <div v-for="(stat, sIdx) in [
+                    { label: 'ACTIVE_OBJECTIVES', value: assignments.filter(a => !a.submission?.submitted).length, sub: 'IMMEDIATE_PRIORITY', icon: Clock },
+                    { label: 'COMPLETED_MISSIONS', value: assignments.filter(a => a.submission?.submitted).length, sub: 'OBJECTIVES_ACHIEVED', icon: CheckCircle2 },
+                    { label: 'PERFORMANCE_RANK', value: 'A+', sub: 'TOP_1%_OF_BATTALION', icon: Sparkles }
+                ]" :key="sIdx"
+                    class="stats-card surface-card p-5 relative overflow-hidden group/stat premium-hover" 
+                    @mousemove="handleMouseMove"
+                >
+                    <!-- Tech Grid Background -->
+                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/stat:opacity-[0.05] transition-opacity">
+                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                            <defs>
+                                <pattern :id="`stat-grid-${sIdx}`" width="15" height="15" patternUnits="userSpaceOnUse">
+                                    <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" :fill="`url(#stat-grid-${sIdx})`" />
+                        </svg>
                     </div>
-                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
-                        <Clock class="w-16 h-16 rotate-12" />
-                    </div>
-                    <div class="relative z-10">
-                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">Active Objectives</p>
-                        <h3 class="text-2xl font-black tracking-tighter mt-1">
-                            {{ assignments.filter(a => !a.submission?.submitted).length }}
-                        </h3>
-                        <div class="mt-3 pt-3 border-t border-border/10">
-                            <span class="text-[9px] font-bold text-muted-foreground/50 tracking-wide uppercase">Immediate priority</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="stats-card surface-card p-4 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
-                    <!-- Hover Bloom Effect -->
-                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.05), transparent 40%)` }">
-                    </div>
-                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
-                        <CheckCircle2 class="w-16 h-16 rotate-12" />
-                    </div>
-                    <div class="relative z-10">
-                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">Completed Missions</p>
-                        <h3 class="text-2xl font-black tracking-tighter mt-1">
-                            {{ assignments.filter(a => a.submission?.submitted).length }}
-                        </h3>
-                        <div class="mt-3 pt-3 border-t border-border/10">
-                            <span class="text-[9px] font-bold text-muted-foreground/50 tracking-wide uppercase">Objectives achieved</span>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="stats-card surface-card p-4 relative overflow-hidden group premium-hover" @mousemove="handleMouseMove">
+                    <!-- Tech Scanning Line -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-32 h-full -translate-x-full group-hover/stat:animate-scan-horizontal pointer-events-none opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+
                     <!-- Hover Bloom Effect -->
-                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.1), transparent 40%)` }">
+                    <div class="absolute inset-0 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-700 pointer-events-none"
+                        :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08), transparent 40%)` }">
                     </div>
-                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-700 pointer-events-none">
-                        <Sparkles class="w-16 h-16 rotate-12" />
+
+                    <!-- Corner Accents -->
+                    <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500"></div>
+                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500"></div>
+
+                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover/stat:opacity-[0.08] transition-all duration-700 pointer-events-none group-hover:scale-110 rotate-12 group-hover:rotate-0">
+                        <component :is="stat.icon" class="w-20 h-20" />
                     </div>
+
                     <div class="relative z-10">
-                        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground/60">Performance Rank</p>
-                        <h3 class="text-2xl font-black tracking-tighter mt-1">A+</h3>
-                        <div class="mt-3 pt-3 border-t border-border/10">
-                            <span class="text-[9px] font-bold text-muted-foreground/50 tracking-wide uppercase">Top 1% of battalion</span>
+                        <p class="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 font-mono">>_{{ stat.label }}</p>
+                        <h3 class="text-3xl font-black tracking-tighter mt-1 font-mono text-foreground group-hover/stat:text-primary transition-colors">
+                            {{ stat.value }}
+                        </h3>
+                        <div class="mt-4 pt-4 border-t border-border/10 flex items-center gap-2">
+                            <div class="w-1 h-1 rounded-full bg-primary/40 animate-pulse"></div>
+                            <span class="text-[8px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">{{ stat.sub }}</span>
                         </div>
                     </div>
                 </div>
@@ -400,17 +396,32 @@ declare const route: any;
                     enter-active-class="animate-in fade-in slide-in-from-bottom-4 duration-500"
                     leave-active-class="animate-out fade-out slide-out-to-top-4 duration-300 absolute"
                 >
-                    <div v-for="assignment in filteredAssignments" :key="assignment.id" 
-                        class="assignment-card surface-card p-5 md:p-6 group premium-hover relative overflow-hidden"
+                    <div v-for="(assignment, aIdx) in filteredAssignments" :key="assignment.id" 
+                        class="assignment-card surface-card p-5 md:p-6 group/card premium-hover relative overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10"
                         @mousemove="handleMouseMove"
                     >
+                        <!-- Tech Grid Background -->
+                        <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/card:opacity-[0.05] transition-opacity">
+                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                                <defs>
+                                    <pattern :id="`assignment-grid-${assignment.id}`" width="15" height="15" patternUnits="userSpaceOnUse">
+                                        <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                    </pattern>
+                                </defs>
+                                <rect width="100%" height="100%" :fill="`url(#assignment-grid-${assignment.id})`" />
+                            </svg>
+                        </div>
+
+                        <!-- Tech Scanning Line -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-32 h-full -translate-x-full group-hover/card:animate-scan-horizontal pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
+
                         <!-- Hover Bloom Effect -->
-                        <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                            :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.15), transparent 40%)` }">
+                        <div class="absolute inset-0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-700 pointer-events-none"
+                            :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.1), transparent 40%)` }">
                         </div>
 
                         <!-- Silhouette Background Icon -->
-                        <div class="absolute -right-6 -bottom-6 opacity-[0.03] group-hover:opacity-[0.05] transition-all duration-700 pointer-events-none rotate-12 group-hover:rotate-0 scale-110">
+                        <div class="absolute -right-6 -bottom-6 opacity-[0.03] group-hover/card:opacity-[0.08] transition-all duration-700 pointer-events-none rotate-12 group-hover:rotate-0 scale-110">
                             <BookOpen class="w-32 h-32" />
                         </div>
 
@@ -418,28 +429,28 @@ declare const route: any;
                             <div class="flex items-start justify-between mb-4">
                                 <div class="space-y-2">
                                     <div class="flex items-center gap-2">
-                                        <div class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20">
-                                            {{ assignment.course?.name || 'General' }}
+                                        <div class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 font-mono">
+                                            {{ assignment.course?.name?.toUpperCase() || 'GENERAL_UNIT' }}
                                         </div>
                                         <div :class="[
-                                            'px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border', 
+                                            'px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border font-mono', 
                                             getStatusColor(assignment.submission?.status || 'Pending').split(' ').filter(c => !c.includes('bg-')).join(' '),
                                             getStatusColor(assignment.submission?.status || 'Pending').split(' ').find(c => c.includes('bg-'))?.replace('/10', '/20')
                                         ]">
-                                            {{ assignment.submission?.status || 'Pending' }}
+                                            {{ assignment.submission?.status?.toUpperCase() || 'PENDING_OPS' }}
                                         </div>
                                     </div>
-                                    <h3 class="text-xl font-black tracking-tighter leading-tight group-hover:text-primary transition-colors duration-500">
+                                    <h3 class="text-xl font-black tracking-tighter leading-tight group-hover/card:text-primary transition-colors duration-500 uppercase">
                                         {{ assignment.title }}
                                     </h3>
                                 </div>
                                 
                                 <div class="text-right">
-                                    <p class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-1">
-                                        {{ assignment.submission?.submitted ? 'Transmission' : 'Deadline' }}
+                                    <p class="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-1 font-mono">
+                                        {{ assignment.submission?.submitted ? '>_TRANSMISSION' : '>_DEADLINE' }}
                                     </p>
-                                    <p class="text-xs font-bold font-mono tracking-tight" :class="isOverdue(assignment.due_date) && !assignment.submission?.submitted ? 'text-red-500' : 'text-muted-foreground'">
-                                        {{ assignment.submission?.submitted_at ? new Date(assignment.submission.submitted_at).toLocaleDateString() : (assignment.due_date || 'UNDEFINED') }}
+                                    <p class="text-xs font-black font-mono tracking-tight" :class="isOverdue(assignment.due_date) && !assignment.submission?.submitted ? 'text-red-500' : 'text-muted-foreground'">
+                                        {{ assignment.submission?.submitted_at ? new Date(assignment.submission.submitted_at).toLocaleDateString().toUpperCase() : (assignment.due_date ? new Date(assignment.due_date).toLocaleDateString().toUpperCase() : 'UNDEFINED') }}
                                     </p>
                                 </div>
                             </div>
@@ -455,30 +466,30 @@ declare const route: any;
                                         <FileText class="w-5 h-5 text-emerald-500" />
                                     </div>
                                     <div>
-                                        <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Secure Submission</p>
-                                        <p class="text-xs font-bold font-mono text-emerald-500/80">VERIFIED</p>
+                                        <p class="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 font-mono">>_SECURE_DATA</p>
+                                        <p class="text-xs font-black font-mono text-emerald-500/80">VERIFIED_TRANSMISSION</p>
                                     </div>
                                 </div>
                                 
                                 <div v-else class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                                    <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/80">Objective Incomplete</span>
+                                    <div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                                    <span class="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500/80 font-mono">>_OBJECTIVE_INCOMPLETE</span>
                                 </div>
 
                                 <div class="flex gap-3">
-                                    <Button v-if="assignment.submission?.submitted" variant="outline" size="sm" class="h-9 px-4 rounded-xl gap-2 bg-transparent border-white/5 hover:bg-white/5 text-[10px] font-bold uppercase tracking-wider">
+                                    <Button v-if="assignment.submission?.submitted" variant="outline" size="sm" class="h-9 px-4 rounded-xl gap-2 bg-transparent border-white/5 hover:bg-white/5 text-[9px] font-black uppercase tracking-widest font-mono">
                                         <Download class="w-3.5 h-3.5" />
-                                        Intel
+                                        INTEL
                                     </Button>
                                     <Button 
                                         v-if="!assignment.submission?.submitted" 
                                         @click="selectedAssignment = assignment; selectedAssignmentId = assignment.id; showUploadModal = true"
                                         variant="default" 
                                         size="sm" 
-                                        class="h-9 px-6 rounded-xl gap-2 text-[10px] font-extrabold uppercase tracking-[0.15em] shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all duration-500"
+                                        class="h-9 px-6 rounded-xl gap-2 text-[9px] font-black uppercase tracking-[0.15em] shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all duration-500 group/btn"
                                     >
-                                        <FileUp class="w-3.5 h-3.5" />
-                                        Submit Intel
+                                        <FileUp class="w-3.5 h-3.5 transition-transform group-hover/btn:-translate-y-0.5" />
+                                        SUBMIT_INTEL
                                     </Button>
                                 </div>
                             </div>
@@ -488,12 +499,25 @@ declare const route: any;
             </div>
 
             <!-- Empty State -->
-            <div v-if="filteredAssignments.length === 0" class="flex flex-col items-center justify-center py-20 z-10">
-                <div class="w-20 h-20 rounded-3xl bg-muted/5 border border-border/10 flex items-center justify-center mb-6">
-                    <BookOpen class="w-8 h-8 text-muted-foreground/20" />
+            <div v-if="filteredAssignments.length === 0" class="flex flex-col items-center justify-center py-24 z-10 animate-in fade-in zoom-in duration-700">
+                <div class="relative group/empty">
+                    <div class="absolute inset-0 bg-primary/20 blur-3xl rounded-full opacity-0 group-hover/empty:opacity-100 transition-opacity duration-1000"></div>
+                    <div class="w-24 h-24 rounded-3xl bg-muted/5 border border-border/10 flex items-center justify-center mb-8 relative z-10 group-hover/empty:border-primary/30 transition-colors duration-500 overflow-hidden">
+                        <div class="absolute inset-0 opacity-[0.05] pointer-events-none">
+                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <pattern id="empty-grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                    </pattern>
+                                </defs>
+                                <rect width="100%" height="100%" fill="url(#empty-grid)" />
+                            </svg>
+                        </div>
+                        <BookOpen class="w-10 h-10 text-muted-foreground/20 group-hover/empty:text-primary/40 transition-colors duration-500" />
+                    </div>
                 </div>
-                <h3 class="text-xl font-black tracking-tighter uppercase text-muted-foreground/40">No Missions Found</h3>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/20 mt-2">Adjust your filters or standby for new objectives.</p>
+                <h3 class="text-2xl font-black tracking-tighter uppercase text-muted-foreground/40 group-hover/empty:text-foreground transition-colors duration-500">NO_MISSIONS_FOUND</h3>
+                <p class="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/20 mt-3 font-mono">ADJUST_FILTERS_OR_STANDBY_FOR_OBJECTIVES</p>
             </div>
 
             <!-- Upload Modal -->
@@ -665,6 +689,15 @@ declare const route: any;
 
 .assignment-card {
     will-change: transform, opacity;
+}
+
+@keyframes scan-horizontal {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(1000%); }
+}
+
+.animate-scan-horizontal {
+    animation: scan-horizontal 3s linear infinite;
 }
 
 select {
