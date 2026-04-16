@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { dashboard, login, register } from '@/routes';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useAppearance } from '@/composables/useAppearance';
+import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import gsap from 'gsap';
-import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon } from 'lucide-vue-next';
+import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon, Cpu, Activity, Zap as ZapIcon, BrainCircuit } from 'lucide-vue-next';
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         canRegister: boolean;
+        totalUsers?: number;
     }>(),
     {
         canRegister: true,
+        totalUsers: 0,
     },
 );
 
@@ -23,9 +26,16 @@ const structuralLines = ref<HTMLElement[]>([]);
 const mainContainer = ref<HTMLElement | null>(null);
 const backgroundGrid = ref<HTMLElement | null>(null);
 const mouseGlow = ref<HTMLElement | null>(null);
+const techCarousel = ref<HTMLElement | null>(null);
 
 // Appearance Management
 const { appearance, toggleTheme } = useAppearance();
+
+// Animated Metrics
+const animUsers = useNumberAnimation(() => props.totalUsers || 0, 2, 'expo.out');
+const animUptime = useNumberAnimation(() => 99, 1.5, 'power2.out');
+const animLatency = useNumberAnimation(() => 5, 2.5, 'elastic.out(1, 0.3)');
+const animSync = useNumberAnimation(() => 1240, 3, 'power4.out');
 
 // Interaction Logic
 const handleMagnetic = (e: MouseEvent) => {
@@ -191,13 +201,33 @@ onMounted(() => {
         ease: 'power4.out',
         clearProps: "all"
     }, "-=1.2")
-    // 6. Reveal Footer
+    // 6. Reveal New Sections
+    .from('.reveal-section', {
+        y: 40,
+        opacity: 0,
+        stagger: 0.2,
+        duration: 1,
+        ease: 'power3.out'
+    }, "-=0.8")
+    // 7. Reveal Footer
     .to('.footer-reveal', {
         opacity: 1,
         y: 0,
         stagger: 0.1,
         duration: 1
     }, "-=0.8");
+
+    // Tech Carousel Logic
+    if (techCarousel.value) {
+        const carousel = techCarousel.value;
+        
+        gsap.to(carousel, {
+            xPercent: -50,
+            duration: 20,
+            ease: "none",
+            repeat: -1
+        });
+    }
 });
 
 const coreFeatures = [
@@ -219,6 +249,22 @@ const coreFeatures = [
         icon: Award,
         code: 'MOD_LDR_03'
     }
+];
+
+const systemStats = computed(() => [
+    { label: 'Total Users', value: animUsers.value, unit: 'NODES', icon: Cpu },
+    { label: 'Uptime', value: animUptime.value + '.99', unit: '%', icon: Activity },
+    { label: 'Latency', value: animLatency.value, unit: 'MS', icon: ZapIcon },
+    { label: 'Intelligence', value: (animSync.value / 100).toFixed(1) + 'k', unit: 'SYNC', icon: BrainCircuit },
+]);
+
+const techStack = [
+    { name: 'Laravel 11', description: 'Robust backend architecture for scale.', icon: Command },
+    { name: 'Vue 3', description: 'High-performance reactive UI system.', icon: Zap },
+    { name: 'Inertia.js', description: 'The modern monolith connection layer.', icon: Target },
+    { name: 'GSAP', description: 'Ultra-smooth professional animations.', icon: Award },
+    { name: 'Tailwind CSS', description: 'Utility-first design framework.', icon: LayoutDashboard },
+    { name: 'TypeScript', description: 'Type-safe scalable development.', icon: Command },
 ];
 </script>
 
@@ -364,8 +410,22 @@ const coreFeatures = [
                 </div>
             </div>
 
+            <!-- System Metrics Ticker -->
+            <div class="reveal-section mt-24 lg:mt-40 grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-20 border-y border-border/10 py-8 lg:py-12">
+                <div v-for="stat in systemStats" :key="stat.label" class="flex flex-col gap-3 group">
+                    <div class="flex items-center gap-3">
+                        <component :is="stat.icon" class="h-4 w-4 text-primary opacity-50 group-hover:opacity-100 transition-opacity" />
+                        <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{{ stat.label }}</span>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-2xl lg:text-4xl font-black tracking-tighter">{{ stat.value }}</span>
+                        <span class="text-[10px] lg:text-xs font-bold text-primary tracking-widest">{{ stat.unit }}</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Features Array -->
-            <div class="mt-24 lg:mt-56 grid w-full border-t border-border/10 pt-10 lg:pt-16 lg:grid-cols-3 gap-0">
+            <div class="mt-12 lg:mt-24 grid w-full lg:grid-cols-3 gap-0 border-b border-border/10">
                 <div 
                     v-for="(feature, index) in coreFeatures" 
                     :key="index"
@@ -402,6 +462,29 @@ const coreFeatures = [
                             View Specs
                             <ArrowRight class="h-3 w-3" />
                         </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tech Stack Carousel -->
+            <div class="reveal-section mt-24 lg:mt-48 overflow-hidden relative py-12 border-y border-border/5">
+                <div class="flex items-center gap-4 mb-12 px-6 lg:px-0">
+                    <div class="h-px w-12 bg-primary"></div>
+                    <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]">Core Technology Stack</h2>
+                </div>
+                
+                <div class="flex whitespace-nowrap" ref="techCarousel">
+                    <!-- Duplicate items for seamless loop -->
+                    <div v-for="n in 2" :key="n" class="flex gap-12 lg:gap-24 pr-12 lg:pr-24">
+                        <div v-for="tech in techStack" :key="tech.name" class="flex items-center gap-6 group">
+                            <div class="flex h-12 w-12 lg:h-16 lg:w-16 items-center justify-center border border-border/10 bg-muted/5 group-hover:border-primary/30 transition-colors">
+                                <component :is="tech.icon" class="h-6 w-6 lg:h-8 lg:w-8 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-base lg:text-xl font-black uppercase tracking-tight">{{ tech.name }}</span>
+                                <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">{{ tech.description }}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

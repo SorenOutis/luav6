@@ -17,8 +17,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
+use App\Models\User;
+
 Route::inertia('/', 'Welcome', [
     'canRegister' => Features::enabled(Features::registration()),
+    'totalUsers' => User::count(),
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
