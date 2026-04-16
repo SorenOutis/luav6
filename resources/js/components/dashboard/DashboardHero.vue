@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import { X, Sparkles, Zap, Award, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
@@ -13,6 +14,8 @@ interface Announcement {
 interface UserStats {
     level: number;
     totalXP: number;
+    currentXP: number;
+    maxXPForLevel: number;
     points: number;
 }
 
@@ -30,10 +33,14 @@ const props = defineProps<Props>();
 const emit = defineEmits(['close-announcement', 'refresh']);
 
 const animatedLevel = useNumberAnimation(() => props.userStats.level);
-const animatedXP = useNumberAnimation(() => props.userStats.totalXP);
+const animatedXP = useNumberAnimation(() => props.userStats.currentXP);
+const animatedMaxXP = useNumberAnimation(() => props.userStats.maxXPForLevel);
 
-const maxXPForLevel = 500000; // Hardcoded for now based on the previous file's logic
-const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
+const xpPercentage = computed(() => {
+    if (!props.userStats.maxXPForLevel) return 0;
+    const percent = (props.userStats.currentXP / props.userStats.maxXPForLevel) * 100;
+    return Math.min(100, Math.max(0, percent));
+});
 </script>
 
 <template>
@@ -157,9 +164,9 @@ const xpPercentage = (props.userStats.totalXP / maxXPForLevel) * 100;
                                 <div class="flex items-center flex-wrap gap-2">
                                     <p class="text-[9px] font-black uppercase tracking-widest text-primary">Neural Progress</p>
                                     <span class="hidden sm:block w-1 h-1 rounded-full bg-primary/40"></span>
-                                    <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{{ (maxXPForLevel - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
                                 </div>
-                                <p class="text-[11px] sm:text-xs font-black tracking-tight">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ maxXPForLevel.toLocaleString() }} XP</span></p>
+                                <p class="text-[11px] sm:text-xs font-black tracking-tight">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ animatedMaxXP.toLocaleString() }} XP</span></p>
                             </div>
                             <div class="flex items-center gap-1.5 text-xs sm:text-sm font-black text-primary self-end sm:self-auto">
                                 <Zap class="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current animate-pulse" />

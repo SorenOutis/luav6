@@ -176,7 +176,11 @@ const props = defineProps<{
 
 const userStats = computed(() => props.userStats);
 const progressPercentage = computed(() => (userStats.value.currentXP / userStats.value.maxXPForLevel) * 100);
-const totalXPProgress = computed(() => Math.min(100, (userStats.value.totalXP / 500000) * 100));
+const totalXPProgress = computed(() => {
+    if (!userStats.value.maxXPForLevel) return 0;
+    const percent = (userStats.value.currentXP / userStats.value.maxXPForLevel) * 100;
+    return Math.min(100, Math.max(0, percent));
+});
 
 const announcements = computed(() => props.announcements);
 const courses = computed(() => props.courses);
