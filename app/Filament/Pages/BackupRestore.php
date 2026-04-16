@@ -192,7 +192,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
                 if (File::exists($avatarsPath)) {
                     $files = File::allFiles($avatarsPath);
                     foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/avatars/'.$file->getFilename());
+                        $zip->addFile($file->getPathname(), 'public/avatars/'.$file->getRelativePathname());
                     }
                 }
 
@@ -201,7 +201,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
                 if (File::exists($coversPath)) {
                     $files = File::allFiles($coversPath);
                     foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/covers/'.$file->getFilename());
+                        $zip->addFile($file->getPathname(), 'public/covers/'.$file->getRelativePathname());
                     }
                 }
 
@@ -257,7 +257,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
                 if (File::exists($avatarsPath)) {
                     $files = File::allFiles($avatarsPath);
                     foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/avatars/'.$file->getFilename());
+                        $zip->addFile($file->getPathname(), 'public/avatars/'.$file->getRelativePathname());
                     }
                 }
 
@@ -265,7 +265,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
                 if (File::exists($coversPath)) {
                     $files = File::allFiles($coversPath);
                     foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/covers/'.$file->getFilename());
+                        $zip->addFile($file->getPathname(), 'public/covers/'.$file->getRelativePathname());
                     }
                 }
                 $zip->close();
@@ -282,11 +282,15 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
             // Restore from the uploaded backup ZIP
             $zip = new ZipArchive;
             if ($zip->open($backupPath) === true) {
-                // Extract database.sqlite
-                $zip->extractTo(database_path(), ['database.sqlite']);
-
-                // Extract avatars and covers
-                $zip->extractTo(storage_path('app'), ['public/avatars/', 'public/covers/']);
+                for ($i = 0; $i < $zip->numFiles; $i++) {
+                    $filename = $zip->getNameIndex($i);
+                    
+                    if ($filename === 'database.sqlite') {
+                        $zip->extractTo(database_path(), $filename);
+                    } elseif (str_starts_with($filename, 'public/')) {
+                        $zip->extractTo(storage_path('app'), $filename);
+                    }
+                }
 
                 $zip->close();
 
