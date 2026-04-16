@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -15,7 +16,7 @@ return new class extends Migration {
             $table->foreignId('exam_id')->constrained()->onDelete('cascade');
             $table->string('title');
             $table->text('instructions')->nullable();
-            $table->string('type'); # multiple_choice, identification, essay, etc.
+            $table->string('type'); // multiple_choice, identification, essay, etc.
             $table->integer('sort_order')->default(0);
             $table->timestamps();
         });

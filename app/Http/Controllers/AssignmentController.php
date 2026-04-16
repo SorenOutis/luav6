@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Assignment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Storage;
 
 class AssignmentController extends Controller
 {
@@ -14,6 +13,7 @@ class AssignmentController extends Controller
         $user = auth()->user();
         $assignments = Assignment::with(['course'])->get()->map(function ($assignment) use ($user) {
             $submission = $user->assignments()->where('assignment_id', $assignment->id)->first();
+
             return [
                 'id' => $assignment->id,
                 'title' => $assignment->title,
@@ -31,7 +31,7 @@ class AssignmentController extends Controller
         });
 
         return Inertia::render('Assignments', [
-            'assignments' => $assignments
+            'assignments' => $assignments,
         ]);
     }
 
@@ -42,7 +42,7 @@ class AssignmentController extends Controller
         ]);
 
         $user = auth()->user();
-        $path = $request->file('file')->store('assignments/' . $user->id, 'public');
+        $path = $request->file('file')->store('assignments/'.$user->id, 'public');
 
         $user->assignments()->syncWithoutDetaching([
             $assignment->id => [
@@ -50,7 +50,7 @@ class AssignmentController extends Controller
                 'status' => 'Submitted',
                 'file_path' => $path,
                 'submitted_at' => now(),
-            ]
+            ],
         ]);
 
         return back()->with('success', 'Assignment submitted successfully!');

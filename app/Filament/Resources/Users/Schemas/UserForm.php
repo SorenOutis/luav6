@@ -2,18 +2,17 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use App\Models\User;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Repeater;
-use Filament\Schemas\Components\Tabs;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Flex;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Image;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -40,8 +39,8 @@ class UserForm
                                             ->prefixIcon('heroicon-m-envelope'),
                                         TextInput::make('password')
                                             ->password()
-                                            ->dehydrated(fn($state) => filled($state))
-                                            ->required(fn(string $operation): bool => $operation === 'create')
+                                            ->dehydrated(fn ($state) => filled($state))
+                                            ->required(fn (string $operation): bool => $operation === 'create')
                                             ->prefixIcon('heroicon-m-lock-closed'),
                                         DateTimePicker::make('email_verified_at')
                                             ->prefixIcon('heroicon-m-check-badge'),
@@ -71,9 +70,9 @@ class UserForm
                                                         ->dehydrated(fn ($state) => filled($state))
                                                         ->label('Change Profile Picture'),
                                                 ])
-                                                ->from('md')
-                                                ->gap()
-                                                ->alignCenter(),
+                                                    ->from('md')
+                                                    ->gap()
+                                                    ->alignCenter(),
                                             ]),
                                         Section::make('Cover Photo')
                                             ->schema([
@@ -89,9 +88,9 @@ class UserForm
                                                         ->dehydrated(fn ($state) => filled($state))
                                                         ->label('Change Cover Photo'),
                                                 ])
-                                                ->from('md')
-                                                ->gap()
-                                                ->alignCenter(),
+                                                    ->from('md')
+                                                    ->gap()
+                                                    ->alignCenter(),
                                             ]),
                                     ]),
                                 Section::make('Section Progress')

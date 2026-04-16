@@ -1,6 +1,19 @@
 <?php
 
+use App\Http\Controllers\Admin\ExamSubmissionController;
+use App\Http\Controllers\AnonymousMessageController;
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\PublicProfileController;
+use App\Http\Controllers\Settings\ProfileController;
+use App\Models\Announcement;
+use App\Models\Exam;
+use App\Models\ExamSubmission;
+use App\Models\Season;
+use App\Models\Section;
+use App\Models\SectionProgress;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -11,13 +24,13 @@ Route::inertia('/', 'Welcome', [
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
-        $currentSeason = \App\Models\Season::current();
+        $currentSeason = Season::current();
 
         // --- Streak Logic ---
         $now = now();
-        if (!$user->last_login_at) {
+        if (! $user->last_login_at) {
             $user->update(['current_streak' => 1, 'last_login_at' => $now]);
-        } elseif (!$user->last_login_at->isToday()) {
+        } elseif (! $user->last_login_at->isToday()) {
             if ($user->last_login_at->isYesterday()) {
                 $user->increment('current_streak');
             } else {
@@ -35,7 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $sectionIds = $user->sections()->pluck('sections.id');
 
         // 1. Announcements (Active)
-        $announcements = \App\Models\Announcement::where('is_active', true)->get();
+        $announcements = Announcement::where('is_active', true)->get();
 
         // 2. Courses (Enrolled by user, scoped to season if id exists)
         $coursesResource = $user->courses();
@@ -62,7 +75,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'title' => $assignment->title,
                 'description' => $assignment->description,
                 'dueDate' => $assignment->due_date ?? 'No deadline',
-                'isOverdue' => $assignment->due_date ? \Carbon\Carbon::parse($assignment->due_date)->isPast() : false,
+                'isOverdue' => $assignment->due_date ? Carbon::parse($assignment->due_date)->isPast() : false,
                 'submitted' => (bool) $assignment->pivot->submitted,
                 'status' => $assignment->pivot->status,
                 'grade' => $assignment->pivot->grade,
@@ -70,24 +83,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 
         // 5. Upcoming Exams (Published exams, ordered by date)
-        $upcomingExams = \App\Models\Exam::where('status', '!=', 'draft')
-            ->when(!$user->is_admin, function ($query) use ($sectionIds) {
+        $upcomingExams = Exam::where('status', '!=', 'draft')
+            ->when(! $user->is_admin, function ($query) use ($sectionIds) {
                 $query->where(function ($query) use ($sectionIds) {
                     $query->whereNull('section_id')
-                          ->orWhereIn('section_id', $sectionIds);
+                        ->orWhereIn('section_id', $sectionIds);
                 });
             })
             ->orderBy('exam_date', 'asc')
             ->limit(3)
             ->get()
             ->map(function ($exam) use ($user) {
-                $submittedPartsCount = \App\Models\ExamSubmission::where('user_id', $user->id)
+                $submittedPartsCount = ExamSubmission::where('user_id', $user->id)
                     ->where('exam_id', $exam->id)
                     ->distinct('exam_part_id')
                     ->count();
-                
+
                 $totalParts = $exam->parts()->count();
-                
+
                 return [
                     'id' => $exam->id,
                     'title' => $exam->title,
@@ -100,18 +113,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'is_completed' => $submittedPartsCount === $totalParts && $totalParts > 0,
                 ];
             });
-        
 
         // 4. Leaderboard (Scoped to Current Season and Section)
         $sectionLeaderboards = [];
         if ($currentSeason) {
             $userSections = $user->sections()->get();
-            
+
             foreach ($userSections as $section) {
                 // Get all students in this section with their section-specific progress
                 $usersInSection = $section->users()
                     ->where('is_admin', false)
-                    ->with(['sectionProgress' => function($q) use ($section) {
+                    ->with(['sectionProgress' => function ($q) use ($section) {
                         $q->where('section_id', $section->id);
                     }])
                     ->get();
@@ -123,14 +135,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 $sectionExp = $currentUserSectionProgress?->exp ?? 0;
 
                 // Get weekly XP for all users in one query
-                $weeklyXpMap = \Illuminate\Support\Facades\DB::table('course_user')
+                $weeklyXpMap = DB::table('course_user')
                     ->whereIn('user_id', $userIds)
                     ->where('updated_at', '>=', now()->subDays(7))
-                    ->select('user_id', \Illuminate\Support\Facades\DB::raw('SUM(xp_earned) as total'))
+                    ->select('user_id', DB::raw('SUM(xp_earned) as total'))
                     ->groupBy('user_id')
                     ->pluck('total', 'user_id');
 
-                $leaderboardUsers = $usersInSection->map(function ($u) use ($section, $weeklyXpMap) {
+                $leaderboardUsers = $usersInSection->map(function ($u) use ($weeklyXpMap) {
                     $progress = $u->sectionProgress->first();
                     $xp = $progress?->exp ?? 0;
                     $level = $progress?->level ?? 1;
@@ -153,13 +165,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ];
                 })->sortByDesc('xp')->values();
 
-                $userRank = \App\Models\SectionProgress::where('section_id', $section->id)
-                    ->whereHas('user', function($q) {
+                $userRank = SectionProgress::where('section_id', $section->id)
+                    ->whereHas('user', function ($q) {
                         $q->where('is_admin', false);
                     })
                     ->where('exp', '>', $sectionExp)
                     ->count() + 1;
-                
+
                 $totalPlayers = $usersInSection->count();
 
                 $sectionLeaderboards[] = [
@@ -184,7 +196,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'rank' => 'Player',
                 'rankNumber' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['userRank'] : 0,
                 'totalPlayers' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['totalPlayers'] : 0,
-                'achievements' => $user->badges()->when($currentSeason, fn($q) => $q->wherePivot(
+                'achievements' => $user->badges()->when($currentSeason, fn ($q) => $q->wherePivot(
                     'season_id',
                     $currentSeason->id
                 ))->count(),
@@ -202,27 +214,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'name' => $currentSeason->name,
             ] : null,
             'sectionName' => $user->sections->pluck('name')->join(', '),
-            'allSections' => \App\Models\Section::all(['id', 'name']),
+            'allSections' => Section::all(['id', 'name']),
         ]);
     })->name('dashboard');
 
-    Route::get('u/{user}', [\App\Http\Controllers\PublicProfileController::class, 'show'])->name('users.show');
-    Route::patch('profile/section', [\App\Http\Controllers\Settings\ProfileController::class, 'updateSection'])->name('profile.section.update');
+    Route::get('u/{user}', [PublicProfileController::class, 'show'])->name('users.show');
+    Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
 
-    Route::get('assignments', [\App\Http\Controllers\AssignmentController::class, 'index'])->name('assignments.index');
-    Route::post('assignments/{assignment}/submit', [\App\Http\Controllers\AssignmentController::class, 'store'])->name('assignments.submit');
+    Route::get('assignments', [AssignmentController::class, 'index'])->name('assignments.index');
+    Route::post('assignments/{assignment}/submit', [AssignmentController::class, 'store'])->name('assignments.submit');
 
     Route::get('exams', [ExamController::class, 'index'])->name('exams.index');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->name('exams.show');
     Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->name('exams.submitPart')->middleware('throttle:10,1');
 
-    Route::get('ngl', [\App\Http\Controllers\AnonymousMessageController::class, 'index'])->name('ngl.index');
-    Route::post('ngl', [\App\Http\Controllers\AnonymousMessageController::class, 'store'])->name('ngl.store');
-    Route::post('ngl/{message}/like', [\App\Http\Controllers\AnonymousMessageController::class, 'like'])->name('ngl.like');
+    Route::get('ngl', [AnonymousMessageController::class, 'index'])->name('ngl.index');
+    Route::post('ngl', [AnonymousMessageController::class, 'store'])->name('ngl.store');
+    Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->name('ngl.like');
 
     // Admin routes
-    Route::get('admin/exams/submissions', [\App\Http\Controllers\Admin\ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');
-    Route::get('admin/exams/{exam}/submissions', [\App\Http\Controllers\Admin\ExamSubmissionController::class, 'examSubmissions'])->name('admin.exams.submissions.by-exam');
+    Route::get('admin/exams/submissions', [ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');
+    Route::get('admin/exams/{exam}/submissions', [ExamSubmissionController::class, 'examSubmissions'])->name('admin.exams.submissions.by-exam');
 });
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';

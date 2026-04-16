@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\AnonymousMessages\Pages;
 
 use App\Filament\Resources\AnonymousMessages\AnonymousMessageResource;
-use Filament\Actions\EditAction;
 use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewAnonymousMessage extends ViewRecord

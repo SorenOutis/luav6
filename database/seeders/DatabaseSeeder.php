@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Section;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -18,12 +20,12 @@ class DatabaseSeeder extends Seeder
         User::factory()->create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
-            'password' => \Illuminate\Support\Facades\Hash::make('password'),
+            'password' => Hash::make('password'),
             'is_admin' => true,
         ]);
 
-        \App\Models\Section::firstOrCreate(['name' => 'Section A']);
-        \App\Models\Section::firstOrCreate(['name' => 'Section B']);
-        \App\Models\Section::firstOrCreate(['name' => 'Section C']);
+        Section::firstOrCreate(['name' => 'Section A']);
+        Section::firstOrCreate(['name' => 'Section B']);
+        Section::firstOrCreate(['name' => 'Section C']);
     }
 }

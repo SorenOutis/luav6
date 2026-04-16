@@ -59,8 +59,8 @@ class ExamSubmission extends Model
 
         $user = $submission->user;
         $exam = $submission->exam;
-        $reason = "Exam Submission";
-        $description = "Earned from Exam: " . ($exam?->title ?? 'Unknown');
+        $reason = 'Exam Submission';
+        $description = 'Earned from Exam: '.($exam?->title ?? 'Unknown');
 
         if ($exam && $exam->section_id) {
             $sectionProgress = $user->activeSectionProgress($exam->section_id);

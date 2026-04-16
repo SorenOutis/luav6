@@ -3,8 +3,13 @@
 namespace App\Filament\Resources\Exams\Pages;
 
 use App\Filament\Resources\Exams\ExamResource;
+use App\Services\ExamTemplateService;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\FileUpload;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\Storage;
 
 class EditExam extends EditRecord
 {
@@ -13,24 +18,25 @@ class EditExam extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            \Filament\Actions\Action::make('downloadTemplate')
+            Action::make('downloadTemplate')
                 ->label('Download Template')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('info')
                 ->action(function () {
-                    $csv = (new \App\Services\ExamTemplateService())->getTemplateCsv();
+                    $csv = (new ExamTemplateService)->getTemplateCsv();
+
                     return response()->streamDownload(
-                        fn () => print($csv),
+                        fn () => print ($csv),
                         'exam-template.csv'
                     );
                 }),
 
-            \Filament\Actions\Action::make('uploadQuestions')
+            Action::make('uploadQuestions')
                 ->label('Upload Questions')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('warning')
                 ->form([
-                    \Filament\Forms\Components\FileUpload::make('questions_file')
+                    FileUpload::make('questions_file')
                         ->label('Select CSV File')
                         ->required()
                         ->disk('local')
@@ -38,10 +44,10 @@ class EditExam extends EditRecord
                         ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', 'text/plain']),
                 ])
                 ->action(function (array $data) {
-                    $file = \Illuminate\Support\Facades\Storage::disk('local')->path($data['questions_file']);
-                    (new \App\Services\ExamTemplateService())->uploadFromCsv($this->record, $file);
-                    
-                    \Filament\Notifications\Notification::make()
+                    $file = Storage::disk('local')->path($data['questions_file']);
+                    (new ExamTemplateService)->uploadFromCsv($this->record, $file);
+
+                    Notification::make()
                         ->title('Questions uploaded successfully')
                         ->success()
                         ->send();

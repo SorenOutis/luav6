@@ -2,10 +2,18 @@
 
 namespace App\Filament\Resources\Exams\Tables;
 
+use App\Models\Exam;
+use App\Services\ExamTemplateService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
+use Filament\Notifications\Notification;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
 
 class ExamsTable
 {
@@ -13,21 +21,21 @@ class ExamsTable
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\TextColumn::make('title')
+                TextColumn::make('title')
                     ->searchable(),
-                \Filament\Tables\Columns\TextColumn::make('section.name')
+                TextColumn::make('section.name')
                     ->label('Section')
                     ->placeholder('All Sections')
                     ->sortable(),
-                \Filament\Tables\Columns\TextColumn::make('exam_date')
+                TextColumn::make('exam_date')
                     ->dateTime()
                     ->sortable(),
-                \Filament\Tables\Columns\TextColumn::make('duration_minutes')
+                TextColumn::make('duration_minutes')
                     ->numeric()
                     ->sortable(),
-                \Filament\Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'draft' => 'warning',
                         'published' => 'success',
                         'closed' => 'danger',
@@ -35,42 +43,43 @@ class ExamsTable
                     }),
             ])
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('section')
+                SelectFilter::make('section')
                     ->relationship('section', 'name'),
             ])
             ->recordActions([
                 EditAction::make(),
-                \Filament\Actions\Action::make('uploadQuestions')
+                Action::make('uploadQuestions')
                     ->label('Import Questions')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->color('warning')
                     ->form([
-                        \Filament\Forms\Components\FileUpload::make('questions_file')
+                        FileUpload::make('questions_file')
                             ->label('Select CSV File')
                             ->required()
                             ->disk('local')
                             ->directory('temp-uploads')
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', 'text/plain']),
                     ])
-                    ->action(function (array $data, \App\Models\Exam $record) {
-                        $file = \Illuminate\Support\Facades\Storage::disk('local')->path($data['questions_file']);
-                        (new \App\Services\ExamTemplateService())->uploadFromCsv($record, $file);
-                        
-                        \Filament\Notifications\Notification::make()
+                    ->action(function (array $data, Exam $record) {
+                        $file = Storage::disk('local')->path($data['questions_file']);
+                        (new ExamTemplateService)->uploadFromCsv($record, $file);
+
+                        Notification::make()
                             ->title('Questions imported successfully')
                             ->success()
                             ->send();
                     }),
             ])
             ->toolbarActions([
-                \Filament\Actions\Action::make('downloadTemplate')
+                Action::make('downloadTemplate')
                     ->label('Download Template')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('info')
                     ->action(function () {
-                        $csv = (new \App\Services\ExamTemplateService())->getTemplateCsv();
+                        $csv = (new ExamTemplateService)->getTemplateCsv();
+
                         return response()->streamDownload(
-                            fn () => print($csv),
+                            fn () => print ($csv),
                             'exam-template.csv'
                         );
                     }),

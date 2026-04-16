@@ -12,7 +12,7 @@ class ExamSubmissionController extends Controller
     public function index()
     {
         // Ensure user is admin
-        if (!auth()->user()->is_admin) {
+        if (! auth()->user()->is_admin) {
             abort(403, 'Unauthorized');
         }
 
@@ -29,7 +29,7 @@ class ExamSubmissionController extends Controller
     public function examSubmissions(Exam $exam)
     {
         // Ensure user is admin
-        if (!auth()->user()->is_admin) {
+        if (! auth()->user()->is_admin) {
             abort(403, 'Unauthorized');
         }
 
@@ -38,10 +38,10 @@ class ExamSubmissionController extends Controller
             ->with(['user', 'examPart'])
             ->orderByDesc('created_at')
             ->get()
-            ->map(function ($submission) use ($exam) {
+            ->map(function ($submission) {
                 // Ensure answers is always an array
                 $answers = is_array($submission->answers) ? $submission->answers : json_decode($submission->answers, true) ?? [];
-                
+
                 return [
                     'id' => $submission->id,
                     'user_name' => $submission->user->name,

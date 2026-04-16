@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\Models\Exam;
-use App\Models\ExamPart;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class ExamTemplateService
@@ -12,7 +10,7 @@ class ExamTemplateService
     public function getTemplateCsv(): string
     {
         $handle = fopen('php://memory', 'r+');
-        
+
         // CSV Header
         fputcsv($handle, [
             'Part Title',
@@ -21,7 +19,7 @@ class ExamTemplateService
             'Type',
             'Choices (Pipe | Separated)',
             'Correct Choice/Answer',
-            'Points'
+            'Points',
         ]);
 
         // Example Rows
@@ -32,9 +30,9 @@ class ExamTemplateService
             'multiple_choice',
             'Berlin|Madrid|Paris|Rome',
             'Paris',
-            '1'
+            '1',
         ]);
-        
+
         fputcsv($handle, [
             'Part I - Multiple Choice',
             '',
@@ -42,7 +40,7 @@ class ExamTemplateService
             'multiple_choice',
             'Earth|Mars|Jupiter|Saturn',
             'Mars',
-            '1'
+            '1',
         ]);
 
         fputcsv($handle, [
@@ -52,7 +50,7 @@ class ExamTemplateService
             'true_false',
             'True|False',
             'True',
-            '1'
+            '1',
         ]);
 
         fputcsv($handle, [
@@ -62,7 +60,7 @@ class ExamTemplateService
             'identification',
             '',
             'Jose Rizal',
-            '5'
+            '5',
         ]);
 
         rewind($handle);
@@ -75,7 +73,7 @@ class ExamTemplateService
     public function uploadFromCsv(Exam $exam, string $csvPath): void
     {
         $rows = [];
-        if (($handle = fopen($csvPath, 'r')) !== FALSE) {
+        if (($handle = fopen($csvPath, 'r')) !== false) {
             // Check for BOM and skip it if present
             $bom = fread($handle, 3);
             if ($bom !== "\xEF\xBB\xBF") {
@@ -85,13 +83,13 @@ class ExamTemplateService
             $header = fgetcsv($handle);
             if ($header) {
                 // Ensure header is UTF-8
-                $header = array_map(fn($h) => $this->ensureUtf8($h), $header);
+                $header = array_map(fn ($h) => $this->ensureUtf8($h), $header);
             }
 
-            while (($data = fgetcsv($handle)) !== FALSE) {
+            while (($data = fgetcsv($handle)) !== false) {
                 if (count($header) === count($data)) {
                     // Ensure data is UTF-8
-                    $data = array_map(fn($d) => $this->ensureUtf8($d), $data);
+                    $data = array_map(fn ($d) => $this->ensureUtf8($d), $data);
                     $rows[] = array_combine($header, $data);
                 }
             }
@@ -108,12 +106,12 @@ class ExamTemplateService
             foreach ($rows as $row) {
                 $partTitle = $row['Part Title'] ?? 'Default Part';
                 $partInstructions = $row['Part Instructions'] ?? '';
-                
-                if (!isset($partsData[$partTitle])) {
+
+                if (! isset($partsData[$partTitle])) {
                     $partsData[$partTitle] = [
                         'instructions' => $partInstructions,
                         'questions' => [],
-                        'sort_order' => $sortOrder++
+                        'sort_order' => $sortOrder++,
                     ];
                 }
 
@@ -127,7 +125,7 @@ class ExamTemplateService
                     'type' => $type,
                     'options' => [],
                     'correct_answer' => null,
-                    'points' => (int) ($row['Points'] ?? 1)
+                    'points' => (int) ($row['Points'] ?? 1),
                 ];
 
                 if (in_array($type, ['multiple_choice', 'true_false'])) {
@@ -135,10 +133,10 @@ class ExamTemplateService
                     foreach ($choices as $choiceText) {
                         // Case-insensitive comparison for correct answer
                         $isCorrect = strcasecmp(trim($choiceText), trim($correctInput)) === 0;
-                        
+
                         $questionData['options'][] = [
                             'text' => $choiceText,
-                            'is_correct' => $isCorrect
+                            'is_correct' => $isCorrect,
                         ];
                     }
                 } elseif ($type === 'identification') {
@@ -155,7 +153,7 @@ class ExamTemplateService
                     'questions' => $data['questions'],
                     'sort_order' => $data['sort_order'],
                     'type' => 'section', // Default from ExamForm
-                    'points' => (int) ($data['questions'][0]['points'] ?? 1) // Default part points to first question's points
+                    'points' => (int) ($data['questions'][0]['points'] ?? 1), // Default part points to first question's points
                 ]);
             }
         });

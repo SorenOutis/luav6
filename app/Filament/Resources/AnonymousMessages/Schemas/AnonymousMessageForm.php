@@ -23,7 +23,7 @@ class AnonymousMessageForm
                             ->label('Approve Message')
                             ->helperText('Approved messages will be visible on the NGL page.')
                             ->default(false),
-                    ])
+                    ]),
             ]);
     }
 }

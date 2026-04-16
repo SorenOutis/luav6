@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class AnonymousMessage extends Model
 {
@@ -15,7 +16,7 @@ class AnonymousMessage extends Model
 
     public function likes()
     {
-        return $this->hasMany(\Illuminate\Support\Facades\DB::table('anonymous_message_likes')->getNamespace() ? 'App\Models\AnonymousMessageLike' : 'AnonymousMessageLike', 'anonymous_message_id');
+        return $this->hasMany(DB::table('anonymous_message_likes')->getNamespace() ? 'App\Models\AnonymousMessageLike' : 'AnonymousMessageLike', 'anonymous_message_id');
     }
 
     // Simplified for now, will use DB table directly in controller for speed

@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -21,7 +19,7 @@ return new class extends Migration
             ->select('exam_submissions.user_id', 'exams.section_id', 'exam_submissions.score')
             ->get();
 
-        $grouped = $examSubmissions->groupBy(fn($item) => $item->user_id . '_' . $item->section_id)
+        $grouped = $examSubmissions->groupBy(fn ($item) => $item->user_id.'_'.$item->section_id)
             ->map(function ($items) {
                 return [
                     'user_id' => $items->first()->user_id,
@@ -62,7 +60,5 @@ return new class extends Migration
         echo "Migrated scores for {$affectedUsers} users across {$grouped->count()} section progress records.\n";
     }
 
-    public function down(): void
-    {
-    }
+    public function down(): void {}
 };

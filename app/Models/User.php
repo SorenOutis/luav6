@@ -82,7 +82,7 @@ class User extends Authenticatable
                 $rewardExp,
                 $rewardPoints,
                 'Section Enrollment',
-                "Enrolled in Section: " . ($section?->name ?? 'Unknown'),
+                'Enrolled in Section: '.($section?->name ?? 'Unknown'),
                 $sectionId
             );
         }
@@ -187,7 +187,7 @@ class User extends Authenticatable
             return null;
         }
 
-        if (!$seasonId) {
+        if (! $seasonId) {
             $seasonId = Season::current()?->id;
         }
 

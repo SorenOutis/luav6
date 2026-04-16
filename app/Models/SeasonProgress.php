@@ -13,10 +13,10 @@ class SeasonProgress extends Model
     protected static function booted()
     {
         static::creating(function (SeasonProgress $progress) {
-            if (!$progress->season_id) {
+            if (! $progress->season_id) {
                 $season = Season::where('is_active', true)->first() ?? Season::first();
-                
-                if (!$season) {
+
+                if (! $season) {
                     $season = Season::create([
                         'name' => 'Season 1',
                         'start_date' => now(),
@@ -24,7 +24,7 @@ class SeasonProgress extends Model
                         'is_active' => true,
                     ]);
                 }
-                
+
                 $progress->season_id = $season->id;
             }
         });
@@ -43,7 +43,7 @@ class SeasonProgress extends Model
             if ($progress->wasChanged('exp') || $progress->wasChanged('points')) {
                 $expDelta = (float) $progress->exp - (float) $progress->getOriginal('exp');
                 $pointsDelta = (float) $progress->points - (float) $progress->getOriginal('points');
-                
+
                 if (abs($expDelta) > 0.001 || abs($pointsDelta) > 0.001) {
                     $user = $progress->user;
                     if ($user) {
@@ -56,7 +56,7 @@ class SeasonProgress extends Model
                             $expDelta,
                             $pointsDelta,
                             'Admin Adjustment',
-                            "Manual adjustment for Season: " . ($progress->season?->name ?? 'Unknown'),
+                            'Manual adjustment for Season: '.($progress->season?->name ?? 'Unknown'),
                             null,
                             $progress->season_id
                         );
@@ -72,7 +72,7 @@ class SeasonProgress extends Model
 
             $expDelta = (float) $progress->exp;
             $pointsDelta = (float) $progress->points;
-            
+
             if ($expDelta > 0 || $pointsDelta > 0) {
                 $user = $progress->user;
                 if ($user) {
@@ -85,7 +85,7 @@ class SeasonProgress extends Model
                         $expDelta,
                         $pointsDelta,
                         'Season Reward',
-                        "Initial progress for Season: " . ($progress->season?->name ?? 'Unknown'),
+                        'Initial progress for Season: '.($progress->season?->name ?? 'Unknown'),
                         null,
                         $progress->season_id
                     );

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Sections\Pages;
 
 use App\Filament\Resources\Sections\SectionResource;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListSections extends ListRecords
@@ -12,7 +13,7 @@ class ListSections extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            \Filament\Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

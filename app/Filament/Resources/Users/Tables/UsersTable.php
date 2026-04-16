@@ -2,14 +2,19 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Models\Section;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 
 class UsersTable
 {
@@ -55,7 +60,7 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                \Filament\Tables\Filters\SelectFilter::make('sections')
+                SelectFilter::make('sections')
                     ->relationship('sections', 'name')
                     ->label('Filter by Sections')
                     ->multiple()
@@ -65,7 +70,7 @@ class UsersTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
-                \Filament\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -73,13 +78,13 @@ class UsersTable
                         ->label('Assign Sections')
                         ->icon('heroicon-o-folder-plus')
                         ->form([
-                            \Filament\Forms\Components\Select::make('sections')
+                            Select::make('sections')
                                 ->label('Sections')
                                 ->multiple()
-                                ->options(\App\Models\Section::pluck('name', 'id'))
+                                ->options(Section::pluck('name', 'id'))
                                 ->required(),
                         ])
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                        ->action(function (Collection $records, array $data) {
                             $records->each(function ($record) use ($data) {
                                 $record->sections()->sync($data['sections']);
                             });

@@ -2,26 +2,23 @@
 
 namespace App\Filament\Resources\Assignments\AssignmentResource\RelationManagers;
 
-use Filament\Forms;
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
-use Filament\Tables;
-use Filament\Tables\Table;
-use App\Models\Submission;
-use Illuminate\Support\Facades\Storage;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\CreateAction;
+use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
 
 class SubmissionsRelationManager extends RelationManager
 {
@@ -33,26 +30,26 @@ class SubmissionsRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                Forms\Components\Select::make('user_id')
+                Select::make('user_id')
                     ->relationship('user', 'name')
                     ->searchable()
                     ->required()
                     ->label('Student'),
-                Forms\Components\Select::make('status')
+                Select::make('status')
                     ->options([
                         'Pending' => 'Pending',
                         'Submitted' => 'Submitted',
                         'Graded' => 'Graded',
                     ])
                     ->required(),
-                Forms\Components\TextInput::make('grade')
+                TextInput::make('grade')
                     ->label('Grade'),
-                Forms\Components\FileUpload::make('file_path')
+                FileUpload::make('file_path')
                     ->label('Submission File')
                     ->disk('public')
                     ->directory('assignments')
                     ->visibility('public'),
-                Forms\Components\DateTimePicker::make('submitted_at')
+                DateTimePicker::make('submitted_at')
                     ->label('Submitted At'),
             ]);
     }
@@ -61,30 +58,30 @@ class SubmissionsRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')
+                TextColumn::make('user.name')
                     ->label('Student')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\IconColumn::make('submitted')
+                IconColumn::make('submitted')
                     ->boolean()
                     ->label('Submitted'),
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state): string => match ($state) {
+                    ->color(fn (string $state): string => match ($state) {
                         'Pending' => 'warning',
                         'Submitted' => 'info',
                         'Graded' => 'success',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('grade')
+                TextColumn::make('grade')
                     ->label('Grade')
                     ->placeholder('N/A'),
-                Tables\Columns\TextColumn::make('submitted_at')
+                TextColumn::make('submitted_at')
                     ->dateTime()
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->options([
                         'Pending' => 'Pending',
                         'Submitted' => 'Submitted',
@@ -92,23 +89,23 @@ class SubmissionsRelationManager extends RelationManager
                     ]),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                CreateAction::make()
                     ->label('Manual Submission'),
             ])
             ->actions([
-                Tables\Actions\Action::make('download')
+                Action::make('download')
                     ->label('Download')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('info')
-                    ->visible(fn($record) => $record->file_path !== null)
-                    ->action(fn($record) => response()->download(Storage::disk('public')->path($record->file_path))),
-                Tables\Actions\EditAction::make()
+                    ->visible(fn ($record) => $record->file_path !== null)
+                    ->action(fn ($record) => response()->download(Storage::disk('public')->path($record->file_path))),
+                EditAction::make()
                     ->label('Grade/Edit'),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

@@ -1,11 +1,12 @@
 <?php
 
 use App\Models\Season;
+use Illuminate\Contracts\Console\Kernel;
 
-require __DIR__ . '/vendor/autoload.php';
-$app = require_once __DIR__ . '/bootstrap/app.php';
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
 
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 if (Season::count() === 0) {
@@ -17,9 +18,9 @@ if (Season::count() === 0) {
     echo "Season 1 created successfully!\n";
 } else {
     echo "Seasons already exist.\n";
-    if (!Season::where('is_active', true)->exists()) {
+    if (! Season::where('is_active', true)->exists()) {
         $season = Season::first();
         $season->update(['is_active' => true]);
-        echo "Activated season: " . $season->name . "\n";
+        echo 'Activated season: '.$season->name."\n";
     }
 }

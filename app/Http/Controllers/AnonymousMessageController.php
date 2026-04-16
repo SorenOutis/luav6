@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AnonymousMessage;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class AnonymousMessageController extends Controller
 {
@@ -30,7 +30,7 @@ class AnonymousMessageController extends Controller
     public function like(AnonymousMessage $message)
     {
         $userId = auth()->id();
-        
+
         $like = DB::table('anonymous_message_likes')
             ->where('anonymous_message_id', $message->id)
             ->where('user_id', $userId)
@@ -51,7 +51,7 @@ class AnonymousMessageController extends Controller
             ]);
             $message->increment('likes_count');
         }
-        
+
         return back();
     }
 
