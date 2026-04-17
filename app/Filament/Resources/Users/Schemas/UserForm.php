@@ -48,6 +48,16 @@ class UserForm
                                             ->label('Administrator Access')
                                             ->helperText('Grant full access to the admin panel')
                                             ->columnSpanFull(),
+                                        Toggle::make('is_banned')
+                                            ->label('Banned')
+                                            ->helperText('Blocked students will be shown a banned modal on the dashboard.')
+                                            ->live()
+                                            ->columnSpanFull(),
+                                        TextInput::make('ban_reason')
+                                            ->label('Ban reason')
+                                            ->maxLength(1000)
+                                            ->visible(fn ($get) => (bool) $get('is_banned'))
+                                            ->columnSpanFull(),
                                     ]),
                             ]),
 

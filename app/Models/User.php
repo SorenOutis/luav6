@@ -27,6 +27,9 @@ class User extends Authenticatable
         'exp',
         'level',
         'is_admin',
+        'is_banned',
+        'banned_at',
+        'ban_reason',
         'current_streak',
         'longest_streak',
         'last_login_at',
@@ -114,6 +117,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'is_banned' => 'boolean',
+            'banned_at' => 'datetime',
         ];
     }
 

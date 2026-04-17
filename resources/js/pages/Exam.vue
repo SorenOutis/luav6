@@ -267,7 +267,7 @@ onMounted(() => {
                                 @click="openReview(exam)"
                                 class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12"
                             >
-                                <span class="inline-block skew-x-12">Recap_Data</span>
+                                <span class="inline-block skew-x-12">Review Answers</span>
                             </button>
                             
                             <a 

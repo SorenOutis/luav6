@@ -24,7 +24,7 @@ Route::inertia('/', 'Welcome', [
     'totalUsers' => User::count(),
 ])->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
         $currentSeason = Season::current();

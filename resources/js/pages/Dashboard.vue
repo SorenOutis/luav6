@@ -7,7 +7,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(ScrollTrigger);
 
 import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard } from '@/routes';
+import { dashboard, logout } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
@@ -69,6 +69,16 @@ const manualRefresh = () => {
 
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
+const isBanned = computed(() => Boolean(page.props.auth.user?.is_banned));
+const banReason = computed(() => page.props.auth.user?.ban_reason || '');
+const bannedAt = computed(() => {
+    const value = page.props.auth.user?.banned_at;
+    if (!value) return '';
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
+});
+const showBanModal = ref(false);
 
 // Personalized greeting based on stats
 const personalizedGreeting = computed(() => {
@@ -224,6 +234,12 @@ onMounted(() => {
         }, 800);
     }
 
+    if (isBanned.value) {
+        setTimeout(() => {
+            showBanModal.value = true;
+        }, 450);
+    }
+
     if (!dashboardContainer.value) return;
 
     gsapCtx = gsap.context(() => {
@@ -323,6 +339,11 @@ const handleQuickAction = (action: string) => {
             break;
     }
 };
+
+const handleLogout = () => {
+    sessionStorage.setItem('logged_out', 'true');
+    router.post(logout());
+};
 </script>
 
 <template>
@@ -332,7 +353,10 @@ const handleQuickAction = (action: string) => {
         <div 
             ref="dashboardContainer" 
             @mousemove="handleGlobalMouseMove"
-            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 md:p-10 relative overflow-hidden bg-background perspective-[1500px]"
+            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 md:p-10 relative overflow-hidden bg-background perspective-[1500px] transition-all duration-300"
+            :class="{
+                'pointer-events-none blur-sm select-none': showBanModal,
+            }"
         >
             <!-- Global Mouse Glow -->
             <div 
@@ -422,6 +446,34 @@ const handleQuickAction = (action: string) => {
             :show="showSectionModal" 
             :sections="allSections" 
         />
+
+        <div
+            v-if="showBanModal"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-md"
+        >
+            <div class="w-full max-w-xl rounded-2xl border border-destructive/30 bg-background/95 p-7 shadow-2xl">
+                <h2 class="text-2xl font-bold text-destructive">Account Suspended</h2>
+                <p class="mt-3 text-sm leading-6 text-muted-foreground">
+                    Your account has been banned from using this system. Please contact your administrator for assistance.
+                </p>
+                <p v-if="banReason" class="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                    <span class="font-semibold">Reason:</span> {{ banReason }}
+                </p>
+                <p v-if="bannedAt" class="mt-3 text-xs text-muted-foreground">
+                    Banned on: {{ bannedAt }}
+                </p>
+
+                <div class="mt-6 flex justify-end">
+                    <button
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
+                        @click="handleLogout"
+                    >
+                        Log out
+                    </button>
+                </div>
+            </div>
+        </div>
     </AppLayout>
 </template>
 
