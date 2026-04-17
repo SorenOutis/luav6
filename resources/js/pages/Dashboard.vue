@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, ref, computed, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
+
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -26,6 +30,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 const dashboardContainer = ref<HTMLElement | null>(null);
 const backgroundGrid = ref<HTMLElement | null>(null);
 const mouseGlow = ref<HTMLElement | null>(null);
+
+let gsapCtx: gsap.Context | null = null;
+const isCoarsePointer = ref(false);
+
+const syncInteractionModes = () => {
+    isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
+};
 
 import { usePage, Link, usePoll, router } from '@inertiajs/vue3';
 import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
@@ -74,7 +85,7 @@ const personalizedGreeting = computed(() => {
 
 // Interactive Background Logic
 const handleGlobalMouseMove = (e: MouseEvent) => {
-    if (!mouseGlow.value || !backgroundGrid.value) return;
+    if (!mouseGlow.value || !backgroundGrid.value || isCoarsePointer.value) return;
 
     const { clientX, clientY } = e;
     const xPercent = clientX / window.innerWidth;
@@ -203,84 +214,92 @@ watch(() => props.sectionName, (newSection) => {
 }, { immediate: true });
 
 onMounted(() => {
+    syncInteractionModes();
+    window.addEventListener('resize', syncInteractionModes);
+
     // If user has no sections, show the selection modal immediately but after initial dashboard animations start
     if (!props.sectionName) {
         setTimeout(() => {
             showSectionModal.value = true;
-        }, 800); // Slightly faster for immediate engagement
+        }, 800);
     }
 
     if (!dashboardContainer.value) return;
 
-    const tl = gsap.timeline({
-        defaults: { ease: 'expo.out', duration: 1.4 }
-    });
+    gsapCtx = gsap.context(() => {
+        const tl = gsap.timeline({
+            defaults: { ease: 'expo.out', duration: 1.2 }
+        });
 
-    // Reset initial states
-    gsap.set('.dashboard-hero', { opacity: 0, y: 40, scale: 0.98 });
-    gsap.set('.dashboard-stats', { opacity: 0, y: 30, scale: 0.97 });
-    gsap.set('.dashboard-leaderboard', { opacity: 0, y: 30, scale: 0.97 });
-    gsap.set('.dashboard-main-grid', {
-        opacity: 0,
-        y: 60,
-        scale: 0.97,
-        rotationX: -10,
-        transformOrigin: 'center top'
-    });
+        // Reset initial states
+        gsap.set('.dashboard-hero', { opacity: 0, y: 30, scale: 0.99 });
+        gsap.set('.dashboard-stats', { opacity: 0, y: 20, scale: 0.99 });
+        gsap.set('.dashboard-leaderboard', { opacity: 0, y: 20, scale: 0.99 });
+        gsap.set('.dashboard-main-grid', {
+            opacity: 0,
+            y: 40,
+            scale: 0.99,
+        });
 
-    tl.to('.dashboard-hero', { 
-        opacity: 1, 
-        y: 0, 
-        scale: 1,
-        duration: 1.2
-    });
-
-    tl.to(
-        '.dashboard-stats',
-        { 
+        // Hero and Stats Entrance (Immediate)
+        tl.to('.dashboard-hero', { 
             opacity: 1, 
             y: 0, 
             scale: 1,
             duration: 1
-        },
-        '-=0.8'
-    );
-
-    tl.to(
-        '.dashboard-leaderboard',
-        { 
+        })
+        .to('.dashboard-stats', { 
             opacity: 1, 
             y: 0, 
-            scale: 1, 
-            duration: 1
-        },
-        '-=0.6'
-    );
+            scale: 1,
+            duration: 0.8
+        }, '-=0.7');
 
-    tl.to(
-        '.dashboard-main-grid',
-        {
+        // Scroll-Triggered Sections
+        gsap.to('.dashboard-leaderboard', {
+            scrollTrigger: {
+                trigger: '.dashboard-leaderboard',
+                start: 'top 90%',
+            },
             opacity: 1,
             y: 0,
             scale: 1,
-            rotationX: 0,
-            duration: 1.4
-        },
-        '-=0.4'
-    );
-
-    // Background orb animation refinement
-    const orbs = dashboardContainer.value.querySelectorAll('.orb');
-    orbs.forEach((orb, i) => {
-        gsap.to(orb, {
-            x: `random(-100, 100)`,
-            y: `random(-100, 100)`,
-            duration: 12 + i * 4,
-            repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut'
+            duration: 1,
+            ease: 'expo.out'
         });
-    });
+
+        gsap.to('.dashboard-main-grid', {
+            scrollTrigger: {
+                trigger: '.dashboard-main-grid',
+                start: 'top 85%',
+            },
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 1.2,
+            ease: 'expo.out'
+        });
+
+        // Background orb animation refinement
+        const orbs = dashboardContainer.value?.querySelectorAll('.orb');
+        orbs?.forEach((orb, i) => {
+            gsap.to(orb, {
+                x: `random(-100, 100)`,
+                y: `random(-100, 100)`,
+                duration: 12 + i * 4,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut'
+            });
+        });
+    }, dashboardContainer.value);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', syncInteractionModes);
+    if (gsapCtx) {
+        gsapCtx.revert();
+    }
 });
 
 const handleQuickAction = (action: string) => {
@@ -313,7 +332,7 @@ const handleQuickAction = (action: string) => {
         <div 
             ref="dashboardContainer" 
             @mousemove="handleGlobalMouseMove"
-            class="flex h-full flex-1 flex-col gap-8 p-4 md:p-10 relative overflow-hidden bg-background perspective-[1500px]"
+            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 md:p-10 relative overflow-hidden bg-background perspective-[1500px]"
         >
             <!-- Global Mouse Glow -->
             <div 
