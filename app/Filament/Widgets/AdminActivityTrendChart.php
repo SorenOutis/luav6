@@ -16,7 +16,7 @@ class AdminActivityTrendChart extends ChartWidget
 
     protected ?string $pollingInterval = '60s';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     protected function getType(): string
     {

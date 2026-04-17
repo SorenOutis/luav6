@@ -489,7 +489,7 @@ const handleBeforeUnload = (e: BeforeUnloadEvent) => {
     const isExamInProgress = examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value);
     if (isExamInProgress && !isSubmitting.value) {
         e.preventDefault();
-        e.returnValue = 'Mission Protocol Active: You have not completed all parts of the exam. Exiting now will compromise your submission. Are you sure?';
+        e.returnValue = 'Assessment Protocol Active: You have not completed all parts of the exam. Exiting now will compromise your submission. Are you sure?';
         return e.returnValue;
     }
 };
@@ -1040,7 +1040,7 @@ const feedbackContent = computed(() => {
                         <button v-if="selectedPart" @click="goBackToList"
                             class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
                             <ChevronLeft class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-                            Return to Mission Briefing
+                            Return to Assessment Dashboard
                         </button>
                         <Link v-else href="/exams"
                             class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
@@ -1092,7 +1092,7 @@ const feedbackContent = computed(() => {
                                      <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                                 </div>
                                 <div class="space-y-0.5">
-                                    <span class="text-[9px] font-black text-primary uppercase tracking-[0.4em] font-mono">MISSION_READY_PROTOCOL</span>
+                                    <span class="text-[9px] font-black text-primary uppercase tracking-[0.4em] font-mono">ASSESSMENT_READY_PROTOCOL</span>
                                     <h1 class="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-foreground leading-[0.95]">
                                         {{ selectedPart ? selectedPart.title : exam.title }}
                                     </h1>
@@ -1150,7 +1150,7 @@ const feedbackContent = computed(() => {
 
                 <!-- Global Progress Bar -->
                 <div v-if="!allPartsSubmitted && examStarted" class="animate-up w-full mt-2 space-y-4">
-                    <!-- Overall Mission Progress -->
+                    <!-- Overall Evaluation Progress -->
                     <div class="space-y-2">
                         <div class="flex items-center justify-between px-1">
                             <span class="text-[9px] font-black uppercase tracking-[0.4em] text-primary/60">System Integrity</span>
@@ -1308,7 +1308,7 @@ const feedbackContent = computed(() => {
                                     <div class="space-y-2 flex-1">
                                         <h4 class="text-[11px] font-black text-primary uppercase tracking-[0.4em] flex items-center gap-3">
                                             <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                                            Exam Briefing
+                                            Assessment Instructions
                                             <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                                         </h4>
                                         <p class="text-base md:text-lg font-black text-foreground leading-relaxed tracking-tight whitespace-pre-wrap">
@@ -1465,7 +1465,7 @@ const feedbackContent = computed(() => {
                                             </span>
                                         </div>
                                         <div class="flex flex-col gap-1">
-                                            <span class="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-40 italic">Mission Clock</span>
+                                            <span class="text-[8px] font-black text-muted-foreground uppercase tracking-widest opacity-40 italic">System Clock</span>
                                             <span class="text-xs font-black text-primary flex items-center gap-2">
                                                 <Zap class="w-3 h-3 animate-pulse" />
                                                 {{ estimatedFinishMinutes || '--' }}m Est.

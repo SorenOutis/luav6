@@ -90,4 +90,3 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
         return $prefix.round($change, 1).'% vs previous 7 days';
     }
 }
-
