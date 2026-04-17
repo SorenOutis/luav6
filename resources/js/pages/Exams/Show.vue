@@ -1078,100 +1078,71 @@ const feedbackContent = computed(() => {
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
                 <div
-                    class="animate-up exam-hero relative overflow-hidden rounded-2xl border border-primary/20 bg-card p-6 md:p-8 shadow-[0_32px_64px_-16px_rgba(var(--primary),0.1)] group/hero"
+                    class="animate-up exam-hero relative overflow-hidden p-8 md:p-12 border border-border bg-card dark:bg-zinc-900/40 shadow-2xl group/hero"
                     @mousemove="handleMouseMove"
                 >
-                    <!-- Tech Grid Background (New) -->
-                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/hero:opacity-[0.05] transition-opacity">
-                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                            <defs>
-                                <pattern id="hero-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.5"/>
-                                </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#hero-grid)" />
-                        </svg>
-                    </div>
+                    <!-- Futuristic Corner Brackets -->
+                    <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                    <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
-                    <!-- Tech Scanning Line (New) -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-40 h-full -translate-x-full group-hover/hero:animate-scan-horizontal pointer-events-none opacity-0 group-hover/hero:opacity-100 transition-opacity"></div>
-
-                    <!-- Card Shine/Bloom Effect (New) -->
-                    <div class="absolute inset-0 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
-                    </div>
-                    
-                    <!-- Futuristic Corner Accents -->
-                    <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/40 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-700"></div>
-                    <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/40 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-700"></div>
-
-                    <!-- Inner Glow / Border Highlight -->
-                    <div class="absolute inset-0 rounded-2xl border border-white/5 pointer-events-none"></div>
-
-                    <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 lg:gap-12 z-10">
-                        <div class="space-y-4 flex-1">
-                            <div class="flex flex-wrap items-center gap-3">
-                                <span
-                                    class="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 text-[9px] font-black text-primary tracking-[0.2em] uppercase skew-x-[-12deg] shadow-sm">
-                                    <span class="skew-x-[12deg] flex items-center gap-2">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
-                                        MISSION_READY_PROTOCOL
-                                    </span>
-                                </span>
-                                <div v-if="examStarted && formattedFinishTime" class="flex items-center gap-2 text-[9px] font-black text-amber-500 uppercase tracking-widest bg-amber-500/10 px-3 py-1 border border-amber-500/20">
-                                    <Zap class="w-3 h-3 animate-pulse" />
-                                    <span class="font-mono">DEADLINE: {{ formattedFinishTime }}</span>
+                    <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-12">
+                        <div class="space-y-6 max-w-3xl">
+                            <div class="flex items-center gap-4">
+                                <div class="w-14 h-14 border-2 border-amber-500 rotate-45 flex items-center justify-center">
+                                     <div class="w-2.5 h-2.5 bg-amber-500 rotate-45 animate-pulse"></div>
+                                </div>
+                                <div class="space-y-1">
+                                    <span class="text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">MISSION_READY_PROTOCOL</span>
+                                    <h1 class="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-foreground leading-[0.9]">
+                                        {{ selectedPart ? selectedPart.title : exam.title }}
+                                    </h1>
                                 </div>
                             </div>
                             
-                            <div class="space-y-2">
-                                <h1 class="text-2xl md:text-5xl font-black tracking-tighter leading-none uppercase group-hover/hero:text-primary transition-colors duration-300">
-                                    {{ selectedPart ? selectedPart.title : exam.title }}
-                                </h1>
-                                
-                                <p v-if="!selectedPart" class="text-xs md:text-sm text-muted-foreground leading-relaxed max-w-2xl font-medium opacity-80">
+                            <div v-if="!selectedPart" class="bg-muted/30 dark:bg-zinc-950/40 p-6 border border-border/50 relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-amber-500/50"></div>
+                                <p class="text-sm md:text-base font-bold text-muted-foreground uppercase leading-relaxed tracking-tight">
                                     {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
                                 </p>
+                                <div class="mt-4 flex items-center gap-3 text-[10px] font-black text-foreground/40 uppercase tracking-widest font-mono">
+                                    <Calendar class="w-4 h-4" />
+                                    {{ formatDateTime(exam.exam_date) }}
+                                </div>
                             </div>
                             
-                            <div v-if="!selectedPart" class="flex flex-wrap items-center gap-6">
-                                <div class="flex items-center gap-3 text-[10px] font-black text-foreground/70 group-hover/hero:text-foreground transition-colors">
-                                    <Calendar class="w-4 h-4 text-primary/70" />
-                                    <span class="font-mono uppercase tracking-widest">{{ formatDateTime(exam.exam_date) }}</span>
-                                </div>
+                            <div v-if="selectedPart && lastSavedAt" class="sync-heartbeat flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 w-fit">
+                                <CheckCircle2 class="w-4 h-4 text-emerald-500" />
+                                <span class="text-[10px] font-black text-emerald-500 uppercase tracking-widest font-mono">ENCRYPTED_SYNC_{{ lastSavedAt.replace(/:/g, '_') }}</span>
                             </div>
                         </div>
 
-                        <!-- Stats Dashboard Bar -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-muted/30 p-6 border border-border/50 relative backdrop-blur-md overflow-hidden group/stats">
-                             <!-- Inner Glow for stats -->
-                             <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover/stats:opacity-100 transition-opacity duration-500"></div>
-                             
+                        <!-- Stats Architecture -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-muted/20 dark:bg-zinc-950/20 p-8 border border-border/50 relative">
                              <!-- Stat Decoration -->
                              <div class="absolute -top-1 -left-1 w-2 h-2 bg-primary"></div>
                              <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-primary"></div>
 
-                            <div v-if="allPartsSubmitted" class="flex flex-col gap-1 relative z-10">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_ACHIEVEMENT</span>
-                                <div class="text-xl font-black text-primary font-mono tabular-nums">{{ totalScore }}/{{ totalPossiblePoints }}</div>
+                            <div v-if="allPartsSubmitted" class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">ACHIEVEMENT</span>
+                                <div class="text-2xl font-black text-primary font-mono tabular-nums">{{ totalScore }}/{{ totalPossiblePoints }}</div>
                             </div>
                             
-                            <div class="flex flex-col gap-1 relative z-10">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_TIME_LIMIT</span>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">TIME_LIMIT</span>
                                 <div class="flex items-baseline gap-1">
-                                    <span class="text-xl font-black font-mono tabular-nums">{{ exam.duration_minutes }}</span>
+                                    <span class="text-2xl font-black font-mono tabular-nums text-foreground">{{ exam.duration_minutes }}</span>
                                     <span class="text-[8px] font-black text-primary uppercase font-mono">MIN</span>
                                 </div>
                             </div>
 
-                            <div class="flex flex-col gap-1 relative z-10">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_SECTIONS</span>
-                                <div class="text-xl font-black font-mono tabular-nums">{{ exam.parts.length }}</div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">SECTIONS</span>
+                                <div class="text-2xl font-black font-mono tabular-nums text-foreground">{{ exam.parts.length }}</div>
                             </div>
 
-                            <div class="flex flex-col gap-1 relative z-10">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">>_TOTAL_TASKS</span>
-                                <div class="text-xl font-black font-mono tabular-nums">{{ totalQuestions }}</div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">TOTAL_TASKS</span>
+                                <div class="text-2xl font-black font-mono tabular-nums text-foreground">{{ totalQuestions }}</div>
                             </div>
                         </div>
                     </div>
@@ -1218,116 +1189,69 @@ const feedbackContent = computed(() => {
                         </span>
                     </div>
 
-                    <div class="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
-                            class="exam-part-card animate-up surface-card premium-hover group/part-card h-full p-2 md:p-3 relative overflow-hidden transition-all duration-500"
+                            class="exam-part-card animate-up relative flex flex-col justify-between p-8 transition-all duration-500 overflow-hidden group/part border border-border bg-card dark:bg-zinc-900/40"
                             :class="[
-                                (isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index))
-                                    ? 'opacity-60 cursor-not-allowed grayscale-[0.5]' 
-                                    : 'cursor-pointer hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1',
-                                getPartColor(index)
+                                isPartSubmitted(part.id) 
+                                    ? 'opacity-80 grayscale-[0.4]' 
+                                    : isPartLocked(index) 
+                                        ? 'opacity-60 cursor-not-allowed grayscale' 
+                                        : 'hover:shadow-2xl hover:-translate-y-1 cursor-pointer'
                             ]"
                             @mousemove="handleMouseMove"
                         >
-                            <!-- Tech Grid Background (New) -->
-                            <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/part-card:opacity-[0.05] transition-opacity">
-                                <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                                    <defs>
-                                        <pattern :id="`grid-${part.id}`" width="15" height="15" patternUnits="userSpaceOnUse">
-                                            <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
-                                        </pattern>
-                                    </defs>
-                                    <rect width="100%" height="100%" :fill="`url(#grid-${part.id})`" />
-                                </svg>
-                            </div>
+                            <!-- Futuristic Corner Brackets -->
+                            <div class="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                            <div class="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
-                            <!-- Tech Scanning Line (New) -->
-                            <div v-if="!isPartLocked(index) && !isPartSubmitted(part.id)" class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-24 h-full -translate-x-full group-hover/part-card:animate-scan-horizontal pointer-events-none opacity-0 group-hover/part-card:opacity-100 transition-opacity"></div>
-
-                            <!-- Card Shine/Bloom Effect (New) -->
-                            <div class="absolute inset-0 opacity-0 group-hover/part-card:opacity-100 transition-opacity duration-700 pointer-events-none"
-                                style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
-                            </div>
-
-                            <!-- Silhouette background icon -->
-                            <div
-                                class="pointer-events-none absolute -right-2 -bottom-2 opacity-5 group-hover/part-card:opacity-15 group-hover/part-card:scale-110 transition-all duration-700">
-                                <component :is="getPartIcon(part.type)" class="w-12 h-12 text-foreground" />
-                            </div>
-
-                            <div class="relative flex flex-col gap-3 h-full z-10">
-                                <!-- Top: Part Label & Status -->
+                            <!-- Top: Status & Metadata -->
+                            <div class="relative z-10 flex flex-col gap-4">
                                 <div class="flex items-center justify-between">
-                                    <div class="px-2 py-0.5 rounded-md bg-primary/5 text-[8px] font-black text-primary/60 uppercase tracking-[0.2em] border border-primary/10 font-mono">
-                                        PART_0{{ index + 1 }}_DATA
+                                    <div class="w-10 h-10 border border-amber-500/30 rotate-45 flex items-center justify-center group-hover/part:border-amber-500 transition-colors">
+                                         <div class="w-1.5 h-1.5 bg-amber-500 rotate-45"></div>
                                     </div>
-                                    <div v-if="isPartSubmitted(part.id) || exam.status === 'closed' || isPartLocked(index)" class="flex flex-col items-end gap-1">
-                                        <div v-if="exam.status === 'closed' && !isPartSubmitted(part.id)" class="flex items-center gap-1.5 text-red-500">
-                                            <Lock class="w-3 h-3" />
-                                            <span class="text-[9px] font-black uppercase tracking-widest font-mono">LOCKED</span>
-                                        </div>
-                                        <div v-else-if="isPartLocked(index)" class="flex flex-col items-end gap-0.5 mt-0.5">
-                                            <div class="flex items-center gap-1 text-muted-foreground/60">
-                                                <Lock class="w-2.5 h-2.5" />
-                                                <span class="text-[8px] font-black uppercase tracking-widest font-mono">LOCKED</span>
-                                            </div>
-                                            <span class="text-[7px] font-bold text-muted-foreground uppercase tracking-wider opacity-60">
-                                                Complete P0{{ index }} to unlock
-                                            </span>
-                                        </div>
-                                        <div v-else-if="submissions[part.id]?.status === 'pending_review'" class="flex items-center gap-1 text-amber-500">
-                                            <Clock class="w-3 h-3" />
-                                            <span class="text-[9px] font-black uppercase tracking-widest font-mono">PENDING_REVIEW</span>
-                                        </div>
-                                        <div v-else class="flex items-center gap-1 text-green-500">
-                                            <CheckSquare2 class="w-3 h-3" />
-                                            <span class="text-[9px] font-black uppercase tracking-widest font-mono">COMPLETED</span>
-                                        </div>
-                                        <div v-if="isPartSubmitted(part.id)" class="text-[8px] font-bold text-muted-foreground/80 font-mono">
-                                            SCORE: <span class="text-foreground">{{ submissions[part.id]?.score ?? 0 }}</span> / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
-                                        </div>
+                                    <div v-if="isPartLocked(index)" class="p-2 rounded-lg bg-zinc-950/50 border border-white/5">
+                                        <Lock class="w-4 h-4 text-muted-foreground/40" />
                                     </div>
-                                    <div v-else class="flex items-center gap-1.5 text-muted-foreground/40 group-hover/part-card:text-primary/60 transition-colors">
-                                        <span class="text-[9px] font-black uppercase tracking-widest font-mono">READY_FOR_OPS</span>
+                                    <div v-else-if="isPartSubmitted(part.id)" class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                        <CheckCircle2 class="w-4 h-4 text-emerald-500" />
                                     </div>
                                 </div>
 
-                                <!-- Center: Title & Types -->
-                                <div class="flex-1 space-y-1.5">
-                                    <h3
-                                        class="text-sm md:text-base font-black leading-tight transition-colors uppercase tracking-tight"
-                                        :class="isPartSubmitted(part.id) || isPartLocked(index) ? 'text-muted-foreground' : 'text-foreground group-hover/part-card:text-primary'">
+                                <div class="space-y-1">
+                                    <span class="text-[9px] font-black text-primary uppercase tracking-[0.3em] font-mono">PHASE_{{ (index + 1).toString().padStart(2, '0') }}</span>
+                                    <h3 class="text-xl font-black text-foreground uppercase italic tracking-tight group-hover/part:text-primary transition-colors leading-none">
                                         {{ part.title }}
                                     </h3>
-                                    
-                                    <div class="flex flex-wrap items-center gap-1.5">
-                                        <span v-for="type in getQuestionTypes(part)" :key="type"
-                                            class="px-2 py-0.5 rounded-md bg-muted text-[8px] font-bold text-muted-foreground/80 uppercase tracking-wider border border-border/40 font-mono">
-                                            {{ formatType(type).toUpperCase() }}
+                                    <div class="h-px w-8 bg-foreground/10"></div>
+                                </div>
+
+                                <!-- Middle: Question Types Stagger -->
+                                <div class="bg-muted/30 dark:bg-zinc-950/40 p-4 border border-border/50 space-y-2">
+                                    <div v-for="type in getQuestionTypes(part)" :key="type" class="flex items-center gap-2">
+                                        <span class="text-amber-500 font-black text-[8px]">[!]</span>
+                                        <span class="text-[8px] font-black text-muted-foreground uppercase tracking-widest font-mono">
+                                            {{ formatType(type) }}
                                         </span>
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- Bottom: Footer Info & Action -->
-                                <div class="flex items-center justify-between pt-2 border-t border-border/10">
-                                    <div class="flex items-center gap-1 text-[9px] text-muted-foreground font-black uppercase font-mono">
-                                        <span class="text-foreground/80">{{ part.questions?.length ?? 0 }}</span>
-                                        <span class="opacity-60">TASKS_LOADED</span>
+                            <!-- Bottom: Footer Info & Action -->
+                            <div class="relative z-10 mt-6 pt-4 border-t border-border/10 flex items-center justify-between">
+                                <div class="flex flex-col">
+                                    <div class="flex items-center gap-2 font-mono">
+                                        <span class="text-[10px] font-black text-primary">{{ part.questions?.length ?? 0 }}</span>
+                                        <span class="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest">TASKS</span>
                                     </div>
-                                    
-                                    <div v-if="!isPartSubmitted(part.id)"
-                                        class="flex items-center gap-1 px-3 py-1 rounded-lg transition-all group/btn"
-                                        :class="isPartLocked(index) 
-                                            ? 'bg-muted/40 text-muted-foreground/40 cursor-not-allowed border border-border/20' 
-                                            : 'bg-primary text-primary-foreground font-black text-[9px] shadow-lg shadow-primary/20 hover:scale-[1.05] active:scale-[0.95]'">
-                                        <span class="text-[9px] font-black uppercase tracking-widest">{{ isPartLocked(index) ? 'LOCKED' : 'EXECUTE' }}</span>
-                                        <Lock v-if="isPartLocked(index)" class="w-2.5 h-2.5" />
-                                        <ArrowRight v-else class="w-2.5 h-2.5 transition-transform group-hover/btn:translate-x-0.5" />
-                                    </div>
-                                    <div v-else
-                                        class="w-8 h-8 rounded-full flex items-center justify-center bg-muted border border-border/60">
-                                        <CheckCircle2 class="w-4 h-4 text-green-500" />
-                                    </div>
+                                </div>
+                                
+                                <div v-if="!isPartSubmitted(part.id)"
+                                    class="px-4 py-2 bg-foreground text-background font-black text-[9px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-2"
+                                    :class="isPartLocked(index) ? 'opacity-20 grayscale' : ''">
+                                    <span class="inline-block skew-x-12">{{ isPartLocked(index) ? 'LOCKED' : 'EXECUTE' }}</span>
+                                    <ArrowRight v-if="!isPartLocked(index)" class="w-3 h-3 skew-x-12" />
                                 </div>
                             </div>
                         </div>

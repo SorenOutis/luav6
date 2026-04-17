@@ -216,145 +216,82 @@ onMounted(() => {
                 <div 
                     v-for="exam in exams" 
                     :key="exam.id"
-                    class="animate-section exam-card surface-card p-4 md:p-5 flex flex-col justify-between transition-all duration-500 overflow-hidden relative group/card"
+                    class="animate-section exam-card relative flex flex-col justify-between p-8 transition-all duration-500 overflow-hidden group/card border border-border bg-card dark:bg-zinc-900/40"
                     :class="exam.is_locked 
-                        ? 'opacity-70 cursor-not-allowed' 
-                        : 'hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1'"
+                        ? 'opacity-70 grayscale-[0.4] cursor-not-allowed' 
+                        : 'hover:shadow-2xl hover:-translate-y-1'"
                     @mousemove="handleMouseMove"
                 >
-                    <!-- Tech Grid Background (New) -->
-                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/card:opacity-[0.05] transition-opacity">
-                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                            <defs>
-                                <pattern id="exam-grid" width="15" height="15" patternUnits="userSpaceOnUse">
-                                    <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
-                                </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#exam-grid)" />
-                        </svg>
-                    </div>
+                    <!-- Futuristic Corner Brackets -->
+                    <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
-                    <!-- Tech Scanning Line (New) -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-32 h-full -translate-x-full group-hover/card:animate-scan-horizontal pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
-
-                    <!-- Card Shine/Bloom Effect (New) -->
-                    <div class="absolute inset-0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
-                    </div>
-
-                    <!-- Glossy accent -->
-                    <div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl"
-                        :class="!exam.is_locked && 'group-hover/card:bg-primary/10 transition-colors duration-500'">
-                    </div>
-
-                    <!-- Lock overlay for completed exams -->
-                    <div v-if="exam.is_locked" class="absolute inset-0 rounded-2xl bg-gradient-to-br from-background/40 to-background/20 backdrop-blur-[2px] z-[5] pointer-events-none"></div>
-                    
-                    <div class="space-y-3 relative z-10">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-2">
-                                <div class="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5 shadow-sm">
-                                    <div v-if="exam.status === 'published' && !exam.is_locked" class="w-1 h-1 rounded-full bg-primary animate-pulse"></div>
-                                    {{ exam.status }}
-                                </div>
-                                <div v-if="exam.is_locked" class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-[9px] font-black text-yellow-600 uppercase tracking-widest shadow-sm">
-                                    <Lock class="w-2.5 h-2.5" />
-                                    DONE
-                                </div>
-                            </div>
-                            <div class="flex items-center text-muted-foreground font-mono text-[9px] gap-1 px-2 py-0.5 rounded-md bg-muted/30 border border-border/50">
-                                <Clock class="w-2.5 h-2.5" />
-                                {{ exam.duration_minutes }}M_LIMIT
-                            </div>
+                    <!-- Center Diamond Icon -->
+                    <div class="flex justify-center mb-6">
+                        <div class="w-12 h-12 border-2 border-amber-500/40 rotate-45 flex items-center justify-center group-hover/card:border-amber-500 transition-colors duration-500">
+                             <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                         </div>
+                    </div>
 
-                        <div>
-                            <h3 class="text-lg font-black tracking-tight group-hover/card:text-primary transition-colors duration-300">
+                    <div class="relative z-10 space-y-6 text-center">
+                        <div class="space-y-2">
+                            <h2 class="text-2xl font-black italic uppercase tracking-tight text-foreground leading-none">
                                 {{ exam.title }}
-                            </h3>
-                            <p class="text-muted-foreground text-[10px] font-medium line-clamp-2 mt-0.5 leading-relaxed">{{ exam.description }}</p>
+                            </h2>
+                            <div class="h-px w-12 bg-foreground/20 mx-auto"></div>
+                            <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                                Initiating <span class="text-foreground underline underline-offset-4 decoration-2">Mission Briefing</span>
+                            </p>
                         </div>
 
-                        <!-- Progress bar for exam completion -->
-                        <div v-if="exam.total_parts && exam.total_parts > 0" class="pt-1">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest font-mono">
-                                    >_PROGRESS_FEED
-                                </span>
-                                <span class="text-[9px] font-black text-primary font-mono tabular-nums">
-                                    {{ Math.round(((exam.submitted_parts_count || 0) / exam.total_parts) * 100) }}%
-                                </span>
+                        <!-- System Alerts Box -->
+                        <div class="bg-muted/30 dark:bg-zinc-950/40 p-5 space-y-3 text-left border border-border/50">
+                            <div class="flex items-start gap-3">
+                                <span class="text-amber-500 font-black text-[10px] shrink-0">[!]</span>
+                                <p class="text-[9px] font-bold text-muted-foreground uppercase leading-relaxed tracking-wider">
+                                    {{ exam.description }}
+                                </p>
                             </div>
-                            <div class="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden border border-primary/10 relative p-[1px]">
-                                <div class="h-full bg-gradient-to-r from-primary/80 to-primary rounded-full transition-all duration-1000 ease-out relative"
-                                    :style="{ width: `${(exam.submitted_parts_count || 0) / exam.total_parts * 100}%` }">
-                                    <!-- Glow Tip -->
-                                    <div class="absolute right-0 top-0 h-full w-1.5 bg-white shadow-[0_0_8px_rgba(var(--primary),0.8)] rounded-full"></div>
-                                    <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
-                                </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-amber-500 font-black text-[10px] shrink-0">[!]</span>
+                                <p class="text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
+                                    TIME_LIMIT: {{ exam.duration_minutes }} MINUTES
+                                </p>
                             </div>
                         </div>
 
-                        <div class="space-y-2 pt-1">
-                            <div class="flex items-center gap-2.5 text-[10px] font-bold text-foreground/70 group-hover/card:text-foreground transition-colors">
-                                <Calendar class="w-3 h-3 text-primary/70" />
-                                <span class="font-mono uppercase tracking-tighter">{{ formatDateTime(exam.exam_date) }}</span>
-                            </div>
+                        <!-- Action Button (Slanted) -->
+                        <div class="pt-4 space-y-4">
+                            <button 
+                                v-if="exam.is_locked"
+                                @click="openReview(exam)"
+                                class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12"
+                            >
+                                <span class="inline-block skew-x-12">Recap_Data</span>
+                            </button>
+                            
+                            <a 
+                                v-else-if="exam.url" 
+                                :href="exam.url" 
+                                target="_blank"
+                                class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-3"
+                            >
+                                <span class="inline-block skew-x-12">Initialize Now</span>
+                                <ArrowRight class="w-4 h-4 skew-x-12" />
+                            </a>
+                            <Link 
+                                v-else
+                                :href="examsShow(exam.id).url"
+                                class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-3"
+                            >
+                                <span class="inline-block skew-x-12">Initialize Now</span>
+                                <ArrowRight class="w-4 h-4 skew-x-12" />
+                            </Link>
 
-                            <!-- Exam Parts Summary -->
-                            <div v-if="exam.parts.length > 0" class="pt-3 space-y-2 border-t border-border/30">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-1.5 h-[1px] bg-primary/40"></div>
-                                    <p class="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 font-mono">STRUCTURE_DATA</p>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <div 
-                                        v-for="part in exam.parts" 
-                                        :key="part.id"
-                                        class="px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10 text-[9px] font-bold flex items-center gap-2 hover:bg-primary/10 hover:border-primary/20 transition-all cursor-default group/part"
-                                    >
-                                        <div class="w-1 h-1 rounded-full bg-primary/40 group-hover/part:bg-primary transition-colors"></div>
-                                        <span class="font-mono uppercase tracking-tighter">{{ part.title }}</span>
-                                    </div>
-                                </div>
-                            </div>
+                            <button v-if="!exam.is_locked" class="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.4em] hover:text-red-500 transition-colors">
+                                Abort
+                            </button>
                         </div>
-                    </div>
-
-                    <div class="pt-3 relative z-10 flex flex-col gap-2">
-                        <button 
-                            v-if="exam.is_locked"
-                            @click="openReview(exam)"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-secondary/10 text-secondary-foreground font-black uppercase tracking-widest hover:bg-secondary/20 transition-all border border-secondary/20 shadow-sm text-[10px] group/btn"
-                        >
-                            <Eye class="w-3.5 h-3.5 transition-transform group-hover/btn:scale-110" />
-                            Review_Data
-                        </button>
-                        
-                        <button 
-                            v-if="exam.is_locked"
-                            disabled
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-muted/30 text-muted-foreground font-black uppercase tracking-widest cursor-not-allowed opacity-60 text-[10px] border border-border/50"
-                        >
-                            <Lock class="w-3 h-3" />
-                            COMPLETED
-                        </button>
-                        <a 
-                            v-else-if="exam.url" 
-                            :href="exam.url" 
-                            target="_blank"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-[10px] group/btn"
-                        >
-                            START
-                            <ExternalLink class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
-                        </a>
-                        <Link 
-                            v-else
-                            :href="examsShow(exam.id).url"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-[10px]"
-                        >
-                            START
-                        </Link>
                     </div>
                 </div>
             </div>
@@ -508,13 +445,22 @@ onMounted(() => {
     will-change: transform, opacity;
 }
 
-@keyframes scan-horizontal {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(1000%); }
+@keyframes scan-vertical {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(1000%); }
 }
 
-.animate-scan-horizontal {
-    animation: scan-horizontal 3s linear infinite;
+.animate-scan-vertical {
+    animation: scan-vertical 4s linear infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s infinite;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
