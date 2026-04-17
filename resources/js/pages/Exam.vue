@@ -307,104 +307,122 @@ onMounted(() => {
 
     <!-- Review Modal -->
     <Dialog v-model:open="showReviewModal">
-        <DialogContent class="sm:max-w-[1000px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-background border-primary/20 shadow-2xl rounded-2xl">
-            <DialogHeader class="p-6 md:p-8 border-b bg-muted/20">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div class="space-y-1">
-                        <DialogTitle class="text-2xl font-black bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
-                            {{ selectedExamForReview?.title }}
-                        </DialogTitle>
-                        <DialogDescription class="text-muted-foreground font-medium">
-                            Review your performance and individual question feedback.
-                        </DialogDescription>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-center">
-                            <span class="block text-[10px] font-black uppercase tracking-widest text-primary/60">Total Score</span>
-                            <span class="text-lg font-bold text-primary">
-                                {{ selectedExamForReview?.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
-                            </span>
+        <DialogContent class="sm:max-w-[1000px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-card dark:bg-zinc-900 border-border shadow-2xl rounded-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <!-- Futuristic Corner Brackets -->
+            <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-foreground z-50 pointer-events-none"></div>
+            <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-foreground z-50 pointer-events-none"></div>
+
+            <DialogHeader class="p-8 md:p-10 border-b border-border bg-muted/10 relative">
+                <div class="flex flex-col md:flex-row md:items-center justify-center gap-6 text-center md:text-left">
+                    <div class="flex items-center gap-5 justify-center md:justify-start">
+                        <div class="w-12 h-12 border-2 border-amber-500 rotate-45 flex items-center justify-center shrink-0">
+                             <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                         </div>
+                        <div class="space-y-1">
+                            <span class="text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">MISSION_DEBRIEF_PROTOCOL</span>
+                            <DialogTitle class="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-foreground leading-none">
+                                {{ selectedExamForReview?.title }}
+                            </DialogTitle>
+                            <DialogDescription class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                                Reviewing performance data and individual operative feedback.
+                            </DialogDescription>
+                        </div>
+                    </div>
+                    <div class="px-6 py-3 bg-muted/30 border border-border/50 relative overflow-hidden group/total mx-auto md:mx-0">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover/total:bg-primary transition-colors"></div>
+                        <span class="block text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-1 font-mono">TOTAL_SCORE</span>
+                        <span class="text-2xl font-black text-foreground font-mono tabular-nums">
+                            {{ selectedExamForReview?.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
+                        </span>
                     </div>
                 </div>
             </DialogHeader>
 
-            <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-background/50">
-                <div v-if="selectedExamForReview" class="space-y-10">
-                    <div v-for="part in selectedExamForReview.parts" :key="part.id" class="space-y-6">
-                        <div class="flex items-center justify-between border-b border-border/50 pb-3">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                    <HelpCircle class="w-4 h-4 text-primary" />
-                                </div>
-                                <h3 class="text-xl font-bold tracking-tight">{{ part.title }}</h3>
+            <div class="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar bg-card/30">
+                <div v-if="selectedExamForReview" class="space-y-16">
+                    <div v-for="part in selectedExamForReview.parts" :key="part.id" class="space-y-8">
+                        <div class="flex items-center justify-between border-b border-border/30 pb-4">
+                            <div class="flex items-center gap-4">
+                                <div class="w-1.5 h-6 bg-primary"></div>
+                                <h3 class="text-xl font-black italic uppercase tracking-tight text-foreground">{{ part.title }}</h3>
                             </div>
-                            <div v-if="getSubmissionForPart(selectedExamForReview, part.id)" class="px-3 py-1 rounded-full bg-muted border text-xs font-bold">
-                                Part Score: {{ getSubmissionForPart(selectedExamForReview, part.id)?.score }} / {{ part.questions?.reduce((acc, q) => acc + (parseInt(q.points) || 1), 0) }}
+                            <div v-if="getSubmissionForPart(selectedExamForReview, part.id)" 
+                                class="px-4 py-2 bg-foreground text-background font-black text-[10px] uppercase tracking-[0.2em] transform -skew-x-12">
+                                <span class="inline-block skew-x-12 font-mono">
+                                    PART_SCORE: {{ getSubmissionForPart(selectedExamForReview, part.id)?.score }} / {{ part.questions?.reduce((acc, q) => acc + (parseInt(q.points) || 1), 0) }}
+                                </span>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div 
                                 v-for="(question, qIndex) in part.questions" 
                                 :key="qIndex"
-                                class="p-5 rounded-2xl border transition-all duration-300 relative overflow-hidden group"
+                                class="p-6 transition-all duration-500 relative overflow-hidden border bg-muted/5 group/question"
                                 :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))
-                                    ? 'bg-green-500/5 border-green-500/20 hover:border-green-500/40' 
-                                    : 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'"
+                                    ? 'border-emerald-500/20 shadow-[0_0_30px_-15px_rgba(16,185,129,0.1)]' 
+                                    : 'border-red-500/20 shadow-[0_0_30px_-15px_rgba(239,68,68,0.1)]'"
                             >
-                                <!-- Corner Indicator -->
-                                <div class="absolute top-0 right-0 w-12 h-12 overflow-hidden pointer-events-none">
-                                    <div class="absolute top-2 right-2">
-                                        <CheckCircle2 v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))" class="w-5 h-5 text-green-500 opacity-50" />
-                                        <XCircle v-else class="w-5 h-5 text-red-500 opacity-50" />
-                                    </div>
+                                <!-- Status Accent -->
+                                <div class="absolute top-0 left-0 w-1 h-full"
+                                    :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500' : 'bg-red-500'">
                                 </div>
 
-                                <div class="space-y-4">
-                                    <div class="space-y-2">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Question {{ qIndex + 1 }}</span>
-                                            <Badge variant="outline" class="text-[9px] uppercase tracking-tighter px-1.5 py-0 h-4">{{ question.type.replace('_', ' ') }}</Badge>
+                                <div class="space-y-6">
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-3">
+                                                <span class="text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">OP_{{ (qIndex + 1).toString().padStart(2, '0') }}</span>
+                                                <span class="text-[8px] font-black text-primary uppercase tracking-widest px-2 py-0.5 border border-primary/20 font-mono">{{ question.type.replace('_', ' ') }}</span>
+                                            </div>
+                                            <div v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))" 
+                                                class="text-emerald-500 font-black text-[9px] font-mono uppercase tracking-widest flex items-center gap-1.5">
+                                                <CheckCircle2 class="w-3.5 h-3.5" />
+                                                SUCCESS
+                                            </div>
+                                            <div v-else class="text-red-500 font-black text-[9px] font-mono uppercase tracking-widest flex items-center gap-1.5">
+                                                <XCircle class="w-3.5 h-3.5" />
+                                                FAILED
+                                            </div>
                                         </div>
-                                        <p class="font-bold text-sm leading-snug">{{ question.text }}</p>
+                                        <p class="font-black italic uppercase tracking-tight text-sm text-foreground leading-snug">{{ question.text }}</p>
                                     </div>
 
-                                    <div class="space-y-3">
+                                    <div class="space-y-4">
                                         <!-- Multiple Choice / True False -->
-                                        <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'" class="grid grid-cols-1 gap-2">
+                                        <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'" class="grid grid-cols-1 gap-3">
                                             <div 
                                                 v-for="(option, oIndex) in question.options" 
                                                 :key="oIndex"
-                                                class="text-xs p-3 rounded-xl border flex items-center justify-between transition-all"
+                                                class="text-[10px] p-4 border flex items-center justify-between transition-all font-mono uppercase tracking-widest"
                                                 :class="[
                                                     option.is_correct 
-                                                        ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400 font-bold' 
-                                                        : 'bg-background/50 border-border/50 text-muted-foreground',
-                                                    parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex 
-                                                        ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-zinc-950' 
-                                                        : ''
+                                                        ? 'bg-emerald-500 text-white dark:text-zinc-950 border-emerald-500 font-black' 
+                                                        : parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex 
+                                                            ? 'bg-red-500/10 border-red-500/50 text-red-500'
+                                                            : 'bg-muted/30 border-border/50 text-muted-foreground opacity-50',
                                                 ]"
                                             >
                                                 <span class="flex-1">{{ option.text }}</span>
                                                 <div v-if="parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex" 
-                                                    class="ml-2 px-1.5 py-0.5 rounded bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-widest">
-                                                    Your Answer
+                                                    class="ml-3 px-2 py-1 bg-foreground text-background text-[7px] font-black uppercase tracking-[0.2em] transform -skew-x-12">
+                                                    <span class="inline-block skew-x-12">USER_ANS</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <!-- Identification -->
-                                        <div v-else-if="question.type === 'identification'" class="space-y-2">
-                                            <div class="p-3 rounded-xl border bg-background/50 flex flex-col gap-1">
-                                                <span class="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Your Answer</span>
-                                                <span class="font-bold text-sm" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-green-600' : 'text-red-600'">
-                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No answer' }}
+                                        <div v-else-if="question.type === 'identification'" class="space-y-3">
+                                            <div class="p-4 bg-muted/30 border border-border/50 flex flex-col gap-1.5 relative overflow-hidden">
+                                                <div class="absolute top-0 left-0 w-1 h-full" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500/40' : 'bg-red-500/40'"></div>
+                                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">USER_INPUT</span>
+                                                <span class="font-black text-xs uppercase tracking-widest" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-500' : 'text-red-500'">
+                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'NULL_VALUE' }}
                                                 </span>
                                             </div>
-                                            <div class="p-3 rounded-xl border border-green-500/30 bg-green-500/10 flex flex-col gap-1">
-                                                <span class="text-[9px] font-black text-green-600 uppercase tracking-widest">Correct Answer</span>
-                                                <span class="font-bold text-sm text-green-700 dark:text-green-400">
+                                            <div class="p-4 bg-emerald-500/5 border border-emerald-500/30 flex flex-col gap-1.5">
+                                                <span class="text-[8px] font-black text-emerald-500 uppercase tracking-[0.3em] font-mono">SYSTEM_REFERENCE</span>
+                                                <span class="font-black text-xs uppercase tracking-widest text-emerald-600">
                                                     {{ question.correct_answer }}
                                                 </span>
                                             </div>
@@ -417,9 +435,10 @@ onMounted(() => {
                 </div>
             </div>
 
-            <DialogFooter class="p-4 md:p-6 border-t bg-muted/10">
-                <Button variant="secondary" @click="showReviewModal = false" class="w-full md:w-auto font-bold uppercase tracking-wider text-xs px-8">
-                    Close Review
+            <DialogFooter class="p-8 md:p-10 border-t border-border bg-muted/10">
+                <Button variant="secondary" @click="showReviewModal = false" 
+                    class="w-full md:w-auto bg-foreground text-background font-black uppercase tracking-[0.3em] text-[10px] transform -skew-x-12 hover:bg-primary hover:text-primary-foreground px-12 h-12 rounded-none">
+                    <span class="inline-block skew-x-12">Terminate Review</span>
                 </Button>
             </DialogFooter>
         </DialogContent>
