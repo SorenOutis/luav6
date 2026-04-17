@@ -128,7 +128,7 @@ const formatType = (type: string) => type.replace(/_/g, ' ').toUpperCase();
                                             {{ formatType(answer.question_type) }}
                                         </span>
                                     </div>
-                                    <p class="text-sm font-semibold leading-relaxed text-foreground">{{ answer.question_text }}</p>
+                                    <p class="text-sm font-semibold leading-relaxed text-foreground whitespace-pre-wrap">{{ answer.question_text }}</p>
                                 </div>
                             </div>
 

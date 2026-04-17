@@ -385,7 +385,7 @@ onMounted(() => {
                                                 FAILED
                                             </div>
                                         </div>
-                                        <p class="font-black italic uppercase tracking-tight text-sm text-foreground leading-snug">{{ question.text }}</p>
+                                        <p class="font-black italic tracking-tight text-sm text-foreground leading-snug whitespace-pre-wrap">{{ question.text }}</p>
                                     </div>
 
                                     <div class="space-y-4">
@@ -403,7 +403,7 @@ onMounted(() => {
                                                             : 'bg-muted/30 border-border/50 text-muted-foreground opacity-50',
                                                 ]"
                                             >
-                                                <span class="flex-1">{{ option.text }}</span>
+                                                <span class="flex-1 whitespace-pre-wrap">{{ option.text }}</span>
                                                 <div v-if="parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex" 
                                                     class="ml-3 px-2 py-1 bg-foreground text-background text-[7px] font-black uppercase tracking-[0.2em] transform -skew-x-12">
                                                     <span class="inline-block skew-x-12">USER_ANS</span>
@@ -416,13 +416,13 @@ onMounted(() => {
                                             <div class="p-4 bg-muted/30 border border-border/50 flex flex-col gap-1.5 relative overflow-hidden">
                                                 <div class="absolute top-0 left-0 w-1 h-full" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500/40' : 'bg-red-500/40'"></div>
                                                 <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">USER_INPUT</span>
-                                                <span class="font-black text-xs uppercase tracking-widest" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-500' : 'text-red-500'">
+                                                <span class="font-black text-xs tracking-widest whitespace-pre-wrap" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-500' : 'text-red-500'">
                                                     {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'NULL_VALUE' }}
                                                 </span>
                                             </div>
                                             <div class="p-4 bg-emerald-500/5 border border-emerald-500/30 flex flex-col gap-1.5">
                                                 <span class="text-[8px] font-black text-emerald-500 uppercase tracking-[0.3em] font-mono">SYSTEM_REFERENCE</span>
-                                                <span class="font-black text-xs uppercase tracking-widest text-emerald-600">
+                                                <span class="font-black text-xs tracking-widest text-emerald-600 whitespace-pre-wrap">
                                                     {{ question.correct_answer }}
                                                 </span>
                                             </div>

@@ -1311,7 +1311,7 @@ const feedbackContent = computed(() => {
                                             Exam Briefing
                                             <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
                                         </h4>
-                                        <p class="text-base md:text-lg font-black text-foreground leading-relaxed uppercase tracking-tight">
+                                        <p class="text-base md:text-lg font-black text-foreground leading-relaxed tracking-tight whitespace-pre-wrap">
                                             {{ selectedPart!.instructions }}
                                         </p>
                                     </div>
@@ -1355,7 +1355,7 @@ const feedbackContent = computed(() => {
                                                     Value: {{ question.points ?? selectedPart!.points ?? 1 }} Units
                                                 </span>
                                             </div>
-                                            <p class="text-lg md:text-xl font-black leading-tight text-foreground/90 uppercase italic tracking-tight">
+                                            <p class="text-lg md:text-xl font-black leading-tight text-foreground/90 italic tracking-tight whitespace-pre-wrap">
                                                 {{ question.text }}
                                             </p>
                                         </div>
@@ -1377,7 +1377,7 @@ const feedbackContent = computed(() => {
                                                         v-model.number="answers[qIndex]" class="sr-only" />
                                                     <Check v-if="answers[qIndex] === oIndex" class="w-3 h-3 text-primary-foreground" />
                                                 </div>
-                                                <span class="relative text-sm font-black uppercase tracking-wider text-muted-foreground group-hover/option:text-foreground transition-colors has-[:checked]:text-primary">{{ option.text }}</span>
+                                                <span class="relative text-sm font-black tracking-wider text-muted-foreground group-hover/option:text-foreground transition-colors has-[:checked]:text-primary whitespace-pre-wrap">{{ option.text }}</span>
                                             </label>
                                         </div>
 
@@ -1385,7 +1385,7 @@ const feedbackContent = computed(() => {
                                         <div v-else-if="question.type === 'identification'" class="max-w-xl">
                                             <div class="relative group/input">
                                                 <input v-model="answers[qIndex]" type="text" placeholder="ENTER RESPONSE..."
-                                                    class="w-full px-6 py-4 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-sm font-black uppercase tracking-widest placeholder:text-muted-foreground/30" />
+                                                    class="w-full px-6 py-4 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-sm font-black tracking-widest placeholder:text-muted-foreground/30" />
                                                 <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within/input:opacity-100 transition-opacity">
                                                     <Zap class="w-4 h-4 text-primary animate-pulse" />
                                                 </div>
