@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
 import gsap from 'gsap';
 import { Terminal, Command } from 'lucide-vue-next';
+import { ref, onMounted, watch } from 'vue';
 import { useLoader } from '@/composables/useLoader';
-
-const TITLE = 'KOAMISHIN.ORG';
 
 const props = defineProps<{
     show: boolean;
 }>();
 
-const { pendingHide, hide } = useLoader();
+const { pendingHide, hide, message } = useLoader();
+const TITLE = 'KOAMISHIN.ORG';
 
 const loaderContainer = ref<HTMLElement | null>(null);
 const structuralLines = ref<HTMLElement[]>([]);
@@ -50,6 +49,7 @@ watch(() => props.show, (newVal) => {
 
 const startEntrance = () => {
     console.log('[GlobalLoader] Starting Entrance Animation');
+    const isTerminating = message.value === 'TERMINATING SESSION';
 
     // Reset gates
     progressDone = false;
@@ -61,33 +61,53 @@ const startEntrance = () => {
     gsap.set('.loader-reveal', { y: 20, opacity: 0 });
     gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
     // Each letter starts clipped (hidden below its container)
-    gsap.set(letterEls.value, { y: '110%', opacity: 0 });
+    if (!isTerminating) {
+        gsap.set(letterEls.value, { y: '110%', opacity: 0 });
+    }
     progress.value = 0;
 
-    // Structural lines sweep in
-    tl.to(structuralLines.value, {
-        scaleX: 1,
-        scaleY: 1,
-        stagger: 0.1,
-        duration: 0.8,
-        ease: 'power4.inOut'
-    })
-    // Letters drop-in one by one
-    .to(letterEls.value, {
-        y: '0%',
-        opacity: 1,
-        stagger: 0.06,
-        duration: 0.9,
-        ease: 'expo.out'
-    }, '-=0.3')
-    // Status row fades up
-    .to('.loader-reveal', {
-        y: 0,
-        opacity: 1,
-        stagger: 0.1,
-        duration: 0.8,
-        ease: 'expo.out'
-    }, '-=0.4');
+    if (isTerminating) {
+        // Faster path for logout: reveal status and progress almost immediately.
+        tl.to(structuralLines.value, {
+            scaleX: 1,
+            scaleY: 1,
+            stagger: 0.06,
+            duration: 0.35,
+            ease: 'power2.out'
+        })
+        .to('.loader-reveal', {
+            y: 0,
+            opacity: 1,
+            stagger: 0.06,
+            duration: 0.35,
+            ease: 'power2.out'
+        }, '-=0.2');
+    } else {
+        // Structural lines sweep in
+        tl.to(structuralLines.value, {
+            scaleX: 1,
+            scaleY: 1,
+            stagger: 0.1,
+            duration: 0.8,
+            ease: 'power4.inOut'
+        })
+        // Letters drop-in one by one
+        .to(letterEls.value, {
+            y: '0%',
+            opacity: 1,
+            stagger: 0.06,
+            duration: 0.9,
+            ease: 'expo.out'
+        }, '-=0.3')
+        // Status row fades up
+        .to('.loader-reveal', {
+            y: 0,
+            opacity: 1,
+            stagger: 0.1,
+            duration: 0.8,
+            ease: 'expo.out'
+        }, '-=0.4');
+    }
 
     // Progress always runs the full journey: 0 → 100% over ~2.8s
     gsap.to(progress, {
@@ -148,7 +168,10 @@ watch(pendingHide, (isPending) => {
             <!-- Monolithic Branding -->
             <div class="flex flex-col items-center">
                 <!-- Per-character animated title -->
-                <h1 class="flex items-end overflow-hidden text-[12vw] md:text-8xl lg:text-[10rem] font-black tracking-[-0.04em] leading-none uppercase select-none">
+                <h1
+                    v-if="message !== 'TERMINATING SESSION'"
+                    class="flex items-end overflow-hidden text-[12vw] md:text-8xl lg:text-[10rem] font-black tracking-[-0.04em] leading-none uppercase select-none"
+                >
                     <span
                         v-for="(char, i) in TITLE"
                         :key="i"
@@ -157,12 +180,16 @@ watch(pendingHide, (isPending) => {
                         :class="{ 'mx-[0.01em]': char === '.' }"
                     >{{ char }}</span>
                 </h1>
+                <div
+                    v-else
+                    class="h-[12vw] min-h-[72px] md:h-28 lg:h-32"
+                ></div>
             </div>
 
             <!-- Initialization Status -->
             <div class="flex flex-col items-center gap-6 w-full max-w-xs">
                 <div class="flex items-center justify-between w-full text-[9px] font-black tracking-[0.4em] uppercase text-muted-foreground/60 loader-reveal">
-                    <span>Initializing Engine</span>
+                    <span>{{ message }}</span>
                     <span>{{ progress }}%</span>
                 </div>
                 
@@ -175,7 +202,9 @@ watch(pendingHide, (isPending) => {
 
                 <div class="flex items-center gap-3 opacity-30 loader-reveal">
                     <div class="h-1 w-1 rounded-full bg-primary animate-pulse"></div>
-                    <span class="text-[8px] font-black uppercase tracking-[0.5em] animate-pulse">Establishing Node Connectivity...</span>
+                    <span class="text-[8px] font-black uppercase tracking-[0.5em] animate-pulse">
+                        {{ message === 'TERMINATING SESSION' ? 'Safely Disconnecting Active Node...' : 'Establishing Node Connectivity...' }}
+                    </span>
                 </div>
             </div>
         </main>

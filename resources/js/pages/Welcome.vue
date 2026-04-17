@@ -28,6 +28,23 @@ const ambientOrbs = ref<HTMLElement[]>([]);
 const bootOverlay = ref<HTMLElement | null>(null);
 const bootText = ref<HTMLElement[]>([]);
 
+// Determine boot message based on session state
+const isLoggingOut = ref(false);
+
+const bootMessage = computed(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('logged_out') === 'true') {
+        return 'SESSION TERMINATED';
+    }
+    return 'LSI ENGINE';
+});
+
+const bootSubtext = computed(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('logged_out') === 'true') {
+        return 'Safely Terminating Active Node Sessions...';
+    }
+    return 'Booting System Components...';
+});
+
 let typingTimeout: ReturnType<typeof setTimeout> | null = null;
 let removeMediaListeners = () => {};
 let gsapCtx: gsap.Context | null = null;
@@ -170,6 +187,11 @@ const type = () => {
 };
 
 onMounted(() => {
+    // Check logout state before starting
+    if (typeof window !== 'undefined' && sessionStorage.getItem('logged_out') === 'true') {
+        isLoggingOut.value = true;
+    }
+
     syncInteractionModes();
 
     const coarsePointerQuery = window.matchMedia('(pointer: coarse)');
@@ -223,6 +245,10 @@ onMounted(() => {
             ease: 'power4.inOut',
             onComplete: () => {
                 if (bootOverlay.value) bootOverlay.value.style.display = 'none';
+                if (isLoggingOut.value) {
+                    sessionStorage.removeItem('logged_out');
+                    isLoggingOut.value = false;
+                }
             }
         }, '+=0.2')
 
@@ -737,27 +763,18 @@ const techStack = [
             class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background p-6"
         >
             <div class="scanline absolute inset-0 pointer-events-none opacity-[0.05]"></div>
-            <div class="relative flex flex-col items-center gap-6">
-                <!-- Digital Pulse Core -->
-                <!-- <div class="relative h-24 w-24">
-                    <div class="absolute inset-0 rounded-full border border-primary/20 animate-ping opacity-20"></div>
-                    <div class="absolute inset-0 rounded-full border border-primary/40 scale-75 animate-pulse"></div>
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <Command class="h-10 w-10 text-primary" />
-                    </div>
-                </div> -->
-
+            <div class="relative flex flex-col items-center gap-4">
                 <!-- Boot Sequence Text -->
                 <div class="flex flex-col items-center gap-2">
                     <div class="flex items-center gap-2 overflow-hidden">
-                        <span v-for="(letter, i) in 'LSI ENGINE'.split('')" :key="i" ref="bootText" class="text-xs font-black tracking-[0.6em] uppercase opacity-0 translate-y-4">
+                        <span v-for="(letter, i) in bootMessage.split('')" :key="i" ref="bootText" class="text-xs font-black tracking-[0.6em] uppercase opacity-0 translate-y-4">
                             {{ letter === ' ' ? '\u00A0' : letter }}
                         </span>
                     </div>
                     <div class="h-px w-32 bg-primary/20 overflow-hidden">
                         <div class="boot-progress h-full w-full bg-primary origin-left scale-x-0"></div>
                     </div>
-                    <span class="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 mt-1">Booting System Components...</span>
+                    <span class="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 mt-1">{{ bootSubtext }}</span>
                 </div>
             </div>
         </div>

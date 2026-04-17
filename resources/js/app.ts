@@ -3,8 +3,8 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import '../css/app.css';
-import { initializeTheme } from '@/composables/useAppearance';
 import GlobalLoader from '@/components/GlobalLoader.vue';
+import { initializeTheme } from '@/composables/useAppearance';
 import { useLoader } from '@/composables/useLoader';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -14,19 +14,44 @@ const { isVisible, show, hide, hideWhenReady } = useLoader();
  * Handle Global Navigation Transitions for the Boot Loader
  */
 router.on('start', (event) => {
-    const isFromAuth = window.location.pathname.includes('/login') || window.location.pathname.includes('/register');
-    const isPostMethod = event.detail.visit.method === 'post';
+    const visit = event.detail.visit;
+    const method = String(visit.method ?? 'get').toLowerCase();
+    const rawUrl = visit.url as string | URL;
+    const url = typeof rawUrl === 'string' ? rawUrl : rawUrl?.toString?.() ?? '';
 
-    // Only show the loading screen when submitting an auth form (post-login/register).
-    // Prevent it from triggering on regular GET navigation (e.g. from /login to /register).
-    if (isFromAuth && isPostMethod) {
-        show();
+    let targetPath = window.location.pathname;
+    try {
+        targetPath = new URL(url, window.location.origin).pathname;
+    } catch {
+        // Keep current pathname fallback when URL parsing fails.
+    }
+
+    const isAuthPage =
+        window.location.pathname.includes('/login') ||
+        window.location.pathname.includes('/register') ||
+        window.location.pathname.includes('/two-factor-challenge');
+
+    const isAuthTarget =
+        targetPath.includes('/login') ||
+        targetPath.includes('/register') ||
+        targetPath.includes('/two-factor-challenge');
+
+    const isMutatingVisit = method !== 'get';
+    const isAuthFlow = isMutatingVisit && (isAuthPage || isAuthTarget);
+    const isLogout = isMutatingVisit && targetPath.includes('/logout');
+
+    if (isAuthFlow) {
+        show('AUTHENTICATING');
+    } else if (isLogout) {
+        show('TERMINATING SESSION');
     }
 });
 
 router.on('finish', () => {
     // Signal the loader to hide — it will wait until progress bar hits 100%
-    hideWhenReady();
+    if (isVisible.value) {
+        hideWhenReady();
+    }
 });
 
 router.on('error', () => {
@@ -94,7 +119,8 @@ function ensureFormMethod(route: any): void {
                     import.meta.glob<DefineComponent>('./pages/**/*.vue'),
                 ),
             setup({ el, App, props, plugin }) {
-                createApp({
+                const RootApp = {
+                    name: 'RootApp',
                     setup() {
                         const { isVisible } = useLoader();
                         return { isVisible };
@@ -105,7 +131,9 @@ function ensureFormMethod(route: any): void {
                             h(GlobalLoader, { show: (this as any).isVisible }),
                         ]);
                     },
-                })
+                };
+
+                createApp(RootApp)
                     .use(plugin)
                     .mount(el);
             },
