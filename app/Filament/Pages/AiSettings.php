@@ -3,14 +3,15 @@
 namespace App\Filament\Pages;
 
 use App\Models\Setting;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
+use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
-use Filament\Notifications\Notification;
-use Filament\Pages\Page;
 
 class AiSettings extends Page implements HasSchemas
 {
@@ -47,13 +48,13 @@ class AiSettings extends Page implements HasSchemas
                             ->label('Enable AI Chat Widget')
                             ->helperText('If disabled, the floating widget will show a maintenance message and prevent chatting.')
                             ->reactive(),
-                        
+
                         Textarea::make('ai_chat_maintenance_message')
                             ->label('Maintenance Message')
                             ->placeholder('Enter the message to display when the AI is disabled...')
                             ->required()
-                            ->visible(fn ($get) => !$get('ai_chat_enabled')),
-                    ])
+                            ->visible(fn ($get) => ! $get('ai_chat_enabled')),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -82,7 +83,7 @@ class AiSettings extends Page implements HasSchemas
     protected function getFormActions(): array
     {
         return [
-            \Filament\Actions\Action::make('save')
+            Action::make('save')
                 ->label(__('filament-panels::resources/pages/edit-record.form.actions.save.label'))
                 ->submit('save'),
         ];

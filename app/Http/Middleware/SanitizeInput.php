@@ -2,9 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use Illuminate\Foundation\Http\Middleware\TransformsRequest;
-use Illuminate\Http\Request;
 
 class SanitizeInput extends TransformsRequest
 {
@@ -39,15 +37,12 @@ class SanitizeInput extends TransformsRequest
 
     /**
      * Sanitize string to prevent XSS.
-     *
-     * @param  string  $value
-     * @return string
      */
     protected function cleanXSS(string $value): string
     {
         // 1. Remove <script> tags and their contents
-        $value = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $value);
-        
+        $value = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $value);
+
         // 2. Remove on* event handlers (e.g. onclick, onload, etc.)
         // This regex is more comprehensive for event handlers
         $value = preg_replace('/on\w+\s*=\s*(["\'])(.*?)\1/is', '', $value);

@@ -24,7 +24,7 @@ class UserInfoTool implements Tool
     {
         $user = auth()->user();
 
-        if (!$user) {
+        if (! $user) {
             return 'No user is currently authenticated.';
         }
 

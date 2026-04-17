@@ -15,7 +15,7 @@ class ChatController extends Controller
 
     public function __invoke(Request $request)
     {
-        if (!Setting::get('ai_chat_enabled', true)) {
+        if (! Setting::get('ai_chat_enabled', true)) {
             return response()->json([
                 'response' => Setting::get('ai_chat_maintenance_message', 'KOA is currently under maintenance.'),
             ], 503);
@@ -28,16 +28,17 @@ class ChatController extends Controller
         try {
             // Get history from session
             $historyData = session()->get($this->sessionKey, []);
-            
+
             // Map session data to message objects
             $history = collect($historyData)->map(function ($msg) {
                 if ($msg['role'] === 'user') {
                     return new UserMessage($msg['content']);
                 }
+
                 return new AssistantMessage($msg['content']);
             })->toArray();
 
-            $agent = new AssistantAgent();
+            $agent = new AssistantAgent;
             $agent->setHistory($history);
 
             $response = $agent->prompt($request->message);
@@ -64,8 +65,8 @@ class ChatController extends Controller
     public function getHistory()
     {
         $history = session()->get($this->sessionKey);
-        
-        if (!$history) {
+
+        if (! $history) {
             $history = [['role' => 'assistant', 'content' => 'Hello! How can I help you today?']];
             session()->put($this->sessionKey, $history);
             session()->save();

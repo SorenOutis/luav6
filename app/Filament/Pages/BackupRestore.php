@@ -284,7 +284,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
             if ($zip->open($backupPath) === true) {
                 for ($i = 0; $i < $zip->numFiles; $i++) {
                     $filename = $zip->getNameIndex($i);
-                    
+
                     if ($filename === 'database.sqlite') {
                         $zip->extractTo(database_path(), $filename);
                     } elseif (str_starts_with($filename, 'public/')) {

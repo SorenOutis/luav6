@@ -25,6 +25,7 @@ class AssistantAgent implements Agent, Conversational, HasTools
     public function setHistory(array $history): self
     {
         $this->history = $history;
+
         return $this;
     }
 
@@ -67,8 +68,8 @@ class AssistantAgent implements Agent, Conversational, HasTools
     public function tools(): iterable
     {
         return [
-            new UserInfoTool(),
-            new AssignmentsTool(),
+            new UserInfoTool,
+            new AssignmentsTool,
         ];
     }
 }

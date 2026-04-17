@@ -13,12 +13,11 @@ use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\SectionProgress;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
-
-use App\Models\User;
 
 Route::inertia('/', 'Welcome', [
     'canRegister' => Features::enabled(Features::registration()),
