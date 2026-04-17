@@ -4,6 +4,7 @@ import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
 import MobileNav from '@/components/MobileNav.vue';
+import FloatingWidget from '@/components/FloatingWidget.vue';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {
@@ -24,6 +25,7 @@ withDefaults(defineProps<Props>(), {
             <AppSidebarHeader v-if="!hideSidebar" :breadcrumbs="breadcrumbs" />
             <slot />
             <MobileNav v-if="!hideSidebar" />
+            <FloatingWidget />
         </AppContent>
     </AppShell>
 </template>

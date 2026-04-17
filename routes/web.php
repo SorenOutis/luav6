@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ExamSubmissionController;
 use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -234,6 +235,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ngl', [AnonymousMessageController::class, 'index'])->name('ngl.index');
     Route::post('ngl', [AnonymousMessageController::class, 'store'])->name('ngl.store');
     Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->name('ngl.like');
+
+    Route::post('api/chat', ChatController::class)->name('chat');
+    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
 
     // Admin routes
     Route::get('admin/exams/submissions', [ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');
