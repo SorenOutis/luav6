@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon, Cpu, Activity, Zap as ZapIcon, BrainCircuit } from 'lucide-vue-next';
+
+gsap.registerPlugin(ScrollTrigger);
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import { useAppearance } from '@/composables/useAppearance';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
@@ -219,7 +222,10 @@ onMounted(() => {
         gsap.set(bootOverlay.value, { autoAlpha: 1 });
         gsap.set('.reveal-content', { y: '100%', opacity: 0 });
         gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
-        gsap.set('.footer-reveal', { opacity: 0, y: 30 });
+        gsap.set('.footer-reveal > *', { opacity: 0, y: 30 });
+        gsap.set('.reveal-section.grid-cols-2', { opacity: 0, y: 50 });
+        gsap.set(featureCards.value, { opacity: 0, y: 60 });
+        gsap.set('.reveal-section.mt-24 .flex.items-center', { opacity: 0, x: -30 });
         gsap.set('.signal-fill', { scaleX: 0, transformOrigin: 'left center' });
         gsap.set('.pulse-panel', { autoAlpha: 0, y: 16, clipPath: 'inset(0 0 100% 0)' });
         gsap.set('.pulse-row', { autoAlpha: 0, y: 16 });
@@ -274,34 +280,7 @@ onMounted(() => {
             stagger: 0.2,
             duration: 1.5 * motionFactor
         }, '-=1.2')
-        // 5. Build Feature Grid with advanced stagger
-        .from(featureCards.value, {
-            y: 60,
-            opacity: 0,
-            stagger: {
-                each: 0.1,
-                from: 'center'
-            },
-            duration: 1.2 * motionFactor,
-            ease: 'power4.out',
-            clearProps: 'all'
-        }, '-=1.4')
-        // 6. Reveal New Sections
-        .from('.reveal-section', {
-            y: 40,
-            opacity: 0,
-            stagger: 0.2,
-            duration: 1 * motionFactor,
-            ease: 'power3.out'
-        }, '-=1')
-        // 7. Reveal Footer
-        .to('.footer-reveal', {
-            opacity: 1,
-            y: 0,
-            stagger: 0.1,
-            duration: 1 * motionFactor
-        }, '-=1')
-        // 8. Explicit entrance choreography for pulse + links
+        // 5. Explicit entrance choreography for pulse + links (These are usually in view immediately)
         .to('.pulse-panel', {
             clipPath: 'inset(0 0 0% 0)',
             y: 0,
@@ -338,6 +317,60 @@ onMounted(() => {
             duration: 0.9 * motionFactor,
             ease: 'power2.out'
         }, '-=0.7');
+
+        // --- NEW: Scroll-Triggered Animations ---
+        
+        // Metrics Ticker
+        gsap.to('.reveal-section.grid-cols-2', {
+            scrollTrigger: {
+                trigger: '.reveal-section.grid-cols-2',
+                start: 'top 85%',
+            },
+            y: 0,
+            opacity: 1,
+            duration: 1.2,
+            ease: 'power3.out'
+        });
+
+        // Features Grid
+        featureCards.value.forEach((card, i) => {
+            gsap.to(card, {
+                scrollTrigger: {
+                    trigger: card,
+                    start: 'top 90%',
+                },
+                y: 0,
+                opacity: 1,
+                duration: 1,
+                delay: i * 0.1,
+                ease: 'power4.out'
+            });
+        });
+
+        // Tech Stack Header
+        gsap.to('.reveal-section.mt-24 .flex.items-center', {
+            scrollTrigger: {
+                trigger: '.reveal-section.mt-24',
+                start: 'top 85%',
+            },
+            x: 0,
+            opacity: 1,
+            duration: 1,
+            ease: 'power2.out'
+        });
+
+        // Footer Reveal
+        gsap.to('.footer-reveal > *', {
+            scrollTrigger: {
+                trigger: 'footer',
+                start: 'top 90%',
+            },
+            y: 0,
+            opacity: 1,
+            stagger: 0.1,
+            duration: 1,
+            ease: 'power3.out'
+        });
 
         gsap.to('.signal-fill', {
             opacity: 0.7,
