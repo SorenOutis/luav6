@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { dashboard, login, register } from '@/routes';
-import { onMounted, ref, computed } from 'vue';
-import { useAppearance } from '@/composables/useAppearance';
-import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import gsap from 'gsap';
 import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon, Cpu, Activity, Zap as ZapIcon, BrainCircuit } from 'lucide-vue-next';
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { useAppearance } from '@/composables/useAppearance';
+import { useNumberAnimation } from '@/composables/useNumberAnimation';
+import { dashboard, login, register } from '@/routes';
 
 const props = withDefaults(
     defineProps<{
@@ -18,15 +18,21 @@ const props = withDefaults(
     },
 );
 
-const heroTitle = ref<HTMLElement | null>(null);
-const heroSub = ref<HTMLElement | null>(null);
-const heroCta = ref<HTMLElement | null>(null);
 const featureCards = ref<HTMLElement[]>([]);
 const structuralLines = ref<HTMLElement[]>([]);
 const mainContainer = ref<HTMLElement | null>(null);
 const backgroundGrid = ref<HTMLElement | null>(null);
 const mouseGlow = ref<HTMLElement | null>(null);
 const techCarousel = ref<HTMLElement | null>(null);
+const ambientOrbs = ref<HTMLElement[]>([]);
+const bootOverlay = ref<HTMLElement | null>(null);
+const bootText = ref<HTMLElement[]>([]);
+
+let typingTimeout: ReturnType<typeof setTimeout> | null = null;
+let removeMediaListeners = () => {};
+let gsapCtx: gsap.Context | null = null;
+const isCoarsePointer = ref(false);
+const prefersReducedMotion = ref(false);
 
 // Appearance Management
 const { appearance, toggleTheme } = useAppearance();
@@ -37,8 +43,15 @@ const animUptime = useNumberAnimation(() => 99, 1.5, 'power2.out');
 const animLatency = useNumberAnimation(() => 5, 2.5, 'elastic.out(1, 0.3)');
 const animSync = useNumberAnimation(() => 1240, 3, 'power4.out');
 
+const syncInteractionModes = () => {
+    isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
+    prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
 // Interaction Logic
 const handleMagnetic = (e: MouseEvent) => {
+    if (isCoarsePointer.value || prefersReducedMotion.value) return;
+
     const btn = e.currentTarget as HTMLElement;
     const rect = btn.getBoundingClientRect();
     const x = e.clientX - rect.left - rect.width / 2;
@@ -63,7 +76,7 @@ const resetMagnetic = (e: MouseEvent) => {
 };
 
 const handleGlobalMouseMove = (e: MouseEvent) => {
-    if (!mouseGlow.value || !backgroundGrid.value) return;
+    if (!mouseGlow.value || !backgroundGrid.value || isCoarsePointer.value || prefersReducedMotion.value) return;
 
     const { clientX, clientY } = e;
     const xPercent = clientX / window.innerWidth;
@@ -86,7 +99,9 @@ const handleGlobalMouseMove = (e: MouseEvent) => {
     });
 };
 
-const handleFeatureMouseMove = (e: MouseEvent, index: number) => {
+const handleFeatureMouseMove = (e: MouseEvent) => {
+    if (isCoarsePointer.value || prefersReducedMotion.value) return;
+
     const card = e.currentTarget as HTMLElement;
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -125,7 +140,6 @@ const currentWordIndex = ref(0);
 const currentCharIndex = ref(words[0].length);
 const isTyping = ref(false);
 const typedText = ref(words[0]);
-let typingTimeout: any = null;
 
 const type = () => {
     const currentWord = words[currentWordIndex.value];
@@ -156,79 +170,215 @@ const type = () => {
 };
 
 onMounted(() => {
+    syncInteractionModes();
+
+    const coarsePointerQuery = window.matchMedia('(pointer: coarse)');
+    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const onMediaChange = () => syncInteractionModes();
+    coarsePointerQuery.addEventListener('change', onMediaChange);
+    reducedMotionQuery.addEventListener('change', onMediaChange);
+    removeMediaListeners = () => {
+        coarsePointerQuery.removeEventListener('change', onMediaChange);
+        reducedMotionQuery.removeEventListener('change', onMediaChange);
+    };
+
     // Start typing after initial load
-    setTimeout(type, 2500);
+    typingTimeout = setTimeout(type, 2500);
 
-    const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.4 } });
-
-
-    // 1. Initial State
-    gsap.set('.reveal-content', { y: '100%', opacity: 0 });
-    gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
-    gsap.set('.footer-reveal', { opacity: 0, y: 30 });
-
-    // 2. Animate Structural Lines
-    tl.to(structuralLines.value, {
-        scaleX: 1,
-        scaleY: 1,
-        stagger: 0.1,
-        duration: 1.2,
-        ease: 'power4.inOut'
-    })
-    // 3. Reveal Nav
-    .from('.nav-item', {
-        y: -20,
-        opacity: 0,
-        stagger: 0.05,
-        duration: 0.8
-    }, "-=0.8")
-    // 4. Reveal Hero with Clip-Path/Overflow
-    .to('.hero-reveal .reveal-content', {
-        y: '0%',
-        opacity: 1,
-        stagger: 0.2,
-        duration: 1.5
-    }, "-=1")
-    // 5. Build Feature Grid with advanced stagger
-    .from(featureCards.value, {
-        y: 60,
-        opacity: 0,
-        stagger: {
-            each: 0.1,
-            from: "center"
-        },
-        duration: 1.2,
-        ease: 'power4.out',
-        clearProps: "all"
-    }, "-=1.2")
-    // 6. Reveal New Sections
-    .from('.reveal-section', {
-        y: 40,
-        opacity: 0,
-        stagger: 0.2,
-        duration: 1,
-        ease: 'power3.out'
-    }, "-=0.8")
-    // 7. Reveal Footer
-    .to('.footer-reveal', {
-        opacity: 1,
-        y: 0,
-        stagger: 0.1,
-        duration: 1
-    }, "-=0.8");
-
-    // Tech Carousel Logic
-    if (techCarousel.value) {
-        const carousel = techCarousel.value;
-        
-        gsap.to(carousel, {
-            xPercent: -50,
-            duration: 20,
-            ease: "none",
-            repeat: -1
+    gsapCtx = gsap.context(() => {
+        const motionFactor = prefersReducedMotion.value ? 0.55 : 1;
+        const tl = gsap.timeline({
+            paused: true,
+            defaults: { ease: 'expo.out', duration: 1.4 * motionFactor }
         });
+
+        // 0. Pre-Boot State
+        gsap.set(bootOverlay.value, { autoAlpha: 1 });
+        gsap.set('.reveal-content', { y: '100%', opacity: 0 });
+        gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
+        gsap.set('.footer-reveal', { opacity: 0, y: 30 });
+        gsap.set('.signal-fill', { scaleX: 0, transformOrigin: 'left center' });
+        gsap.set('.pulse-panel', { autoAlpha: 0, y: 16, clipPath: 'inset(0 0 100% 0)' });
+        gsap.set('.pulse-row', { autoAlpha: 0, y: 16 });
+        gsap.set('.quick-link-row', { autoAlpha: 0, y: 16, x: 18 });
+        gsap.set('.online-pill', { autoAlpha: 0, y: 16, scale: 0.86 });
+
+        // 1. Boot Sequence (The Entrance)
+        tl.to(bootText.value, {
+            opacity: 1,
+            y: 0,
+            stagger: 0.04,
+            duration: 0.8 * motionFactor,
+            ease: 'back.out(2)'
+        })
+        .to('.boot-progress', {
+            scaleX: 1,
+            duration: 0.4 * motionFactor,
+            ease: 'power4.inOut'
+        }, '-=0.4')
+        .to(bootOverlay.value, {
+            clipPath: 'inset(0 0 100% 0)',
+            duration: 1.4 * motionFactor,
+            ease: 'power4.inOut',
+            onComplete: () => {
+                if (bootOverlay.value) bootOverlay.value.style.display = 'none';
+            }
+        }, '+=0.2')
+
+        // 2. Animate Structural Lines
+        .to(structuralLines.value, {
+            scaleX: 1,
+            scaleY: 1,
+            stagger: 0.1,
+            duration: 1.2,
+            ease: 'power4.inOut'
+        }, '-=0.8')
+        // 3. Reveal Nav
+        .from('.nav-item', {
+            y: -20,
+            opacity: 0,
+            stagger: 0.05,
+            duration: 0.4 * motionFactor
+        }, '-=0.8')
+        // 4. Reveal Hero with Clip-Path/Overflow
+        .to('.hero-reveal .reveal-content', {
+            y: '0%',
+            opacity: 1,
+            stagger: 0.2,
+            duration: 1.5 * motionFactor
+        }, '-=1.2')
+        // 5. Build Feature Grid with advanced stagger
+        .from(featureCards.value, {
+            y: 60,
+            opacity: 0,
+            stagger: {
+                each: 0.1,
+                from: 'center'
+            },
+            duration: 1.2 * motionFactor,
+            ease: 'power4.out',
+            clearProps: 'all'
+        }, '-=1.4')
+        // 6. Reveal New Sections
+        .from('.reveal-section', {
+            y: 40,
+            opacity: 0,
+            stagger: 0.2,
+            duration: 1 * motionFactor,
+            ease: 'power3.out'
+        }, '-=1')
+        // 7. Reveal Footer
+        .to('.footer-reveal', {
+            opacity: 1,
+            y: 0,
+            stagger: 0.1,
+            duration: 1 * motionFactor
+        }, '-=1')
+        // 8. Explicit entrance choreography for pulse + links
+        .to('.pulse-panel', {
+            clipPath: 'inset(0 0 0% 0)',
+            y: 0,
+            autoAlpha: 1,
+            duration: 1.1 * motionFactor,
+            ease: 'power3.out'
+        }, '-=1.3')
+        .to('.online-pill', {
+            scale: 1,
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.7 * motionFactor,
+            ease: 'back.out(1.8)'
+        }, '-=1.1')
+        .to('.pulse-row', {
+            y: 0,
+            autoAlpha: 1,
+            stagger: 0.12,
+            duration: 0.8 * motionFactor,
+            ease: 'power3.out'
+        }, '-=1')
+        .to('.quick-link-row', {
+            x: 0,
+            y: 0,
+            autoAlpha: 1,
+            stagger: 0.1,
+            duration: 0.65 * motionFactor,
+            ease: 'power2.out'
+        }, '-=0.9')
+        // 9. Signal bar entrance
+        .to('.signal-fill', {
+            scaleX: 1,
+            stagger: 0.14,
+            duration: 0.9 * motionFactor,
+            ease: 'power2.out'
+        }, '-=0.7');
+
+        gsap.to('.signal-fill', {
+            opacity: 0.7,
+            duration: 1.8,
+            yoyo: true,
+            repeat: -1,
+            stagger: 0.2,
+            ease: 'sine.inOut'
+        });
+
+        if (ambientOrbs.value.length > 0) {
+            gsap.to(ambientOrbs.value, {
+                y: (index) => (index % 2 ? 18 : -18),
+                x: (index) => (index % 2 ? -8 : 12),
+                duration: 6,
+                ease: 'sine.inOut',
+                yoyo: true,
+                repeat: -1,
+                stagger: 0.5
+            });
+        }
+
+        // Tech Carousel Logic
+        if (techCarousel.value) {
+            gsap.to(techCarousel.value, {
+                xPercent: -50,
+                duration: isCoarsePointer.value ? 30 : 20,
+                ease: 'none',
+                repeat: -1
+            });
+        }
+
+        requestAnimationFrame(() => tl.play(0));
+    }, mainContainer);
+});
+
+onBeforeUnmount(() => {
+    if (typingTimeout) {
+        clearTimeout(typingTimeout);
+        typingTimeout = null;
+    }
+
+    removeMediaListeners();
+
+    if (gsapCtx) {
+        gsapCtx.revert();
+        gsapCtx = null;
     }
 });
+
+const liveSignals = [
+    { label: 'Session Throughput', value: 92, valueLabel: '92%' },
+    { label: 'Adaptive Routing', value: 86, valueLabel: '86%' },
+    { label: 'Knowledge Sync', value: 97, valueLabel: '97%' },
+];
+
+const quickLinks = [
+    { label: 'Documentation', href: '#', icon: BookOpen },
+    { label: 'Live Sessions', href: '#', icon: Video },
+    { label: 'Source Cluster', href: '#', icon: Github },
+];
+
+const orbLayers = [
+    { style: 'width: 11rem; height: 11rem; left: -4.5rem; top: 5rem;' },
+    { style: 'width: 14rem; height: 14rem; right: -5.5rem; top: 28%;' },
+    { style: 'width: 9rem; height: 9rem; right: 18%; bottom: -4.5rem;' },
+];
 
 const coreFeatures = [
     {
@@ -279,13 +429,20 @@ const techStack = [
         <!-- Global Mouse Glow -->
         <div 
             ref="mouseGlow"
-            class="pointer-events-none fixed -left-[150px] -top-[150px] z-0 h-[300px] w-[300px] rounded-full bg-primary/5 blur-[120px] will-change-transform dark:bg-primary/10"
+            class="pointer-events-none fixed -left-[150px] -top-[150px] z-0 hidden h-[300px] w-[300px] rounded-full bg-primary/5 blur-[120px] will-change-transform dark:bg-primary/10 md:block"
         ></div>
 
         <!-- Monolithic Grid Overlay -->
         <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] will-change-transform">
             <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
         </div>
+        <div
+            v-for="(orb, index) in orbLayers"
+            :key="index"
+            ref="ambientOrbs"
+            class="ambient-orb pointer-events-none absolute z-[1] rounded-full"
+            :style="orb.style"
+        ></div>
 
         <!-- System Structural Constraints (Lines) -->
         <div class="fixed inset-y-0 left-6 lg:left-24 w-px bg-border/20 z-0 origin-top" ref="structuralLines"></div>
@@ -410,6 +567,56 @@ const techStack = [
                 </div>
             </div>
 
+            <div class="reveal-section mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/20 bg-background/70 p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-45px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+                    <div class="scan-line pointer-events-none absolute inset-x-0 top-0 h-px"></div>
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Live System Pulse</p>
+                            <h2 class="mt-2 text-xl sm:text-2xl font-black tracking-tight">Operational signals in real time</h2>
+                        </div>
+                        <div class="online-pill hidden sm:flex items-center gap-2 rounded-full border border-border/40 px-3 py-1 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                            <span class="h-1.5 w-1.5 rounded-full bg-foreground/80 animate-pulse"></span>
+                            Online
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-4">
+                        <div v-for="signal in liveSignals" :key="signal.label" class="pulse-row rounded-xl border border-border/20 bg-muted/10 p-3 sm:p-4">
+                            <div class="mb-2 flex items-center justify-between gap-3">
+                                <span class="text-[10px] sm:text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">{{ signal.label }}</span>
+                                <span class="text-[10px] sm:text-xs font-black tracking-wider text-foreground/80">{{ signal.valueLabel }}</span>
+                            </div>
+                            <div class="h-2 overflow-hidden rounded-full bg-foreground/10">
+                                <div class="signal-fill h-full rounded-full bg-foreground/75" :style="{ width: `${signal.value}%` }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/20 bg-background/70 p-5 sm:p-6 lg:p-8">
+                    <div class="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-foreground/5 blur-3xl"></div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Control Links</p>
+                    <h3 class="mt-2 text-xl font-black tracking-tight">Stay inside one command surface.</h3>
+                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">Jump directly into docs, session feed, and source channels without leaving the launch page.</p>
+
+                    <div class="mt-5 space-y-2">
+                        <a
+                            v-for="quickLink in quickLinks"
+                            :key="quickLink.label"
+                            :href="quickLink.href"
+                            class="quick-link-row group flex items-center justify-between rounded-xl border border-border/20 px-3 sm:px-4 py-3 transition-colors hover:bg-muted/40"
+                        >
+                            <span class="flex items-center gap-3">
+                                <component :is="quickLink.icon" class="h-4 w-4 text-foreground/70" />
+                                <span class="text-xs font-black uppercase tracking-[0.18em] text-foreground/80">{{ quickLink.label }}</span>
+                            </span>
+                            <ArrowRight class="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                        </a>
+                    </div>
+                </section>
+            </div>
+
             <!-- System Metrics Ticker -->
             <div class="reveal-section mt-24 lg:mt-40 grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-20 border-y border-border/10 py-8 lg:py-12">
                 <div v-for="stat in systemStats" :key="stat.label" class="flex flex-col gap-3 group">
@@ -430,7 +637,7 @@ const techStack = [
                     v-for="(feature, index) in coreFeatures" 
                     :key="index"
                     ref="featureCards"
-                    @mousemove="handleFeatureMouseMove($event, index)"
+                    @mousemove="handleFeatureMouseMove($event)"
                     @mouseleave="resetFeatureMouse"
                     class="group relative flex flex-col p-8 lg:p-20 border-border/10 transition-all hover:bg-muted/20 overflow-hidden"
                     :class="{ 'border-b lg:border-b-0 lg:border-r': index !== coreFeatures.length - 1 }"
@@ -524,6 +731,37 @@ const techStack = [
             </div>
         </footer>
 
+        <!-- Initial Boot Interface (Entrance) -->
+        <div 
+            ref="bootOverlay"
+            class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background p-6"
+        >
+            <div class="scanline absolute inset-0 pointer-events-none opacity-[0.05]"></div>
+            <div class="relative flex flex-col items-center gap-6">
+                <!-- Digital Pulse Core -->
+                <!-- <div class="relative h-24 w-24">
+                    <div class="absolute inset-0 rounded-full border border-primary/20 animate-ping opacity-20"></div>
+                    <div class="absolute inset-0 rounded-full border border-primary/40 scale-75 animate-pulse"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <Command class="h-10 w-10 text-primary" />
+                    </div>
+                </div> -->
+
+                <!-- Boot Sequence Text -->
+                <div class="flex flex-col items-center gap-2">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <span v-for="(letter, i) in 'LSI ENGINE'.split('')" :key="i" ref="bootText" class="text-xs font-black tracking-[0.6em] uppercase opacity-0 translate-y-4">
+                            {{ letter === ' ' ? '\u00A0' : letter }}
+                        </span>
+                    </div>
+                    <div class="h-px w-32 bg-primary/20 overflow-hidden">
+                        <div class="boot-progress h-full w-full bg-primary origin-left scale-x-0"></div>
+                    </div>
+                    <span class="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 mt-1">Booting System Components...</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 </template>
 
@@ -532,9 +770,55 @@ const techStack = [
     display: block;
 }
 
+.ambient-orb {
+    background: radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--color-foreground) 28%, transparent), transparent 70%);
+    opacity: 0.35;
+    filter: blur(6px);
+}
+
+.scan-line {
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-foreground) 35%, transparent), transparent);
+}
+
+.scanline {
+    background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(0, 0, 0, 0.1) 51%,
+        transparent 52%
+    );
+    background-size: 100% 4px;
+    animation: scan 10s linear infinite;
+}
+
+@keyframes scan {
+    from { background-position: 0 0; }
+    to { background-position: 0 100%; }
+}
+
+.signal-fill {
+    box-shadow: 0 0 20px color-mix(in srgb, currentColor 45%, transparent);
+}
+
 /* Custom easing override for ultra-premium feel */
 .fixed {
     transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (max-width: 1024px) {
+    .ambient-orb {
+        opacity: 0.22;
+    }
+}
+
+@media (max-width: 768px) {
+    .ambient-orb {
+        display: none;
+    }
+
+    .fixed {
+        transition-duration: 0.35s;
+    }
 }
 
 /* System Variable Integration */
