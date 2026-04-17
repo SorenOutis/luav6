@@ -1078,34 +1078,34 @@ const feedbackContent = computed(() => {
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
                 <div
-                    class="animate-up exam-hero relative overflow-hidden p-8 md:p-12 border border-border bg-card dark:bg-zinc-900/40 shadow-2xl group/hero"
+                    class="animate-up exam-hero relative overflow-hidden p-6 md:p-8 border border-border bg-card dark:bg-zinc-900/40 shadow-2xl group/hero"
                     @mousemove="handleMouseMove"
                 >
                     <!-- Futuristic Corner Brackets -->
-                    <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
-                    <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
+                    <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
-                    <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-12">
-                        <div class="space-y-6 max-w-3xl">
+                    <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                        <div class="space-y-4 max-w-3xl">
                             <div class="flex items-center gap-4">
-                                <div class="w-14 h-14 border-2 border-amber-500 rotate-45 flex items-center justify-center">
-                                     <div class="w-2.5 h-2.5 bg-amber-500 rotate-45 animate-pulse"></div>
+                                <div class="w-12 h-12 border-2 border-amber-500 rotate-45 flex items-center justify-center shrink-0">
+                                     <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                                 </div>
-                                <div class="space-y-1">
-                                    <span class="text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">MISSION_READY_PROTOCOL</span>
-                                    <h1 class="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-foreground leading-[0.9]">
+                                <div class="space-y-0.5">
+                                    <span class="text-[9px] font-black text-primary uppercase tracking-[0.4em] font-mono">MISSION_READY_PROTOCOL</span>
+                                    <h1 class="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-foreground leading-[0.95]">
                                         {{ selectedPart ? selectedPart.title : exam.title }}
                                     </h1>
                                 </div>
                             </div>
                             
-                            <div v-if="!selectedPart" class="bg-muted/30 dark:bg-zinc-950/40 p-6 border border-border/50 relative overflow-hidden">
+                            <div v-if="!selectedPart" class="bg-muted/30 dark:bg-zinc-950/40 p-4 border border-border/50 relative overflow-hidden">
                                 <div class="absolute top-0 left-0 w-1 h-full bg-amber-500/50"></div>
-                                <p class="text-sm md:text-base font-bold text-muted-foreground uppercase leading-relaxed tracking-tight">
+                                <p class="text-[11px] md:text-xs font-bold text-muted-foreground uppercase leading-relaxed tracking-tight">
                                     {{ exam.description || 'Quickly assess and master the material with our streamlined exam interface.' }}
                                 </p>
-                                <div class="mt-4 flex items-center gap-3 text-[10px] font-black text-foreground/40 uppercase tracking-widest font-mono">
-                                    <Calendar class="w-4 h-4" />
+                                <div class="mt-2 flex items-center gap-3 text-[9px] font-black text-foreground/40 uppercase tracking-widest font-mono">
+                                    <Calendar class="w-3.5 h-3.5" />
                                     {{ formatDateTime(exam.exam_date) }}
                                 </div>
                             </div>
@@ -1117,32 +1117,32 @@ const feedbackContent = computed(() => {
                         </div>
 
                         <!-- Stats Architecture -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-muted/20 dark:bg-zinc-950/20 p-8 border border-border/50 relative">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 bg-muted/20 dark:bg-zinc-950/20 p-6 border border-border/50 relative">
                              <!-- Stat Decoration -->
                              <div class="absolute -top-1 -left-1 w-2 h-2 bg-primary"></div>
                              <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-primary"></div>
 
                             <div v-if="allPartsSubmitted" class="flex flex-col gap-1">
                                 <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">ACHIEVEMENT</span>
-                                <div class="text-2xl font-black text-primary font-mono tabular-nums">{{ totalScore }}/{{ totalPossiblePoints }}</div>
+                                <div class="text-lg font-black text-primary font-mono tabular-nums">{{ totalScore }}/{{ totalPossiblePoints }}</div>
                             </div>
                             
                             <div class="flex flex-col gap-1">
                                 <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">TIME_LIMIT</span>
                                 <div class="flex items-baseline gap-1">
-                                    <span class="text-2xl font-black font-mono tabular-nums text-foreground">{{ exam.duration_minutes }}</span>
+                                    <span class="text-lg font-black font-mono tabular-nums text-foreground">{{ exam.duration_minutes }}</span>
                                     <span class="text-[8px] font-black text-primary uppercase font-mono">MIN</span>
                                 </div>
                             </div>
 
                             <div class="flex flex-col gap-1">
                                 <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">SECTIONS</span>
-                                <div class="text-2xl font-black font-mono tabular-nums text-foreground">{{ exam.parts.length }}</div>
+                                <div class="text-lg font-black font-mono tabular-nums text-foreground">{{ exam.parts.length }}</div>
                             </div>
 
                             <div class="flex flex-col gap-1">
                                 <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">TOTAL_TASKS</span>
-                                <div class="text-2xl font-black font-mono tabular-nums text-foreground">{{ totalQuestions }}</div>
+                                <div class="text-lg font-black font-mono tabular-nums text-foreground">{{ totalQuestions }}</div>
                             </div>
                         </div>
                     </div>
@@ -1191,47 +1191,48 @@ const feedbackContent = computed(() => {
 
                     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                         <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
-                            class="exam-part-card animate-up relative flex flex-col justify-between p-8 transition-all duration-500 overflow-hidden group/part border border-border bg-card dark:bg-zinc-900/40"
+                            class="exam-part-card animate-up relative flex flex-col justify-between p-6 transition-all duration-500 overflow-hidden group/part border border-border bg-card dark:bg-zinc-900/40"
                             :class="[
                                 isPartSubmitted(part.id) 
-                                    ? 'opacity-80 grayscale-[0.4]' 
+                                    ? 'opacity-80' 
                                     : isPartLocked(index) 
                                         ? 'opacity-60 cursor-not-allowed grayscale' 
-                                        : 'hover:shadow-2xl hover:-translate-y-1 cursor-pointer'
+                                        : 'hover:shadow-xl hover:-translate-y-1 cursor-pointer'
                             ]"
                             @mousemove="handleMouseMove"
                         >
                             <!-- Futuristic Corner Brackets -->
-                            <div class="absolute top-0 left-0 w-5 h-5 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
-                            <div class="absolute bottom-0 right-0 w-5 h-5 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
+                            <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                            <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
                             <!-- Top: Status & Metadata -->
-                            <div class="relative z-10 flex flex-col gap-4">
+                            <div class="relative z-10 flex flex-col gap-3">
                                 <div class="flex items-center justify-between">
-                                    <div class="w-10 h-10 border border-amber-500/30 rotate-45 flex items-center justify-center group-hover/part:border-amber-500 transition-colors">
-                                         <div class="w-1.5 h-1.5 bg-amber-500 rotate-45"></div>
+                                    <div class="w-8 h-8 border border-amber-500/30 rotate-45 flex items-center justify-center group-hover/part:border-amber-500 transition-colors">
+                                         <div class="w-1 h-1 bg-amber-500 rotate-45"></div>
                                     </div>
-                                    <div v-if="isPartLocked(index)" class="p-2 rounded-lg bg-zinc-950/50 border border-white/5">
-                                        <Lock class="w-4 h-4 text-muted-foreground/40" />
+                                    <div v-if="isPartLocked(index)" class="p-1.5 rounded-lg bg-zinc-950/50 border border-white/5">
+                                        <Lock class="w-3.5 h-3.5 text-muted-foreground/40" />
                                     </div>
-                                    <div v-else-if="isPartSubmitted(part.id)" class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                        <CheckCircle2 class="w-4 h-4 text-emerald-500" />
+                                    <div v-else-if="isPartSubmitted(part.id)" class="px-2.5 py-1.5 bg-emerald-500 text-white dark:text-zinc-950 font-black text-[10px] font-mono tracking-widest transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                                        <span class="inline-block skew-x-12">
+                                            {{ submissions[part.id]?.score ?? 0 }} / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <div class="space-y-1">
-                                    <span class="text-[9px] font-black text-primary uppercase tracking-[0.3em] font-mono">PHASE_{{ (index + 1).toString().padStart(2, '0') }}</span>
-                                    <h3 class="text-xl font-black text-foreground uppercase italic tracking-tight group-hover/part:text-primary transition-colors leading-none">
+                                <div class="space-y-0.5">
+                                    <span class="text-[8px] font-black text-primary uppercase tracking-[0.2em] font-mono">PHASE_{{ (index + 1).toString().padStart(2, '0') }}</span>
+                                    <h3 class="text-base font-black text-foreground uppercase italic tracking-tight group-hover/part:text-primary transition-colors leading-none">
                                         {{ part.title }}
                                     </h3>
-                                    <div class="h-px w-8 bg-foreground/10"></div>
                                 </div>
 
                                 <!-- Middle: Question Types Stagger -->
-                                <div class="bg-muted/30 dark:bg-zinc-950/40 p-4 border border-border/50 space-y-2">
+                                <div class="bg-muted/30 dark:bg-zinc-950/40 p-3 border border-border/50 space-y-1.5">
                                     <div v-for="type in getQuestionTypes(part)" :key="type" class="flex items-center gap-2">
-                                        <span class="text-amber-500 font-black text-[8px]">[!]</span>
-                                        <span class="text-[8px] font-black text-muted-foreground uppercase tracking-widest font-mono">
+                                        <span class="text-amber-500 font-black text-[7px]">[!]</span>
+                                        <span class="text-[7px] font-black text-muted-foreground uppercase tracking-widest font-mono">
                                             {{ formatType(type) }}
                                         </span>
                                     </div>
@@ -1239,16 +1240,14 @@ const feedbackContent = computed(() => {
                             </div>
 
                             <!-- Bottom: Footer Info & Action -->
-                            <div class="relative z-10 mt-6 pt-4 border-t border-border/10 flex items-center justify-between">
-                                <div class="flex flex-col">
-                                    <div class="flex items-center gap-2 font-mono">
-                                        <span class="text-[10px] font-black text-primary">{{ part.questions?.length ?? 0 }}</span>
-                                        <span class="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest">TASKS</span>
-                                    </div>
+                            <div class="relative z-10 mt-4 pt-3 border-t border-border/10 flex items-center justify-between">
+                                <div class="flex items-center gap-1.5 font-mono">
+                                    <span class="text-[9px] font-black text-primary">{{ part.questions?.length ?? 0 }}</span>
+                                    <span class="text-[7px] font-bold text-muted-foreground/40 uppercase tracking-widest">TASKS</span>
                                 </div>
                                 
                                 <div v-if="!isPartSubmitted(part.id)"
-                                    class="px-4 py-2 bg-foreground text-background font-black text-[9px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-2"
+                                    class="px-3 py-1.5 bg-foreground text-background font-black text-[8px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-1.5"
                                     :class="isPartLocked(index) ? 'opacity-20 grayscale' : ''">
                                     <span class="inline-block skew-x-12">{{ isPartLocked(index) ? 'LOCKED' : 'EXECUTE' }}</span>
                                     <ArrowRight v-if="!isPartLocked(index)" class="w-3 h-3 skew-x-12" />
