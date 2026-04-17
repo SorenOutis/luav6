@@ -195,7 +195,7 @@ const resetMagnetic = (e: MouseEvent) => {
                 <Trophy class="w-10 h-10 text-muted-foreground/50" />
             </div>
             <h3 class="text-2xl font-black tracking-tighter mb-2">The Arena is Empty</h3>
-            <p class="text-muted-foreground max-w-sm">No warriors have claimed their spot on the leaderboard yet. Be the first to earn XP and make your mark.</p>
+            <p class="text-muted-foreground max-w-sm">No users have claimed their spot on the leaderboard yet. Be the first to earn XP and make your mark.</p>
         </div>
 
         <template v-else>
@@ -204,7 +204,7 @@ const resetMagnetic = (e: MouseEvent) => {
                 <div class="w-16 h-16 mb-4 bg-muted/30 rounded-full flex items-center justify-center">
                     <Search class="w-8 h-8 text-muted-foreground/40" />
                 </div>
-                <h3 class="text-xl font-bold tracking-tight mb-1">No warriors found</h3>
+                <h3 class="text-xl font-bold tracking-tight mb-1">No users found</h3>
                 <p class="text-sm text-muted-foreground">We couldn't find anyone matching "{{ searchQuery }}". Try another name!</p>
                 <button @click="searchQuery = ''" class="mt-4 text-xs font-bold text-primary hover:underline transition-all hover:scale-105 active:scale-95">Clear search</button>
             </div>
