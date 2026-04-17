@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
-import { onMounted, ref, computed, reactive } from 'vue';
+import { onMounted, onUnmounted, ref, computed, reactive } from 'vue';
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
@@ -84,6 +84,10 @@ const partStartTime = ref<number | null>(null);
 const estimatedFinishMinutes = ref<number | null>(null);
 const lastSavedAt = ref<string | null>(null);
 const pendingUnlockIndex = ref<number | null>(null);
+
+const typedSequence = ref('');
+const SECRET_COMMAND = 'blyat';
+const isAdminBypass = ref(false);
 
 const showUnansweredWarning = ref(false);
 const unansweredWarningRef = ref<HTMLElement | null>(null);
@@ -280,9 +284,30 @@ const integrityWarnings = ref(0);
 const showIntegrityAlert = ref(false);
 
 const handleVisibilityChange = () => {
-    if (document.visibilityState === 'hidden' && examStarted.value) {
+    if (isAdminBypass.value) return;
+
+    if ((document.visibilityState === 'hidden' || !document.hasFocus()) && examStarted.value) {
         integrityWarnings.value++;
         showIntegrityAlert.value = true;
+        
+        // --- NEW: Trigger full lockout on Alt+Tab/Focus Loss ---
+        showFullscreenLockout.value = true;
+        
+        // Stop the keyboard lock if it was active (re-entered on resume)
+        if ('keyboard' in navigator && (navigator as any).keyboard.unlock) {
+            (navigator as any).keyboard.unlock();
+        }
+
+        // Animate lockout modal
+        setTimeout(() => {
+            if (lockoutModalRef.value) {
+                gsap.fromTo(
+                    lockoutModalRef.value,
+                    { opacity: 0, scale: 0.9, y: 50 },
+                    { opacity: 1, scale: 1, y: 0, duration: 0.8, ease: 'elastic.out(1, 0.7)' }
+                );
+            }
+        }, 10);
         
         // Auto-close alert after 5 seconds
         setTimeout(() => {
@@ -421,7 +446,7 @@ const reEnterFullscreen = async () => {
         
         // Try to lock keyboard if supported (Chromium only, requires user gesture)
         if ('keyboard' in navigator && (navigator as any).keyboard.lock) {
-            await (navigator as any).keyboard.lock(['Escape', 'F11', 'Tab']);
+            await (navigator as any).keyboard.lock(['Escape', 'F11', 'Tab', 'MetaLeft', 'MetaRight', 'AltLeft', 'AltRight']);
         }
         
         isFullscreen.value = true;
@@ -435,7 +460,7 @@ const handleFullscreenChange = () => {
     isFullscreen.value = !!document.fullscreenElement;
     
     // If they exit full screen while the exam is in progress
-    if (!isFullscreen.value && isExamInProgress.value) {
+    if (!isFullscreen.value && isExamInProgress.value && !isAdminBypass.value) {
         showFullscreenLockout.value = true;
         integrityWarnings.value++;
         showIntegrityAlert.value = true;
@@ -506,19 +531,58 @@ const startPart = () => {
 const handleGlobalKeydown = (e: KeyboardEvent) => {
     const isExamInProgress = examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value);
 
-    // Block Alt+Tab, Alt+Esc, and Alt+F4 during exam to prevent switching apps
-    if (isExamInProgress && e.key === 'Tab' && e.altKey) {
+    // ─── ADMIN SECRET COMMAND (blyat) ───────────────────────
+    // Track keys to detect secret command to exit/enter fullscreen
+    if (isExamInProgress) {
+        typedSequence.value += e.key.toLowerCase();
+        if (typedSequence.value.includes(SECRET_COMMAND)) {
+            typedSequence.value = '';
+            isAdminBypass.value = !isAdminBypass.value;
+            
+            if (isAdminBypass.value) {
+                // Admin entering bypass mode: Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            } else {
+                // Admin exiting bypass mode: Re-enter fullscreen
+                reEnterFullscreen();
+            }
+            return;
+        }
+        // Keep sequence short to avoid memory bloat
+        if (typedSequence.value.length > 20) {
+            typedSequence.value = typedSequence.value.slice(-10);
+        }
+    }
+
+    // ─── ANTI-CHEATING ───────────────────────────────────────
+    // If admin bypass is active, don't block anything or trigger alerts
+    if (isAdminBypass.value) return;
+
+    // Block Alt+Tab, Alt+Esc, Alt+F4, and Windows Key (Meta)
+    if (isExamInProgress && (e.altKey || e.metaKey)) {
         e.preventDefault();
+        integrityWarnings.value++;
+        showIntegrityAlert.value = true;
+        setTimeout(() => { showIntegrityAlert.value = false; }, 3000);
         return;
     }
 
-    if (isExamInProgress && e.key === 'Escape' && e.altKey) {
+    // Block Windows Key (Meta) specifically
+    if (isExamInProgress && e.key === 'Meta') {
         e.preventDefault();
         return;
     }
 
     // Block Alt key alone during exam
     if (isExamInProgress && e.key === 'Alt') {
+        e.preventDefault();
+        return;
+    }
+
+    // Block Tab key during exam (prevent focus shifting)
+    if (isExamInProgress && e.key === 'Tab') {
         e.preventDefault();
         return;
     }
@@ -878,6 +942,7 @@ onMounted(() => {
     runEntranceAnimations();
     
     window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleVisibilityChange);
     window.addEventListener('contextmenu', preventCheatingActions);
     window.addEventListener('copy', preventCheatingActions);
     window.addEventListener('paste', preventCheatingActions);
@@ -887,6 +952,20 @@ onMounted(() => {
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('blur', handleVisibilityChange);
+    window.removeEventListener('contextmenu', preventCheatingActions);
+    window.removeEventListener('copy', preventCheatingActions);
+    window.removeEventListener('paste', preventCheatingActions);
+    window.removeEventListener('keydown', handleGlobalKeydown);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
 });
 const isExamInProgress = computed(() => 
     examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value)

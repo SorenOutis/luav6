@@ -345,7 +345,7 @@ onMounted(() => {
                             target="_blank"
                             class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-[10px] group/btn"
                         >
-                            EXECUTE_START
+                            START
                             <ExternalLink class="w-3 h-3 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
                         </a>
                         <Link 
@@ -353,7 +353,7 @@ onMounted(() => {
                             :href="examsShow(exam.id).url"
                             class="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-lg shadow-primary/20 text-[10px]"
                         >
-                            EXECUTE_START
+                            START
                         </Link>
                     </div>
                 </div>
