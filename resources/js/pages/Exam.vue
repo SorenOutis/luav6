@@ -134,55 +134,59 @@ onMounted(() => {
     if (!examContainer.value) return;
 
     const tl = gsap.timeline({
-        defaults: { ease: 'power4.out', duration: 1.1 }
+        defaults: { ease: 'expo.out', duration: 1.2 }
     });
 
-    // Initial states
-    gsap.set('.exam-hero', { opacity: 0, y: 30, filter: 'blur(5px)' });
+    // Initial states - more controlled, less blur
+    gsap.set('.exam-hero', { opacity: 0, x: -20 });
     gsap.set('.exam-card', {
         opacity: 0,
-        y: 50,
-        scale: 0.95,
-        rotationX: -10,
-        filter: 'blur(10px)',
-        transformOrigin: 'center top'
+        y: 40,
+        scale: 0.98,
+        transformOrigin: 'center bottom'
     });
+    gsap.set('.exam-card .absolute.top-0, .exam-card .absolute.bottom-0', { scale: 0 });
 
-    // Hero entrance
+    // 1. Hero entrance
     tl.to('.exam-hero', { 
         opacity: 1, 
-        y: 0, 
-        filter: 'blur(0px)', 
-        duration: 0.8 
+        x: 0, 
+        duration: 1
     });
 
-    // Card entrance with depth and liquid stagger
+    // 2. Card entrance - Staggered slide and fade
     tl.to(
         '.exam-card',
         {
             opacity: 1,
             y: 0,
             scale: 1,
-            rotationX: 0,
-            filter: 'blur(0px)',
-            stagger: {
-                each: 0.08,
-                from: "start",
-                ease: "power2.inOut"
-            },
+            stagger: 0.1,
             duration: 1.2,
-            ease: 'elastic.out(1, 0.75)'
+            clearProps: 'filter'
         },
-        '-=0.5'
+        '-=0.7'
     );
 
-    // Background orb animation
+    // 3. Bracket reveal - "Locking in" effect
+    tl.to(
+        '.exam-card .absolute.top-0, .exam-card .absolute.bottom-0',
+        {
+            scale: 1,
+            stagger: 0.05,
+            duration: 0.8,
+            ease: 'back.out(2)'
+        },
+        '-=1'
+    );
+
+    // Background orb animation refinement
     const orbs = examContainer.value.querySelectorAll('.orb');
     orbs.forEach((orb, i) => {
         gsap.to(orb, {
-            x: `random(-60, 60)`,
-            y: `random(-60, 60)`,
-            duration: 15 + i * 5,
+            x: `random(-100, 100)`,
+            y: `random(-100, 100)`,
+            duration: 12 + i * 4,
             repeat: -1,
             yoyo: true,
             ease: 'sine.inOut'

@@ -320,7 +320,7 @@ const resetMagnetic = (e: MouseEvent) => {
                         <div class="flex items-center justify-center sm:justify-start gap-2 opacity-40 group-hover:opacity-100 transition-opacity">
                             <Terminal class="w-3 h-3 text-primary" />
                             <span class="text-[8px] sm:text-[10px] font-mono font-black uppercase tracking-widest flex items-center gap-2">
-                                RANK_{{ idx + 1 }}_WARRIOR
+                                RANK_{{ idx + 1 }}
                                 <span v-if="idx === 0" class="text-primary/50 animate-pulse hidden lg:inline-block">// UPDATING_CORE_NODE...</span>
                             </span>
                         </div>

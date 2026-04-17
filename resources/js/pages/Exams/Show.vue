@@ -244,32 +244,44 @@ const clearDraft = () => {
 // Re-trigger entrance animations when returning to list view
 const runEntranceAnimations = () => {
     const tl = gsap.timeline({
-        defaults: { ease: 'power4.out', duration: 1.0 }
+        defaults: { ease: 'expo.out', duration: 1.2 }
     });
 
-    // Reset base state to hidden before animating
-    gsap.set('.animate-up', { opacity: 0, y: 25 });
+    // Reset base states - technical and sharp
+    gsap.set('.exam-hero', { opacity: 0, y: 30 });
     gsap.set('.exam-part-card', { opacity: 0, y: 40, scale: 0.98 });
+    // Target all corner brackets in hero and cards
+    gsap.set('.exam-hero .absolute.top-0, .exam-hero .absolute.bottom-0, .exam-part-card .absolute.top-0, .exam-part-card .absolute.bottom-0', { scale: 0 });
 
-    // Hero: main card in first
-    tl.to('.exam-hero', { opacity: 1, y: 0, duration: 0.9 });
+    // 1. Hero entrance
+    tl.to('.exam-hero', { 
+        opacity: 1, 
+        y: 0, 
+        duration: 1 
+    });
 
-    // Hero components
-    tl.fromTo('.exam-hero-left', { opacity: 0, y: 30 }, { opacity: 1, y: 0 }, '-=0.6');
-    tl.fromTo('.exam-hero-stats', { opacity: 0, scale: 0.9, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.8 }, '-=0.7');
-    tl.fromTo('.exam-stat', { opacity: 0, x: -10 }, { opacity: 1, x: 0, stagger: 0.1, duration: 0.5 }, '-=0.4');
-
-    // Parts list cards
-    tl.fromTo('.exam-part-card', 
-        { opacity: 0, y: 40, scale: 0.98 }, 
+    // 2. Part cards entrance - Staggered build
+    tl.to('.exam-part-card', 
         { 
             opacity: 1, 
             y: 0, 
             scale: 1, 
-            stagger: 0.08, 
-            duration: 0.8 
+            stagger: 0.1, 
+            duration: 1.2 
         }, 
-        '-=0.5'
+        '-=0.7'
+    );
+
+    // 3. Bracket "Lock-In" reveal
+    tl.to(
+        '.exam-hero .absolute.top-0, .exam-hero .absolute.bottom-0, .exam-part-card .absolute.top-0, .exam-part-card .absolute.bottom-0',
+        {
+            scale: 1,
+            stagger: 0.03,
+            duration: 0.8,
+            ease: 'back.out(2)'
+        },
+        '-=1'
     );
 };
 
