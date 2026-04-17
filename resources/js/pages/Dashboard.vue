@@ -449,24 +449,40 @@ const handleLogout = () => {
 
         <div
             v-if="showBanModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-md"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-md"
         >
-            <div class="w-full max-w-xl rounded-2xl border border-destructive/30 bg-background/95 p-7 shadow-2xl">
-                <h2 class="text-2xl font-bold text-destructive">Account Suspended</h2>
-                <p class="mt-3 text-sm leading-6 text-muted-foreground">
-                    Your account has been banned from using this system. Please contact your administrator for assistance.
-                </p>
-                <p v-if="banReason" class="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-sm">
-                    <span class="font-semibold">Reason:</span> {{ banReason }}
-                </p>
-                <p v-if="bannedAt" class="mt-3 text-xs text-muted-foreground">
-                    Banned on: {{ bannedAt }}
-                </p>
+            <div class="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-destructive/30 bg-background/95 shadow-2xl">
+                <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-destructive/10 via-destructive to-destructive/10" />
+                <div class="p-6 sm:p-8">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-destructive/85">Access Restricted</p>
+                        <h2 class="mt-1 text-3xl font-semibold tracking-tight text-foreground">Account Suspended</h2>
+                        <p class="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+                            Your account is currently banned from using this system. Please contact your administrator to request a review.
+                        </p>
+                    </div>
 
-                <div class="mt-6 flex justify-end">
+                    <div class="mt-6 space-y-3">
+                        <div
+                            v-if="banReason"
+                            class="rounded-xl border border-border/80 bg-gradient-to-br from-muted/60 to-muted/30 p-4"
+                        >
+                            <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ban reason</p>
+                            <p class="mt-1 text-sm text-foreground">{{ banReason }}</p>
+                        </div>
+                        <div
+                            v-if="bannedAt"
+                            class="inline-flex items-center rounded-full border border-border/80 bg-muted/40 px-3 py-1 text-xs text-muted-foreground"
+                        >
+                            Banned on: {{ bannedAt }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end border-t border-border/70 bg-muted/20 p-4 sm:p-5">
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
+                        class="inline-flex items-center justify-center rounded-xl bg-destructive px-5 py-2.5 text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90"
                         @click="handleLogout"
                     >
                         Log out
