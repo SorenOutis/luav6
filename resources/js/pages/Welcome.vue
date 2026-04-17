@@ -471,8 +471,8 @@ const techStack = [
         ></div>
 
         <!-- System Structural Constraints (Lines) -->
-        <div class="fixed inset-y-0 left-6 lg:left-24 w-px bg-border/20 z-0 origin-top" ref="structuralLines"></div>
-        <div class="fixed inset-y-0 right-6 lg:right-24 w-px bg-border/20 z-0 origin-bottom" ref="structuralLines"></div>
+        <div class="fixed inset-y-0 left-4 lg:left-24 w-px bg-border/10 lg:bg-border/20 z-0 origin-top" ref="structuralLines"></div>
+        <div class="fixed inset-y-0 right-4 lg:right-24 w-px bg-border/10 lg:bg-border/20 z-0 origin-bottom" ref="structuralLines"></div>
         <div class="fixed inset-x-0 top-1/4 h-px bg-border/20 z-0 hidden lg:block origin-left" ref="structuralLines"></div>
         <div class="fixed inset-x-0 bottom-1/4 h-px bg-border/20 z-0 hidden lg:block origin-right" ref="structuralLines"></div>
 
@@ -535,7 +535,7 @@ const techStack = [
             <!-- Hero Monolith -->
             <div class="max-w-6xl">
                 <div class="hero-reveal overflow-hidden mb-2 lg:mb-4">
-                    <h1 class="reveal-content text-[12vw] sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.8] uppercase flex flex-col">
+                    <h1 class="reveal-content text-5xl sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] sm:leading-[0.8] uppercase flex flex-col">
                         <span>Learning Systems</span>
                         <span class="text-muted-foreground/20 italic">Intelligence</span>
                     </h1>
@@ -543,7 +543,7 @@ const techStack = [
                 
                 <div class="hero-reveal mb-10 lg:mb-16 lg:pl-2 relative">
                     <!-- Invisible Shadow Element: Reserves the maximum possible space to prevent layout shifts -->
-                    <p class="max-w-3xl text-base font-medium sm:text-xl lg:text-2xl leading-relaxed tracking-tight opacity-0 pointer-events-none select-none invisible whitespace-pre-wrap">
+                    <p class="max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium leading-relaxed tracking-tight opacity-0 pointer-events-none select-none invisible whitespace-pre-wrap">
                         Access the industrial-grade assessment engine engineered for high-fidelity performance and architectural growth in 
                         <span class="font-black uppercase tracking-widest inline-flex items-center">
                             Architectural Might.<span class="ml-1 w-1 h-[0.8em] bg-primary"></span>
@@ -551,7 +551,7 @@ const techStack = [
                     </p>
                     
                     <!-- Visible Animated Element: Positioned absolutely within the reserved space -->
-                    <p class="reveal-content absolute inset-0 max-w-3xl text-base font-medium text-muted-foreground sm:text-xl lg:text-2xl leading-relaxed tracking-tight">
+                    <p class="reveal-content absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight">
                         Access the industrial-grade assessment engine engineered for high-fidelity performance and architectural growth in 
                         <span class="text-foreground font-black uppercase tracking-widest inline-flex items-center">
                             {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite]"></span>
@@ -665,7 +665,7 @@ const techStack = [
                     ref="featureCards"
                     @mousemove="handleFeatureMouseMove($event)"
                     @mouseleave="resetFeatureMouse"
-                    class="group relative flex flex-col p-8 lg:p-20 border-border/10 transition-all hover:bg-muted/20 overflow-hidden"
+                    class="group relative flex flex-col p-8 sm:p-12 lg:p-20 border-border/10 transition-all hover:bg-muted/20 overflow-hidden"
                     :class="{ 'border-b lg:border-b-0 lg:border-r': index !== coreFeatures.length - 1 }"
                 >
                     <!-- Local Card Glow -->
@@ -700,15 +700,15 @@ const techStack = [
             </div>
 
             <!-- Tech Stack Carousel -->
-            <div class="reveal-section mt-24 lg:mt-48 overflow-hidden relative py-12 border-y border-border/5">
-                <div class="flex items-center gap-4 mb-12 px-6 lg:px-0">
+            <div class="reveal-section mt-24 lg:mt-48 overflow-hidden relative py-12 border-y border-border/5 -mx-6 sm:mx-0">
+                <div class="flex items-center gap-4 mb-12 px-6 sm:px-0">
                     <div class="h-px w-12 bg-primary"></div>
                     <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]">Core Technology Stack</h2>
                 </div>
                 
                 <div class="flex whitespace-nowrap" ref="techCarousel">
                     <!-- Duplicate items for seamless loop -->
-                    <div v-for="n in 2" :key="n" class="flex gap-12 lg:gap-24 pr-12 lg:pr-24">
+                    <div v-for="n in 2" :key="n" class="flex gap-12 lg:gap-24 pr-12 lg:pr-24 pl-6 sm:pl-0">
                         <div v-for="tech in techStack" :key="tech.name" class="flex items-center gap-6 group">
                             <div class="flex h-12 w-12 lg:h-16 lg:w-16 items-center justify-center border border-border/10 bg-muted/5 group-hover:border-primary/30 transition-colors">
                                 <component :is="tech.icon" class="h-6 w-6 lg:h-8 lg:w-8 text-muted-foreground group-hover:text-primary transition-colors" />
