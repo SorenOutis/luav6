@@ -287,10 +287,6 @@ onMounted(() => {
                                 <span class="inline-block skew-x-12">Initialize Now</span>
                                 <ArrowRight class="w-4 h-4 skew-x-12" />
                             </Link>
-
-                            <button v-if="!exam.is_locked" class="text-[9px] font-black text-muted-foreground/40 uppercase tracking-[0.4em] hover:text-red-500 transition-colors">
-                                Abort
-                            </button>
                         </div>
                     </div>
                 </div>
