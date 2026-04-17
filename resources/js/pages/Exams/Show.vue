@@ -971,7 +971,7 @@ const isExamInProgress = computed(() =>
     examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value)
 );
 
-const hideSidebar = computed(() => isExamInProgress.value);
+const hideSidebar = computed(() => isExamInProgress.value && !isAdminBypass.value);
 
 const scorePercentage = computed(() => {
     if (totalPossiblePoints.value === 0) return 0;
