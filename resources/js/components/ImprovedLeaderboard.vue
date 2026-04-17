@@ -175,7 +175,7 @@ const resetMagnetic = (e: MouseEvent) => {
                     <input 
                         type="text" 
                         v-model="searchQuery" 
-                        placeholder="Search warriors..."
+                        placeholder="Search users..."
                         class="pl-10 pr-4 py-2 bg-card border border-border/40 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full sm:w-64 shadow-sm"
                     />
                 </div>
