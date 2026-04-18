@@ -92,6 +92,7 @@ const isAdminBypass = ref(false);
 const showUnansweredWarning = ref(false);
 const unansweredWarningRef = ref<HTMLElement | null>(null);
 const hasShownUnansweredWarning = ref(false);
+const isTimeoutSubmission = ref(false);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
@@ -122,6 +123,7 @@ const startTimer = () => {
         } else {
             stopTimer();
             if (examStarted.value && !isSubmitting.value) {
+                isTimeoutSubmission.value = true;
                 submitPart(); // Auto-submit on timeout
             }
         }
@@ -710,6 +712,7 @@ const submitPart = async () => {
     }
 
     isSubmitting.value = true;
+    isTimeoutSubmission.value = false; // Reset timeout flag if we are proceeding with submission
 
     try {
         // Build detailed answers with question information
@@ -815,6 +818,7 @@ const closeUnansweredWarning = (proceed: boolean) => {
             onComplete: () => {
                 showUnansweredWarning.value = false;
                 hasShownUnansweredWarning.value = false; // Reset so it can show again with updated count
+                isTimeoutSubmission.value = false;
                 if (proceed) {
                     isSubmitting.value = true;
                     submitPartFinal();
@@ -824,6 +828,7 @@ const closeUnansweredWarning = (proceed: boolean) => {
     } else {
         showUnansweredWarning.value = false;
         hasShownUnansweredWarning.value = false; // Reset so it can show again with updated count
+        isTimeoutSubmission.value = false;
         if (proceed) {
             isSubmitting.value = true;
             submitPartFinal();
@@ -1616,23 +1621,28 @@ const onDragEnd = () => {
                             </div>
 
                             <div class="space-y-3">
-                                <h3 class="text-xl md:text-3xl font-black text-foreground tracking-tighter uppercase italic">Unanswered Questions</h3>
+                                <h3 class="text-xl md:text-3xl font-black text-foreground tracking-tighter uppercase italic">
+                                    {{ isTimeoutSubmission ? 'Time is up!' : 'Unanswered Questions' }}
+                                </h3>
                                 <div class="h-0.5 w-16 bg-amber-500 mx-auto"></div>
-                                <p class="text-muted-foreground text-xs md:text-sm font-bold leading-relaxed max-w-sm mx-auto uppercase tracking-wider">
+                                <p v-if="isTimeoutSubmission" class="text-muted-foreground text-xs md:text-sm font-bold leading-relaxed max-w-sm mx-auto uppercase tracking-wider">
+                                    The time for this section has expired. Your progress will be saved automatically.
+                                </p>
+                                <p v-else class="text-muted-foreground text-xs md:text-sm font-bold leading-relaxed max-w-sm mx-auto uppercase tracking-wider">
                                     You have <span class="text-amber-500 font-black text-lg">{{ unansweredCount }}</span> unanswered question{{ unansweredCount > 1 ? 's' : '' }} in this section.
                                 </p>
                                 <p class="text-[10px] text-muted-foreground/70 font-medium italic">
-                                    You may proceed, but these will be marked as incorrect.
+                                    {{ isTimeoutSubmission ? 'Please click the button below to proceed to the next section or finalize your submission.' : 'You may proceed, but these will be marked as incorrect.' }}
                                 </p>
                             </div>
 
                             <div class="flex flex-col w-full gap-3 mt-4">
                                 <button @click="closeUnansweredWarning(true)"
                                     class="w-full px-6 py-4 bg-amber-500 text-black font-black hover:bg-amber-400 transition-all flex items-center justify-center gap-4 group/btn uppercase tracking-[0.2em] text-xs skew-x-[-12deg]">
-                                    <span class="skew-x-[12deg]">Proceed Anyway</span>
+                                    <span class="skew-x-[12deg]">{{ isTimeoutSubmission ? 'Continue' : 'Proceed Anyway' }}</span>
                                     <ArrowRight class="w-5 h-5 group-hover/btn:translate-x-2 transition-transform skew-x-[12deg]" />
                                 </button>
-                                <button @click="closeUnansweredWarning(false)"
+                                <button v-if="!isTimeoutSubmission" @click="closeUnansweredWarning(false)"
                                     class="w-full py-3 text-muted-foreground font-black hover:text-foreground transition-colors text-[10px] uppercase tracking-[0.3em]">
                                     Return to Questions
                                 </button>

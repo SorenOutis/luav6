@@ -455,7 +455,7 @@ onMounted(() => {
             <DialogFooter class="p-8 md:p-10 border-t border-border bg-muted/10">
                 <Button variant="secondary" @click="showReviewModal = false" 
                     class="w-full md:w-auto bg-foreground text-background font-black uppercase tracking-[0.3em] text-[10px] transform -skew-x-12 hover:bg-primary hover:text-primary-foreground px-12 h-12 rounded-none">
-                    <span class="inline-block skew-x-12">Terminate Review</span>
+                    <span class="inline-block skew-x-12">Close Review</span>
                 </Button>
             </DialogFooter>
         </DialogContent>
