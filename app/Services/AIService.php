@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 class AIService
 {
     protected string $baseUrl;
+
     protected string $model;
 
     public function __construct()
@@ -18,8 +19,6 @@ class AIService
 
     /**
      * Pre-warm the AI model by loading it into RAM.
-     *
-     * @return bool
      */
     public function preWarm(): bool
     {
@@ -42,9 +41,9 @@ class AIService
     /**
      * Assess an essay and return a score and feedback.
      *
-     * @param string $essayText The student's essay answer.
-     * @param string $questionText The essay prompt/question.
-     * @param int $maxPoints The maximum points possible for this question.
+     * @param  string  $essayText  The student's essay answer.
+     * @param  string  $questionText  The essay prompt/question.
+     * @param  int  $maxPoints  The maximum points possible for this question.
      * @return array{score: float, feedback: string}
      */
     public function assessEssay(string $essayText, string $questionText, int $maxPoints): array
@@ -52,7 +51,7 @@ class AIService
         // Use a file-based lock to ensure 1-by-1 processing across different student requests
         $lockFile = storage_path('ai_assessment.lock');
         $fp = fopen($lockFile, 'w+');
-        
+
         try {
             // Wait for the lock (blocking)
             if (flock($fp, LOCK_EX)) {
@@ -96,12 +95,12 @@ class AIService
                             'num_ctx' => 1024,       // Smaller context window for faster processing
                             'top_k' => 10,
                             'top_p' => 0.5,
-                        ]
+                        ],
                     ]);
 
                     if ($response->successful()) {
                         $data = json_decode($response->json('response'), true);
-                        
+
                         if (isset($data['score'])) {
                             return [
                                 'score' => (float) round((float) $data['score']),
@@ -109,10 +108,10 @@ class AIService
                             ];
                         }
                     }
-                    
-                    Log::error('AI Assessment failed: ' . $response->body());
+
+                    Log::error('AI Assessment failed: '.$response->body());
                 } catch (\Exception $e) {
-                    Log::error('AI Assessment error: ' . $e->getMessage());
+                    Log::error('AI Assessment error: '.$e->getMessage());
                 } finally {
                     // Release the lock
                     flock($fp, LOCK_UN);

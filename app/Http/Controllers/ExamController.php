@@ -11,9 +11,7 @@ use Inertia\Inertia;
 
 class ExamController extends Controller
 {
-    public function __construct(protected AIService $aiService)
-    {
-    }
+    public function __construct(protected AIService $aiService) {}
 
     public function index()
     {
@@ -91,6 +89,7 @@ class ExamController extends Controller
     public function preWarmAI()
     {
         $this->aiService->preWarm();
+
         return response()->json(['status' => 'ok']);
     }
 
