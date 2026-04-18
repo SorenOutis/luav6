@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ChevronLeft, User, Calendar, FileText, CheckCircle2, HelpCircle } from 'lucide-vue-next';
+import { ChevronLeft, User, Calendar, FileText, CheckCircle2, HelpCircle, Zap } from 'lucide-vue-next';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 
@@ -8,7 +8,10 @@ interface Answer {
     question_number: number;
     question_text: string;
     question_type: string;
+    points?: number;
     answer: string | number | null;
+    ai_score?: number;
+    ai_feedback?: string;
 }
 
 interface Submission {
@@ -140,6 +143,24 @@ const formatType = (type: string) => type.replace(/_/g, ' ').toUpperCase();
                                         {{ answer.answer }}
                                     </span>
                                     <span v-else class="text-muted-foreground italic">No answer provided</span>
+                                </div>
+
+                                <!-- AI Assessment Display -->
+                                <div v-if="answer.question_type === 'essay' && (answer.ai_score !== undefined || answer.ai_feedback !== undefined)" 
+                                    class="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3 relative overflow-hidden group/ai">
+                                    <div class="absolute top-0 right-0 w-12 h-12 bg-primary/5 -rotate-45 translate-x-6 -translate-y-6 group-hover/ai:bg-primary/10 transition-colors"></div>
+                                    
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                                <Zap class="w-3.5 h-3.5 text-primary animate-pulse" />
+                                            </div>
+                                            <span class="text-[10px] font-black text-primary uppercase tracking-[0.2em]">AI Assessment Analysis</span>
+                                        </div>
+                                        <div class="px-2.5 py-1 bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest rounded-lg">
+                                            Score: {{ answer.ai_score }} / {{ answer.points ?? 1 }}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

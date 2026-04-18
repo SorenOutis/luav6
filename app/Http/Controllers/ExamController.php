@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Services\AIService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ExamController extends Controller
 {
+    public function __construct(protected AIService $aiService)
+    {
+    }
+
     public function index()
     {
         $user = auth()->user();
@@ -83,6 +88,12 @@ class ExamController extends Controller
         ]);
     }
 
+    public function preWarmAI()
+    {
+        $this->aiService->preWarm();
+        return response()->json(['status' => 'ok']);
+    }
+
     public function submitPart(Request $request, Exam $exam, ExamPart $examPart)
     {
         // Prevent submissions if exam is closed
@@ -102,20 +113,42 @@ class ExamController extends Controller
         $answers = $validated['answers'];
         $hasEssay = false;
 
+        // Create a lookup for submitted answers by question number
+        $submittedAnswers = collect($answers)->keyBy('question_number');
+
         foreach ($questions as $index => $question) {
+            $questionNumber = $index + 1;
             $questionPoints = (int) ($question['points'] ?? $examPart->points ?? 1);
             $totalPossible += $questionPoints;
+
+            $submittedAnswerData = $submittedAnswers->get($questionNumber);
+            $submittedAnswer = $submittedAnswerData['answer'] ?? null;
+
+            if ($submittedAnswer === null) {
+                continue;
+            }
 
             if ($question['type'] === 'essay') {
                 $hasEssay = true;
 
-                continue;
-            }
+                // Perform AI assessment for the essay
+                $assessment = $this->aiService->assessEssay(
+                    (string) $submittedAnswer,
+                    (string) $question['text'],
+                    $questionPoints
+                );
 
-            // Find the answer for this question number (offset 1)
-            $submittedAnswer = collect($answers)->firstWhere('question_number', $index + 1)['answer'] ?? null;
+                // Add AI score to the total score
+                $score += $assessment['score'];
 
-            if ($submittedAnswer === null) {
+                // Update the answer data with AI results
+                if ($submittedAnswerData) {
+                    $submittedAnswers[$questionNumber] = array_merge($submittedAnswerData, [
+                        'ai_score' => $assessment['score'],
+                        'ai_feedback' => $assessment['feedback'],
+                    ]);
+                }
+
                 continue;
             }
 
@@ -144,7 +177,7 @@ class ExamController extends Controller
                 'exam_part_id' => $examPart->id,
             ],
             [
-                'answers' => json_encode($validated['answers']),
+                'answers' => json_encode($submittedAnswers->values()->toArray()),
                 'status' => $hasEssay ? 'pending_review' : 'submitted',
                 'score' => $score,
             ]

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
-import { onMounted, onUnmounted, ref, computed, reactive } from 'vue';
+import { onMounted, onUnmounted, ref, computed, reactive, nextTick } from 'vue';
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
+import axios from 'axios';
 import type { BreadcrumbItem } from '@/types';
 import {
     Calendar, Clock, ChevronLeft, ChevronRight, BookOpen,
@@ -65,6 +66,7 @@ const handleMouseMove = (e: MouseEvent) => {
 
 const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
 const isSubmitting = ref(false);
+const isFinalSubmitting = ref(false);
 const showSuccessModal = ref(false);
 const isCalculatingScore = ref(false);
 const successModalRef = ref<HTMLElement | null>(null);
@@ -93,6 +95,9 @@ const showUnansweredWarning = ref(false);
 const unansweredWarningRef = ref<HTMLElement | null>(null);
 const hasShownUnansweredWarning = ref(false);
 const isTimeoutSubmission = ref(false);
+const currentPartHasEssay = ref(false);
+const calcCountdown = ref(0);
+const calcTimerInterval = ref<ReturnType<typeof setInterval> | null>(null);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
@@ -713,98 +718,102 @@ const submitPart = async () => {
 
     isSubmitting.value = true;
     isTimeoutSubmission.value = false; // Reset timeout flag if we are proceeding with submission
+    
+    // Check if current part has essay
+    currentPartHasEssay.value = selectedPart.value?.questions?.some(q => q.type === 'essay') || false;
 
-    try {
-        // Build detailed answers with question information
-        const detailedAnswers = (selectedPart.value?.questions || []).map((question, index) => ({
-            question_number: index + 1,
-            question_text: question.text,
-            question_type: question.type,
-            points: question.points ?? selectedPart.value?.points ?? 1,
-            answer: (answers[index] !== undefined && answers[index] !== null) ? answers[index] : null,
-        }));
+    // Build detailed answers with question information
+    const detailedAnswers = (selectedPart.value?.questions || []).map((question, index) => ({
+        question_number: index + 1,
+        question_text: question.text,
+        question_type: question.type,
+        points: question.points ?? selectedPart.value?.points ?? 1,
+        answer: (answers[index] !== undefined && answers[index] !== null) ? answers[index] : null,
+    }));
 
-        router.post(`/exams/${props.exam.id}/parts/${selectedPart.value.id}/submit`, {
-            answers: detailedAnswers,
-        }, {
-            onSuccess: () => {
-                clearDraft(); // Clean up successfully submitted draft
+    router.post(`/exams/${props.exam.id}/parts/${selectedPart.value.id}/submit`, {
+        answers: detailedAnswers,
+    }, {
+        onSuccess: () => {
+            clearDraft(); // Clean up successfully submitted draft
+            
+            // Exit full screen mode only if ALL parts are completed
+            if (remainingPartsCount.value === 0) {
+                // Set examStarted to false BEFORE exiting fullscreen
+                // to prevent the handleFullscreenChange from triggering the lockout modal
+                examStarted.value = false;
                 
-                // Exit full screen mode only if ALL parts are completed
-                if (remainingPartsCount.value === 0) {
-                    // Set examStarted to false BEFORE exiting fullscreen
-                    // to prevent the handleFullscreenChange from triggering the lockout modal
-                    examStarted.value = false;
-                    
-                    if (document.fullscreenElement) {
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if ((document as any).webkitExitFullscreen) {
-                            (document as any).webkitExitFullscreen();
-                        } else if ((document as any).msExitFullscreen) {
-                            (document as any).msExitFullscreen();
-                        }
+                if (document.fullscreenElement) {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if ((document as any).webkitExitFullscreen) {
+                        (document as any).webkitExitFullscreen();
+                    } else if ((document as any).msExitFullscreen) {
+                        (document as any).msExitFullscreen();
                     }
-                    isFullscreen.value = false;
                 }
+                isFullscreen.value = false;
+            }
 
-                // Show success modal
-                showSuccessModal.value = true;
-                partsPendingCount.value = remainingPartsCount.value;
+            // Show success modal
+            showSuccessModal.value = true;
+            partsPendingCount.value = remainingPartsCount.value;
+            isFinalSubmitting.value = false; // Reset early on success to allow modal interactions
 
-                // Animate modal
-                setTimeout(() => {
-                    if (successModalRef.value) {
-                        gsap.fromTo(
-                            successModalRef.value,
-                            { opacity: 0, scale: 0.85, y: 30 },
-                            { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
-                        );
+            // Animate modal
+            setTimeout(() => {
+                if (successModalRef.value) {
+                    gsap.fromTo(
+                        successModalRef.value,
+                        { opacity: 0, scale: 0.85, y: 30 },
+                        { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
+                    );
 
-                        // If all parts are done, animate the total score
-                        if (partsPendingCount.value === 0) {
-                            isCalculatingScore.value = true;
-                            displayedScore.value = 0;
+                    // If all parts are done, animate the total score
+                    if (partsPendingCount.value === 0) {
+                        isCalculatingScore.value = true;
+                        displayedScore.value = 0;
+                        
+                        // Simulate calculation delay
+                        setTimeout(() => {
+                            isCalculatingScore.value = false;
+                            const targetScore = Number(totalScore.value) || 0;
                             
-                            // Simulate calculation delay
-                            setTimeout(() => {
-                                isCalculatingScore.value = false;
-                                const targetScore = Number(totalScore.value) || 0;
-                                
-                                gsap.to(displayedScore, {
-                                    value: targetScore,
-                                    duration: 1.2,
-                                    ease: 'none',
-                                    onUpdate: () => {
-                                        displayedScore.value = Math.floor(displayedScore.value);
-                                    },
-                                    onComplete: () => {
-                                        displayedScore.value = targetScore;
-                                    }
-                                });
+                            gsap.to(displayedScore, {
+                                value: targetScore,
+                                duration: 1.2,
+                                ease: 'none',
+                                onUpdate: () => {
+                                    displayedScore.value = Math.floor(displayedScore.value);
+                                },
+                                onComplete: () => {
+                                    displayedScore.value = targetScore;
+                                }
+                            });
 
-                                // Decorative pop for the score box
-                                gsap.fromTo('.final-score-box',
-                                    { scale: 0.8, opacity: 0, y: 20 },
-                                    { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
-                                );
-                            }, 3000); // 3-second "calculation"
-                        }
-
-                        // Bounce animation for checkmark
-                        gsap.fromTo(
-                            '.success-checkmark',
-                            { scale: 0, rotate: -180 },
-                            { scale: 1, rotate: 0, duration: 0.8, delay: 0.2, ease: 'elastic.out(1.2, 0.4)' }
-                        );
+                            // Decorative pop for the score box
+                            gsap.fromTo('.final-score-box',
+                                { scale: 0.8, opacity: 0, y: 20 },
+                                { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
+                            );
+                        }, 3000); // 3-second "calculation"
                     }
-                }, 10);
 
-            },
-        });
-    } finally {
-        isSubmitting.value = false;
-    }
+                    // Bounce animation for checkmark
+                    gsap.fromTo(
+                        '.success-checkmark',
+                        { scale: 0, rotate: -180 },
+                        { scale: 1, rotate: 0, duration: 0.8, delay: 0.2, ease: 'elastic.out(1.2, 0.4)' }
+                    );
+                }
+            }, 10);
+
+        },
+        onFinish: () => {
+            isFinalSubmitting.value = false;
+            isSubmitting.value = false;
+        }
+    });
 };
 
 const closeUnansweredWarning = (proceed: boolean) => {
@@ -837,87 +846,130 @@ const closeUnansweredWarning = (proceed: boolean) => {
 };
 
 const submitPartFinal = async () => {
-    try {
-        const detailedAnswers = (selectedPart.value?.questions || []).map((question, index) => ({
-            question_number: index + 1,
-            question_text: question.text,
-            question_type: question.type,
-            points: question.points ?? selectedPart.value?.points ?? 1,
-            answer: (answers[index] !== undefined && answers[index] !== null) ? answers[index] : null,
-        }));
+    if (isFinalSubmitting.value) return;
+    isFinalSubmitting.value = true;
+    
+    // 1. Prepare data
+    const detailedAnswers = (selectedPart.value?.questions || []).map((question, index) => ({
+        question_number: index + 1,
+        question_text: question.text,
+        question_type: question.type,
+        points: question.points ?? selectedPart.value?.points ?? 1,
+        answer: (answers[index] !== undefined && answers[index] !== null) ? answers[index] : null,
+    }));
 
-        router.post(`/exams/${props.exam.id}/parts/${selectedPart.value.id}/submit`, {
-            answers: detailedAnswers,
-        }, {
-            onSuccess: () => {
-                clearDraft();
-                
-                if (remainingPartsCount.value === 0) {
-                    examStarted.value = false;
-                    
-                    if (document.fullscreenElement) {
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if ((document as any).webkitExitFullscreen) {
-                            (document as any).webkitExitFullscreen();
-                        } else if ((document as any).msExitFullscreen) {
-                            (document as any).msExitFullscreen();
-                        }
-                    }
-                    isFullscreen.value = false;
-                }
+    const hadEssay = selectedPart.value?.questions?.some(q => q.type === 'essay');
+    currentPartHasEssay.value = hadEssay;
 
-                showSuccessModal.value = true;
-                partsPendingCount.value = remainingPartsCount.value;
+    // 2. IMMEDIATELY show calculating modal
+    showSuccessModal.value = true;
+    isCalculatingScore.value = true;
+    displayedScore.value = 0;
+    partsPendingCount.value = Math.max(0, remainingPartsCount.value - 1); // Anticipate the submission
 
-                setTimeout(() => {
-                    if (successModalRef.value) {
-                        gsap.fromTo(
-                            successModalRef.value,
-                            { opacity: 0, scale: 0.85, y: 30 },
-                            { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
-                        );
+    const calcDurationSeconds = hadEssay ? 5 : 3;
+    calcCountdown.value = calcDurationSeconds;
 
-                        if (partsPendingCount.value === 0) {
-                            isCalculatingScore.value = true;
-                            displayedScore.value = 0;
-                            
-                            setTimeout(() => {
-                                isCalculatingScore.value = false;
-                                const targetScore = Number(totalScore.value) || 0;
-                                
-                                gsap.to(displayedScore, {
-                                    value: targetScore,
-                                    duration: 1.2,
-                                    ease: 'none',
-                                    onUpdate: () => {
-                                        displayedScore.value = Math.floor(displayedScore.value);
-                                    },
-                                    onComplete: () => {
-                                        displayedScore.value = targetScore;
-                                    }
-                                });
+    // Start UI countdown
+    if (calcTimerInterval.value) clearInterval(calcTimerInterval.value);
+    calcTimerInterval.value = setInterval(() => {
+        if (calcCountdown.value > 0) {
+            calcCountdown.value--;
+        } else {
+            if (calcTimerInterval.value) clearInterval(calcTimerInterval.value);
+        }
+    }, 1000);
 
-                                gsap.fromTo('.final-score-box',
-                                    { scale: 0.8, opacity: 0, y: 20 },
-                                    { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
-                                );
-                            }, 3000);
-                        }
+    // Ensure DOM is updated before animating
+    await nextTick();
 
-                        gsap.fromTo(
-                            '.success-checkmark',
-                            { scale: 0, rotate: -180 },
-                            { scale: 1, rotate: 0, duration: 0.8, delay: 0.2, ease: 'elastic.out(1.2, 0.4)' }
-                        );
-                    }
-                }, 10);
-
-            },
-        });
-    } finally {
-        isSubmitting.value = false;
+    // GSAP Entrance for Modal (TRULY IMMEDIATE)
+    if (successModalRef.value) {
+        gsap.fromTo(
+            successModalRef.value,
+            { opacity: 0, scale: 0.85, y: 30 },
+            { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: 'power3.out' }
+        );
     }
+
+    // Trigger AI pre-warm in the background while modal is showing
+    if (hadEssay) {
+        axios.post(route('exams.preWarmAI')).catch(() => {});
+    }
+
+    let requestFinished = false;
+
+    // 3. Start background submission
+    router.post(`/exams/${props.exam.id}/parts/${selectedPart.value.id}/submit`, {
+        answers: detailedAnswers,
+    }, {
+        onSuccess: () => {
+            requestFinished = true;
+            clearDraft();
+            
+            if (remainingPartsCount.value === 0) {
+                examStarted.value = false;
+                
+                if (document.fullscreenElement) {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if ((document as any).webkitExitFullscreen) {
+                        (document as any).webkitExitFullscreen();
+                    } else if ((document as any).msExitFullscreen) {
+                        (document as any).msExitFullscreen();
+                    }
+                }
+                isFullscreen.value = false;
+            }
+        },
+        onError: () => {
+            requestFinished = true;
+            isCalculatingScore.value = false;
+            showSuccessModal.value = false;
+            isFinalSubmitting.value = false;
+            isSubmitting.value = false;
+        }
+    });
+
+    // 4. Reveal logic: Wait for BOTH the minimum timer AND the server request
+    setTimeout(() => {
+        const checkAndReveal = () => {
+            if (requestFinished) {
+                isCalculatingScore.value = false;
+                if (calcTimerInterval.value) clearInterval(calcTimerInterval.value);
+                
+                const targetScore = Number(totalScore.value) || 0;
+                
+                gsap.to(displayedScore, {
+                    value: targetScore,
+                    duration: 1.2,
+                    ease: 'none',
+                    onUpdate: () => {
+                        displayedScore.value = Math.floor(displayedScore.value);
+                    },
+                    onComplete: () => {
+                        displayedScore.value = targetScore;
+                        isFinalSubmitting.value = false;
+                        isSubmitting.value = false;
+                    }
+                });
+
+                gsap.fromTo('.final-score-box',
+                    { scale: 0.8, opacity: 0, y: 20 },
+                    { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
+                );
+
+                gsap.fromTo(
+                    '.success-checkmark',
+                    { scale: 0, rotate: -180 },
+                    { scale: 1, rotate: 0, duration: 0.8, delay: 0.2, ease: 'elastic.out(1.2, 0.4)' }
+                );
+            } else {
+                setTimeout(checkAndReveal, 200);
+            }
+        };
+        checkAndReveal();
+    }, calcDurationSeconds * 1000);
 };
 
 const closeSuccessModal = () => {
@@ -930,6 +982,7 @@ const closeSuccessModal = () => {
             ease: 'power2.in',
             onComplete: () => {
                 showSuccessModal.value = false;
+                currentPartHasEssay.value = false;
 
                 // If all parts are completed, redirect to the exams list
                 if (allPartsSubmitted.value) {
@@ -1127,12 +1180,7 @@ const onDragEnd = () => {
                 <!-- ─── BREADCRUMB NAV ─────────────────────────────────── -->
                 <div class="animate-up flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <button v-if="selectedPart" @click="goBackToList"
-                            class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
-                            <ChevronLeft class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-                            Return to Assessment Dashboard
-                        </button>
-                        <Link v-else href="/exams"
+                        <Link href="/exams"
                             class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
                             <ChevronLeft class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
                             All Assessments
@@ -1397,14 +1445,15 @@ const onDragEnd = () => {
                                 </div>
                             </div>
 
-                            <div class="flex flex-col gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div v-for="(question, qIndex) in selectedPart!.questions" :key="qIndex"
                                     :id="`q-${qIndex}`"
                                     :class="[
                                         'question-card relative rounded-none border-l-4 border-r border-t border-b p-6 md:p-8 flex flex-col gap-8 transition-all duration-500',
                                         getQuestionStatus(qIndex) === 'answered' 
                                             ? 'border-l-primary border-primary/20 bg-primary/[0.02] shadow-[0_0_40px_rgba(var(--primary),0.05)]' 
-                                            : 'border-l-muted border-border/40 bg-card/40'
+                                            : 'border-l-muted border-border/40 bg-card/40',
+                                        question.type === 'essay' ? 'md:col-span-2' : ''
                                     ]">
                                     
                                     <!-- Decorative elements -->
@@ -1593,7 +1642,7 @@ const onDragEnd = () => {
                         <button @click="submitPart" :disabled="isSubmitting"
                             class="group relative px-10 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center gap-6 disabled:opacity-50 disabled:cursor-not-allowed skew-x-[-12deg] shadow-[0_20px_40px_-10px_rgba(var(--primary),0.4)]">
                             
-                            <span class="skew-x-[12deg] text-base tracking-[0.2em] uppercase">{{ isSubmitting ? 'Transmitting Data...' : 'Finalize Section' }}</span>
+                            <span class="skew-x-[12deg] text-base tracking-[0.2em] uppercase">{{ isSubmitting ? (currentPartHasEssay ? 'Assessing Answers...' : 'Transmitting Data...') : 'Finalize Section' }}</span>
                             
                             <div class="skew-x-[12deg] p-1.5 bg-primary-foreground/20 group-hover:bg-primary-foreground/30 transition-colors">
                                 <ArrowRight v-if="!isSubmitting" class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -1809,8 +1858,18 @@ const onDragEnd = () => {
                                         <Zap class="absolute inset-0 m-auto w-6 h-6 text-primary animate-pulse" />
                                     </div>
                                     <div class="space-y-2 text-center">
-                                        <p class="text-xs font-black text-primary uppercase tracking-[0.4em] animate-pulse">Calculating your score</p>
-                                        <p class="text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-60 italic">Excluding Manual Review Components</p>
+                                        <p class="text-xs font-black text-primary uppercase tracking-[0.4em] animate-pulse">
+                                            {{ currentPartHasEssay ? 'Assessment Protocol Active' : 'Calculating your score' }}
+                                        </p>
+                                        <p class="text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-60 italic">
+                                            {{ currentPartHasEssay ? 'LSI is analyzing your narrative response' : 'Excluding Manual Review Components' }}
+                                        </p>
+                                        <!-- Countdown Timer -->
+                                        <div class="mt-4 flex items-center justify-center gap-2">
+                                            <div class="px-3 py-1 bg-primary/10 border border-primary/30 rounded-full flex items-center gap-2">
+                                                <span class="text-[10px] font-mono font-black text-primary">T-MINUS: {{ calcCountdown }}S</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1837,7 +1896,7 @@ const onDragEnd = () => {
 
                             <button @click="closeSuccessModal" :disabled="isCalculatingScore"
                                 class="w-full px-8 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs skew-x-[-12deg] shadow-[0_15px_30px_rgba(var(--primary),0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
-                                <span class="skew-x-[12deg]">{{ isCalculatingScore ? 'Calculating...' : (partsPendingCount > 0 ? 'Next Deployment' : 'Return to Page') }}</span>
+                                <span class="skew-x-[12deg]">{{ isCalculatingScore ? (currentPartHasEssay ? 'Assessing...' : 'Calculating...') : (partsPendingCount > 0 ? 'Next Deployment' : 'Return to Page') }}</span>
                                 <ChevronRight v-if="!isCalculatingScore" class="w-5 h-5 skew-x-[12deg]" />
                                 <div v-else class="w-5 h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin skew-x-[12deg]"></div>
                             </button>
