@@ -142,50 +142,48 @@ onMounted(() => {
     if (!examContainer.value) return;
 
     const tl = gsap.timeline({
-        defaults: { ease: 'expo.out', duration: 1.2 }
+        defaults: { ease: 'expo.out', duration: 0.8 }
     });
-
-    // Initial states - more controlled, less blur
-    gsap.set('.exam-hero', { opacity: 0, x: -20 });
-    gsap.set('.exam-card', {
-        opacity: 0,
-        y: 40,
-        scale: 0.98,
-        transformOrigin: 'center bottom'
-    });
-    gsap.set('.exam-card .absolute.top-0, .exam-card .absolute.bottom-0', { scale: 0 });
 
     // 1. Hero entrance
-    tl.to('.exam-hero', { 
-        opacity: 1, 
-        x: 0, 
-        duration: 1
-    });
+    tl.fromTo('.exam-hero', 
+        { opacity: 0, x: -20 },
+        { opacity: 1, x: 0, duration: 0.6 }
+    );
 
-    // 2. Card entrance - Staggered slide and fade
-    tl.to(
+    // 2. Card entrance - Tactical slide-in with overshoot
+    tl.fromTo(
         '.exam-card',
         {
+            opacity: 0,
+            x: -40,
+            skewX: -5,
+            scale: 0.98
+        },
+        {
             opacity: 1,
-            y: 0,
+            x: 0,
+            skewX: 0,
             scale: 1,
-            stagger: 0.1,
-            duration: 1.2,
+            stagger: 0.08,
+            duration: 1,
+            ease: 'back.out(1.2)',
             clearProps: 'filter'
         },
-        '-=0.7'
+        '-=0.5'
     );
 
     // 3. Bracket reveal - "Locking in" effect
-    tl.to(
+    tl.fromTo(
         '.exam-card .absolute.top-0, .exam-card .absolute.bottom-0',
+        { scale: 0 },
         {
             scale: 1,
-            stagger: 0.05,
-            duration: 0.8,
+            stagger: 0.03,
+            duration: 0.5,
             ease: 'back.out(2)'
         },
-        '-=1'
+        '-=0.8'
     );
 
     // Background orb animation refinement
@@ -537,6 +535,10 @@ onMounted(() => {
 
 .animate-section {
     will-change: transform, opacity;
+}
+
+.exam-card {
+    opacity: 0;
 }
 
 @keyframes scan-vertical {

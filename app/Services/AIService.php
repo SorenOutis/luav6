@@ -76,7 +76,7 @@ class AIService
         - Zero Points: Irrelevant, nonsensical, or explicitly states they don't know.
         
         Response Format:
-        You MUST respond with a valid JSON object only. No other text.
+        You MUST respond with a valid JSON object ONLY. DO NOT provide feedback, explanations, or reasoning.
         The score MUST be a WHOLE NUMBER (flat number), no decimals allowed.
         {
             "score": <integer_value_between_0_and_$maxPoints>
@@ -125,7 +125,7 @@ class AIService
         // Fallback in case of failure
         return [
             'score' => 0.0,
-            'feedback' => 'AI Assessment unavailable at this time.',
+            'feedback' => '',
         ];
     }
 }

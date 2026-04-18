@@ -260,44 +260,46 @@ const clearDraft = () => {
 // Re-trigger entrance animations when returning to list view
 const runEntranceAnimations = () => {
     const tl = gsap.timeline({
-        defaults: { ease: 'expo.out', duration: 1.2 }
+        defaults: { ease: 'expo.out', duration: 0.8 }
     });
-
-    // Reset base states - technical and sharp
-    gsap.set('.exam-hero', { opacity: 0, y: 30 });
-    gsap.set('.exam-part-card', { opacity: 0, y: 40, scale: 0.98 });
-    // Target all corner brackets in hero and cards
-    gsap.set('.exam-hero .absolute.top-0, .exam-hero .absolute.bottom-0, .exam-part-card .absolute.top-0, .exam-part-card .absolute.bottom-0', { scale: 0 });
 
     // 1. Hero entrance
-    tl.to('.exam-hero', { 
-        opacity: 1, 
-        y: 0, 
-        duration: 1 
-    });
+    tl.fromTo('.exam-hero', 
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.6 }
+    );
 
-    // 2. Part cards entrance - Staggered build
-    tl.to('.exam-part-card', 
+    // 2. Part cards entrance - Tactical slide-in with overshoot
+    tl.fromTo('.exam-part-card', 
+        { 
+            opacity: 0, 
+            x: -40, 
+            skewX: -5, 
+            scale: 0.98 
+        },
         { 
             opacity: 1, 
-            y: 0, 
+            x: 0, 
+            skewX: 0,
             scale: 1, 
-            stagger: 0.1, 
-            duration: 1.2 
+            stagger: 0.08, 
+            duration: 1,
+            ease: 'back.out(1.2)'
         }, 
-        '-=0.7'
+        '-=0.5'
     );
 
     // 3. Bracket "Lock-In" reveal
-    tl.to(
+    tl.fromTo(
         '.exam-hero .absolute.top-0, .exam-hero .absolute.bottom-0, .exam-part-card .absolute.top-0, .exam-part-card .absolute.bottom-0',
+        { scale: 0 },
         {
             scale: 1,
-            stagger: 0.03,
-            duration: 0.8,
+            stagger: 0.02,
+            duration: 0.5,
             ease: 'back.out(2)'
         },
-        '-=1'
+        '-=0.8'
     );
 };
 
@@ -2003,6 +2005,10 @@ const onDragEnd = () => {
 
 .animate-up {
     will-change: transform, opacity;
+}
+
+.exam-part-card {
+    opacity: 0;
 }
 
 @keyframes scan-horizontal {
