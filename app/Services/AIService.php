@@ -90,6 +90,13 @@ class AIService
                         'prompt' => $prompt,
                         'stream' => false,
                         'format' => 'json',
+                        'options' => [
+                            'temperature' => 0,      // Zero temperature for faster, deterministic output
+                            'num_predict' => 20,     // Only need a few tokens for the JSON score
+                            'num_ctx' => 1024,       // Smaller context window for faster processing
+                            'top_k' => 10,
+                            'top_p' => 0.5,
+                        ]
                     ]);
 
                     if ($response->successful()) {

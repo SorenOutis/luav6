@@ -806,7 +806,7 @@ const submitPart = async () => {
                                 { scale: 0.8, opacity: 0, y: 20 },
                                 { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
                             );
-                        }, currentPartHasEssay.value ? 5000 : 3000); // 5s for AI, 3s for regular final calculation
+                        }, currentPartHasEssay.value ? 2000 : 1000); // Faster UI feedback
                     }
 
                     // Bounce animation for checkmark
@@ -881,7 +881,7 @@ const submitPartFinal = async () => {
     displayedScore.value = 0;
     partsPendingCount.value = Math.max(0, remainingPartsCount.value - 1); // Anticipate the submission
 
-    const calcDurationSeconds = hadEssay ? 5 : 3;
+    const calcDurationSeconds = hadEssay ? 2 : 1;
     calcCountdown.value = calcDurationSeconds;
 
     // Start UI countdown
