@@ -101,7 +101,16 @@ const calcTimerInterval = ref<ReturnType<typeof setInterval> | null>(null);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
-    return selectedPart.value.questions.length - Object.keys(answers).length;
+    
+    let count = 0;
+    selectedPart.value.questions.forEach((q, index) => {
+        const answer = answers[index];
+        // Count as unanswered if answer is undefined, null, or an empty string (for essays/identification)
+        if (answer === undefined || answer === null || (typeof answer === 'string' && answer.trim() === '')) {
+            count++;
+        }
+    });
+    return count;
 });
 
 const totalQuestions = computed(() =>
@@ -735,7 +744,8 @@ const submitPart = async () => {
         answers: detailedAnswers,
     }, {
         onSuccess: () => {
-            clearDraft(); // Clean up successfully submitted draft
+                hasShownUnansweredWarning.value = false; // Reset warning state after successful submission
+                clearDraft(); // Clean up successfully submitted draft
             
             // Exit full screen mode only if ALL parts are completed
             if (remainingPartsCount.value === 0) {
@@ -769,8 +779,8 @@ const submitPart = async () => {
                         { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: 'back.out' }
                     );
 
-                    // If all parts are done, animate the total score
-                    if (partsPendingCount.value === 0) {
+                    // If all parts are done OR current part has essay, animate the total score/AI assessment
+                    if (partsPendingCount.value === 0 || currentPartHasEssay.value) {
                         isCalculatingScore.value = true;
                         displayedScore.value = 0;
                         
@@ -796,7 +806,7 @@ const submitPart = async () => {
                                 { scale: 0.8, opacity: 0, y: 20 },
                                 { scale: 1, opacity: 1, y: 0, duration: 1.2, ease: 'elastic.out(1, 0.5)' }
                             );
-                        }, 3000); // 3-second "calculation"
+                        }, currentPartHasEssay.value ? 5000 : 3000); // 5s for AI, 3s for regular final calculation
                     }
 
                     // Bounce animation for checkmark
@@ -826,21 +836,21 @@ const closeUnansweredWarning = (proceed: boolean) => {
             ease: 'power2.in',
             onComplete: () => {
                 showUnansweredWarning.value = false;
-                hasShownUnansweredWarning.value = false; // Reset so it can show again with updated count
                 isTimeoutSubmission.value = false;
                 if (proceed) {
-                    isSubmitting.value = true;
-                    submitPartFinal();
+                    submitPart();
+                } else {
+                    hasShownUnansweredWarning.value = false; // Reset so it can show again if they click submit again
                 }
             }
         });
     } else {
         showUnansweredWarning.value = false;
-        hasShownUnansweredWarning.value = false; // Reset so it can show again with updated count
         isTimeoutSubmission.value = false;
         if (proceed) {
-            isSubmitting.value = true;
-            submitPartFinal();
+            submitPart();
+        } else {
+            hasShownUnansweredWarning.value = false; // Reset so it can show again if they click submit again
         }
     }
 };
@@ -1180,7 +1190,7 @@ const onDragEnd = () => {
                 <!-- ─── BREADCRUMB NAV ─────────────────────────────────── -->
                 <div class="animate-up flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <Link href="/exams"
+                        <Link v-if="!selectedPart" href="/exams"
                             class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
                             <ChevronLeft class="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
                             All Assessments

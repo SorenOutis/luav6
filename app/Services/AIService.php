@@ -57,10 +57,16 @@ class AIService
         Maximum Points: $maxPoints
         
         STRICT GRADING RULES:
-        1. If the essay says "I don't know", "skip", or anything similar, the score MUST be 0.
-        2. If the essay is completely irrelevant to the question, the score MUST be 0.
-        3. If the essay is too short to provide any meaningful information (e.g., just 1-2 random words), the score MUST be 0.
-        4. ONLY give points if the student actually attempts to answer the question with relevant facts or reasoning.
+        1. COMPREHENSIVENESS: The answer MUST be comprehensive and thorough. Short, vague, or superficial answers should receive significantly fewer points.
+        2. RELEVANCE: The answer MUST be directly related to the question. Irrelevant content, even if well-written, must not be rewarded.
+        3. FACTUAL ACCURACY: Points should only be awarded for correct facts and logical reasoning.
+        4. "I DON'T KNOW" CLAUSE: If the student says "I don't know", "skip", or anything similar, the score MUST be 0.
+        5. MINIMUM SUBSTANCE: If the essay is too short to provide meaningful information (e.g., less than 2-3 sentences of actual content), it should receive a very low score or 0.
+        
+        SCORING CRITERIA:
+        - Full Points ($maxPoints): Comprehensive, highly relevant, and accurate answer that covers all aspects of the question.
+        - Partial Points: Relevant but lacks depth or misses some aspects of the question.
+        - Zero Points: Irrelevant, nonsensical, or explicitly states they don't know.
         
         Response Format:
         You MUST respond with a valid JSON object only. No other text.
