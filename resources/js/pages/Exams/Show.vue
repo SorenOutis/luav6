@@ -930,6 +930,13 @@ const closeSuccessModal = () => {
             ease: 'power2.in',
             onComplete: () => {
                 showSuccessModal.value = false;
+
+                // If all parts are completed, redirect to the exams list
+                if (allPartsSubmitted.value) {
+                    router.visit('/exams');
+                    return;
+                }
+
                 // Reset and go back to parts list
                 Object.keys(answers).forEach(key => delete answers[Number(key)]);
                 goBackToList();
