@@ -572,12 +572,24 @@ const handleGlobalKeydown = (e: KeyboardEvent) => {
     // If admin bypass is active, don't block anything or trigger alerts
     if (isAdminBypass.value) return;
 
-    // Block Alt+Tab, Alt+Esc, Alt+F4, and Windows Key (Meta)
-    if (isExamInProgress && (e.altKey || e.metaKey)) {
+    /**
+     * SECURITY NOTE: Ctrl+Alt+Del is a hardware interrupt handled by the OS kernel.
+     * No web browser can intercept or block it for security reasons.
+     * Instead, we rely on the Focus Loss/Alt+Tab detection to log such events.
+     */
+
+    // Block Alt+Tab, Alt+Esc, Alt+F4, Windows Key (Meta), and generic Ctrl+Alt combos
+    if (isExamInProgress && (e.altKey || e.metaKey || (e.ctrlKey && e.altKey))) {
         e.preventDefault();
         integrityWarnings.value++;
         showIntegrityAlert.value = true;
         setTimeout(() => { showIntegrityAlert.value = false; }, 3000);
+        return;
+    }
+
+    // Block Ctrl+Shift+Esc (Task Manager)
+    if (isExamInProgress && e.ctrlKey && e.shiftKey && e.key === 'Escape') {
+        e.preventDefault();
         return;
     }
 
@@ -1008,6 +1020,60 @@ const feedbackContent = computed(() => {
         bg: 'bg-amber-500/5'
     };
 });
+
+// ─── DRAGGABLE WIDGET LOGIC ────────────────────────────────
+const widgetPos = reactive({ x: 0, y: 0 });
+const isDragging = ref(false);
+const widgetRef = ref<HTMLElement | null>(null);
+const startPos = { x: 0, y: 0 };
+const dragBounds = reactive({ minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity });
+let rafId: number | null = null;
+
+const onDragStart = (e: MouseEvent) => {
+    // Only drag if left click
+    if (e.button !== 0 || !widgetRef.value) return;
+    
+    const rect = widgetRef.value.getBoundingClientRect();
+    
+    // Calculate bounds so widget stays within viewport
+    // Current translation (widgetPos.x/y) + distance to screen edges
+    dragBounds.minX = widgetPos.x - rect.left;
+    dragBounds.maxX = widgetPos.x + (window.innerWidth - rect.right);
+    dragBounds.minY = widgetPos.y - rect.top;
+    dragBounds.maxY = widgetPos.y + (window.innerHeight - rect.bottom);
+
+    isDragging.value = true;
+    startPos.x = e.clientX - widgetPos.x;
+    startPos.y = e.clientY - widgetPos.y;
+    
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+    
+    // Prevent text selection while dragging
+    e.preventDefault();
+};
+
+const onDragMove = (e: MouseEvent) => {
+    if (!isDragging.value) return;
+    
+    if (rafId) cancelAnimationFrame(rafId);
+    
+    rafId = requestAnimationFrame(() => {
+        const rawX = e.clientX - startPos.x;
+        const rawY = e.clientY - startPos.y;
+        
+        // Clamp position within calculated bounds
+        widgetPos.x = Math.max(dragBounds.minX, Math.min(dragBounds.maxX, rawX));
+        widgetPos.y = Math.max(dragBounds.minY, Math.min(dragBounds.maxY, rawY));
+    });
+};
+
+const onDragEnd = () => {
+    isDragging.value = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    window.removeEventListener('mousemove', onDragMove);
+    window.removeEventListener('mouseup', onDragEnd);
+};
 </script>
 
 <template>
@@ -1061,8 +1127,8 @@ const feedbackContent = computed(() => {
                         </Link>
                     </div>
 
-                    <!-- Live Floating Timer & Smart Stats -->
-                    <div v-if="examStarted" 
+                    <!-- Live Floating Timer & Smart Stats (Only in list view) -->
+                    <div v-if="examStarted && !selectedPart" 
                         class="flex items-center gap-4 md:gap-6 px-6 py-3 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-2xl shadow-2xl transition-all duration-500 hover:border-primary/40 group/timer relative overflow-hidden">
                         
                         <!-- Pulse decoration for timer -->
@@ -1161,7 +1227,7 @@ const feedbackContent = computed(() => {
                 </div>
 
                 <!-- Global Progress Bar -->
-                <div v-if="!allPartsSubmitted && examStarted" class="animate-up w-full mt-2 space-y-4">
+                <div v-if="!allPartsSubmitted && examStarted && !selectedPart" class="animate-up w-full mt-2 space-y-4">
                     <!-- Overall Evaluation Progress -->
                     <div class="space-y-2">
                         <div class="flex items-center justify-between px-1">
@@ -1173,17 +1239,6 @@ const feedbackContent = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Current Section Progress -->
-                    <div v-if="selectedPart" class="space-y-2">
-                        <div class="flex items-center justify-between px-1">
-                            <span class="text-[9px] font-black uppercase tracking-[0.4em] text-primary">Section Deployment</span>
-                            <span class="text-[9px] font-black text-primary">{{ Math.round(partProgress) }}% INITIALIZED</span>
-                        </div>
-                        <div class="w-full h-2 bg-muted/50 overflow-hidden border border-primary/20 relative">
-                            <div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
-                            <div class="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_15px_rgba(var(--primary),0.5)]" :style="{ width: `${partProgress}%` }"></div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- ═══════════════════════════════════════════════════════ -->
@@ -1770,6 +1825,66 @@ const feedbackContent = computed(() => {
                                 <div v-else class="w-5 h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin skew-x-[12deg]"></div>
                             </button>
                         </div>
+                    </div>
+                </div>
+            </transition>
+            <!-- ─── DRAGGABLE EXAM WIDGET ────────────────────────────── -->
+            <transition name="modal-fade">
+                <div ref="widgetRef" v-if="examStarted && selectedPart && !showSuccessModal" 
+                    class="fixed bottom-8 right-8 z-[100] group/widget transition-transform duration-75"
+                    :style="{ transform: `translate(${widgetPos.x}px, ${widgetPos.y}px)` }">
+                    
+                    <div class="relative bg-card/90 dark:bg-black/80 backdrop-blur-2xl border border-border dark:border-white/10 rounded-2xl p-4 shadow-2xl w-56 md:w-64 overflow-hidden select-none"
+                        :class="{ 'cursor-grabbing': isDragging, 'cursor-grab': !isDragging, 'ring-2 ring-primary/20': isDragging }"
+                        @mousedown="onDragStart">
+                        
+                        <!-- Drag Indicator (Visual Only) -->
+                        <div class="absolute top-0 left-0 right-0 h-6 flex items-center justify-center opacity-40 group-hover/widget:opacity-100 transition-opacity pointer-events-none">
+                            <div class="w-12 h-1 bg-foreground/10 rounded-full"></div>
+                        </div>
+
+                        <!-- Widget Content -->
+                        <div class="space-y-3 mt-2">
+                            <!-- Timer Row -->
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                                    <span class="text-[9px] font-black text-primary uppercase tracking-widest font-mono">PHASE_ACTIVE</span>
+                                </div>
+                                <div class="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20"
+                                    :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse bg-red-500/5 dark:bg-red-500/10' : 'text-primary'">
+                                    <Clock class="w-3 h-3" />
+                                    <span class="font-mono font-black text-sm tracking-widest">{{ formattedTime }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Progress Section -->
+                            <div class="space-y-1.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[8px] font-bold text-muted-foreground uppercase tracking-widest truncate max-w-[120px]">
+                                        {{ selectedPart.title }}
+                                    </span>
+                                    <span class="text-[8px] font-black text-primary font-mono">{{ Math.round(partProgress) }}%</span>
+                                </div>
+                                <div class="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden border border-border dark:border-white/5 relative">
+                                    <div class="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_10px_rgba(var(--primary),0.4)]"
+                                        :style="{ width: `${partProgress}%` }">
+                                        <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Stats Row -->
+                            <div v-if="estimatedFinishMinutes !== null && estimatedFinishMinutes > 0" 
+                                class="flex items-center gap-2 pt-1">
+                                <Zap class="w-3 h-3 text-amber-500 fill-amber-500/20" />
+                                <span class="text-[8px] font-black text-amber-500 uppercase tracking-widest font-mono">EST_FINISH: {{ estimatedFinishMinutes }}M</span>
+                            </div>
+                        </div>
+
+                        <!-- Tech Decoration -->
+                        <div class="absolute -right-4 -bottom-4 w-12 h-12 border border-primary/5 dark:border-primary/10 rotate-45 pointer-events-none"></div>
+                        <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-0.5 h-8 bg-primary/20 dark:bg-primary/30 rounded-full pointer-events-none"></div>
                     </div>
                 </div>
             </transition>
