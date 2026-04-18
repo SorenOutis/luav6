@@ -9,7 +9,7 @@ usePoll(10000, {
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
-import { Calendar, Clock, ExternalLink, AlertCircle, Lock, Eye, CheckCircle2, XCircle, HelpCircle } from 'lucide-vue-next';
+import { Calendar, Clock, ExternalLink, AlertCircle, Lock, Eye, EyeOff, CheckCircle2, XCircle, HelpCircle, Shield, ShieldOff } from 'lucide-vue-next';
 import {
     Dialog,
     DialogContent,
@@ -59,6 +59,7 @@ const props = defineProps<{
 
 const showReviewModal = ref(false);
 const selectedExamForReview = ref<Exam | null>(null);
+const privacyMode = ref(true);
 
 const openReview = (exam: Exam) => {
     selectedExamForReview.value = exam;
@@ -345,12 +346,30 @@ onMounted(() => {
                             </DialogDescription>
                         </div>
                     </div>
-                    <div class="px-6 py-3 bg-muted/30 border border-border/50 relative overflow-hidden group/total mx-auto md:mx-0">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover/total:bg-primary transition-colors"></div>
-                        <span class="block text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-1 font-mono">TOTAL_SCORE</span>
-                        <span class="text-2xl font-black text-foreground font-mono tabular-nums">
-                            {{ selectedExamForReview?.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
-                        </span>
+
+                    <div class="flex items-center gap-4 mx-auto md:mx-0">
+                        <!-- Privacy Toggle -->
+                        <button 
+                            @click="privacyMode = !privacyMode"
+                            class="group/privacy flex flex-col items-center gap-1.5 px-4 py-2 border border-border/50 hover:border-primary/50 transition-all relative overflow-hidden bg-muted/20"
+                        >
+                            <div class="absolute top-0 left-0 w-full h-[1px] bg-primary/30 group-hover/privacy:bg-primary transition-colors"></div>
+                            <div class="flex items-center gap-2">
+                                <component :is="privacyMode ? Shield : ShieldOff" class="w-3 h-3" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'" />
+                                <span class="text-[8px] font-black uppercase tracking-[0.2em] font-mono" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'">
+                                    {{ privacyMode ? 'PRIVACY_ACTIVE' : 'PRIVACY_OFF' }}
+                                </span>
+                            </div>
+                            <span class="text-[7px] font-bold text-muted-foreground/60 uppercase tracking-widest">Anti-Glance Shield</span>
+                        </button>
+
+                        <div class="px-6 py-3 bg-muted/30 border border-border/50 relative overflow-hidden group/total">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover/total:bg-primary transition-colors"></div>
+                            <span class="block text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-1 font-mono">TOTAL_SCORE</span>
+                            <span class="text-2xl font-black text-foreground font-mono tabular-nums">
+                                {{ selectedExamForReview?.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </DialogHeader>
@@ -385,7 +404,16 @@ onMounted(() => {
                                     :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500' : 'bg-red-500'">
                                 </div>
 
-                                <div class="space-y-6">
+                                <!-- Privacy Overlay for blurred state -->
+                                <div v-if="privacyMode" class="absolute inset-0 z-20 flex items-center justify-center opacity-100 group-hover/question:opacity-0 pointer-events-none transition-opacity duration-300">
+                                    <div class="flex items-center gap-2 px-3 py-1.5 bg-background/80 border border-primary/20 backdrop-blur-sm shadow-xl transform rotate-[-2deg]">
+                                        <Shield class="w-3 h-3 text-primary animate-pulse" />
+                                        <span class="text-[8px] font-black text-primary uppercase tracking-[0.2em]">Data Shielded</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-6 transition-all duration-500"
+                                    :class="privacyMode ? 'blur-md group-hover/question:blur-0 select-none' : ''">
                                     <div class="space-y-3">
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap-3">
