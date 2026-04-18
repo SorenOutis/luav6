@@ -330,43 +330,43 @@ onMounted(() => {
             <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-foreground z-50 pointer-events-none"></div>
             <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-foreground z-50 pointer-events-none"></div>
 
-            <DialogHeader class="p-8 md:p-10 border-b border-border bg-muted/10 relative">
-                <div class="flex flex-col md:flex-row md:items-center justify-center gap-6 text-center md:text-left">
-                    <div class="flex items-center gap-5 justify-center md:justify-start">
-                        <div class="w-12 h-12 border-2 border-amber-500 rotate-45 flex items-center justify-center shrink-0">
+            <DialogHeader class="p-5 md:p-10 border-b border-border bg-muted/10 relative">
+                <div class="flex flex-col md:flex-row md:items-center justify-center gap-4 md:gap-6 text-center md:text-left">
+                    <div class="flex items-center gap-3 md:gap-5 justify-center md:justify-start">
+                        <div class="hidden sm:flex w-12 h-12 border-2 border-amber-500 rotate-45 items-center justify-center shrink-0">
                              <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                         </div>
                         <div class="space-y-1">
-                            <span class="text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">ASSESSMENT_DEBRIEF_PROTOCOL</span>
-                            <DialogTitle class="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-foreground leading-none">
+                            <span class="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">ASSESSMENT_DEBRIEF_PROTOCOL</span>
+                            <DialogTitle class="text-xl md:text-4xl font-black italic uppercase tracking-tighter text-foreground leading-none">
                                 {{ selectedExamForReview?.title }}
                             </DialogTitle>
-                            <DialogDescription class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                            <DialogDescription class="hidden sm:block text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 Reviewing performance data and individual operative feedback.
                             </DialogDescription>
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4 mx-auto md:mx-0">
+                    <div class="flex items-center gap-3 md:gap-4 mx-auto md:mx-0">
                         <!-- Privacy Toggle -->
                         <button 
                             @click="privacyMode = !privacyMode"
-                            class="group/privacy flex flex-col items-center gap-1.5 px-4 py-2 border border-border/50 hover:border-primary/50 transition-all relative overflow-hidden bg-muted/20"
+                            class="group/privacy flex flex-col items-center gap-1 px-3 md:px-4 py-1.5 md:py-2 border border-border/50 hover:border-primary/50 transition-all relative overflow-hidden bg-muted/20"
                         >
                             <div class="absolute top-0 left-0 w-full h-[1px] bg-primary/30 group-hover/privacy:bg-primary transition-colors"></div>
                             <div class="flex items-center gap-2">
-                                <component :is="privacyMode ? Shield : ShieldOff" class="w-3 h-3" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'" />
-                                <span class="text-[8px] font-black uppercase tracking-[0.2em] font-mono" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'">
-                                    {{ privacyMode ? 'PRIVACY_ACTIVE' : 'PRIVACY_OFF' }}
+                                <component :is="privacyMode ? Shield : ShieldOff" class="w-2.5 h-2.5 md:w-3 md:h-3" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'" />
+                                <span class="text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] font-mono" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'">
+                                    {{ privacyMode ? 'SHIELD_ON' : 'SHIELD_OFF' }}
                                 </span>
                             </div>
-                            <span class="text-[7px] font-bold text-muted-foreground/60 uppercase tracking-widest">Anti-Glance Shield</span>
+                            <span class="hidden md:block text-[7px] font-bold text-muted-foreground/60 uppercase tracking-widest">Anti-Glance</span>
                         </button>
 
-                        <div class="px-6 py-3 bg-muted/30 border border-border/50 relative overflow-hidden group/total">
+                        <div class="px-4 md:px-6 py-1.5 md:py-3 bg-muted/30 border border-border/50 relative overflow-hidden group/total">
                             <div class="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover/total:bg-primary transition-colors"></div>
-                            <span class="block text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-1 font-mono">TOTAL_SCORE</span>
-                            <span class="text-2xl font-black text-foreground font-mono tabular-nums">
+                            <span class="block text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-0.5 md:mb-1 font-mono leading-none">SCORE</span>
+                            <span class="text-lg md:text-2xl font-black text-foreground font-mono tabular-nums leading-none">
                                 {{ selectedExamForReview?.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
                             </span>
                         </div>
