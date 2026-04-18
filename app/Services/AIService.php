@@ -49,7 +49,14 @@ class AIService
      */
     public function assessEssay(string $essayText, string $questionText, int $maxPoints): array
     {
-        $prompt = <<<PROMPT
+        // Use a file-based lock to ensure 1-by-1 processing across different student requests
+        $lockFile = storage_path('ai_assessment.lock');
+        $fp = fopen($lockFile, 'w+');
+        
+        try {
+            // Wait for the lock (blocking)
+            if (flock($fp, LOCK_EX)) {
+                $prompt = <<<PROMPT
         Act as a STRICT academic examiner. Your task is to evaluate a student's essay response based on a specific question.
         
         Question: "$questionText"
@@ -76,28 +83,36 @@ class AIService
         }
         PROMPT;
 
-        try {
-            $response = Http::timeout(60)->post("{$this->baseUrl}/api/generate", [
-                'model' => $this->model,
-                'prompt' => $prompt,
-                'stream' => false,
-                'format' => 'json',
-            ]);
+                try {
+                    // Increase timeout significantly to 300 seconds (5 minutes) to handle LAN queues
+                    $response = Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
+                        'model' => $this->model,
+                        'prompt' => $prompt,
+                        'stream' => false,
+                        'format' => 'json',
+                    ]);
 
-            if ($response->successful()) {
-                $data = json_decode($response->json('response'), true);
-                
-                if (isset($data['score'])) {
-                    return [
-                        'score' => (float) round((float) $data['score']),
-                        'feedback' => '',
-                    ];
+                    if ($response->successful()) {
+                        $data = json_decode($response->json('response'), true);
+                        
+                        if (isset($data['score'])) {
+                            return [
+                                'score' => (float) round((float) $data['score']),
+                                'feedback' => '',
+                            ];
+                        }
+                    }
+                    
+                    Log::error('AI Assessment failed: ' . $response->body());
+                } catch (\Exception $e) {
+                    Log::error('AI Assessment error: ' . $e->getMessage());
+                } finally {
+                    // Release the lock
+                    flock($fp, LOCK_UN);
                 }
             }
-            
-            Log::error('AI Assessment failed: ' . $response->body());
-        } catch (\Exception $e) {
-            Log::error('AI Assessment error: ' . $e->getMessage());
+        } finally {
+            fclose($fp);
         }
 
         // Fallback in case of failure

@@ -744,8 +744,8 @@ const submitPart = async () => {
         answers: detailedAnswers,
     }, {
         onSuccess: () => {
-                hasShownUnansweredWarning.value = false; // Reset warning state after successful submission
-                clearDraft(); // Clean up successfully submitted draft
+            hasShownUnansweredWarning.value = false; // Reset warning state after successful submission
+            clearDraft(); // Clean up successfully submitted draft
             
             // Exit full screen mode only if ALL parts are completed
             if (remainingPartsCount.value === 0) {
@@ -822,6 +822,10 @@ const submitPart = async () => {
         onFinish: () => {
             isFinalSubmitting.value = false;
             isSubmitting.value = false;
+        },
+        // Increase timeout for LAN environments where AI might queue
+        headers: {
+            'X-Inertia-Timeout': 300000 // 5 minutes in milliseconds
         }
     });
 };
@@ -1316,13 +1320,13 @@ const onDragEnd = () => {
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <template v-if="!selectedPart">
                     <div class="animate-up flex items-center justify-between">
-                        <h2 class="text-base font-bold flex items-center gap-2">
-                            <Layers class="w-4 h-4 text-primary" />
+                        <h2 class="text-xl font-black flex items-center gap-3 uppercase italic tracking-tight">
+                            <Layers class="w-6 h-6 text-primary" />
                             Exam Parts
                         </h2>
                         <span
-                            class="text-[10px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full border border-border/50">
-                            {{ exam.parts.length }} Section{{ exam.parts.length !== 1 ? 's' : '' }}
+                            class="text-xs font-black text-muted-foreground bg-muted/50 px-4 py-1.5 rounded-none border border-border/50 uppercase tracking-widest font-mono">
+                            {{ exam.parts.length }} Sections
                         </span>
                     </div>
 
@@ -1345,31 +1349,31 @@ const onDragEnd = () => {
                             <!-- Top: Status & Metadata -->
                             <div class="relative z-10 flex flex-col gap-3">
                                 <div class="flex items-center justify-between">
-                                    <div class="w-8 h-8 border border-amber-500/30 rotate-45 flex items-center justify-center group-hover/part:border-amber-500 transition-colors">
-                                         <div class="w-1 h-1 bg-amber-500 rotate-45"></div>
+                                    <div class="w-10 h-10 border border-amber-500/30 rotate-45 flex items-center justify-center group-hover/part:border-amber-500 transition-colors">
+                                         <div class="w-2 h-2 bg-amber-500 rotate-45"></div>
                                     </div>
                                     <div v-if="isPartLocked(index)" class="p-1.5 rounded-lg bg-zinc-950/50 border border-white/5">
                                         <Lock class="w-3.5 h-3.5 text-muted-foreground/40" />
                                     </div>
-                                    <div v-else-if="isPartSubmitted(part.id)" class="px-2.5 py-1.5 bg-emerald-500 text-white dark:text-zinc-950 font-black text-[10px] font-mono tracking-widest transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                                    <div v-else-if="isPartSubmitted(part.id)" class="px-3 py-2 bg-emerald-500 text-white dark:text-zinc-950 font-black text-xs font-mono tracking-widest transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
                                         <span class="inline-block skew-x-12">
                                             {{ submissions[part.id]?.score ?? 0 }} / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div class="space-y-0.5">
-                                    <span class="text-[8px] font-black text-primary uppercase tracking-[0.2em] font-mono">PHASE_{{ (index + 1).toString().padStart(2, '0') }}</span>
-                                    <h3 class="text-base font-black text-foreground uppercase italic tracking-tight group-hover/part:text-primary transition-colors leading-none">
+                                <div class="space-y-1">
+                                    <span class="text-[10px] font-black text-primary uppercase tracking-[0.2em] font-mono">PART_{{ (index + 1).toString().padStart(2, '0') }}</span>
+                                    <h3 class="text-xl font-black text-foreground uppercase italic tracking-tight group-hover/part:text-primary transition-colors leading-none">
                                         {{ part.title }}
                                     </h3>
                                 </div>
 
                                 <!-- Middle: Question Types Stagger -->
-                                <div class="bg-muted/30 dark:bg-zinc-950/40 p-3 border border-border/50 space-y-1.5">
-                                    <div v-for="type in getQuestionTypes(part)" :key="type" class="flex items-center gap-2">
-                                        <span class="text-amber-500 font-black text-[7px]">[!]</span>
-                                        <span class="text-[7px] font-black text-muted-foreground uppercase tracking-widest font-mono">
+                                <div class="bg-muted/30 dark:bg-zinc-950/40 p-4 border border-border/50 space-y-2">
+                                    <div v-for="type in getQuestionTypes(part)" :key="type" class="flex items-center gap-2.5">
+                                        <span class="text-amber-500 font-black text-[9px]">[!]</span>
+                                        <span class="text-[9px] font-black text-muted-foreground uppercase tracking-widest font-mono">
                                             {{ formatType(type) }}
                                         </span>
                                     </div>
@@ -1377,17 +1381,23 @@ const onDragEnd = () => {
                             </div>
 
                             <!-- Bottom: Footer Info & Action -->
-                            <div class="relative z-10 mt-4 pt-3 border-t border-border/10 flex items-center justify-between">
-                                <div class="flex items-center gap-1.5 font-mono">
-                                    <span class="text-[9px] font-black text-primary">{{ part.questions?.length ?? 0 }}</span>
-                                    <span class="text-[7px] font-bold text-muted-foreground/40 uppercase tracking-widest">TASKS</span>
+                            <div class="relative z-10 mt-6 pt-4 border-t border-border/10 flex items-center justify-between">
+                                <div class="flex items-center gap-6 font-mono">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-black text-primary">{{ part.questions?.length ?? 0 }}</span>
+                                        <span class="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">TASKS</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-black text-amber-500">{{ part.questions?.reduce((sum, q) => sum + (parseInt(q.points) || parseInt(part.points) || 1), 0) ?? 0 }}</span>
+                                        <span class="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">POINTS</span>
+                                    </div>
                                 </div>
                                 
                                 <div v-if="!isPartSubmitted(part.id)"
-                                    class="px-3 py-1.5 bg-foreground text-background font-black text-[8px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-1.5"
+                                    class="px-4 py-2 bg-foreground text-background font-black text-[10px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-2"
                                     :class="isPartLocked(index) ? 'opacity-20 grayscale' : ''">
                                     <span class="inline-block skew-x-12">{{ isPartLocked(index) ? 'LOCKED' : 'EXECUTE' }}</span>
-                                    <ArrowRight v-if="!isPartLocked(index)" class="w-3 h-3 skew-x-12" />
+                                    <ArrowRight v-if="!isPartLocked(index)" class="w-3.5 h-3.5 skew-x-12" />
                                 </div>
                             </div>
                         </div>
@@ -1421,10 +1431,16 @@ const onDragEnd = () => {
                                         <span class="text-[8px] font-black text-emerald-500 uppercase tracking-widest">Synced {{ lastSavedAt }}</span>
                                     </div>
                                 </div>
-                                <span
-                                    class="text-[9px] font-black text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg border border-border/40 uppercase tracking-widest">
-                                    {{ selectedPart!.questions?.length ?? 0 }} Tasks
-                                </span>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="text-[9px] font-black text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg border border-border/40 uppercase tracking-widest">
+                                        {{ selectedPart!.questions?.length ?? 0 }} Tasks
+                                    </span>
+                                    <span
+                                        class="text-[9px] font-black text-amber-500 bg-amber-500/5 px-3 py-1 rounded-lg border border-amber-500/20 uppercase tracking-widest font-mono">
+                                        {{ selectedPart!.questions?.reduce((sum, q) => sum + (parseInt(q.points) || parseInt(selectedPart!.points) || 1), 0) ?? 0 }} Points
+                                    </span>
+                                </div>
                             </div>
 
                             <!-- Part Instructions -->
@@ -1935,7 +1951,7 @@ const onDragEnd = () => {
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                                    <span class="text-[9px] font-black text-primary uppercase tracking-widest font-mono">PHASE_ACTIVE</span>
+                                    <span class="text-[9px] font-black text-primary uppercase tracking-widest font-mono">PART_ACTIVE</span>
                                 </div>
                                 <div class="flex items-center gap-2 px-3 py-1 rounded-lg bg-primary/5 dark:bg-primary/10 border border-primary/20"
                                     :class="timeLeftSeconds < 300 ? 'border-red-500/50 text-red-500 animate-pulse bg-red-500/5 dark:bg-red-500/10' : 'text-primary'">
