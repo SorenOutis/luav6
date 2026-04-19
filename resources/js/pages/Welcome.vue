@@ -550,15 +550,15 @@ onBeforeUnmount(() => {
 });
 
 const liveSignals = [
-    { label: 'Session Throughput', value: 92, valueLabel: '92%' },
-    { label: 'Adaptive Routing', value: 86, valueLabel: '86%' },
-    { label: 'Knowledge Sync', value: 97, valueLabel: '97%' },
+    { label: 'AI Evaluation Speed', value: 92, valueLabel: 'Optimal' },
+    { label: 'System Integrity', value: 98, valueLabel: '98%' },
+    { label: 'Active Assessments', value: 100, valueLabel: 'Live' },
 ];
 
 const quickLinks = [
-    { label: 'Documentation', href: '#', icon: BookOpen },
-    { label: 'Live Sessions', href: '#', icon: Video },
-    { label: 'Source Cluster', href: '#', icon: Github },
+    { label: 'Exam Directory', href: '#', icon: BookOpen },
+    { label: 'Assessment Analytics', href: '#', icon: Activity },
+    { label: 'Evaluation Logs', href: '#', icon: ClipboardCheck },
 ];
 
 const orbLayers = [
@@ -570,7 +570,7 @@ const orbLayers = [
 const coreFeatures = [
     {
         title: 'Assessment Engine',
-        description: 'Industrial-grade testing infrastructure with real-time analytics and automated evaluation modules.',
+        description: 'Smart testing infrastructure with real-time analytics and AI-powered evaluation modules.',
         icon: Target,
         code: 'MOD_EXM_01',
         details: 'Take timed exams with multiple question types: multiple choice, true/false, identification, and AI-graded essays. Get instant feedback and track your performance across seasons.',
@@ -578,15 +578,15 @@ const coreFeatures = [
     },
     {
         title: 'Skill Acquisition',
-        description: 'Structured assignment workflows designed to track progressive growth and mastery across seasons.',
+        description: 'Structured assignment workflows designed to track progressive learning and mastery across subjects.',
         icon: Zap,
         code: 'MOD_ASN_02',
-        details: 'Submit assignments with file uploads, track deadlines, and receive grades from your instructors. Stay on top of every mission objective with status tracking.',
+        details: 'Submit assignments with file uploads, track deadlines, and receive grades from your instructors. Stay on top of your academic goals with progress tracking.',
         stats: [{ label: 'File Upload', value: 'Secure' }, { label: 'Deadline Alerts', value: 'Live' }, { label: 'Grade Tracking', value: 'Instant' }]
     },
     {
-        title: 'Operational Elite',
-        description: 'High-fidelity leaderboard system driven by XP, streaks, and competitive intelligence metrics.',
+        title: 'Gamified Learning',
+        description: 'Engaging leaderboard system driven by XP, daily streaks, and competitive academic performance.',
         icon: Award,
         code: 'MOD_LDR_03',
         details: 'Compete with peers on the section-based leaderboard. Earn XP from exams, assignments, and daily streaks. Rise through the ranks and dominate your section.',
@@ -595,8 +595,8 @@ const coreFeatures = [
 ];
 
 const systemStats = computed(() => [
-    { label: 'Active Users', value: animUsers.value, unit: 'NODES', icon: Cpu },
-    { label: 'Assessments', value: animExams.value, unit: 'LIVE', icon: ClipboardCheck },
+    { label: 'Active Users', value: animUsers.value, unit: 'LEARNERS', icon: Cpu },
+    { label: 'Assessments', value: animExams.value, unit: 'READY', icon: ClipboardCheck },
     { label: 'Assignments', value: animAssignments.value, unit: 'ACTIVE', icon: FileText },
     { label: 'Submissions', value: animSubmissions.value, unit: 'TOTAL', icon: Trophy },
 ]);
@@ -653,7 +653,7 @@ const techStack = [
                     <Command class="h-6 w-6 lg:h-7 lg:w-7 relative z-10" />
                 </div>
                 <div class="flex flex-col leading-none">
-                    <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LUAV Engine</span>
+                    <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LSI Engine</span>
                     <span class="text-[7px] lg:text-[8px] font-bold text-primary/60 uppercase mt-1 tracking-widest">v6.4.0</span>
                 </div>
             </div>
@@ -715,7 +715,7 @@ const techStack = [
                 <div class="hero-reveal mb-10 lg:mb-16 lg:pl-2 relative">
                     <!-- Invisible Shadow Element: Reserves the maximum possible space to prevent layout shifts -->
                     <p class="max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium leading-relaxed tracking-tight opacity-0 pointer-events-none select-none invisible whitespace-pre-wrap">
-                        Access the industrial-grade assessment engine engineered for high-fidelity performance and architectural growth in 
+                        Experience the smart assessment engine engineered for high-fidelity learning and academic growth in 
                         <span class="font-black uppercase tracking-widest inline-flex items-center">
                             Architectural Might.<span class="ml-1 w-1 h-[0.8em] bg-primary"></span>
                         </span> 
@@ -723,7 +723,7 @@ const techStack = [
                     
                     <!-- Visible Animated Element: Positioned absolutely within the reserved space -->
                     <p class="reveal-content absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight">
-                        Access the industrial-grade assessment engine engineered for high-fidelity performance and architectural growth in 
+                        Experience the smart assessment engine engineered for high-fidelity learning and academic growth in 
                         <span class="text-foreground font-black uppercase tracking-widest inline-flex items-center">
                             {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite] shadow-[0_0_8px_var(--color-primary)]"></span>
                         </span> 
@@ -740,7 +740,7 @@ const techStack = [
                             @mouseleave="resetMagnetic"
                             class="group relative flex items-center justify-between gap-8 lg:gap-12 bg-primary px-8 lg:px-10 py-5 lg:py-6 text-primary-foreground transition-all hover:gap-12 lg:hover:gap-16 active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 overflow-hidden"
                         >
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Initialize Dashboard</span>
+                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Access Dashboard</span>
                             <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6 relative z-10 group-hover:translate-x-1 transition-transform" />
                             <div class="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                         </Link>
@@ -749,7 +749,7 @@ const techStack = [
                             @mouseleave="resetMagnetic"
                             class="group relative flex items-center justify-between gap-8 lg:gap-12 bg-foreground px-8 lg:px-10 py-5 lg:py-6 text-background transition-all hover:gap-12 lg:hover:gap-16 active:scale-[0.98] shadow-2xl overflow-hidden"
                         >
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Authenticate System</span>
+                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Login to Hub</span>
                             <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6 relative z-10 group-hover:translate-x-1 transition-transform" />
                             <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         </Link>
@@ -773,8 +773,8 @@ const techStack = [
                     <div class="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl pointer-events-none"></div>
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Live System Pulse</p>
-                            <h2 class="mt-2 text-xl sm:text-2xl font-black tracking-tight">Operational signals in real time</h2>
+                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Live Platform Pulse</p>
+                            <h2 class="mt-2 text-xl sm:text-2xl font-black tracking-tight">Learning metrics in real time</h2>
                         </div>
                         <div class="online-pill hidden sm:flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>
@@ -797,9 +797,9 @@ const techStack = [
 
                 <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-5 sm:p-6 lg:p-8 backdrop-blur-2xl">
                     <div class="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl"></div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Control Links</p>
-                    <h3 class="mt-2 text-xl font-black tracking-tight">Stay inside one command surface.</h3>
-                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">Jump directly into docs, session feed, and source channels without leaving the launch page.</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Learning Environment</p>
+                    <h3 class="mt-2 text-xl font-black tracking-tight">Centralized Assessment Platform.</h3>
+                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">AI-powered evaluation, secure exam handling, and live performance tracking integrated seamlessly into your classroom.</p>
 
                     <div class="mt-5 space-y-2">
                         <a
@@ -1146,19 +1146,19 @@ const techStack = [
                 <div class="flex flex-col gap-6 lg:gap-8">
                     <div class="flex items-center gap-4 lg:gap-5">
                         <div class="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></div>
-                        <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] lg:tracking-[0.5em] text-foreground">Luav Operational Intelligence</span>
+                        <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.3em] lg:tracking-[0.5em] text-foreground">Luav Academic Engine</span>
                     </div>
                     <div class="flex flex-col gap-2">
-                         <p class="text-[9px] lg:text-[10px] font-bold text-muted-foreground tracking-widest uppercase">Region: Global // Cluster 01</p>
+                         <p class="text-[9px] lg:text-[10px] font-bold text-muted-foreground tracking-widest uppercase">Deploy: Global // Campus 01</p>
                          <p class="text-[9px] lg:text-[10px] font-medium text-muted-foreground/30 leading-snug">Designed for the next generation of assessment-driven <br class="hidden sm:block"/>learning ecosystems.</p>
                     </div>
                 </div>
                 
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-12 lg:gap-x-20 gap-y-10 lg:gap-y-12">
-                    <div v-for="category in ['Core', 'External', 'Legal']" :key="category" class="flex flex-col gap-4 lg:gap-6">
+                    <div v-for="category in ['Platform', 'Support', 'Legal']" :key="category" class="flex flex-col gap-4 lg:gap-6">
                          <h4 class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-foreground/80">{{ category }}</h4>
                          <div class="flex flex-col gap-2 lg:gap-3">
-                             <a v-for="link in ['Registry', 'Auth', 'Nodes']" :key="link" href="#" class="text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 hover:text-primary transition-colors">
+                             <a v-for="link in ['Directory', 'Policies', 'Privacy']" :key="link" href="#" class="text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40 hover:text-primary transition-colors">
                                  {{ link }}
                              </a>
                          </div>
@@ -1167,7 +1167,7 @@ const techStack = [
 
                 <div class="flex flex-col items-start lg:items-end gap-2 text-left lg:text-right w-full lg:w-auto">
                     <p class="text-[9px] lg:text-[10px] font-black text-foreground/20 uppercase tracking-[0.3em]">
-                        © 2026 LUAV STRUCTURAL SYSTEMS
+                        ALL RIGHTS RESERVED KOAMISHIN 2026
                     </p>
                     <div class="h-px w-24 bg-border/20 hidden lg:block"></div>
                 </div>
