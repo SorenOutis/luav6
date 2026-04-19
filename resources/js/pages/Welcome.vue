@@ -733,34 +733,38 @@ const techStack = [
 
 
 
-                <div class="hero-reveal overflow-hidden">
-                    <div class="reveal-content flex flex-col sm:flex-row gap-3 lg:gap-4">
+                <div class="hero-reveal overflow-hidden p-2 -m-2">
+                    <div class="reveal-content flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8">
                         <Link v-if="$page.props.auth.user" :href="dashboard()" 
                             @mousemove="handleMagnetic" 
                             @mouseleave="resetMagnetic"
-                            class="group relative flex items-center justify-between gap-8 lg:gap-12 bg-primary px-8 lg:px-10 py-5 lg:py-6 text-primary-foreground transition-all hover:gap-12 lg:hover:gap-16 active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 overflow-hidden"
+                            class="group relative flex items-center justify-center bg-primary px-12 py-5 lg:py-6 text-primary-foreground transition-all active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 -skew-x-[12deg] hover:bg-primary/90"
                         >
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Access Dashboard</span>
-                            <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6 relative z-10 group-hover:translate-x-1 transition-transform" />
-                            <div class="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                            <div class="skew-x-[12deg] flex items-center gap-4">
+                                <span class="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.4em] relative z-10">Access Dashboard</span>
+                                <ArrowRight class="h-4 w-4 lg:h-5 lg:w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+                            </div>
                         </Link>
                         <Link v-else :href="login()" 
                             @mousemove="handleMagnetic" 
                             @mouseleave="resetMagnetic"
-                            class="group relative flex items-center justify-between gap-8 lg:gap-12 bg-foreground px-8 lg:px-10 py-5 lg:py-6 text-background transition-all hover:gap-12 lg:hover:gap-16 active:scale-[0.98] shadow-2xl overflow-hidden"
+                            class="group relative flex items-center justify-center bg-foreground text-background px-12 py-5 lg:py-6 transition-all active:scale-[0.98] shadow-2xl -skew-x-[12deg] hover:bg-primary hover:text-primary-foreground"
                         >
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Login to Hub</span>
-                            <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6 relative z-10 group-hover:translate-x-1 transition-transform" />
-                            <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div class="skew-x-[12deg] flex items-center gap-4">
+                                <span class="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.4em] relative z-10">Login to Hub</span>
+                                <ArrowRight class="h-4 w-4 lg:h-5 lg:w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
+                            </div>
                         </Link>
                         
                         <Link v-if="!$page.props.auth.user && canRegister" :href="register()" 
                             @mousemove="handleMagnetic" 
                             @mouseleave="resetMagnetic"
-                            class="group flex items-center justify-between gap-8 lg:gap-10 border border-border/40 dark:border-border/20 px-8 lg:px-10 py-5 lg:py-6 transition-all hover:bg-muted/30 hover:border-primary/30 active:scale-[0.98] text-muted-foreground"
+                            class="group relative flex items-center justify-center border-2 border-border/40 dark:border-border/20 px-12 py-5 lg:py-6 transition-all hover:bg-muted/30 hover:border-primary/30 active:scale-[0.98] text-muted-foreground -skew-x-[12deg]"
                         >
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em]">Register Account</span>
-                            <LayoutDashboard class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                            <div class="skew-x-[12deg] flex items-center gap-4">
+                                <span class="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.4em]">Register Account</span>
+                                <LayoutDashboard class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
+                            </div>
                         </Link>
                     </div>
                 </div>
