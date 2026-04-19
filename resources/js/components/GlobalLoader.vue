@@ -17,12 +17,12 @@ const letterEls = ref<HTMLElement[]>([]);
 const progress = ref(0);
 const isMounted = ref(false);
 
-// Two gates that must BOTH be true before exit plays
+// Gate for progress bar
 let progressDone = false;
-let serverDone = false;
 
 const tryExit = () => {
-    if (progressDone && serverDone) {
+    console.log(`[GlobalLoader] tryExit called. progressDone: ${progressDone}, pendingHide: ${pendingHide.value}`);
+    if (progressDone && pendingHide.value) {
         console.log('[GlobalLoader] Both gates open — starting exit');
         startExit();
     }
@@ -43,17 +43,32 @@ watch(() => props.show, (newVal) => {
     console.log('[GlobalLoader] Prop "show" changed to:', newVal);
     if (newVal) {
         startEntrance();
+    } else {
+        // If show is forced to false (e.g. on error), start exit immediately
+        if (loaderContainer.value && loaderContainer.value.style.display !== 'none') {
+            console.log('[GlobalLoader] Prop "show" became false — forcing exit');
+            startExit(true); // Pass true to indicate forced/fast exit
+        }
     }
-    // Exit is now only triggered via the dual-gate (pendingHide + progress)
 });
 
 const startEntrance = () => {
     console.log('[GlobalLoader] Starting Entrance Animation');
+    
+    // Kill any ongoing exit animations
+    if (loaderContainer.value) {
+        gsap.killTweensOf(loaderContainer.value);
+    }
+    
     const isTerminating = message.value === 'TERMINATING SESSION';
 
-    // Reset gates
+    // Reset gate
     progressDone = false;
-    serverDone = false;
+    
+    // Check if we should exit immediately (rare race condition)
+    if (pendingHide.value) {
+        console.log('[GlobalLoader] pendingHide is already true — will exit once progress hits 100%');
+    }
 
     const tl = gsap.timeline();
 
@@ -125,13 +140,20 @@ const startEntrance = () => {
     });
 };
 
-const startExit = () => {
-    console.log('[GlobalLoader] Starting Exit Animation');
+const startExit = (fast: boolean = false) => {
+    console.log(`[GlobalLoader] Starting Exit Animation (${fast ? 'FAST' : 'NORMAL'})`);
+    
+    // If fast, we kill any ongoing progress animation and jump to 100
+    if (fast) {
+        gsap.killTweensOf(progress);
+        progress.value = 100;
+    }
+
     gsap.to(loaderContainer.value, {
         y: '-100%',
-        duration: 1.2,
-        ease: 'expo.inOut',
-        delay: 0.4, // Let user see 100% for a brief moment
+        duration: fast ? 0.6 : 1.2,
+        ease: fast ? 'expo.in' : 'expo.inOut',
+        delay: fast ? 0 : 0.4, // No delay for fast exit
         onComplete: () => {
             console.log('[GlobalLoader] Exit Animation Complete');
             gsap.set(loaderContainer.value, { display: 'none' });
@@ -142,11 +164,11 @@ const startExit = () => {
 
 // Gate 2: server signals it's done
 watch(pendingHide, (isPending) => {
-    if (!isPending) return;
-    console.log('[GlobalLoader] Server done — gate 2 open');
-    serverDone = true;
-    tryExit();
-});
+    if (isPending) {
+        console.log('[GlobalLoader] Server done — gate 2 open');
+        tryExit();
+    }
+}, { immediate: true });
 </script>
 
 <template>

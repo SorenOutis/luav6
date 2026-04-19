@@ -40,6 +40,8 @@ router.on('start', (event) => {
     const isAuthFlow = isMutatingVisit && (isAuthPage || isAuthTarget);
     const isLogout = isMutatingVisit && targetPath.includes('/logout');
 
+    console.log(`[app.ts] Navigation started to: ${targetPath}. isAuthFlow: ${isAuthFlow}, isLogout: ${isLogout}`);
+
     if (isAuthFlow) {
         show('AUTHENTICATING');
     } else if (isLogout) {
@@ -47,10 +49,24 @@ router.on('start', (event) => {
     }
 });
 
-router.on('finish', () => {
-    // Signal the loader to hide — it will wait until progress bar hits 100%
+router.on('finish', (event) => {
+    // Signal the loader to hide
     if (isVisible.value) {
-        hideWhenReady();
+        // Use the errors from the event detail if available, or the current page
+        const page = event.detail.page || router.page;
+        const errors = page?.props?.errors || {};
+        const hasErrors = Object.keys(errors).length > 0;
+        
+        console.log(`[app.ts] Navigation finished. hasErrors: ${hasErrors}, isVisible: ${isVisible.value}`);
+
+        if (hasErrors) {
+            console.log('[app.ts] Validation errors detected — hiding loader immediately');
+            hide();
+        } else {
+            // Normal successful navigation — wait for progress bar to hit 100%
+            console.log('[app.ts] Successful navigation — calling hideWhenReady');
+            hideWhenReady();
+        }
     }
 });
 
