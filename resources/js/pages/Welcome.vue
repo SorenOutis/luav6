@@ -622,11 +622,11 @@ const techStack = [
         <!-- Global Mouse Glow -->
         <div 
             ref="mouseGlow"
-            class="pointer-events-none fixed -left-[150px] -top-[150px] z-0 hidden h-[300px] w-[300px] rounded-full bg-primary/5 blur-[120px] will-change-transform dark:bg-primary/10 md:block"
+            class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 hidden h-[400px] w-[400px] rounded-full bg-primary/[0.06] blur-[150px] will-change-transform dark:bg-primary/[0.12] md:block"
         ></div>
 
         <!-- Monolithic Grid Overlay -->
-        <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] will-change-transform">
+        <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.025] dark:opacity-[0.05] will-change-transform">
             <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
         </div>
         <div
@@ -644,14 +644,17 @@ const techStack = [
         <div class="fixed inset-x-0 bottom-1/4 h-px bg-border/20 z-0 hidden lg:block origin-right" ref="structuralLines"></div>
 
         <!-- Global Header -->
-        <header class="relative z-20 flex w-full items-center justify-between px-6 py-6 lg:px-16 border-b border-border/5 backdrop-blur-xl transition-colors duration-500">
+        <header class="relative z-20 flex w-full items-center justify-between px-6 py-5 lg:px-16 lg:py-6 border-b border-border/10 dark:border-border/5 backdrop-blur-2xl bg-background/60 dark:bg-background/30 transition-colors duration-500">
+            <!-- Header glow line -->
+            <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
             <div class="nav-item flex items-center gap-3 lg:gap-4 group cursor-pointer">
-                <div class="flex h-10 w-10 items-center justify-center text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
-                    <Command class="h-6 w-6 lg:h-7 lg:w-7" />
+                <div class="relative flex h-10 w-10 items-center justify-center text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
+                    <div class="absolute inset-0 rounded-xl bg-primary/5 dark:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <Command class="h-6 w-6 lg:h-7 lg:w-7 relative z-10" />
                 </div>
                 <div class="flex flex-col leading-none">
                     <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LUAV Engine</span>
-                    <span class="text-[7px] lg:text-[8px] font-bold text-muted-foreground uppercase mt-1 tracking-widest opacity-60">v6.4.0</span>
+                    <span class="text-[7px] lg:text-[8px] font-bold text-primary/60 uppercase mt-1 tracking-widest">v6.4.0</span>
                 </div>
             </div>
 
@@ -659,7 +662,7 @@ const techStack = [
                 <!-- Theme Toggle Button - always visible -->
                 <button 
                     @click="toggleTheme" 
-                    class="p-2 text-muted-foreground hover:text-foreground transition-all active:scale-90"
+                    class="relative p-2.5 text-muted-foreground hover:text-foreground transition-all active:scale-90 rounded-xl hover:bg-muted/40"
                     aria-label="Toggle Theme"
                 >
                     <Sun v-if="appearance === 'dark'" class="h-4 w-4 lg:h-5 lg:w-5" />
@@ -672,7 +675,7 @@ const techStack = [
                         @mouseleave="resetMagnetic"
                         class="nav-item text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] lg:tracking-[0.3em] text-muted-foreground hover:text-primary transition-all flex items-center gap-2"
                     >
-                        <div class="h-1 w-1 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <div class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"></div>
                         <span class="hidden sm:inline">Access Engine</span>
                         <span class="sm:hidden">Engine</span>
                     </Link>
@@ -688,9 +691,10 @@ const techStack = [
                     <Link v-if="canRegister" :href="register()" 
                         @mousemove="handleMagnetic" 
                         @mouseleave="resetMagnetic"
-                        class="nav-item bg-foreground text-background px-4 lg:px-8 py-2 lg:py-3 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary transition-all shadow-2xl"
+                        class="nav-item relative bg-foreground text-background px-5 lg:px-8 py-2.5 lg:py-3 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary transition-all shadow-2xl overflow-hidden group"
                     >
-                        Init
+                        <span class="relative z-10">Init</span>
+                        <div class="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     </Link>
                 </template>
             </nav>
@@ -704,7 +708,7 @@ const techStack = [
                 <div class="hero-reveal overflow-hidden mb-2 lg:mb-4">
                     <h1 class="reveal-content text-5xl sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] sm:leading-[0.8] uppercase flex flex-col">
                         <span>Learning Systems</span>
-                        <span class="text-muted-foreground/20 italic">Intelligence</span>
+                        <span class="bg-gradient-to-r from-muted-foreground/30 via-muted-foreground/15 to-muted-foreground/5 bg-clip-text text-transparent italic">Intelligence</span>
                     </h1>
                 </div>
                 
@@ -721,7 +725,7 @@ const techStack = [
                     <p class="reveal-content absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight">
                         Access the industrial-grade assessment engine engineered for high-fidelity performance and architectural growth in 
                         <span class="text-foreground font-black uppercase tracking-widest inline-flex items-center">
-                            {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite]"></span>
+                            {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite] shadow-[0_0_8px_var(--color-primary)]"></span>
                         </span> 
                     </p>
                 </div>
@@ -734,62 +738,66 @@ const techStack = [
                         <Link v-if="$page.props.auth.user" :href="dashboard()" 
                             @mousemove="handleMagnetic" 
                             @mouseleave="resetMagnetic"
-                            class="group flex items-center justify-between gap-8 lg:gap-12 bg-primary px-8 lg:px-10 py-5 lg:py-6 text-primary-foreground transition-all hover:gap-12 lg:hover:gap-16 active:scale-95 shadow-2xl"
+                            class="group relative flex items-center justify-between gap-8 lg:gap-12 bg-primary px-8 lg:px-10 py-5 lg:py-6 text-primary-foreground transition-all hover:gap-12 lg:hover:gap-16 active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 overflow-hidden"
                         >
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em]">Initialize Dashboard</span>
-                            <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6" />
+                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Initialize Dashboard</span>
+                            <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6 relative z-10 group-hover:translate-x-1 transition-transform" />
+                            <div class="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                         </Link>
                         <Link v-else :href="login()" 
                             @mousemove="handleMagnetic" 
                             @mouseleave="resetMagnetic"
-                            class="group flex items-center justify-between gap-8 lg:gap-12 bg-foreground px-8 lg:px-10 py-5 lg:py-6 text-background transition-all hover:gap-12 lg:hover:gap-16 active:scale-95 shadow-2xl"
+                            class="group relative flex items-center justify-between gap-8 lg:gap-12 bg-foreground px-8 lg:px-10 py-5 lg:py-6 text-background transition-all hover:gap-12 lg:hover:gap-16 active:scale-[0.98] shadow-2xl overflow-hidden"
                         >
-                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em]">Authenticate System</span>
-                            <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6" />
+                            <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] relative z-10">Authenticate System</span>
+                            <ArrowRight class="h-5 w-5 lg:h-6 lg:w-6 relative z-10 group-hover:translate-x-1 transition-transform" />
+                            <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                         </Link>
                         
                         <Link v-if="!$page.props.auth.user && canRegister" :href="register()" 
                             @mousemove="handleMagnetic" 
                             @mouseleave="resetMagnetic"
-                            class="group flex items-center justify-between gap-8 lg:gap-10 border border-border px-8 lg:px-10 py-5 lg:py-6 transition-all hover:bg-muted/30 active:scale-95 text-muted-foreground"
+                            class="group flex items-center justify-between gap-8 lg:gap-10 border border-border/40 dark:border-border/20 px-8 lg:px-10 py-5 lg:py-6 transition-all hover:bg-muted/30 hover:border-primary/30 active:scale-[0.98] text-muted-foreground"
                         >
                             <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.3em]">Register Account</span>
-                            <LayoutDashboard class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                            <LayoutDashboard class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
                         </Link>
                     </div>
                 </div>
             </div>
 
             <div class="reveal-section mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/20 bg-background/70 p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-45px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-30px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_80px_-45px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
                     <div class="scan-line pointer-events-none absolute inset-x-0 top-0 h-px"></div>
+                    <!-- Inner glow accent -->
+                    <div class="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl pointer-events-none"></div>
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Live System Pulse</p>
+                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Live System Pulse</p>
                             <h2 class="mt-2 text-xl sm:text-2xl font-black tracking-tight">Operational signals in real time</h2>
                         </div>
-                        <div class="online-pill hidden sm:flex items-center gap-2 rounded-full border border-border/40 px-3 py-1 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-                            <span class="h-1.5 w-1.5 rounded-full bg-foreground/80 animate-pulse"></span>
+                        <div class="online-pill hidden sm:flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>
                             Online
                         </div>
                     </div>
 
-                    <div class="mt-6 space-y-4">
-                        <div v-for="signal in liveSignals" :key="signal.label" class="pulse-row rounded-xl border border-border/20 bg-muted/10 p-3 sm:p-4">
+                    <div class="mt-6 space-y-3">
+                        <div v-for="signal in liveSignals" :key="signal.label" class="pulse-row rounded-xl border border-border/20 dark:border-border/10 bg-muted/20 dark:bg-foreground/[0.03] p-3 sm:p-4 hover:bg-muted/30 dark:hover:bg-foreground/[0.05] transition-colors">
                             <div class="mb-2 flex items-center justify-between gap-3">
                                 <span class="text-[10px] sm:text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">{{ signal.label }}</span>
-                                <span class="text-[10px] sm:text-xs font-black tracking-wider text-foreground/80">{{ signal.valueLabel }}</span>
+                                <span class="text-[10px] sm:text-xs font-black tracking-wider text-foreground">{{ signal.valueLabel }}</span>
                             </div>
-                            <div class="h-2 overflow-hidden rounded-full bg-foreground/10">
-                                <div class="signal-fill h-full rounded-full bg-foreground/75" :style="{ width: `${signal.value}%` }"></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-muted/50 dark:bg-foreground/10">
+                                <div class="signal-fill h-full rounded-full bg-gradient-to-r from-primary/60 to-primary" :style="{ width: `${signal.value}%` }"></div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/20 bg-background/70 p-5 sm:p-6 lg:p-8">
-                    <div class="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-foreground/5 blur-3xl"></div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Control Links</p>
+                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-5 sm:p-6 lg:p-8 backdrop-blur-2xl">
+                    <div class="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl"></div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Control Links</p>
                     <h3 class="mt-2 text-xl font-black tracking-tight">Stay inside one command surface.</h3>
                     <p class="mt-3 text-sm leading-relaxed text-muted-foreground">Jump directly into docs, session feed, and source channels without leaving the launch page.</p>
 
@@ -798,105 +806,115 @@ const techStack = [
                             v-for="quickLink in quickLinks"
                             :key="quickLink.label"
                             :href="quickLink.href"
-                            class="quick-link-row group flex items-center justify-between rounded-xl border border-border/20 px-3 sm:px-4 py-3 transition-colors hover:bg-muted/40"
+                            class="quick-link-row group flex items-center justify-between rounded-xl border border-border/20 dark:border-border/10 px-3 sm:px-4 py-3 transition-all hover:bg-muted/30 dark:hover:bg-foreground/[0.05] hover:border-primary/20"
                         >
                             <span class="flex items-center gap-3">
-                                <component :is="quickLink.icon" class="h-4 w-4 text-foreground/70" />
+                                <component :is="quickLink.icon" class="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
                                 <span class="text-xs font-black uppercase tracking-[0.18em] text-foreground/80">{{ quickLink.label }}</span>
                             </span>
-                            <ArrowRight class="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                            <ArrowRight class="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-all group-hover:translate-x-1" />
                         </a>
                     </div>
                 </section>
             </div>
 
             <!-- System Metrics Ticker -->
-            <div class="reveal-section mt-24 lg:mt-40 grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-20 border-y border-border/10 py-8 lg:py-12">
-                <div v-for="stat in systemStats" :key="stat.label" class="flex flex-col gap-3 group">
+            <div class="reveal-section mt-24 lg:mt-40 grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-20 border-y border-border/20 dark:border-border/10 py-8 lg:py-14">
+                <div v-for="stat in systemStats" :key="stat.label" class="flex flex-col gap-3 group hover:-translate-y-1 transition-transform duration-500">
                     <div class="flex items-center gap-3">
-                        <component :is="stat.icon" class="h-4 w-4 text-primary opacity-50 group-hover:opacity-100 transition-opacity" />
-                        <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/50">{{ stat.label }}</span>
+                        <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/5 dark:bg-primary/10 group-hover:bg-primary/10 dark:group-hover:bg-primary/20 transition-colors">
+                            <component :is="stat.icon" class="h-3.5 w-3.5 text-primary opacity-60 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">{{ stat.label }}</span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span class="text-2xl lg:text-4xl font-black tracking-tighter">{{ stat.value }}</span>
+                        <span class="text-2xl lg:text-4xl font-black tracking-tighter tabular-nums">{{ stat.value }}</span>
                         <span class="text-[10px] lg:text-xs font-bold text-primary tracking-widest">{{ stat.unit }}</span>
                     </div>
+                    <div class="h-px w-full bg-gradient-to-r from-primary/30 to-transparent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-700"></div>
                 </div>
             </div>
 
             <!-- Features Array (Feature 10 — Expandable) -->
-            <div class="mt-12 lg:mt-24 grid w-full lg:grid-cols-3 gap-0 border-b border-border/10">
+            <div class="mt-12 lg:mt-24 grid w-full lg:grid-cols-3 gap-0 border-b border-border/20 dark:border-border/10">
                 <div 
                     v-for="(feature, index) in coreFeatures" 
                     :key="index"
                     ref="featureCards"
                     @mousemove="handleFeatureMouseMove($event)"
                     @mouseleave="resetFeatureMouse"
-                    class="group relative flex flex-col p-8 sm:p-12 lg:p-20 border-border/10 transition-all hover:bg-muted/20 overflow-hidden cursor-pointer"
+                    class="group relative flex flex-col p-8 sm:p-12 lg:p-16 border-border/20 dark:border-border/10 transition-all hover:bg-muted/30 dark:hover:bg-foreground/[0.02] overflow-hidden cursor-pointer"
                     :class="[
                         { 'border-b lg:border-b-0 lg:border-r': index !== coreFeatures.length - 1 },
-                        expandedFeature === index ? 'bg-muted/10' : ''
+                        expandedFeature === index ? 'bg-muted/20 dark:bg-foreground/[0.03]' : ''
                     ]"
                     @click="toggleFeature(index)"
                 >
                     <!-- Local Card Glow -->
                     <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--glow-color), transparent 40%)` }">
+                        :style="{ background: `radial-gradient(500px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--glow-color), transparent 40%)` }">
                     </div>
 
                     <!-- Module Indicator -->
-                    <div class="absolute top-8 left-8 lg:left-20 flex items-center gap-3">
-                         <span class="text-[9px] font-black tracking-widest text-primary leading-none">{{ feature.code }}</span>
-                         <div class="h-px w-8 lg:w-12 bg-primary/20 group-hover:w-12 lg:group-hover:w-20 group-hover:bg-primary transition-all"></div>
+                    <div class="absolute top-8 left-8 lg:left-12 flex items-center gap-3">
+                         <span class="text-[8px] font-black tracking-widest text-primary/70 leading-none group-hover:text-primary transition-colors">{{ feature.code }}</span>
+                         <div class="h-px w-8 lg:w-12 bg-primary/20 group-hover:w-16 lg:group-hover:w-32 group-hover:bg-gradient-to-r group-hover:from-primary group-hover:to-transparent transition-all duration-700"></div>
                     </div>
 
-                    <div class="mt-6 lg:mt-12 mb-8 lg:mb-14 flex h-12 w-12 lg:h-16 lg:w-16 items-center justify-center border border-foreground/5 bg-foreground/[0.02] transition-all group-hover:rotate-[15deg] group-hover:border-primary/20">
-                        <component :is="feature.icon" class="h-5 w-5 lg:h-7 lg:w-7 opacity-20 group-hover:opacity-100 transition-all group-hover:text-primary duration-500" />
+                    <div class="mt-8 lg:mt-12 mb-8 lg:mb-12 flex h-14 w-14 lg:h-20 lg:w-20 relative border border-border/30 dark:border-border/10 bg-muted/20 dark:bg-foreground/[0.02] transition-all duration-700 group-hover:rotate-[15deg] group-hover:scale-110 group-hover:border-primary/40 group-hover:bg-primary/5 rounded-2xl items-center justify-center overflow-hidden">
+                        <!-- Icon subtle glow -->
+                        <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-[0.15] blur-xl transition-opacity duration-700"></div>
+                        <component :is="feature.icon" class="h-6 w-6 lg:h-8 lg:w-8 text-muted-foreground opacity-40 group-hover:opacity-100 transition-all group-hover:text-primary duration-500 relative z-10" />
                     </div>
                     
-                    <div class="space-y-4 lg:space-y-6">
-                        <h3 class="text-xl lg:text-2xl font-black uppercase tracking-tight">{{ feature.title }}</h3>
-                        <p class="text-sm lg:text-base leading-relaxed text-muted-foreground group-hover:text-foreground transition-colors duration-500 max-w-sm">
+                    <div class="space-y-4 lg:space-y-6 relative z-10">
+                        <h3 class="text-xl lg:text-3xl font-black uppercase tracking-tight">{{ feature.title }}</h3>
+                        <p class="text-sm lg:text-base leading-relaxed text-muted-foreground group-hover:text-foreground/90 transition-colors duration-500 max-w-sm">
                             {{ feature.description }}
                         </p>
                     </div>
 
-                    <div class="mt-10 lg:mt-20">
-                        <button class="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground hover:text-primary transition-all flex items-center gap-5">
+                    <div class="mt-10 lg:mt-16 relative z-10">
+                        <button class="text-[10px] font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] text-muted-foreground hover:text-primary transition-all flex items-center gap-4 group/btn">
                             {{ expandedFeature === index ? 'Close Specs' : 'View Specs' }}
-                            <ChevronDown class="h-3 w-3 transition-transform duration-500" :class="{ 'rotate-180': expandedFeature === index }" />
+                            <ChevronDown class="h-4 w-4 transition-transform duration-500 group-hover/btn:translate-y-0.5" :class="{ 'rotate-180 group-hover/btn:-translate-y-0.5': expandedFeature === index }" />
                         </button>
                     </div>
 
                     <!-- Expandable Detail Panel -->
                     <Transition
-                        enter-active-class="transition-all duration-500 ease-out"
-                        enter-from-class="max-h-0 opacity-0"
-                        enter-to-class="max-h-[500px] opacity-100"
+                        enter-active-class="transition-all duration-700 ease-[0.2,0.8,0.2,1]"
+                        enter-from-class="max-h-0 opacity-0 translate-y-4"
+                        enter-to-class="max-h-[500px] opacity-100 translate-y-0"
                         leave-active-class="transition-all duration-300 ease-in"
-                        leave-from-class="max-h-[500px] opacity-100"
-                        leave-to-class="max-h-0 opacity-0"
+                        leave-from-class="max-h-[500px] opacity-100 translate-y-0"
+                        leave-to-class="max-h-0 opacity-0 -translate-y-4"
                     >
-                        <div v-if="expandedFeature === index" class="overflow-hidden mt-8 lg:mt-12 border-t border-border/30 dark:border-border/20 pt-8">
-                            <p class="text-sm leading-relaxed text-muted-foreground mb-6 max-w-md">
+                        <div v-if="expandedFeature === index" class="relative overflow-hidden mt-8 lg:mt-12 pt-8 z-10">
+                            <!-- Gradient Top Border -->
+                            <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+                            
+                            <p class="text-sm leading-relaxed text-muted-foreground mb-8 max-w-md bg-muted/30 dark:bg-foreground/[0.03] p-5 rounded-lg border border-border/20 dark:border-border/10">
+                                <Sparkles class="w-4 h-4 text-primary mb-3 inline-block" />
+                                <br />
                                 {{ feature.details }}
                             </p>
                             
                             <!-- Feature Mini Stats -->
-                            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
-                                <div v-for="stat in feature.stats" :key="stat.label" class="p-2.5 sm:p-3 border border-border/30 dark:border-border/20 bg-muted/30 dark:bg-foreground/[0.04] rounded-sm">
-                                    <p class="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-muted-foreground mb-1">{{ stat.label }}</p>
-                                    <p class="text-[10px] sm:text-xs font-black text-primary tracking-wider">{{ stat.value }}</p>
+                            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-8">
+                                <div v-for="stat in feature.stats" :key="stat.label" class="p-3 sm:p-4 border border-border/40 dark:border-border/20 bg-card dark:bg-background/50 backdrop-blur-sm rounded-lg shadow-sm">
+                                    <p class="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-muted-foreground mb-1.5">{{ stat.label }}</p>
+                                    <p class="text-[11px] sm:text-xs font-black text-primary tracking-widest">{{ stat.value }}</p>
                                 </div>
                             </div>
 
-                            <Link v-if="$page.props.auth.user" :href="dashboard()" class="inline-flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.3em] bg-primary text-primary-foreground px-5 py-3 hover:gap-5 transition-all rounded-sm shadow-sm">
+                            <Link v-if="$page.props.auth.user" :href="dashboard()" class="inline-flex items-center gap-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] bg-primary text-primary-foreground px-6 py-4 hover:bg-primary/90 transition-all rounded-lg shadow-lg hover:shadow-primary/20 hover:gap-6 group/link">
                                 Access Module
-                                <ArrowRight class="h-3 w-3" />
+                                <ArrowRight class="h-3.5 w-3.5" />
                             </Link>
-                            <Link v-else :href="login()" class="inline-flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.3em] bg-foreground text-background px-5 py-3 hover:bg-primary hover:text-primary-foreground hover:gap-5 transition-all rounded-sm shadow-sm">
+                            <Link v-else :href="login()" class="inline-flex items-center gap-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] bg-foreground text-background px-6 py-4 hover:bg-primary hover:text-primary-foreground transition-all rounded-lg shadow-lg hover:shadow-primary/20 hover:gap-6 group/link">
                                 Login to Access
-                                <ArrowRight class="h-3 w-3" />
+                                <ArrowRight class="h-3.5 w-3.5" />
                             </Link>
                         </div>
                     </Transition>
