@@ -6,12 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Season extends Model
 {
-    protected $fillable = ['name', 'start_date', 'end_date', 'is_active'];
+    protected $fillable = ['name', 'start_date', 'end_date', 'is_active', 'show_countdown_on_welcome'];
 
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'is_active' => 'boolean',
+        'show_countdown_on_welcome' => 'boolean',
     ];
 
     protected static function booted()

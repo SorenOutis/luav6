@@ -1398,7 +1398,7 @@ const onDragEnd = () => {
                                 <div v-if="!isPartSubmitted(part.id)"
                                     class="px-4 py-2 bg-foreground text-background font-black text-[10px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-2"
                                     :class="isPartLocked(index) ? 'opacity-20 grayscale' : ''">
-                                    <span class="inline-block skew-x-12">{{ isPartLocked(index) ? 'LOCKED' : 'EXECUTE' }}</span>
+                                    <span class="inline-block skew-x-12">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
                                     <ArrowRight v-if="!isPartLocked(index)" class="w-3.5 h-3.5 skew-x-12" />
                                 </div>
                             </div>
@@ -1781,7 +1781,7 @@ const onDragEnd = () => {
                             <div class="flex flex-col w-full gap-3">
                                 <button @click="confirmStart"
                                     class="w-full px-6 py-4 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 group/btn uppercase tracking-[0.2em] text-xs skew-x-[-12deg]">
-                                    <span class="skew-x-[12deg]">Initialize Now</span>
+                                    <span class="skew-x-[12deg]">Start Now</span>
                                     <ArrowRight class="w-5 h-5 group-hover/btn:translate-x-2 transition-transform skew-x-[12deg]" />
                                 </button>
                                 <button @click="showStartModal = false"

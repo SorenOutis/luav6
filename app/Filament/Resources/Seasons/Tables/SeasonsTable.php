@@ -25,6 +25,9 @@ class SeasonsTable
                     ->sortable(),
                 IconColumn::make('is_active')
                     ->boolean(),
+                IconColumn::make('show_countdown_on_welcome')
+                    ->label('Countdown')
+                    ->boolean(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

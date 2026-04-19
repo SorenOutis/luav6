@@ -20,6 +20,9 @@ class SeasonForm
                 DateTimePicker::make('end_date'),
                 Toggle::make('is_active')
                     ->required(),
+                Toggle::make('show_countdown_on_welcome')
+                    ->label('Show Countdown on Welcome Page')
+                    ->helperText('When enabled, a live countdown timer for this season will be displayed on the public Welcome page. Requires an end date to be set.'),
             ]);
     }
 }

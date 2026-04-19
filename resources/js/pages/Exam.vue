@@ -299,7 +299,7 @@ onMounted(() => {
                                 target="_blank"
                                 class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-3"
                             >
-                                <span class="inline-block skew-x-12">Initialize Now</span>
+                                <span class="inline-block skew-x-12">Start Now</span>
                                 <ArrowRight class="w-4 h-4 skew-x-12" />
                             </a>
                             <Link 
@@ -307,7 +307,7 @@ onMounted(() => {
                                 :href="examsShow(exam.id).url"
                                 class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-3"
                             >
-                                <span class="inline-block skew-x-12">Initialize Now</span>
+                                <span class="inline-block skew-x-12">Start Now</span>
                                 <ArrowRight class="w-4 h-4 skew-x-12" />
                             </Link>
                         </div>

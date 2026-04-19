@@ -2,22 +2,37 @@
 import { Head, Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon, Cpu, Activity, Zap as ZapIcon, BrainCircuit } from 'lucide-vue-next';
+import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon, Cpu, Activity, Zap as ZapIcon, BrainCircuit, Timer, CheckCircle2, XCircle, ChevronDown, ClipboardCheck, FileText, Trophy, Sparkles, Play } from 'lucide-vue-next';
 
 gsap.registerPlugin(ScrollTrigger);
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import { useAppearance } from '@/composables/useAppearance';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import { dashboard, login, register } from '@/routes';
+
+interface ActiveSeason {
+    name: string;
+    startDate: string | null;
+    endDate: string | null;
+    showCountdown: boolean;
+}
 
 const props = withDefaults(
     defineProps<{
         canRegister: boolean;
         totalUsers?: number;
+        totalExams?: number;
+        totalAssignments?: number;
+        totalSubmissions?: number;
+        activeSeason?: ActiveSeason | null;
     }>(),
     {
         canRegister: true,
         totalUsers: 0,
+        totalExams: 0,
+        totalAssignments: 0,
+        totalSubmissions: 0,
+        activeSeason: null,
     },
 );
 
@@ -57,11 +72,115 @@ const prefersReducedMotion = ref(false);
 // Appearance Management
 const { appearance, toggleTheme } = useAppearance();
 
-// Animated Metrics
+// Animated Metrics (Feature 3 & 9 — Real Data)
 const animUsers = useNumberAnimation(() => props.totalUsers || 0, 2, 'expo.out');
-const animUptime = useNumberAnimation(() => 99, 1.5, 'power2.out');
-const animLatency = useNumberAnimation(() => 5, 2.5, 'elastic.out(1, 0.3)');
-const animSync = useNumberAnimation(() => 1240, 3, 'power4.out');
+const animExams = useNumberAnimation(() => props.totalExams || 0, 1.8, 'power2.out');
+const animAssignments = useNumberAnimation(() => props.totalAssignments || 0, 2.2, 'expo.out');
+const animSubmissions = useNumberAnimation(() => props.totalSubmissions || 0, 2.5, 'power4.out');
+
+// Feature 8 — Season Countdown Timer
+const countdown = ref({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+const countdownActive = ref(false);
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
+
+const updateCountdown = () => {
+    if (!props.activeSeason?.endDate || !props.activeSeason?.showCountdown) {
+        countdownActive.value = false;
+        return;
+    }
+    const end = new Date(props.activeSeason.endDate).getTime();
+    const now = Date.now();
+    const diff = end - now;
+    if (diff <= 0) {
+        countdownActive.value = false;
+        countdown.value = { days: 0, hours: 0, minutes: 0, seconds: 0 };
+        if (countdownInterval) clearInterval(countdownInterval);
+        return;
+    }
+    countdownActive.value = true;
+    countdown.value = {
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+    };
+};
+
+// Feature 6 — Interactive Demo Quiz
+interface DemoQuestion {
+    id: number;
+    text: string;
+    type: 'multiple_choice' | 'true_false';
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+}
+
+const demoQuestions: DemoQuestion[] = [
+    {
+        id: 1,
+        text: 'What does HTML stand for?',
+        type: 'multiple_choice',
+        options: ['Hyper Text Markup Language', 'High Tech Modern Language', 'Hyper Transfer Markup Language', 'Home Tool Markup Language'],
+        correctIndex: 0,
+        explanation: 'HTML stands for Hyper Text Markup Language — the standard language for creating web pages.'
+    },
+    {
+        id: 2,
+        text: 'JavaScript is a compiled programming language.',
+        type: 'true_false',
+        options: ['True', 'False'],
+        correctIndex: 1,
+        explanation: 'JavaScript is an interpreted (or JIT compiled) scripting language, not a traditionally compiled language.'
+    },
+    {
+        id: 3,
+        text: 'Which CSS property controls the font size?',
+        type: 'multiple_choice',
+        options: ['text-size', 'font-style', 'font-size', 'text-style'],
+        correctIndex: 2,
+        explanation: 'The font-size property is used to specify the size of the font in CSS.'
+    },
+];
+
+const currentDemoQuestion = ref(0);
+const selectedDemoAnswer = ref<number | null>(null);
+const demoAnswered = ref(false);
+const demoScore = ref(0);
+const demoCompleted = ref(false);
+
+const selectDemoAnswer = (index: number) => {
+    if (demoAnswered.value) return;
+    selectedDemoAnswer.value = index;
+    demoAnswered.value = true;
+    if (index === demoQuestions[currentDemoQuestion.value].correctIndex) {
+        demoScore.value++;
+    }
+};
+
+const nextDemoQuestion = () => {
+    if (currentDemoQuestion.value < demoQuestions.length - 1) {
+        currentDemoQuestion.value++;
+        selectedDemoAnswer.value = null;
+        demoAnswered.value = false;
+    } else {
+        demoCompleted.value = true;
+    }
+};
+
+const resetDemoQuiz = () => {
+    currentDemoQuestion.value = 0;
+    selectedDemoAnswer.value = null;
+    demoAnswered.value = false;
+    demoScore.value = 0;
+    demoCompleted.value = false;
+};
+
+// Feature 10 — Expandable Feature Cards
+const expandedFeature = ref<number | null>(null);
+const toggleFeature = (index: number) => {
+    expandedFeature.value = expandedFeature.value === index ? null : index;
+};
 
 const syncInteractionModes = () => {
     isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
@@ -405,12 +524,21 @@ onMounted(() => {
 
         requestAnimationFrame(() => tl.play(0));
     }, mainContainer);
+
+    // Feature 8 — Start countdown timer
+    updateCountdown();
+    countdownInterval = setInterval(updateCountdown, 1000);
 });
 
 onBeforeUnmount(() => {
     if (typingTimeout) {
         clearTimeout(typingTimeout);
         typingTimeout = null;
+    }
+
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
     }
 
     removeMediaListeners();
@@ -444,27 +572,33 @@ const coreFeatures = [
         title: 'Assessment Engine',
         description: 'Industrial-grade testing infrastructure with real-time analytics and automated evaluation modules.',
         icon: Target,
-        code: 'MOD_EXM_01'
+        code: 'MOD_EXM_01',
+        details: 'Take timed exams with multiple question types: multiple choice, true/false, identification, and AI-graded essays. Get instant feedback and track your performance across seasons.',
+        stats: [{ label: 'Question Types', value: '4' }, { label: 'AI Grading', value: 'Active' }, { label: 'Auto-Score', value: 'Real-time' }]
     },
     {
         title: 'Skill Acquisition',
         description: 'Structured assignment workflows designed to track progressive growth and mastery across seasons.',
         icon: Zap,
-        code: 'MOD_ASN_02'
+        code: 'MOD_ASN_02',
+        details: 'Submit assignments with file uploads, track deadlines, and receive grades from your instructors. Stay on top of every mission objective with status tracking.',
+        stats: [{ label: 'File Upload', value: 'Secure' }, { label: 'Deadline Alerts', value: 'Live' }, { label: 'Grade Tracking', value: 'Instant' }]
     },
     {
         title: 'Operational Elite',
         description: 'High-fidelity leaderboard system driven by XP, streaks, and competitive intelligence metrics.',
         icon: Award,
-        code: 'MOD_LDR_03'
+        code: 'MOD_LDR_03',
+        details: 'Compete with peers on the section-based leaderboard. Earn XP from exams, assignments, and daily streaks. Rise through the ranks and dominate your section.',
+        stats: [{ label: 'XP System', value: 'Active' }, { label: 'Streak Bonus', value: 'Daily' }, { label: 'Sections', value: 'Multi' }]
     }
 ];
 
 const systemStats = computed(() => [
-    { label: 'Total Users', value: animUsers.value, unit: 'NODES', icon: Cpu },
-    { label: 'Uptime', value: animUptime.value + '.99', unit: '%', icon: Activity },
-    { label: 'Latency', value: animLatency.value, unit: 'MS', icon: ZapIcon },
-    { label: 'Intelligence', value: (animSync.value / 100).toFixed(1) + 'k', unit: 'SYNC', icon: BrainCircuit },
+    { label: 'Active Users', value: animUsers.value, unit: 'NODES', icon: Cpu },
+    { label: 'Assessments', value: animExams.value, unit: 'LIVE', icon: ClipboardCheck },
+    { label: 'Assignments', value: animAssignments.value, unit: 'ACTIVE', icon: FileText },
+    { label: 'Submissions', value: animSubmissions.value, unit: 'TOTAL', icon: Trophy },
 ]);
 
 const techStack = [
@@ -690,7 +824,7 @@ const techStack = [
                 </div>
             </div>
 
-            <!-- Features Array -->
+            <!-- Features Array (Feature 10 — Expandable) -->
             <div class="mt-12 lg:mt-24 grid w-full lg:grid-cols-3 gap-0 border-b border-border/10">
                 <div 
                     v-for="(feature, index) in coreFeatures" 
@@ -698,8 +832,12 @@ const techStack = [
                     ref="featureCards"
                     @mousemove="handleFeatureMouseMove($event)"
                     @mouseleave="resetFeatureMouse"
-                    class="group relative flex flex-col p-8 sm:p-12 lg:p-20 border-border/10 transition-all hover:bg-muted/20 overflow-hidden"
-                    :class="{ 'border-b lg:border-b-0 lg:border-r': index !== coreFeatures.length - 1 }"
+                    class="group relative flex flex-col p-8 sm:p-12 lg:p-20 border-border/10 transition-all hover:bg-muted/20 overflow-hidden cursor-pointer"
+                    :class="[
+                        { 'border-b lg:border-b-0 lg:border-r': index !== coreFeatures.length - 1 },
+                        expandedFeature === index ? 'bg-muted/10' : ''
+                    ]"
+                    @click="toggleFeature(index)"
                 >
                     <!-- Local Card Glow -->
                     <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
@@ -724,13 +862,241 @@ const techStack = [
                     </div>
 
                     <div class="mt-10 lg:mt-20">
-                        <a href="#" class="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground hover:text-primary transition-all flex items-center gap-5">
-                            View Specs
-                            <ArrowRight class="h-3 w-3" />
-                        </a>
+                        <button class="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground hover:text-primary transition-all flex items-center gap-5">
+                            {{ expandedFeature === index ? 'Close Specs' : 'View Specs' }}
+                            <ChevronDown class="h-3 w-3 transition-transform duration-500" :class="{ 'rotate-180': expandedFeature === index }" />
+                        </button>
+                    </div>
+
+                    <!-- Expandable Detail Panel -->
+                    <Transition
+                        enter-active-class="transition-all duration-500 ease-out"
+                        enter-from-class="max-h-0 opacity-0"
+                        enter-to-class="max-h-[500px] opacity-100"
+                        leave-active-class="transition-all duration-300 ease-in"
+                        leave-from-class="max-h-[500px] opacity-100"
+                        leave-to-class="max-h-0 opacity-0"
+                    >
+                        <div v-if="expandedFeature === index" class="overflow-hidden mt-8 lg:mt-12 border-t border-border/30 dark:border-border/20 pt-8">
+                            <p class="text-sm leading-relaxed text-muted-foreground mb-6 max-w-md">
+                                {{ feature.details }}
+                            </p>
+                            
+                            <!-- Feature Mini Stats -->
+                            <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+                                <div v-for="stat in feature.stats" :key="stat.label" class="p-2.5 sm:p-3 border border-border/30 dark:border-border/20 bg-muted/30 dark:bg-foreground/[0.04] rounded-sm">
+                                    <p class="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-muted-foreground mb-1">{{ stat.label }}</p>
+                                    <p class="text-[10px] sm:text-xs font-black text-primary tracking-wider">{{ stat.value }}</p>
+                                </div>
+                            </div>
+
+                            <Link v-if="$page.props.auth.user" :href="dashboard()" class="inline-flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.3em] bg-primary text-primary-foreground px-5 py-3 hover:gap-5 transition-all rounded-sm shadow-sm">
+                                Access Module
+                                <ArrowRight class="h-3 w-3" />
+                            </Link>
+                            <Link v-else :href="login()" class="inline-flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.3em] bg-foreground text-background px-5 py-3 hover:bg-primary hover:text-primary-foreground hover:gap-5 transition-all rounded-sm shadow-sm">
+                                Login to Access
+                                <ArrowRight class="h-3 w-3" />
+                            </Link>
+                        </div>
+                    </Transition>
+                </div>
+            </div>
+
+            <!-- Feature 8 — Season Countdown Timer -->
+            <div v-if="countdownActive && activeSeason" class="reveal-section mt-24 lg:mt-40 relative">
+                <div class="relative overflow-hidden rounded-2xl border border-border/40 dark:border-border/20 bg-card/80 dark:bg-background/70 p-6 sm:p-10 lg:p-14 backdrop-blur-xl shadow-lg dark:shadow-none">
+                    <!-- Scan line effect -->
+                    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+                    <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
+                    
+                    <!-- Corner brackets -->
+                    <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary/40 pointer-events-none"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary/40 pointer-events-none"></div>
+                    
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-8">
+                        <div class="space-y-2 sm:space-y-3">
+                            <div class="flex items-center gap-3">
+                                <Timer class="h-4 w-4 text-primary animate-pulse" />
+                                <span class="text-[9px] font-black uppercase tracking-[0.3em] text-primary">Season Timer</span>
+                            </div>
+                            <h2 class="text-xl sm:text-2xl lg:text-3xl font-black uppercase tracking-tight">{{ activeSeason.name }}</h2>
+                            <p class="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest">Time Remaining Until Season End</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-4 gap-2 sm:gap-4 lg:gap-5">
+                            <div v-for="(unit, key) in { DAYS: countdown.days, HRS: countdown.hours, MIN: countdown.minutes, SEC: countdown.seconds }" :key="key" class="flex flex-col items-center p-3 sm:p-5 lg:p-6 border border-border/40 dark:border-border/15 bg-muted/40 dark:bg-foreground/[0.04] rounded-lg min-w-0">
+                                <span class="text-xl sm:text-3xl lg:text-5xl font-black tracking-tighter tabular-nums font-mono leading-none">
+                                    {{ String(unit).padStart(2, '0') }}
+                                </span>
+                                <span class="text-[6px] sm:text-[8px] font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-muted-foreground mt-1.5 sm:mt-2">{{ key }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress bar showing season elapsed -->
+                    <div v-if="activeSeason.startDate" class="mt-6 sm:mt-8 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">Season Progress</span>
+                            <span class="text-[8px] font-black uppercase tracking-[0.2em] text-primary">
+                                {{ Math.round((Date.now() - new Date(activeSeason.startDate).getTime()) / (new Date(activeSeason.endDate!).getTime() - new Date(activeSeason.startDate).getTime()) * 100) }}%
+                            </span>
+                        </div>
+                        <div class="h-1.5 overflow-hidden rounded-full bg-muted/60 dark:bg-foreground/10">
+                            <div class="h-full rounded-full bg-primary/70 transition-all duration-1000" :style="{ width: Math.min(100, Math.round((Date.now() - new Date(activeSeason.startDate).getTime()) / (new Date(activeSeason.endDate!).getTime() - new Date(activeSeason.startDate).getTime()) * 100)) + '%' }"></div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Feature 6 — Interactive Demo Quiz -->
+            <div class="reveal-section mt-24 lg:mt-40 relative">
+                <div class="flex items-center gap-4 mb-8 sm:mb-10">
+                    <div class="h-px w-12 bg-primary"></div>
+                    <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]">Try a Sample Assessment</h2>
+                </div>
+
+                <div class="relative overflow-hidden rounded-2xl border border-border/40 dark:border-border/20 bg-card/80 dark:bg-background/70 backdrop-blur-xl shadow-lg dark:shadow-none">
+                    <!-- Corner brackets -->
+                    <div class="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-l-2 border-foreground/20 dark:border-foreground/10 pointer-events-none z-10"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-r-2 border-foreground/20 dark:border-foreground/10 pointer-events-none z-10"></div>
+
+                    <!-- Quiz Header -->
+                    <div class="border-b border-border/30 dark:border-border/15 p-4 sm:p-6 lg:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3 sm:gap-4">
+                            <div class="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center border border-primary/30 bg-primary/10 rounded-lg shrink-0">
+                                <Play class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+                            </div>
+                            <div>
+                                <p class="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.3em] text-primary">Demo Protocol</p>
+                                <h3 class="text-base sm:text-lg font-black uppercase tracking-tight">Quick Knowledge Check</h3>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 sm:gap-4">
+                            <div class="px-3 sm:px-4 py-2 border border-border/40 dark:border-border/20 bg-muted/30 dark:bg-foreground/[0.04] rounded-lg">
+                                <span class="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground block">Progress</span>
+                                <span class="text-xs sm:text-sm font-black font-mono">{{ demoCompleted ? demoQuestions.length : currentDemoQuestion + 1 }}/{{ demoQuestions.length }}</span>
+                            </div>
+                            <div class="px-3 sm:px-4 py-2 border border-border/40 dark:border-border/20 bg-muted/30 dark:bg-foreground/[0.04] rounded-lg">
+                                <span class="text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground block">Score</span>
+                                <span class="text-xs sm:text-sm font-black font-mono text-primary">{{ demoScore }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quiz Body -->
+                    <div class="p-4 sm:p-6 lg:p-12">
+                        <!-- Active Question -->
+                        <div v-if="!demoCompleted">
+                            <div class="flex items-center gap-3 mb-4 sm:mb-6">
+                                <span class="text-[9px] font-black tracking-[0.3em] text-primary font-mono">Q_{{ String(currentDemoQuestion + 1).padStart(2, '0') }}</span>
+                                <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground px-2 py-0.5 border border-border/30 dark:border-border/20 rounded">
+                                    {{ demoQuestions[currentDemoQuestion].type.replace('_', ' ') }}
+                                </span>
+                            </div>
+                            
+                            <p class="text-base sm:text-lg lg:text-xl font-black tracking-tight mb-6 sm:mb-8 max-w-2xl">
+                                {{ demoQuestions[currentDemoQuestion].text }}
+                            </p>
+
+                            <!-- Options -->
+                            <div class="grid gap-2.5 sm:gap-3 grid-cols-1" :class="demoQuestions[currentDemoQuestion].type === 'true_false' ? 'sm:grid-cols-2' : 'sm:grid-cols-2'">
+                                <button
+                                    v-for="(option, oIndex) in demoQuestions[currentDemoQuestion].options"
+                                    :key="oIndex"
+                                    @click="selectDemoAnswer(oIndex)"
+                                    class="relative p-4 sm:p-5 border rounded-lg text-left transition-all duration-300 group/opt overflow-hidden"
+                                    :class="[
+                                        !demoAnswered ? 'border-border/40 dark:border-border/20 hover:border-primary/50 hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer active:scale-[0.98] bg-muted/20 dark:bg-foreground/[0.03]' : '',
+                                        demoAnswered && oIndex === demoQuestions[currentDemoQuestion].correctIndex ? 'border-emerald-500/60 bg-emerald-500/10 dark:bg-emerald-500/15' : '',
+                                        demoAnswered && oIndex === selectedDemoAnswer && oIndex !== demoQuestions[currentDemoQuestion].correctIndex ? 'border-red-500/60 bg-red-500/10 dark:bg-red-500/15' : '',
+                                        demoAnswered && oIndex !== demoQuestions[currentDemoQuestion].correctIndex && oIndex !== selectedDemoAnswer ? 'opacity-40' : '',
+                                    ]"
+                                    :disabled="demoAnswered"
+                                >
+                                    <div class="flex items-center justify-between gap-3 sm:gap-4">
+                                        <div class="flex items-center gap-3 sm:gap-4">
+                                            <span class="text-[10px] font-black font-mono text-muted-foreground w-5 shrink-0">{{ String.fromCharCode(65 + oIndex) }}.</span>
+                                            <span class="text-xs sm:text-sm font-bold">{{ option }}</span>
+                                        </div>
+                                        <CheckCircle2 v-if="demoAnswered && oIndex === demoQuestions[currentDemoQuestion].correctIndex" class="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500 shrink-0" />
+                                        <XCircle v-if="demoAnswered && oIndex === selectedDemoAnswer && oIndex !== demoQuestions[currentDemoQuestion].correctIndex" class="h-4 w-4 sm:h-5 sm:w-5 text-red-500 shrink-0" />
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- Feedback + Next -->
+                            <Transition
+                                enter-active-class="transition-all duration-500 ease-out"
+                                enter-from-class="opacity-0 translate-y-4"
+                                enter-to-class="opacity-100 translate-y-0"
+                            >
+                                <div v-if="demoAnswered" class="mt-6 sm:mt-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
+                                    <div class="p-4 border border-border/30 dark:border-border/15 bg-muted/30 dark:bg-foreground/[0.04] max-w-lg rounded-lg">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <Sparkles class="h-3 w-3 text-primary" />
+                                            <span class="text-[8px] font-black uppercase tracking-[0.3em] text-primary">Explanation</span>
+                                        </div>
+                                        <p class="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                                            {{ demoQuestions[currentDemoQuestion].explanation }}
+                                        </p>
+                                    </div>
+                                    <button
+                                        @click="nextDemoQuestion"
+                                        class="flex items-center justify-center sm:justify-start gap-4 bg-foreground text-background px-6 py-3.5 sm:py-4 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-primary hover:text-primary-foreground transition-all active:scale-95 shrink-0 rounded-lg"
+                                    >
+                                        {{ currentDemoQuestion < demoQuestions.length - 1 ? 'Next Question' : 'View Results' }}
+                                        <ArrowRight class="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </Transition>
+                        </div>
+
+                        <!-- Quiz Complete -->
+                        <div v-else class="flex flex-col items-center justify-center py-8 lg:py-16 text-center">
+                            <div class="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center border-2 border-primary/30 bg-primary/10 mb-6 rotate-45 rounded-xl">
+                                <Trophy class="h-6 w-6 sm:h-8 sm:w-8 text-primary -rotate-45" />
+                            </div>
+                            <h3 class="text-2xl sm:text-3xl lg:text-4xl font-black uppercase tracking-tight mb-2">Assessment Complete</h3>
+                            <p class="text-muted-foreground text-xs sm:text-sm mb-2">Demo Protocol Finalized</p>
+                            
+                            <div class="flex items-baseline gap-2 my-4 sm:my-6">
+                                <span class="text-4xl sm:text-5xl lg:text-6xl font-black text-primary font-mono">{{ demoScore }}</span>
+                                <span class="text-lg sm:text-xl font-black text-muted-foreground/40">/{{ demoQuestions.length }}</span>
+                            </div>
+                            
+                            <p class="text-xs sm:text-sm text-muted-foreground mb-6 sm:mb-8 max-w-md px-4">
+                                {{ demoScore === demoQuestions.length ? 'Perfect score! You\'re ready to dominate.' : demoScore >= 2 ? 'Solid performance. The real assessments await.' : 'Room for growth. Sign up and sharpen your skills.' }}
+                            </p>
+
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto px-4 sm:px-0">
+                                <button @click="resetDemoQuiz" class="flex items-center justify-center gap-3 border border-border/40 dark:border-border/20 px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.3em] hover:bg-muted/30 transition-all active:scale-95 rounded-lg">
+                                    Retry Assessment
+                                </button>
+                                <Link v-if="!$page.props.auth.user" :href="register()" class="flex items-center justify-center gap-3 bg-primary text-primary-foreground px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.3em] hover:gap-5 transition-all active:scale-95 rounded-lg shadow-sm">
+                                    Create Account
+                                    <ArrowRight class="h-4 w-4" />
+                                </Link>
+                                <Link v-else :href="dashboard()" class="flex items-center justify-center gap-3 bg-primary text-primary-foreground px-6 py-3.5 text-[10px] font-black uppercase tracking-[0.3em] hover:gap-5 transition-all active:scale-95 rounded-lg shadow-sm">
+                                    Go to Dashboard
+                                    <ArrowRight class="h-4 w-4" />
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress dots -->
+                    <div class="border-t border-border/30 dark:border-border/15 p-4 flex items-center justify-center gap-2">
+                        <div v-for="(q, qi) in demoQuestions" :key="qi" class="h-1.5 rounded-full transition-all duration-300"
+                            :class="[
+                                qi === currentDemoQuestion && !demoCompleted ? 'w-8 bg-primary' : 'w-1.5',
+                                qi < currentDemoQuestion || demoCompleted ? 'bg-primary/50' : 'bg-muted dark:bg-foreground/15',
+                            ]"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
 
             <!-- Tech Stack Carousel -->
             <div class="reveal-section mt-24 lg:mt-48 overflow-hidden relative py-12 border-y border-border/5 -mx-6 sm:mx-0">

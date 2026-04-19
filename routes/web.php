@@ -8,6 +8,7 @@ use App\Http\Controllers\ExamController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Models\Announcement;
+use App\Models\Assignment;
 use App\Models\Exam;
 use App\Models\ExamSubmission;
 use App\Models\Season;
@@ -19,10 +20,28 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
-Route::inertia('/', 'Welcome', [
-    'canRegister' => Features::enabled(Features::registration()),
-    'totalUsers' => User::count(),
-])->name('home');
+Route::get('/', function () {
+    $currentSeason = Season::current();
+
+    return inertia('Welcome', [
+        'canRegister' => Features::enabled(Features::registration()),
+        'totalUsers' => User::count(),
+        'totalExams' => Exam::where('status', '!=', 'draft')->count(),
+        'totalAssignments' => Assignment::count(),
+        'totalSubmissions' => ExamSubmission::query()
+            ->selectRaw('COUNT(*) as cnt')
+            ->fromSub(
+                ExamSubmission::select('user_id', 'exam_id')->distinct(),
+                'sub'
+            )->value('cnt'),
+        'activeSeason' => $currentSeason ? [
+            'name' => $currentSeason->name,
+            'startDate' => $currentSeason->start_date?->toISOString(),
+            'endDate' => $currentSeason->end_date?->toISOString(),
+            'showCountdown' => (bool) $currentSeason->show_countdown_on_welcome,
+        ] : null,
+    ]);
+})->name('home');
 
 Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', function () {
