@@ -241,6 +241,22 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     })->name('dashboard');
 
     Route::get('u/{user}', [PublicProfileController::class, 'show'])->name('users.show');
+    Route::get('users/{user}/xp-history', function (User $user) {
+        return $user->gamificationHistories()
+            ->with('section:id,name')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($history) {
+                return [
+                    'id' => $history->id,
+                    'amount_xp' => (float) $history->amount_xp,
+                    'reason' => $history->reason,
+                    'description' => $history->description,
+                    'section_name' => $history->section?->name,
+                    'created_at' => $history->created_at->format('M d, Y H:i'),
+                ];
+            });
+    })->name('users.xp-history');
     Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
 
     Route::get('assignments', [AssignmentController::class, 'index'])->name('assignments.index');

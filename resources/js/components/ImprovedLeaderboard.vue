@@ -2,8 +2,16 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import gsap from 'gsap';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
-import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award, Search, Flame, Cpu, Terminal, Activity } from 'lucide-vue-next';
+import { Trophy, Crown, TrendingUp, TrendingDown, Minus, Medal, Sparkles, User, Award, Search, Flame, Cpu, Terminal, Activity, History, Eye, Loader2 } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
+import axios from 'axios';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
 interface LeaderboardUser {
     id: number;
@@ -125,6 +133,28 @@ const resetMagnetic = (e: MouseEvent) => {
         duration: 0.5,
         ease: 'elastic.out(1, 0.3)'
     });
+};
+
+// History Modal State
+const isHistoryOpen = ref(false);
+const selectedUser = ref<LeaderboardUser | null>(null);
+const xpHistory = ref<any[]>([]);
+const isLoadingHistory = ref(false);
+
+const openHistory = async (user: LeaderboardUser) => {
+    selectedUser.value = user;
+    isHistoryOpen.value = true;
+    isLoadingHistory.value = true;
+    xpHistory.value = [];
+    
+    try {
+        const response = await axios.get(`/users/${user.id}/xp-history`);
+        xpHistory.value = response.data;
+    } catch (error) {
+        console.error('Failed to fetch XP history:', error);
+    } finally {
+        isLoadingHistory.value = false;
+    }
 };
 </script>
 
@@ -371,85 +401,220 @@ const resetMagnetic = (e: MouseEvent) => {
             </div>
 
             <!-- High Density List Rankings -->
-            <div class="surface-card overflow-hidden">
-                <div class="px-6 py-4 border-b border-border/20 bg-muted/5 flex items-center justify-between">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">All Rankings</span>
+            <div class="space-y-4">
+                <div class="px-6 py-4 flex items-center justify-between bg-card/30 rounded-2xl border border-border/20 backdrop-blur-sm">
+                    <div class="flex items-center gap-2">
+                        <Activity class="w-4 h-4 text-primary" />
+                        <span class="text-xs font-black uppercase tracking-[0.2em] text-foreground">Operational Rankings</span>
+                    </div>
                     <div class="flex items-center gap-4">
-                        <span class="text-[10px] font-bold text-muted-foreground">Sort: <span class="text-foreground">Monthly</span></span>
+                        <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/5 border border-primary/10">
+                            <span class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sort:</span>
+                            <span class="text-[10px] font-black text-primary uppercase tracking-widest">Monthly</span>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="divide-y divide-border/10">
+                <div class="space-y-2">
                     <div v-for="(user, idx) in displayedUsers" :key="user.id"
-                        class="group px-6 py-4 flex items-center justify-between hover:bg-primary/[0.02] transition-colors cursor-default animate-fade-up relative overflow-hidden"
-                        :class="[`stagger-${idx + 4}`, { 'bg-primary/[0.03]': user.isCurrentUser }]"
+                        class="group relative px-4 sm:px-6 py-3 flex items-center justify-between bg-card/40 hover:bg-card/60 border border-border/40 hover:border-primary/30 rounded-2xl transition-all duration-500 cursor-default animate-fade-up overflow-hidden"
+                        :class="[`stagger-${idx + 4}`, { 'border-primary/40 bg-primary/[0.02] shadow-[0_0_20px_rgba(var(--primary),0.05)]': user.isCurrentUser }]"
                         @mousemove="handleMouseMove"
                     >
+                        <!-- Left Accent Line -->
+                        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-2/3 bg-primary/20 rounded-r-full group-hover:h-full group-hover:bg-primary transition-all duration-500"></div>
+
                         <!-- Row Bloom Effect -->
                         <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                            style="background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.05), transparent 40%)">
+                            style="background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
                         </div>
 
-                        <div class="flex items-center gap-6">
-                            <span class="text-sm font-black text-muted-foreground/40 w-6">#{{ idx + 1 }}</span>
-                            <div class="flex items-center gap-3">
-                                <Link :href="`/u/${user.id}`" class="w-10 h-10 rounded-xl bg-muted/30 border border-border/20 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-105 transition-transform block">
-                                    <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover" />
-                                    <User v-else class="w-5 h-5 text-muted-foreground/40" />
-                                </Link>
+                        <div class="flex items-center gap-4 sm:gap-8 relative z-10">
+                            <!-- Rank Badge -->
+                            <div class="relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 shrink-0">
+                                <div class="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 rounded-lg rotate-45 transition-all duration-500 border border-primary/10 group-hover:rotate-90"></div>
+                                <span class="relative text-xs sm:text-sm font-black text-foreground tabular-nums">#{{ idx + 1 }}</span>
+                            </div>
+
+                            <!-- User Info -->
+                            <div class="flex items-center gap-3 sm:gap-4">
+                                <div class="relative">
+                                    <Link :href="`/u/${user.id}`" class="block w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-muted/30 border border-border/20 flex items-center justify-center overflow-hidden shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                                        <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover" />
+                                        <User v-else class="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground/40" />
+                                    </Link>
+                                    <div v-if="user.trend === 'up'" class="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background animate-pulse"></div>
+                                </div>
+                                
                                 <div>
-                                    <h4 class="text-sm font-bold flex items-center gap-2">
-                                        {{ user.name }}
-                                        <span v-if="user.isCurrentUser" class="text-[8px] uppercase px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-black">You</span>
-                                    </h4>
-                                    <div class="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-                                        <span>Joined {{ user.joinedAt }}</span>
-                                        <div class="w-0.5 h-0.5 rounded-full bg-muted-foreground/30"></div>
-                                        <span class="flex items-center gap-1">
-                                            <Award class="w-3 h-3 text-primary" /> Silver III
-                                        </span>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="text-sm sm:text-base font-black tracking-tight text-foreground truncate max-w-[120px] sm:max-w-[200px]">
+                                            {{ user.name }}
+                                        </h4>
+                                        <span v-if="user.isCurrentUser" class="text-[7px] sm:text-[8px] uppercase px-2 py-0.5 rounded-full bg-primary text-primary-foreground font-black shadow-lg shadow-primary/20">YOU</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted/50 border border-border/40">
+                                            <Award class="w-2.5 h-2.5 text-primary" />
+                                            <span class="text-[8px] sm:text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Silver III</span>
+                                        </div>
+                                        <span class="text-[9px] text-muted-foreground/60 hidden sm:inline font-mono">ID_{{ user.id.toString().padStart(4, '0') }}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="flex items-center gap-8">
-                            <!-- Trend indicator -->
-                            <div class="hidden sm:flex flex-col items-center">
-                                <component :is="user.trend === 'up' ? TrendingUp : (user.trend === 'down' ? TrendingDown : Minus)" 
-                                    class="w-4 h-4" 
-                                    :class="user.trend === 'up' ? 'text-primary' : (user.trend === 'down' ? 'text-destructive' : 'text-muted-foreground')"
-                                />
-                                <span class="text-[8px] font-bold uppercase mt-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">Trend</span>
+                        <div class="flex items-center gap-3 sm:gap-10 relative z-10">
+                            <!-- Trend Column (Desktop Only) -->
+                            <div class="hidden md:flex flex-col items-end min-w-[60px]">
+                                <div class="flex items-center gap-1.5">
+                                    <component :is="user.trend === 'up' ? TrendingUp : (user.trend === 'down' ? TrendingDown : Minus)" 
+                                        class="w-4 h-4" 
+                                        :class="user.trend === 'up' ? 'text-emerald-500' : (user.trend === 'down' ? 'text-destructive' : 'text-muted-foreground')"
+                                    />
+                                    <span class="text-[10px] font-black uppercase tabular-nums" :class="user.trend === 'up' ? 'text-emerald-500' : (user.trend === 'down' ? 'text-destructive' : 'text-muted-foreground')">
+                                        {{ user.trend === 'up' ? 'UP' : (user.trend === 'down' ? 'DOWN' : 'STABLE') }}
+                                    </span>
+                                </div>
+                                <span class="text-[8px] font-bold uppercase text-muted-foreground/40 tracking-widest mt-0.5">Network Trend</span>
                             </div>
 
                             <!-- Data Column -->
-                            <div class="text-right min-w-[100px]">
-                                <p class="text-sm font-black tabular-nums">{{ user.xp.toLocaleString() }} <span class="text-[10px] font-bold text-muted-foreground">XP</span></p>
-                                <p class="text-[9px] font-bold text-primary opacity-80">+{{ user.weeklyXp >= 1000 ? (user.weeklyXp / 1000).toFixed(1) + 'k' : user.weeklyXp }} weekly</p>
+                            <div class="text-right">
+                                <div class="flex items-baseline justify-end gap-1.5">
+                                    <span class="text-base sm:text-xl font-black tabular-nums text-foreground tracking-tighter leading-none">{{ user.xp.toLocaleString() }}</span>
+                                    <span class="text-[10px] font-bold text-primary uppercase tracking-widest">XP</span>
+                                </div>
+                                <div class="flex items-center justify-end gap-1 mt-1">
+                                    <Sparkles class="w-2.5 h-2.5 text-primary/60" />
+                                    <span class="text-[9px] font-bold text-primary/80 tracking-tight">+{{ user.weeklyXp >= 1000 ? (user.weeklyXp / 1000).toFixed(1) + 'k' : user.weeklyXp }} weekly</span>
+                                </div>
                             </div>
 
-                            <!-- Action -->
-                            <Link :href="`/u/${user.id}`" class="flex p-2 rounded-xl text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100">
-                                 <TrendingUp class="w-4 h-4 rotate-45" />
-                            </Link>
+                            <!-- Actions -->
+                            <div class="flex items-center gap-1.5 sm:gap-2 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                                <Link :href="`/u/${user.id}`" 
+                                    class="p-2 sm:p-2.5 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all border border-primary/10 hover:border-primary shadow-sm hover:shadow-primary/20"
+                                    title="View Profile"
+                                >
+                                     <Eye class="w-4 h-4" />
+                                </Link>
+                                <button @click="openHistory(user)"
+                                    class="p-2 sm:p-2.5 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground transition-all border border-primary/10 hover:border-primary shadow-sm hover:shadow-primary/20"
+                                    title="View History"
+                                >
+                                     <History class="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="p-4 bg-muted/5 text-center" v-if="users.length > 10">
+                <div class="pt-4 flex justify-center" v-if="users.length > 10">
                     <button 
                         @click="showAllRankings = !showAllRankings"
                         @mousemove="handleMagnetic" 
                         @mouseleave="resetMagnetic"
-                        class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
+                        class="group flex items-center gap-3 px-8 py-3 rounded-2xl bg-card border border-border/40 hover:border-primary/40 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground hover:text-primary transition-all shadow-sm hover:shadow-primary/10"
                     >
-                        {{ showAllRankings ? 'Show Less Rankings' : 'Load More Rankings' }}
+                        <div class="w-1 h-1 rounded-full bg-primary/40 group-hover:scale-[3] group-hover:bg-primary transition-all"></div>
+                        {{ showAllRankings ? 'Collapse Data Stream' : 'Load More Rankings' }}
+                        <div class="w-1 h-1 rounded-full bg-primary/40 group-hover:scale-[3] group-hover:bg-primary transition-all"></div>
                     </button>
                 </div>
             </div>
         </template>
     </template>
+
+    <!-- XP History Modal -->
+    <Dialog v-model:open="isHistoryOpen">
+        <DialogContent class="sm:max-w-[450px] p-0 overflow-hidden border-primary/20 bg-card/95 backdrop-blur-2xl shadow-2xl shadow-primary/10">
+            <!-- Modal Header -->
+            <div class="relative p-8 pb-6 border-b border-border/20 overflow-hidden">
+                <!-- Background Decoration -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                <div class="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl -ml-12 -mb-12"></div>
+                
+                <div class="relative flex items-center gap-5">
+                    <div class="relative group">
+                        <div class="absolute -inset-1 bg-gradient-to-tr from-primary to-primary/20 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                        <div class="relative w-14 h-14 rounded-2xl bg-card border border-primary/20 flex items-center justify-center shrink-0">
+                            <History class="w-7 h-7 text-primary" />
+                        </div>
+                    </div>
+                    <div>
+                        <DialogTitle class="text-2xl font-black tracking-tight text-foreground">{{ selectedUser?.name }}</DialogTitle>
+                        <div class="flex items-center gap-2 mt-1">
+                            <div class="px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
+                                <span class="text-[9px] font-black text-primary uppercase tracking-[0.2em]">XP_LOG_STREAMS</span>
+                            </div>
+                            <span class="text-[10px] font-medium text-muted-foreground">Detailed activity history</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="max-h-[450px] overflow-y-auto custom-scrollbar bg-card/30">
+                <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center py-20 gap-4">
+                    <div class="relative">
+                        <Loader2 class="w-10 h-10 text-primary animate-spin" />
+                        <div class="absolute inset-0 w-10 h-10 border-t-2 border-primary rounded-full animate-ping opacity-20"></div>
+                    </div>
+                    <p class="text-xs font-mono font-black uppercase tracking-[0.3em] text-primary/60 animate-pulse">Syncing Network Data...</p>
+                </div>
+
+                <div v-else-if="xpHistory.length === 0" class="flex flex-col items-center justify-center py-20 text-center px-10">
+                    <div class="w-16 h-16 rounded-full bg-muted/20 border border-dashed border-muted-foreground/30 flex items-center justify-center mb-4">
+                        <Activity class="w-8 h-8 text-muted-foreground/20" />
+                    </div>
+                    <p class="text-base font-black text-foreground">Zero Activity Detected</p>
+                    <p class="text-xs text-muted-foreground mt-2 leading-relaxed">This node has not yet established a data footprint in the current season.</p>
+                </div>
+
+                <div v-else class="p-4 space-y-2">
+                    <div v-for="(item, index) in xpHistory" :key="item.id" 
+                        class="group relative flex items-center justify-between p-4 rounded-2xl bg-card/50 hover:bg-card border border-border/40 hover:border-primary/30 transition-all duration-300 animate-fade-up"
+                        :style="{ animationDelay: `${index * 50}ms` }"
+                    >
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-muted/30 border border-border/20 flex items-center justify-center shrink-0 group-hover:bg-primary/10 group-hover:border-primary/20 transition-colors">
+                                <component :is="item.reason.includes('Exam') ? Trophy : (item.reason.includes('Enroll') ? Sparkles : Award)" 
+                                    class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" 
+                                />
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-black text-foreground tracking-tight">{{ item.reason }}</span>
+                                <span v-if="item.description" class="text-[10px] text-muted-foreground font-medium line-clamp-1 group-hover:text-foreground transition-colors">{{ item.description }}</span>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[9px] font-mono text-muted-foreground/40 uppercase tracking-widest">{{ item.created_at }}</span>
+                                    <span v-if="item.section_name" class="px-1.5 py-0.5 rounded-full bg-primary/5 text-[8px] font-black text-primary/60 uppercase tracking-tighter">{{ item.section_name }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right pl-4">
+                            <div class="flex items-baseline justify-end gap-1">
+                                <span class="text-lg font-black tabular-nums tracking-tighter" :class="item.amount_xp >= 0 ? 'text-primary' : 'text-destructive'">
+                                    {{ item.amount_xp >= 0 ? '+' : '' }}{{ item.amount_xp.toLocaleString() }}
+                                </span>
+                                <span class="text-[9px] font-bold text-muted-foreground/60 uppercase">XP</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-6 border-t border-border/20 bg-muted/5 flex justify-center">
+                <button @click="isHistoryOpen = false" 
+                    class="group relative px-10 py-2.5 rounded-xl bg-card border border-border/40 hover:border-primary/40 transition-all overflow-hidden"
+                >
+                    <div class="absolute inset-0 bg-primary/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                    <span class="relative text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground group-hover:text-primary transition-colors">Close Log</span>
+                </button>
+            </div>
+        </DialogContent>
+    </Dialog>
     </div>
 </template>
 
