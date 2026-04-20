@@ -18,16 +18,18 @@ class AIService
     }
 
     /**
-     * Pre-warm the AI model by loading it into RAM.
+     * Pre-warm the AI model by loading it into RAM and keeping it alive.
      */
     public function preWarm(): bool
     {
         try {
-            // This just loads the model without a full prompt
-            Http::timeout(5)->post("{$this->baseUrl}/api/generate", [
+            // Increase timeout for pre-warm to ensure model is fully loaded
+            // We use keep_alive: -1 to keep the model in memory indefinitely
+            Http::timeout(60)->post("{$this->baseUrl}/api/generate", [
                 'model' => $this->model,
                 'prompt' => '',
                 'stream' => false,
+                'keep_alive' => -1,
             ]);
 
             return true;
@@ -46,79 +48,137 @@ class AIService
      * @param  int  $maxPoints  The maximum points possible for this question.
      * @return array{score: float, feedback: string}
      */
+    /**
+     * Assess multiple essays in parallel.
+     *
+     * @param  array<int, array{essayText: string, questionText: string, maxPoints: int}>  $essays
+     * @return array<int, array{score: float, feedback: string}>
+     */
+    public function batchAssessEssays(array $essays): array
+    {
+        if (empty($essays)) {
+            return [];
+        }
+
+        $responses = Http::pool(function ($pool) use ($essays) {
+            foreach ($essays as $index => $essay) {
+                $prompt = $this->buildPrompt($essay['essayText'], $essay['questionText'], $essay['maxPoints']);
+                $pool->as((string) $index)->timeout(300)->post("{$this->baseUrl}/api/generate", [
+                    'model' => $this->model,
+                    'prompt' => $prompt,
+                    'stream' => false,
+                    'format' => 'json',
+                    'keep_alive' => -1,
+                    'options' => [
+                        'temperature' => 0,
+                        'num_predict' => 15,
+                        'num_ctx' => 1024,
+                        'top_k' => 5,
+                        'top_p' => 0.1,
+                    ],
+                ]);
+            }
+        });
+
+        $results = [];
+        foreach ($essays as $index => $essay) {
+            $response = $responses[(string) $index] ?? null;
+            $result = ['score' => 0.0, 'feedback' => ''];
+
+            if ($response && $response->successful()) {
+                $data = json_decode($response->json('response'), true);
+                if (isset($data['score'])) {
+                    $result['score'] = (float) round((float) $data['score']);
+                }
+            } elseif ($response) {
+                Log::error("AI Batch Assessment failed for index $index: ".$response->body());
+            } else {
+                Log::error("AI Batch Assessment missing response for index $index");
+            }
+
+            $results[$index] = $result;
+        }
+
+        return $results;
+    }
+
+    /**
+     * Build the prompt for essay assessment.
+     */
+    protected function buildPrompt(string $essayText, string $questionText, int $maxPoints): string
+    {
+        return <<<PROMPT
+Act as a STRICT academic examiner. Your task is to evaluate a student's essay response based on a specific question.
+
+Question: "$questionText"
+Student Essay: "$essayText"
+Maximum Points: $maxPoints
+
+STRICT GRADING RULES:
+1. COMPREHENSIVENESS: The answer MUST be comprehensive and thorough. Short, vague, or superficial answers should receive significantly fewer points.
+2. RELEVANCE: The answer MUST be directly related to the question. Irrelevant content, even if well-written, must not be rewarded.
+3. FACTUAL ACCURACY: Points should only be awarded for correct facts and logical reasoning.
+4. "I DON'T KNOW" CLAUSE: If the student says "I don't know", "skip", or anything similar, the score MUST be 0.
+5. MINIMUM SUBSTANCE: If the essay is too short to provide meaningful information (e.g., less than 2-3 sentences of actual content), it should receive a very low score or 0.
+
+SCORING CRITERIA:
+- Full Points ($maxPoints): Comprehensive, highly relevant, and accurate answer that covers all aspects of the question.
+- Partial Points: Relevant but lacks depth or misses some aspects of the question.
+- Zero Points: Irrelevant, nonsensical, or explicitly states they don't know.
+
+Response Format:
+You MUST respond with a valid JSON object ONLY. DO NOT provide feedback, explanations, or reasoning.
+The score MUST be a WHOLE NUMBER (flat number), no decimals allowed.
+{
+    "score": <integer_value_between_0_and_$maxPoints>
+}
+PROMPT;
+    }
+
+    /**
+     * Assess an essay and return a score and feedback.
+     *
+     * @param  string  $essayText  The student's essay answer.
+     * @param  string  $questionText  The essay prompt/question.
+     * @param  int  $maxPoints  The maximum points possible for this question.
+     * @return array{score: float, feedback: string}
+     */
     public function assessEssay(string $essayText, string $questionText, int $maxPoints): array
     {
-        // Use a file-based lock to ensure 1-by-1 processing across different student requests
-        $lockFile = storage_path('ai_assessment.lock');
-        $fp = fopen($lockFile, 'w+');
+        $prompt = $this->buildPrompt($essayText, $questionText, $maxPoints);
 
         try {
-            // Wait for the lock (blocking)
-            if (flock($fp, LOCK_EX)) {
-                $prompt = <<<PROMPT
-        Act as a STRICT academic examiner. Your task is to evaluate a student's essay response based on a specific question.
-        
-        Question: "$questionText"
-        Student Essay: "$essayText"
-        Maximum Points: $maxPoints
-        
-        STRICT GRADING RULES:
-        1. COMPREHENSIVENESS: The answer MUST be comprehensive and thorough. Short, vague, or superficial answers should receive significantly fewer points.
-        2. RELEVANCE: The answer MUST be directly related to the question. Irrelevant content, even if well-written, must not be rewarded.
-        3. FACTUAL ACCURACY: Points should only be awarded for correct facts and logical reasoning.
-        4. "I DON'T KNOW" CLAUSE: If the student says "I don't know", "skip", or anything similar, the score MUST be 0.
-        5. MINIMUM SUBSTANCE: If the essay is too short to provide meaningful information (e.g., less than 2-3 sentences of actual content), it should receive a very low score or 0.
-        
-        SCORING CRITERIA:
-        - Full Points ($maxPoints): Comprehensive, highly relevant, and accurate answer that covers all aspects of the question.
-        - Partial Points: Relevant but lacks depth or misses some aspects of the question.
-        - Zero Points: Irrelevant, nonsensical, or explicitly states they don't know.
-        
-        Response Format:
-        You MUST respond with a valid JSON object ONLY. DO NOT provide feedback, explanations, or reasoning.
-        The score MUST be a WHOLE NUMBER (flat number), no decimals allowed.
-        {
-            "score": <integer_value_between_0_and_$maxPoints>
-        }
-        PROMPT;
+            // Removed blocking file lock to allow concurrent AI processing.
+            // Ollama handles internal queuing which is more efficient for modern multi-core systems.
+            $response = Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
+                'model' => $this->model,
+                'prompt' => $prompt,
+                'stream' => false,
+                'format' => 'json',
+                'keep_alive' => -1, // Ensure model stays in RAM after assessment
+                'options' => [
+                    'temperature' => 0,      // Zero temperature for faster, deterministic output
+                    'num_predict' => 15,     // Reduced from 20 to 15, we only need a few tokens for JSON
+                    'num_ctx' => 1024,       // Smaller context window for faster processing
+                    'top_k' => 5,            // Reduced from 10 to 5 for even faster token selection
+                    'top_p' => 0.1,          // Lower top_p for more focused generation
+                ],
+            ]);
 
-                try {
-                    // Increase timeout significantly to 300 seconds (5 minutes) to handle LAN queues
-                    $response = Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
-                        'model' => $this->model,
-                        'prompt' => $prompt,
-                        'stream' => false,
-                        'format' => 'json',
-                        'options' => [
-                            'temperature' => 0,      // Zero temperature for faster, deterministic output
-                            'num_predict' => 20,     // Only need a few tokens for the JSON score
-                            'num_ctx' => 1024,       // Smaller context window for faster processing
-                            'top_k' => 10,
-                            'top_p' => 0.5,
-                        ],
-                    ]);
+            if ($response->successful()) {
+                $data = json_decode($response->json('response'), true);
 
-                    if ($response->successful()) {
-                        $data = json_decode($response->json('response'), true);
-
-                        if (isset($data['score'])) {
-                            return [
-                                'score' => (float) round((float) $data['score']),
-                                'feedback' => '',
-                            ];
-                        }
-                    }
-
-                    Log::error('AI Assessment failed: '.$response->body());
-                } catch (\Exception $e) {
-                    Log::error('AI Assessment error: '.$e->getMessage());
-                } finally {
-                    // Release the lock
-                    flock($fp, LOCK_UN);
+                if (isset($data['score'])) {
+                    return [
+                        'score' => (float) round((float) $data['score']),
+                        'feedback' => '',
+                    ];
                 }
             }
-        } finally {
-            fclose($fp);
+
+            Log::error('AI Assessment failed: '.$response->body());
+        } catch (\Exception $e) {
+            Log::error('AI Assessment error: '.$e->getMessage());
         }
 
         // Fallback in case of failure

@@ -115,6 +115,29 @@ class ExamController extends Controller
         // Create a lookup for submitted answers by question number
         $submittedAnswers = collect($answers)->keyBy('question_number');
 
+        // Collect essays for batch processing
+        $essaysToProcess = [];
+        foreach ($questions as $index => $question) {
+            $questionNumber = $index + 1;
+            $submittedAnswerData = $submittedAnswers->get($questionNumber);
+            $submittedAnswer = $submittedAnswerData['answer'] ?? null;
+
+            if ($submittedAnswer !== null && $question['type'] === 'essay') {
+                $hasEssay = true;
+                $essaysToProcess[$questionNumber] = [
+                    'essayText' => (string) $submittedAnswer,
+                    'questionText' => (string) $question['text'],
+                    'maxPoints' => (int) ($question['points'] ?? $examPart->points ?? 1),
+                ];
+            }
+        }
+
+        // Batch process essays if any
+        $essayAssessments = [];
+        if (! empty($essaysToProcess)) {
+            $essayAssessments = $this->aiService->batchAssessEssays($essaysToProcess);
+        }
+
         foreach ($questions as $index => $question) {
             $questionNumber = $index + 1;
             $questionPoints = (int) ($question['points'] ?? $examPart->points ?? 1);
@@ -128,14 +151,7 @@ class ExamController extends Controller
             }
 
             if ($question['type'] === 'essay') {
-                $hasEssay = true;
-
-                // Perform AI assessment for the essay
-                $assessment = $this->aiService->assessEssay(
-                    (string) $submittedAnswer,
-                    (string) $question['text'],
-                    $questionPoints
-                );
+                $assessment = $essayAssessments[$questionNumber] ?? ['score' => 0.0, 'feedback' => ''];
 
                 // Add AI score to the total score
                 $score += $assessment['score'];
