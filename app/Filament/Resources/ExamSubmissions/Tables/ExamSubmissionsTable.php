@@ -93,26 +93,17 @@ class ExamSubmissionsTable
                     ->action(function ($livewire) {
                         // Get the current filtered query from the table
                         $query = $livewire->getFilteredTableQuery();
-
-                        // We need to re-query with aggregation
-                        // Note: toBase() is safer for aggregates in some cases,
-                        // but we want the models for relationships.
-                        $data = ExamSubmission::query()
-                            ->whereIn('id', $query->pluck('id'))
-                            ->select('user_id', 'exam_id', DB::raw('SUM(score) as total_score'))
-                            ->groupBy('user_id', 'exam_id')
-                            ->with(['user', 'exam'])
-                            ->get();
+                        $submissionIds = $query->pluck('id')->toArray();
 
                         $filename = 'exam_total_scores_'.now()->format('Y-m-d_H-i').'.csv';
 
-                        return response()->streamDownload(function () {
+                        return response()->streamDownload(function () use ($submissionIds) {
                             $handle = fopen('php://memory', 'w');
                             fputcsv($handle, ['Student Name', 'Exam', 'Total Score']);
 
-                            // Re-fetch data inside the stream for memory efficiency if it was larger,
-                            // but here we already have it.
+                            // Fetch aggregated data based on the filtered submission IDs
                             $data = ExamSubmission::query()
+                                ->whereIn('id', $submissionIds)
                                 ->select('user_id', 'exam_id', DB::raw('SUM(score) as total_score'))
                                 ->groupBy('user_id', 'exam_id')
                                 ->with(['user', 'exam'])
