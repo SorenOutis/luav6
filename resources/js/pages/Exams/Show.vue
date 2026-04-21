@@ -385,6 +385,14 @@ const remainingPartsCount = computed(() =>
     props.exam.parts.length - submittedPartsCount.value
 );
 
+const nextPartId = computed(() => {
+    // The next part is the first one that hasn't been submitted and isn't locked
+    const nextPart = props.exam.parts.find((part, index) => 
+        !isPartSubmitted(part.id) && !isPartLocked(index)
+    );
+    return nextPart ? nextPart.id : null;
+});
+
 const isPartSubmitted = (partId: number) => {
     return !!props.submissions[partId];
 };
@@ -1340,10 +1348,20 @@ const onDragEnd = () => {
                                     ? 'opacity-80' 
                                     : isPartLocked(index) 
                                         ? 'opacity-60 cursor-not-allowed grayscale' 
-                                        : 'hover:shadow-xl hover:-translate-y-1 cursor-pointer'
+                                        : 'hover:shadow-xl hover:-translate-y-1 cursor-pointer',
+                                nextPartId === part.id ? 'ring-2 ring-primary shadow-[0_0_40px_rgba(var(--primary),0.2)] border-primary/50' : ''
                             ]"
                             @mousemove="handleMouseMove"
                         >
+                            <!-- Onboarding/Focus Highlight -->
+                            <div v-if="nextPartId === part.id" class="absolute inset-0 pointer-events-none z-0">
+                                <div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
+                                <div class="absolute top-0 right-0 px-4 py-1.5 bg-primary text-primary-foreground font-black text-[8px] uppercase tracking-[0.3em] transform -skew-x-12 shadow-lg z-20 flex items-center gap-2">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-ping"></div>
+                                    <span class="inline-block skew-x-12">RECOMMENDED_NEXT</span>
+                                </div>
+                            </div>
+
                             <!-- Futuristic Corner Brackets -->
                             <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
                             <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-foreground pointer-events-none"></div>

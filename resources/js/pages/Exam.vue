@@ -539,11 +539,29 @@ onMounted(() => {
                 </div>
             </div>
 
-            <DialogFooter class="p-8 md:p-10 border-t border-border bg-muted/10">
+            <DialogFooter class="p-8 md:p-10 border-t border-border bg-muted/10 flex flex-col md:flex-row gap-4 items-center justify-between">
                 <Button variant="secondary" @click="showReviewModal = false" 
-                    class="w-full md:w-auto bg-foreground text-background font-black uppercase tracking-[0.3em] text-xs transform -skew-x-12 hover:bg-primary hover:text-primary-foreground px-16 h-14 rounded-none">
-                    <span class="inline-block skew-x-12">Close Review</span>
+                    class="w-full md:w-auto bg-muted/20 text-muted-foreground font-black uppercase tracking-[0.3em] text-[10px] transform -skew-x-12 hover:bg-red-500/10 hover:text-red-500 px-8 h-12 rounded-none border border-border/50">
+                    <span class="inline-block skew-x-12">Close_Review</span>
                 </Button>
+
+                <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="flex items-center gap-4 w-full md:w-auto">
+                    <button 
+                        v-if="selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) > 0"
+                        @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) - 1].id"
+                        class="flex-1 md:flex-none px-6 py-3 bg-muted/30 text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 border border-border/50 hover:bg-primary/10 hover:text-primary transition-all"
+                    >
+                        <span class="inline-block skew-x-12">Previous_Part</span>
+                    </button>
+                    
+                    <button 
+                        v-if="selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) < selectedExamForReview.parts.length - 1"
+                        @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) + 1].id"
+                        class="flex-1 md:flex-none px-10 py-3 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary),0.5)] transition-all"
+                    >
+                        <span class="inline-block skew-x-12">Next_Part</span>
+                    </button>
+                </div>
             </DialogFooter>
         </DialogContent>
     </Dialog>
