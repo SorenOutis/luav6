@@ -422,7 +422,7 @@ onMounted(() => {
                                     <div class="space-y-4">
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap-4">
-                                                <span class="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">OP_{{ (qIndex + 1).toString().padStart(2, '0') }}</span>
+                                                <span class="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">NUMBER_{{ (qIndex + 1).toString().padStart(2, '0') }}</span>
                                                 <span class="text-[10px] font-black text-primary uppercase tracking-widest px-2 py-0.5 border border-primary/20 font-mono">{{ question.type.replace('_', ' ') }}</span>
                                             </div>
                                             <div v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))" 
@@ -456,7 +456,7 @@ onMounted(() => {
                                                 <span class="flex-1 whitespace-pre-wrap">{{ option.text }}</span>
                                                 <div v-if="parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex" 
                                                     class="ml-4 px-3 py-1.5 bg-foreground text-background text-[10px] font-black uppercase tracking-[0.2em] transform -skew-x-12">
-                                                    <span class="inline-block skew-x-12">USER_ANS</span>
+                                                    <span class="inline-block skew-x-12">YOUR_ANSWER</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -467,7 +467,7 @@ onMounted(() => {
                                                 <div class="absolute top-0 left-0 w-1.5 h-full" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500/40' : 'bg-red-500/40'"></div>
                                                 <span class="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">USER_INPUT</span>
                                                 <span class="font-black text-base tracking-widest whitespace-pre-wrap" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-500' : 'text-red-500'">
-                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'NULL_VALUE' }}
+                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'NO_ANSWER' }}
                                                 </span>
                                             </div>
                                             <div class="p-5 bg-emerald-500/5 border border-emerald-500/30 flex flex-col gap-2">
@@ -496,7 +496,7 @@ onMounted(() => {
                                                 <div class="flex items-center justify-between">
                                                     <div class="flex items-center gap-3">
                                                         <Zap class="w-4 h-4 text-primary animate-pulse" />
-                                                        <span class="text-[10px] font-black text-primary uppercase tracking-[0.3em] font-mono">AI_ANALYSIS_PROTOCOL</span>
+                                                        <span class="text-[10px] font-black text-primary uppercase tracking-[0.3em] font-mono">ESSAY ANALYSIS SCORE</span>
                                                     </div>
                                                     <div class="px-3 py-1 bg-primary text-primary-foreground font-black text-[10px] font-mono tracking-widest transform -skew-x-12">
                                                         <span class="inline-block skew-x-12">SCORE: {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score }} / {{ question.points }}</span>
