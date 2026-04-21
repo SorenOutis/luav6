@@ -59,10 +59,12 @@ const props = defineProps<{
 
 const showReviewModal = ref(false);
 const selectedExamForReview = ref<Exam | null>(null);
+const selectedPartId = ref<number | null>(null);
 const privacyMode = ref(true);
 
 const openReview = (exam: Exam) => {
     selectedExamForReview.value = exam;
+    selectedPartId.value = exam.parts.length > 0 ? exam.parts[0].id : null;
     showReviewModal.value = true;
 };
 
@@ -379,9 +381,34 @@ onMounted(() => {
                 </div>
             </DialogHeader>
 
+            <!-- Navigation Tabs for Parts -->
+            <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="px-5 md:px-10 py-4 border-b border-border/50 bg-muted/5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                <button 
+                    v-for="part in selectedExamForReview.parts" 
+                    :key="part.id"
+                    @click="selectedPartId = part.id"
+                    class="relative px-6 py-2 transition-all duration-300 transform -skew-x-12 shrink-0 group"
+                    :class="selectedPartId === part.id 
+                        ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)]' 
+                        : 'bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'"
+                >
+                    <div class="flex items-center gap-3 skew-x-12">
+                        <span class="text-[8px] font-black uppercase tracking-[0.2em] font-mono opacity-60">
+                            PART_{{ (selectedExamForReview.parts.indexOf(part) + 1).toString().padStart(2, '0') }}
+                        </span>
+                        <span class="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                            {{ part.title }}
+                        </span>
+                        <div v-if="getSubmissionForPart(selectedExamForReview, part.id)" 
+                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]">
+                        </div>
+                    </div>
+                </button>
+            </div>
+
             <div class="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar bg-card/30">
                 <div v-if="selectedExamForReview" class="space-y-16">
-                    <div v-for="part in selectedExamForReview.parts" :key="part.id" class="space-y-8">
+                    <div v-for="part in selectedExamForReview.parts" :key="part.id" v-show="selectedPartId === part.id" class="space-y-8">
                         <div class="flex items-center justify-between border-b border-border/30 pb-6">
                             <div class="flex items-center gap-5">
                                 <div class="w-2 h-8 bg-primary"></div>
@@ -428,11 +455,11 @@ onMounted(() => {
                                             <div v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))" 
                                                 class="text-emerald-500 font-black text-xs font-mono uppercase tracking-widest flex items-center gap-2">
                                                 <CheckCircle2 class="w-4 h-4" />
-                                                {{ question.type === 'essay' ? 'ASSESSED' : 'SUCCESS' }}
+                                                {{ question.type === 'essay' ? 'ASSESSED' : 'CORRECT' }}
                                             </div>
                                             <div v-else class="text-red-500 font-black text-xs font-mono uppercase tracking-widest flex items-center gap-2">
                                                 <XCircle class="w-4 h-4" />
-                                                {{ question.type === 'essay' ? 'ZERO_SCORE' : 'FAILED' }}
+                                                {{ question.type === 'essay' ? 'ZERO_SCORE' : 'WRONG' }}
                                             </div>
                                         </div>
                                         <p class="font-black italic tracking-tight text-lg text-foreground leading-snug whitespace-pre-wrap">{{ question.text }}</p>
@@ -471,7 +498,7 @@ onMounted(() => {
                                                 </span>
                                             </div>
                                             <div class="p-5 bg-emerald-500/5 border border-emerald-500/30 flex flex-col gap-2">
-                                                <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] font-mono">SYSTEM_REFERENCE</span>
+                                                <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] font-mono">CORRECT_ANSWER</span>
                                                 <span class="font-black text-base tracking-widest text-emerald-600 whitespace-pre-wrap">
                                                     {{ question.correct_answer }}
                                                 </span>
@@ -571,5 +598,13 @@ onMounted(() => {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(var(--primary), 0.2);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 </style>
