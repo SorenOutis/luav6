@@ -304,25 +304,36 @@ const archStack = [
 const initArchAnimation = () => {
     if (!archContainer.value || prefersReducedMotion.value) return;
 
+    // Set initial 3D isometric state so it doesn't look flat
+    gsap.set('.arch-stack-wrapper', {
+        rotationX: 55,
+        rotationZ: -35,
+        y: 10
+    });
+    
+    gsap.set('.arch-layer-card', {
+        z: (i) => i * 30, // Stacked closer initially
+        opacity: 0.7
+    });
+
     const tl = gsap.timeline({
         scrollTrigger: {
             trigger: archContainer.value,
-            start: 'top 60%',
+            start: 'top 80%',
             end: 'bottom 20%',
             scrub: 1,
         }
     });
 
-    // Animate the whole stack to tilt and spread
+    // Animate spreading them apart on scroll
     tl.to('.arch-stack-wrapper', {
-        rotationX: 55,
-        rotationZ: -35,
-        y: -50,
+        rotationZ: -45,
+        y: -40,
         duration: 1,
     })
-    .to(archLayers.value, {
+    .to('.arch-layer-card', {
         z: (i) => i * 80,
-        opacity: (i) => 0.4 + (i * 0.15),
+        opacity: (i) => 0.5 + (i * 0.15),
         stagger: 0,
         duration: 1,
     }, 0);
@@ -1328,15 +1339,14 @@ const techStack = [
                                  }">
                             </div>
 
-                            <!-- Layered Stack -->
-                            <div v-for="(layer, i) in archStack" :key="'layer-'+i"
-                                 ref="archLayers"
-                                 class="absolute inset-0 border border-primary/20 bg-card/40 backdrop-blur-xl rounded-2xl flex flex-col items-center justify-center p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-none"
+                            <!-- Layered Stack (Reversed for proper 3D DOM stacking) -->
+                            <div v-for="(layer, i) in [...archStack].reverse()" :key="'layer-'+i"
+                                 class="arch-layer-card absolute inset-0 border border-primary/30 bg-background/90 dark:bg-[#050507]/90 rounded-2xl flex flex-col items-center justify-center p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-colors"
                                  :style="{ transform: `translateZ(${i * 20}px)` }">
-                                <div class="absolute top-4 left-4 text-[8px] font-black tracking-widest text-primary/40">0{{ archStack.length - i }}</div>
-                                <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest mb-2">{{ layer.title }}</h4>
-                                <div class="h-px w-8 bg-primary/20 mb-2"></div>
-                                <p class="text-[10px] text-muted-foreground leading-tight px-4 opacity-60">{{ layer.desc }}</p>
+                                <div class="absolute top-4 left-4 text-[10px] font-black tracking-widest text-primary/60">0{{ i + 1 }}</div>
+                                <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-foreground">{{ layer.title }}</h4>
+                                <div class="h-px w-8 bg-primary/40 mb-2"></div>
+                                <p class="text-[10px] text-muted-foreground leading-tight px-4 opacity-80">{{ layer.desc }}</p>
                             </div>
                         </div>
                     </div>
