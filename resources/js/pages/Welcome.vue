@@ -2,10 +2,10 @@
 import { Head, Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { BookOpen, Video, ArrowRight, Github, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon, Cpu, Activity, Zap as ZapIcon, BrainCircuit, Timer, CheckCircle2, XCircle, ChevronDown, ClipboardCheck, FileText, Trophy, Sparkles, Play } from 'lucide-vue-next';
+import { BookOpen, ArrowRight, LayoutDashboard, Command, Zap, Award, Target, Sun, Moon, Cpu, Activity, Timer, CheckCircle2, XCircle, ChevronDown, ClipboardCheck, FileText, Trophy, Sparkles, Play, Terminal } from 'lucide-vue-next';
 
 gsap.registerPlugin(ScrollTrigger);
-import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
 import { useAppearance } from '@/composables/useAppearance';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import { dashboard, login, register } from '@/routes';
@@ -45,6 +45,345 @@ const techCarousel = ref<HTMLElement | null>(null);
 const ambientOrbs = ref<HTMLElement[]>([]);
 const bootOverlay = ref<HTMLElement | null>(null);
 const bootText = ref<HTMLElement[]>([]);
+
+// ─── Enhancement 1: Neural Particle Network ───────────────────────────────
+const particleCanvas = ref<HTMLCanvasElement | null>(null);
+let particleAnimFrame: number | null = null;
+
+interface Particle {
+    x: number; y: number;
+    vx: number; vy: number;
+    radius: number;
+    opacity: number;
+    mouseInfluence: number;
+}
+
+const initParticleNetwork = () => {
+    const canvas = particleCanvas.value;
+    if (!canvas || prefersReducedMotion.value) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const COUNT = isCoarsePointer.value ? 22 : 40;
+    const CONNECTION_DIST = 140;
+    const MOUSE_REPEL_DIST = 90;
+    let mouse = { x: -9999, y: -9999 };
+    let particles: Particle[] = [];
+
+    const resize = () => {
+        const parent = canvas.parentElement;
+        if (!parent) return;
+        canvas.width = parent.offsetWidth;
+        canvas.height = parent.offsetHeight;
+    };
+
+    const spawnParticles = () => {
+        particles = Array.from({ length: COUNT }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.35,
+            vy: (Math.random() - 0.5) * 0.35,
+            radius: Math.random() * 1.5 + 0.8,
+            opacity: Math.random() * 0.5 + 0.2,
+            mouseInfluence: Math.random() * 0.4 + 0.6,
+        }));
+    };
+
+    const getColor = () => {
+        const isDark = document.documentElement.classList.contains('dark');
+        return isDark ? '250,250,250' : '9,9,11';
+    };
+
+    const draw = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const color = getColor();
+
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+
+            // Mouse repel
+            const dx = p.x - mouse.x;
+            const dy = p.y - mouse.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < MOUSE_REPEL_DIST) {
+                const force = (MOUSE_REPEL_DIST - dist) / MOUSE_REPEL_DIST;
+                p.vx += (dx / dist) * force * 0.08 * p.mouseInfluence;
+                p.vy += (dy / dist) * force * 0.08 * p.mouseInfluence;
+            }
+
+            // Dampen & move
+            p.vx *= 0.96;
+            p.vy *= 0.96;
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // Wrap edges
+            if (p.x < -10) p.x = canvas.width + 10;
+            if (p.x > canvas.width + 10) p.x = -10;
+            if (p.y < -10) p.y = canvas.height + 10;
+            if (p.y > canvas.height + 10) p.y = -10;
+
+            // Draw dot
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${color},${p.opacity})`;
+            ctx.fill();
+
+            // Draw connections
+            for (let j = i + 1; j < particles.length; j++) {
+                const q = particles[j];
+                const cx = p.x - q.x;
+                const cy = p.y - q.y;
+                const cd = Math.sqrt(cx * cx + cy * cy);
+                if (cd < CONNECTION_DIST) {
+                    const alpha = (1 - cd / CONNECTION_DIST) * 0.18;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(q.x, q.y);
+                    ctx.strokeStyle = `rgba(${color},${alpha})`;
+                    ctx.lineWidth = 0.8;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        particleAnimFrame = requestAnimationFrame(draw);
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+    const onMouseLeave = () => { mouse = { x: -9999, y: -9999 }; };
+
+    resize();
+    spawnParticles();
+    draw();
+
+    canvas.addEventListener('mousemove', onMouseMove);
+    canvas.addEventListener('mouseleave', onMouseLeave);
+    window.addEventListener('resize', resize);
+};
+
+const destroyParticleNetwork = () => {
+    if (particleAnimFrame !== null) {
+        cancelAnimationFrame(particleAnimFrame);
+        particleAnimFrame = null;
+    }
+};
+
+// ─── Enhancement 2: Live System Terminal ──────────────────────────────────
+const terminalLines = ref<{ id: number; time: string; module: string; message: string; displayText: string; isTyping: boolean; type: 'info' | 'success' | 'warn' }[]>([]);
+const terminalPaused = ref(false);
+const terminalEl = ref<HTMLElement | null>(null);
+let terminalInterval: ReturnType<typeof setInterval> | null = null;
+let terminalLineId = 0;
+let isProcessingQueue = false;
+const terminalQueue: any[] = [];
+
+const terminalPool = [
+    { module: 'EVAL_ENGINE', message: 'Assessment batch processed — 12 submissions graded', type: 'success' as const },
+    { module: 'SYNC', message: 'Leaderboard XP recalculated for Section A', type: 'info' as const },
+    { module: 'AI_GRADE', message: 'Essay scoring model loaded — avg confidence 94.2%', type: 'success' as const },
+    { module: 'AUTH', message: 'Session token refreshed for 3 active nodes', type: 'info' as const },
+    { module: 'EXAM_SVC', message: 'Timed exam #2847 finalized — results dispatched', type: 'success' as const },
+    { module: 'STREAK_SVC', message: 'Daily streak bonus applied to 18 learners', type: 'success' as const },
+    { module: 'WARN', message: 'Idle session detected — initiating heartbeat probe', type: 'warn' as const },
+    { module: 'DB_POOL', message: 'Connection pool rebalanced — latency nominal', type: 'info' as const },
+    { module: 'ASSIGN_SVC', message: 'Deadline alert dispatched — 6 pending submissions', type: 'warn' as const },
+    { module: 'CACHE', message: 'Leaderboard snapshot cached — TTL 60s', type: 'info' as const },
+    { module: 'QUEUE', message: 'Job #9912 completed — 0 failures in batch', type: 'success' as const },
+    { module: 'SCORING', message: 'Rubric v3.1 applied to Section B exam submissions', type: 'success' as const },
+    { module: 'MONITOR', message: 'System integrity check passed — all services healthy', type: 'success' as const },
+    { module: 'AI_GRADE', message: 'Short-answer NLP model inference — 7ms avg latency', type: 'info' as const },
+    { module: 'USER_SVC', message: 'New learner node registered — profile initialized', type: 'success' as const },
+];
+
+const getTerminalTime = () => {
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+};
+
+const processTerminalQueue = async () => {
+    if (isProcessingQueue || terminalQueue.length === 0) return;
+    
+    // Respect pause state
+    if (terminalPaused.value) {
+        setTimeout(processTerminalQueue, 500);
+        return;
+    }
+    
+    isProcessingQueue = true;
+    const entry = terminalQueue.shift();
+    
+    const newLine = { 
+        id: terminalLineId++, 
+        time: getTerminalTime(), 
+        ...entry, 
+        displayText: '', 
+        isTyping: true 
+    };
+    
+    terminalLines.value.push(newLine);
+    
+    if (terminalLines.value.length > 7) {
+        terminalLines.value.shift();
+    }
+
+    // Human-like typing rhythm
+    const message = entry.message;
+    for (let i = 0; i < message.length; i++) {
+        // Stop if component unmounted or extreme case
+        if (terminalLineId === 0) break; 
+
+        // Update the reactive proxy instead of the raw object
+        const activeProxy = terminalLines.value.find(l => l.id === newLine.id);
+        if (activeProxy) {
+            activeProxy.displayText += message[i];
+        }
+        
+        // Human-like variable delay
+        let delay = 20 + Math.random() * 50; // Base speed 20-70ms
+        if ([' ', ',', '.', '—'].includes(message[i])) delay += 60 + Math.random() * 40; // Punctuation pause
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        // Auto-scroll as text grows
+        nextTick(() => {
+            if (terminalEl.value) {
+                terminalEl.value.scrollTop = terminalEl.value.scrollHeight;
+            }
+        });
+    }
+
+    const finalProxy = terminalLines.value.find(l => l.id === newLine.id);
+    if (finalProxy) {
+        finalProxy.isTyping = false;
+    }
+    isProcessingQueue = false;
+    
+    // Pause between lines
+    const nextLineDelay = 1000 + Math.random() * 1500;
+    setTimeout(processTerminalQueue, nextLineDelay);
+};
+
+const pushTerminalLine = () => {
+    const entry = terminalPool[Math.floor(Math.random() * terminalPool.length)];
+    terminalQueue.push(entry);
+    if (!isProcessingQueue) processTerminalQueue();
+};
+
+const startTerminal = () => {
+    // Queue up initial "boot" logs
+    terminalQueue.push(terminalPool[0]);
+    terminalQueue.push(terminalPool[1]);
+    terminalQueue.push(terminalPool[2]);
+    
+    processTerminalQueue();
+    
+    // Continuously add new logs to the queue
+    terminalInterval = setInterval(() => {
+        if (terminalQueue.length < 5) { // Don't overfill the queue
+            pushTerminalLine();
+        }
+    }, 6000);
+};
+
+// ─── Enhancement 7: 3D Architecture Stack ─────────────────────────────────
+const archContainer = ref<HTMLElement | null>(null);
+const archLayers = ref<HTMLElement[]>([]);
+
+const archStack = [
+    { title: 'Intelligence Layer', desc: 'Neural processing & AI evaluation modules.', color: 'primary' },
+    { title: 'Application Logic', desc: 'Secure exam orchestration & routing.', color: 'muted' },
+    { title: 'Data Persistence', desc: 'High-fidelity academic records & analytics.', color: 'muted' },
+    { title: 'Core Infrastructure', desc: 'Scalable cloud-native node environment.', color: 'primary' },
+];
+
+const initArchAnimation = () => {
+    if (!archContainer.value || prefersReducedMotion.value) return;
+
+    const tl = gsap.timeline({
+        scrollTrigger: {
+            trigger: archContainer.value,
+            start: 'top 60%',
+            end: 'bottom 20%',
+            scrub: 1,
+        }
+    });
+
+    // Animate the whole stack to tilt and spread
+    tl.to('.arch-stack-wrapper', {
+        rotationX: 55,
+        rotationZ: -35,
+        y: -50,
+        duration: 1,
+    })
+    .to(archLayers.value, {
+        z: (i) => i * 80,
+        opacity: (i) => 0.4 + (i * 0.15),
+        stagger: 0,
+        duration: 1,
+    }, 0);
+
+    // Float floating nodes
+    gsap.to('.arch-node', {
+        y: 'random(-20, 20)',
+        x: 'random(-20, 20)',
+        rotation: 360,
+        duration: 'random(3, 5)',
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+        stagger: {
+            each: 0.5,
+            from: 'random'
+        }
+    });
+};
+
+// ─── Enhancement 5: Text Scramble ─────────────────────────────────────────
+const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*_-+';
+
+const scrambleText = (el: HTMLElement) => {
+    const original = el.dataset.scramble || el.textContent || '';
+    const totalDuration = 600;
+    const chars = original.split('');
+    const resolved = new Array(chars.length).fill(false);
+    const start = performance.now();
+
+    const tick = (now: number) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / totalDuration, 1);
+        // Resolve characters progressively left-to-right
+        const resolveCount = Math.floor(progress * chars.length);
+        for (let i = 0; i < resolveCount; i++) resolved[i] = true;
+
+        el.textContent = chars.map((c, i) => {
+            if (c === ' ') return ' ';
+            if (resolved[i]) return c;
+            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }).join('');
+
+        if (progress < 1) requestAnimationFrame(tick);
+        else el.textContent = original;
+    };
+    requestAnimationFrame(tick);
+};
+
+const initScrambleElements = () => {
+    const els = document.querySelectorAll<HTMLElement>('[data-scramble]');
+    els.forEach(el => {
+        el.dataset.scramble = el.textContent?.trim() || '';
+        ScrollTrigger.create({
+            trigger: el,
+            start: 'top 88%',
+            once: true,
+            onEnter: () => scrambleText(el),
+        });
+    });
+};
 
 // Determine boot message based on session state
 const isLoggingOut = ref(false);
@@ -289,7 +628,7 @@ const type = () => {
         
         if (currentCharIndex.value === currentWord.length) {
             isTyping.value = false;
-            typingTimeout = setTimeout(type, 2000); // Wait at end
+            typingTimeout = setTimeout(type, 2500); // Wait at end
             return;
         }
     } else {
@@ -299,12 +638,15 @@ const type = () => {
         if (currentCharIndex.value === 0) {
             isTyping.value = true;
             currentWordIndex.value = (currentWordIndex.value + 1) % words.length;
-            typingTimeout = setTimeout(type, 500); // Wait at start
+            typingTimeout = setTimeout(type, 800); // Wait at start
             return;
         }
     }
     
-    const delay = isTyping.value ? 100 : 50;
+    // Human-like typing rhythm for the hero section
+    let delay = isTyping.value ? 40 + Math.random() * 60 : 30; // Randomize typing delay, fast delete
+    if (isTyping.value && typedText.value.endsWith(' ')) delay += 60 + Math.random() * 40; // Pause slightly on spaces
+    
     typingTimeout = setTimeout(type, delay);
 };
 
@@ -528,6 +870,18 @@ onMounted(() => {
     // Feature 8 — Start countdown timer
     updateCountdown();
     countdownInterval = setInterval(updateCountdown, 1000);
+
+    // Enhancement 1 — Neural particle network
+    nextTick(() => initParticleNetwork());
+
+    // Enhancement 2 — Live terminal
+    startTerminal();
+
+    // Enhancement 5 — Text scramble on scroll
+    nextTick(() => initScrambleElements());
+
+    // Enhancement 7 — 3D Architecture Stack
+    nextTick(() => initArchAnimation());
 });
 
 onBeforeUnmount(() => {
@@ -541,6 +895,17 @@ onBeforeUnmount(() => {
         countdownInterval = null;
     }
 
+    if (terminalInterval) {
+        clearInterval(terminalInterval);
+        terminalInterval = null;
+    }
+
+    // Reset IDs and state for cleanup
+    terminalLineId = 0;
+    isProcessingQueue = false;
+    terminalQueue.length = 0;
+
+    destroyParticleNetwork();
     removeMediaListeners();
 
     if (gsapCtx) {
@@ -643,6 +1008,18 @@ const techStack = [
         <div class="fixed inset-x-0 top-1/4 h-px bg-border/20 z-0 hidden lg:block origin-left" ref="structuralLines"></div>
         <div class="fixed inset-x-0 bottom-1/4 h-px bg-border/20 z-0 hidden lg:block origin-right" ref="structuralLines"></div>
 
+        <!-- Enhancement 4: Noise / Grain Overlay -->
+        <div class="noise-grain pointer-events-none fixed inset-0 z-[1] opacity-[0.015] dark:opacity-[0.03]"
+             aria-hidden="true">
+            <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                <filter id="grain-filter">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+                    <feColorMatrix type="saturate" values="0"/>
+                </filter>
+                <rect width="100%" height="100%" filter="url(#grain-filter)"/>
+            </svg>
+        </div>
+
         <!-- Global Header -->
         <header class="relative z-20 flex w-full items-center justify-between px-6 py-5 lg:px-16 lg:py-6 border-b border-border/10 dark:border-border/5 backdrop-blur-2xl bg-background/60 dark:bg-background/30 transition-colors duration-500">
             <!-- Header glow line -->
@@ -704,8 +1081,15 @@ const techStack = [
         <main class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-6 pt-12 pb-32 lg:px-16 lg:pt-28">
             
             <!-- Hero Monolith -->
-            <div class="max-w-6xl">
-                <div class="hero-reveal overflow-hidden mb-2 lg:mb-4">
+            <div class="max-w-6xl relative">
+                <!-- Enhancement 1: Neural Particle Network Canvas -->
+                <canvas
+                    ref="particleCanvas"
+                    class="particle-canvas pointer-events-none absolute inset-0 w-full h-full z-0 hidden md:block"
+                    aria-hidden="true"
+                />
+
+                <div class="hero-reveal overflow-hidden mb-2 lg:mb-4 relative z-10">
                     <h1 class="reveal-content text-5xl sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] sm:leading-[0.8] uppercase flex flex-col">
                         <span>Learning Systems</span>
                         <span class="bg-gradient-to-r from-muted-foreground/30 via-muted-foreground/15 to-muted-foreground/5 bg-clip-text text-transparent italic">Intelligence</span>
@@ -770,19 +1154,108 @@ const techStack = [
                 </div>
             </div>
 
+            <!-- Enhancement 2: Live System Terminal -->
+            <div class="reveal-section mt-8 lg:mt-12 relative">
+                <div
+                    class="terminal-panel relative overflow-hidden rounded-xl border border-border/30 dark:border-border/20 bg-[#0a0a0c] dark:bg-[#050507] backdrop-blur-xl"
+                    @mouseenter="terminalPaused = true"
+                    @mouseleave="terminalPaused = false"
+                >
+                    <!-- Scanline overlay inside terminal -->
+                    <div class="scanline absolute inset-0 pointer-events-none opacity-[0.04] z-10"></div>
+
+                    <!-- Terminal Header Bar -->
+                    <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/5">
+                        <div class="flex items-center gap-2">
+                            <div class="flex gap-1.5">
+                                <div class="h-2.5 w-2.5 rounded-full bg-red-500/70"></div>
+                                <div class="h-2.5 w-2.5 rounded-full bg-yellow-500/70"></div>
+                                <div class="h-2.5 w-2.5 rounded-full bg-emerald-500/70"></div>
+                            </div>
+                            <div class="flex items-center gap-2 ml-3">
+                                <Terminal class="h-3 w-3 text-emerald-400/60" />
+                                <span class="text-[9px] font-black uppercase tracking-[0.3em] text-white/30">LSI_SYSLOG — LIVE STREAM</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <Transition
+                                enter-active-class="transition-opacity duration-300"
+                                enter-from-class="opacity-0"
+                                enter-to-class="opacity-100"
+                                leave-active-class="transition-opacity duration-200"
+                                leave-from-class="opacity-100"
+                                leave-to-class="opacity-0"
+                            >
+                                <span v-if="terminalPaused" class="text-[8px] font-black uppercase tracking-widest text-yellow-400/70 mr-1">STREAM PAUSED</span>
+                            </Transition>
+                            <div class="h-1.5 w-1.5 rounded-full animate-pulse" :class="terminalPaused ? 'bg-yellow-400/70' : 'bg-emerald-400'"></div>
+                        </div>
+                    </div>
+
+                    <!-- Terminal Log Body -->
+                    <div ref="terminalEl" class="terminal-body overflow-hidden px-4 py-3 space-y-1.5 max-h-[160px] lg:max-h-[140px]">
+                        <TransitionGroup
+                            enter-active-class="transition-[opacity,transform] duration-500 ease-out"
+                            enter-from-class="opacity-0 -translate-y-2"
+                            enter-to-class="opacity-100 translate-y-0"
+                            leave-active-class="transition-[opacity,transform] duration-300 ease-in"
+                            leave-from-class="opacity-100"
+                            leave-to-class="opacity-0"
+                            tag="div"
+                            class="space-y-1.5"
+                        >
+                            <div
+                                v-for="(line, idx) in terminalLines"
+                                :key="line.id"
+                                class="flex items-start gap-2 sm:gap-3 font-mono text-[10px] sm:text-xs leading-relaxed"
+                                :class="{ 'opacity-40': idx < terminalLines.length - 5 }"
+                            >
+                                <span class="text-white/25 shrink-0 tabular-nums">{{ line.time }}</span>
+                                <span class="shrink-0 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest"
+                                    :class="{
+                                        'bg-emerald-500/15 text-emerald-400': line.type === 'success',
+                                        'bg-blue-500/15 text-blue-400': line.type === 'info',
+                                        'bg-yellow-500/15 text-yellow-400': line.type === 'warn',
+                                    }">{{ line.module }}</span>
+                                <span class="text-white/50 leading-relaxed break-all sm:break-normal">
+                                    {{ line.displayText }}
+                                    <span v-if="line.isTyping" class="inline-block w-1 h-3 bg-emerald-400/70 ml-0.5 animate-pulse"></span>
+                                </span>
+                            </div>
+                        </TransitionGroup>
+                        <!-- Blinking cursor at end -->
+                        <div class="flex items-center gap-2 font-mono text-xs">
+                            <span class="text-emerald-400/60">$</span>
+                            <span class="h-3.5 w-1.5 bg-emerald-400/70 animate-[pulse_1s_ease-in-out_infinite]"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="reveal-section mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-30px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_80px_-45px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+                <section class="pulse-panel gradient-border relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-30px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_80px_-45px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
                     <div class="scan-line pointer-events-none absolute inset-x-0 top-0 h-px"></div>
                     <!-- Inner glow accent -->
                     <div class="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl pointer-events-none"></div>
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Live Platform Pulse</p>
+                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80" data-scramble>Live Platform Pulse</p>
                             <h2 class="mt-2 text-xl sm:text-2xl font-black tracking-tight">Learning metrics in real time</h2>
                         </div>
-                        <div class="online-pill hidden sm:flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
-                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>
-                            Online
+                        <div class="flex items-center gap-3">
+                            <!-- Enhancement 6: Animated SVG Waveform -->
+                            <div class="hidden sm:flex items-end gap-[3px] h-5" aria-hidden="true">
+                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0s; --bar-min:30%; --bar-max:90%"></span>
+                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.15s; --bar-min:50%; --bar-max:100%"></span>
+                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.05s; --bar-min:20%; --bar-max:70%"></span>
+                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.25s; --bar-min:60%; --bar-max:100%"></span>
+                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.1s; --bar-min:35%; --bar-max:85%"></span>
+                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.3s; --bar-min:15%; --bar-max:60%"></span>
+                            </div>
+                            <div class="online-pill hidden sm:flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>
+                                Online
+                            </div>
                         </div>
                     </div>
 
@@ -838,6 +1311,65 @@ const techStack = [
                     <div class="h-px w-full bg-gradient-to-r from-primary/30 to-transparent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-700"></div>
                 </div>
             </div>
+
+            <!-- Enhancement 7: 3D Architecture Stack -->
+            <section ref="archContainer" class="reveal-section mt-32 lg:mt-56 py-20 relative overflow-hidden">
+                <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
+                    <!-- 3D Visual Column -->
+                    <div class="relative w-full lg:w-1/2 flex justify-center perspective-[2000px]">
+                        <div class="arch-stack-wrapper relative w-64 h-64 sm:w-80 sm:h-80 preserve-3d transition-transform duration-700">
+                            <!-- Floating Data Nodes around the stack -->
+                            <div v-for="n in 6" :key="'node-'+n" 
+                                 class="arch-node absolute w-3 h-3 bg-primary/40 rounded-full blur-[1px] z-10"
+                                 :style="{ 
+                                     left: Math.random() * 100 + '%', 
+                                     top: Math.random() * 100 + '%',
+                                     transform: `translateZ(${Math.random() * 200 - 100}px)` 
+                                 }">
+                            </div>
+
+                            <!-- Layered Stack -->
+                            <div v-for="(layer, i) in archStack" :key="'layer-'+i"
+                                 ref="archLayers"
+                                 class="absolute inset-0 border border-primary/20 bg-card/40 backdrop-blur-xl rounded-2xl flex flex-col items-center justify-center p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-none"
+                                 :style="{ transform: `translateZ(${i * 20}px)` }">
+                                <div class="absolute top-4 left-4 text-[8px] font-black tracking-widest text-primary/40">0{{ archStack.length - i }}</div>
+                                <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest mb-2">{{ layer.title }}</h4>
+                                <div class="h-px w-8 bg-primary/20 mb-2"></div>
+                                <p class="text-[10px] text-muted-foreground leading-tight px-4 opacity-60">{{ layer.desc }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Text Content Column -->
+                    <div class="w-full lg:w-1/2 space-y-8 lg:space-y-12">
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-4">
+                                <div class="h-px w-12 bg-primary"></div>
+                                <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em] text-primary" data-scramble>System Schematic</span>
+                            </div>
+                            <h2 class="text-3xl sm:text-5xl font-black uppercase tracking-tight leading-none">Multidimensional <br /> Architecture</h2>
+                        </div>
+                        
+                        <div class="grid gap-6">
+                            <div v-for="(layer, i) in archStack" :key="'text-'+i" class="flex gap-6 group">
+                                <span class="text-xl font-black text-primary/20 group-hover:text-primary/60 transition-colors tabular-nums">0{{ archStack.length - i }}</span>
+                                <div>
+                                    <h5 class="text-sm font-black uppercase tracking-widest mb-1">{{ layer.title }}</h5>
+                                    <p class="text-xs text-muted-foreground leading-relaxed">{{ layer.desc }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-8">
+                            <Link :href="register()" class="group inline-flex items-center gap-6 text-[10px] font-black uppercase tracking-[0.4em] border border-border px-8 py-5 hover:bg-foreground hover:text-background transition-all">
+                                Inspect Ecosystem
+                                <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <!-- Features Array (Feature 10 — Expandable) -->
             <div class="mt-12 lg:mt-24 grid w-full lg:grid-cols-3 gap-0 border-b border-border/20 dark:border-border/10">
@@ -975,10 +1507,10 @@ const techStack = [
             <div class="reveal-section mt-24 lg:mt-40 relative">
                 <div class="flex items-center gap-4 mb-8 sm:mb-10">
                     <div class="h-px w-12 bg-primary"></div>
-                    <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]">Try a Sample Assessment</h2>
+                    <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]" data-scramble>Try a Sample Assessment</h2>
                 </div>
 
-                <div class="relative overflow-hidden rounded-2xl border border-border/40 dark:border-border/20 bg-card/80 dark:bg-background/70 backdrop-blur-xl shadow-lg dark:shadow-none">
+                <div class="relative overflow-hidden rounded-2xl border border-border/40 dark:border-border/20 bg-card/80 dark:bg-background/70 backdrop-blur-xl shadow-lg dark:shadow-none gradient-border">
                     <!-- Corner brackets -->
                     <div class="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-l-2 border-foreground/20 dark:border-foreground/10 pointer-events-none z-10"></div>
                     <div class="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-r-2 border-foreground/20 dark:border-foreground/10 pointer-events-none z-10"></div>
@@ -1124,7 +1656,7 @@ const techStack = [
             <div class="reveal-section mt-24 lg:mt-48 overflow-hidden relative py-12 border-y border-border/5 -mx-6 sm:mx-0">
                 <div class="flex items-center gap-4 mb-12 px-6 sm:px-0">
                     <div class="h-px w-12 bg-primary"></div>
-                    <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]">Core Technology Stack</h2>
+                    <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]" data-scramble>Core Technology Stack</h2>
                 </div>
                 
                 <div class="flex whitespace-nowrap" ref="techCarousel">
@@ -1243,6 +1775,106 @@ const techStack = [
     transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Enhancement 1: Particle Canvas
+──────────────────────────────────────────────────────────────────────────*/
+.particle-canvas {
+    /* Fills the hero wrapper exactly; pointer-events none so it never blocks clicks */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Enhancement 3: Animated Gradient Border
+   Uses @property so the rotating angle is CSS-animatable.
+──────────────────────────────────────────────────────────────────────────*/
+@property --gb-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+@keyframes rotate-gb {
+    to { --gb-angle: 360deg; }
+}
+
+.gradient-border {
+    position: relative;
+    isolation: isolate;
+}
+
+.gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    z-index: -1;
+    pointer-events: none;
+    background: conic-gradient(
+        from var(--gb-angle),
+        transparent 0%,
+        color-mix(in srgb, var(--color-primary) 35%, transparent) 20%,
+        transparent 40%,
+        transparent 60%,
+        color-mix(in srgb, var(--color-primary) 20%, transparent) 80%,
+        transparent 100%
+    );
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: rotate-gb 6s linear infinite;
+    opacity: 0.6;
+}
+
+.gradient-border:hover::before {
+    opacity: 1;
+    animation-duration: 3s;
+}
+
+/* Dark mode: slightly brighter border */
+.dark .gradient-border::before {
+    opacity: 0.8;
+}
+
+.dark .gradient-border:hover::before {
+    opacity: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Enhancement 6: Animated Waveform Bars
+──────────────────────────────────────────────────────────────────────────*/
+.waveform-bar {
+    display: inline-block;
+    height: 100%;
+    animation: waveform-pulse 1.2s ease-in-out infinite alternate;
+    animation-delay: var(--bar-delay, 0s);
+    transform-origin: bottom;
+    transform: scaleY(var(--bar-min, 30%));
+}
+
+@keyframes waveform-pulse {
+    from { transform: scaleY(var(--bar-min, 30%)); }
+    to   { transform: scaleY(var(--bar-max, 90%)); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Noise Grain: visible in both themes, slightly stronger in dark
+──────────────────────────────────────────────────────────────────────────*/
+.noise-grain {
+    mix-blend-mode: overlay;
+}
+
+/* Terminal panel: always dark bg, never inherits theme background */
+.terminal-panel {
+    font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 1024px) {
     .ambient-orb {
         opacity: 0.22;
@@ -1257,6 +1889,37 @@ const techStack = [
     .fixed {
         transition-duration: 0.35s;
     }
+
+    /* On mobile, reduce gradient border intensity */
+    .gradient-border::before {
+        opacity: 0.3;
+    }
+
+    /* Disable particle canvas on mobile (hidden via tailwind hidden md:block already) */
+    .particle-canvas {
+        display: none;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Enhancement 7: 3D Utilities
+──────────────────────────────────────────────────────────────────────────*/
+.perspective-\[2000px\] {
+    perspective: 2000px;
+}
+
+.preserve-3d {
+    transform-style: preserve-3d;
+}
+
+.arch-stack-wrapper {
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.arch-node {
+    pointer-events: none;
+    will-change: transform;
 }
 
 /* System Variable Integration */
