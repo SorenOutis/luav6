@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import { X, Sparkles, Zap, Award, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getInitials } from '@/composables/useInitials';
 
 interface Announcement {
     id: number;
@@ -21,6 +23,7 @@ interface UserStats {
 
 interface Props {
     userName: string;
+    userAvatar?: string;
     userStats: UserStats;
     announcements: Announcement[];
     totalXPProgress: number;
@@ -95,58 +98,84 @@ const xpPercentage = computed(() => {
             <!-- Decorative Elements -->
             <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[100px] transition-transform duration-1000 group-hover:scale-150"></div>
             
-            <div class="relative flex flex-col md:flex-row md:items-center justify-between gap-8">
-                <div class="space-y-4">
-                    <div class="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-muted-foreground/60">
-                        <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                            <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Online
-                        </div>
-                        <span class="w-1 h-1 rounded-full bg-border"></span>
-                        <div class="flex items-center gap-2 group/sync">
-                            <span>Sync: {{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
-                            <button @click="emit('refresh')" :disabled="isRefreshing" class="hover:text-primary transition-colors">
-                                <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isRefreshing }" />
-                            </button>
+            <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <!-- Left side: Profile Picture + Greetings -->
+                <div class="flex items-center gap-5">
+                    <!-- Profile Picture -->
+                    <div class="shrink-0">
+                        <div class="relative group/avatar cursor-pointer">
+                            <div class="absolute -inset-1 bg-gradient-to-tr from-primary/40 to-primary/0 rounded-full blur opacity-0 group-hover/avatar:opacity-100 transition duration-500"></div>
+                            <Avatar class="size-16 sm:size-20 lg:size-24 border-2 border-primary/20 bg-card/60 relative overflow-hidden rounded-full transition-all duration-500 group-hover/avatar:scale-105 group-hover/avatar:border-primary/50 shadow-xl">
+                                <AvatarImage
+                                    v-if="userAvatar"
+                                    :src="userAvatar"
+                                    :alt="userName"
+                                    class="object-cover"
+                                />
+                                <AvatarFallback
+                                    class="bg-primary/10 font-black text-primary text-lg sm:text-xl lg:text-2xl"
+                                >
+                                    {{ getInitials(userName) }}
+                                </AvatarFallback>
+                            </Avatar>
                         </div>
                     </div>
 
-                    <div class="space-y-1">
-                        <h1 class="text-3xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
-                            {{ timeBasedGreeting }}, {{ userName }}
-                        </h1>
-                        <p class="text-muted-foreground text-xs sm:text-sm font-medium max-w-sm leading-relaxed opacity-80">
-                            Your learning engine is at <span class="text-foreground font-black">peak performance</span>.
-                        </p>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-muted-foreground/60">
+                            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Online
+                            </div>
+                            <span class="w-1 h-1 rounded-full bg-border"></span>
+                            <div class="flex items-center gap-2 group/sync">
+                                <span>Sync: {{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
+                                <button @click="emit('refresh')" :disabled="isRefreshing" class="hover:text-primary transition-colors">
+                                    <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isRefreshing }" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1">
+                            <h1 class="text-3xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
+                                {{ timeBasedGreeting }}, {{ userName }}
+                            </h1>
+                            <p class="text-muted-foreground text-xs sm:text-sm font-medium max-w-sm leading-relaxed opacity-80">
+                                Your learning engine is at <span class="text-foreground font-black">peak performance</span>.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Level & Progress Visual -->
-                <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 bg-primary/5 p-5 sm:p-6 rounded-[2rem] border border-primary/10 backdrop-blur-sm relative group/progress-box w-full lg:w-auto">
-                    <div class="relative shrink-0 p-1 group/level">
-                        <!-- Core Level Chip -->
-                        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/20 bg-card/60 flex flex-col items-center justify-center shadow-lg relative z-10 backdrop-blur-2xl transition-all duration-500 group-hover:scale-105">
-                            <span class="text-[8px] uppercase font-black tracking-[0.2em] text-primary/60 mb-0.5">Level</span>
-                            <span class="text-xl sm:text-2xl font-black font-mono tracking-tighter leading-none premium-gradient-text">{{ animatedLevel }}</span>
-                            <Award class="w-3 h-3 text-primary mt-1 opacity-60" />
-                        </div>
-                    </div>
+                <div class="flex items-center gap-4 sm:gap-6 w-full lg:w-auto lg:ml-auto">
 
-                    <div class="flex-1 w-full sm:w-64 lg:w-72 space-y-3 relative z-10">
-                        <div class="flex justify-between items-end">
-                            <div class="space-y-0.5">
-                                <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
-                                <p class="text-xs font-black tracking-tight">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ animatedMaxXP.toLocaleString() }} XP</span></p>
-                            </div>
-                            <div class="flex items-center gap-1 text-xs font-black text-primary">
-                                <Zap class="w-3 h-3 fill-current" />
-                                <span>{{ Math.round(xpPercentage) }}%</span>
+                    <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 bg-primary/5 p-5 sm:p-6 rounded-[2rem] border border-primary/10 backdrop-blur-sm relative group/progress-box flex-1 lg:flex-none">
+                        <div class="relative shrink-0 p-1 group/level">
+                            <!-- Core Level Chip -->
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/20 bg-card/60 flex flex-col items-center justify-center shadow-lg relative z-10 backdrop-blur-2xl transition-all duration-500 group-hover:scale-105">
+                                <span class="text-[8px] uppercase font-black tracking-[0.2em] text-primary/60 mb-0.5">Level</span>
+                                <span class="text-xl sm:text-2xl font-black font-mono tracking-tighter leading-none premium-gradient-text">{{ animatedLevel }}</span>
+                                <Award class="w-3 h-3 text-primary mt-1 opacity-60" />
                             </div>
                         </div>
-                        
-                        <div class="relative h-2 w-full bg-muted/40 rounded-full overflow-hidden border border-border/10">
-                            <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.3)]" 
-                                :style="{ width: `${xpPercentage}%` }">
+
+                        <div class="flex-1 w-full sm:w-64 lg:w-72 space-y-3 relative z-10">
+                            <div class="flex justify-between items-end">
+                                <div class="space-y-0.5">
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
+                                    <p class="text-xs font-black tracking-tight">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ animatedMaxXP.toLocaleString() }} XP</span></p>
+                                </div>
+                                <div class="flex items-center gap-1 text-xs font-black text-primary">
+                                    <Zap class="w-3 h-3 fill-current" />
+                                    <span>{{ Math.round(xpPercentage) }}%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="relative h-2 w-full bg-muted/40 rounded-full overflow-hidden border border-border/10">
+                                <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.3)]" 
+                                    :style="{ width: `${xpPercentage}%` }">
+                                </div>
                             </div>
                         </div>
                     </div>

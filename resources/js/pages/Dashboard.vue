@@ -69,6 +69,7 @@ const manualRefresh = () => {
 
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
+const userAvatar = computed(() => page.props.auth.user?.avatar);
 const isBanned = computed(() => Boolean(page.props.auth.user?.is_banned));
 const banReason = computed(() => page.props.auth.user?.ban_reason || '');
 const bannedAt = computed(() => {
@@ -378,6 +379,7 @@ const handleLogout = () => {
                 <DashboardHero 
                     class="animate-section dashboard-hero"
                     :user-name="userName"
+                    :user-avatar="userAvatar"
                     :user-stats="userStats"
                     :announcements="announcements"
                     :total-x-p-progress="totalXPProgress"
