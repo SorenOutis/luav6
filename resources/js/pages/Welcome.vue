@@ -648,6 +648,26 @@ const resetFeatureMouse = (e: MouseEvent) => {
     });
 };
 
+const handleMetricHover = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    gsap.to(card, {
+        y: -12,
+        scale: 1.02,
+        duration: 0.4,
+        ease: 'power2.out'
+    });
+};
+
+const resetMetricHover = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    gsap.to(card, {
+        y: 0,
+        scale: 1,
+        duration: 0.6,
+        ease: 'power3.out'
+    });
+};
+
 // Typing Animation Logic
 const words = ['Peak Performance.', 'Operational Elite.', 'Architectural Might.', 'System Synergy.', 'High Precision.'];
 const currentWordIndex = ref(0);
@@ -817,16 +837,46 @@ onMounted(() => {
 
         // --- NEW: Scroll-Triggered Animations ---
         
-        // Metrics Ticker
-        gsap.to('.reveal-section.grid-cols-2', {
+        // Revamped Metrics Ticker Entrance
+        gsap.to('.metric-card', {
             scrollTrigger: {
-                trigger: '.reveal-section.grid-cols-2',
+                trigger: '.metric-card',
                 start: 'top 85%',
             },
             y: 0,
             opacity: 1,
+            scale: 1,
+            stagger: 0.1,
             duration: 1.2,
-            ease: 'power3.out'
+            ease: 'expo.out'
+        });
+
+        // Continuous Scanning Animation for Metrics
+        gsap.to('.metric-scan', {
+            y: 180, // Card height approx
+            opacity: 1,
+            duration: 3,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+            stagger: {
+                each: 0.8,
+                from: 'random'
+            }
+        });
+
+        // Micro-bar Pulse Animation
+        gsap.to('.metric-bar', {
+            scaleY: 1.5,
+            opacity: 0.8,
+            duration: (i) => 1 + (i % 5) * 0.2,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+            stagger: {
+                each: 0.1,
+                from: 'start'
+            }
         });
 
         // Features Grid
@@ -1067,10 +1117,10 @@ const coreFeatures = [
 ];
 
 const systemStats = computed(() => [
-    { label: 'Active Users', value: animUsers.value, unit: 'LEARNERS', icon: Cpu },
-    { label: 'Assessments', value: animExams.value, unit: 'READY', icon: ClipboardCheck },
-    { label: 'Assignments', value: animAssignments.value, unit: 'ACTIVE', icon: FileText },
-    { label: 'Submissions', value: animSubmissions.value, unit: 'TOTAL', icon: Trophy },
+    { label: 'Active Users', value: animUsers.value, unit: 'LEARNERS', icon: Cpu, status: 'NOMINAL', color: 'primary' },
+    { label: 'Assessments', value: animExams.value, unit: 'READY', icon: ClipboardCheck, status: 'STABLE', color: 'emerald' },
+    { label: 'Assignments', value: animAssignments.value, unit: 'ACTIVE', icon: FileText, status: 'SYNCED', color: 'primary' },
+    { label: 'Submissions', value: animSubmissions.value, unit: 'TOTAL', icon: Trophy, status: 'UPDATING', color: 'primary' },
 ]);
 
 const techStack = [
@@ -1478,20 +1528,44 @@ const featureBars = computed(() => {
                 </section>
             </div>
 
-            <!-- System Metrics Ticker -->
-            <div class="reveal-section mt-24 lg:mt-40 grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-20 border-y border-border/20 dark:border-border/10 py-8 lg:py-14">
-                <div v-for="stat in systemStats" :key="stat.label" class="flex flex-col gap-3 group hover:-translate-y-1 transition-transform duration-500">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/5 dark:bg-primary/10 group-hover:bg-primary/10 dark:group-hover:bg-primary/20 transition-colors">
-                            <component :is="stat.icon" class="h-3.5 w-3.5 text-primary opacity-60 group-hover:opacity-100 transition-opacity" />
+            <!-- System Metrics Ticker (Revamped) -->
+            <div class="reveal-section mt-24 lg:mt-40 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-10 py-10 lg:py-16 relative">
+                <div 
+                    v-for="(stat, i) in systemStats" 
+                    :key="stat.label" 
+                    @mouseenter="handleMetricHover($event)"
+                    @mouseleave="resetMetricHover($event)"
+                    class="metric-card group relative flex flex-col p-6 lg:p-8 rounded-xl border border-border/20 bg-card/40 backdrop-blur-md overflow-hidden"
+                >
+                    <!-- Corner Brackets (Visual flair) -->
+                    <div class="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary/40"></div>
+                    <div class="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary/40"></div>
+
+                    <!-- Scanning line (GSAP animated) -->
+                    <div class="metric-scan absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 z-10"></div>
+
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/5 border border-primary/10 group-hover:bg-primary/10 transition-colors">
+                            <component :is="stat.icon" class="h-5 w-5 text-primary opacity-70 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">{{ stat.label }}</span>
+                        <span class="text-[8px] font-black tracking-widest text-primary/40 tabular-nums font-mono">{{ stat.status }}</span>
                     </div>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-2xl lg:text-4xl font-black tracking-tighter tabular-nums">{{ stat.value }}</span>
-                        <span class="text-[10px] lg:text-xs font-bold text-primary tracking-widest">{{ stat.unit }}</span>
+
+                    <div class="space-y-1">
+                        <p class="text-[9px] font-black uppercase tracking-[0.25em] text-muted-foreground/60">{{ stat.label }}</p>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl lg:text-5xl font-black tracking-tighter tabular-nums leading-none">{{ stat.value }}</span>
+                            <span class="text-[9px] lg:text-[10px] font-black text-primary/80 tracking-widest uppercase">{{ stat.unit }}</span>
+                        </div>
                     </div>
-                    <div class="h-px w-full bg-gradient-to-r from-primary/30 to-transparent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-700"></div>
+
+                    <!-- Micro-chart placeholder (Small bars) -->
+                    <div class="mt-6 flex items-end gap-1 h-4">
+                        <div v-for="j in 5" :key="j" 
+                             class="flex-1 bg-primary/20 rounded-t-sm metric-bar origin-bottom"
+                             :style="{ height: (30 + (Math.sin(i * 2 + j) + 1) * 35) + '%' }">
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1850,10 +1924,10 @@ const featureBars = computed(() => {
                     <h2 class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em]" data-scramble>Core Technology Stack</h2>
                 </div>
                 
-                <div class="flex whitespace-nowrap" ref="techCarousel">
+                <div class="flex flex-nowrap" ref="techCarousel">
                     <!-- Duplicate items for seamless loop -->
-                    <div v-for="n in 2" :key="n" class="flex gap-12 lg:gap-24 pr-12 lg:pr-24 pl-6 sm:pl-0">
-                        <div v-for="tech in techStack" :key="tech.name" class="flex items-center gap-6 group">
+                    <div v-for="n in 2" :key="n" class="flex flex-nowrap">
+                        <div v-for="tech in techStack" :key="tech.name + n" class="flex items-center gap-6 group pr-12 lg:pr-24">
                             <div class="flex h-12 w-12 lg:h-16 lg:w-16 items-center justify-center border border-border/10 bg-muted/5 group-hover:border-primary/30 transition-colors">
                                 <component :is="tech.icon" class="h-6 w-6 lg:h-8 lg:w-8 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
