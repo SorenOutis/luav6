@@ -82,8 +82,8 @@ const initParticleNetwork = () => {
         particles = Array.from({ length: COUNT }, () => ({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            vx: (Math.random() - 0.5) * 0.35,
-            vy: (Math.random() - 0.5) * 0.35,
+            vx: (Math.random() - 0.5) * 1.2, // Increased initial velocity
+            vy: (Math.random() - 0.5) * 1.2,
             radius: Math.random() * 1.5 + 0.8,
             opacity: Math.random() * 0.5 + 0.2,
             mouseInfluence: Math.random() * 0.4 + 0.6,
@@ -108,13 +108,26 @@ const initParticleNetwork = () => {
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < MOUSE_REPEL_DIST) {
                 const force = (MOUSE_REPEL_DIST - dist) / MOUSE_REPEL_DIST;
-                p.vx += (dx / dist) * force * 0.08 * p.mouseInfluence;
-                p.vy += (dy / dist) * force * 0.08 * p.mouseInfluence;
+                p.vx += (dx / dist) * force * 0.18 * p.mouseInfluence;
+                p.vy += (dy / dist) * force * 0.18 * p.mouseInfluence;
             }
 
-            // Dampen & move
-            p.vx *= 0.96;
-            p.vy *= 0.96;
+            // More organic motion: Slight random drift (increased for noticeability)
+            p.vx += (Math.random() - 0.5) * 0.04;
+            p.vy += (Math.random() - 0.5) * 0.04;
+
+            // Dampen slightly but keep a minimum speed
+            p.vx *= 0.985; // Slightly less friction
+            p.vy *= 0.985;
+            
+            // Limit max speed (increased)
+            const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+            const maxSpeed = 2.2;
+            if (speed > maxSpeed) {
+                p.vx = (p.vx / speed) * maxSpeed;
+                p.vy = (p.vy / speed) * maxSpeed;
+            }
+
             p.x += p.vx;
             p.y += p.vy;
 
@@ -338,18 +351,46 @@ const initArchAnimation = () => {
         duration: 1,
     }, 0);
 
-    // Float floating nodes
-    gsap.to('.arch-node', {
-        y: 'random(-20, 20)',
-        x: 'random(-20, 20)',
-        rotation: 360,
-        duration: 'random(3, 5)',
+    // Continuous idle floating for the whole stack (using the idle wrapper to avoid ScrollTrigger conflict)
+    gsap.to('.arch-stack-idle', {
+        y: '+=25',
+        x: '+=12',
+        rotationZ: '+=3',
+        duration: 4.5,
         repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut'
+    });
+
+    // Individual card "dancing" animation - now targeting the inner content to avoid ScrollTrigger conflicts
+    gsap.to('.arch-card-content', {
+        y: () => (Math.random() - 0.5) * 20,
+        x: () => (Math.random() - 0.5) * 10,
+        rotationZ: () => (Math.random() - 0.5) * 2,
+        duration: () => 3 + Math.random() * 2,
+        repeat: -1,
+        repeatRefresh: true,
         yoyo: true,
         ease: 'sine.inOut',
         stagger: {
-            each: 0.5,
+            each: 0.4,
             from: 'random'
+        }
+    });
+
+    // Float floating nodes - more dynamic
+    gsap.to('.arch-node', {
+        y: () => (Math.random() - 0.5) * 60,
+        x: () => (Math.random() - 0.5) * 60,
+        rotation: 360,
+        duration: () => 2.5 + Math.random() * 3,
+        repeat: -1,
+        repeatRefresh: true,
+        yoyo: true,
+        ease: 'sine.inOut',
+        stagger: {
+            each: 0.4,
+            from: 'center'
         }
     });
 };
@@ -1328,25 +1369,29 @@ const techStack = [
                 <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
                     <!-- 3D Visual Column -->
                     <div class="relative w-full lg:w-1/2 flex justify-center perspective-[2000px]">
-                        <div class="arch-stack-wrapper relative w-64 h-64 sm:w-80 sm:h-80 preserve-3d transition-transform duration-700">
-                            <!-- Floating Data Nodes around the stack -->
-                            <div v-for="n in 6" :key="'node-'+n" 
-                                 class="arch-node absolute w-3 h-3 bg-primary/40 rounded-full blur-[1px] z-10"
-                                 :style="{ 
-                                     left: Math.random() * 100 + '%', 
-                                     top: Math.random() * 100 + '%',
-                                     transform: `translateZ(${Math.random() * 200 - 100}px)` 
-                                 }">
-                            </div>
+                        <div class="arch-stack-wrapper relative w-64 h-64 sm:w-80 sm:h-80 preserve-3d">
+                            <div class="arch-stack-idle relative w-full h-full preserve-3d">
+                                <!-- Floating Data Nodes around the stack -->
+                                <div v-for="n in 6" :key="'node-'+n" 
+                                     class="arch-node absolute w-3 h-3 bg-primary/40 rounded-full blur-[1px] z-10"
+                                     :style="{ 
+                                         left: Math.random() * 100 + '%', 
+                                         top: Math.random() * 100 + '%',
+                                         transform: `translateZ(${Math.random() * 200 - 100}px)` 
+                                     }">
+                                </div>
 
-                            <!-- Layered Stack (Reversed for proper 3D DOM stacking) -->
-                            <div v-for="(layer, i) in [...archStack].reverse()" :key="'layer-'+i"
-                                 class="arch-layer-card absolute inset-0 border border-primary/30 bg-background/90 dark:bg-[#050507]/90 rounded-2xl flex flex-col items-center justify-center p-6 text-center shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-colors"
-                                 :style="{ transform: `translateZ(${i * 20}px)` }">
-                                <div class="absolute top-4 left-4 text-[10px] font-black tracking-widest text-primary/60">0{{ i + 1 }}</div>
-                                <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-foreground">{{ layer.title }}</h4>
-                                <div class="h-px w-8 bg-primary/40 mb-2"></div>
-                                <p class="text-[10px] text-muted-foreground leading-tight px-4 opacity-80">{{ layer.desc }}</p>
+                                <!-- Layered Stack (Reversed for proper 3D DOM stacking) -->
+                                <div v-for="(layer, i) in [...archStack].reverse()" :key="'layer-'+i"
+                                     class="arch-layer-card absolute inset-0 border border-primary/30 bg-background/90 dark:bg-[#050507]/90 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-colors overflow-hidden">
+                                    <!-- Inner content wrapper for independent "dancing" animation -->
+                                    <div class="arch-card-content w-full h-full flex flex-col items-center justify-center p-6 text-center">
+                                        <div class="absolute top-4 left-4 text-[10px] font-black tracking-widest text-primary/60">0{{ i + 1 }}</div>
+                                        <h4 class="text-xs sm:text-sm font-black uppercase tracking-widest mb-2 text-foreground">{{ layer.title }}</h4>
+                                        <div class="h-px w-8 bg-primary/40 mb-2"></div>
+                                        <p class="text-[10px] text-muted-foreground leading-tight px-4 opacity-80">{{ layer.desc }}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1922,7 +1967,7 @@ const techStack = [
     transform-style: preserve-3d;
 }
 
-.arch-stack-wrapper {
+.arch-stack-wrapper, .arch-stack-idle {
     transform-style: preserve-3d;
     will-change: transform;
 }
