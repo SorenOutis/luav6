@@ -377,22 +377,6 @@ const initArchAnimation = () => {
             from: 'random'
         }
     });
-
-    // Float floating nodes - more dynamic
-    gsap.to('.arch-node', {
-        y: () => (Math.random() - 0.5) * 60,
-        x: () => (Math.random() - 0.5) * 60,
-        rotation: 360,
-        duration: () => 2.5 + Math.random() * 3,
-        repeat: -1,
-        repeatRefresh: true,
-        yoyo: true,
-        ease: 'sine.inOut',
-        stagger: {
-            each: 0.4,
-            from: 'center'
-        }
-    });
 };
 
 // ─── Enhancement 5: Text Scramble ─────────────────────────────────────────
@@ -1371,16 +1355,6 @@ const techStack = [
                     <div class="relative w-full lg:w-1/2 flex justify-center perspective-[2000px]">
                         <div class="arch-stack-wrapper relative w-64 h-64 sm:w-80 sm:h-80 preserve-3d">
                             <div class="arch-stack-idle relative w-full h-full preserve-3d">
-                                <!-- Floating Data Nodes around the stack -->
-                                <div v-for="n in 6" :key="'node-'+n" 
-                                     class="arch-node absolute w-3 h-3 bg-primary/40 rounded-full blur-[1px] z-10"
-                                     :style="{ 
-                                         left: Math.random() * 100 + '%', 
-                                         top: Math.random() * 100 + '%',
-                                         transform: `translateZ(${Math.random() * 200 - 100}px)` 
-                                     }">
-                                </div>
-
                                 <!-- Layered Stack (Reversed for proper 3D DOM stacking) -->
                                 <div v-for="(layer, i) in [...archStack].reverse()" :key="'layer-'+i"
                                      class="arch-layer-card absolute inset-0 border border-primary/30 bg-background/90 dark:bg-[#050507]/90 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_0_30px_rgba(0,0,0,0.5)] transition-colors overflow-hidden">
@@ -1969,11 +1943,6 @@ const techStack = [
 
 .arch-stack-wrapper, .arch-stack-idle {
     transform-style: preserve-3d;
-    will-change: transform;
-}
-
-.arch-node {
-    pointer-events: none;
     will-change: transform;
 }
 
