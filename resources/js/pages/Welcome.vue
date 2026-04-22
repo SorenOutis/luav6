@@ -903,6 +903,55 @@ onMounted(() => {
         requestAnimationFrame(() => tl.play(0));
     }, mainContainer);
 
+    // Fragment Bars Animation (Separated for robustness)
+    nextTick(() => {
+        gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
+            gsap.fromTo(bar, {
+                scaleY: 0.7,
+                opacity: 0.5,
+                transformOrigin: 'bottom'
+            }, {
+                scaleY: 1,
+                opacity: 1,
+                duration: 2 + Math.random() * 2,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut',
+                delay: (i % 24) * 0.05
+            });
+        });
+
+        gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
+            gsap.fromTo(bit, {
+                opacity: 0.2
+            }, {
+                opacity: 1,
+                duration: 1 + Math.random() * 2,
+                repeat: -1,
+                yoyo: true,
+                ease: 'power1.inOut',
+                delay: (i % 24) * 0.1
+            });
+        });
+
+        // Enhancement: Live Pulse Waveform Animation
+        gsap.utils.toArray('.pulse-waveform-bar').forEach((bar: any, i: number) => {
+            gsap.fromTo(bar, {
+                scaleY: 0.4,
+                opacity: 0.3,
+                transformOrigin: 'bottom'
+            }, {
+                scaleY: 1.2,
+                opacity: 1,
+                duration: 0.8 + Math.random() * 0.7,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut',
+                delay: i * 0.1
+            });
+        });
+    });
+
     // Feature 8 — Start countdown timer
     updateCountdown();
     countdownInterval = setInterval(updateCountdown, 1000);
@@ -912,6 +961,9 @@ onMounted(() => {
 
     // Enhancement 2 — Live terminal
     startTerminal();
+
+    // Enhancement: Live Signal Jitter
+    signalInterval = setInterval(updateLiveSignals, 3000);
 
     // Enhancement 5 — Text scramble on scroll
     nextTick(() => initScrambleElements());
@@ -936,6 +988,11 @@ onBeforeUnmount(() => {
         terminalInterval = null;
     }
 
+    if (signalInterval) {
+        clearInterval(signalInterval);
+        signalInterval = null;
+    }
+
     // Reset IDs and state for cleanup
     terminalLineId = 0;
     isProcessingQueue = false;
@@ -950,11 +1007,28 @@ onBeforeUnmount(() => {
     }
 });
 
-const liveSignals = [
-    { label: 'AI Evaluation Speed', value: 92, valueLabel: 'Optimal' },
-    { label: 'System Integrity', value: 98, valueLabel: '98%' },
-    { label: 'Active Assessments', value: 100, valueLabel: 'Live' },
-];
+const liveSignals = ref([
+    { label: 'AI Evaluation Speed', value: 92, targetValue: 92, valueLabel: 'Optimal', color: 'primary' },
+    { label: 'System Integrity', value: 98, targetValue: 98, valueLabel: '98%', color: 'emerald' },
+    { label: 'Active Assessments', value: 100, targetValue: 100, valueLabel: 'Live', color: 'primary' },
+]);
+
+// Jitter live signals for interactivity
+const updateLiveSignals = () => {
+    liveSignals.value.forEach(signal => {
+        // Randomly jitter the value slightly around its target
+        const jitter = (Math.random() - 0.5) * 4;
+        const newValue = Math.max(85, Math.min(100, signal.targetValue + jitter));
+        
+        gsap.to(signal, {
+            value: newValue,
+            duration: 1.5,
+            ease: 'sine.inOut'
+        });
+    });
+};
+
+let signalInterval: ReturnType<typeof setInterval> | null = null;
 
 const quickLinks = [
     { label: 'Exam Directory', href: '#', icon: BookOpen },
@@ -972,7 +1046,6 @@ const coreFeatures = [
     {
         title: 'Assessment Engine',
         description: 'Smart testing infrastructure with real-time analytics and AI-powered evaluation modules.',
-        icon: Target,
         code: 'MOD_EXM_01',
         details: 'Take timed exams with multiple question types: multiple choice, true/false, identification, and AI-graded essays. Get instant feedback and track your performance across seasons.',
         stats: [{ label: 'Question Types', value: '4' }, { label: 'AI Grading', value: 'Active' }, { label: 'Auto-Score', value: 'Real-time' }]
@@ -980,7 +1053,6 @@ const coreFeatures = [
     {
         title: 'Skill Acquisition',
         description: 'Structured assignment workflows designed to track progressive learning and mastery across subjects.',
-        icon: Zap,
         code: 'MOD_ASN_02',
         details: 'Submit assignments with file uploads, track deadlines, and receive grades from your instructors. Stay on top of your academic goals with progress tracking.',
         stats: [{ label: 'File Upload', value: 'Secure' }, { label: 'Deadline Alerts', value: 'Live' }, { label: 'Grade Tracking', value: 'Instant' }]
@@ -988,7 +1060,6 @@ const coreFeatures = [
     {
         title: 'Gamified Learning',
         description: 'Engaging leaderboard system driven by XP, daily streaks, and competitive academic performance.',
-        icon: Award,
         code: 'MOD_LDR_03',
         details: 'Compete with peers on the section-based leaderboard. Earn XP from exams, assignments, and daily streaks. Rise through the ranks and dominate your section.',
         stats: [{ label: 'XP System', value: 'Active' }, { label: 'Streak Bonus', value: 'Daily' }, { label: 'Sections', value: 'Multi' }]
@@ -1010,6 +1081,31 @@ const techStack = [
     { name: 'Tailwind CSS', description: 'Utility-first design framework.', icon: LayoutDashboard },
     { name: 'TypeScript', description: 'Type-safe scalable development.', icon: Command },
 ];
+
+// Stable pulse bars for the "Live Pulse" visualization
+const pulseBars = computed(() => {
+    return Array.from({ length: 8 }, (_, i) => ({
+        id: i,
+        height: 40 + ((Math.sin(i * 1.2) + 1) / 2) * 60,
+        delay: i * 0.1
+    }));
+});
+
+// Stable bar data for the "Data Fragment Matrix" to prevent "jumping" on re-renders
+const featureBars = computed(() => {
+    return coreFeatures.map((_, fIdx) => {
+        const count = 24; // Generate full set, we slice based on pointer type in template
+        return Array.from({ length: count }, (_, i) => ({
+            id: i,
+            // Use deterministic values based on indices for stability across re-renders
+            height: 30 + ((Math.sin(fIdx * 1.5 + i * 0.8) + 1) / 2) * 50,
+            delay: i * 0.15, // Slightly slower stagger
+            duration: 4.5 + ((Math.cos(fIdx * 2.2 + i * 0.4) + 1) / 2) * 3.5, // Increased duration (4.5s to 8s) for smoother feel
+            hasBit: ((Math.sin(fIdx * 3.1 + i * 1.7) + 1) / 2) > 0.65,
+            bitDelay: i * 0.25
+        }));
+    });
+});
 </script>
 
 <template>
@@ -1268,65 +1364,116 @@ const techStack = [
                 </div>
             </div>
 
-            <div class="reveal-section mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-                <section class="pulse-panel gradient-border relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-5 sm:p-6 lg:p-8 shadow-[0_20px_80px_-30px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_80px_-45px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
-                    <div class="scan-line pointer-events-none absolute inset-x-0 top-0 h-px"></div>
-                    <!-- Inner glow accent -->
-                    <div class="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl pointer-events-none"></div>
-                    <div class="flex items-center justify-between gap-4">
+            <div class="reveal-section mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+                <!-- Interactive Pulse Panel -->
+                <section class="pulse-panel gradient-border relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-6 sm:p-8 lg:p-10 shadow-[0_20px_80px_-30px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_80px_-45px_rgba(0,0,0,0.45)] backdrop-blur-2xl group/pulse">
+                    <!-- Scanning line effect -->
+                    <div class="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-2xl">
+                        <div class="absolute inset-x-0 h-[100px] bg-gradient-to-b from-primary/10 to-transparent -top-[100px] animate-[scan-vertical_4s_linear_infinite]"></div>
+                    </div>
+
+                    <div class="relative z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                         <div>
-                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80" data-scramble>Live Platform Pulse</p>
-                            <h2 class="mt-2 text-xl sm:text-2xl font-black tracking-tight">Learning metrics in real time</h2>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <!-- Enhancement 6: Animated SVG Waveform -->
-                            <div class="hidden sm:flex items-end gap-[3px] h-5" aria-hidden="true">
-                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0s; --bar-min:30%; --bar-max:90%"></span>
-                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.15s; --bar-min:50%; --bar-max:100%"></span>
-                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.05s; --bar-min:20%; --bar-max:70%"></span>
-                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.25s; --bar-min:60%; --bar-max:100%"></span>
-                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.1s; --bar-min:35%; --bar-max:85%"></span>
-                                <span class="waveform-bar w-[3px] rounded-full bg-emerald-500/70" style="--bar-delay:0.3s; --bar-min:15%; --bar-max:60%"></span>
+                            <div class="flex items-center gap-2 mb-2">
+                                <Activity class="h-3 w-3 text-primary animate-pulse" />
+                                <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80" data-scramble>System Diagnostics</p>
                             </div>
-                            <div class="online-pill hidden sm:flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-3.5 py-1.5 text-[9px] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400">
-                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"></span>
-                                Online
+                            <h2 class="text-2xl sm:text-3xl font-black tracking-tight leading-none uppercase italic">Live Pulse</h2>
+                        </div>
+                        
+                        <div class="flex items-center gap-6">
+                            <!-- Mini Sparkline visualization -->
+                            <div class="hidden sm:flex items-end gap-1 h-10 w-24 px-2 py-1 border border-border/20 rounded bg-muted/20">
+                                <div v-for="bar in pulseBars" :key="bar.id" 
+                                    class="pulse-waveform-bar w-full bg-primary/40 rounded-t-sm origin-bottom will-change-transform"
+                                    :style="{ 
+                                        height: bar.height + '%',
+                                    }">
+                                </div>
+                            </div>
+                            <div class="online-pill flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-emerald-600 dark:text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                                Operational
                             </div>
                         </div>
                     </div>
 
-                    <div class="mt-6 space-y-3">
-                        <div v-for="signal in liveSignals" :key="signal.label" class="pulse-row rounded-xl border border-border/20 dark:border-border/10 bg-muted/20 dark:bg-foreground/[0.03] p-3 sm:p-4 hover:bg-muted/30 dark:hover:bg-foreground/[0.05] transition-colors">
-                            <div class="mb-2 flex items-center justify-between gap-3">
-                                <span class="text-[10px] sm:text-xs font-black uppercase tracking-[0.15em] text-muted-foreground">{{ signal.label }}</span>
-                                <span class="text-[10px] sm:text-xs font-black tracking-wider text-foreground">{{ signal.valueLabel }}</span>
+                    <div class="mt-10 grid gap-4">
+                        <div v-for="signal in liveSignals" :key="signal.label" 
+                             @click="updateLiveSignals"
+                             class="pulse-row group/row relative overflow-hidden rounded-xl border border-border/20 dark:border-border/10 bg-muted/20 dark:bg-foreground/[0.03] p-4 sm:p-5 hover:bg-muted/40 dark:hover:bg-foreground/[0.06] transition-all cursor-pointer">
+                            <!-- Click feedback overlay -->
+                            <div class="absolute inset-0 bg-primary/5 opacity-0 group-active/row:opacity-100 transition-opacity"></div>
+                            
+                            <div class="relative z-10 flex items-center justify-between gap-4 mb-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="h-1.5 w-1.5 rounded-full" :class="signal.color === 'emerald' ? 'bg-emerald-500' : 'bg-primary'"></div>
+                                    <span class="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-muted-foreground group-hover/row:text-foreground transition-colors">{{ signal.label }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] sm:text-xs font-black font-mono tracking-wider text-foreground">{{ Math.round(signal.value) }}%</span>
+                                    <span class="text-[8px] font-bold px-1.5 py-0.5 rounded border border-border/30 bg-background/50 text-muted-foreground uppercase tracking-widest">{{ signal.valueLabel }}</span>
+                                </div>
                             </div>
-                            <div class="h-2 overflow-hidden rounded-full bg-muted/50 dark:bg-foreground/10">
-                                <div class="signal-fill h-full rounded-full bg-gradient-to-r from-primary/60 to-primary" :style="{ width: `${signal.value}%` }"></div>
+                            
+                            <div class="relative h-1.5 w-full overflow-hidden rounded-full bg-muted/50 dark:bg-foreground/10">
+                                <div class="signal-fill absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out" 
+                                     :class="signal.color === 'emerald' ? 'bg-emerald-500' : 'bg-primary'"
+                                     :style="{ width: `${signal.value}%` }">
+                                    <!-- Scanning highlight on the bar -->
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-20 -translate-x-full animate-[scan-horizontal_2s_linear_infinite]"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-5 sm:p-6 lg:p-8 backdrop-blur-2xl">
-                    <div class="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl"></div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Learning Environment</p>
-                    <h3 class="mt-2 text-xl font-black tracking-tight">Centralized Assessment Platform.</h3>
-                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">AI-powered evaluation, secure exam handling, and live performance tracking integrated seamlessly into your classroom.</p>
+                <!-- Interactive Environment Panel -->
+                <section class="pulse-panel relative overflow-hidden rounded-2xl border border-border/30 dark:border-border/15 bg-card/60 dark:bg-background/50 p-6 sm:p-8 lg:p-10 backdrop-blur-2xl flex flex-col group/env">
+                    <!-- Decorative background elements -->
+                    <div class="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl transition-transform duration-1000 group-hover/env:scale-150"></div>
+                    
+                    <div class="relative z-10 mb-8">
+                        <div class="flex items-center gap-2 mb-2">
+                            <LayoutDashboard class="h-3 w-3 text-primary/60" />
+                            <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Control Center</p>
+                        </div>
+                        <h3 class="text-xl sm:text-2xl font-black tracking-tight uppercase">Operational <br/> Nodes</h3>
+                        <p class="mt-4 text-xs leading-relaxed text-muted-foreground/80 max-w-[280px]">AI-powered evaluation and secure exam handling integrated into your classroom.</p>
+                    </div>
 
-                    <div class="mt-5 space-y-2">
+                    <div class="mt-auto space-y-3 relative z-10">
                         <a
                             v-for="quickLink in quickLinks"
                             :key="quickLink.label"
                             :href="quickLink.href"
-                            class="quick-link-row group flex items-center justify-between rounded-xl border border-border/20 dark:border-border/10 px-3 sm:px-4 py-3 transition-all hover:bg-muted/30 dark:hover:bg-foreground/[0.05] hover:border-primary/20"
+                            class="quick-link-row group/link relative flex items-center justify-between rounded-xl border border-border/20 dark:border-border/10 px-5 py-4 transition-all hover:bg-muted/40 dark:hover:bg-foreground/[0.06] hover:border-primary/30 overflow-hidden"
                         >
-                            <span class="flex items-center gap-3">
-                                <component :is="quickLink.icon" class="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                                <span class="text-xs font-black uppercase tracking-[0.18em] text-foreground/80">{{ quickLink.label }}</span>
+                            <!-- Hover background scanning effect -->
+                            <div class="absolute inset-0 -translate-x-full group-hover/link:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-primary/5 to-transparent"></div>
+                            
+                            <span class="flex items-center gap-4 relative z-10">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/30 group-hover/link:bg-primary/10 transition-colors">
+                                    <component :is="quickLink.icon" class="h-4 w-4 text-muted-foreground group-hover/link:text-primary transition-all duration-300" />
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/80 group-hover/link:text-foreground transition-colors">{{ quickLink.label }}</span>
+                                    <span class="text-[7px] font-bold text-muted-foreground/40 uppercase tracking-widest group-hover/link:text-primary/40 transition-colors">Protocol_Enabled</span>
+                                </div>
                             </span>
-                            <ArrowRight class="h-4 w-4 text-muted-foreground/40 group-hover:text-primary transition-all group-hover:translate-x-1" />
+                            <div class="flex items-center gap-2">
+                                <div class="h-1 w-1 rounded-full bg-primary opacity-0 group-hover/link:opacity-100 transition-opacity animate-pulse"></div>
+                                <ArrowRight class="h-4 w-4 text-muted-foreground/40 group-hover/link:text-primary transition-all group-hover/link:translate-x-1" />
+                            </div>
                         </a>
+                    </div>
+                    
+                    <!-- Bottom status bar -->
+                    <div class="mt-8 pt-4 border-t border-border/10 flex items-center justify-between">
+                        <span class="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Environment_Secure</span>
+                        <div class="flex gap-1">
+                            <div v-for="i in 3" :key="i" class="h-1 w-4 rounded-full bg-emerald-500/20 group-hover/env:bg-emerald-500/40 transition-colors"></div>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -1426,14 +1573,29 @@ const techStack = [
                          <div class="h-px w-8 lg:w-12 bg-primary/20 group-hover:w-16 lg:group-hover:w-32 group-hover:bg-gradient-to-r group-hover:from-primary group-hover:to-transparent transition-all duration-700"></div>
                     </div>
 
-                    <div class="mt-8 lg:mt-12 mb-8 lg:mb-12 flex h-14 w-14 lg:h-20 lg:w-20 relative border border-border/30 dark:border-border/10 bg-muted/20 dark:bg-foreground/[0.02] transition-all duration-700 group-hover:rotate-[15deg] group-hover:scale-110 group-hover:border-primary/40 group-hover:bg-primary/5 rounded-2xl items-center justify-center overflow-hidden">
-                        <!-- Icon subtle glow -->
-                        <div class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-[0.15] blur-xl transition-opacity duration-700"></div>
-                        <component :is="feature.icon" class="h-6 w-6 lg:h-8 lg:w-8 text-muted-foreground opacity-40 group-hover:opacity-100 transition-all group-hover:text-primary duration-500 relative z-10" />
+                    <!-- New Technical Visual: Data Fragment Matrix -->
+                    <div class="mt-12 lg:mt-16 mb-10 lg:mb-14 relative h-16 lg:h-20 w-full flex items-end gap-1.5 overflow-hidden group/matrix">
+                        <!-- Dynamic "Data Bars" -->
+                        <div v-for="bar in featureBars[index].slice(0, isCoarsePointer ? 12 : 24)" :key="bar.id" 
+                             class="fragment-bar flex-1 bg-muted-foreground/10 dark:bg-foreground/5 rounded-t-sm origin-bottom group-hover:bg-primary/20 will-change-transform"
+                             :style="{ 
+                                 height: bar.height + '%',
+                             }">
+                             <!-- Active "bit" highlight -->
+                             <div v-if="bar.hasBit" 
+                                  class="fragment-bit w-full h-1.5 bg-primary/30 dark:bg-primary/50"
+                                  :style="{ opacity: 0.5, willChange: 'opacity' }"></div>
+                        </div>
+
+                        <!-- Status indicator -->
+                        <div class="absolute top-0 right-0 flex items-center gap-2 px-2 py-1 border border-border/20 bg-background/50 backdrop-blur-sm rounded group-hover:border-primary/30 transition-colors">
+                            <div class="h-1 w-1 rounded-full bg-primary animate-ping"></div>
+                            <span class="text-[7px] font-black uppercase tracking-widest text-muted-foreground group-hover:text-primary transition-colors">Fragment_Active</span>
+                        </div>
                     </div>
                     
                     <div class="space-y-4 lg:space-y-6 relative z-10">
-                        <h3 class="text-xl lg:text-3xl font-black uppercase tracking-tight">{{ feature.title }}</h3>
+                        <h3 class="text-xl lg:text-3xl font-black uppercase tracking-tight group-hover:translate-x-1 transition-transform duration-500">{{ feature.title }}</h3>
                         <p class="text-sm lg:text-base leading-relaxed text-muted-foreground group-hover:text-foreground/90 transition-colors duration-500 max-w-sm">
                             {{ feature.description }}
                         </p>
@@ -1795,6 +1957,16 @@ const techStack = [
     to { background-position: 0 100%; }
 }
 
+@keyframes scan-vertical {
+    from { transform: translateY(0); }
+    to { transform: translateY(calc(100% + 100px)); }
+}
+
+@keyframes scan-horizontal {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(500%); }
+}
+
 .signal-fill {
     box-shadow: 0 0 20px color-mix(in srgb, currentColor 45%, transparent);
 }
@@ -1873,23 +2045,6 @@ const techStack = [
 
 .dark .gradient-border:hover::before {
     opacity: 1;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   Enhancement 6: Animated Waveform Bars
-──────────────────────────────────────────────────────────────────────────*/
-.waveform-bar {
-    display: inline-block;
-    height: 100%;
-    animation: waveform-pulse 1.2s ease-in-out infinite alternate;
-    animation-delay: var(--bar-delay, 0s);
-    transform-origin: bottom;
-    transform: scaleY(var(--bar-min, 30%));
-}
-
-@keyframes waveform-pulse {
-    from { transform: scaleY(var(--bar-min, 30%)); }
-    to   { transform: scaleY(var(--bar-max, 90%)); }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
