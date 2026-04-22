@@ -13,6 +13,8 @@ import LivePulse from '@/components/welcome/LivePulse.vue';
 import EnvironmentPanel from '@/components/welcome/EnvironmentPanel.vue';
 import SystemMetrics from '@/components/welcome/SystemMetrics.vue';
 import ArchitectureStack from '@/components/welcome/ArchitectureStack.vue';
+import DimensionalCore from '@/components/welcome/DimensionalCore.vue';
+import FloatingPrisms from '@/components/welcome/FloatingPrisms.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import SeasonCountdown from '@/components/welcome/SeasonCountdown.vue';
 import DemoQuiz from '@/components/welcome/DemoQuiz.vue';
@@ -297,6 +299,8 @@ const orbLayers = [
         </div>
         <div v-for="(orb, index) in orbLayers" :key="index" ref="ambientOrbs" class="ambient-orb pointer-events-none absolute z-[1] rounded-full bg-primary/5 blur-3xl" :style="orb.style"></div>
 
+        <FloatingPrisms :prefers-reduced-motion="prefersReducedMotion" />
+
         <!-- Structural Lines -->
         <div class="fixed inset-y-0 left-4 lg:left-24 w-px bg-border/10 lg:bg-border/20 z-0 origin-top" ref="structuralLines"></div>
         <div class="fixed inset-y-0 right-4 lg:right-24 w-px bg-border/10 lg:bg-border/20 z-0 origin-bottom" ref="structuralLines"></div>
@@ -347,6 +351,8 @@ const orbLayers = [
             />
 
             <ArchitectureStack />
+
+            <DimensionalCore />
 
             <FeatureCards 
                 :is-coarse-pointer="isCoarsePointer"
