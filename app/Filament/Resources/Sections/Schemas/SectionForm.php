@@ -14,6 +14,13 @@ class SectionForm
                 TextInput::make('name')
                     ->required()
                     ->unique(ignoreRecord: true),
+                TextInput::make('password')
+                    ->password()
+                    ->revealable()
+                    ->helperText('Students will be required to enter this password when joining the section. Leave blank on edit to keep the current password.')
+                    ->required(fn (string $operation): bool => $operation === 'create')
+                    ->dehydrated(fn (?string $state): bool => filled($state))
+                    ->maxLength(255),
             ]);
     }
 }

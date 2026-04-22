@@ -11,7 +11,19 @@ class Section extends Model
 
     protected $fillable = [
         'name',
+        'password',
     ];
+
+    protected $hidden = [
+        'password',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+        ];
+    }
 
     /**
      * Get the users associated with the section.

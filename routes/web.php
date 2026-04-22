@@ -236,7 +236,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 'name' => $currentSeason->name,
             ] : null,
             'sectionName' => $user->sections->pluck('name')->join(', '),
-            'allSections' => Section::all(['id', 'name']),
+            'allSections' => Section::all(['id', 'name', 'password'])->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'has_password' => filled($s->getRawOriginal('password')),
+            ]),
         ]);
     })->name('dashboard');
 
@@ -258,6 +262,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             });
     })->name('users.xp-history');
     Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
+    Route::post('sections/{section}/verify-password', [ProfileController::class, 'verifySectionPassword'])->name('sections.verify-password');
 
     Route::get('assignments', [AssignmentController::class, 'index'])->name('assignments.index');
     Route::post('assignments/{assignment}/submit', [AssignmentController::class, 'store'])->name('assignments.submit');

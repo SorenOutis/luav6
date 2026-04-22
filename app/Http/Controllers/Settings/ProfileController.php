@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\Section;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -85,13 +88,59 @@ class ProfileController extends Controller
      */
     public function updateSection(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'section_ids' => ['required', 'array'],
             'section_ids.*' => ['exists:sections,id'],
+            'section_passwords' => ['sometimes', 'array'],
+            'section_passwords.*' => ['nullable', 'string'],
         ]);
 
-        $request->user()->sections()->sync($request->section_ids);
+        $sectionIds = $validated['section_ids'];
+        $passwords = $validated['section_passwords'] ?? [];
+
+        $sections = Section::whereIn('id', $sectionIds)->get();
+
+        $errors = [];
+        foreach ($sections as $section) {
+            $rawPassword = $section->getRawOriginal('password');
+            if (! filled($rawPassword)) {
+                continue;
+            }
+
+            $submitted = $passwords[$section->id] ?? null;
+            if (! filled($submitted) || ! Hash::check($submitted, $rawPassword)) {
+                $errors["section_passwords.{$section->id}"] = "Incorrect password for {$section->name}.";
+            }
+        }
+
+        if (! empty($errors)) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        $request->user()->sections()->sync($sectionIds);
 
         return back();
+    }
+
+    /**
+     * Verify a single section's password (used for the flip-card unlock flow).
+     */
+    public function verifySectionPassword(Request $request, Section $section)
+    {
+        $data = $request->validate([
+            'password' => ['nullable', 'string'],
+        ]);
+
+        $rawPassword = $section->getRawOriginal('password');
+
+        // Section without a password is always "valid"
+        if (! filled($rawPassword)) {
+            return response()->json(['valid' => true]);
+        }
+
+        $submitted = $data['password'] ?? '';
+        $valid = filled($submitted) && Hash::check($submitted, $rawPassword);
+
+        return response()->json(['valid' => $valid]);
     }
 }
