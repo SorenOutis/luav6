@@ -62,7 +62,7 @@ class AIService
 
         $responses = Http::pool(function ($pool) use ($essays) {
             foreach ($essays as $index => $essay) {
-                $prompt = $this->buildPrompt($essay['essayText'], $essay['questionText'], $essay['maxPoints']);
+                $prompt = $this->buildPrompt($essay['essayText'], $essay['questionText']);
                 $pool->as((string) $index)->timeout(300)->post("{$this->baseUrl}/api/generate", [
                     'model' => $this->model,
                     'prompt' => $prompt,
@@ -71,7 +71,7 @@ class AIService
                     'keep_alive' => -1,
                     'options' => [
                         'temperature' => 0,
-                        'num_predict' => 15,
+                        'num_predict' => 50, // Increased to ensure JSON is not cut off
                         'num_ctx' => 1024,
                         'top_k' => 5,
                         'top_p' => 0.1,
@@ -84,11 +84,15 @@ class AIService
         foreach ($essays as $index => $essay) {
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0, 'feedback' => ''];
+            $maxPoints = (int) ($essay['maxPoints'] ?? 1);
 
             if ($response && $response->successful()) {
                 $data = json_decode($response->json('response'), true);
                 if (isset($data['score'])) {
-                    $result['score'] = (float) round((float) $data['score']);
+                    // AI provides a score from 0-100, we scale it to maxPoints
+                    $percentage = (float) $data['score'];
+                    $scaledScore = ($percentage / 100) * $maxPoints;
+                    $result['score'] = (float) round($scaledScore, 2);
                 }
             } elseif ($response) {
                 Log::error("AI Batch Assessment failed for index $index: ".$response->body());
@@ -105,14 +109,13 @@ class AIService
     /**
      * Build the prompt for essay assessment.
      */
-    protected function buildPrompt(string $essayText, string $questionText, int $maxPoints): string
+    protected function buildPrompt(string $essayText, string $questionText): string
     {
         return <<<PROMPT
 Act as a STRICT academic examiner. Your task is to evaluate a student's essay response based on a specific question.
 
 Question: "$questionText"
 Student Essay: "$essayText"
-Maximum Points: $maxPoints
 
 STRICT GRADING RULES:
 1. COMPREHENSIVENESS: The answer MUST be comprehensive and thorough. Short, vague, or superficial answers should receive significantly fewer points.
@@ -121,16 +124,18 @@ STRICT GRADING RULES:
 4. "I DON'T KNOW" CLAUSE: If the student says "I don't know", "skip", or anything similar, the score MUST be 0.
 5. MINIMUM SUBSTANCE: If the essay is too short to provide meaningful information (e.g., less than 2-3 sentences of actual content), it should receive a very low score or 0.
 
-SCORING CRITERIA:
-- Full Points ($maxPoints): Comprehensive, highly relevant, and accurate answer that covers all aspects of the question.
-- Partial Points: Relevant but lacks depth or misses some aspects of the question.
-- Zero Points: Irrelevant, nonsensical, or explicitly states they don't know.
+SCORING CRITERIA (0-100 SCALE):
+- 100: Comprehensive, highly relevant, and accurate answer that covers all aspects of the question.
+- 70-90: Relevant and mostly accurate but lacks some depth or misses minor aspects.
+- 40-60: Relevant but superficial, or has minor factual inaccuracies.
+- 10-30: Barely relevant, very short, or has significant inaccuracies.
+- 0: Irrelevant, nonsensical, or explicitly states they don't know.
 
 Response Format:
 You MUST respond with a valid JSON object ONLY. DO NOT provide feedback, explanations, or reasoning.
-The score MUST be a WHOLE NUMBER (flat number), no decimals allowed.
+The score MUST be a WHOLE NUMBER between 0 and 100.
 {
-    "score": <integer_value_between_0_and_$maxPoints>
+    "score": <integer_value_between_0_and_100>
 }
 PROMPT;
     }
@@ -145,23 +150,21 @@ PROMPT;
      */
     public function assessEssay(string $essayText, string $questionText, int $maxPoints): array
     {
-        $prompt = $this->buildPrompt($essayText, $questionText, $maxPoints);
+        $prompt = $this->buildPrompt($essayText, $questionText);
 
         try {
-            // Removed blocking file lock to allow concurrent AI processing.
-            // Ollama handles internal queuing which is more efficient for modern multi-core systems.
             $response = Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
                 'model' => $this->model,
                 'prompt' => $prompt,
                 'stream' => false,
                 'format' => 'json',
-                'keep_alive' => -1, // Ensure model stays in RAM after assessment
+                'keep_alive' => -1,
                 'options' => [
-                    'temperature' => 0,      // Zero temperature for faster, deterministic output
-                    'num_predict' => 15,     // Reduced from 20 to 15, we only need a few tokens for JSON
-                    'num_ctx' => 1024,       // Smaller context window for faster processing
-                    'top_k' => 5,            // Reduced from 10 to 5 for even faster token selection
-                    'top_p' => 0.1,          // Lower top_p for more focused generation
+                    'temperature' => 0,
+                    'num_predict' => 50, // Increased
+                    'num_ctx' => 1024,
+                    'top_k' => 5,
+                    'top_p' => 0.1,
                 ],
             ]);
 
@@ -169,8 +172,10 @@ PROMPT;
                 $data = json_decode($response->json('response'), true);
 
                 if (isset($data['score'])) {
+                    $percentage = (float) $data['score'];
+                    $scaledScore = ($percentage / 100) * $maxPoints;
                     return [
-                        'score' => (float) round((float) $data['score']),
+                        'score' => (float) round($scaledScore, 2),
                         'feedback' => '',
                     ];
                 }
@@ -181,7 +186,6 @@ PROMPT;
             Log::error('AI Assessment error: '.$e->getMessage());
         }
 
-        // Fallback in case of failure
         return [
             'score' => 0.0,
             'feedback' => '',

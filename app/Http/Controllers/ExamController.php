@@ -7,6 +7,7 @@ use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Services\AIService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class ExamController extends Controller
@@ -62,17 +63,20 @@ class ExamController extends Controller
             abort(403, 'You do not have access to this exam.');
         }
 
-        $exam->load([
-            'parts' => function ($query) {
-                $query->orderBy('sort_order');
-            },
-        ]);
+        // Cache the exam structure for 1 hour to optimize LAN traffic
+        $exam = Cache::remember("exam_structure_{$exam->id}", 3600, function () use ($exam) {
+            return $exam->load([
+                'parts' => function ($query) {
+                    $query->orderBy('sort_order');
+                },
+            ]);
+        });
 
         if ($exam->status === 'draft') {
             abort(404);
         }
 
-        // Get submissions for the current user
+        // Get submissions for the current user (don't cache this as it's user-specific)
         $userId = auth()->id();
         $submissions = ExamSubmission::where('user_id', $userId)
             ->where('exam_id', $exam->id)

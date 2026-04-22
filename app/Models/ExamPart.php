@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class ExamPart extends Model
 {
@@ -21,6 +22,17 @@ class ExamPart extends Model
         'options' => 'array',
         'questions' => 'array',
     ];
+
+    protected static function booted()
+    {
+        static::saved(function ($part) {
+            Cache::forget("exam_structure_{$part->exam_id}");
+        });
+
+        static::deleted(function ($part) {
+            Cache::forget("exam_structure_{$part->exam_id}");
+        });
+    }
 
     public function exam()
     {
