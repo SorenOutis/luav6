@@ -136,6 +136,7 @@ export function useAppearance(): UseAppearanceReturn {
         );
 
         isTransitioningTheme.value = true;
+        document.documentElement.classList.add('theme-transitioning');
         gsap.globalTimeline.pause();
 
         const transition = (document as any).startViewTransition(() => {
@@ -153,8 +154,8 @@ export function useAppearance(): UseAppearanceReturn {
                     clipPath: newTheme === 'dark' ? [...clipPath].reverse() : clipPath,
                 },
                 {
-                    duration: 500,
-                    easing: 'ease-in-out',
+                    duration: 400,
+                    easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
                     pseudoElement: newTheme === 'dark'
                         ? '::view-transition-old(root)'
                         : '::view-transition-new(root)',
@@ -163,12 +164,14 @@ export function useAppearance(): UseAppearanceReturn {
 
             animation.onfinish = () => {
                 isTransitioningTheme.value = false;
+                document.documentElement.classList.remove('theme-transitioning');
                 gsap.globalTimeline.resume();
             };
         });
 
         transition.finished.finally(() => {
             isTransitioningTheme.value = false;
+            document.documentElement.classList.remove('theme-transitioning');
             gsap.globalTimeline.resume();
         });
     }

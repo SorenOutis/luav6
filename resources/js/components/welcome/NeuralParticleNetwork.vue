@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -8,6 +8,7 @@ gsap.registerPlugin(ScrollTrigger);
 const props = defineProps<{
     isCoarsePointer: boolean;
     prefersReducedMotion: boolean;
+    paused?: boolean;
 }>();
 
 const particleCanvas = ref<HTMLCanvasElement | null>(null);
@@ -61,7 +62,10 @@ const initParticleNetwork = () => {
     };
 
     const draw = () => {
-        if (!isActive) return;
+        if (!isActive || props.paused) {
+            particleAnimFrame = null;
+            return;
+        }
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const color = getColor();
@@ -137,6 +141,12 @@ const initParticleNetwork = () => {
     canvas.addEventListener('mousemove', onMouseMove);
     canvas.addEventListener('mouseleave', onMouseLeave);
     window.addEventListener('resize', resize);
+
+    watch(() => props.paused, (isPaused) => {
+        if (!isPaused && isActive && !particleAnimFrame) {
+            draw();
+        }
+    });
 
     // Use ScrollTrigger to pause animation when not in view
     scrollTriggerInstance = ScrollTrigger.create({

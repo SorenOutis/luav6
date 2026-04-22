@@ -164,3 +164,20 @@
 .dark::view-transition-new(root) {
     z-index: 1;
 }
+
+/* Optimization for smooth view transitions on heavy pages */
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+    transition: none !important;
+    animation-duration: 0s !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    filter: none !important;
+}
+
+.theme-transitioning .ambient-orb,
+.theme-transitioning .mouse-glow,
+.theme-transitioning .particle-canvas {
+    display: none !important;
+}

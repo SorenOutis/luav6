@@ -20,6 +20,7 @@ import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 
 // Composables & Routes
+import { useAppearance } from '@/composables/useAppearance';
 import { dashboard, login, register } from '@/routes';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -64,6 +65,8 @@ const isCoarsePointer = ref(false);
 const prefersReducedMotion = ref(false);
 const isLoggingOut = ref(false);
 const showBootOverlay = ref(true);
+
+const { isTransitioningTheme } = useAppearance();
 
 // Interaction Modes
 const syncInteractionModes = () => {
@@ -321,7 +324,11 @@ const orbLayers = [
                 @reset-magnetic="resetMagnetic"
             >
                 <template #background>
-                    <NeuralParticleNetwork :is-coarse-pointer="isCoarsePointer" :prefers-reduced-motion="prefersReducedMotion" />
+                    <NeuralParticleNetwork 
+                        :is-coarse-pointer="isCoarsePointer" 
+                        :prefers-reduced-motion="prefersReducedMotion"
+                        :paused="isTransitioningTheme"
+                    />
                 </template>
             </WelcomeHero>
 
