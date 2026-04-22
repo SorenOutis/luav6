@@ -45,13 +45,14 @@ const initParticleNetwork = () => {
     };
 
     const spawnParticles = () => {
+        const isDark = document.documentElement.classList.contains('dark');
         particles = Array.from({ length: COUNT }, () => ({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
             vx: (Math.random() - 0.5) * 1.2,
             vy: (Math.random() - 0.5) * 1.2,
-            radius: Math.random() * 1.5 + 0.8,
-            opacity: Math.random() * 0.5 + 0.2,
+            radius: Math.random() * 1.5 + (isDark ? 1.2 : 0.8),
+            opacity: Math.random() * (isDark ? 0.6 : 0.5) + (isDark ? 0.4 : 0.2),
             mouseInfluence: Math.random() * 0.4 + 0.6,
         }));
     };
@@ -114,12 +115,13 @@ const initParticleNetwork = () => {
                 const cy = p.y - q.y;
                 const cd = Math.sqrt(cx * cx + cy * cy);
                 if (cd < CONNECTION_DIST) {
-                    const alpha = (1 - cd / CONNECTION_DIST) * 0.18;
+                    const isDark = document.documentElement.classList.contains('dark');
+                    const alpha = (1 - cd / CONNECTION_DIST) * (isDark ? 0.35 : 0.18);
                     ctx.beginPath();
                     ctx.moveTo(p.x, p.y);
                     ctx.lineTo(q.x, q.y);
                     ctx.strokeStyle = `rgba(${color},${alpha})`;
-                    ctx.lineWidth = 0.8;
+                    ctx.lineWidth = isDark ? 1.2 : 0.8;
                     ctx.stroke();
                 }
             }
