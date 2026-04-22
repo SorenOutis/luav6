@@ -51,7 +51,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         // --- Streak Logic ---
         $now = now();
         if (! $user->last_login_at) {
-            $user->update(['current_streak' => 1, 'last_login_at' => $now]);
+            $user->update([
+                'current_streak' => 1,
+                'longest_streak' => max(1, (int) ($user->longest_streak ?? 0)),
+                'last_login_at' => $now,
+            ]);
         } elseif (! $user->last_login_at->isToday()) {
             if ($user->last_login_at->isYesterday()) {
                 $user->increment('current_streak');
@@ -59,6 +63,29 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 $user->update(['current_streak' => 1]);
             }
             $user->update(['last_login_at' => $now]);
+
+            // Keep longest_streak in sync whenever current streak advances
+            if (($user->current_streak ?? 0) > ($user->longest_streak ?? 0)) {
+                $user->update(['longest_streak' => $user->current_streak]);
+            }
+        }
+
+        // --- Activity / Login Dates for Heatmap (last 90 days) ---
+        $loginDates = DB::table('gamification_histories')
+            ->where('user_id', $user->id)
+            ->where('created_at', '>=', now()->subDays(90))
+            ->selectRaw('DATE(created_at) as d')
+            ->distinct()
+            ->pluck('d')
+            ->map(fn ($d) => (string) $d)
+            ->values();
+
+        // Include today if the user has an up-to-date last_login_at
+        if ($user->last_login_at && $user->last_login_at->isToday()) {
+            $today = $now->toDateString();
+            if (! $loginDates->contains($today)) {
+                $loginDates->push($today);
+            }
         }
 
         // --- Seasonal Progress ---
@@ -224,8 +251,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 ))->count(),
                 'points' => $seasonalPoints,
                 'streak' => $user->current_streak,
+                'longestStreak' => (int) ($user->longest_streak ?? 0),
                 'joinedAt' => $user->created_at->format('M Y'),
             ],
+            'loginDates' => $loginDates,
             'announcements' => $announcements,
             'courses' => $courses,
             'assignments' => $assignments,

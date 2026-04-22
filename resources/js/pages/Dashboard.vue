@@ -47,23 +47,38 @@ import { index as assignmentsIndex } from '@/routes/assignments';
 const lastSyncTime = ref(new Date());
 const isRefreshing = ref(false);
 
-const { stop, start } = usePoll(10000, {
-    only: ['userStats', 'announcements', 'courses', 'assignments', 'upcomingExams', 'leaderboardUsers', 'activeSeason'],
+const POLL_PROPS = ['userStats', 'loginDates', 'announcements', 'courses', 'assignments', 'upcomingExams', 'sectionLeaderboards', 'activeSeason'];
+const POLL_INTERVAL_MS = 15000;
+
+const { stop: stopPoll, start: startPoll } = usePoll(POLL_INTERVAL_MS, {
+    only: POLL_PROPS,
     onStart: () => { isRefreshing.value = true; },
-    onFinish: () => { 
+    onFinish: () => {
         isRefreshing.value = false;
         lastSyncTime.value = new Date();
-    }
-});
+    },
+}, { autoStart: false });
+
+const isPollingActive = ref(false);
+const resumePolling = () => {
+    if (isPollingActive.value) return;
+    startPoll();
+    isPollingActive.value = true;
+};
+const pausePolling = () => {
+    if (!isPollingActive.value) return;
+    stopPoll();
+    isPollingActive.value = false;
+};
 
 const manualRefresh = () => {
     isRefreshing.value = true;
     router.reload({
-        only: ['userStats', 'announcements', 'courses', 'assignments', 'upcomingExams', 'leaderboardUsers', 'activeSeason'],
+        only: POLL_PROPS,
         onFinish: () => {
             isRefreshing.value = false;
             lastSyncTime.value = new Date();
-        }
+        },
     });
 };
 
@@ -184,8 +199,10 @@ const props = defineProps<{
         achievements: number;
         points: number;
         streak: number;
+        longestStreak: number;
         joinedAt: string;
     };
+    loginDates?: string[];
     announcements: Announcement[];
     courses: Course[];
     assignments: Assignment[];
@@ -212,8 +229,8 @@ const sectionLeaderboards = computed(() => props.sectionLeaderboards);
 
 const streak = computed(() => ({
     currentStreak: props.userStats.streak || 0,
-    longestStreak: 12, // Still mock for now, can be clarified
-    loginDates: ['2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08', '2026-03-09']
+    longestStreak: props.userStats.longestStreak || 0,
+    loginDates: props.loginDates ?? [],
 }));
 
 const showSectionModal = ref(false);
@@ -224,9 +241,25 @@ watch(() => props.sectionName, (newSection) => {
     }
 }, { immediate: true });
 
+const handleVisibilityChange = () => {
+    if (document.hidden) {
+        pausePolling();
+    } else if (!showBanModal.value) {
+        resumePolling();
+        // Fire an immediate sync so stale data updates right away
+        manualRefresh();
+    }
+};
+
 onMounted(() => {
     syncInteractionModes();
     window.addEventListener('resize', syncInteractionModes);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Kick off polling (respect current tab visibility)
+    if (!document.hidden) {
+        resumePolling();
+    }
 
     // If user has no sections, show the selection modal immediately but after initial dashboard animations start
     if (!props.sectionName) {
@@ -236,6 +269,7 @@ onMounted(() => {
     }
 
     if (isBanned.value) {
+        pausePolling();
         setTimeout(() => {
             showBanModal.value = true;
         }, 450);
@@ -276,7 +310,7 @@ onMounted(() => {
         gsap.to('.dashboard-leaderboard', {
             scrollTrigger: {
                 trigger: '.dashboard-leaderboard',
-                start: 'top 90%',
+                start: 'top 75%',
             },
             opacity: 1,
             y: 0,
@@ -288,7 +322,7 @@ onMounted(() => {
         gsap.to('.dashboard-main-grid', {
             scrollTrigger: {
                 trigger: '.dashboard-main-grid',
-                start: 'top 85%',
+                start: 'top 75%',
             },
             opacity: 1,
             y: 0,
@@ -297,23 +331,37 @@ onMounted(() => {
             ease: 'expo.out'
         });
 
-        // Background orb animation refinement
+        // Background orb animation refinement — re-randomize each cycle
         const orbs = dashboardContainer.value?.querySelectorAll('.orb');
         orbs?.forEach((orb, i) => {
             gsap.to(orb, {
-                x: `random(-100, 100)`,
-                y: `random(-100, 100)`,
+                x: 'random(-100, 100)',
+                y: 'random(-100, 100)',
                 duration: 12 + i * 4,
                 repeat: -1,
+                repeatRefresh: true,
                 yoyo: true,
-                ease: 'sine.inOut'
+                ease: 'sine.inOut',
             });
         });
     }, dashboardContainer.value);
 });
 
+// Pause/resume polling + animations in response to ban modal
+watch(showBanModal, (open) => {
+    if (open) {
+        pausePolling();
+        gsap.globalTimeline.pause();
+    } else {
+        gsap.globalTimeline.resume();
+        if (!document.hidden) resumePolling();
+    }
+});
+
 onBeforeUnmount(() => {
     window.removeEventListener('resize', syncInteractionModes);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    pausePolling();
     if (gsapCtx) {
         gsapCtx.revert();
     }
@@ -354,7 +402,7 @@ const handleLogout = () => {
         <div 
             ref="dashboardContainer" 
             @mousemove="handleGlobalMouseMove"
-            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 md:p-10 relative overflow-hidden bg-background perspective-[1500px] transition-all duration-300"
+            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 md:p-10 relative overflow-hidden bg-background transition-all duration-300"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
@@ -408,7 +456,7 @@ const handleLogout = () => {
             </div>
 
             <!-- Main Content Grid -->
-            <div class="grid gap-8 lg:grid-cols-3 animate-section stagger-4 dashboard-main-grid">
+            <div class="grid gap-8 lg:grid-cols-3 items-start animate-section stagger-4 dashboard-main-grid">
                 <!-- Courses Progress - Main Section -->
                 <div class="lg:col-span-2 space-y-8">
                     <!-- Streak Heatmap Card -->
@@ -434,13 +482,15 @@ const handleLogout = () => {
                 </div>
 
                 <!-- Sidebar - Notifications & Achievements -->
-                <DashboardSidebar 
-                    :unread-notification-count="3"
-                    :weekly-x-p="userStats.currentXP" 
-                    :weekly-goal="1000"
-                    :upcoming-exams="upcomingExams"
-                    @quick-action="handleQuickAction"
-                />
+                <div class="lg:sticky lg:top-24 lg:self-start">
+                    <DashboardSidebar
+                        :unread-notification-count="3"
+                        :weekly-x-p="userStats.currentXP"
+                        :weekly-goal="1000"
+                        :upcoming-exams="upcomingExams"
+                        @quick-action="handleQuickAction"
+                    />
+                </div>
             </div>
         </div>
 
