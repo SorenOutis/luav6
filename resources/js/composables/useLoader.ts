@@ -1,23 +1,33 @@
 import { reactive, toRefs } from 'vue';
 
+export const LOADER_MESSAGES = {
+    INITIALIZING: 'INITIALIZING',
+    TERMINATING: 'TERMINATING SESSION',
+} as const;
+
+export type LoaderMessage = typeof LOADER_MESSAGES[keyof typeof LOADER_MESSAGES] | string;
+
+const DEV = import.meta.env.DEV;
+const log = (...args: unknown[]) => { if (DEV) console.log(...args); };
+
 const state = reactive({
     isVisible: false,
     pendingHide: false,
-    message: 'INITIALIZING',
+    message: LOADER_MESSAGES.INITIALIZING as LoaderMessage,
 });
 
 export function useLoader() {
-    const show = (message: string = 'INITIALIZING') => {
+    const show = (message: LoaderMessage = LOADER_MESSAGES.INITIALIZING) => {
         state.isVisible = true;
         state.pendingHide = false;
         state.message = message;
-        console.log('[useLoader] state.isVisible set to true with message:', message);
+        log('[useLoader] state.isVisible set to true with message:', message);
     };
 
     const hide = () => {
         state.isVisible = false;
         state.pendingHide = false;
-        console.log('[useLoader] state.isVisible set to false');
+        log('[useLoader] state.isVisible set to false');
     };
 
     /**
@@ -26,7 +36,7 @@ export function useLoader() {
      */
     const hideWhenReady = () => {
         state.pendingHide = true;
-        console.log('[useLoader] pendingHide set to true — waiting for progress 100%');
+        log('[useLoader] pendingHide set to true — waiting for progress 100%');
     };
 
     return {
