@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Progress from '@/components/ui/progress/Progress.vue';
+import { Clock } from 'lucide-vue-next';
 
 interface Course {
     id: number;

@@ -4,8 +4,10 @@ import CardContent from '@/components/ui/card/CardContent.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import Button from '@/components/ui/button/Button.vue';
+import NextUpCard, { type NextUpItem } from './NextUpCard.vue';
+import EmptyState from './EmptyState.vue';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Clock } from 'lucide-vue-next';
+import { BookOpen, Clock, RefreshCw, Trophy, Sparkles, CalendarX } from 'lucide-vue-next';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
 
 interface Exam {
@@ -13,6 +15,7 @@ interface Exam {
     title: string;
     description: string;
     exam_date: string;
+    exam_date_iso?: string | null;
     duration_minutes: number;
     status: string;
     parts_count: number;
@@ -25,67 +28,113 @@ interface Props {
     weeklyXP?: number;
     weeklyGoal?: number;
     upcomingExams?: Exam[];
+    nextUpItem?: NextUpItem | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    weeklyXP: 0,
+    weeklyGoal: 0,
+    upcomingExams: () => [],
+    nextUpItem: null,
+});
 const emit = defineEmits(['quick-action']);
+
+const weeklyPercent = (xp: number, goal: number) => {
+    if (!goal) return 0;
+    return Math.min(100, Math.round((xp / goal) * 100));
+};
 </script>
 
 <template>
     <div class="space-y-4">
-        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border bg-gradient-to-br from-primary/10 via-transparent to-transparent backdrop-blur-xl relative overflow-hidden group/actions">
-            <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl group-hover/actions:scale-150 transition-transform duration-1000"></div>
+        <!-- Promoted: Next Up -->
+        <NextUpCard v-if="nextUpItem" :item="nextUpItem" />
+
+        <!-- Compact Quick Actions -->
+        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
+            <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
             <CardHeader class="pb-3">
-                <CardTitle class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center justify-between">
-                    Quick Actions
-                    <div class="w-1 h-1 rounded-full bg-primary animate-pulse"></div>
-                </CardTitle>
+                <CardTitle class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent class="grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'resume')">
-                    <RefreshCw class="w-4 h-4 text-primary group-hover/btn:rotate-180 transition-transform duration-500" />
+            <CardContent class="grid grid-cols-4 gap-2">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    @click="emit('quick-action', 'resume')"
+                >
+                    <RefreshCw class="h-4 w-4 text-primary group-hover/btn:rotate-180 transition-transform duration-500" />
                     <span class="text-[9px] font-black uppercase tracking-widest">Resume</span>
                 </Button>
-                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'assignments')">
-                    <BookOpen class="w-4 h-4 text-primary group-hover/btn:scale-110 transition-transform" />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    @click="emit('quick-action', 'assignments')"
+                >
+                    <BookOpen class="h-4 w-4 text-primary group-hover/btn:scale-110 transition-transform" />
                     <span class="text-[9px] font-black uppercase tracking-widest">Tasks</span>
                 </Button>
-                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'leaderboard')">
-                    <Trophy class="w-4 h-4 text-primary group-hover/btn:-translate-y-1 transition-transform" />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    @click="emit('quick-action', 'leaderboard')"
+                >
+                    <Trophy class="h-4 w-4 text-primary group-hover/btn:-translate-y-0.5 transition-transform" />
                     <span class="text-[9px] font-black uppercase tracking-widest">Ranks</span>
                 </Button>
-                <Button variant="outline" size="sm" class="flex flex-col items-center gap-1 justify-center h-16 glass-morphism border-primary/10 hover:border-primary/30 group/btn" @click="emit('quick-action', 'settings')">
-                    <Sparkles class="w-4 h-4 text-primary group-hover/btn:rotate-12 transition-transform" />
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    @click="emit('quick-action', 'settings')"
+                >
+                    <Sparkles class="h-4 w-4 text-primary group-hover/btn:rotate-12 transition-transform" />
                     <span class="text-[9px] font-black uppercase tracking-widest">Profile</span>
                 </Button>
             </CardContent>
         </Card>
 
-        <Card v-if="weeklyGoal" class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative backdrop-blur-xl">
-            <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+        <!-- Weekly Goal -->
+        <Card
+            v-if="weeklyGoal"
+            class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative"
+        >
+            <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
             <CardHeader class="pb-2">
                 <CardTitle class="text-sm font-bold">Weekly Goal</CardTitle>
             </CardHeader>
             <CardContent>
                 <div class="space-y-3">
                     <div class="flex justify-between items-end">
-                        <div class="text-2xl font-bold">{{ weeklyXP }} <span class="text-xs text-muted-foreground font-normal">/ {{ weeklyGoal }} XP</span></div>
-                        <div class="text-xs font-bold text-primary">{{ Math.round((weeklyXP || 0) / weeklyGoal * 100) }}%</div>
+                        <div class="text-2xl font-bold tabular-nums">
+                            {{ weeklyXP }}
+                            <span class="text-xs text-muted-foreground font-normal">/ {{ weeklyGoal }} XP</span>
+                        </div>
+                        <div class="text-xs font-bold text-primary tabular-nums">
+                            {{ weeklyPercent(weeklyXP || 0, weeklyGoal) }}%
+                        </div>
                     </div>
                     <div class="h-2 bg-muted rounded-full overflow-hidden">
-                        <div class="h-full bg-primary transition-all duration-1000" :style="{ width: `${Math.min(100, (weeklyXP || 0) / weeklyGoal * 100)}%` }"></div>
+                        <div
+                            class="h-full bg-primary transition-all duration-1000"
+                            :style="{ width: `${weeklyPercent(weeklyXP || 0, weeklyGoal)}%` }"
+                        />
                     </div>
-                    <p class="text-[10px] text-muted-foreground">Keep it up! You're almost at your weekly target.</p>
+                    <p class="text-[10px] text-muted-foreground">
+                        Keep it up! You're almost at your weekly target.
+                    </p>
                 </div>
             </CardContent>
         </Card>
 
-        <!-- Upcoming Exams Card -->
-        <Card v-if="upcomingExams && upcomingExams.length > 0" class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative backdrop-blur-xl">
-            <div class="absolute -right-12 -top-12 w-28 h-28 bg-primary/5 rounded-full blur-2xl"></div>
+        <!-- Upcoming Exams -->
+        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
+            <div class="absolute -right-12 -top-12 w-28 h-28 bg-primary/5 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
             <CardHeader class="pb-3 flex flex-row items-center justify-between">
                 <CardTitle class="text-sm font-bold flex items-center gap-2">
-                    <BookOpen class="w-4 h-4 text-primary" />
+                    <BookOpen class="h-4 w-4 text-primary" />
                     Upcoming Activities
                 </CardTitle>
                 <Link :href="examsIndex().url" class="text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors">
@@ -93,21 +142,28 @@ const emit = defineEmits(['quick-action']);
                 </Link>
             </CardHeader>
             <CardContent>
-                <div class="space-y-2">
-                    <Link v-for="exam in upcomingExams.slice(0, 2)" :key="exam.id"
+                <div v-if="upcomingExams && upcomingExams.length > 0" class="space-y-2">
+                    <Link
+                        v-for="exam in upcomingExams.slice(0, 2)"
+                        :key="exam.id"
                         :href="examsShow(exam.id).url"
                         class="p-3 rounded-lg border border-border/30 hover:border-primary/40 bg-muted/20 hover:bg-muted/40 transition-all duration-300 group cursor-pointer block"
-                        as="div">
+                        as="div"
+                    >
                         <div class="flex items-start justify-between gap-2">
                             <div class="flex-1 min-w-0">
-                                <h4 class="text-xs font-semibold text-foreground group-hover:text-primary transition-colors truncate">{{ exam.title }}</h4>
-                                <div class="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                                    <Clock class="w-2.5 h-2.5" />
+                                <h4 class="text-xs font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                                    {{ exam.title }}
+                                </h4>
+                                <div class="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground tabular-nums">
+                                    <Clock class="h-2.5 w-2.5" />
                                     {{ exam.duration_minutes }}m
                                 </div>
                             </div>
                             <div v-if="!exam.is_completed" class="text-right flex-shrink-0">
-                                <div class="text-xs font-bold text-primary">{{ exam.submitted_parts }}/{{ exam.parts_count }}</div>
+                                <div class="text-xs font-bold text-primary tabular-nums">
+                                    {{ exam.submitted_parts }}/{{ exam.parts_count }}
+                                </div>
                             </div>
                             <div v-else class="flex-shrink-0">
                                 <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-semibold uppercase">
@@ -117,6 +173,13 @@ const emit = defineEmits(['quick-action']);
                         </div>
                     </Link>
                 </div>
+                <EmptyState
+                    v-else
+                    compact
+                    :icon="CalendarX"
+                    title="All caught up"
+                    message="No scheduled activities right now. New exams will appear here the moment they're published."
+                />
             </CardContent>
         </Card>
     </div>

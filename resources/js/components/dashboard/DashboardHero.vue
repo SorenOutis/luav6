@@ -155,7 +155,7 @@ const xpPercentage = computed(() => {
                             <!-- Core Level Chip -->
                             <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/20 bg-card/60 flex flex-col items-center justify-center shadow-lg relative z-10 backdrop-blur-2xl transition-all duration-500 group-hover:scale-105">
                                 <span class="text-[8px] uppercase font-black tracking-[0.2em] text-primary/60 mb-0.5">Level</span>
-                                <span class="text-xl sm:text-2xl font-black font-mono tracking-tighter leading-none premium-gradient-text">{{ animatedLevel }}</span>
+                                <span class="text-xl sm:text-2xl font-black font-mono tracking-tighter leading-none premium-gradient-text tabular-nums">{{ animatedLevel }}</span>
                                 <Award class="w-3 h-3 text-primary mt-1 opacity-60" />
                             </div>
                         </div>
@@ -163,10 +163,10 @@ const xpPercentage = computed(() => {
                         <div class="flex-1 w-full sm:w-64 lg:w-72 space-y-3 relative z-10">
                             <div class="flex justify-between items-end">
                                 <div class="space-y-0.5">
-                                    <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
-                                    <p class="text-xs font-black tracking-tight">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ animatedMaxXP.toLocaleString() }} XP</span></p>
+                                    <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 tabular-nums">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
+                                    <p class="text-xs font-black tracking-tight tabular-nums">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ animatedMaxXP.toLocaleString() }} XP</span></p>
                                 </div>
-                                <div class="flex items-center gap-1 text-xs font-black text-primary">
+                                <div class="flex items-center gap-1 text-xs font-black text-primary tabular-nums">
                                     <Zap class="w-3 h-3 fill-current" />
                                     <span>{{ Math.round(xpPercentage) }}%</span>
                                 </div>

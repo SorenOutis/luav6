@@ -174,6 +174,7 @@ PROMPT;
                 if (isset($data['score'])) {
                     $percentage = (float) $data['score'];
                     $scaledScore = ($percentage / 100) * $maxPoints;
+
                     return [
                         'score' => (float) round($scaledScore, 2),
                         'feedback' => '',

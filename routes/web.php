@@ -119,12 +119,15 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
         // 3. Assignments (Assigned to user)
         $assignments = $user->assignments()->get()->map(function ($assignment) {
+            $due = $assignment->due_date ? Carbon::parse($assignment->due_date) : null;
+
             return [
                 'id' => $assignment->id,
                 'title' => $assignment->title,
                 'description' => $assignment->description,
-                'dueDate' => $assignment->due_date ?? 'No deadline',
-                'isOverdue' => $assignment->due_date ? Carbon::parse($assignment->due_date)->isPast() : false,
+                'dueDate' => $due ? $due->format('M d, Y') : 'No deadline',
+                'dueAtIso' => $due?->toIso8601String(),
+                'isOverdue' => $due ? $due->isPast() : false,
                 'submitted' => (bool) $assignment->pivot->submitted,
                 'status' => $assignment->pivot->status,
                 'grade' => $assignment->pivot->grade,
@@ -155,6 +158,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                     'title' => $exam->title,
                     'description' => $exam->description,
                     'exam_date' => $exam->exam_date->format('M d, Y'),
+                    'exam_date_iso' => $exam->exam_date->toIso8601String(),
                     'duration_minutes' => $exam->duration_minutes,
                     'status' => $exam->status,
                     'parts_count' => $totalParts,
@@ -263,6 +267,8 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             'activeSeason' => $currentSeason ? [
                 'id' => $currentSeason->id,
                 'name' => $currentSeason->name,
+                'startDate' => $currentSeason->start_date?->toIso8601String(),
+                'endDate' => $currentSeason->end_date?->toIso8601String(),
             ] : null,
             'sectionName' => $user->sections->pluck('name')->join(', '),
             'allSections' => Section::all(['id', 'name', 'password'])->map(fn ($s) => [

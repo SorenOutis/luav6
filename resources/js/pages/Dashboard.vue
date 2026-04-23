@@ -19,6 +19,9 @@ import DashboardStats from '@/components/dashboard/DashboardStats.vue';
 import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';
+import TodayStrip from '@/components/dashboard/TodayStrip.vue';
+import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
+import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import { Calendar } from 'lucide-vue-next';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
@@ -33,9 +36,11 @@ const mouseGlow = ref<HTMLElement | null>(null);
 
 let gsapCtx: gsap.Context | null = null;
 const isCoarsePointer = ref(false);
+const prefersReducedMotion = ref(false);
 
 const syncInteractionModes = () => {
     isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
+    prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
 import { usePage, Link, usePoll, router } from '@inertiajs/vue3';
@@ -111,7 +116,7 @@ const personalizedGreeting = computed(() => {
 
 // Interactive Background Logic
 const handleGlobalMouseMove = (e: MouseEvent) => {
-    if (!mouseGlow.value || !backgroundGrid.value || isCoarsePointer.value) return;
+    if (!mouseGlow.value || !backgroundGrid.value || isCoarsePointer.value || prefersReducedMotion.value) return;
 
     const { clientX, clientY } = e;
     const xPercent = clientX / window.innerWidth;
@@ -149,10 +154,25 @@ interface Assignment {
     title: string;
     description: string;
     dueDate: string;
+    dueAtIso?: string | null;
     isOverdue: boolean;
     submitted: boolean;
     status: string;
     grade: string | null;
+}
+
+interface LeaderboardUser {
+    id: number;
+    name: string;
+    avatar?: string;
+    xp: number;
+    level: number;
+    xpProgress: number;
+    streak: number;
+    joinedAt: string;
+    weeklyXp: number;
+    trend: 'up' | 'down' | 'stable';
+    isCurrentUser: boolean;
 }
 
 interface LeaderboardData {
@@ -166,6 +186,8 @@ interface LeaderboardData {
 interface Season {
     id: number;
     name: string;
+    startDate?: string | null;
+    endDate?: string | null;
 }
 
 interface Announcement {
@@ -180,6 +202,7 @@ interface Exam {
     title: string;
     description: string;
     exam_date: string;
+    exam_date_iso?: string | null;
     duration_minutes: number;
     status: string;
     parts_count: number;
@@ -233,6 +256,98 @@ const streak = computed(() => ({
     loginDates: props.loginDates ?? [],
 }));
 
+// Unified list of items with due-dates for "Today" + "Next Up"
+interface DueItem {
+    kind: 'exam' | 'assignment';
+    title: string;
+    dueAt: Date;
+    href: string;
+    meta?: string;
+    isCompleted: boolean;
+    isOverdue: boolean;
+}
+
+const dueItems = computed<DueItem[]>(() => {
+    const items: DueItem[] = [];
+
+    for (const a of props.assignments ?? []) {
+        if (!a.dueAtIso) continue;
+        const dueAt = new Date(a.dueAtIso);
+        if (Number.isNaN(dueAt.getTime())) continue;
+        items.push({
+            kind: 'assignment',
+            title: a.title,
+            dueAt,
+            href: assignmentsIndex().url,
+            meta: a.description,
+            isCompleted: a.submitted,
+            isOverdue: a.isOverdue,
+        });
+    }
+
+    for (const e of props.upcomingExams ?? []) {
+        if (!e.exam_date_iso) continue;
+        const dueAt = new Date(e.exam_date_iso);
+        if (Number.isNaN(dueAt.getTime())) continue;
+        items.push({
+            kind: 'exam',
+            title: e.title,
+            dueAt,
+            href: examsShow(e.id).url,
+            meta: `${e.submitted_parts}/${e.parts_count} parts · ${e.duration_minutes}m`,
+            isCompleted: e.is_completed,
+            isOverdue: dueAt.getTime() < Date.now() && !e.is_completed,
+        });
+    }
+
+    return items;
+});
+
+const nextUpItem = computed<NextUpItem | null>(() => {
+    const now = Date.now();
+    const candidates = dueItems.value
+        .filter((i) => !i.isCompleted)
+        .sort((a, b) => Math.abs(a.dueAt.getTime() - now) - Math.abs(b.dueAt.getTime() - now));
+    const pick = candidates[0];
+    if (!pick) return null;
+    return {
+        kind: pick.kind,
+        title: pick.title,
+        dueAt: pick.dueAt.toISOString(),
+        href: pick.href,
+        meta: pick.meta,
+    };
+});
+
+const todaySummary = computed(() => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const endOfDay = start.getTime() + 86_400_000;
+    const in24h = Date.now() + 86_400_000;
+
+    let dueTodayCount = 0;
+    let overdueCount = 0;
+    let upcoming24hCount = 0;
+
+    for (const item of dueItems.value) {
+        if (item.isCompleted) continue;
+        const t = item.dueAt.getTime();
+        if (t < Date.now()) {
+            overdueCount += 1;
+            continue;
+        }
+        if (t >= start.getTime() && t < endOfDay) dueTodayCount += 1;
+        if (t < in24h) upcoming24hCount += 1;
+    }
+
+    return { dueTodayCount, overdueCount, upcoming24hCount };
+});
+
+const seasonalXpTarget = computed(() => {
+    // Rough target: fill the currently reached level's XP band; can be tuned later
+    return props.userStats?.maxXPForLevel ?? 100;
+});
+
 const showSectionModal = ref(false);
 
 watch(() => props.sectionName, (newSection) => {
@@ -278,6 +393,15 @@ onMounted(() => {
     if (!dashboardContainer.value) return;
 
     gsapCtx = gsap.context(() => {
+        if (prefersReducedMotion.value) {
+            // Make sure everything is visible immediately; skip entrance + ambient animations
+            gsap.set(
+                ['.dashboard-hero', '.dashboard-stats', '.dashboard-leaderboard', '.dashboard-main-grid'],
+                { opacity: 1, y: 0, scale: 1, clearProps: 'transform' },
+            );
+            return;
+        }
+
         const tl = gsap.timeline({
             defaults: { ease: 'expo.out', duration: 1.2 }
         });
@@ -331,19 +455,21 @@ onMounted(() => {
             ease: 'expo.out'
         });
 
-        // Background orb animation refinement — re-randomize each cycle
-        const orbs = dashboardContainer.value?.querySelectorAll('.orb');
-        orbs?.forEach((orb, i) => {
-            gsap.to(orb, {
-                x: 'random(-100, 100)',
-                y: 'random(-100, 100)',
-                duration: 12 + i * 4,
-                repeat: -1,
-                repeatRefresh: true,
-                yoyo: true,
-                ease: 'sine.inOut',
+        // Background orb animation refinement — re-randomize each cycle (skipped when reduced-motion)
+        if (!prefersReducedMotion.value) {
+            const orbs = dashboardContainer.value?.querySelectorAll('.orb');
+            orbs?.forEach((orb, i) => {
+                gsap.to(orb, {
+                    x: 'random(-100, 100)',
+                    y: 'random(-100, 100)',
+                    duration: 12 + i * 4,
+                    repeat: -1,
+                    repeatRefresh: true,
+                    yoyo: true,
+                    ease: 'sine.inOut',
+                });
             });
-        });
+        }
     }, dashboardContainer.value);
 });
 
@@ -422,6 +548,14 @@ const handleLogout = () => {
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
+            <!-- Today snapshot strip -->
+            <TodayStrip
+                :due-today-count="todaySummary.dueTodayCount"
+                :overdue-count="todaySummary.overdueCount"
+                :upcoming24h-count="todaySummary.upcoming24hCount"
+                :next-item="nextUpItem"
+            />
+
             <!-- Hero Banner Section -->
             <div class="relative space-y-6">
                 <DashboardHero 
@@ -445,6 +579,15 @@ const handleLogout = () => {
                 :user-stats="userStats"
                 :streak="streak"
                 :progress-percentage="progressPercentage"
+            />
+
+            <!-- Season progress band -->
+            <SeasonProgressBand
+                :name="activeSeason?.name ?? null"
+                :start-date="activeSeason?.startDate ?? null"
+                :end-date="activeSeason?.endDate ?? null"
+                :xp-earned="userStats.currentXP"
+                :xp-target="seasonalXpTarget"
             />
 
             <!-- Improved Leaderboard -->
@@ -488,6 +631,7 @@ const handleLogout = () => {
                         :weekly-x-p="userStats.currentXP"
                         :weekly-goal="1000"
                         :upcoming-exams="upcomingExams"
+                        :next-up-item="nextUpItem"
                         @quick-action="handleQuickAction"
                     />
                 </div>

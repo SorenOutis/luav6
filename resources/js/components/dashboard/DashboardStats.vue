@@ -124,7 +124,7 @@ const displayStats = computed(() => [
                 <div class="space-y-0.5 sm:space-y-1">
                     <p class="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] text-muted-foreground/50 leading-none">{{ stat.label }}</p>
                     <div class="flex items-baseline gap-1 sm:gap-1.5">
-                        <h3 class="text-lg sm:text-2xl lg:text-3xl font-black tracking-tighter leading-none premium-gradient-text">
+                        <h3 class="text-lg sm:text-2xl lg:text-3xl font-black tracking-tighter leading-none premium-gradient-text tabular-nums">
                             {{ stat.value }}
                         </h3>
                         <span class="text-[8px] sm:text-[10px] font-black uppercase tracking-wider text-muted-foreground/30">{{ stat.suffix }}</span>
