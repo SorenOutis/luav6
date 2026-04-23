@@ -5,6 +5,7 @@ use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Models\Announcement;
@@ -313,6 +314,15 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
     Route::post('api/chat', ChatController::class)->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
+
+    // Tower Defense game routes
+    Route::prefix('games/tower-defense')->name('games.tower-defense.')->group(function () {
+        Route::get('/', [TowerDefenseController::class, 'index'])->name('index');
+        Route::get('/play/{level}', [TowerDefenseController::class, 'play'])->name('play');
+        Route::post('/runs', [TowerDefenseController::class, 'startRun'])->name('runs.start')->middleware('throttle:30,1');
+        Route::post('/runs/{run}/finish', [TowerDefenseController::class, 'finishRun'])->name('runs.finish')->middleware('throttle:30,1');
+        Route::get('/leaderboard/{level}', [TowerDefenseController::class, 'leaderboard'])->name('leaderboard');
+    });
 
     // Admin routes
     Route::get('admin/exams/submissions', [ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');

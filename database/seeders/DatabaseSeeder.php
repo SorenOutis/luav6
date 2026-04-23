@@ -27,5 +27,7 @@ class DatabaseSeeder extends Seeder
         Section::firstOrCreate(['name' => 'Section A']);
         Section::firstOrCreate(['name' => 'Section B']);
         Section::firstOrCreate(['name' => 'Section C']);
+
+        $this->call(TowerDefenseSeeder::class);
     }
 }
