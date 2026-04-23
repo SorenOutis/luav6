@@ -94,13 +94,13 @@ const xpPercentage = computed(() => {
         </TransitionGroup>
 
         <!-- Bespoke Hero Section -->
-        <div class="surface-card p-4 sm:p-7 relative overflow-hidden group">
+        <div class="surface-card p-5 sm:p-7 relative overflow-hidden group">
             <!-- Decorative Elements -->
             <div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-[100px] transition-transform duration-1000 group-hover:scale-150"></div>
             
-            <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+            <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-8 sm:gap-10">
                 <!-- Left side: Profile Picture + Greetings -->
-                <div class="flex items-center gap-5">
+                <div class="flex items-center gap-4 sm:gap-6">
                     <!-- Profile Picture -->
                     <div class="shrink-0">
                         <div class="relative group/avatar cursor-pointer">
@@ -121,26 +121,26 @@ const xpPercentage = computed(() => {
                         </div>
                     </div>
 
-                    <div class="space-y-4">
-                        <div class="flex items-center gap-3 text-[10px] font-black tracking-widest uppercase text-muted-foreground/60">
+                    <div class="space-y-3 sm:space-y-4">
+                        <div class="flex items-center gap-2.5 sm:gap-3 text-[9px] sm:text-[10px] font-black tracking-widest uppercase text-muted-foreground/60">
                             <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                                 <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
                                 Online
                             </div>
                             <span class="w-1 h-1 rounded-full bg-border"></span>
                             <div class="flex items-center gap-2 group/sync">
-                                <span>Sync: {{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
+                                <span class="whitespace-nowrap">Sync: {{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
                                 <button @click="emit('refresh')" :disabled="isRefreshing" class="hover:text-primary transition-colors">
                                     <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': isRefreshing }" />
                                 </button>
                             </div>
                         </div>
 
-                        <div class="space-y-1">
-                            <h1 class="text-3xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-[1.1]">
+                        <div class="space-y-0.5 sm:space-y-1">
+                            <h1 class="text-2xl sm:text-4xl font-black tracking-tighter premium-gradient-text leading-tight">
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
-                            <p class="text-muted-foreground text-xs sm:text-sm font-medium max-w-sm leading-relaxed opacity-80">
+                            <p class="text-muted-foreground text-[10px] sm:text-sm font-medium max-w-[200px] sm:max-w-sm leading-relaxed opacity-80">
                                 Your learning engine is at <span class="text-foreground font-black">peak performance</span>.
                             </p>
                         </div>
@@ -150,29 +150,29 @@ const xpPercentage = computed(() => {
                 <!-- Level & Progress Visual -->
                 <div class="flex items-center gap-4 sm:gap-6 w-full lg:w-auto lg:ml-auto">
 
-                    <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 bg-primary/5 p-5 sm:p-6 rounded-[2rem] border border-primary/10 backdrop-blur-sm relative group/progress-box flex-1 lg:flex-none">
+                    <div class="flex flex-col sm:flex-row items-center gap-5 sm:gap-8 bg-primary/5 p-6 sm:p-6 rounded-[2.5rem] border border-primary/10 backdrop-blur-sm relative group/progress-box flex-1 lg:flex-none">
                         <div class="relative shrink-0 p-1 group/level">
                             <!-- Core Level Chip -->
                             <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/20 bg-card/60 flex flex-col items-center justify-center shadow-lg relative z-10 backdrop-blur-2xl transition-all duration-500 group-hover:scale-105">
-                                <span class="text-[8px] uppercase font-black tracking-[0.2em] text-primary/60 mb-0.5">Level</span>
+                                <span class="text-[7px] sm:text-[8px] uppercase font-black tracking-[0.2em] text-primary/60 mb-0.5">Level</span>
                                 <span class="text-xl sm:text-2xl font-black font-mono tracking-tighter leading-none premium-gradient-text tabular-nums">{{ animatedLevel }}</span>
-                                <Award class="w-3 h-3 text-primary mt-1 opacity-60" />
+                                <Award class="w-2.5 h-2.5 sm:w-3 h-3 text-primary mt-1 opacity-60" />
                             </div>
                         </div>
 
                         <div class="flex-1 w-full sm:w-64 lg:w-72 space-y-3 relative z-10">
                             <div class="flex justify-between items-end">
                                 <div class="space-y-0.5">
-                                    <p class="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 tabular-nums">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
-                                    <p class="text-xs font-black tracking-tight tabular-nums">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ animatedMaxXP.toLocaleString() }} XP</span></p>
+                                    <p class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground/60 tabular-nums">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP to Level {{ userStats.level + 1 }}</p>
+                                    <p class="text-[10px] sm:text-xs font-black tracking-tight tabular-nums">{{ animatedXP.toLocaleString() }} <span class="text-muted-foreground/40 font-bold">/ {{ animatedMaxXP.toLocaleString() }} XP</span></p>
                                 </div>
-                                <div class="flex items-center gap-1 text-xs font-black text-primary tabular-nums">
+                                <div class="flex items-center gap-1 text-[10px] sm:text-xs font-black text-primary tabular-nums">
                                     <Zap class="w-3 h-3 fill-current" />
                                     <span>{{ Math.round(xpPercentage) }}%</span>
                                 </div>
                             </div>
                             
-                            <div class="relative h-2 w-full bg-muted/40 rounded-full overflow-hidden border border-border/10">
+                            <div class="relative h-1.5 sm:h-2 w-full bg-muted/40 rounded-full overflow-hidden border border-border/10">
                                 <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_15px_rgba(var(--primary),0.3)]" 
                                     :style="{ width: `${xpPercentage}%` }">
                                 </div>

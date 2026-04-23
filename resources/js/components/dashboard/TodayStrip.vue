@@ -222,14 +222,14 @@ const accentClasses = (accent: string, active: boolean) => {
             />
         </div>
 
-        <div class="relative z-10 flex flex-col gap-3 p-3 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch">
+        <div class="relative z-10 flex flex-col gap-3 p-4 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch">
             <!-- Middle: Metric tiles -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-3 lg:flex-1">
+            <div class="grid grid-cols-3 gap-3 sm:gap-3 lg:flex-1">
                 <template v-for="m in metrics" :key="m.key">
                     <div
                         :class="[
-                            'relative overflow-hidden rounded-xl border transition-all duration-300',
-                            'flex flex-col items-start gap-2 p-2.5',
+                            'relative overflow-hidden rounded-2xl border transition-all duration-300',
+                            'flex flex-col items-start gap-2.5 p-3',
                             'sm:flex-row sm:items-center sm:gap-3 sm:p-3 sm:px-4',
                             accentClasses(m.accent, m.active).wrap,
                         ]"
@@ -247,12 +247,12 @@ const accentClasses = (accent: string, active: boolean) => {
                         <div class="relative z-10 flex w-full items-center gap-2 sm:w-auto sm:gap-0">
                             <div
                                 :class="[
-                                    'relative flex shrink-0 items-center justify-center rounded-lg border',
-                                    'h-8 w-8 sm:h-10 sm:w-10',
+                                    'relative flex shrink-0 items-center justify-center rounded-xl border',
+                                    'h-9 w-9 sm:h-10 sm:w-10',
                                     accentClasses(m.accent, m.active).iconWrap,
                                 ]"
                             >
-                                <component :is="m.icon" class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <component :is="m.icon" class="h-4 w-4 sm:h-4 sm:w-4" />
                                 <span
                                     v-if="m.active"
                                     :class="[
@@ -263,7 +263,7 @@ const accentClasses = (accent: string, active: boolean) => {
                                 />
                             </div>
                             <!-- Mobile-only label beside icon; hidden on sm+ (shown in the bottom block) -->
-                            <p class="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground/70 truncate sm:hidden">
+                            <p class="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/70 truncate sm:hidden">
                                 {{ m.label }}
                             </p>
                         </div>
@@ -283,7 +283,7 @@ const accentClasses = (accent: string, active: boolean) => {
                                     {{ m.value }}
                                 </span>
                                 <!-- Sub-label hidden on xs (tight space); shown from sm+ -->
-                                <span class="hidden truncate text-[10px] text-muted-foreground/70 sm:inline">
+                                <span class="hidden truncate text-[9px] font-black uppercase tracking-wider text-muted-foreground/50 sm:inline">
                                     {{ m.sub }}
                                 </span>
                             </div>
@@ -297,7 +297,7 @@ const accentClasses = (accent: string, active: boolean) => {
                 v-if="nextItem"
                 :href="nextItem.href"
                 :class="[
-                    'group relative flex items-center gap-3 overflow-hidden rounded-xl border px-4 py-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg lg:w-[32%] lg:min-w-[280px]',
+                    'group relative flex items-center gap-4 overflow-hidden rounded-2xl border px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg lg:w-[32%] lg:min-w-[280px]',
                     nextToneClasses.border,
                     'ring-1',
                     nextToneClasses.ring,

@@ -528,7 +528,7 @@ const handleLogout = () => {
         <div 
             ref="dashboardContainer" 
             @mousemove="handleGlobalMouseMove"
-            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 md:p-10 relative overflow-hidden bg-background transition-all duration-300"
+            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 sm:p-5 md:p-10 relative overflow-hidden bg-background transition-all duration-300 min-w-0 w-full max-w-full"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
@@ -547,14 +547,6 @@ const handleLogout = () => {
             <!-- Glassy background decorative orbs -->
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
-
-            <!-- Today snapshot strip -->
-            <TodayStrip
-                :due-today-count="todaySummary.dueTodayCount"
-                :overdue-count="todaySummary.overdueCount"
-                :upcoming24h-count="todaySummary.upcoming24hCount"
-                :next-item="nextUpItem"
-            />
 
             <!-- Hero Banner Section -->
             <div class="relative space-y-6">
@@ -581,6 +573,14 @@ const handleLogout = () => {
                 :progress-percentage="progressPercentage"
             />
 
+            <!-- Today snapshot strip -->
+            <TodayStrip
+                :due-today-count="todaySummary.dueTodayCount"
+                :overdue-count="todaySummary.overdueCount"
+                :upcoming24h-count="todaySummary.upcoming24hCount"
+                :next-item="nextUpItem"
+            />
+
             <!-- Season progress band -->
             <SeasonProgressBand
                 :name="activeSeason?.name ?? null"
@@ -599,11 +599,11 @@ const handleLogout = () => {
             </div>
 
             <!-- Main Content Grid -->
-            <div class="grid gap-8 lg:grid-cols-3 items-start animate-section stagger-4 dashboard-main-grid">
+            <div class="grid gap-8 grid-cols-1 lg:grid-cols-3 items-start animate-section stagger-4 dashboard-main-grid min-w-0">
                 <!-- Courses Progress - Main Section -->
-                <div class="lg:col-span-2 space-y-8">
+                <div class="lg:col-span-2 space-y-8 min-w-0">
                     <!-- Streak Heatmap Card -->
-                    <div class="surface-card p-6 sm:p-8">
+                    <div class="surface-card p-4 sm:p-8">
                         <div class="flex items-center justify-between mb-6">
                             <div>
                                 <h3 class="text-xl font-bold flex items-center gap-2">
@@ -625,7 +625,7 @@ const handleLogout = () => {
                 </div>
 
                 <!-- Sidebar - Notifications & Achievements -->
-                <div class="lg:sticky lg:top-24 lg:self-start">
+                <div class="lg:sticky lg:top-24 lg:self-start min-w-0">
                     <DashboardSidebar
                         :unread-notification-count="3"
                         :weekly-x-p="userStats.currentXP"

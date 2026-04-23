@@ -32,33 +32,33 @@ const getLevelClass = (level: number) => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-3 relative z-10">
+    <div class="flex flex-col gap-2 sm:gap-3 relative z-10">
         <!-- Labels -->
-        <div class="grid grid-cols-7 gap-1 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 text-center mb-1">
+        <div class="grid grid-cols-7 gap-1 sm:gap-2 text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 text-center mb-0.5 sm:mb-1">
             <span v-for="day in days" :key="day">{{ day }}</span>
         </div>
         
         <!-- Grid -->
         <div class="grid grid-cols-7 gap-1 sm:gap-2">
             <div v-for="i in 28" :key="i"
-                class="aspect-square rounded-md border transition-all duration-300 hover:scale-110 cursor-pointer relative group/cell"
+                class="aspect-square rounded-sm sm:rounded-md border transition-all duration-300 hover:scale-110 cursor-pointer relative group/cell"
                 :class="getLevelClass(getActivityLevel(i))">
                 <!-- Tooltip -->
-                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-foreground text-background text-[9px] font-black tracking-widest uppercase rounded opacity-0 group-hover/cell:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-2xl">
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-foreground text-background text-[8px] sm:text-[9px] font-black tracking-widest uppercase rounded opacity-0 group-hover/cell:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-2xl">
                     Lvl {{ getActivityLevel(i) }} Output
                 </div>
             </div>
         </div>
 
         <!-- Legend -->
-        <div class="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-4 pt-4 border-t border-border/10">
+        <div class="flex items-center justify-between text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border/10">
             <span>Standby</span>
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <div class="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 rounded-sm bg-muted/10 border border-border/10"></div>
-                <div class="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 rounded-sm bg-primary/20 border border-primary/10"></div>
-                <div class="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 rounded-sm bg-primary/40 border border-primary/20"></div>
-                <div class="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 rounded-sm bg-primary/70 border border-primary/40"></div>
-                <div class="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 rounded-sm bg-primary border border-primary/60"></div>
+            <div class="flex items-center gap-1 sm:gap-2">
+                <div class="w-2 sm:w-3.5 h-2 sm:h-3.5 rounded-[2px] sm:rounded-sm bg-muted/10 border border-border/10"></div>
+                <div class="w-2 sm:w-3.5 h-2 sm:h-3.5 rounded-[2px] sm:rounded-sm bg-primary/20 border border-primary/10"></div>
+                <div class="w-2 sm:w-3.5 h-2 sm:h-3.5 rounded-[2px] sm:rounded-sm bg-primary/40 border border-primary/20"></div>
+                <div class="w-2 sm:w-3.5 h-2 sm:h-3.5 rounded-[2px] sm:rounded-sm bg-primary/70 border border-primary/40"></div>
+                <div class="w-2 sm:w-3.5 h-2 sm:h-3.5 rounded-[2px] sm:rounded-sm bg-primary border border-primary/60"></div>
             </div>
             <span>Peak</span>
         </div>

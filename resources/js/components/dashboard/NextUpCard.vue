@@ -122,7 +122,7 @@ const toneClasses = computed(() => {
         <div class="relative z-10 mt-4 flex items-end justify-between gap-3">
             <div>
                 <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/60">{{ toneClasses.badge }}</p>
-                <p class="mt-0.5 text-2xl font-black tracking-tight tabular-nums" :class="countdown?.overdue ? 'text-destructive' : 'text-foreground'">
+                <p class="mt-0.5 text-xl sm:text-2xl font-black tracking-tight tabular-nums" :class="countdown?.overdue ? 'text-destructive' : 'text-foreground'">
                     {{ countdown?.label ?? '—' }}
                 </p>
             </div>

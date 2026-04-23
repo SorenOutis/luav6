@@ -54,44 +54,44 @@ const weeklyPercent = (xp: number, goal: number) => {
         <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
             <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
             <CardHeader class="pb-3">
-                <CardTitle class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Quick Actions</CardTitle>
+                <CardTitle class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent class="grid grid-cols-4 gap-2">
+            <CardContent class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <Button
                     variant="outline"
                     size="sm"
-                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    class="flex flex-col items-center gap-1 justify-center h-12 sm:h-14 border-primary/10 hover:border-primary/30 group/btn"
                     @click="emit('quick-action', 'resume')"
                 >
-                    <RefreshCw class="h-4 w-4 text-primary group-hover/btn:rotate-180 transition-transform duration-500" />
-                    <span class="text-[9px] font-black uppercase tracking-widest">Resume</span>
+                    <RefreshCw class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary group-hover/btn:rotate-180 transition-transform duration-500" />
+                    <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Resume</span>
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
-                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    class="flex flex-col items-center gap-1 justify-center h-12 sm:h-14 border-primary/10 hover:border-primary/30 group/btn"
                     @click="emit('quick-action', 'assignments')"
                 >
-                    <BookOpen class="h-4 w-4 text-primary group-hover/btn:scale-110 transition-transform" />
-                    <span class="text-[9px] font-black uppercase tracking-widest">Tasks</span>
+                    <BookOpen class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary group-hover/btn:scale-110 transition-transform" />
+                    <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Tasks</span>
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
-                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    class="flex flex-col items-center gap-1 justify-center h-12 sm:h-14 border-primary/10 hover:border-primary/30 group/btn"
                     @click="emit('quick-action', 'leaderboard')"
                 >
-                    <Trophy class="h-4 w-4 text-primary group-hover/btn:-translate-y-0.5 transition-transform" />
-                    <span class="text-[9px] font-black uppercase tracking-widest">Ranks</span>
+                    <Trophy class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary group-hover/btn:-translate-y-0.5 transition-transform" />
+                    <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Ranks</span>
                 </Button>
                 <Button
                     variant="outline"
                     size="sm"
-                    class="flex flex-col items-center gap-1 justify-center h-14 border-primary/10 hover:border-primary/30 group/btn"
+                    class="flex flex-col items-center gap-1 justify-center h-12 sm:h-14 border-primary/10 hover:border-primary/30 group/btn"
                     @click="emit('quick-action', 'settings')"
                 >
-                    <Sparkles class="h-4 w-4 text-primary group-hover/btn:rotate-12 transition-transform" />
-                    <span class="text-[9px] font-black uppercase tracking-widest">Profile</span>
+                    <Sparkles class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary group-hover/btn:rotate-12 transition-transform" />
+                    <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Profile</span>
                 </Button>
             </CardContent>
         </Card>
@@ -103,16 +103,16 @@ const weeklyPercent = (xp: number, goal: number) => {
         >
             <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
             <CardHeader class="pb-2">
-                <CardTitle class="text-sm font-bold">Weekly Goal</CardTitle>
+                <CardTitle class="text-xs sm:text-sm font-bold">Weekly Goal</CardTitle>
             </CardHeader>
             <CardContent>
                 <div class="space-y-3">
                     <div class="flex justify-between items-end">
-                        <div class="text-2xl font-bold tabular-nums">
+                        <div class="text-xl sm:text-2xl font-bold tabular-nums">
                             {{ weeklyXP }}
-                            <span class="text-xs text-muted-foreground font-normal">/ {{ weeklyGoal }} XP</span>
+                            <span class="text-[10px] text-muted-foreground font-normal">/ {{ weeklyGoal }} XP</span>
                         </div>
-                        <div class="text-xs font-bold text-primary tabular-nums">
+                        <div class="text-[10px] sm:text-xs font-bold text-primary tabular-nums">
                             {{ weeklyPercent(weeklyXP || 0, weeklyGoal) }}%
                         </div>
                     </div>

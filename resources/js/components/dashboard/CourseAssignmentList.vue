@@ -50,19 +50,19 @@ const handleMouseMove = (e: MouseEvent) => {
 </script>
 
 <template>
-    <div class="surface-card p-6 md:p-8 flex flex-col relative overflow-hidden group/board" @mousemove="handleMouseMove">
+    <div class="surface-card p-5 sm:p-8 flex flex-col relative overflow-hidden group/board" @mousemove="handleMouseMove">
         <!-- Hover Bloom Effect -->
         <div class="absolute inset-0 opacity-0 group-hover/board:opacity-100 transition-opacity duration-700 pointer-events-none"
             :style="{ background: `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.05), transparent 40%)` }">
         </div>
 
-        <div class="mb-8 relative z-10 border-b border-border/10 pb-4 flex items-center justify-between">
+        <div class="mb-6 sm:mb-8 relative z-10 border-b border-border/10 pb-4 flex items-center justify-between">
             <div>
-                <h3 class="text-xl font-black tracking-tighter flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <h3 class="text-lg sm:text-xl font-black tracking-tighter flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary sm:w-5 sm:h-5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     Mission Control
                 </h3>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mt-1">Your learning trajectory and active assignments</p>
+                <p class="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mt-1">Your learning trajectory and active assignments</p>
             </div>
             <div class="hidden sm:flex -space-x-2">
                 <div v-for="i in 3" :key="i" class="w-7 h-7 rounded-full border-2 border-background bg-muted flex items-center justify-center overflow-hidden">
@@ -77,13 +77,13 @@ const handleMouseMove = (e: MouseEvent) => {
         </div>
 
         <div class="space-y-6 sm:space-y-8 relative z-10">
-            <div v-if="courses.length === 0 && assignments.length === 0" class="text-center py-12 sm:py-20 px-4 animate-fade-in border border-dashed border-primary/20 rounded-2xl sm:rounded-3xl bg-primary/5 backdrop-blur-sm group/empty">
-                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 border border-primary/20 relative">
+            <div v-if="courses.length === 0 && assignments.length === 0" class="text-center py-10 sm:py-20 px-4 animate-fade-in border border-dashed border-primary/20 rounded-2xl sm:rounded-3xl bg-primary/5 backdrop-blur-sm group/empty">
+                <div class="w-12 h-12 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 border border-primary/20 relative">
                     <div class="absolute inset-0 rounded-full bg-primary/20 animate-ping opacity-20"></div>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary group-hover/empty:scale-110 transition-transform duration-500 sm:w-8 sm:h-8"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary group-hover/empty:scale-110 transition-transform duration-500 sm:w-8 sm:h-8"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                 </div>
-                <h3 class="text-sm sm:text-base font-black tracking-widest uppercase mb-2 premium-gradient-text">Objectives Secured</h3>
-                <p class="text-[9px] sm:text-[11px] font-bold tracking-wider text-muted-foreground/80 max-w-[280px] mx-auto uppercase leading-relaxed">All sectors clear. You've completed all current modules and transmissions.</p>
+                <h3 class="text-xs sm:text-base font-black tracking-widest uppercase mb-2 premium-gradient-text">Objectives Secured</h3>
+                <p class="text-[8px] sm:text-[11px] font-bold tracking-wider text-muted-foreground/80 max-w-[240px] sm:max-w-[280px] mx-auto uppercase leading-relaxed">All sectors clear. You've completed all current modules and transmissions.</p>
                 <button class="mt-6 sm:mt-8 px-5 sm:px-6 py-2 rounded-lg sm:rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-[8px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 border border-primary/20">
                     Browse Archives
                 </button>

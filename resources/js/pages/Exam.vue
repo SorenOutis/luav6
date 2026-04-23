@@ -224,93 +224,93 @@ onMounted(() => {
             </div>
 
             <!-- Exam Grid -->
-            <div v-if="exams.length > 0" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div v-if="exams.length > 0" class="grid gap-3 sm:gap-4 grid-cols-2 xl:grid-cols-3">
                 <div 
                     v-for="exam in exams" 
                     :key="exam.id"
-                    class="animate-section exam-card relative flex flex-col justify-between p-8 transition-all duration-500 overflow-hidden group/card border border-border bg-card dark:bg-zinc-900/40"
+                    class="animate-section exam-card relative flex flex-col justify-between p-3 sm:p-8 transition-all duration-500 overflow-hidden group/card border border-border bg-card dark:bg-zinc-900/40 min-w-0"
                     :class="exam.is_locked 
                         ? 'opacity-60 grayscale-[0.8] cursor-not-allowed bg-muted/10' 
                         : 'hover:shadow-2xl hover:-translate-y-1'"
                     @mousemove="handleMouseMove"
                 >
                     <!-- Futuristic Corner Brackets -->
-                    <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
-                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
+                    <div class="absolute top-0 left-0 w-4 h-4 sm:w-6 sm:h-6 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                    <div class="absolute bottom-0 right-0 w-4 h-4 sm:w-6 sm:h-6 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
                     <!-- Status & Score Overlay -->
-                    <div v-if="exam.is_locked" class="absolute top-6 right-6 flex flex-col items-end gap-2 z-20">
-                        <div class="px-3 py-1 bg-emerald-500 text-white dark:text-zinc-950 font-black text-[9px] uppercase tracking-[0.2em] transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                    <div v-if="exam.is_locked" class="absolute top-3 right-3 sm:top-6 sm:right-6 flex flex-col items-end gap-1.5 sm:gap-2 z-20">
+                        <div class="px-2 sm:px-3 py-0.5 sm:py-1 bg-emerald-500 text-white dark:text-zinc-950 font-black text-[8px] sm:text-[9px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
                             <span class="inline-block skew-x-12">COMPLETED</span>
                         </div>
-                        <div class="px-3 py-1 bg-foreground text-background font-black text-[10px] font-mono tracking-widest transform -skew-x-12">
+                        <div class="px-2 sm:px-3 py-0.5 sm:py-1 bg-foreground text-background font-black text-[8px] sm:text-[10px] font-mono tracking-widest transform -skew-x-12">
                             <span class="inline-block skew-x-12">
-                                SCORE: {{ exam.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
+                                {{ exam.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
                             </span>
                         </div>
                     </div>
 
                     <!-- Center Diamond Icon -->
-                    <div class="flex justify-center mb-6">
-                        <div class="w-12 h-12 border-2 rotate-45 flex items-center justify-center transition-colors duration-500"
+                    <div class="flex justify-center mb-3 sm:mb-6">
+                        <div class="w-8 h-8 sm:w-12 sm:h-12 border-2 rotate-45 flex items-center justify-center transition-colors duration-500"
                             :class="exam.is_locked ? 'border-muted-foreground/30' : 'border-amber-500/40 group-hover/card:border-amber-500'">
                              <div class="w-2 h-2 rotate-45" :class="exam.is_locked ? 'bg-muted-foreground/30' : 'bg-amber-500 animate-pulse'"></div>
                         </div>
                     </div>
 
-                    <div class="relative z-10 space-y-6 text-center">
-                        <div class="space-y-2">
-                            <h2 class="text-2xl font-black italic uppercase tracking-tight text-foreground leading-none">
+                    <div class="relative z-10 space-y-3 sm:space-y-6 text-center min-w-0">
+                        <div class="space-y-1 sm:space-y-2">
+                            <h2 class="text-sm sm:text-2xl font-black italic uppercase tracking-tight text-foreground leading-tight sm:leading-none break-words">
                                 {{ exam.title }}
                             </h2>
-                            <div class="h-px w-12 bg-foreground/20 mx-auto"></div>
-                            <p class="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                            <div class="h-px w-8 sm:w-12 bg-foreground/20 mx-auto"></div>
+                            <p class="hidden sm:block text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
                                 Initiating <span class="text-foreground underline underline-offset-4 decoration-2">Assessment Protocol</span>
                             </p>
                         </div>
 
                         <!-- System Alerts Box -->
-                        <div class="bg-muted/30 dark:bg-zinc-950/40 p-5 space-y-3 text-left border border-border/50">
-                            <div class="flex items-start gap-3">
+                        <div class="bg-muted/30 dark:bg-zinc-950/40 p-2 sm:p-5 space-y-1.5 sm:space-y-3 text-left border border-border/50">
+                            <div class="hidden sm:flex items-start gap-3">
                                 <span class="text-amber-500 font-black text-[10px] shrink-0">[!]</span>
                                 <p class="text-[9px] font-bold text-muted-foreground uppercase leading-relaxed tracking-wider">
                                     {{ exam.description }}
                                 </p>
                             </div>
-                            <div class="flex items-center gap-3">
-                                <span class="text-amber-500 font-black text-[10px] shrink-0">[!]</span>
-                                <p class="text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
-                                    TIME_LIMIT: {{ exam.duration_minutes }} MINUTES
+                            <div class="flex items-center gap-2 sm:gap-3">
+                                <span class="text-amber-500 font-black text-[9px] sm:text-[10px] shrink-0">[!]</span>
+                                <p class="text-[8px] sm:text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-mono truncate">
+                                    {{ exam.duration_minutes }} MIN
                                 </p>
                             </div>
                         </div>
 
                         <!-- Action Button (Slanted) -->
-                        <div class="pt-4 space-y-4">
+                        <div class="pt-2 sm:pt-4 space-y-2 sm:space-y-4">
                             <button 
                                 v-if="exam.is_locked"
                                 @click="openReview(exam)"
-                                class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12"
+                                class="relative w-full py-2 sm:py-4 bg-foreground text-background font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[9px] sm:text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12"
                             >
-                                <span class="inline-block skew-x-12">Review Answers</span>
+                                <span class="inline-block skew-x-12">Review</span>
                             </button>
                             
                             <a 
                                 v-else-if="exam.url" 
                                 :href="exam.url" 
                                 target="_blank"
-                                class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-3"
+                                class="relative w-full py-2 sm:py-4 bg-foreground text-background font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[9px] sm:text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-2 sm:gap-3"
                             >
-                                <span class="inline-block skew-x-12">Start Now</span>
-                                <ArrowRight class="w-4 h-4 skew-x-12" />
+                                <span class="inline-block skew-x-12">Start</span>
+                                <ArrowRight class="w-3 h-3 sm:w-4 sm:h-4 skew-x-12" />
                             </a>
                             <Link 
                                 v-else
                                 :href="examsShow(exam.id).url"
-                                class="relative w-full py-4 bg-foreground text-background font-black uppercase tracking-[0.3em] text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-3"
+                                class="relative w-full py-2 sm:py-4 bg-foreground text-background font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[9px] sm:text-[11px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-2 sm:gap-3"
                             >
-                                <span class="inline-block skew-x-12">Start Now</span>
-                                <ArrowRight class="w-4 h-4 skew-x-12" />
+                                <span class="inline-block skew-x-12">Start</span>
+                                <ArrowRight class="w-3 h-3 sm:w-4 sm:h-4 skew-x-12" />
                             </Link>
                         </div>
                     </div>
