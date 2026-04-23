@@ -4,6 +4,8 @@ namespace App\Providers\Filament;
 
 use App\Filament\Widgets\AdminActivityTrendChart;
 use App\Filament\Widgets\AdminAnalyticsOverview;
+use App\Filament\Widgets\LatestExamSubmissionsWidget;
+use App\Filament\Widgets\TopStudentsWidget;
 use App\Http\Middleware\SanitizeInput;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -14,7 +16,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -41,10 +42,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
+                AccountWidget::class,
                 AdminAnalyticsOverview::class,
                 AdminActivityTrendChart::class,
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                LatestExamSubmissionsWidget::class,
+                TopStudentsWidget::class,
             ])
             ->middleware([
                 SanitizeInput::class,

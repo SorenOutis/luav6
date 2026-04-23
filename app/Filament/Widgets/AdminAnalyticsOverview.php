@@ -13,6 +13,10 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
 {
     protected ?string $pollingInterval = '30s';
 
+    protected static ?int $sort = 1;
+
+    protected int|string|array $columnSpan = 'full';
+
     protected ?string $heading = 'System Analytics';
 
     protected ?string $description = 'High-level metrics for student growth and platform activity.';

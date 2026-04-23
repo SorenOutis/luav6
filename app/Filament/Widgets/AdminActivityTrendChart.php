@@ -16,11 +16,44 @@ class AdminActivityTrendChart extends ChartWidget
 
     protected ?string $pollingInterval = '60s';
 
+    protected static ?int $sort = 2;
+
     protected int|string|array $columnSpan = 'full';
+
+    protected ?string $maxHeight = '260px';
 
     protected function getType(): string
     {
         return 'line';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function getOptions(): array
+    {
+        return [
+            'maintainAspectRatio' => false,
+            'plugins' => [
+                'legend' => [
+                    'display' => true,
+                    'position' => 'bottom',
+                    'labels' => [
+                        'boxWidth' => 12,
+                        'font' => ['size' => 11],
+                    ],
+                ],
+            ],
+            'scales' => [
+                'y' => [
+                    'beginAtZero' => true,
+                    'ticks' => ['precision' => 0],
+                ],
+            ],
+            'elements' => [
+                'point' => ['radius' => 2, 'hoverRadius' => 4],
+            ],
+        ];
     }
 
     /**
