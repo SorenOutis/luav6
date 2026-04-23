@@ -29,11 +29,11 @@ class TdLevelResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $navigationLabel = 'Levels';
+    protected static ?string $navigationLabel = 'TD · Levels';
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Tower Defense';
+    protected static string|\UnitEnum|null $navigationGroup = 'Games';
 
     public static function form(Schema $schema): Schema
     {

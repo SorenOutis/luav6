@@ -21,11 +21,11 @@ class TdDifficultyResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFire;
 
-    protected static ?string $navigationLabel = 'Difficulties';
+    protected static ?string $navigationLabel = 'TD · Difficulties';
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Tower Defense';
+    protected static string|\UnitEnum|null $navigationGroup = 'Games';
 
     public static function form(Schema $schema): Schema
     {

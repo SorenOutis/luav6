@@ -18,9 +18,9 @@ class TdRunResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
 
-    protected static ?string $navigationLabel = 'Runs & Leaderboard';
+    protected static ?string $navigationLabel = 'TD · Runs';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Tower Defense';
+    protected static string|\UnitEnum|null $navigationGroup = 'Games';
 
     public static function form(Schema $schema): Schema
     {

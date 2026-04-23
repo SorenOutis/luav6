@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, ClipboardList, GraduationCap } from 'lucide-vue-next';
+import { BookOpen, FolderGit2, LayoutGrid, ClipboardList, GraduationCap, Gamepad2 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -32,6 +32,11 @@ const mainNavItems: NavItem[] = [
         title: 'Activities',
         href: '/exams',
         icon: GraduationCap,
+    },
+    {
+        title: 'Games',
+        href: '/games',
+        icon: Gamepad2,
     },
 ];
 

@@ -24,11 +24,11 @@ class TdEnemyResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBugAnt;
 
-    protected static ?string $navigationLabel = 'Enemies';
+    protected static ?string $navigationLabel = 'TD · Enemies';
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Tower Defense';
+    protected static string|\UnitEnum|null $navigationGroup = 'Games';
 
     public static function form(Schema $schema): Schema
     {

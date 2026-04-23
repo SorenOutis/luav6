@@ -24,11 +24,11 @@ class TdMapResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMap;
 
-    protected static ?string $navigationLabel = 'Maps';
+    protected static ?string $navigationLabel = 'TD · Maps';
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Tower Defense';
+    protected static string|\UnitEnum|null $navigationGroup = 'Games';
 
     public static function form(Schema $schema): Schema
     {

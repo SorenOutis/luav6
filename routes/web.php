@@ -5,6 +5,7 @@ use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\Games\GamesController;
 use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -314,6 +315,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
     Route::post('api/chat', ChatController::class)->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
+
+    // Games hub
+    Route::get('games', [GamesController::class, 'index'])->name('games.index');
 
     // Tower Defense game routes
     Route::prefix('games/tower-defense')->name('games.tower-defense.')->group(function () {
