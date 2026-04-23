@@ -223,22 +223,6 @@ const accentClasses = (accent: string, active: boolean) => {
         </div>
 
         <div class="relative z-10 flex flex-col gap-3 p-3 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch">
-            <!-- Left: Day heading + live clock -->
-            <div class="flex items-center justify-between gap-4 lg:w-[18%] lg:min-w-[180px] lg:flex-col lg:items-start lg:justify-center lg:gap-2">
-                <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/60">
-                        Today at a glance
-                    </p>
-                    <p class="mt-0.5 text-sm font-bold text-foreground">
-                        {{ now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }) }}
-                    </p>
-                </div>
-                <div class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-primary tabular-nums">
-                    <Clock class="h-3 w-3" />
-                    {{ currentHour }}
-                </div>
-            </div>
-
             <!-- Middle: Metric tiles -->
             <div class="grid grid-cols-3 gap-2 sm:gap-3 lg:flex-1">
                 <template v-for="m in metrics" :key="m.key">
