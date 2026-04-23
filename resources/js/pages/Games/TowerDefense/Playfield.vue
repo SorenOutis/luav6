@@ -203,19 +203,22 @@ const resetGame = () => {
     resetModalOpen.value = true;
 };
 
-const confirmReset = () => {
-    if (runId.value != null) {
-        axios.post(`/games/tower-defense/runs/${runId.value}/finish`, {
-            status: 'abandoned',
-            waves_completed: Math.max(0, hud.value.wave - 1),
-            score: hud.value.score,
-            gold_spent: 0,
-            lives_remaining: hud.value.lives,
-            duration_ms: 0,
-        }).catch(() => { /* noop */ });
-    }
+const confirmReset = async () => {
+    resetModalOpen.value = false;
+    try {
+        if (runId.value != null) {
+            await axios.post(`/games/tower-defense/runs/${runId.value}/finish`, {
+                status: 'abandoned',
+                waves_completed: Math.max(0, hud.value.wave - 1),
+                score: hud.value.score,
+                gold_spent: 0,
+                lives_remaining: hud.value.lives,
+                duration_ms: 0,
+            });
+        }
+    } catch { /* noop */ }
     clearCheckpoint();
-    router.reload();
+    window.location.reload();
 };
 
 const cancelReset = () => {
@@ -324,8 +327,28 @@ const cancelReset = () => {
 
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
                 <!-- Canvas (PixiJS mounts here) -->
-                <div class="flex items-start justify-center overflow-auto border border-border bg-black p-2">
+                <div class="relative flex items-start justify-center overflow-hidden border border-border bg-black p-2">
                     <div ref="stageRef" class="[image-rendering:pixelated]" />
+
+                    <!-- Wave announcement banner (centered over canvas) -->
+                    <Transition name="td-wave">
+                        <div
+                            v-if="waveBanner"
+                            :key="waveBanner.key"
+                            class="pointer-events-none absolute inset-0 z-40 flex items-center justify-center"
+                        >
+                            <div class="td-wave-banner relative flex flex-col items-center">
+                                <div class="absolute inset-0 -z-10 bg-gradient-to-r from-transparent via-primary/20 to-transparent blur-2xl" />
+                                <p class="text-[10px] font-bold uppercase tracking-[0.5em] text-primary drop-shadow-[0_0_8px_rgba(0,0,0,0.6)]">Incoming</p>
+                                <h2 class="td-wave-text text-7xl font-black uppercase tracking-tight text-white">
+                                    Wave <span class="td-wave-accent">{{ waveBanner.n }}</span>
+                                </h2>
+                                <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.4em] text-white/70 drop-shadow-[0_0_8px_rgba(0,0,0,0.6)]">
+                                    of {{ waveBanner.total }}
+                                </p>
+                            </div>
+                        </div>
+                    </Transition>
                 </div>
 
                 <!-- Sidebar: Tower shop + selected tower -->
@@ -432,26 +455,6 @@ const cancelReset = () => {
                 </aside>
             </div>
         </div>
-
-        <!-- Wave announcement banner -->
-        <Transition name="td-wave">
-            <div
-                v-if="waveBanner"
-                :key="waveBanner.key"
-                class="pointer-events-none fixed inset-x-0 top-32 z-40 flex justify-center"
-            >
-                <div class="td-wave-banner relative flex flex-col items-center">
-                    <div class="absolute inset-0 -z-10 bg-gradient-to-r from-transparent via-primary/20 to-transparent blur-2xl" />
-                    <p class="text-[10px] font-bold uppercase tracking-[0.5em] text-primary">Incoming</p>
-                    <h2 class="td-wave-text text-7xl font-black uppercase tracking-tight text-foreground">
-                        Wave <span class="text-primary">{{ waveBanner.n }}</span>
-                    </h2>
-                    <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground">
-                        of {{ waveBanner.total }}
-                    </p>
-                </div>
-            </div>
-        </Transition>
 
         <!-- Start modal -->
         <div v-if="startModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur">
@@ -623,7 +626,11 @@ const cancelReset = () => {
     animation: td-wave-pop 2.2s ease-out forwards;
 }
 .td-wave-text {
-    text-shadow: 0 0 24px rgba(0, 0, 0, 0.6), 0 0 48px hsl(var(--primary) / 0.45);
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85), 0 0 32px rgba(0, 0, 0, 0.7), 0 0 64px hsl(var(--primary) / 0.6);
+}
+.td-wave-accent {
+    color: #fbbf24;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9), 0 0 28px rgba(251, 191, 36, 0.75), 0 0 56px rgba(251, 191, 36, 0.45);
 }
 @keyframes td-wave-pop {
     0% { transform: translateY(0) scale(1); }
