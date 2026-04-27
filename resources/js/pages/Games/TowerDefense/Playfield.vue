@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
-import { onBeforeUnmount, onMounted, ref, shallowRef } from 'vue';
+import { onBeforeUnmount, onMounted, ref, shallowRef, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { TowerDefenseGame, type GameSnapshot } from './engine/Game';
 import type { HudState, LevelPayload } from './engine/types';
@@ -28,6 +28,7 @@ const hud = ref<HudState>({
     hoverTile: null,
     canBuild: false,
     selectedPlacedTowerId: null,
+    movingTowerId: null,
     speed: 1,
     awaitingWaveStart: true,
     nextWaveIdx: 1,
@@ -127,7 +128,13 @@ onMounted(async () => {
     game.value = g;
     g.on('hud', (state) => {
         hud.value = state;
-        selectedInfo.value = g.getSelectedTowerInfo();
+        // If a tower is being moved, the selected tower info should be cleared
+        // as the sidebar should reflect the moving state, not a static selection.
+        if (state.movingTowerId !== null) {
+            selectedInfo.value = null;
+        } else {
+            selectedInfo.value = g.getSelectedTowerInfo();
+        }
     });
     g.on('end', async (result) => {
         endResult.value = result;
@@ -176,6 +183,16 @@ const selectTower = (slug: string) => {
     game.value.selectTower(hud.value.selectedTowerSlug === slug ? null : slug);
 };
 
+const selectPlacedTower = (id: number) => {
+    if (!game.value) return;
+    game.value.selectPlacedTower(hud.value.selectedPlacedTowerId === id ? null : id);
+};
+
+const startMovingSelectedTower = () => {
+    if (!game.value) return;
+    game.value.startMovingSelectedTower();
+};
+
 const togglePause = () => {
     if (!game.value) return;
     if (hud.value.status === 'playing') game.value.pause();
@@ -192,6 +209,29 @@ const retry = () => {
     clearCheckpoint();
     window.location.reload();
 };
+
+const nextWaveInfo = computed(() => {
+    if (hud.value.nextWaveIdx > props.level.waves.length) return null;
+    const wave = props.level.waves[hud.value.nextWaveIdx - 1];
+    if (!wave) return null;
+    
+    // Aggregate enemy counts
+    const enemyMap = new Map<string, { name: string, count: number, color: string }>();
+    wave.spawns.forEach(s => {
+        const existing = enemyMap.get(s.enemy.slug);
+        if (existing) {
+            existing.count += s.count;
+        } else {
+            enemyMap.set(s.enemy.slug, { 
+                name: s.enemy.name, 
+                count: s.count, 
+                color: s.enemy.color 
+            });
+        }
+    });
+    return Array.from(enemyMap.values());
+});
+
 const backToIndex = () => router.visit('/games/tower-defense');
 
 const resetGame = () => {
@@ -353,6 +393,23 @@ const cancelReset = () => {
 
                 <!-- Sidebar: Tower shop + selected tower -->
                 <aside class="flex flex-col gap-4">
+                    <!-- Next Wave Intel -->
+                    <div v-if="hud.awaitingWaveStart && nextWaveInfo && nextWaveInfo.length > 0" class="surface-card">
+                        <div class="flex items-center justify-between border-b border-border px-3 py-2">
+                            <h2 class="text-xs font-black uppercase tracking-[0.25em] text-foreground">Next Wave Intel</h2>
+                            <span class="text-[9px] font-bold uppercase tracking-widest text-primary animate-pulse">Scanning...</span>
+                        </div>
+                        <div class="p-2 flex flex-col gap-1.5">
+                            <div v-for="enemy in nextWaveInfo" :key="enemy.name" class="flex items-center justify-between rounded-lg border border-border bg-background/40 p-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="h-3 w-3 rounded-full" :style="{ background: enemy.color, boxShadow: `0 0 6px ${enemy.color}` }" />
+                                    <span class="text-[10px] font-black uppercase tracking-wider">{{ enemy.name }}</span>
+                                </div>
+                                <span class="text-[10px] font-bold tabular-nums text-muted-foreground">x{{ enemy.count }}</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="surface-card">
                         <div class="flex items-center justify-between border-b border-border px-3 py-2">
                             <h2 class="text-xs font-black uppercase tracking-[0.25em] text-foreground">Arsenal</h2>
@@ -408,6 +465,14 @@ const cancelReset = () => {
                             </div>
                         </div>
                         <div class="mt-3 flex gap-2">
+                            <button
+                                v-if="hud.awaitingWaveStart"
+                                @click="startMovingSelectedTower"
+                                class="flex-1 rounded-lg border border-blue-500/50 bg-blue-500/10 p-2 text-xs font-black uppercase tracking-widest text-blue-400 hover:bg-blue-500/20 disabled:opacity-40"
+                                :disabled="hud.status !== 'idle' && hud.status !== 'paused'"
+                            >
+                                Move
+                            </button>
                             <button
                                 v-if="selectedInfo.nextUpgrade"
                                 @click="upgrade"

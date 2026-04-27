@@ -263,6 +263,9 @@ export class TowerDefenseGame {
     private coreHitTimer = 0; // seconds remaining for hit flash
     private coreShakeTimer = 0;
 
+    private ghostBase?: Sprite;
+    private ghostBarrel?: Sprite;
+
     // Textures cache
     private enemyTextures = new Map<string, Texture>();
     private towerBaseTextures = new Map<string, Texture>();
@@ -294,6 +297,7 @@ export class TowerDefenseGame {
 
     private selectedTowerSlug: string | null = null;
     private selectedPlacedTowerId: number | null = null;
+    private movingTowerId: number | null = null;
     private hoverTile: { x: number; y: number } | null = null;
 
     private lastFrame = 0;
@@ -349,6 +353,15 @@ export class TowerDefenseGame {
         this.coreLayer = new Container();
         this.app.stage.addChild(this.bgLayer, this.pathLayer, this.hoverLayer, this.uiLayer, this.towerLayer, this.coreLayer, this.enemyLayer, this.projectileLayer);
 
+        // Ghost sprites for preview
+        this.ghostBase = new Sprite();
+        this.ghostBase.anchor.set(0.5);
+        this.ghostBase.visible = false;
+        this.ghostBarrel = new Sprite();
+        this.ghostBarrel.anchor.set(0.25, 0.5);
+        this.ghostBarrel.visible = false;
+        this.towerLayer.addChild(this.ghostBase, this.ghostBarrel);
+
         this.drawBackground();
         this.drawPath();
         this.drawCore();
@@ -403,6 +416,21 @@ export class TowerDefenseGame {
 
     selectTower(slug: string | null) {
         this.selectedTowerSlug = slug;
+        this.selectedPlacedTowerId = null;
+        this.movingTowerId = null;
+        this.emitHud();
+    }
+
+    selectPlacedTower(id: number | null) {
+        this.selectedPlacedTowerId = id;
+        this.selectedTowerSlug = null;
+        this.movingTowerId = null;
+        this.emitHud();
+    }
+
+    startMovingSelectedTower() {
+        if (this.selectedPlacedTowerId == null) return;
+        this.movingTowerId = this.selectedPlacedTowerId;
         this.selectedPlacedTowerId = null;
         this.emitHud();
     }
@@ -907,6 +935,38 @@ export class TowerDefenseGame {
         return true;
     }
 
+    private moveTower(towerId: number, newTileX: number, newTileY: number): boolean {
+        if (!this.awaitingWaveStart) return false; // Can only move towers during build phase
+        const towerToMove = this.towers.find((t) => t.id === towerId);
+        if (!towerToMove) return false;
+
+        // Check if the new tile is buildable and not occupied by another tower
+        if (!this.isBuildable(newTileX, newTileY)) return false;
+        if (this.towers.some((t) => t.id !== towerId && t.tileX === newTileX && t.tileY === newTileY)) return false;
+
+        // Update tower's position
+        towerToMove.tileX = newTileX;
+        towerToMove.tileY = newTileY;
+        towerToMove.x = newTileX * this.tileSize + this.tileSize / 2;
+        towerToMove.y = newTileY * this.tileSize + this.tileSize / 2;
+
+        // Update sprite positions
+        if (towerToMove.base) {
+            towerToMove.base.x = towerToMove.x;
+            towerToMove.base.y = towerToMove.y;
+        }
+        if (towerToMove.barrel) {
+            towerToMove.barrel.x = towerToMove.x;
+            towerToMove.barrel.y = towerToMove.y;
+        }
+        if (towerToMove.tierMarks) {
+            towerToMove.tierMarks.x = towerToMove.x;
+            towerToMove.tierMarks.y = towerToMove.y;
+        }
+
+        return true;
+    }
+
     private computePathTiles(wps: [number, number][]): Set<string> {
         const s = new Set<string>();
         for (let i = 0; i < wps.length - 1; i++) {
@@ -1037,33 +1097,92 @@ export class TowerDefenseGame {
             p.sprite.y = Math.round(p.y);
         }
 
-        // Hover preview
+        // Hover preview for placing new towers or moving existing ones
         this.hoverLayer.clear();
-        if (this.hoverTile && this.selectedTowerSlug) {
-            const ok = this.isBuildable(this.hoverTile.x, this.hoverTile.y);
-            const def = this.level.towers.find((t) => t.slug === this.selectedTowerSlug);
-            this.hoverLayer
-                .rect(this.hoverTile.x * this.tileSize, this.hoverTile.y * this.tileSize, this.tileSize, this.tileSize)
-                .fill({ color: ok ? 0x22c55e : 0xef4444, alpha: 0.25 });
-            if (ok && def) {
-                this.hoverLayer
-                    .circle(
-                        this.hoverTile.x * this.tileSize + this.tileSize / 2,
-                        this.hoverTile.y * this.tileSize + this.tileSize / 2,
-                        def.range * this.tileSize,
-                    )
-                    .stroke({ color: 0xffffff, width: 1, alpha: 0.25 });
+        if (this.ghostBase) this.ghostBase.visible = false;
+        if (this.ghostBarrel) this.ghostBarrel.visible = false;
+
+        if (this.hoverTile) {
+            const tx = this.hoverTile.x;
+            const ty = this.hoverTile.y;
+            const x = tx * this.tileSize + this.tileSize / 2;
+            const y = ty * this.tileSize + this.tileSize / 2;
+
+            let def: TowerDef | undefined;
+            let isBuildable = false;
+
+            if (this.selectedTowerSlug) {
+                def = this.level.towers.find((t) => t.slug === this.selectedTowerSlug);
+                isBuildable = this.isBuildable(tx, ty);
+            } else if (this.movingTowerId) {
+                const towerToMove = this.towers.find((t) => t.id === this.movingTowerId);
+                if (towerToMove) {
+                    def = towerToMove.def;
+                    // For moving, check if the new tile is buildable AND not the tower's original spot
+                    isBuildable = this.isBuildable(tx, ty) && !(towerToMove.tileX === tx && towerToMove.tileY === ty);
+                }
             }
+
+            if (def && this.ghostBase && this.ghostBarrel) {
+                // Draw ghost tower
+                let baseTex = this.towerBaseTextures.get(def.slug);
+                if (!baseTex) {
+                    baseTex = buildTowerBaseTexture(this.app.renderer, parseColor(def.color));
+                    this.towerBaseTextures.set(def.slug, baseTex);
+                }
+                let barrelTex = this.towerBarrelTextures.get(def.slug);
+                if (!barrelTex) {
+                    barrelTex = buildTowerBarrelTexture(this.app.renderer, parseColor(def.color));
+                    this.towerBarrelTextures.set(def.slug, barrelTex);
+                }
+
+                this.ghostBase.texture = baseTex;
+                this.ghostBase.scale.set((this.tileSize * 0.9) / baseTex.width);
+                this.ghostBase.x = x;
+                this.ghostBase.y = y;
+                this.ghostBase.alpha = 0.4;
+                this.ghostBase.tint = isBuildable ? 0xffffff : 0xff0000;
+                this.ghostBase.visible = true;
+
+                this.ghostBarrel.texture = barrelTex;
+                this.ghostBarrel.scale.set((this.tileSize * 0.55) / barrelTex.width);
+                this.ghostBarrel.x = x;
+                this.ghostBarrel.y = y;
+                this.ghostBarrel.alpha = 0.4;
+                this.ghostBarrel.tint = isBuildable ? 0xffffff : 0xff0000;
+                this.ghostBarrel.visible = true;
+
+                // Draw range indicator with fill and pulse
+                const pulse = 0.15 + Math.sin(Date.now() / 300) * 0.05;
+                this.hoverLayer
+                    .circle(x, y, def.range * this.tileSize)
+                    .fill({ color: isBuildable ? 0xffffff : 0xff0000, alpha: pulse })
+                    .stroke({ color: isBuildable ? 0xffffff : 0xff0000, width: 1, alpha: 0.25 });
+            }
+
+            // Highlight the hovered tile
+            this.hoverLayer
+                .rect(tx * this.tileSize, ty * this.tileSize, this.tileSize, this.tileSize)
+                .fill({ color: isBuildable ? 0x22c55e : 0xef4444, alpha: 0.25 });
         }
 
-        // Selected tower range ring
+        // Selected tower range ring and original position highlight if moving
         this.uiLayer.clear();
         if (this.selectedPlacedTowerId != null) {
             const t = this.towers.find((x) => x.id === this.selectedPlacedTowerId);
             if (t) {
-                this.uiLayer.circle(t.x, t.y, t.range).stroke({ color: 0xffffff, width: 1, alpha: 0.35 });
+                this.uiLayer.circle(t.x, t.y, t.range)
+                    .fill({ color: 0xffffff, alpha: 0.05 })
+                    .stroke({ color: 0xffffff, width: 1, alpha: 0.35 });
                 this.uiLayer.rect(t.tileX * this.tileSize, t.tileY * this.tileSize, this.tileSize, this.tileSize)
                     .stroke({ color: 0xffffff, width: 1, alpha: 0.4 });
+            }
+        } else if (this.movingTowerId != null) {
+            const t = this.towers.find((x) => x.id === this.movingTowerId);
+            if (t) {
+                // Highlight original position of the tower being moved
+                this.uiLayer.rect(t.tileX * this.tileSize, t.tileY * this.tileSize, this.tileSize, this.tileSize)
+                    .stroke({ color: 0x38bdf8, width: 2, alpha: 0.8 }); // Blue highlight for original position
             }
         }
     }
@@ -1115,13 +1234,22 @@ export class TowerDefenseGame {
     };
     private onClick = (ev: MouseEvent) => {
         const { tx, ty } = this.eventToTile(ev);
+
+        if (this.movingTowerId != null) {
+            // Attempt to move the tower
+            if (this.moveTower(this.movingTowerId, tx, ty)) {
+                this.movingTowerId = null;
+                this.emitHud();
+            }
+            return;
+        }
+
         if (this.selectedTowerSlug) {
             this.tryPlaceTower(tx, ty);
             return;
         }
         const hit = this.towers.find((t) => t.tileX === tx && t.tileY === ty);
-        this.selectedPlacedTowerId = hit ? hit.id : null;
-        this.emitHud();
+        this.selectPlacedTower(hit ? hit.id : null);
     };
     private onContext = (ev: MouseEvent) => {
         ev.preventDefault();

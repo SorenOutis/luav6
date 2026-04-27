@@ -95,6 +95,7 @@ export interface HudState {
     hoverTile: { x: number; y: number } | null;
     canBuild: boolean;
     selectedPlacedTowerId: number | null;
+    movingTowerId: number | null;
     speed: 1 | 2 | 3;
     awaitingWaveStart: boolean;
     nextWaveIdx: number; // 1-based index of the next wave to start
