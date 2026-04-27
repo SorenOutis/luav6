@@ -190,7 +190,7 @@ const formatDuration = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
 
 const retry = () => {
     clearCheckpoint();
-    router.reload();
+    window.location.reload();
 };
 const backToIndex = () => router.visit('/games/tower-defense');
 
@@ -553,58 +553,79 @@ const cancelReset = () => {
         </div>
 
         <!-- End modal -->
-        <div v-if="endResult" class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur">
-            <div class="w-full max-w-md border border-border bg-card p-8">
-                <div class="mb-4 flex items-center gap-3">
-                    <component
-                        :is="endResult.status === 'win' ? Trophy : Shield"
-                        class="h-8 w-8"
-                        :class="endResult.status === 'win' ? 'text-emerald-400' : 'text-rose-400'"
+        <div v-if="endResult" class="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-md">
+            <div class="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+                <!-- Header with status -->
+                <div class="relative overflow-hidden border-b border-border p-8 text-center">
+                    <div 
+                        class="pointer-events-none absolute inset-0 bg-gradient-to-b"
+                        :class="endResult.status === 'win' ? 'from-emerald-500/10 to-transparent' : 'from-rose-500/10 to-transparent'"
                     />
-                    <h2 class="text-2xl font-black uppercase tracking-tight">
+                    
+                    <div class="relative mb-4 flex justify-center">
+                        <div 
+                            class="flex h-20 w-20 items-center justify-center rounded-2xl border shadow-lg"
+                            :class="endResult.status === 'win' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400' : 'border-rose-500/40 bg-rose-500/10 text-rose-400'"
+                        >
+                            <component :is="endResult.status === 'win' ? Trophy : Shield" class="h-10 w-10" />
+                        </div>
+                    </div>
+
+                    <h2 class="relative text-3xl font-black uppercase tracking-tighter">
                         {{ endResult.status === 'win' ? 'Victory' : 'Defeat' }}
                     </h2>
+                    <p class="relative mt-1 text-[10px] font-bold uppercase tracking-[0.4em] text-muted-foreground">
+                        Mission Terminated
+                    </p>
                 </div>
-                <div class="grid grid-cols-2 gap-3 text-center">
-                    <div class="border border-border p-3">
-                        <div class="text-[10px] uppercase tracking-widest text-muted-foreground">Score</div>
-                        <div class="text-xl font-black tabular-nums text-emerald-400">{{ endResult.score }}</div>
+
+                <!-- Stats Grid -->
+                <div class="p-8">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="surface-card flex flex-col items-center justify-center gap-1 p-5">
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Final Score</p>
+                            <p class="text-2xl font-black tabular-nums text-emerald-400">{{ endResult.score }}</p>
+                        </div>
+                        <div class="surface-card flex flex-col items-center justify-center gap-1 p-5">
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Waves Survived</p>
+                            <p class="text-2xl font-black tabular-nums text-foreground">{{ endResult.waves }}/{{ level.waves.length }}</p>
+                        </div>
+                        <div class="surface-card flex flex-col items-center justify-center gap-1 p-5">
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Lives Remaining</p>
+                            <p class="text-2xl font-black tabular-nums text-rose-400">{{ endResult.lives }}</p>
+                        </div>
+                        <div class="surface-card flex flex-col items-center justify-center gap-1 p-5">
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Time Elapsed</p>
+                            <p class="text-2xl font-black tabular-nums text-foreground">{{ formatDuration(endResult.duration) }}</p>
+                        </div>
                     </div>
-                    <div class="border border-border p-3">
-                        <div class="text-[10px] uppercase tracking-widest text-muted-foreground">Waves</div>
-                        <div class="text-xl font-black tabular-nums">{{ endResult.waves }}/{{ level.waves.length }}</div>
+
+                    <!-- Stars for victory -->
+                    <div v-if="endResult.status === 'win'" class="mt-8 flex justify-center gap-3">
+                        <Star
+                            v-for="i in 3"
+                            :key="i"
+                            class="h-10 w-10 drop-shadow-[0_0_12px_rgba(251,191,36,0.4)]"
+                            :class="(endResult.lives / level.starting_lives) >= (i === 3 ? 0.9 : i === 2 ? 0.5 : 0.01) ? 'fill-amber-400 text-amber-400' : 'text-muted/20'"
+                        />
                     </div>
-                    <div class="border border-border p-3">
-                        <div class="text-[10px] uppercase tracking-widest text-muted-foreground">Lives</div>
-                        <div class="text-xl font-black tabular-nums text-rose-400">{{ endResult.lives }}</div>
+
+                    <!-- Actions -->
+                    <div class="mt-10 flex flex-col gap-3">
+                        <button
+                            @click="retry"
+                            :disabled="submitting"
+                            class="flex w-full items-center justify-center gap-3 rounded-xl border border-primary bg-primary p-4 text-sm font-black uppercase tracking-[0.2em] text-primary-foreground shadow-lg transition hover:opacity-90 disabled:opacity-50"
+                        >
+                            <RotateCcw class="h-5 w-5" /> Retry Mission
+                        </button>
+                        <button
+                            @click="backToIndex"
+                            class="flex w-full items-center justify-center gap-3 rounded-xl border border-border p-4 text-sm font-black uppercase tracking-[0.2em] text-muted-foreground transition hover:bg-muted/50"
+                        >
+                            Return to Levels
+                        </button>
                     </div>
-                    <div class="border border-border p-3">
-                        <div class="text-[10px] uppercase tracking-widest text-muted-foreground">Time</div>
-                        <div class="text-xl font-black tabular-nums">{{ formatDuration(endResult.duration) }}</div>
-                    </div>
-                </div>
-                <div v-if="endResult.status === 'win'" class="mt-4 flex justify-center gap-1">
-                    <Star
-                        v-for="i in 3"
-                        :key="i"
-                        class="h-8 w-8"
-                        :class="(endResult.lives / level.starting_lives) >= (i === 3 ? 0.9 : i === 2 ? 0.5 : 0.01) ? 'fill-amber-400 text-amber-400' : 'text-border'"
-                    />
-                </div>
-                <div class="mt-6 flex gap-2">
-                    <button
-                        @click="retry"
-                        :disabled="submitting"
-                        class="flex flex-1 items-center justify-center gap-2 border border-primary bg-primary p-3 text-xs font-black uppercase tracking-widest text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                    >
-                        <RotateCcw class="h-4 w-4" /> Retry
-                    </button>
-                    <button
-                        @click="backToIndex"
-                        class="flex flex-1 items-center justify-center gap-2 border border-border p-3 text-xs font-black uppercase tracking-widest hover:bg-muted"
-                    >
-                        Levels
-                    </button>
                 </div>
             </div>
         </div>
