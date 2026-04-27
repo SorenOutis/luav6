@@ -232,7 +232,7 @@ const cancelReset = () => {
     <AppLayout :breadcrumbs="breadcrumbs" hide-sidebar>
         <div class="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4">
             <!-- Top bar -->
-            <div class="relative overflow-hidden border border-border bg-card">
+            <div class="surface-card relative overflow-hidden rounded-xl shadow-lg">
                 <div class="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/60 via-primary/20 to-transparent" />
                 <div class="flex flex-wrap items-center justify-between gap-4 p-3">
                     <div class="flex items-center gap-4">
@@ -244,47 +244,47 @@ const cancelReset = () => {
                             <p class="text-[9px] font-bold uppercase tracking-[0.3em] text-muted-foreground">Sector {{ level.id }}</p>
                             <h1 class="text-sm font-black uppercase tracking-widest">{{ level.name }}</h1>
                         </div>
-                        <span class="border border-border bg-background/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        <span class="rounded-full border border-border bg-background/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {{ level.difficulty.name }}
                         </span>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
-                        <div class="flex items-center gap-2 border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-amber-400">
+                        <div class="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-amber-400">
                             <Coins class="h-4 w-4" /> {{ hud.gold }}
                         </div>
-                        <div class="flex items-center gap-2 border border-rose-500/30 bg-rose-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-rose-400">
+                        <div class="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-rose-400">
                             <Heart class="h-4 w-4" /> {{ hud.lives }}
                         </div>
-                        <div class="flex items-center gap-2 border border-sky-500/30 bg-sky-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-sky-400">
+                        <div class="flex items-center gap-2 rounded-full border border-sky-500/30 bg-sky-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-sky-400">
                             <Shield class="h-4 w-4" /> {{ hud.wave }}/{{ hud.totalWaves }}
                         </div>
-                        <div class="flex items-center gap-2 border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-emerald-400">
+                        <div class="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1.5 text-sm font-bold tabular-nums text-emerald-400">
                             <Trophy class="h-4 w-4" /> {{ hud.score }}
                         </div>
-                        <div class="flex items-center gap-2 border border-border px-3 py-1.5 text-sm font-bold tabular-nums">
+                        <div class="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm font-bold tabular-nums">
                             <Users class="h-4 w-4 text-fuchsia-400" /> {{ hud.enemiesAlive }}
                         </div>
                         <button
                             @click="togglePause"
-                            class="flex items-center gap-2 border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-muted"
+                            class="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-bold uppercase tracking-widest hover:bg-muted"
                         >
                             <component :is="hud.status === 'paused' ? Play : Pause" class="h-4 w-4" />
                             {{ hud.status === 'paused' ? 'Resume' : 'Pause' }}
                         </button>
                         <button
                             @click="resetGame"
-                            class="flex items-center gap-2 border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-rose-400 hover:bg-rose-500/15"
+                            class="flex items-center gap-2 rounded-full border border-rose-500/40 bg-rose-500/5 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-rose-400 hover:bg-rose-500/15"
                             title="Reset the current run"
                         >
                             <RefreshCw class="h-4 w-4" />
                             Reset
                         </button>
-                        <div class="flex border border-border">
+                        <div class="flex rounded-full border border-border">
                             <button
                                 v-for="s in [1, 2, 3] as const"
                                 :key="s"
                                 @click="setSpeed(s)"
-                                class="flex items-center gap-1 px-2 py-1.5 text-xs font-bold"
+                                class="flex items-center gap-1 rounded-full px-2 py-1.5 text-xs font-bold"
                                 :class="hud.speed === s ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
                             >
                                 <Gauge v-if="s === 1" class="h-3 w-3" />{{ s }}x
@@ -327,7 +327,7 @@ const cancelReset = () => {
 
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
                 <!-- Canvas (PixiJS mounts here) -->
-                <div class="relative flex items-start justify-center overflow-hidden border border-border bg-black p-2">
+                <div class="relative flex items-start justify-center overflow-hidden rounded-xl border border-border bg-black p-2 shadow-lg">
                     <div ref="stageRef" class="[image-rendering:pixelated]" />
 
                     <!-- Wave announcement banner (centered over canvas) -->
@@ -353,7 +353,7 @@ const cancelReset = () => {
 
                 <!-- Sidebar: Tower shop + selected tower -->
                 <aside class="flex flex-col gap-4">
-                    <div class="border border-border bg-card">
+                    <div class="surface-card">
                         <div class="flex items-center justify-between border-b border-border px-3 py-2">
                             <h2 class="text-xs font-black uppercase tracking-[0.25em] text-foreground">Arsenal</h2>
                             <span class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Right-click · cancel</span>
@@ -364,10 +364,10 @@ const cancelReset = () => {
                                 :key="tower.slug"
                                 @click="selectTower(tower.slug)"
                                 :disabled="hud.gold < tower.cost"
-                                class="group flex items-center gap-3 border p-2.5 text-left transition disabled:opacity-40"
+                                class="group flex items-center gap-3 rounded-lg border p-2.5 text-left transition disabled:opacity-40"
                                 :class="hud.selectedTowerSlug === tower.slug ? 'border-primary bg-primary/10 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]' : 'border-border hover:border-muted-foreground hover:bg-muted/30'"
                             >
-                                <span class="flex h-10 w-10 shrink-0 items-center justify-center border border-border bg-background" :style="{ boxShadow: `inset 0 0 0 4px ${tower.color}33` }">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-background" :style="{ boxShadow: `inset 0 0 0 4px ${tower.color}33` }">
                                     <span class="h-4 w-4" :style="{ background: tower.color, boxShadow: `0 0 8px ${tower.color}` }" />
                                 </span>
                                 <div class="min-w-0 flex-1">
@@ -387,22 +387,22 @@ const cancelReset = () => {
                         </div>
                     </div>
 
-                    <div v-if="selectedInfo" class="border border-border bg-card">
+                    <div v-if="selectedInfo" class="surface-card">
                         <div class="flex items-center justify-between border-b border-border px-3 py-2">
                             <h2 class="text-xs font-black uppercase tracking-[0.25em] text-foreground">{{ selectedInfo.name }}</h2>
-                            <span class="border border-amber-500/40 bg-amber-500/10 px-1.5 text-[9px] font-black tracking-widest uppercase text-amber-400">T{{ selectedInfo.tier + 1 }}</span>
+                            <span class="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 text-[9px] font-black tracking-widest uppercase text-amber-400">T{{ selectedInfo.tier + 1 }}</span>
                         </div>
                         <div class="p-3">
                         <div class="grid grid-cols-3 gap-2 text-center text-[10px] uppercase tracking-widest">
-                            <div class="border border-border p-2">
+                            <div class="surface-card p-2">
                                 <div class="text-muted-foreground">DMG</div>
                                 <div class="text-sm font-black text-foreground">{{ selectedInfo.damage }}</div>
                             </div>
-                            <div class="border border-border p-2">
+                            <div class="surface-card p-2">
                                 <div class="text-muted-foreground">RNG</div>
                                 <div class="text-sm font-black text-foreground">{{ selectedInfo.range.toFixed(1) }}</div>
                             </div>
-                            <div class="border border-border p-2">
+                            <div class="surface-card p-2">
                                 <div class="text-muted-foreground">RATE</div>
                                 <div class="text-sm font-black text-foreground">{{ selectedInfo.fireRate }}</div>
                             </div>
@@ -412,13 +412,13 @@ const cancelReset = () => {
                                 v-if="selectedInfo.nextUpgrade"
                                 @click="upgrade"
                                 :disabled="hud.gold < selectedInfo.nextUpgrade.cost"
-                                class="flex-1 border border-emerald-500/50 bg-emerald-500/10 p-2 text-xs font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40"
+                                class="flex-1 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-2 text-xs font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-40"
                             >
                                 Upgrade ({{ selectedInfo.nextUpgrade.cost }}g)
                             </button>
                             <button
                                 @click="sell"
-                                class="flex-1 border border-rose-500/50 bg-rose-500/10 p-2 text-xs font-black uppercase tracking-widest text-rose-400 hover:bg-rose-500/20"
+                                class="flex-1 rounded-lg border border-rose-500/50 bg-rose-500/10 p-2 text-xs font-black uppercase tracking-widest text-rose-400 hover:bg-rose-500/20"
                             >
                                 Sell (+{{ selectedInfo.sellRefund }}g)
                             </button>
@@ -426,7 +426,7 @@ const cancelReset = () => {
                         </div>
                     </div>
 
-                    <div class="border border-border bg-card">
+                    <div class="surface-card">
                         <div class="flex items-center justify-between border-b border-border px-3 py-2">
                             <h2 class="flex items-center gap-1.5 text-xs font-black uppercase tracking-[0.25em] text-foreground">
                                 <Trophy class="h-3.5 w-3.5 text-amber-400" /> Leaderboard
@@ -442,7 +442,7 @@ const cancelReset = () => {
                             >
                                 <span class="flex min-w-0 items-center gap-2">
                                     <span
-                                        class="inline-flex h-5 w-5 shrink-0 items-center justify-center border text-[10px] font-black tabular-nums"
+                                        class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-black tabular-nums"
                                         :class="i === 0 ? 'border-amber-400/50 text-amber-400' : i === 1 ? 'border-slate-400/50 text-slate-300' : i === 2 ? 'border-orange-400/50 text-orange-400' : 'border-border text-muted-foreground'"
                                     >{{ i + 1 }}</span>
                                     <span class="truncate font-bold">{{ row.user.name }}</span>
