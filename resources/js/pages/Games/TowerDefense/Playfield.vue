@@ -458,58 +458,61 @@ const cancelReset = () => {
 
         <!-- Start modal -->
         <div v-if="startModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur">
-            <div class="w-full max-w-lg border border-border bg-card">
-                <div class="relative overflow-hidden border-b border-border">
+            <div class="w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl">
+                <div class="relative overflow-hidden rounded-t-xl border-b border-border p-6">
                     <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
-                    <div class="relative flex items-center gap-4 p-5">
-                        <div class="flex h-12 w-12 items-center justify-center border border-primary/40 bg-primary/10">
-                            <Shield class="h-6 w-6 text-primary" />
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-primary/40 bg-primary/10 shadow-inner">
+                            <Shield class="h-7 w-7 text-primary" />
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Briefing</p>
-                            <h2 class="text-xl font-black uppercase tracking-tight">{{ level.name }}</h2>
-                            <p class="text-[10px] uppercase tracking-widest text-muted-foreground">
-                                {{ level.difficulty.name }} · {{ level.map.name }} · {{ level.waves.length }} waves
+                            <p class="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/80">Briefing</p>
+                            <h2 class="mt-1 text-2xl font-black uppercase tracking-tight text-foreground">{{ level.name }}</h2>
+                            <p class="mt-1 text-[11px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                                {{ level.difficulty.name }} · {{ level.map.name }} · {{ level.waves.length }} Waves
                             </p>
                         </div>
                     </div>
                 </div>
-                <div class="space-y-4 p-5">
-                    <p v-if="level.description" class="text-sm text-muted-foreground">{{ level.description }}</p>
-                    <div class="grid grid-cols-3 gap-2 text-center text-[10px] uppercase tracking-widest">
-                        <div class="border border-amber-500/30 bg-amber-500/5 p-3">
-                            <div class="flex items-center justify-center gap-1 text-muted-foreground"><Coins class="h-3 w-3" /> Gold</div>
-                            <div class="mt-1 text-xl font-black tabular-nums text-amber-400">{{ level.starting_gold }}</div>
+                <div class="space-y-6 p-6">
+                    <p v-if="level.description" class="text-sm leading-relaxed text-muted-foreground">{{ level.description }}</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="surface-card flex flex-col items-center justify-center gap-1 p-4">
+                            <Coins class="h-5 w-5 text-amber-500" />
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Starting Gold</p>
+                            <p class="text-xl font-black tabular-nums text-amber-400">{{ level.starting_gold }}</p>
                         </div>
-                        <div class="border border-rose-500/30 bg-rose-500/5 p-3">
-                            <div class="flex items-center justify-center gap-1 text-muted-foreground"><Heart class="h-3 w-3" /> Core HP</div>
-                            <div class="mt-1 text-xl font-black tabular-nums text-rose-400">{{ level.starting_lives }}</div>
+                        <div class="surface-card flex flex-col items-center justify-center gap-1 p-4">
+                            <Heart class="h-5 w-5 text-rose-500" />
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Core HP</p>
+                            <p class="text-xl font-black tabular-nums text-rose-400">{{ level.starting_lives }}</p>
                         </div>
-                        <div class="border border-sky-500/30 bg-sky-500/5 p-3">
-                            <div class="flex items-center justify-center gap-1 text-muted-foreground"><Shield class="h-3 w-3" /> Waves</div>
-                            <div class="mt-1 text-xl font-black tabular-nums text-sky-400">{{ level.waves.length }}</div>
+                        <div class="surface-card flex flex-col items-center justify-center gap-1 p-4">
+                            <Shield class="h-5 w-5 text-sky-500" />
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Total Waves</p>
+                            <p class="text-xl font-black tabular-nums text-sky-400">{{ level.waves.length }}</p>
                         </div>
                     </div>
                     <div>
-                        <h3 class="mb-2 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Available Towers</h3>
-                        <div class="flex flex-wrap gap-2">
-                            <span v-for="t in level.towers" :key="t.slug" class="flex items-center gap-1.5 border border-border bg-background/40 px-2 py-1 text-[10px] font-bold uppercase tracking-widest">
-                                <span class="h-2.5 w-2.5" :style="{ background: t.color }" />
+                        <h3 class="mb-3 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Available Towers</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <span v-for="t in level.towers" :key="t.slug" class="flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-foreground">
+                                <span class="h-2.5 w-2.5 rounded-full" :style="{ background: t.color }" />
                                 {{ t.name }} <span class="text-amber-400 tabular-nums">{{ t.cost }}g</span>
                             </span>
                         </div>
                     </div>
                 </div>
-                <div class="flex gap-2 border-t border-border p-4">
+                <div class="flex gap-3 border-t border-border p-6">
                     <button
                         @click="backToIndex"
-                        class="flex-1 border border-border p-3 text-xs font-black uppercase tracking-widest hover:bg-muted"
+                        class="flex-1 rounded-lg border border-border p-3 text-xs font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50"
                     >
                         Cancel
                     </button>
                     <button
                         @click="confirmStart"
-                        class="flex flex-[2] items-center justify-center gap-2 border border-primary bg-primary p-3 text-xs font-black uppercase tracking-widest text-primary-foreground hover:opacity-90"
+                        class="flex flex-[2] items-center justify-center gap-2 rounded-lg border border-primary bg-primary p-3 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-lg hover:bg-primary/90"
                     >
                         <Play class="h-4 w-4" /> Start Defense
                     </button>

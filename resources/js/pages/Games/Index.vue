@@ -32,138 +32,147 @@ const upcoming = [
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-6 p-4 xl:p-6">
             <!-- Hero -->
-            <div class="relative overflow-hidden border border-border bg-card">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-transparent" />
-                <div class="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/60 via-primary/20 to-transparent" />
-                <div class="relative flex flex-wrap items-center justify-between gap-6 p-6">
-                    <div class="flex items-center gap-4">
-                        <div class="flex h-14 w-14 items-center justify-center border border-primary/40 bg-primary/10">
-                            <Gamepad2 class="h-7 w-7 text-primary" />
+            <div class="surface-card relative mb-2 overflow-hidden">
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
+                <div class="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-8">
+                    <div class="flex items-center gap-5">
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 shadow-inner">
+                            <Gamepad2 class="h-8 w-8 text-primary" />
                         </div>
                         <div>
-                            <p class="text-[10px] font-bold uppercase tracking-[0.35em] text-primary">Arcade</p>
-                            <h1 class="text-2xl font-black uppercase tracking-tight">Games Hub</h1>
-                            <p class="mt-1 text-sm text-muted-foreground">Pick a game, climb the leaderboard, earn stars.</p>
+                            <div class="flex items-center gap-2">
+                                <span class="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                                <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/80">Arcade Experience</p>
+                            </div>
+                            <h1 class="text-3xl font-black uppercase tracking-tight sm:text-4xl">Games Hub</h1>
+                            <p class="mt-1 text-sm text-muted-foreground/80">Pick a game, climb the leaderboard, earn stars.</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-6 text-xs">
-                        <div class="flex items-center gap-2 text-muted-foreground">
-                            <Sparkles class="h-4 w-4 text-primary" />
-                            <span class="font-bold uppercase tracking-widest">{{ games.length }} available</span>
+                    <div class="flex items-center gap-8 text-xs">
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="flex items-center gap-2 text-primary">
+                                <Sparkles class="h-4 w-4" />
+                                <span class="font-black tabular-nums">{{ games.length }}</span>
+                            </div>
+                            <span class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Available</span>
                         </div>
-                        <div class="flex items-center gap-2 text-muted-foreground">
-                            <Clock class="h-4 w-4" />
-                            <span class="font-bold uppercase tracking-widest">{{ upcoming.length }} coming soon</span>
+                        <div class="h-8 w-px bg-border/40" />
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="flex items-center gap-2 text-muted-foreground">
+                                <Clock class="h-4 w-4" />
+                                <span class="font-black tabular-nums">{{ upcoming.length }}</span>
+                            </div>
+                            <span class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Coming Soon</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
+            <div class="grid grid-cols-1 gap-8 items-start xl:grid-cols-[1fr_320px]">
                 <!-- Games list -->
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-6 items-start sm:grid-cols-2">
                     <Link
                         v-for="game in games"
                         :key="game.slug"
                         :href="game.href"
-                        class="group relative flex flex-col overflow-hidden border border-border bg-card transition hover:-translate-y-0.5 hover:border-primary"
+                        class="surface-card premium-hover group flex flex-col h-fit"
                     >
-                        <div class="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 via-primary to-primary/60 opacity-70 group-hover:opacity-100" />
-                        <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
-
-                        <div class="relative flex items-start justify-between gap-3 border-b border-border p-5">
-                            <div class="flex items-start gap-3">
-                                <div class="flex h-12 w-12 items-center justify-center border border-primary/40 bg-primary/10">
-                                    <Shield class="h-6 w-6 text-primary" />
+                        <div class="relative flex items-center justify-between border-b border-border/40 p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 shadow-sm">
+                                    <Shield class="h-5 w-5 text-primary" />
                                 </div>
                                 <div>
-                                    <p class="text-[9px] font-bold uppercase tracking-[0.3em] text-primary">{{ game.tagline }}</p>
-                                    <h2 class="mt-0.5 text-lg font-black uppercase tracking-tight">{{ game.name }}</h2>
+                                    <h2 class="text-base font-black uppercase tracking-tight">{{ game.name }}</h2>
+                                    <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-primary/70">{{ game.tagline }}</p>
                                 </div>
                             </div>
                             <span
-                                class="border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.25em]"
+                                class="rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shadow-sm border"
                                 :class="game.status === 'live'
-                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
                                     : 'border-border bg-muted text-muted-foreground'"
                             >
                                 {{ game.status === 'live' ? 'Live' : 'Soon' }}
                             </span>
                         </div>
 
-                        <div class="relative flex flex-1 flex-col gap-4 p-5">
-                            <p class="text-sm text-muted-foreground">{{ game.description }}</p>
+                        <div class="relative flex flex-col p-4">
+                            <p class="text-[13px] leading-snug text-muted-foreground/90">{{ game.description }}</p>
 
-                            <div class="flex flex-wrap gap-1.5">
+                            <div class="mt-3 flex flex-wrap gap-1">
                                 <span
                                     v-for="tag in game.tags"
                                     :key="tag"
-                                    class="border border-border bg-muted px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
+                                    class="rounded border border-border/40 bg-muted/30 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-muted-foreground"
                                 >
                                     {{ tag }}
                                 </span>
                             </div>
 
-                            <div class="mt-auto grid grid-cols-2 gap-2 border-t border-border pt-4 sm:grid-cols-3">
+                            <!-- Stats Row - Ultra Compact -->
+                            <div class="mt-4 flex items-center gap-5 overflow-x-auto pb-1 scrollbar-none">
                                 <div
                                     v-for="s in game.stats"
                                     :key="s.label"
-                                    class="border border-border bg-muted/40 p-2"
+                                    class="flex shrink-0 flex-col gap-0"
                                 >
-                                    <p class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">{{ s.label }}</p>
-                                    <p class="mt-0.5 text-sm font-black tabular-nums">{{ s.value }}</p>
+                                    <p class="text-[7px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">{{ s.label }}</p>
+                                    <p class="text-xs font-black tabular-nums">{{ s.value }}</p>
                                 </div>
                             </div>
 
-                            <div class="flex items-center justify-between border border-primary bg-primary p-2.5 text-[11px] font-black uppercase tracking-widest text-primary-foreground transition group-hover:opacity-90">
-                                <span>Play {{ game.name }}</span>
-                                <ChevronRight class="h-4 w-4" />
+                            <div class="mt-5 flex items-center justify-between rounded-lg bg-primary px-3 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-primary-foreground shadow-md transition group-hover:bg-primary/90">
+                                <span>Play Game</span>
+                                <ChevronRight class="h-3.5 w-3.5" />
                             </div>
                         </div>
                     </Link>
                 </div>
 
                 <!-- Sidebar -->
-                <aside class="flex flex-col gap-4">
-                    <div class="border border-border bg-card">
-                        <div class="flex items-center gap-2 border-b border-border px-4 py-2.5">
+                <aside class="flex flex-col gap-6">
+                    <div class="surface-card">
+                        <div class="flex items-center gap-2 border-b border-border/40 px-5 py-3">
                             <Trophy class="h-4 w-4 text-primary" />
-                            <h2 class="text-xs font-black uppercase tracking-[0.25em]">Featured</h2>
+                            <h2 class="text-[10px] font-black uppercase tracking-[0.25em]">Featured Game</h2>
                         </div>
-                        <div class="p-4">
+                        <div class="p-5">
                             <p class="text-sm font-black uppercase tracking-tight">Tower Defense</p>
-                            <p class="mt-1 text-xs text-muted-foreground">Our flagship arcade experience — strategic tower placement across escalating difficulty tiers.</p>
+                            <p class="mt-1 text-xs leading-relaxed text-muted-foreground/80">Our flagship arcade experience — strategic tower placement across escalating difficulty tiers.</p>
                             <Link
                                 href="/games/tower-defense"
-                                class="mt-3 flex items-center justify-center gap-2 border border-primary bg-primary py-2 text-[11px] font-black uppercase tracking-widest text-primary-foreground hover:opacity-90"
+                                class="mt-4 flex items-center justify-center gap-2 rounded-xl bg-primary/5 border border-primary/10 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300"
                             >
                                 Jump In <ChevronRight class="h-3 w-3" />
                             </Link>
                         </div>
                     </div>
 
-                    <div class="border border-border bg-card">
-                        <div class="flex items-center gap-2 border-b border-border px-4 py-2.5">
+                    <div class="surface-card">
+                        <div class="flex items-center gap-2 border-b border-border/40 px-5 py-3">
                             <Clock class="h-4 w-4 text-muted-foreground" />
-                            <h2 class="text-xs font-black uppercase tracking-[0.25em]">Coming Soon</h2>
+                            <h2 class="text-[10px] font-black uppercase tracking-[0.25em]">Upcoming</h2>
                         </div>
-                        <ul class="flex flex-col divide-y divide-border">
-                            <li v-for="u in upcoming" :key="u.name" class="flex items-start gap-3 p-3">
-                                <div class="mt-0.5 h-2 w-2 shrink-0 bg-muted-foreground/40" />
+                        <ul class="flex flex-col">
+                            <li v-for="u in upcoming" :key="u.name" class="flex items-start gap-3 border-b border-border/40 p-4 last:border-0">
+                                <div class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/30" />
                                 <div>
-                                    <p class="text-xs font-black uppercase tracking-widest">{{ u.name }}</p>
-                                    <p class="text-[11px] text-muted-foreground">{{ u.desc }}</p>
+                                    <p class="text-[11px] font-black uppercase tracking-widest">{{ u.name }}</p>
+                                    <p class="text-[10px] text-muted-foreground/80">{{ u.desc }}</p>
                                 </div>
                             </li>
                         </ul>
                     </div>
 
-                    <div class="border border-border bg-card p-4">
+                    <div class="surface-card p-5">
                         <div class="flex items-center gap-2">
-                            <Sparkles class="h-4 w-4 text-primary" />
-                            <h2 class="text-xs font-black uppercase tracking-[0.25em]">Tip</h2>
+                            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                                <Sparkles class="h-4 w-4 text-primary" />
+                            </div>
+                            <h2 class="text-[10px] font-black uppercase tracking-[0.25em]">Pro Tip</h2>
                         </div>
-                        <p class="mt-2 text-xs text-muted-foreground">
+                        <p class="mt-3 text-xs leading-relaxed text-muted-foreground/80">
                             Earn stars by clearing levels at higher difficulty. Stars contribute to your seasonal rank.
                         </p>
                     </div>

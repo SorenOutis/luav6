@@ -128,6 +128,15 @@
     .stagger-5 {
         animation-delay: 400ms;
     }
+
+    .scrollbar-none {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 @keyframes fadeUp {
