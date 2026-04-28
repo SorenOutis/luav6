@@ -204,6 +204,33 @@ const openHistory = async (user: LeaderboardUser) => {
         isLoadingHistory.value = false;
     }
 };
+
+// Dynamic font sizing for names so the full name fits on the card
+const getPodiumFontSize = (name: string, idx: number) => {
+    const len = name.length;
+    // Champion (idx 0) gets larger base sizes
+    if (idx === 0) {
+        if (len <= 12) return 'clamp(1.25rem, 2.5vw, 1.875rem)'; // ~text-xl to ~text-3xl
+        if (len <= 18) return 'clamp(1rem, 2vw, 1.5rem)';        // ~text-lg to ~text-2xl
+        if (len <= 24) return 'clamp(0.875rem, 1.5vw, 1.25rem)'; // ~text-sm to ~text-xl
+        if (len <= 32) return 'clamp(0.75rem, 1.2vw, 1rem)';     // ~text-xs to ~text-base
+        return 'clamp(0.625rem, 1vw, 0.875rem)';                 // very long names
+    }
+    // 2nd and 3rd place
+    if (len <= 12) return 'clamp(1.125rem, 2vw, 1.5rem)';    // ~text-lg to ~text-2xl
+    if (len <= 18) return 'clamp(0.9375rem, 1.5vw, 1.25rem)';// ~text-base to ~text-xl
+    if (len <= 24) return 'clamp(0.8125rem, 1.2vw, 1rem)';   // ~text-sm to ~text-base
+    if (len <= 32) return 'clamp(0.6875rem, 1vw, 0.875rem)'; // smaller
+    return 'clamp(0.5625rem, 0.8vw, 0.75rem)';               // very long names
+};
+
+const getListFontSize = (name: string) => {
+    const len = name.length;
+    if (len <= 15) return ''; // default browser size (~text-xs to text-base via responsive)
+    if (len <= 22) return 'clamp(0.6875rem, 1.2vw, 0.875rem)';
+    if (len <= 30) return 'clamp(0.625rem, 1vw, 0.8125rem)';
+    return 'clamp(0.5625rem, 0.9vw, 0.75rem)';
+};
 </script>
 
 <template>
@@ -359,7 +386,7 @@ const openHistory = async (user: LeaderboardUser) => {
                             </div>
 
                             <div class="space-y-1">
-                                <h3 :class="[idx === 0 ? 'text-xl sm:text-2xl lg:text-3xl' : 'text-lg sm:text-xl lg:text-2xl']" class="font-black tracking-tighter leading-tight max-w-[15rem] truncate">
+                                <h3 :style="{ fontSize: getPodiumFontSize(user.name, idx) }" class="font-black tracking-tighter leading-tight text-center break-words">
                                     <Link :href="`/u/${user.id}`" class="hover:text-primary transition-colors">{{ user.name }}</Link>
                                 </h3>
                                 <div class="flex items-center justify-center gap-2">
@@ -453,7 +480,7 @@ const openHistory = async (user: LeaderboardUser) => {
                                 
                                 <div>
                                     <div class="flex items-center gap-1.5 sm:gap-2">
-                                        <h4 class="text-xs sm:text-base font-black tracking-tight text-foreground truncate max-w-[100px] sm:max-w-[200px]">
+                                        <h4 :style="{ fontSize: getListFontSize(user.name) }" class="font-black tracking-tight text-foreground break-words leading-snug">
                                             {{ user.name }}
                                         </h4>
                                         <span v-if="user.isCurrentUser" class="text-[6px] sm:text-[8px] uppercase px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-black shadow-lg shadow-primary/20">YOU</span>
