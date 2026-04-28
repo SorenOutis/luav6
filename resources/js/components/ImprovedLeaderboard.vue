@@ -102,6 +102,54 @@ const getAnimXP = (idx: number) => {
     return { value: top3.value[idx]?.xp || 0 };
 };
 
+const getTopRankMeta = (idx: number) => {
+    if (idx === 0) {
+        return {
+            label: 'TOP 1',
+            title: '1st',
+            icon: Crown,
+            orderClass: 'lg:order-2',
+            cardClass: 'border-amber-400/50 shadow-[0_20px_70px_-30px_rgba(251,191,36,0.45)] lg:-translate-y-6 lg:scale-[1.04]',
+            badgeClass: 'bg-amber-400 text-black border-amber-200/80 shadow-[0_10px_30px_-10px_rgba(251,191,36,0.8)]',
+            frameClass: 'border-amber-400/60 bg-amber-400/10',
+            accentClass: 'from-amber-300/80 via-amber-400/40 to-transparent',
+            haloClass: 'bg-amber-300/20',
+            pedestalClass: 'from-amber-300/70 via-amber-400/30 to-amber-300/5',
+            textClass: 'text-amber-300',
+        };
+    }
+
+    if (idx === 1) {
+        return {
+            label: 'TOP 2',
+            title: '2nd',
+            icon: Medal,
+            orderClass: 'lg:order-1',
+            cardClass: 'border-slate-300/30 shadow-[0_18px_50px_-35px_rgba(226,232,240,0.35)] lg:translate-y-4',
+            badgeClass: 'bg-slate-200 text-slate-900 border-white/70 shadow-[0_10px_30px_-12px_rgba(226,232,240,0.6)]',
+            frameClass: 'border-slate-300/40 bg-slate-200/10',
+            accentClass: 'from-slate-200/60 via-slate-300/20 to-transparent',
+            haloClass: 'bg-slate-200/10',
+            pedestalClass: 'from-slate-200/50 via-slate-300/20 to-slate-200/5',
+            textClass: 'text-slate-200',
+        };
+    }
+
+    return {
+        label: 'TOP 3',
+        title: '3rd',
+        icon: Award,
+        orderClass: 'lg:order-3',
+        cardClass: 'border-orange-400/30 shadow-[0_18px_50px_-35px_rgba(251,146,60,0.28)] lg:translate-y-8',
+        badgeClass: 'bg-orange-400 text-black border-orange-200/70 shadow-[0_10px_30px_-12px_rgba(251,146,60,0.6)]',
+        frameClass: 'border-orange-300/40 bg-orange-300/10',
+        accentClass: 'from-orange-300/70 via-orange-400/20 to-transparent',
+        haloClass: 'bg-orange-300/10',
+        pedestalClass: 'from-orange-300/50 via-orange-400/20 to-orange-300/5',
+        textClass: 'text-orange-300',
+    };
+};
+
 const handleMouseMove = (e: MouseEvent) => {
     const card = e.currentTarget as HTMLElement;
     const rect = card.getBoundingClientRect();
@@ -240,165 +288,122 @@ const openHistory = async (user: LeaderboardUser) => {
             </div>
 
             <template v-else>
-                <!-- Elite Top 3 Cards (Landscape Tech Mode) -->
-                <div class="flex flex-col gap-4">
-                    <div v-for="(user, idx) in top3" :key="user.id"
-                    class="relative surface-card p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 group transition-all duration-700 hover:translate-x-2 animate-fade-up overflow-hidden"
-                    :class="[
-                        idx === 0 ? 'border-primary/40 shadow-2xl shadow-primary/10 z-20 scale-[1.01] sm:scale-[1.02]' : 'border-border/40',
-                        `stagger-${idx + 1}`
-                    ]"
-                    @mousemove="handleMouseMove"
-                >
-                    <!-- Tech Grid Background -->
-                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none">
-                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                            <defs>
-                                <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.5"/>
-                                </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" fill="url(#grid)" />
-                        </svg>
-                    </div>
-
-                    <!-- Tech Scanning Line -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-40 h-full -translate-x-full group-hover:animate-scan-horizontal pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                    <!-- Card Shine/Bloom Effect -->
-                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary), 0.08), transparent 40%)">
-                    </div>
-
-                    <!-- Background Decorative Element for Top 1 -->
-                    <div v-if="idx === 0" class="absolute -top-20 -right-20 w-48 h-48 sm:w-60 sm:h-60 bg-primary/[0.05] rounded-full blur-3xl pointer-events-none transition-colors group-hover:bg-primary/[0.08]"></div>
-
-                    <!-- Tech Rank Badge (Clipped Corner) -->
-                    <div class="absolute top-0 left-0 z-30">
-                        <div class="flex items-center justify-center w-8 h-8 sm:w-14 sm:h-14 font-mono font-black text-[10px] sm:text-xl shadow-lg border backdrop-blur-md transition-all group-hover:scale-110 tech-badge-left"
-                            :class="[
-                                idx === 0 ? 'bg-primary text-primary-foreground border-primary/50 shadow-primary/20' : 
-                                'bg-card/80 text-foreground border-border/50 shadow-black/10'
-                            ]"
-                        >
-                            {{ idx + 1 }}
-                        </div>
-                    </div>
-
-                    <!-- Left Side: Avatar with Tech Frame -->
-                    <div class="relative group-hover:scale-105 transition-transform duration-500 shrink-0 ml-2 sm:ml-8">
-                        <!-- Frame Accents -->
-                        <div class="absolute -inset-1.5 sm:-inset-2 border-t-2 border-l-2 border-primary/20 rounded-tl-xl transition-all group-hover:-inset-1 group-hover:border-primary"></div>
-                        <div class="absolute -inset-1.5 sm:-inset-2 border-b-2 border-r-2 border-primary/20 rounded-br-xl transition-all group-hover:-inset-1 group-hover:border-primary"></div>
-                        
-                        <div class="absolute inset-0 rounded-full blur-2xl opacity-20 transition-opacity group-hover:opacity-50"
-                            :class="idx === 0 ? 'bg-primary' : 'bg-muted-foreground'"
-                        ></div>
-                        
-                        <Link :href="`/u/${user.id}`" class="block relative w-14 h-14 sm:w-24 sm:h-24 rounded-lg sm:rounded-xl border-2 p-1 transition-all duration-700 group-hover:rounded-lg overflow-hidden"
-                            :class="idx === 0 ? 'border-primary shadow-xl shadow-primary/20 bg-primary/5' : 'border-border/50 bg-muted/20'"
-                        >
-                            <div class="w-full h-full rounded bg-muted/40 flex items-center justify-center overflow-hidden transition-all duration-700">
-                                <img v-if="user.avatar" :src="user.avatar" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                <User v-else class="w-6 h-6 sm:w-12 sm:h-12 text-muted-foreground/40" />
-                            </div>
-                        </Link>
-
-                        <!-- Icon Overlay (Tech Style) -->
-                        <div v-if="idx === 0" class="absolute -bottom-1.5 -right-1.5 p-1 sm:p-2 bg-primary rounded-lg shadow-xl shadow-primary/40 animate-bounce-slow z-30 border border-white/20">
-                            <Cpu class="w-2.5 h-2.5 sm:w-5 sm:h-5 text-primary-foreground" />
-                        </div>
-                    </div>
-
-                    <!-- Middle: Identity & XP -->
-                    <div class="flex-1 text-center sm:text-left space-y-1 sm:space-y-2 z-10 relative group/middle">
-                        <!-- Tech Animation Centerpiece (New) -->
-                        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] sm:w-[300px] sm:h-[300px] opacity-[0.03] group-hover/middle:opacity-[0.08] transition-opacity duration-1000 pointer-events-none hidden sm:block overflow-hidden">
-                            <!-- Circuit Node Animation -->
-                            <svg viewBox="0 0 100 100" class="w-full h-full animate-spin-very-slow">
-                                <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" stroke-width="0.2" stroke-dasharray="1 3" />
-                                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="10 5" class="animate-pulse" />
-                                <g class="text-primary">
-                                    <circle cx="50" cy="15" r="1.5" fill="currentColor" />
-                                    <circle cx="50" cy="85" r="1.5" fill="currentColor" />
-                                    <circle cx="15" cy="50" r="1.5" fill="currentColor" />
-                                    <circle cx="85" cy="50" r="1.5" fill="currentColor" />
-                                    <path d="M 50 15 L 50 35 M 50 65 L 50 85 M 15 50 L 35 50 M 65 50 L 85 50" stroke="currentColor" stroke-width="0.5" />
-                                </g>
-                                <!-- Rotating data rings -->
-                                <circle cx="50" cy="50" r="25" fill="none" stroke="currentColor" stroke-width="0.2" stroke-dasharray="2 10" class="animate-reverse-spin" />
+                <!-- Elite Top 3 Podium -->
+                <div class="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-end lg:gap-5">
+                    <div
+                        v-for="(user, idx) in top3"
+                        :key="user.id"
+                        class="relative surface-card group overflow-hidden border p-4 sm:p-5 lg:p-6 transition-all duration-700 animate-fade-up"
+                        :class="[
+                            getTopRankMeta(idx).orderClass,
+                            getTopRankMeta(idx).cardClass,
+                            `stagger-${idx + 1}`
+                        ]"
+                        @mousemove="handleMouseMove"
+                    >
+                        <div class="absolute inset-0 opacity-[0.03] pointer-events-none">
+                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                                <defs>
+                                    <pattern :id="`grid-top-${idx}`" width="20" height="20" patternUnits="userSpaceOnUse">
+                                        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                    </pattern>
+                                </defs>
+                                <rect width="100%" height="100%" :fill="`url(#grid-top-${idx})`" />
                             </svg>
-                            <!-- Pulsing data core -->
-                             <div class="absolute inset-0 flex items-center justify-center">
-                                 <div class="w-2 h-2 bg-primary rounded-full blur-[2px] animate-ping"></div>
-                                 <div class="absolute w-4 h-4 bg-primary/20 rounded-full blur-sm animate-pulse"></div>
-                             </div>
-                         </div>
-
-                        <!-- Animated Data Stream (New) -->
-                        <div class="absolute inset-0 pointer-events-none hidden sm:block">
-                            <div v-for="n in 3" :key="n" 
-                                class="absolute h-[1px] bg-gradient-to-r from-transparent via-primary/20 to-transparent w-full opacity-0 group-hover:opacity-100 transition-opacity duration-1000"
-                                :style="{ 
-                                    top: `${20 + n * 25}%`, 
-                                    animation: `scan-horizontal ${2 + n}s linear infinite`,
-                                    animationDelay: `${n * 0.5}s`
-                                }"
-                            ></div>
                         </div>
 
-                        <div class="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 opacity-60 sm:opacity-40 group-hover:opacity-100 transition-opacity">
-                            <Terminal class="w-2.5 h-2.5 sm:w-3 h-3 text-primary" />
-                            <span class="text-[7px] sm:text-[10px] font-mono font-black uppercase tracking-widest flex items-center gap-2">
-                                RANK_{{ idx + 1 }}
-                                <span v-if="idx === 0" class="text-primary/50 animate-pulse hidden lg:inline-block">// UPDATING_CORE_NODE...</span>
-                            </span>
-                        </div>
-                        
-                        <h3 class="font-black text-base sm:text-3xl truncate leading-tight tracking-tighter">
-                            <Link :href="`/u/${user.id}`" class="hover:text-primary transition-colors">{{ user.name }}</Link>
-                        </h3>
-                        
-                        <div class="flex items-center justify-center sm:justify-start gap-2 sm:gap-3">
-                            <div class="flex items-baseline gap-1 sm:gap-2 leading-none">
-                                <span class="text-lg sm:text-4xl font-mono font-black text-foreground tabular-nums tracking-tighter">{{ getAnimXP(idx).value.toLocaleString() }}</span>
-                                <span class="text-[8px] sm:text-sm font-mono font-bold text-primary uppercase">XP</span>
-                            </div>
-                            <div class="px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-[7px] sm:text-xs font-mono font-black uppercase tracking-[0.2em] text-primary/70">
-                                {{ activeSeasonName || 'SEASON_01' }}
-                            </div>
-                        </div>
-                    </div>
+                        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r opacity-80" :class="getTopRankMeta(idx).accentClass"></div>
+                        <div
+                            class="absolute bottom-3 left-1/2 h-14 w-[78%] -translate-x-1/2 rounded-full bg-gradient-to-t blur-2xl opacity-60 pointer-events-none"
+                            :class="getTopRankMeta(idx).pedestalClass"
+                        ></div>
+                        <div class="absolute -top-14 left-1/2 h-28 w-28 -translate-x-1/2 rounded-full blur-3xl pointer-events-none transition-opacity duration-500 opacity-70 group-hover:opacity-100" :class="getTopRankMeta(idx).haloClass"></div>
 
-                    <!-- Right Side: Stats Panel -->
-                    <div class="w-full sm:w-64 space-y-3 sm:space-y-4 sm:border-l sm:border-primary/10 sm:pl-8 z-10">
-                        <!-- XP Progress -->
-                        <div class="space-y-1 sm:space-y-1.5">
-                            <div class="flex justify-between items-end">
-                                <p class="text-[7px] sm:text-[10px] font-mono font-black uppercase text-muted-foreground tracking-tighter">XP_PROGRESS</p>
-                                <p class="text-[9px] sm:text-sm font-mono font-black text-primary">{{ user.xpProgress }}%</p>
+                        <div class="relative z-10 flex flex-col items-center text-center">
+                            <div class="mb-3 flex items-center gap-2 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-[0.25em]" :class="getTopRankMeta(idx).badgeClass">
+                                <component :is="getTopRankMeta(idx).icon" class="h-3.5 w-3.5" />
+                                <span>{{ getTopRankMeta(idx).label }}</span>
                             </div>
-                            <div class="h-1.5 sm:h-3 w-full bg-muted/20 rounded-sm overflow-hidden p-0.5 border border-primary/10 relative">
-                                <div class="h-full bg-primary rounded-sm transition-all duration-1500 ease-out relative"
-                                    :style="{ width: `${user.xpProgress}%` }"
+
+                            <div class="mb-4 flex items-center gap-2">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-full border text-sm font-black shadow-lg" :class="getTopRankMeta(idx).frameClass">
+                                    {{ idx + 1 }}
+                                </div>
+                                <span class="text-[10px] font-mono font-black uppercase tracking-[0.28em]" :class="getTopRankMeta(idx).textClass">
+                                    {{ getTopRankMeta(idx).title }}
+                                </span>
+                            </div>
+
+                            <div class="relative mb-4 transition-transform duration-500 group-hover:scale-105">
+                                <div class="absolute inset-0 rounded-full blur-2xl opacity-40" :class="getTopRankMeta(idx).haloClass"></div>
+                                <Link
+                                    :href="`/u/${user.id}`"
+                                    class="relative block rounded-2xl border-2 p-1.5 overflow-hidden bg-card/70"
+                                    :class="[
+                                        getTopRankMeta(idx).frameClass,
+                                        idx === 0 ? 'h-24 w-24 sm:h-28 sm:w-28' : 'h-20 w-20 sm:h-24 sm:w-24'
+                                    ]"
                                 >
-                                    <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
-                                    <div class="absolute right-0 top-0 h-full w-1 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
+                                    <div class="flex h-full w-full items-center justify-center overflow-hidden rounded-xl bg-muted/40">
+                                        <img v-if="user.avatar" :src="user.avatar" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                        <User v-else class="h-10 w-10 text-muted-foreground/40" />
+                                    </div>
+                                </Link>
+
+                                <div
+                                    v-if="idx === 0"
+                                    class="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border border-amber-200/80 bg-amber-400 text-black shadow-[0_10px_25px_-10px_rgba(251,191,36,0.8)]"
+                                >
+                                    <Crown class="h-4 w-4" />
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Streak Indicator -->
-                        <div class="flex items-center justify-between">
-                            <p class="text-[7px] sm:text-[10px] font-mono font-black uppercase text-muted-foreground tracking-tighter">STREAK</p>
-                            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/[0.03] border border-primary/10 text-foreground hover:bg-primary/[0.05] hover:border-primary/20 transition-all group/streak relative overflow-hidden shadow-sm">
-                                <Flame class="w-3 h-3 sm:w-5 h-5 fill-primary/10 text-primary group-hover/streak:scale-110 transition-transform" />
-                                <span class="text-xs sm:text-lg font-mono font-black tabular-nums">{{ user.streak }}D</span>
+                            <div class="space-y-1">
+                                <h3 :class="[idx === 0 ? 'text-xl sm:text-2xl lg:text-3xl' : 'text-lg sm:text-xl lg:text-2xl']" class="font-black tracking-tighter leading-tight max-w-[15rem] truncate">
+                                    <Link :href="`/u/${user.id}`" class="hover:text-primary transition-colors">{{ user.name }}</Link>
+                                </h3>
+                                <div class="flex items-center justify-center gap-2">
+                                    <span class="text-[10px] font-mono font-black uppercase tracking-[0.28em] text-muted-foreground/70">Rank {{ idx + 1 }}</span>
+                                    <span v-if="user.isCurrentUser" class="rounded-full bg-primary px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-primary-foreground">You</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 flex items-baseline gap-1.5 leading-none">
+                                <span :class="[idx === 0 ? 'text-3xl sm:text-4xl lg:text-5xl' : 'text-2xl sm:text-3xl lg:text-4xl']" class="font-mono font-black text-foreground tabular-nums tracking-tighter">
+                                    {{ getAnimXP(idx).value.toLocaleString() }}
+                                </span>
+                                <span class="text-[10px] font-mono font-bold uppercase tracking-[0.24em] text-primary">XP</span>
+                            </div>
+
+                            <div class="mt-3 flex items-center gap-2 rounded-full border border-border/40 bg-card/60 px-3 py-1 text-[8px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                                <Terminal class="h-3 w-3 text-primary" />
+                                <span>{{ activeSeasonName || 'Season 01' }}</span>
+                            </div>
+
+                            <div class="mt-5 w-full space-y-3 rounded-2xl border border-border/30 bg-background/40 p-3 sm:p-4">
+                                <div class="space-y-1.5">
+                                    <div class="flex items-end justify-between">
+                                        <p class="text-[8px] font-mono font-black uppercase tracking-[0.22em] text-muted-foreground">XP Progress</p>
+                                        <p class="text-[10px] font-mono font-black text-primary">{{ user.xpProgress }}%</p>
+                                    </div>
+                                    <div class="h-2.5 w-full overflow-hidden rounded-full border border-primary/10 bg-muted/20 p-0.5">
+                                        <div class="relative h-full rounded-full bg-primary transition-all duration-1500 ease-out" :style="{ width: `${user.xpProgress}%` }">
+                                            <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between rounded-xl border border-border/20 bg-card/60 px-3 py-2">
+                                    <div class="flex items-center gap-2">
+                                        <Flame class="h-4 w-4 text-primary" />
+                                        <span class="text-[8px] font-mono font-black uppercase tracking-[0.22em] text-muted-foreground">Streak</span>
+                                    </div>
+                                    <span class="text-sm font-mono font-black tabular-nums text-foreground">{{ user.streak }}D</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
             <!-- High Density List Rankings -->
             <div class="space-y-3 sm:space-y-4">
