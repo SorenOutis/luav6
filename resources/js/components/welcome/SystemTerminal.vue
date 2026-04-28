@@ -11,21 +11,21 @@ let isProcessingQueue = false;
 const terminalQueue: any[] = [];
 
 const terminalPool = [
-    { module: 'EVAL_ENGINE', message: 'Assessment batch processed — 12 submissions graded', type: 'success' as const },
-    { module: 'SYNC', message: 'Leaderboard XP recalculated for Section A', type: 'info' as const },
-    { module: 'AI_GRADE', message: 'Essay scoring model loaded — avg confidence 94.2%', type: 'success' as const },
-    { module: 'AUTH', message: 'Session token refreshed for 3 active nodes', type: 'info' as const },
-    { module: 'EXAM_SVC', message: 'Timed exam #2847 finalized — results dispatched', type: 'success' as const },
-    { module: 'STREAK_SVC', message: 'Daily streak bonus applied to 18 learners', type: 'success' as const },
-    { module: 'WARN', message: 'Idle session detected — initiating heartbeat probe', type: 'warn' as const },
-    { module: 'DB_POOL', message: 'Connection pool rebalanced — latency nominal', type: 'info' as const },
-    { module: 'ASSIGN_SVC', message: 'Deadline alert dispatched — 6 pending submissions', type: 'warn' as const },
-    { module: 'CACHE', message: 'Leaderboard snapshot cached — TTL 60s', type: 'info' as const },
-    { module: 'QUEUE', message: 'Job #9912 completed — 0 failures in batch', type: 'success' as const },
-    { module: 'SCORING', message: 'Rubric v3.1 applied to Section B exam submissions', type: 'success' as const },
-    { module: 'MONITOR', message: 'System integrity check passed — all services healthy', type: 'success' as const },
-    { module: 'AI_GRADE', message: 'Short-answer NLP model inference — 7ms avg latency', type: 'info' as const },
-    { module: 'USER_SVC', message: 'New learner node registered — profile initialized', type: 'success' as const },
+    { module: 'ASSESSMENT', message: 'Assessment batch processed — 12 learner submissions reviewed', type: 'success' as const },
+    { module: 'INSIGHTS', message: 'Progress trends refreshed — weak skill clusters detected', type: 'info' as const },
+    { module: 'AI_REVIEW', message: 'Rubric-aligned scoring engine loaded — confidence within threshold', type: 'success' as const },
+    { module: 'SESSION', message: 'Active classroom session synced — learner activity updated', type: 'info' as const },
+    { module: 'RESULTS', message: 'Timed assessment finalized — results and feedback released', type: 'success' as const },
+    { module: 'FEEDBACK', message: 'Targeted feedback generated — next-step suggestions prepared', type: 'success' as const },
+    { module: 'NOTICE', message: 'Pending submissions detected — teacher review queue updated', type: 'warn' as const },
+    { module: 'ANALYTICS', message: 'Performance dashboard recalculated — mastery indicators refreshed', type: 'info' as const },
+    { module: 'ASSIGNMENT', message: 'Assignment checkpoint reached — submission status tracked', type: 'warn' as const },
+    { module: 'CACHE', message: 'Learning snapshot cached — analytics ready for inspection', type: 'info' as const },
+    { module: 'QUEUE', message: 'Background evaluation jobs completed — no failed tasks reported', type: 'success' as const },
+    { module: 'SCORING', message: 'Rubric criteria applied — explanation trace attached to results', type: 'success' as const },
+    { module: 'MONITOR', message: 'Learning services stable — assessment and feedback flows healthy', type: 'success' as const },
+    { module: 'AI_REVIEW', message: 'Short-answer analysis completed — response intent matched successfully', type: 'info' as const },
+    { module: 'PROFILE', message: 'New learner profile initialized — baseline progress tracking enabled', type: 'success' as const },
 ];
 
 const getTerminalTime = () => {
@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="flex items-center gap-2 ml-3">
                         <Terminal class="h-3 w-3 text-primary/60 dark:text-emerald-400/60" />
-                        <span class="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 dark:text-white/30">LSI_SYSLOG — LIVE STREAM</span>
+                        <span class="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 dark:text-white/30">LEARNING_INTEL — LIVE STREAM</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">

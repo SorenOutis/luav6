@@ -17,25 +17,25 @@ const props = defineProps<{
 
 const coreFeatures = [
     {
-        title: 'Assessment Engine',
-        description: 'Smart testing infrastructure with real-time analytics and AI-powered evaluation modules.',
+        title: 'Assessment Intelligence',
+        description: 'Structured exams and classroom checks powered by AI-assisted scoring and clear performance analysis.',
         code: 'MOD_EXM_01',
-        details: 'Take timed exams with multiple question types: multiple choice, true/false, identification, and AI-graded essays. Get instant feedback and track your performance across seasons.',
-        stats: [{ label: 'Question Types', value: '4' }, { label: 'AI Grading', value: 'Active' }, { label: 'Auto-Score', value: 'Real-time' }]
+        details: 'Run timed assessments with multiple question types, instant checking, and rubric-aware review flows that help teachers and learners understand every result.',
+        stats: [{ label: 'Question Types', value: 'Multi' }, { label: 'AI Support', value: 'Active' }, { label: 'Score Flow', value: 'Real-time' }]
     },
     {
-        title: 'Skill Acquisition',
-        description: 'Structured assignment workflows designed to track progressive learning and mastery across subjects.',
+        title: 'Feedback Intelligence',
+        description: 'Turn submissions into explainable feedback so learners know what was strong, weak, and next to improve.',
         code: 'MOD_ASN_02',
-        details: 'Submit assignments with file uploads, track deadlines, and receive grades from your instructors. Stay on top of your academic goals with progress tracking.',
-        stats: [{ label: 'File Upload', value: 'Secure' }, { label: 'Deadline Alerts', value: 'Live' }, { label: 'Grade Tracking', value: 'Instant' }]
+        details: 'Support assignments, rubric checks, and review traces with feedback that is easier to inspect, discuss, and use for classroom improvement.',
+        stats: [{ label: 'Rubric View', value: 'Visible' }, { label: 'Feedback', value: 'Traceable' }, { label: 'Review Flow', value: 'Guided' }]
     },
     {
-        title: 'Gamified Learning',
-        description: 'Engaging leaderboard system driven by XP, daily streaks, and competitive academic performance.',
+        title: 'Progress Intelligence',
+        description: 'Track learner growth over time with mastery signals, activity history, and performance trends.',
         code: 'MOD_LDR_03',
-        details: 'Compete with peers on the section-based leaderboard. Earn XP from exams, assignments, and daily streaks. Rise through the ranks and dominate your section.',
-        stats: [{ label: 'XP System', value: 'Active' }, { label: 'Streak Bonus', value: 'Daily' }, { label: 'Sections', value: 'Multi' }]
+        details: 'Monitor how students improve across assessments, identify weak areas earlier, and surface the next actions that support stronger learning outcomes.',
+        stats: [{ label: 'Mastery', value: 'Tracked' }, { label: 'Insights', value: 'Live' }, { label: 'History', value: 'Continuous' }]
     }
 ];
 
@@ -195,7 +195,7 @@ onMounted(() => {
 
             <div class="mt-10 lg:mt-16 relative z-10">
                 <button class="text-[10px] font-black uppercase tracking-[0.3em] lg:tracking-[0.4em] text-muted-foreground hover:text-primary transition-all flex items-center gap-4 group/btn">
-                    {{ expandedFeature === index ? 'Close Specs' : 'View Specs' }}
+                    {{ expandedFeature === index ? 'Close Details' : 'View Details' }}
                     <ChevronDown class="h-4 w-4 transition-transform duration-500 group-hover/btn:translate-y-0.5" :class="{ 'rotate-180 group-hover/btn:-translate-y-0.5': expandedFeature === index }" />
                 </button>
             </div>
@@ -225,11 +225,11 @@ onMounted(() => {
                     </div>
 
                     <Link v-if="auth.user" :href="dashboard()" class="inline-flex items-center gap-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] bg-primary text-primary-foreground px-6 py-4 hover:bg-primary/90 transition-all rounded-lg shadow-lg hover:shadow-primary/20 hover:gap-6 group/link">
-                        Access Module
+                        Open Module
                         <ArrowRight class="h-3.5 w-3.5" />
                     </Link>
                     <Link v-else :href="login()" class="inline-flex items-center gap-4 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] bg-foreground text-background px-6 py-4 hover:bg-primary hover:text-primary-foreground transition-all rounded-lg shadow-lg hover:shadow-primary/20 hover:gap-6 group/link">
-                        Login to Access
+                        Login to Continue
                         <ArrowRight class="h-3.5 w-3.5" />
                     </Link>
                 </div>

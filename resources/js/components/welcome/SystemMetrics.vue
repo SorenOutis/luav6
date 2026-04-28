@@ -17,10 +17,10 @@ const animAssignments = useNumberAnimation(() => props.totalAssignments, 2.2, 'e
 const animSubmissions = useNumberAnimation(() => props.totalSubmissions, 2.5, 'power4.out');
 
 const systemStats = computed(() => [
-    { label: 'Active Users', value: animUsers.value, unit: 'LEARNERS', icon: Cpu, status: 'NOMINAL', color: 'primary' },
-    { label: 'Assessments', value: animExams.value, unit: 'READY', icon: ClipboardCheck, status: 'STABLE', color: 'emerald' },
-    { label: 'Assignments', value: animAssignments.value, unit: 'ACTIVE', icon: FileText, status: 'SYNCED', color: 'primary' },
-    { label: 'Submissions', value: animSubmissions.value, unit: 'TOTAL', icon: Trophy, status: 'UPDATING', color: 'primary' },
+    { label: 'Learners Supported', value: animUsers.value, unit: 'ACTIVE', icon: Cpu, status: 'ONLINE', color: 'primary' },
+    { label: 'Assessments Running', value: animExams.value, unit: 'LIVE', icon: ClipboardCheck, status: 'STABLE', color: 'emerald' },
+    { label: 'Assignments Tracked', value: animAssignments.value, unit: 'SYNCED', icon: FileText, status: 'FLOWING', color: 'primary' },
+    { label: 'Feedback Records', value: animSubmissions.value, unit: 'TOTAL', icon: Trophy, status: 'UPDATING', color: 'primary' },
 ]);
 
 const handleMetricHover = (e: MouseEvent) => {
