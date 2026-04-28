@@ -102,66 +102,65 @@ const xpPercentage = computed(() => {
                 <div class="absolute -bottom-1/2 -left-1/4 w-[150%] h-[200%] bg-primary/[0.02] dark:bg-white/[0.01] blur-[100px] animate-slow-drift-reverse"></div>
             </div>
             
-            <div class="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-10">
+            <div class="relative flex flex-col lg:flex-row lg:items-end justify-between gap-4 lg:gap-10">
                 <!-- Left side: Profile Picture + Greetings + Integrated Progress -->
-                <div class="flex flex-row items-center lg:items-center gap-4 sm:gap-6 w-full lg:w-auto">
+                <div class="flex flex-row items-center lg:items-center gap-3 sm:gap-6 w-full lg:w-auto">
                     <!-- Profile Picture with Integrated Level Badge -->
                     <div class="shrink-0 relative group/avatar">
                         <div class="relative">
                             <!-- Level Badge integrated into Avatar -->
-                            <div class="absolute -top-1 -right-1 z-30 px-2 py-0.5 rounded-lg bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-tighter shadow-lg border border-background tabular-nums">
+                            <div class="absolute -top-1 -right-1 z-30 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[7px] sm:text-[8px] font-black uppercase tracking-tighter shadow-lg border border-background tabular-nums">
                                 Lvl {{ animatedLevel }}
                             </div>
 
-                            <div class="absolute -bottom-0.5 -right-0.5 z-20 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-background flex items-center justify-center border-2 border-background shadow-lg">
+                            <div class="absolute -bottom-0.5 -right-0.5 z-20 w-3 h-3 sm:w-5 sm:h-5 rounded-full bg-background flex items-center justify-center border-2 border-background shadow-lg">
                                 <span class="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"></span>
                             </div>
                             
-                            <Avatar class="size-14 sm:size-20 lg:size-24 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-2xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 shadow-xl">
+                            <Avatar class="size-12 sm:size-20 lg:size-24 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-xl sm:rounded-2xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 shadow-xl">
                                 <AvatarImage
                                     v-if="userAvatar"
                                     :src="userAvatar"
                                     :alt="userName"
                                     class="object-cover"
                                 />
-                                <AvatarFallback class="bg-primary/5 font-black text-primary text-xl sm:text-2xl lg:text-3xl">
+                                <AvatarFallback class="bg-primary/5 font-black text-primary text-lg sm:text-2xl lg:text-3xl">
                                     {{ getInitials(userName) }}
                                 </AvatarFallback>
                             </Avatar>
                         </div>
                     </div>
 
-                    <div class="flex-1 space-y-2 sm:space-y-3">
-                        <div class="flex items-center gap-2 text-[8px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-muted-foreground/40">
-                            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/5 border border-primary/10 group/sync cursor-pointer hover:bg-primary/10 transition-colors" @click="emit('refresh')">
-                                <RefreshCw class="w-2.5 h-2.5 text-primary/60" :class="{ 'animate-spin': isRefreshing }" />
-                                <span class="whitespace-nowrap tabular-nums">{{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
+                    <div class="flex-1 min-w-0 space-y-1 sm:space-y-3">
+                        <div class="flex items-center gap-2 text-[7px] sm:text-[10px] font-black tracking-[0.1em] sm:tracking-[0.2em] uppercase text-muted-foreground/40">
+                            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/5 border border-primary/10 group/sync cursor-pointer hover:bg-primary/10 transition-colors" @click="emit('refresh')">
+                                <RefreshCw class="w-2 sm:w-2.5 h-2 sm:h-2.5 text-primary/60" :class="{ 'animate-spin': isRefreshing }" />
+                                <span class="whitespace-nowrap tabular-nums text-[6px] sm:text-[9px]">{{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
                             </div>
-                            <span class="w-1 h-1 rounded-full bg-border/30"></span>
-                            <span class="opacity-50 tracking-widest hidden sm:inline">Active</span>
+                            <span class="opacity-40 tracking-widest hidden sm:inline">Active</span>
                         </div>
 
-                        <div class="space-y-1">
-                            <h1 class="text-xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-tight">
+                        <div class="space-y-0.5 sm:space-y-1">
+                            <h1 class="text-base sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-tight truncate">
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
-                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                                <p class="text-muted-foreground/60 text-[10px] sm:text-sm font-medium leading-relaxed" v-html="smarterStatus"></p>
-                                <div class="hidden sm:block w-px h-3 bg-border/40"></div>
-                                <div class="flex items-center gap-3">
-                                    <span class="text-[9px] font-black text-primary uppercase tracking-widest">{{ Math.round(xpPercentage) }}% Efficiency</span>
-                                    <div class="flex gap-1">
-                                        <div v-for="i in 5" :key="i" class="w-1 h-1 rounded-full" :class="i <= (userStats.level % 5) + 1 ? 'bg-primary/60' : 'bg-muted/40'"></div>
-                                    </div>
-                                </div>
-                            </div>
+                            <p class="text-muted-foreground/60 text-[9px] sm:text-sm font-medium leading-relaxed line-clamp-1" v-html="smarterStatus"></p>
                         </div>
 
-                        <!-- Integrated XP Bar -->
-                        <div class="w-full max-w-sm space-y-1.5">
-                            <div class="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
-                                <span>{{ animatedXP.toLocaleString() }} XP</span>
-                                <span>{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} to Level {{ userStats.level + 1 }}</span>
+                        <!-- Integrated XP Bar & Mini Stats -->
+                        <div class="w-full max-w-sm space-y-1 sm:space-y-1.5">
+                            <div class="flex justify-between items-center text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-primary/60">{{ animatedXP.toLocaleString() }} XP</span>
+                                    <span class="hidden sm:inline opacity-30">/</span>
+                                    <span class="hidden sm:inline">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} to Level {{ userStats.level + 1 }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-primary">{{ Math.round(xpPercentage) }}% Eff.</span>
+                                    <div class="flex gap-0.5 sm:gap-1">
+                                        <div v-for="i in 5" :key="i" class="w-0.5 sm:w-1 h-0.5 sm:h-1 rounded-full" :class="i <= (userStats.level % 5) + 1 ? 'bg-primary/60' : 'bg-muted/40'"></div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="relative h-1 w-full bg-muted/20 rounded-full overflow-hidden border border-white/5 shadow-inner">
                                 <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_10px_rgba(var(--primary),0.3)]" 
