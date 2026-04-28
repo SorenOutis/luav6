@@ -4,9 +4,9 @@ import { Activity } from 'lucide-vue-next';
 import gsap from 'gsap';
 
 const liveSignals = ref([
-    { label: 'AI Evaluation Speed', value: 92, targetValue: 92, valueLabel: 'Optimal', color: 'primary' },
-    { label: 'System Integrity', value: 98, targetValue: 98, valueLabel: '98%', color: 'emerald' },
-    { label: 'Active Assessments', value: 100, targetValue: 100, valueLabel: 'Live', color: 'primary' },
+    { label: 'Essay Review Speed', value: 92, targetValue: 92, valueLabel: 'Fast', color: 'primary' },
+    { label: 'Rubric Match Confidence', value: 96, targetValue: 96, valueLabel: '96%', color: 'emerald' },
+    { label: 'Feedback Availability', value: 100, targetValue: 100, valueLabel: 'Live', color: 'primary' },
 ]);
 
 let signalInterval: ReturnType<typeof setInterval> | null = null;
@@ -69,9 +69,9 @@ onBeforeUnmount(() => {
             <div>
                 <div class="flex items-center gap-2 mb-2">
                     <Activity class="h-3 w-3 text-primary animate-pulse" />
-                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">System Diagnostics</p>
+                    <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Essay Diagnostics</p>
                 </div>
-                <h2 class="text-2xl sm:text-3xl font-black tracking-tight leading-none uppercase italic">Live Pulse</h2>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight leading-none uppercase italic">AI Review Pulse</h2>
             </div>
             
             <div class="flex items-center gap-6">

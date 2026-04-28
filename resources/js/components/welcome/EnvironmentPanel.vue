@@ -2,9 +2,9 @@
 import { LayoutDashboard, BookOpen, Activity, ClipboardCheck, ArrowRight } from 'lucide-vue-next';
 
 const quickLinks = [
-    { label: 'Exam Directory', href: '#', icon: BookOpen },
-    { label: 'Assessment Analytics', href: '#', icon: Activity },
-    { label: 'Evaluation Logs', href: '#', icon: ClipboardCheck },
+    { label: 'Essay Rubric View', href: '#', icon: BookOpen },
+    { label: 'Scoring Analytics', href: '#', icon: Activity },
+    { label: 'Feedback Trace Log', href: '#', icon: ClipboardCheck },
 ];
 </script>
 
@@ -15,10 +15,10 @@ const quickLinks = [
         <div class="relative z-10 mb-8">
             <div class="flex items-center gap-2 mb-2">
                 <LayoutDashboard class="h-3 w-3 text-primary/60" />
-                <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Control Center</p>
+                <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/80">Review Center</p>
             </div>
-            <h3 class="text-xl sm:text-2xl font-black tracking-tight uppercase">Operational <br/> Nodes</h3>
-            <p class="mt-4 text-xs leading-relaxed text-muted-foreground/80 max-w-[280px]">AI-powered evaluation and secure exam handling integrated into your classroom.</p>
+            <h3 class="text-xl sm:text-2xl font-black tracking-tight uppercase">Essay Review <br/> Controls</h3>
+            <p class="mt-4 text-xs leading-relaxed text-muted-foreground/80 max-w-[280px]">Show how the AI scores essays, which rubric areas were checked, and where feedback comes from.</p>
         </div>
 
         <div class="mt-auto space-y-3 relative z-10">
@@ -36,7 +36,7 @@ const quickLinks = [
                     </div>
                     <div class="flex flex-col">
                         <span class="text-[10px] font-black uppercase tracking-[0.18em] text-foreground/80 group-hover/link:text-foreground transition-colors">{{ quickLink.label }}</span>
-                        <span class="text-[7px] font-bold text-muted-foreground/40 uppercase tracking-widest group-hover/link:text-primary/40 transition-colors">Protocol_Enabled</span>
+                        <span class="text-[7px] font-bold text-muted-foreground/40 uppercase tracking-widest group-hover/link:text-primary/40 transition-colors">Review_Enabled</span>
                     </div>
                 </span>
                 <div class="flex items-center gap-2">
@@ -47,7 +47,7 @@ const quickLinks = [
         </div>
         
         <div class="mt-8 pt-4 border-t border-border/10 flex items-center justify-between">
-            <span class="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Environment_Secure</span>
+            <span class="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Feedback_Traceable</span>
             <div class="flex gap-1">
                 <div v-for="i in 3" :key="i" class="h-1 w-4 rounded-full bg-emerald-500/20 group-hover/env:bg-emerald-500/40 transition-colors"></div>
             </div>
