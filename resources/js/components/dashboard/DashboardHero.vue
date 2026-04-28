@@ -28,6 +28,7 @@ interface Props {
     announcements: Announcement[];
     totalXPProgress: number;
     timeBasedGreeting: string;
+    smarterStatus: string;
     isRefreshing?: boolean;
     lastSyncTime?: Date;
 }
@@ -94,106 +95,78 @@ const xpPercentage = computed(() => {
         </TransitionGroup>
 
         <!-- Bespoke Hero Section - Open Layout -->
-        <div class="relative min-h-[160px] lg:min-h-[200px] flex flex-col justify-center px-2">
-            <!-- Expansive Ambient Background - Subdued -->
+        <div class="relative min-h-0 lg:min-h-[200px] flex flex-col justify-center px-1 sm:px-2">
+            <!-- Ambient Background - Neutral & Minimal -->
             <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden rounded-[2.5rem]">
-                <div class="absolute -top-1/2 -right-1/4 w-[150%] h-[200%] bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent opacity-50 blur-[100px] animate-slow-drift"></div>
-                <div class="absolute -bottom-1/2 -left-1/4 w-[150%] h-[200%] bg-gradient-to-tr from-primary/[0.03] via-transparent to-transparent opacity-30 blur-[100px] animate-slow-drift-reverse"></div>
+                <div class="absolute -top-1/2 -right-1/4 w-[150%] h-[200%] bg-primary/[0.02] dark:bg-white/[0.01] blur-[100px] animate-slow-drift"></div>
+                <div class="absolute -bottom-1/2 -left-1/4 w-[150%] h-[200%] bg-primary/[0.02] dark:bg-white/[0.01] blur-[100px] animate-slow-drift-reverse"></div>
             </div>
             
-            <div class="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-10">
-                <!-- Left side: Profile Picture + Greetings -->
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
-                    <!-- Profile Picture with Dynamic Glow -->
+            <div class="relative flex flex-col lg:flex-row lg:items-end justify-between gap-6 sm:gap-10">
+                <!-- Left side: Profile Picture + Greetings + Integrated Progress -->
+                <div class="flex flex-row items-center lg:items-center gap-4 sm:gap-6 w-full lg:w-auto">
+                    <!-- Profile Picture with Integrated Level Badge -->
                     <div class="shrink-0 relative group/avatar">
-                        <div class="absolute -inset-2 bg-primary/5 rounded-full blur-2xl opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-700"></div>
                         <div class="relative">
-                            <!-- Online Badge integrated into Avatar border -->
-                            <div class="absolute -bottom-0.5 -right-0.5 z-20 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-background flex items-center justify-center border-2 border-background shadow-lg">
-                                <span class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.4)]"></span>
+                            <!-- Level Badge integrated into Avatar -->
+                            <div class="absolute -top-1 -right-1 z-30 px-2 py-0.5 rounded-lg bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-tighter shadow-lg border border-background tabular-nums">
+                                Lvl {{ animatedLevel }}
+                            </div>
+
+                            <div class="absolute -bottom-0.5 -right-0.5 z-20 w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full bg-background flex items-center justify-center border-2 border-background shadow-lg">
+                                <span class="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"></span>
                             </div>
                             
-                            <Avatar class="size-16 sm:size-20 lg:size-24 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-2xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 group-hover/avatar:border-primary/50 shadow-xl">
+                            <Avatar class="size-14 sm:size-20 lg:size-24 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-2xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 shadow-xl">
                                 <AvatarImage
                                     v-if="userAvatar"
                                     :src="userAvatar"
                                     :alt="userName"
                                     class="object-cover"
                                 />
-                                <AvatarFallback
-                                    class="bg-primary/5 font-black text-primary text-xl sm:text-2xl lg:text-3xl"
-                                >
+                                <AvatarFallback class="bg-primary/5 font-black text-primary text-xl sm:text-2xl lg:text-3xl">
                                     {{ getInitials(userName) }}
                                 </AvatarFallback>
                             </Avatar>
                         </div>
                     </div>
 
-                    <div class="space-y-3 sm:space-y-4">
-                        <div class="flex items-center gap-2 text-[9px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-muted-foreground/40">
+                    <div class="flex-1 space-y-2 sm:space-y-3">
+                        <div class="flex items-center gap-2 text-[8px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-muted-foreground/40">
                             <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/5 border border-primary/10 group/sync cursor-pointer hover:bg-primary/10 transition-colors" @click="emit('refresh')">
                                 <RefreshCw class="w-2.5 h-2.5 text-primary/60" :class="{ 'animate-spin': isRefreshing }" />
-                                <span class="whitespace-nowrap tabular-nums">Sync: {{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
+                                <span class="whitespace-nowrap tabular-nums">{{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
                             </div>
                             <span class="w-1 h-1 rounded-full bg-border/30"></span>
-                            <span class="opacity-50">Active</span>
+                            <span class="opacity-50 tracking-widest hidden sm:inline">Active</span>
                         </div>
 
                         <div class="space-y-1">
-                            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight bg-gradient-to-br from-foreground via-foreground to-foreground/40 bg-clip-text text-transparent leading-[1.1] sm:leading-[1.05]">
+                            <h1 class="text-xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-tight">
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
-                            <p class="text-muted-foreground/60 text-[10px] sm:text-sm font-medium max-w-sm sm:max-w-md leading-relaxed">
-                                Your engine is at <span class="text-primary font-black relative px-0.5">peak capacity</span>.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right side: Floating Progress Panel - Compacted -->
-                <div class="lg:w-auto lg:ml-auto w-full group/progress">
-                    <div class="relative p-4 sm:p-6 rounded-3xl bg-card/20 backdrop-blur-xl border border-white/5 dark:border-white/[0.02] shadow-xl transition-all duration-700 group-hover/progress:translate-y-[-2px]">
-                        
-                        <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 relative z-10">
-                            <!-- Level Indicator - Sleeker -->
-                            <div class="relative shrink-0">
-                                <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border border-primary/20 bg-background/30 flex flex-col items-center justify-center shadow-lg backdrop-blur-xl transition-all duration-700 group-hover/progress:scale-105">
-                                    <span class="text-[7px] sm:text-[8px] uppercase font-black tracking-widest text-primary/40">Lvl</span>
-                                    <span class="text-2xl sm:text-3xl font-black font-mono tracking-tighter leading-none bg-gradient-to-br from-foreground via-foreground to-foreground/40 bg-clip-text text-transparent tabular-nums">{{ animatedLevel }}</span>
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                <p class="text-muted-foreground/60 text-[10px] sm:text-sm font-medium leading-relaxed" v-html="smarterStatus"></p>
+                                <div class="hidden sm:block w-px h-3 bg-border/40"></div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[9px] font-black text-primary uppercase tracking-widest">{{ Math.round(xpPercentage) }}% Efficiency</span>
+                                    <div class="flex gap-1">
+                                        <div v-for="i in 5" :key="i" class="w-1 h-1 rounded-full" :class="i <= (userStats.level % 5) + 1 ? 'bg-primary/60' : 'bg-muted/40'"></div>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="flex-1 w-full sm:w-60 lg:w-64 space-y-3">
-                                <div class="flex justify-between items-end">
-                                    <div class="space-y-0.5">
-                                        <p class="text-[9px] font-black uppercase tracking-wider text-muted-foreground/30 tabular-nums">
-                                            Next: <span class="text-primary/60">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} XP</span>
-                                        </p>
-                                        <div class="flex items-baseline gap-1.5">
-                                            <span class="text-xl font-black tracking-tight tabular-nums">{{ animatedXP.toLocaleString() }}</span>
-                                            <span class="text-[10px] font-bold text-muted-foreground/20 uppercase tracking-widest">/ {{ animatedMaxXP.toLocaleString() }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end">
-                                        <div class="flex items-center gap-1 text-base font-black text-primary tabular-nums leading-none">
-                                            <Zap class="size-3 fill-current" />
-                                            <span>{{ Math.round(xpPercentage) }}%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="relative h-2 w-full bg-muted/20 rounded-full overflow-hidden border border-white/5 shadow-inner">
-                                    <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_12px_rgba(var(--primary),0.3)]" 
-                                        :style="{ width: `${xpPercentage}%` }">
-                                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-1/2 -skew-x-[45deg] animate-shimmer"></div>
-                                    </div>
-                                </div>
-                                
-                                <div class="flex justify-between items-center px-1">
-                                    <span class="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">Tier {{ Math.floor(userStats.level / 10) + 1 }}</span>
-                                    <div class="flex gap-1 opacity-50">
-                                        <div v-for="i in 5" :key="i" class="w-1 h-1 rounded-full" :class="i <= (userStats.level % 5) + 1 ? 'bg-primary' : 'bg-muted/40'"></div>
-                                    </div>
+                        <!-- Integrated XP Bar -->
+                        <div class="w-full max-w-sm space-y-1.5">
+                            <div class="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
+                                <span>{{ animatedXP.toLocaleString() }} XP</span>
+                                <span>{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} to Level {{ userStats.level + 1 }}</span>
+                            </div>
+                            <div class="relative h-1 w-full bg-muted/20 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                                <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_10px_rgba(var(--primary),0.3)]" 
+                                    :style="{ width: `${xpPercentage}%` }">
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-1/2 -skew-x-[45deg] animate-shimmer"></div>
                                 </div>
                             </div>
                         </div>

@@ -101,17 +101,42 @@ const bannedAt = computed(() => {
 });
 const showBanModal = ref(false);
 
-// Personalized greeting based on stats
+// Smarter, context-aware greeting
 const personalizedGreeting = computed(() => {
     const hour = new Date().getHours();
-    let base = 'Good Evening';
-    if (hour < 12) base = 'Good Morning';
-    else if (hour < 18) base = 'Good Afternoon';
-
     const streak = props.userStats.streak;
-    if (streak > 5) return `${base}, Champ!`;
-    if (streak > 0) return `${base}, keep it up!`;
-    return base;
+    const overdue = todaySummary.value.overdueCount;
+    
+    // Time-based base greeting
+    let greeting = 'Good Evening';
+    if (hour >= 0 && hour < 4) greeting = "Late night session";
+    else if (hour >= 4 && hour < 7) greeting = "Early bird vibes";
+    else if (hour >= 7 && hour < 12) greeting = "Good Morning";
+    else if (hour >= 12 && hour < 17) greeting = "Good Afternoon";
+    else if (hour >= 17 && hour < 21) greeting = "Good Evening";
+    else greeting = "Winding down";
+
+    // Add flair based on state
+    if (overdue > 0) return `${greeting}, let's catch up`;
+    if (streak >= 7) return `${greeting}, Legend`;
+    if (streak > 0) return `${greeting}, keep it up`;
+    
+    return greeting;
+});
+
+// Smarter status subtext for the hero
+const smarterStatus = computed(() => {
+    const xpRemaining = props.userStats.maxXPForLevel - props.userStats.currentXP;
+    const streak = props.userStats.streak;
+    const overdue = todaySummary.value.overdueCount;
+    const dueToday = todaySummary.value.dueTodayCount;
+
+    if (overdue > 0) return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} requiring <span class="text-foreground font-black">immediate attention</span>.`;
+    if (xpRemaining < 200) return `Only <span class="text-foreground font-black">${xpRemaining} XP</span> until you reach Level ${props.userStats.level + 1}!`;
+    if (streak >= 3) return `You've maintained a <span class="text-foreground font-black">${streak}-day streak</span>. Keep the momentum!`;
+    if (dueToday > 0) return `You have ${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your <span class="text-foreground font-black">schedule for today</span>.`;
+    
+    return `Your learning engine is performing at <span class="text-foreground font-black">peak capacity</span>.`;
 });
 
 // Interactive Background Logic
@@ -558,6 +583,7 @@ const handleLogout = () => {
                     :announcements="announcements"
                     :total-x-p-progress="totalXPProgress"
                     :time-based-greeting="personalizedGreeting"
+                    :smarter-status="smarterStatus"
                     :is-refreshing="isRefreshing"
                     :last-sync-time="lastSyncTime"
                     @close-announcement="announcements = []"
