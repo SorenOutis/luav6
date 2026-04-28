@@ -15,12 +15,12 @@ const ringC = ref<HTMLElement | null>(null);
 const section = ref<HTMLElement | null>(null);
 
 const faces = [
-    { label: 'NEURAL', code: '0xN01', transform: 'translateZ(110px)' },
-    { label: 'VECTOR', code: '0xV02', transform: 'rotateY(180deg) translateZ(110px)' },
-    { label: 'QUERY', code: '0xQ03', transform: 'rotateY(90deg) translateZ(110px)' },
-    { label: 'SYNC', code: '0xS04', transform: 'rotateY(-90deg) translateZ(110px)' },
-    { label: 'TRAIN', code: '0xT05', transform: 'rotateX(90deg) translateZ(110px)' },
-    { label: 'LEARN', code: '0xL06', transform: 'rotateX(-90deg) translateZ(110px)' },
+    { label: 'THESIS', code: 'ESS_01', transform: 'translateZ(110px)' },
+    { label: 'EVIDENCE', code: 'ESS_02', transform: 'rotateY(180deg) translateZ(110px)' },
+    { label: 'STRUCTURE', code: 'ESS_03', transform: 'rotateY(90deg) translateZ(110px)' },
+    { label: 'CLARITY', code: 'ESS_04', transform: 'rotateY(-90deg) translateZ(110px)' },
+    { label: 'GRAMMAR', code: 'ESS_05', transform: 'rotateX(90deg) translateZ(110px)' },
+    { label: 'RELEVANCE', code: 'ESS_06', transform: 'rotateX(-90deg) translateZ(110px)' },
 ];
 
 const orbitNodes = (count: number) =>
@@ -168,36 +168,37 @@ onBeforeUnmount(() => {
                 <div class="dc-reveal flex items-center gap-2">
                     <span class="h-px w-10 bg-primary/60"></span>
                     <span class="text-[10px] font-mono font-bold tracking-[0.35em] text-primary/80 uppercase">
-                        &gt; DIMENSION.ENGINE
+                        &gt; ESSAY.ANALYZER
                     </span>
                 </div>
                 <h2
                     class="dc-reveal text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight leading-[1.05]"
                 >
-                    Multidimensional
+                    Transparent
                     <br />
                     <span class="bg-gradient-to-br from-primary via-primary/80 to-foreground bg-clip-text text-transparent">
-                        Intelligence Core
+                        Essay Review Core
                     </span>
                 </h2>
                 <p class="dc-reveal text-sm sm:text-base text-muted-foreground/80 leading-relaxed max-w-md">
-                    Six reasoning surfaces orbiting a quantum lattice — every query is projected through
-                    <span class="text-foreground font-semibold">neural</span>,
-                    <span class="text-foreground font-semibold">vector</span>, and
-                    <span class="text-foreground font-semibold">temporal</span> dimensions in parallel.
+                    Each essay is reviewed across six visible criteria so students can understand how the AI scores
+                    their work through
+                    <span class="text-foreground font-semibold">thesis strength</span>,
+                    <span class="text-foreground font-semibold">supporting evidence</span>, and
+                    <span class="text-foreground font-semibold">writing clarity</span>.
                 </p>
 
                 <div class="dc-reveal grid grid-cols-3 gap-2 pt-3 max-w-sm">
                     <div class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left">
-                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Axes</p>
+                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Criteria</p>
                         <p class="text-xl font-black text-foreground">6</p>
                     </div>
                     <div class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left">
-                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Orbits</p>
+                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Passes</p>
                         <p class="text-xl font-black text-foreground">3</p>
                     </div>
                     <div class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left">
-                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Nodes</p>
+                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Signals</p>
                         <p class="text-xl font-black text-primary">19</p>
                     </div>
                 </div>
@@ -208,7 +209,7 @@ onBeforeUnmount(() => {
                         <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
                     </span>
                     <span class="text-[10px] font-mono font-bold tracking-[0.3em] text-muted-foreground/70 uppercase">
-                        Runtime stable · phase locked
+                        Rubric active · feedback traceable
                     </span>
                 </div>
             </div>
@@ -302,16 +303,16 @@ onBeforeUnmount(() => {
 
                 <!-- Corner labels -->
                 <span class="dc-reveal absolute left-3 top-3 text-[9px] font-mono tracking-[0.25em] text-muted-foreground/60 uppercase">
-                    &gt; engine.online
+                    &gt; essay.review
                 </span>
                 <span class="dc-reveal absolute right-3 top-3 text-[9px] font-mono tracking-[0.25em] text-primary/70 uppercase">
-                    v6.∞
+                    ai.v6
                 </span>
                 <span class="dc-reveal absolute left-3 bottom-3 text-[9px] font-mono tracking-[0.25em] text-muted-foreground/60 uppercase">
-                    axis: x · y · z
+                    axis: thesis · evidence · clarity
                 </span>
                 <span class="dc-reveal absolute right-3 bottom-3 text-[9px] font-mono tracking-[0.25em] text-muted-foreground/60 uppercase">
-                    ▲ drag · hover
+                    ▲ review · inspect
                 </span>
             </div>
         </div>

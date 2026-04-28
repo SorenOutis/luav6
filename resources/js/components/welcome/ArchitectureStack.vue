@@ -7,10 +7,10 @@ import gsap from 'gsap';
 const archContainer = ref<HTMLElement | null>(null);
 
 const archStack = [
-    { title: 'Intelligence Layer', desc: 'Neural processing & AI evaluation modules.', color: 'primary' },
-    { title: 'Application Logic', desc: 'Secure exam orchestration & routing.', color: 'muted' },
-    { title: 'Data Persistence', desc: 'High-fidelity academic records & analytics.', color: 'muted' },
-    { title: 'Core Infrastructure', desc: 'Scalable cloud-native node environment.', color: 'primary' },
+    { title: 'AI Learning Support', desc: 'AI-assisted checking, smart feedback, and guided evaluation tools.', color: 'primary' },
+    { title: 'Assessment Workflows', desc: 'Exams, assignments, submissions, and classroom activity in one flow.', color: 'muted' },
+    { title: 'Student Progress Data', desc: 'Scores, streaks, rankings, and learning analytics tracked over time.', color: 'muted' },
+    { title: 'Academic Platform Core', desc: 'Secure infrastructure for students, teachers, sections, and seasons.', color: 'primary' },
 ];
 
 onMounted(() => {
@@ -98,9 +98,9 @@ onMounted(() => {
                 <div class="space-y-4">
                     <div class="flex items-center gap-4">
                         <div class="h-px w-12 bg-primary"></div>
-                        <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em] text-primary" data-scramble>System Schematic</span>
+                        <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.4em] text-primary" data-scramble>Learning Framework</span>
                     </div>
-                    <h2 class="text-3xl sm:text-5xl font-black uppercase tracking-tight leading-none">Multidimensional <br /> Architecture</h2>
+                    <h2 class="text-3xl sm:text-5xl font-black uppercase tracking-tight leading-none">Learning Platform <br /> Architecture</h2>
                 </div>
                 
                 <div class="grid gap-6">
@@ -115,7 +115,7 @@ onMounted(() => {
 
                 <div class="pt-8">
                     <Link href="/register" class="group inline-flex items-center gap-6 text-[10px] font-black uppercase tracking-[0.4em] border border-border px-8 py-5 hover:bg-foreground hover:text-background transition-all">
-                        Inspect Ecosystem
+                        Explore Learning Hub
                         <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Link>
                 </div>
