@@ -92,9 +92,9 @@ const podiumOrder = computed(() => {
 });
 
 const rankMeta = [
-    { label: 'Champion', icon: Crown, ring: 'ring-amber-400/60', glow: 'shadow-amber-400/30', accent: 'text-amber-400', bg: 'from-amber-400/20 via-amber-400/5 to-transparent', badge: 'bg-amber-400 text-black' },
-    { label: 'Second Place', icon: Medal, ring: 'ring-slate-300/50', glow: 'shadow-slate-300/20', accent: 'text-slate-300', bg: 'from-slate-300/15 via-slate-300/5 to-transparent', badge: 'bg-slate-300 text-slate-900' },
-    { label: 'Third Place', icon: Award, ring: 'ring-orange-400/50', glow: 'shadow-orange-400/20', accent: 'text-orange-400', bg: 'from-orange-400/15 via-orange-400/5 to-transparent', badge: 'bg-orange-400 text-black' },
+    { label: '1st', icon: Crown, ring: 'ring-amber-400/60', glow: 'shadow-amber-400/30', accent: 'text-amber-400', bg: 'from-amber-400/20 via-amber-400/5 to-transparent', badge: 'bg-amber-400 text-black' },
+    { label: '2nd', icon: Medal, ring: 'ring-slate-300/50', glow: 'shadow-slate-300/20', accent: 'text-slate-300', bg: 'from-slate-300/15 via-slate-300/5 to-transparent', badge: 'bg-slate-300 text-slate-900' },
+    { label: '3rd', icon: Award, ring: 'ring-orange-400/50', glow: 'shadow-orange-400/20', accent: 'text-orange-400', bg: 'from-orange-400/15 via-orange-400/5 to-transparent', badge: 'bg-orange-400 text-black' },
 ];
 
 const getNameSize = (name: string, isChamp: boolean) => {
