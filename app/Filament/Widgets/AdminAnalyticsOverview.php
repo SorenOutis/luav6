@@ -17,9 +17,9 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected ?string $heading = 'System Analytics';
+    protected ?string $heading = 'Operational Pulse';
 
-    protected ?string $description = 'High-level metrics for student growth and platform activity.';
+    protected ?string $description = 'Live signals for growth, activity, submissions, and moderation.';
 
     /**
      * @return array<Stat>
@@ -61,21 +61,27 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
             Stat::make('Total Students', number_format($totalStudents))
                 ->description($studentGrowthDescription)
                 ->descriptionIcon('heroicon-m-arrow-trending-up', IconPosition::Before)
+                ->icon('heroicon-o-users')
+                ->chart($this->dailyStudentRegistrations())
                 ->color('primary'),
 
             Stat::make('Active Today', number_format($activeToday))
                 ->description('Students who logged in today')
                 ->descriptionIcon('heroicon-m-bolt', IconPosition::Before)
+                ->icon('heroicon-o-sparkles')
                 ->color('success'),
 
             Stat::make('Submission Rate', $assignmentSubmissionRate.'%')
                 ->description(number_format($submittedAssignments).' submitted / '.number_format($totalAssignmentTargets).' assigned')
                 ->descriptionIcon('heroicon-m-check-badge', IconPosition::Before)
+                ->icon('heroicon-o-clipboard-document-check')
+                ->chart($this->dailyAssignmentSubmissions())
                 ->color('info'),
 
             Stat::make('Banned Students', number_format($bannedStudents))
                 ->description(number_format($examSubmissions7d).' exam submissions in last 7 days')
                 ->descriptionIcon('heroicon-m-no-symbol', IconPosition::Before)
+                ->icon('heroicon-o-shield-exclamation')
                 ->color($bannedStudents > 0 ? 'danger' : 'gray'),
         ];
     }
@@ -92,5 +98,39 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
         $prefix = $change >= 0 ? '+' : '';
 
         return $prefix.round($change, 1).'% vs previous 7 days';
+    }
+
+    /**
+     * @return array<float>
+     */
+    private function dailyStudentRegistrations(): array
+    {
+        $raw = User::query()
+            ->where('is_admin', false)
+            ->whereDate('created_at', '>=', now()->subDays(6)->toDateString())
+            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day');
+
+        return collect(range(6, 0))
+            ->map(fn (int $daysAgo): float => (float) ($raw[now()->subDays($daysAgo)->toDateString()] ?? 0))
+            ->all();
+    }
+
+    /**
+     * @return array<float>
+     */
+    private function dailyAssignmentSubmissions(): array
+    {
+        $raw = DB::table('assignment_user')
+            ->where('submitted', true)
+            ->whereDate('updated_at', '>=', now()->subDays(6)->toDateString())
+            ->selectRaw('DATE(updated_at) as day, COUNT(*) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day');
+
+        return collect(range(6, 0))
+            ->map(fn (int $daysAgo): float => (float) ($raw[now()->subDays($daysAgo)->toDateString()] ?? 0))
+            ->all();
     }
 }

@@ -24,6 +24,10 @@ class AnonymousMessageResource extends Resource
 
     protected static ?string $navigationLabel = 'NGL Messages';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Community';
+
+    protected static ?int $navigationSort = 2;
+
     protected static ?string $modelLabel = 'Anonymous Message';
 
     protected static ?string $slug = 'ngl-messages';

@@ -11,14 +11,17 @@ use App\Models\ExamSubmission;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class ExamSubmissionResource extends Resource
 {
     protected static ?string $model = ExamSubmission::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-chart-bar';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Learning';
+
+    protected static ?int $navigationSort = 4;
 
     public static function form(Schema $schema): Schema
     {

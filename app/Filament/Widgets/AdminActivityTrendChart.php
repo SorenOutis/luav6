@@ -18,9 +18,12 @@ class AdminActivityTrendChart extends ChartWidget
 
     protected static ?int $sort = 2;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'md' => 6,
+        'xl' => 8,
+    ];
 
-    protected ?string $maxHeight = '260px';
+    protected ?string $maxHeight = '330px';
 
     protected function getType(): string
     {
@@ -48,6 +51,10 @@ class AdminActivityTrendChart extends ChartWidget
                 'y' => [
                     'beginAtZero' => true,
                     'ticks' => ['precision' => 0],
+                    'grid' => ['drawBorder' => false],
+                ],
+                'x' => [
+                    'grid' => ['display' => false],
                 ],
             ],
             'elements' => [

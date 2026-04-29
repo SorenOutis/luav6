@@ -1,0 +1,406 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+:root {
+    --admin-surface: color-mix(in oklab, var(--gray-50) 76%, white);
+    --admin-surface-strong: white;
+    --admin-border: color-mix(in oklab, var(--gray-200) 76%, transparent);
+    --admin-glow: color-mix(in oklab, var(--primary-400) 18%, transparent);
+    --admin-shadow: 0 18px 55px -34px rgb(0 0 0 / 0.45);
+}
+
+.dark {
+    --admin-surface: color-mix(in oklab, var(--gray-900) 82%, black);
+    --admin-surface-strong: color-mix(in oklab, var(--gray-900) 92%, black);
+    --admin-border: color-mix(in oklab, var(--gray-700) 56%, transparent);
+    --admin-glow: color-mix(in oklab, var(--primary-400) 24%, transparent);
+    --admin-shadow: 0 24px 70px -38px rgb(0 0 0 / 0.95);
+}
+
+.fi-body {
+    background:
+        radial-gradient(circle at 15% 5%, var(--admin-glow), transparent 24rem),
+        radial-gradient(circle at 85% 14%, color-mix(in oklab, var(--info-400) 12%, transparent), transparent 22rem),
+        var(--gray-50);
+}
+
+.dark .fi-body {
+    background:
+        radial-gradient(circle at 16% 0%, color-mix(in oklab, var(--primary-400) 16%, transparent), transparent 28rem),
+        radial-gradient(circle at 86% 12%, color-mix(in oklab, var(--info-400) 12%, transparent), transparent 24rem),
+        #070708;
+}
+
+.fi-main {
+    padding-block-start: 2.75rem;
+}
+
+.fi-main,
+.fi-page-main,
+.fi-page-header-main-ctn,
+.fi-page-content {
+    max-width: 92rem;
+}
+
+.fi-page-content {
+    row-gap: 2rem;
+}
+
+.admin-dashboard-grid {
+    gap: 2rem !important;
+}
+
+.admin-dashboard-grid > .fi-wi-widget {
+    min-width: 0;
+}
+
+.fi-topbar {
+    background: color-mix(in oklab, var(--admin-surface-strong) 84%, transparent);
+    border-bottom: 1px solid var(--admin-border);
+    backdrop-filter: blur(18px);
+}
+
+.fi-sidebar {
+    background:
+        linear-gradient(180deg, color-mix(in oklab, var(--admin-surface-strong) 96%, transparent), var(--admin-surface)),
+        var(--admin-surface-strong);
+    border-inline-end: 1px solid var(--admin-border);
+}
+
+.fi-sidebar-header,
+.fi-sidebar-nav {
+    background: transparent;
+}
+
+.fi-sidebar-nav-groups {
+    gap: 1.15rem;
+}
+
+.fi-sidebar-group {
+    padding-block: 0.15rem;
+}
+
+.fi-sidebar-group-label {
+    color: var(--gray-500);
+    font-size: 0.6875rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    padding-inline: 1rem;
+    text-transform: uppercase;
+}
+
+.dark .fi-sidebar-group-label {
+    color: var(--gray-400);
+}
+
+.fi-sidebar-group-items {
+    gap: 0.25rem;
+}
+
+.fi-sidebar-item-btn {
+    border-radius: 0.625rem;
+    margin-inline: 0.35rem;
+    transition:
+        background-color 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background: linear-gradient(135deg, color-mix(in oklab, var(--primary-500) 20%, transparent), color-mix(in oklab, var(--primary-400) 10%, transparent));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary-400) 32%, transparent);
+}
+
+.fi-sidebar-item-btn:hover {
+    transform: translateX(2px);
+}
+
+.fi-section,
+.fi-ta-ctn,
+.fi-wi-chart .fi-section,
+.fi-wi-table .fi-ta-ctn {
+    background: color-mix(in oklab, var(--admin-surface-strong) 88%, transparent);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.875rem;
+    box-shadow: var(--admin-shadow);
+    overflow: hidden;
+}
+
+.fi-section-header,
+.fi-ta-header {
+    background:
+        linear-gradient(180deg, color-mix(in oklab, var(--admin-surface-strong) 96%, transparent), color-mix(in oklab, var(--admin-surface) 88%, transparent));
+    border-bottom: 1px solid var(--admin-border);
+}
+
+.fi-section-header-heading,
+.fi-ta-header-heading,
+.fi-page-header-heading {
+    letter-spacing: 0;
+}
+
+.fi-wi-stats-overview-stat {
+    background:
+        linear-gradient(145deg, color-mix(in oklab, var(--admin-surface-strong) 95%, transparent), color-mix(in oklab, var(--admin-surface) 80%, transparent));
+    border: 1px solid var(--admin-border);
+    border-radius: 0.875rem;
+    box-shadow: var(--admin-shadow);
+    min-height: 9rem;
+}
+
+.fi-wi-stats-overview .fi-section-header {
+    padding: 1.35rem 1.5rem 1rem;
+}
+
+.fi-wi-stats-overview .fi-section-content {
+    padding: 1.15rem 1.5rem 1.5rem;
+}
+
+.fi-wi-stats-overview .fi-grid-ctn {
+    gap: 1.35rem;
+}
+
+.fi-wi-stats-overview-stat-value {
+    font-size: 2rem;
+    line-height: 2.25rem;
+}
+
+.fi-ta-row:hover {
+    background: color-mix(in oklab, var(--primary-400) 7%, transparent);
+}
+
+.fi-input-wrp,
+.fi-select-input,
+.fi-dropdown-panel,
+.fi-modal-window {
+    border-radius: 0.75rem;
+}
+
+.fi-btn,
+.fi-link,
+.fi-badge {
+    letter-spacing: 0;
+}
+
+.admin-command-center {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.72fr) minmax(18rem, 0.78fr);
+    overflow: hidden;
+    position: relative;
+}
+
+.admin-command-center::before {
+    background:
+        linear-gradient(135deg, color-mix(in oklab, var(--primary-400) 22%, transparent), transparent 38%),
+        linear-gradient(315deg, color-mix(in oklab, var(--info-400) 16%, transparent), transparent 42%);
+    content: '';
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+}
+
+.admin-command-center > * {
+    position: relative;
+}
+
+.admin-command-center__content,
+.admin-command-center__metrics,
+.admin-command-center__queue {
+    background: color-mix(in oklab, var(--admin-surface-strong) 72%, transparent);
+    border: 1px solid var(--admin-border);
+    border-radius: 0.875rem;
+    padding: 1.5rem;
+}
+
+.admin-command-center__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 18rem;
+}
+
+.admin-command-center__eyebrow,
+.admin-command-center__metric-label,
+.admin-command-center__queue-header,
+.admin-command-center__deadline time,
+.admin-command-center__empty {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1rem;
+}
+
+.dark .admin-command-center__eyebrow,
+.dark .admin-command-center__metric-label,
+.dark .admin-command-center__queue-header,
+.dark .admin-command-center__deadline time,
+.dark .admin-command-center__empty {
+    color: var(--gray-400);
+}
+
+.admin-command-center__eyebrow {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.5rem;
+    text-transform: uppercase;
+}
+
+.admin-command-center__status-dot {
+    background: var(--success-500);
+    border-radius: 999px;
+    box-shadow: 0 0 0 0.25rem color-mix(in oklab, var(--success-400) 18%, transparent);
+    height: 0.55rem;
+    width: 0.55rem;
+}
+
+.admin-command-center__title {
+    color: var(--gray-950);
+    font-size: clamp(2.15rem, 3.3vw, 3.35rem);
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.05;
+    margin-top: 1.15rem;
+    max-width: 46rem;
+}
+
+.dark .admin-command-center__title {
+    color: white;
+}
+
+.admin-command-center__description {
+    color: var(--gray-600);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-top: 1.1rem;
+    max-width: 44rem;
+}
+
+.dark .admin-command-center__description {
+    color: var(--gray-300);
+}
+
+.admin-command-center__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    margin-top: 1.65rem;
+}
+
+.admin-command-center__primary-action,
+.admin-command-center__secondary-action {
+    align-items: center;
+    border-radius: 0.7rem;
+    display: inline-flex;
+    font-size: 0.875rem;
+    font-weight: 700;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.625rem 0.9rem;
+}
+
+.admin-command-center__primary-action {
+    background: var(--primary-500);
+    color: white;
+}
+
+.admin-command-center__secondary-action {
+    background: color-mix(in oklab, var(--gray-200) 55%, transparent);
+    color: var(--gray-900);
+}
+
+.dark .admin-command-center__secondary-action {
+    background: color-mix(in oklab, var(--gray-700) 44%, transparent);
+    color: var(--gray-100);
+}
+
+.admin-command-center__metrics {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-command-center__metric {
+    border-radius: 0.75rem;
+    background: color-mix(in oklab, var(--admin-surface) 74%, transparent);
+    padding: 1.15rem;
+}
+
+.admin-command-center__metric strong {
+    color: var(--gray-950);
+    display: block;
+    font-size: 1.75rem;
+    line-height: 2rem;
+    margin-top: 0.35rem;
+}
+
+.dark .admin-command-center__metric strong {
+    color: white;
+}
+
+.admin-command-center__queue {
+    display: flex;
+    flex-direction: column;
+    gap: 0.95rem;
+}
+
+.admin-command-center__queue-header {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.admin-command-center__queue-header a {
+    color: var(--primary-600);
+}
+
+.dark .admin-command-center__queue-header a {
+    color: var(--primary-400);
+}
+
+.admin-command-center__deadline {
+    border-radius: 0.75rem;
+    background: color-mix(in oklab, var(--admin-surface) 74%, transparent);
+    padding: 1rem;
+}
+
+.admin-command-center__deadline span {
+    color: var(--gray-950);
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.25rem;
+}
+
+.dark .admin-command-center__deadline span {
+    color: var(--gray-100);
+}
+
+.admin-command-center__deadline time {
+    display: block;
+    margin-top: 0.25rem;
+}
+
+@media (max-width: 80rem) {
+    .admin-command-center {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 42rem) {
+    .fi-main {
+        padding-block-start: 1rem;
+    }
+
+    .admin-command-center__content,
+    .admin-command-center__metrics,
+    .admin-command-center__queue {
+        padding: 1rem;
+    }
+
+    .admin-command-center__metrics {
+        grid-template-columns: 1fr;
+    }
+}

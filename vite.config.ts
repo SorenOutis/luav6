@@ -11,6 +11,7 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/js/app.ts',
+                'resources/css/filament/admin/theme.css',
                 // Pages with their own dynamic imports (e.g. pixi.js) need explicit
                 // entries so Vite's manifest keeps their source path for @vite() lookups.
                 'resources/js/pages/Games/TowerDefense/Playfield.vue',

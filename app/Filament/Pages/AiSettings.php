@@ -21,6 +21,8 @@ class AiSettings extends Page implements HasSchemas
 
     protected static string|\UnitEnum|null $navigationGroup = 'Settings';
 
+    protected static ?int $navigationSort = 1;
+
     protected static ?string $title = 'AI Chat Settings';
 
     protected static ?string $navigationLabel = 'AI Settings';

@@ -2,8 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\AdminDashboard;
 use App\Filament\Widgets\AdminActivityTrendChart;
 use App\Filament\Widgets\AdminAnalyticsOverview;
+use App\Filament\Widgets\AdminCommandCenterWidget;
 use App\Filament\Widgets\LatestExamSubmissionsWidget;
 use App\Filament\Widgets\TopStudentsWidget;
 use App\Http\Middleware\SanitizeInput;
@@ -11,11 +13,9 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -32,17 +32,34 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName('LuaV6 Admin')
+            ->sidebarCollapsibleOnDesktop()
+            ->spa()
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->colors([
                 'primary' => Color::Amber,
+                'gray' => Color::Zinc,
+                'info' => Color::Sky,
+                'success' => Color::Emerald,
+                'warning' => Color::Amber,
+                'danger' => Color::Rose,
+            ])
+            ->navigationGroups([
+                'Learning',
+                'Community',
+                'Gamification',
+                'Administration',
+                'Settings',
+                'Games',
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
-                Dashboard::class,
+                AdminDashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
+                AdminCommandCenterWidget::class,
                 AdminAnalyticsOverview::class,
                 AdminActivityTrendChart::class,
                 LatestExamSubmissionsWidget::class,
