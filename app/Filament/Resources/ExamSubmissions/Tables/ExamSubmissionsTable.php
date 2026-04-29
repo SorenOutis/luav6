@@ -57,6 +57,9 @@ class ExamSubmissionsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->groups([
+                Group::make('exam.title')
+                    ->label('Exam')
+                    ->collapsible(),
                 Group::make('exam.section.name')
                     ->label('Section')
                     ->collapsible(),
@@ -66,10 +69,8 @@ class ExamSubmissionsTable
                 Group::make('user.name')
                     ->label('Student')
                     ->collapsible(),
-                Group::make('exam.title')
-                    ->label('Exam')
-                    ->collapsible(),
             ])
+            ->defaultGroup('exam.title')
             ->filters([
                 SelectFilter::make('user_id')
                     ->label('Student')
