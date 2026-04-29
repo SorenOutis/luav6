@@ -95,16 +95,11 @@ const xpPercentage = computed(() => {
         </TransitionGroup>
 
         <!-- Bespoke Hero Section - Open Layout -->
-        <div class="relative min-h-0 lg:min-h-[200px] flex flex-col justify-center px-1 sm:px-2">
-            <!-- Ambient Background - Neutral & Minimal -->
-            <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden rounded-[2.5rem]">
-                <div class="absolute -top-1/2 -right-1/4 w-[150%] h-[200%] bg-primary/[0.02] dark:bg-white/[0.01] blur-[100px] animate-slow-drift"></div>
-                <div class="absolute -bottom-1/2 -left-1/4 w-[150%] h-[200%] bg-primary/[0.02] dark:bg-white/[0.01] blur-[100px] animate-slow-drift-reverse"></div>
-            </div>
+        <div class="relative flex flex-col justify-center px-1 sm:px-2 lg:px-4">
             
             <div class="relative flex flex-col lg:flex-row lg:items-end justify-between gap-4 lg:gap-10">
                 <!-- Left side: Profile Picture + Greetings + Integrated Progress -->
-                <div class="flex flex-row items-center lg:items-center gap-3 sm:gap-6 w-full lg:w-auto">
+                <div class="flex flex-row items-center lg:items-center gap-3 sm:gap-6 lg:gap-10 w-full lg:w-auto">
                     <!-- Profile Picture with Integrated Level Badge -->
                     <div class="shrink-0 relative group/avatar">
                         <div class="relative">
@@ -117,7 +112,7 @@ const xpPercentage = computed(() => {
                                 <span class="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"></span>
                             </div>
                             
-                            <Avatar class="size-12 sm:size-20 lg:size-24 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-xl sm:rounded-2xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 shadow-xl">
+                            <Avatar class="size-12 sm:size-20 lg:size-28 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 shadow-xl">
                                 <AvatarImage
                                     v-if="userAvatar"
                                     :src="userAvatar"
@@ -132,40 +127,40 @@ const xpPercentage = computed(() => {
                     </div>
 
                     <div class="flex-1 min-w-0 space-y-1 sm:space-y-3">
-                        <div class="flex items-center gap-2 text-[7px] sm:text-[10px] font-black tracking-[0.1em] sm:tracking-[0.2em] uppercase text-muted-foreground/40">
+                        <div class="flex items-center gap-2 text-[7px] sm:text-[10px] lg:text-xs font-black tracking-[0.1em] sm:tracking-[0.2em] lg:tracking-[0.3em] uppercase text-muted-foreground/40">
                             <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/5 border border-primary/10 group/sync cursor-pointer hover:bg-primary/10 transition-colors" @click="emit('refresh')">
                                 <RefreshCw class="w-2 sm:w-2.5 h-2 sm:h-2.5 text-primary/60" :class="{ 'animate-spin': isRefreshing }" />
-                                <span class="whitespace-nowrap tabular-nums text-[6px] sm:text-[9px]">{{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
+                                <span class="whitespace-nowrap tabular-nums text-[6px] sm:text-[9px] lg:text-xs">{{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
                             </div>
-                            <span class="opacity-40 tracking-widest hidden sm:inline">Active</span>
+                            <!-- <span class="opacity-40 tracking-widest hidden sm:inline">Active</span> -->
                         </div>
 
                         <div class="space-y-0.5 sm:space-y-1">
                             <h1 class="text-base sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-tight truncate">
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
-                            <p class="text-muted-foreground/60 text-[9px] sm:text-sm font-medium leading-relaxed line-clamp-1" v-html="smarterStatus"></p>
+                            <p class="text-muted-foreground/60 text-[9px] sm:text-sm lg:text-lg font-medium leading-relaxed line-clamp-1 lg:mt-1" v-html="smarterStatus"></p>
                         </div>
 
                         <!-- Integrated XP Bar & Mini Stats -->
-                        <div class="w-full max-w-sm space-y-1 sm:space-y-1.5">
-                            <div class="flex justify-between items-center text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-muted-foreground/30">
+                        <div class="w-full max-w-sm lg:max-w-lg space-y-1 sm:space-y-1.5 lg:space-y-3">
+                            <div class="flex justify-between items-center text-[7px] sm:text-[8px] lg:text-xs font-black uppercase tracking-widest text-muted-foreground/40">
                                 <div class="flex items-center gap-2">
                                     <span class="text-primary/60">{{ animatedXP.toLocaleString() }} XP</span>
                                     <span class="hidden sm:inline opacity-30">/</span>
                                     <span class="hidden sm:inline">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} to Level {{ userStats.level + 1 }}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-primary">{{ Math.round(xpPercentage) }}% Eff.</span>
-                                    <div class="flex gap-0.5 sm:gap-1">
-                                        <div v-for="i in 5" :key="i" class="w-0.5 sm:w-1 h-0.5 sm:h-1 rounded-full" :class="i <= (userStats.level % 5) + 1 ? 'bg-primary/60' : 'bg-muted/40'"></div>
+                                    <span class="text-primary">{{ Math.round(xpPercentage) }}% Efficiency</span>
+                                    <div class="flex gap-0.5 sm:gap-1 lg:gap-1.5">
+                                        <div v-for="i in 5" :key="i" class="w-0.5 sm:w-1 lg:w-1.5 h-0.5 sm:h-1 lg:h-1.5 rounded-full" :class="i <= (userStats.level % 5) + 1 ? 'bg-primary/60' : 'bg-muted/40'"></div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="relative h-1 w-full bg-muted/20 rounded-full overflow-hidden border border-white/5 shadow-inner">
-                                <div class="h-full bg-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_10px_rgba(var(--primary),0.3)]" 
+                            <div class="relative h-1 lg:h-6 w-full bg-muted/30 dark:bg-black/20 rounded-full overflow-hidden border border-white/10 shadow-inner backdrop-blur-sm">
+                                <div class="h-full bg-gradient-to-r from-primary via-primary/90 to-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_20px_rgba(var(--primary),0.5)]" 
                                     :style="{ width: `${xpPercentage}%` }">
-                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-1/2 -skew-x-[45deg] animate-shimmer"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full -skew-x-[45deg] animate-shimmer"></div>
                                 </div>
                             </div>
                         </div>
