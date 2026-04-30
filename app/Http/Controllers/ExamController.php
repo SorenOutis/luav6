@@ -30,6 +30,7 @@ class ExamController extends Controller
                         ->orWhereIn('section_id', $sectionIds);
                 });
             })
+            ->latest()
             ->get();
 
         // Get submission counts and details for the current user
