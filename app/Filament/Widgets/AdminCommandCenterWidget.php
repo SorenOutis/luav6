@@ -33,6 +33,38 @@ class AdminCommandCenterWidget extends Widget
         $submittedAssignments = (clone $assignmentTargets)->where('submitted', true)->count();
         $totalAssignmentTargets = $assignmentTargets->count();
 
+        // Total XP across all students
+        $totalXpEarned = $students->sum('exp');
+
+        // Games played this week (tower defense runs)
+        $gamesPlayedWeek = DB::table('td_runs')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->count();
+
+        // Average score across all exam submissions this week
+        $avgScore = ExamSubmission::query()
+            ->where('created_at', '>=', now()->subDays(7))
+            ->whereNotNull('score')
+            ->avg('score');
+
+        // New students this week
+        $newStudentsThisWeek = User::query()
+            ->where('is_admin', false)
+            ->where('created_at', '>=', now()->subDays(7))
+            ->count();
+
+        // Streak leaders (students with 7+ day streaks)
+        $streakLeaders = User::query()
+            ->where('is_admin', false)
+            ->where('current_streak', '>=', 7)
+            ->orderByDesc('current_streak')
+            ->limit(3)
+            ->get()
+            ->map(fn ($u) => [
+                'name' => $u->name,
+                'streak' => $u->current_streak,
+            ]);
+
         return [
             'adminName' => auth()->user()?->name ?? 'Admin',
             'activeSeason' => $activeSeason,
@@ -53,6 +85,11 @@ class AdminCommandCenterWidget extends Widget
                 ->orderBy('due_date')
                 ->limit(3)
                 ->get(),
+            'totalXpEarned' => $totalXpEarned,
+            'gamesPlayedWeek' => $gamesPlayedWeek,
+            'avgScore' => $avgScore ? round((float) $avgScore, 1) : 0,
+            'newStudentsThisWeek' => $newStudentsThisWeek,
+            'streakLeaders' => $streakLeaders,
         ];
     }
 }

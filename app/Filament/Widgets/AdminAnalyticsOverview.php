@@ -55,6 +55,19 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
             ->whereBetween('created_at', [now()->subDays(14)->startOfDay(), now()->subDays(7)->startOfDay()])
             ->count();
 
+        // Total XP across all students
+        $totalXpAll = User::query()->where('is_admin', false)->sum('exp');
+
+        // Games played this week (tower defense runs)
+        $gamesPlayedWeek = DB::table('td_runs')
+            ->where('created_at', '>=', now()->subDays(7)->startOfDay())
+            ->count();
+
+        // Anonymous messages this week (engagement signal)
+        $anonymousMessagesWeek = DB::table('anonymous_messages')
+            ->where('created_at', '>=', now()->subDays(7)->startOfDay())
+            ->count();
+
         $studentGrowthDescription = $this->formatGrowthDescription($studentsLast7Days, $studentsPrev7Days);
 
         return [
@@ -78,11 +91,24 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
                 ->chart($this->dailyAssignmentSubmissions())
                 ->color('info'),
 
+            Stat::make('Total XP Earned', number_format($totalXpAll))
+                ->description(number_format($gamesPlayedWeek).' game plays this week')
+                ->descriptionIcon('heroicon-m-trophy', IconPosition::Before)
+                ->icon('heroicon-o-fire')
+                ->chart($this->weeklyXpDistribution())
+                ->color('warning'),
+
             Stat::make('Banned Students', number_format($bannedStudents))
                 ->description(number_format($examSubmissions7d).' exam submissions in last 7 days')
                 ->descriptionIcon('heroicon-m-no-symbol', IconPosition::Before)
                 ->icon('heroicon-o-shield-exclamation')
                 ->color($bannedStudents > 0 ? 'danger' : 'gray'),
+
+            Stat::make('Community Activity', number_format($anonymousMessagesWeek))
+                ->description('Messages this week')
+                ->descriptionIcon('heroicon-m-chat-bubble-left-right', IconPosition::Before)
+                ->icon('heroicon-o-chat-bubble-left-right')
+                ->color('secondary'),
         ];
     }
 
@@ -126,6 +152,22 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
             ->where('submitted', true)
             ->whereDate('updated_at', '>=', now()->subDays(6)->toDateString())
             ->selectRaw('DATE(updated_at) as day, COUNT(*) as total')
+            ->groupBy('day')
+            ->pluck('total', 'day');
+
+        return collect(range(6, 0))
+            ->map(fn (int $daysAgo): float => (float) ($raw[now()->subDays($daysAgo)->toDateString()] ?? 0))
+            ->all();
+    }
+
+    /**
+     * @return array<float>
+     */
+    private function weeklyXpDistribution(): array
+    {
+        $raw = DB::table('gamification_histories')
+            ->whereDate('created_at', '>=', now()->subDays(6)->toDateString())
+            ->selectRaw('DATE(created_at) as day, SUM(amount_xp) as total')
             ->groupBy('day')
             ->pluck('total', 'day');
 

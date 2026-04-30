@@ -15,6 +15,19 @@
                 {{ number_format($totalStudents) }} students across {{ number_format($sectionsCount) }} sections.
             </p>
 
+            @if ($streakLeaders->isNotEmpty())
+                <div class="admin-command-center__streaks">
+                    <span class="admin-command-center__streak-label">Streak leaders</span>
+                    <div class="admin-command-center__streak-leaders">
+                        @foreach ($streakLeaders as $leader)
+                            <span class="admin-command-center__streak-badge">
+                                {{ $leader['name'] }} — {{ $leader['streak'] }}d
+                            </span>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             <div class="admin-command-center__actions">
                 <a class="admin-command-center__primary-action" href="/admin/exam-submissions">
                     <x-filament::icon icon="heroicon-o-document-chart-bar" />
@@ -35,6 +48,11 @@
             </div>
 
             <div class="admin-command-center__metric">
+                <span class="admin-command-center__metric-label">New this week</span>
+                <strong>+{{ number_format($newStudentsThisWeek) }}</strong>
+            </div>
+
+            <div class="admin-command-center__metric">
                 <span class="admin-command-center__metric-label">Live exams</span>
                 <strong>{{ number_format($liveExamsCount) }}</strong>
             </div>
@@ -45,8 +63,13 @@
             </div>
 
             <div class="admin-command-center__metric">
-                <span class="admin-command-center__metric-label">Pending assignments</span>
-                <strong>{{ number_format($pendingAssignments) }}</strong>
+                <span class="admin-command-center__metric-label">Avg score (7d)</span>
+                <strong>{{ $avgScore }}%</strong>
+            </div>
+
+            <div class="admin-command-center__metric">
+                <span class="admin-command-center__metric-label">Total XP earned</span>
+                <strong>{{ number_format($totalXpEarned) }}</strong>
             </div>
         </div>
 
@@ -59,9 +82,10 @@
             @forelse ($upcomingAssignments as $assignment)
                 @php
                     $dueDate = $assignment->due_date ? \Illuminate\Support\Carbon::parse($assignment->due_date) : null;
+                    $isUrgent = $dueDate && $dueDate->diffInHours(now()) <= 24;
                 @endphp
 
-                <div class="admin-command-center__deadline">
+                <div class="admin-command-center__deadline @if ($isUrgent) admin-command-center__deadline--urgent @endif">
                     <span>{{ $assignment->title }}</span>
                     <time>{{ $dueDate?->format('M d, g:i A') ?? 'No deadline' }}</time>
                 </div>

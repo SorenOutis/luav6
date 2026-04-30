@@ -10,20 +10,36 @@ use Illuminate\Support\Facades\DB;
 
 class AdminActivityTrendChart extends ChartWidget
 {
-    protected ?string $heading = '7-Day Activity Trend';
+    protected ?string $heading = 'Activity Trends';
 
-    protected ?string $description = 'Daily student registrations and submissions.';
+    protected ?string $description = 'Daily student registrations, exam submissions, and assignment activity.';
 
     protected ?string $pollingInterval = '60s';
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
     protected int|string|array $columnSpan = [
         'md' => 6,
-        'xl' => 8,
+        'xl' => 7,
     ];
 
     protected ?string $maxHeight = '330px';
+
+    public ?string $timeRange = '7d';
+
+    protected function getHeaderWidgets(): array
+    {
+        return [];
+    }
+
+    protected function getFilters(): ?array
+    {
+        return [
+            '7d' => 'Last 7 days',
+            '14d' => 'Last 14 days',
+            '30d' => 'Last 30 days',
+        ];
+    }
 
     protected function getType(): string
     {
@@ -68,27 +84,33 @@ class AdminActivityTrendChart extends ChartWidget
      */
     protected function getData(): array
     {
-        $dates = collect(range(6, 0))
+        $days = match ($this->timeRange) {
+            '14d' => 13,
+            '30d' => 29,
+            default => 6,
+        };
+
+        $dates = collect(range($days, 0))
             ->map(fn (int $daysAgo) => now()->subDays($daysAgo)->startOfDay());
 
         $labels = $dates->map(fn (CarbonInterface $date) => $date->format('M d'))->all();
 
         $registrationsRaw = User::query()
             ->where('is_admin', false)
-            ->whereDate('created_at', '>=', now()->subDays(6)->toDateString())
+            ->whereDate('created_at', '>=', now()->subDays($days)->toDateString())
             ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
             ->groupBy('day')
             ->pluck('total', 'day');
 
         $examSubmissionsRaw = ExamSubmission::query()
-            ->whereDate('created_at', '>=', now()->subDays(6)->toDateString())
+            ->whereDate('created_at', '>=', now()->subDays($days)->toDateString())
             ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
             ->groupBy('day')
             ->pluck('total', 'day');
 
         $assignmentSubmissionsRaw = DB::table('assignment_user')
             ->where('submitted', true)
-            ->whereDate('updated_at', '>=', now()->subDays(6)->toDateString())
+            ->whereDate('updated_at', '>=', now()->subDays($days)->toDateString())
             ->selectRaw('DATE(updated_at) as day, COUNT(*) as total')
             ->groupBy('day')
             ->pluck('total', 'day');
@@ -104,6 +126,7 @@ class AdminActivityTrendChart extends ChartWidget
         )->all();
 
         return [
+            'labels' => $labels,
             'datasets' => [
                 [
                     'label' => 'New Students',
@@ -130,7 +153,6 @@ class AdminActivityTrendChart extends ChartWidget
                     'fill' => true,
                 ],
             ],
-            'labels' => $labels,
         ];
     }
 }

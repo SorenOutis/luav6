@@ -3,10 +3,16 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\AdminDashboard;
+use App\Filament\Widgets\ActivityFeedWidget;
 use App\Filament\Widgets\AdminActivityTrendChart;
 use App\Filament\Widgets\AdminAnalyticsOverview;
 use App\Filament\Widgets\AdminCommandCenterWidget;
+use App\Filament\Widgets\ExamPerformanceWidget;
 use App\Filament\Widgets\LatestExamSubmissionsWidget;
+use App\Filament\Widgets\QuickActionsWidget;
+use App\Filament\Widgets\SeasonProgressWidget;
+use App\Filament\Widgets\SectionComparisonWidget;
+use App\Filament\Widgets\StudentRiskWidget;
 use App\Filament\Widgets\TopStudentsWidget;
 use App\Http\Middleware\SanitizeInput;
 use Filament\Http\Middleware\Authenticate;
@@ -61,9 +67,15 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AdminCommandCenterWidget::class,
                 AdminAnalyticsOverview::class,
+                SeasonProgressWidget::class,
                 AdminActivityTrendChart::class,
+                ExamPerformanceWidget::class,
+                ActivityFeedWidget::class,
                 LatestExamSubmissionsWidget::class,
                 TopStudentsWidget::class,
+                SectionComparisonWidget::class,
+                StudentRiskWidget::class,
+                QuickActionsWidget::class,
             ])
             ->middleware([
                 SanitizeInput::class,
