@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
-import { X, Sparkles, Zap, Award, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
+import { X, Sparkles, Zap, Award, Megaphone, ArrowRight, RefreshCw, Trophy } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
@@ -19,6 +19,10 @@ interface UserStats {
     currentXP: number;
     maxXPForLevel: number;
     points: number;
+    rankNumber?: number;
+    totalPlayers?: number;
+    achievements?: number;
+    streak?: number;
 }
 
 interface Props {
@@ -162,6 +166,37 @@ const xpPercentage = computed(() => {
                                     :style="{ width: `${xpPercentage}%` }">
                                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full -skew-x-[45deg] animate-shimmer"></div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right side: Performance Mini-Grid -->
+                <div class="hidden lg:grid grid-cols-2 gap-3 w-72 shrink-0 self-end mb-1">
+                    <div class="group relative p-4 rounded-[2rem] bg-card/40 border border-border/40 backdrop-blur-xl hover:border-primary/30 transition-all duration-500 overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="relative flex flex-col gap-1">
+                            <div class="flex items-center gap-2">
+                                <Trophy class="w-3 h-3 text-primary/60" />
+                                <span class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Global Rank</span>
+                            </div>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-2xl font-black tracking-tighter tabular-nums">#{{ userStats.rankNumber || '--' }}</span>
+                                <span class="text-[8px] font-bold text-muted-foreground/20">/{{ userStats.totalPlayers || '0' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="group relative p-4 rounded-[2rem] bg-card/40 border border-border/40 backdrop-blur-xl hover:border-primary/30 transition-all duration-500 overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="relative flex flex-col gap-1">
+                            <div class="flex items-center gap-2">
+                                <Zap class="w-3 h-3 text-primary/60" />
+                                <span class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Points</span>
+                            </div>
+                            <div class="flex items-baseline gap-1">
+                                <span class="text-2xl font-black tracking-tighter tabular-nums">{{ (userStats.points || 0).toLocaleString() }}</span>
+                                <span class="text-[8px] font-bold text-muted-foreground/20 italic">PTS</span>
                             </div>
                         </div>
                     </div>
