@@ -120,6 +120,28 @@ const totalQuestions = computed(() =>
 // ─── LIVE TIMER LOGIC ───────────────────────────────────────
 const timeLeftSeconds = ref(props.exam.duration_minutes * 60);
 const timerInterval = ref<ReturnType<typeof setInterval> | null>(null);
+const monitorHeartbeatInterval = ref<ReturnType<typeof setInterval> | null>(null);
+
+const getAnsweredCount = () =>
+    Object.values(answers).filter((value) => value !== undefined && value !== null && String(value).trim() !== '').length;
+
+const sendMonitorProgress = async (status: 'starting' | 'in_progress' | 'submitting' | 'finished' = 'in_progress') => {
+    if (!examStarted.value && status === 'in_progress') {
+        return;
+    }
+
+    try {
+        await axios.post(`/exams/${props.exam.id}/monitor-progress`, {
+            status,
+            exam_part_id: selectedPart.value?.id ?? null,
+            submitted_parts_count: submittedPartsCount.value,
+            current_part_answered_count: selectedPart.value ? getAnsweredCount() : 0,
+            current_part_total_questions: selectedPart.value?.questions?.length ?? 0,
+        });
+    } catch {
+        // Heartbeat failures should not interrupt the exam flow.
+    }
+};
 
 const formattedTime = computed(() => {
     const mins = Math.floor(timeLeftSeconds.value / 60);
@@ -542,6 +564,7 @@ const startPart = () => {
     examStarted.value = true;
     startTimer(); // Start the countdown when the first section begins
     loadDraft(); // Load any saved progress
+    void sendMonitorProgress('starting');
 
     setTimeout(() => {
         gsap.fromTo(
@@ -737,6 +760,7 @@ const submitPart = async () => {
 
     isSubmitting.value = true;
     isTimeoutSubmission.value = false; // Reset timeout flag if we are proceeding with submission
+    void sendMonitorProgress('submitting');
     
     // Check if current part has essay
     currentPartHasEssay.value = selectedPart.value?.questions?.some(q => q.type === 'essay') || false;
@@ -773,6 +797,7 @@ const submitPart = async () => {
                     }
                 }
                 isFullscreen.value = false;
+                void sendMonitorProgress('finished');
             }
 
             // Show success modal
@@ -1065,6 +1090,12 @@ onMounted(() => {
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    monitorHeartbeatInterval.value = setInterval(() => {
+        if (isExamInProgress.value) {
+            void sendMonitorProgress('in_progress');
+        }
+    }, 5000);
 });
 
 onUnmounted(() => {
@@ -1079,6 +1110,11 @@ onUnmounted(() => {
     document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
     document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    if (monitorHeartbeatInterval.value) {
+        clearInterval(monitorHeartbeatInterval.value);
+        monitorHeartbeatInterval.value = null;
+    }
 });
 const isExamInProgress = computed(() => 
     examStarted.value || (submittedPartsCount.value > 0 && !allPartsSubmitted.value)

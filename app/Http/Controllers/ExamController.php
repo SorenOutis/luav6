@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Exam;
+use App\Models\ExamLiveSession;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Services\AIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ExamController extends Controller
@@ -99,6 +101,46 @@ class ExamController extends Controller
         $this->aiService->preWarm();
 
         return response()->json(['status' => 'ok']);
+    }
+
+    public function monitorProgress(Request $request, Exam $exam)
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'string', Rule::in(['starting', 'in_progress', 'submitting', 'finished'])],
+            'exam_part_id' => [
+                'nullable',
+                Rule::exists('exam_parts', 'id')->where(fn ($query) => $query->where('exam_id', $exam->id)),
+            ],
+            'submitted_parts_count' => ['required', 'integer', 'min:0'],
+            'current_part_answered_count' => ['required', 'integer', 'min:0'],
+            'current_part_total_questions' => ['required', 'integer', 'min:0'],
+        ]);
+
+        if ($validated['status'] === 'finished') {
+            ExamLiveSession::query()
+                ->where('user_id', $request->user()->id)
+                ->where('exam_id', $exam->id)
+                ->delete();
+
+            return response()->json(['ok' => true]);
+        }
+
+        ExamLiveSession::updateOrCreate(
+            [
+                'user_id' => $request->user()->id,
+                'exam_id' => $exam->id,
+            ],
+            [
+                'exam_part_id' => $validated['exam_part_id'] ?? null,
+                'status' => $validated['status'],
+                'submitted_parts_count' => $validated['submitted_parts_count'],
+                'current_part_answered_count' => $validated['current_part_answered_count'],
+                'current_part_total_questions' => $validated['current_part_total_questions'],
+                'last_seen_at' => now(),
+            ],
+        );
+
+        return response()->json(['ok' => true]);
     }
 
     public function submitPart(Request $request, Exam $exam, ExamPart $examPart)

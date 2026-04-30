@@ -3,9 +3,12 @@
 namespace App\Filament\Resources\ExamSubmissions\Pages;
 
 use App\Filament\Resources\ExamSubmissions\ExamSubmissionResource;
+use App\Models\Exam;
 use App\Models\ExamSubmission;
 use App\Models\Section;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Forms\Components\Select;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\EmbeddedTable;
 use Filament\Schemas\Components\RenderHook;
@@ -25,6 +28,23 @@ class ListExamSubmissions extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('monitorExam')
+                ->label('Monitor Exam')
+                ->icon('heroicon-o-signal')
+                ->form([
+                    Select::make('exam_id')
+                        ->label('Exam')
+                        ->options(
+                            Exam::query()
+                                ->where('status', '!=', 'draft')
+                                ->orderByDesc('exam_date')
+                                ->pluck('title', 'id')
+                                ->all()
+                        )
+                        ->searchable()
+                        ->required(),
+                ])
+                ->action(fn (array $data) => redirect(ExamSubmissionResource::getUrl('monitor', ['exam' => $data['exam_id']]))),
             CreateAction::make(),
         ];
     }

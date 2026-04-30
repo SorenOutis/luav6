@@ -333,6 +333,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('exams', [ExamController::class, 'index'])->name('exams.index');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->name('exams.show');
     Route::post('exams/pre-warm-ai', [ExamController::class, 'preWarmAI'])->name('exams.preWarmAI');
+    Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->name('exams.monitorProgress')->middleware('throttle:60,1');
     Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->name('exams.submitPart')->middleware('throttle:10,1');
 
     Route::get('ngl', [AnonymousMessageController::class, 'index'])->name('ngl.index');
