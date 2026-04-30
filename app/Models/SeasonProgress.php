@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\BadgeAwardService;
 use Illuminate\Database\Eloquent\Model;
 
 class SeasonProgress extends Model
@@ -52,6 +53,12 @@ class SeasonProgress extends Model
                         $user->level = floor($user->exp / 100) + 1;
                         $user->save();
 
+                        app(BadgeAwardService::class)->awardEligibleBadges(
+                            $user,
+                            (int) $progress->level,
+                            $progress->season_id
+                        );
+
                         $user->recordGamificationHistory(
                             $expDelta,
                             $pointsDelta,
@@ -80,6 +87,12 @@ class SeasonProgress extends Model
                     $user->increment('points', $pointsDelta);
                     $user->level = floor($user->exp / 100) + 1;
                     $user->save();
+
+                    app(BadgeAwardService::class)->awardEligibleBadges(
+                        $user,
+                        (int) $progress->level,
+                        $progress->season_id
+                    );
 
                     $user->recordGamificationHistory(
                         $expDelta,

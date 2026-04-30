@@ -7,7 +7,7 @@ import Button from '@/components/ui/button/Button.vue';
 import NextUpCard, { type NextUpItem } from './NextUpCard.vue';
 import EmptyState from './EmptyState.vue';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Clock, RefreshCw, Trophy, Sparkles, CalendarX } from 'lucide-vue-next';
+import { BookOpen, Clock, RefreshCw, Trophy, Sparkles, CalendarX, Shield } from 'lucide-vue-next';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
 
 interface Exam {
@@ -23,19 +23,34 @@ interface Exam {
     is_completed: boolean;
 }
 
+interface Badge {
+    id: number;
+    name: string;
+    description?: string | null;
+    requiredLevel?: number | null;
+    image?: string | null;
+    iconUrl?: string | null;
+    earnedSeason?: string | null;
+    earnedAt?: string | null;
+}
+
 interface Props {
     unreadNotificationCount: number;
+    badges?: Badge[];
     weeklyXP?: number;
     weeklyGoal?: number;
     upcomingExams?: Exam[];
     nextUpItem?: NextUpItem | null;
+    profileUrl?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+    badges: () => [],
     weeklyXP: 0,
     weeklyGoal: 0,
     upcomingExams: () => [],
     nextUpItem: null,
+    profileUrl: '/dashboard',
 });
 const emit = defineEmits(['quick-action']);
 
@@ -93,6 +108,47 @@ const weeklyPercent = (xp: number, goal: number) => {
                     <Sparkles class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary group-hover/btn:rotate-12 transition-transform" />
                     <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Profile</span>
                 </Button>
+            </CardContent>
+        </Card>
+
+        <!-- Badges -->
+        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
+            <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+            <CardHeader class="pb-3 flex flex-row items-center justify-between">
+                <CardTitle class="text-sm font-bold flex items-center gap-2">
+                    <Shield class="h-4 w-4 text-primary" />
+                    My Badges
+                </CardTitle>
+                <Link :href="profileUrl" class="text-[10px] font-semibold text-primary hover:text-primary/80 transition-colors">
+                    View all →
+                </Link>
+            </CardHeader>
+            <CardContent class="pt-0">
+                <div v-if="badges.length > 0" class="space-y-2">
+                    <div
+                        v-for="badge in badges.slice(0, 4)"
+                        :key="badge.id"
+                        class="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/20 p-2.5 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
+                    >
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10">
+                            <img v-if="badge.image" :src="badge.image" :alt="badge.name" class="h-full w-full object-cover" />
+                            <span v-else class="text-[9px] font-black uppercase tracking-widest text-primary">Lvl {{ badge.requiredLevel ?? '--' }}</span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-xs font-bold text-foreground">{{ badge.name }}</p>
+                            <p class="mt-0.5 truncate text-[10px] text-muted-foreground">
+                                {{ badge.earnedSeason ?? 'Unlocked badge' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <EmptyState
+                    v-else
+                    compact
+                    :icon="Shield"
+                    title="No badges yet"
+                    message="Reach higher levels to unlock lifetime badges and show where you earned them."
+                />
             </CardContent>
         </Card>
 

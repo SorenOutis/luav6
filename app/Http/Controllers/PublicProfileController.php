@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Season;
 use App\Models\SeasonProgress;
 use App\Models\User;
+use App\Services\BadgeAwardService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,11 +16,7 @@ class PublicProfileController extends Controller
         $viewer = $request->user();
         $currentSeason = Season::current();
 
-        $user->load(['sections', 'badges' => function ($q) use ($currentSeason) {
-            if ($currentSeason) {
-                $q->wherePivot('season_id', $currentSeason->id);
-            }
-        }]);
+        $user->load(['sections', 'badges']);
 
         $seasonalExp = 0;
         $seasonalLevel = 1;
@@ -30,6 +27,15 @@ class PublicProfileController extends Controller
             $progress = $user->activeSeasonProgress();
             $seasonalExp = $progress?->exp ?? 0;
             $seasonalLevel = $progress?->level ?? 1;
+
+            if ($user->is($viewer)) {
+                app(BadgeAwardService::class)->awardEligibleBadges(
+                    $user,
+                    (int) $seasonalLevel,
+                    $currentSeason->id
+                );
+                $user->load('badges');
+            }
 
             $primarySectionId = $user->sections()->first()?->id;
 
@@ -93,6 +99,10 @@ class PublicProfileController extends Controller
                 'section' => $h->section?->name,
             ]);
 
+        $badgeSeasonNames = Season::query()
+            ->whereIn('id', $user->badges->pluck('pivot.season_id')->filter()->unique())
+            ->pluck('name', 'id');
+
         return Inertia::render('User/PublicProfile', [
             'profileUser' => [
                 'id' => $user->id,
@@ -116,7 +126,11 @@ class PublicProfileController extends Controller
                 'id' => $b->id,
                 'name' => $b->name,
                 'description' => $b->description,
-                'icon' => $b->icon,
+                'requiredLevel' => $b->required_level,
+                'image' => $b->image_path ? asset('storage/'.$b->image_path) : null,
+                'iconUrl' => $b->icon_url,
+                'earnedSeason' => $b->pivot->season_id ? ($badgeSeasonNames[$b->pivot->season_id] ?? 'Unknown Season') : null,
+                'earnedAt' => optional($b->pivot->created_at)?->format('M d, Y'),
             ]),
             'courses' => $courses,
             'isSameSection' => $isSameSection,

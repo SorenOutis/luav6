@@ -52,7 +52,7 @@ import { index as assignmentsIndex } from '@/routes/assignments';
 const lastSyncTime = ref(new Date());
 const isRefreshing = ref(false);
 
-const POLL_PROPS = ['userStats', 'loginDates', 'announcements', 'courses', 'assignments', 'upcomingExams', 'sectionLeaderboards', 'activeSeason'];
+const POLL_PROPS = ['userStats', 'userBadges', 'loginDates', 'announcements', 'courses', 'assignments', 'upcomingExams', 'sectionLeaderboards', 'activeSeason'];
 const POLL_INTERVAL_MS = 15000;
 
 const { stop: stopPoll, start: startPoll } = usePoll(POLL_INTERVAL_MS, {
@@ -235,6 +235,17 @@ interface Exam {
     is_completed: boolean;
 }
 
+interface UserBadge {
+    id: number;
+    name: string;
+    description?: string | null;
+    requiredLevel?: number | null;
+    image?: string | null;
+    iconUrl?: string | null;
+    earnedSeason?: string | null;
+    earnedAt?: string | null;
+}
+
 const props = defineProps<{
     userStats: {
         totalXP: number;
@@ -252,6 +263,7 @@ const props = defineProps<{
     };
     loginDates?: string[];
     announcements: Announcement[];
+    userBadges: UserBadge[];
     courses: Course[];
     assignments: Assignment[];
     upcomingExams: Exam[];
@@ -270,6 +282,7 @@ const totalXPProgress = computed(() => {
 });
 
 const announcements = computed(() => props.announcements);
+const userBadges = computed(() => props.userBadges);
 const courses = computed(() => props.courses);
 const assignments = computed(() => props.assignments);
 const upcomingExams = computed(() => props.upcomingExams);
@@ -654,10 +667,12 @@ const handleLogout = () => {
                 <div class="lg:sticky lg:top-24 lg:self-start min-w-0">
                     <DashboardSidebar
                         :unread-notification-count="3"
+                        :badges="userBadges"
                         :weekly-x-p="userStats.currentXP"
                         :weekly-goal="1000"
                         :upcoming-exams="upcomingExams"
                         :next-up-item="nextUpItem"
+                        :profile-url="`/u/${page.props.auth.user?.id}`"
                         @quick-action="handleQuickAction"
                     />
                 </div>

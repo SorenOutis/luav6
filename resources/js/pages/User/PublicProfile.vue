@@ -19,7 +19,11 @@ interface Badge {
     id: number;
     name: string;
     description: string;
-    icon: string;
+    image?: string | null;
+    iconUrl?: string | null;
+    requiredLevel?: number | null;
+    earnedSeason?: string | null;
+    earnedAt?: string | null;
 }
 
 interface HistoryItem {
@@ -248,9 +252,14 @@ const formatDelta = (value: number) => {
                         </h3>
                         <div v-if="badges.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div v-for="badge in badges" :key="badge.id" class="flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-card/80 to-card border border-border/50 shadow-sm hover:scale-105 transition-transform duration-300">
-                                <div class="w-12 h-12 mb-3 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl" v-html="badge.icon">
+                                <div class="w-14 h-14 mb-3 rounded-2xl overflow-hidden bg-primary/10 flex items-center justify-center">
+                                    <img v-if="badge.image" :src="badge.image" :alt="badge.name" class="w-full h-full object-cover" />
+                                    <span v-else class="text-[10px] font-black uppercase tracking-widest text-primary">Lvl {{ badge.requiredLevel ?? '--' }}</span>
                                 </div>
                                 <span class="text-xs font-bold text-center leading-tight">{{ badge.name }}</span>
+                                <span v-if="badge.earnedSeason" class="mt-1 text-[10px] text-center text-muted-foreground">
+                                    Earned in {{ badge.earnedSeason }}
+                                </span>
                             </div>
                         </div>
                         <div v-else class="p-8 rounded-xl bg-card border border-dashed text-center text-muted-foreground text-sm">

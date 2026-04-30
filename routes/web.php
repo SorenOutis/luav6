@@ -9,6 +9,7 @@ use App\Http\Controllers\Games\GamesController;
 use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Services\BadgeAwardService;
 use App\Models\Announcement;
 use App\Models\Assignment;
 use App\Models\Exam;
@@ -95,6 +96,20 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         $seasonalExp = $seasonalProgress?->exp ?? 0;
         $seasonalLevel = $seasonalProgress?->level ?? 1;
         $seasonalPoints = $seasonalProgress?->points ?? 0;
+
+        app(BadgeAwardService::class)->awardEligibleBadges(
+            $user,
+            (int) $seasonalLevel,
+            $currentSeason?->id
+        );
+
+        $earnedBadges = $user->badges()
+            ->orderByPivot('created_at', 'desc')
+            ->get();
+
+        $badgeSeasonNames = Season::query()
+            ->whereIn('id', $earnedBadges->pluck('pivot.season_id')->filter()->unique())
+            ->pluck('name', 'id');
 
         $sectionIds = $user->sections()->pluck('sections.id');
 
@@ -251,15 +266,22 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 'rank' => 'Player',
                 'rankNumber' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['userRank'] : 0,
                 'totalPlayers' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['totalPlayers'] : 0,
-                'achievements' => $user->badges()->when($currentSeason, fn ($q) => $q->wherePivot(
-                    'season_id',
-                    $currentSeason->id
-                ))->count(),
+                'achievements' => $earnedBadges->count(),
                 'points' => $seasonalPoints,
                 'streak' => $user->current_streak,
                 'longestStreak' => (int) ($user->longest_streak ?? 0),
                 'joinedAt' => $user->created_at->format('M Y'),
             ],
+            'userBadges' => $earnedBadges->map(fn ($badge) => [
+                'id' => $badge->id,
+                'name' => $badge->name,
+                'description' => $badge->description,
+                'requiredLevel' => $badge->required_level,
+                'image' => $badge->image_path ? asset('storage/'.$badge->image_path) : null,
+                'iconUrl' => $badge->icon_url,
+                'earnedSeason' => $badge->pivot->season_id ? ($badgeSeasonNames[$badge->pivot->season_id] ?? 'Unknown Season') : null,
+                'earnedAt' => optional($badge->pivot->created_at)?->format('M d, Y'),
+            ])->values(),
             'loginDates' => $loginDates,
             'announcements' => $announcements,
             'courses' => $courses,
