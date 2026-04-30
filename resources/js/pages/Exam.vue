@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, usePoll } from '@inertiajs/vue3';
 import { show as examsShow } from '@/routes/exams';
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 
 usePoll(10000, {
     only: ['exams']
@@ -9,7 +9,7 @@ usePoll(10000, {
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
-import { Calendar, Clock, ExternalLink, AlertCircle, Lock, Eye, EyeOff, CheckCircle2, XCircle, HelpCircle, Shield, ShieldOff, ArrowRight } from 'lucide-vue-next';
+import { Calendar, Clock, ExternalLink, AlertCircle, Lock, Eye, EyeOff, CheckCircle2, XCircle, HelpCircle, Shield, ShieldOff, ArrowRight, Zap, Timer, TrendingUp } from 'lucide-vue-next';
 import {
     Dialog,
     DialogContent,
@@ -51,6 +51,8 @@ interface Exam {
     total_parts?: number;
     is_locked?: boolean;
     submissions?: ExamSubmission[];
+    section_name?: string;
+    exam_date_iso?: string;
 }
 
 const props = defineProps<{
@@ -61,6 +63,63 @@ const showReviewModal = ref(false);
 const selectedExamForReview = ref<Exam | null>(null);
 const selectedPartId = ref<number | null>(null);
 const privacyMode = ref(true);
+
+// --- Filter State ---
+const activeFilter = ref<'all' | 'active' | 'completed'>('all');
+
+const filteredExams = computed(() => {
+    if (activeFilter.value === 'active') return props.exams.filter(e => !e.is_locked);
+    if (activeFilter.value === 'completed') return props.exams.filter(e => e.is_locked);
+    return props.exams;
+});
+
+// --- Summary Stats ---
+const activeCount = computed(() => props.exams.filter(e => !e.is_locked).length);
+const completedCount = computed(() => props.exams.filter(e => e.is_locked).length);
+const totalCount = computed(() => props.exams.length);
+
+// --- Exam Time Info (countdown/overdue) ---
+const getExamTimeInfo = (exam: Exam) => {
+    if (!exam.exam_date && !exam.exam_date_iso) {
+        return { label: 'NO_DEADLINE_SET', color: 'text-muted-foreground', isOverdue: false, isUpcoming: false };
+    }
+    const dateStr = exam.exam_date_iso || exam.exam_date;
+    const examDate = new Date(dateStr);
+    if (Number.isNaN(examDate.getTime())) {
+        return { label: 'INVALID_DATE', color: 'text-muted-foreground', isOverdue: false, isUpcoming: false };
+    }
+    const now = new Date();
+    const diff = examDate.getTime() - now.getTime();
+
+    if (exam.is_locked) {
+        return { label: `COMPLETED ${examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, color: 'text-emerald-500', isOverdue: false, isUpcoming: false };
+    }
+    if (diff < 0) {
+        return { label: 'OVERDUE', color: 'text-red-500', isOverdue: true, isUpcoming: false };
+    }
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) {
+        return { label: `${days}D ${hours}H REMAINING`, color: 'text-amber-500', isOverdue: false, isUpcoming: true };
+    }
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return { label: `${hours}H ${minutes}M REMAINING`, color: 'text-red-500', isOverdue: false, isUpcoming: true };
+};
+
+// --- Status Badge Info ---
+const getStatusBadgeInfo = (exam: Exam) => {
+    if (exam.is_locked && exam.status === 'closed') return { label: 'CLOSED', color: 'bg-red-500' };
+    if (exam.is_locked) return { label: 'IN PROGRESS', color: 'bg-emerald-500' };
+    if (exam.status === 'published') return { label: 'PUBLISHED', color: 'bg-blue-500' };
+    if (exam.status === 'closed') return { label: 'CLOSED', color: 'bg-red-500' };
+    return { label: 'DRAFT', color: 'bg-muted text-muted-foreground' };
+};
+
+// --- Progress Percentage ---
+const getProgressPercent = (exam: Exam) => {
+    if (!exam.total_parts || exam.total_parts === 0) return 0;
+    return ((exam.submitted_parts_count ?? 0) / exam.total_parts) * 100;
+};
 
 const openReview = (exam: Exam) => {
     selectedExamForReview.value = exam;
@@ -140,6 +199,58 @@ const formatDateTime = (dateStr: string) => {
     });
 };
 
+// --- GSAP Animation ---
+const animateCards = () => {
+    if (!examContainer.value) return;
+
+    gsap.killTweensOf('.exam-card');
+    gsap.set('.exam-card', { opacity: 0, x: -40, skewX: -5, scale: 0.98 });
+    gsap.set('.exam-hero', { opacity: 1, x: 0 });
+    gsap.set('.exam-card .bracket-corner', { scale: 0 });
+
+    const tl = gsap.timeline({
+        defaults: { ease: 'expo.out', duration: 0.8 }
+    });
+
+    tl.fromTo(
+        '.exam-card',
+        {
+            opacity: 0,
+            x: -40,
+            skewX: -5,
+            scale: 0.98
+        },
+        {
+            opacity: 1,
+            x: 0,
+            skewX: 0,
+            scale: 1,
+            stagger: 0.08,
+            duration: 1,
+            ease: 'back.out(1.2)',
+            clearProps: 'filter'
+        },
+        '-=0.1'
+    );
+
+    tl.fromTo(
+        '.exam-card .bracket-corner',
+        { scale: 0 },
+        {
+            scale: 1,
+            stagger: 0.03,
+            duration: 0.5,
+            ease: 'back.out(2)'
+        },
+        '-=0.8'
+    );
+};
+
+// Re-animate when filter changes
+watch(activeFilter, () => {
+    setTimeout(animateCards, 50);
+});
+
 onMounted(() => {
     if (!examContainer.value) return;
 
@@ -177,7 +288,7 @@ onMounted(() => {
 
     // 3. Bracket reveal - "Locking in" effect
     tl.fromTo(
-        '.exam-card .absolute.top-0, .exam-card .absolute.bottom-0',
+        '.exam-card .bracket-corner',
         { scale: 0 },
         {
             scale: 1,
@@ -207,7 +318,7 @@ onMounted(() => {
     <Head title="Exams" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div ref="examContainer" class="flex h-full flex-1 flex-col gap-5 p-3 md:p-8 relative overflow-hidden bg-background perspective-[1000px]">
+        <div ref="examContainer" class="flex h-full flex-1 flex-col gap-4 p-3 md:p-8 relative overflow-hidden bg-background perspective-[1000px]">
             <!-- Glassy background decorative orbs -->
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
@@ -223,10 +334,56 @@ onMounted(() => {
                 </p>
             </div>
 
+            <!-- Summary Stats -->
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <div class="relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
+                    <div class="absolute top-0 left-0 w-0.5 h-full bg-amber-500/60 group-hover/stat:bg-amber-500 transition-colors"></div>
+                    <div class="flex items-center gap-2 skew-x-[-12deg]">
+                        <AlertCircle class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
+                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">ACTIVE</span>
+                        <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ activeCount }}</span>
+                    </div>
+                </div>
+                <div class="relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
+                    <div class="absolute top-0 left-0 w-0.5 h-full bg-emerald-500/60 group-hover/stat:bg-emerald-500 transition-colors"></div>
+                    <div class="flex items-center gap-2 skew-x-[-12deg]">
+                        <CheckCircle2 class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-500" />
+                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">COMPLETED</span>
+                        <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ completedCount }}</span>
+                    </div>
+                </div>
+                <div class="relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
+                    <div class="absolute top-0 left-0 w-0.5 h-full bg-primary/60 group-hover/stat:bg-primary transition-colors"></div>
+                    <div class="flex items-center gap-2 skew-x-[-12deg]">
+                        <Calendar class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
+                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">TOTAL</span>
+                        <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ totalCount }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <button
+                    v-for="filter in ['all', 'active', 'completed']"
+                    :key="filter"
+                    @click="activeFilter = filter as 'all' | 'active' | 'completed'"
+                    class="relative px-4 sm:px-6 py-1 sm:py-1.5 transition-all duration-300 transform -skew-x-12 shrink-0 group/tab border"
+                    :class="activeFilter === filter 
+                        ? 'bg-primary text-primary-foreground shadow-[0_0_12px_rgba(var(--primary),0.3)] border-primary/50' 
+                        : 'bg-muted/20 text-muted-foreground hover:bg-muted hover:text-foreground border-border/50'"
+                >
+                    <div class="flex items-center gap-2 skew-x-12">
+                        <component :is="filter === 'all' ? Calendar : filter === 'active' ? AlertCircle : CheckCircle2" class="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                        <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] font-mono">{{ filter }}</span>
+                    </div>
+                </button>
+            </div>
+
             <!-- Exam Grid -->
-            <div v-if="exams.length > 0" class="grid gap-2 sm:gap-3 grid-cols-2 xl:grid-cols-3">
+            <div v-if="filteredExams.length > 0" class="grid gap-2 sm:gap-3 grid-cols-2 xl:grid-cols-3">
                 <div 
-                    v-for="exam in exams" 
+                    v-for="exam in filteredExams" 
                     :key="exam.id"
                     class="animate-section exam-card relative flex flex-col justify-between p-2 sm:p-5 transition-all duration-500 overflow-hidden group/card border border-border bg-card dark:bg-zinc-900/40 min-w-0"
                     :class="exam.is_locked 
@@ -235,14 +392,19 @@ onMounted(() => {
                     @mousemove="handleMouseMove"
                 >
                     <!-- Futuristic Corner Brackets -->
-                    <div class="absolute top-0 left-0 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
-                    <div class="absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
+                    <div class="bracket-corner absolute top-0 left-0 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                    <div class="bracket-corner absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
-                    <!-- Status & Score Overlay -->
-                    <div v-if="exam.is_locked" class="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col items-end gap-1 sm:gap-1.5 z-20">
-                        <div class="px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 bg-emerald-500 text-white dark:text-zinc-950 font-black text-[7px] sm:text-[8px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                            <span class="inline-block skew-x-12">COMPLETED</span>
+                    <!-- Status Badge (Top Left) -->
+                    <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20">
+                        <div class="px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 font-black text-[7px] sm:text-[8px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transform -skew-x-12"
+                            :class="getStatusBadgeInfo(exam).color">
+                            <span class="inline-block skew-x-12">{{ getStatusBadgeInfo(exam).label }}</span>
                         </div>
+                    </div>
+
+                    <!-- Score / Completion Badge (Top Right) -->
+                    <div v-if="exam.is_locked" class="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col items-end gap-1 sm:gap-1.5 z-20">
                         <div class="px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 bg-foreground text-background font-black text-[7px] sm:text-[9px] font-mono tracking-widest transform -skew-x-12">
                             <span class="inline-block skew-x-12">
                                 {{ exam.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
@@ -251,26 +413,44 @@ onMounted(() => {
                     </div>
 
                     <!-- Center Diamond Icon -->
-                    <div class="flex justify-center mb-2 sm:mb-4">
+                    <div class="flex justify-center mb-2 sm:mb-3">
                         <div class="w-6 h-6 sm:w-8 sm:h-8 border-2 rotate-45 flex items-center justify-center transition-colors duration-500"
                             :class="exam.is_locked ? 'border-muted-foreground/30' : 'border-amber-500/40 group-hover/card:border-amber-500'">
                              <div class="w-1.5 h-1.5 rotate-45" :class="exam.is_locked ? 'bg-muted-foreground/30' : 'bg-amber-500 animate-pulse'"></div>
                         </div>
                     </div>
 
-                    <div class="relative z-10 space-y-2 sm:space-y-4 text-center min-w-0">
+                    <div class="relative z-10 space-y-1.5 sm:space-y-3 text-center min-w-0">
+                        <!-- Section Label -->
+                        <div v-if="exam.section_name" class="text-[7px] sm:text-[8px] font-mono uppercase tracking-[0.25em] text-muted-foreground/70">
+                            SECTION: {{ exam.section_name }}
+                        </div>
+
+                        <!-- Title -->
                         <div class="space-y-0.5 sm:space-y-1">
                             <h2 class="text-xs sm:text-lg font-black italic uppercase tracking-tight text-foreground leading-tight sm:leading-none break-words">
                                 {{ exam.title }}
                             </h2>
                             <div class="h-px w-6 sm:w-8 bg-foreground/20 mx-auto"></div>
-                            <p class="hidden sm:block text-[9px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                                Initiating <span class="text-foreground underline underline-offset-4 decoration-2">Assessment Protocol</span>
-                            </p>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div v-if="exam.total_parts && exam.total_parts > 0" class="space-y-1">
+                            <div class="flex items-center justify-center gap-1.5 text-[7px] sm:text-[9px] font-black uppercase tracking-widest font-mono">
+                                <span :class="exam.is_locked ? 'text-emerald-500' : 'text-muted-foreground'">
+                                    {{ exam.submitted_parts_count }} / {{ exam.total_parts }} PARTS
+                                </span>
+                            </div>
+                            <div class="h-1 bg-muted/50 rounded-full overflow-hidden mx-auto max-w-[80%]">
+                                <div class="h-full rounded-full transition-all duration-700 ease-out"
+                                    :class="exam.is_locked ? 'bg-emerald-500 w-full' : 'bg-primary'"
+                                    :style="{ width: `${getProgressPercent(exam)}%` }">
+                                </div>
+                            </div>
                         </div>
 
                         <!-- System Alerts Box -->
-                        <div class="bg-muted/30 dark:bg-zinc-950/40 p-1.5 sm:p-3 space-y-1 sm:space-y-2 text-left border border-border/50">
+                        <div class="bg-muted/30 dark:bg-zinc-950/40 p-1.5 sm:p-3 space-y-1 sm:space-y-1.5 text-left border border-border/50">
                             <div class="hidden sm:flex items-start gap-2">
                                 <span class="text-amber-500 font-black text-[8px] shrink-0">[!]</span>
                                 <p class="text-[8px] font-bold text-muted-foreground uppercase leading-relaxed tracking-wider">
@@ -281,6 +461,14 @@ onMounted(() => {
                                 <span class="text-amber-500 font-black text-[8px] sm:text-[9px] shrink-0">[!]</span>
                                 <p class="text-[7px] sm:text-[8px] font-bold text-muted-foreground uppercase tracking-wider font-mono truncate">
                                     {{ exam.duration_minutes }} MIN
+                                </p>
+                            </div>
+                            <!-- Date / Countdown -->
+                            <div class="flex items-center gap-1.5 sm:gap-2">
+                                <Clock class="w-2 h-2 sm:w-2.5 sm:h-2.5 shrink-0" :class="getExamTimeInfo(exam).color" />
+                                <p class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider font-mono truncate"
+                                    :class="getExamTimeInfo(exam).color">
+                                    {{ getExamTimeInfo(exam).label }}
                                 </p>
                             </div>
                         </div>
@@ -323,14 +511,15 @@ onMounted(() => {
                     <AlertCircle class="w-12 h-12 text-muted-foreground/50" />
                 </div>
                 <div class="space-y-1">
-                    <h3 class="text-xl font-semibold">No active exams found</h3>
-                    <p class="text-muted-foreground">Keep an eye out! Your instructor will post new exams here.</p>
+                    <h3 class="text-xl font-semibold">No exams found</h3>
+                    <p v-if="activeFilter !== 'all'" class="text-muted-foreground">Try changing the filter to see more exams.</p>
+                    <p v-else class="text-muted-foreground">Keep an eye out! Your instructor will post new exams here.</p>
                 </div>
             </div>
         </div>
     </AppLayout>
 
-    <!-- Review Modal -->
+    <!-- Review Modal (UNCHANGED) -->
     <Dialog v-model:open="showReviewModal">
         <DialogContent class="sm:max-w-[1000px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-card dark:bg-zinc-900 border-border shadow-2xl rounded-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
             <!-- Futuristic Corner Brackets -->
@@ -614,7 +803,7 @@ onMounted(() => {
     background: rgba(var(--primary), 0.1);
     border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+.custom-scrollbar::-webkit-scrollbar:hover {
     background: rgba(var(--primary), 0.2);
 }
 

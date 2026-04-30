@@ -18,6 +18,7 @@ class ExamController extends Controller
     {
         $user = auth()->user();
         $exams = Exam::with([
+            'section',
             'parts' => function ($query) {
                 $query->orderBy('sort_order');
             },
@@ -47,6 +48,8 @@ class ExamController extends Controller
                 'total_parts' => $exam->parts->count(),
                 'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
                 'submissions' => $submissions->toArray(),
+                'section_name' => $exam->section?->name,
+                'exam_date_iso' => $exam->exam_date?->toIso8601String(),
             ]);
         });
 
