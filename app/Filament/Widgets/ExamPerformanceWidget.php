@@ -2,7 +2,6 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\ExamSubmission;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
 

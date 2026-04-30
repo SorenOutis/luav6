@@ -59,6 +59,7 @@ class StudentRiskWidget extends BaseWidget
                             return 'Never';
                         }
                         $days = $record->last_login_at->diffInDays(now());
+
                         return $days >= 14 ? "{$days} days" : "{$days}d";
                     })
                     ->sortable()
@@ -67,6 +68,7 @@ class StudentRiskWidget extends BaseWidget
                             return 'danger';
                         }
                         $days = $record->last_login_at->diffInDays(now());
+
                         return $days >= 14 ? 'danger' : ($days >= 7 ? 'warning' : null);
                     })
                     ->alignCenter(),
@@ -111,6 +113,7 @@ class StudentRiskWidget extends BaseWidget
                         if ($inactive >= 7 || $record->exp < 50) {
                             return 'Warning';
                         }
+
                         return 'Low';
                     })
                     ->color(fn ($state) => match ($state) {

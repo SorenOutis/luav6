@@ -4,8 +4,8 @@ namespace App\Filament\Widgets;
 
 use App\Models\Assignment;
 use App\Models\Exam;
-use App\Models\User;
 use App\Models\ExamSubmission;
+use App\Models\User;
 use Filament\Widgets\Widget;
 
 class QuickActionsWidget extends Widget

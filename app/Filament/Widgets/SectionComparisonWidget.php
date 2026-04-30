@@ -88,7 +88,7 @@ class SectionComparisonWidget extends BaseWidget
                             ->where('submitted', true)
                             ->count();
 
-                        return $total > 0 ? round(($submitted / $total) * 100, 1) . '%' : 'N/A';
+                        return $total > 0 ? round(($submitted / $total) * 100, 1).'%' : 'N/A';
                     })
                     ->alignCenter(),
 

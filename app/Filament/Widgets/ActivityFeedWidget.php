@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\ExamSubmission;
 use App\Models\User;
+use Carbon\Carbon;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\DB;
 
@@ -94,7 +95,8 @@ class ActivityFeedWidget extends Widget
             ->values()
             ->map(function ($event) {
                 $ts = $event['timestamp'];
-                $human = $ts instanceof \DateTimeInterface ? \Carbon\Carbon::instance($ts)->diffForHumans() : (string) $ts;
+                $human = $ts instanceof \DateTimeInterface ? Carbon::instance($ts)->diffForHumans() : (string) $ts;
+
                 return array_merge($event, ['timestamp' => $human]);
             });
 

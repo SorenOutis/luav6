@@ -5,10 +5,9 @@ namespace App\Filament\Widgets;
 use App\Models\GamificationHistory;
 use App\Models\Season;
 use App\Models\SeasonProgress;
-use App\Models\User;
+use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Illuminate\Support\Facades\DB;
 
 class SeasonProgressWidget extends BaseWidget
 {
@@ -70,27 +69,27 @@ class SeasonProgressWidget extends BaseWidget
         return [
             Stat::make('Season Progress', $progressPercent.'%')
                 ->description($daysRemaining.' days remaining')
-                ->descriptionIcon('heroicon-m-clock', \Filament\Support\Enums\IconPosition::Before)
+                ->descriptionIcon('heroicon-m-clock', IconPosition::Before)
                 ->icon('heroicon-o-calendar')
                 ->chart([$daysElapsed, max(0, $totalDays - $daysElapsed)])
                 ->color('primary'),
 
             Stat::make('Active Students', number_format($activeStudents))
                 ->description('Avg '.number_format($avgXpPerStudent).' XP per student')
-                ->descriptionIcon('heroicon-m-users', \Filament\Support\Enums\IconPosition::Before)
+                ->descriptionIcon('heroicon-m-users', IconPosition::Before)
                 ->icon('heroicon-o-academic-cap')
                 ->color('success'),
 
             Stat::make('Total XP Earned', number_format($totalSeasonXp))
                 ->description(number_format($totalSeasonPoints).' points distributed')
-                ->descriptionIcon('heroicon-m-bolt', \Filament\Support\Enums\IconPosition::Before)
+                ->descriptionIcon('heroicon-m-bolt', IconPosition::Before)
                 ->icon('heroicon-o-trophy')
                 ->chart($this->weeklyXpTrend($activeSeason->id))
                 ->color('info'),
 
             Stat::make('Total Events', number_format($totalEvents))
                 ->description('Gamification actions recorded')
-                ->descriptionIcon('heroicon-m-chart-bar', \Filament\Support\Enums\IconPosition::Before)
+                ->descriptionIcon('heroicon-m-chart-bar', IconPosition::Before)
                 ->icon('heroicon-o-rectangle-stack')
                 ->color('warning'),
         ];
