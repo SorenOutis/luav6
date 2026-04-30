@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\StudentNotificationService;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -196,7 +197,7 @@ class User extends Authenticatable
             $seasonId = Season::current()?->id;
         }
 
-        return $this->gamificationHistories()->create([
+        $history = $this->gamificationHistories()->create([
             'amount_xp' => $amountXp,
             'amount_points' => $amountPoints,
             'reason' => $reason,
@@ -204,6 +205,15 @@ class User extends Authenticatable
             'section_id' => $sectionId,
             'season_id' => $seasonId,
         ]);
+
+        app(StudentNotificationService::class)->sendXpEarned(
+            $this,
+            (float) $amountXp,
+            (string) $reason,
+            $description
+        );
+
+        return $history;
     }
 
     /**

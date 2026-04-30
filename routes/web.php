@@ -7,6 +7,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\Games\GamesController;
 use App\Http\Controllers\Games\TowerDefenseController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Services\BadgeAwardService;
@@ -302,6 +303,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             ]),
         ]);
     })->name('dashboard');
+
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     Route::get('u/{user}', [PublicProfileController::class, 'show'])->name('users.show');
     Route::get('users/{user}/xp-history', function (User $user) {

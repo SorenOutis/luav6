@@ -52,7 +52,7 @@ import { index as assignmentsIndex } from '@/routes/assignments';
 const lastSyncTime = ref(new Date());
 const isRefreshing = ref(false);
 
-const POLL_PROPS = ['userStats', 'userBadges', 'loginDates', 'announcements', 'courses', 'assignments', 'upcomingExams', 'sectionLeaderboards', 'activeSeason'];
+const POLL_PROPS = ['userStats', 'userBadges', 'notifications', 'loginDates', 'announcements', 'courses', 'assignments', 'upcomingExams', 'sectionLeaderboards', 'activeSeason'];
 const POLL_INTERVAL_MS = 15000;
 
 const { stop: stopPoll, start: startPoll } = usePoll(POLL_INTERVAL_MS, {

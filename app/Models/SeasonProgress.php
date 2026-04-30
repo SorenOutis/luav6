@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\BadgeAwardService;
+use App\Services\StudentNotificationService;
 use Illuminate\Database\Eloquent\Model;
 
 class SeasonProgress extends Model
@@ -59,6 +60,10 @@ class SeasonProgress extends Model
                             $progress->season_id
                         );
 
+                        if ($progress->wasChanged('level') && (int) $progress->level > (int) $progress->getOriginal('level')) {
+                            app(StudentNotificationService::class)->sendLevelUp($user, (int) $progress->level);
+                        }
+
                         $user->recordGamificationHistory(
                             $expDelta,
                             $pointsDelta,
@@ -93,6 +98,10 @@ class SeasonProgress extends Model
                         (int) $progress->level,
                         $progress->season_id
                     );
+
+                    if ((int) $progress->level > 1) {
+                        app(StudentNotificationService::class)->sendLevelUp($user, (int) $progress->level);
+                    }
 
                     $user->recordGamificationHistory(
                         $expDelta,

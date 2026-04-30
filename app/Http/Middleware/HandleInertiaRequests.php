@@ -42,6 +42,29 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'notifications' => fn () => $request->user() ? [
+                'unreadCount' => $request->user()->unreadNotifications()->count(),
+                'items' => $request->user()->notifications()
+                    ->latest()
+                    ->limit(8)
+                    ->get()
+                    ->map(fn ($notification) => [
+                        'id' => $notification->id,
+                        'type' => $notification->data['type'] ?? 'system',
+                        'icon' => $notification->data['icon'] ?? 'bell',
+                        'title' => $notification->data['title'] ?? 'Notification',
+                        'message' => $notification->data['message'] ?? null,
+                        'meta' => $notification->data['meta'] ?? null,
+                        'image' => $notification->data['image'] ?? null,
+                        'href' => $notification->data['href'] ?? '/dashboard',
+                        'readAt' => optional($notification->read_at)?->toIso8601String(),
+                        'createdAt' => $notification->created_at?->diffForHumans(),
+                    ])
+                    ->values(),
+            ] : [
+                'unreadCount' => 0,
+                'items' => [],
+            ],
             'aiChat' => [
                 'enabled' => (bool) Setting::get('ai_chat_enabled', true),
                 'maintenanceMessage' => Setting::get('ai_chat_maintenance_message', 'KOA is currently under maintenance. Please try again later.'),

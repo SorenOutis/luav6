@@ -44,6 +44,8 @@ class BadgeAwardService
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            app(StudentNotificationService::class)->sendBadgeUnlocked($user, $badge, $seasonId);
         }
     }
 }
