@@ -17,17 +17,20 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('password'),
-            'is_admin' => true,
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin@example.com'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make('password'),
+                'is_admin' => true,
+            ]
+        );
 
         Section::firstOrCreate(['name' => 'Section A']);
         Section::firstOrCreate(['name' => 'Section B']);
         Section::firstOrCreate(['name' => 'Section C']);
 
+        $this->call(BadgeSeeder::class);
         $this->call(TowerDefenseSeeder::class);
     }
 }
