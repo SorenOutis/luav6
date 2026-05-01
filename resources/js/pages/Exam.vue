@@ -738,7 +738,7 @@ onMounted(() => {
                                             >
                                                 <div class="flex items-center gap-3">
                                                     <Timer class="w-4 h-4 text-amber-500" />
-                                                    <span class="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] font-mono">AI_FEEDBACK_PENDING</span>
+                                                    <span class="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] font-mono">FEEDBACK</span>
                                                 </div>
                                                 <span class="text-[10px] font-bold text-muted-foreground font-mono uppercase tracking-widest">Awaiting release</span>
                                             </div>

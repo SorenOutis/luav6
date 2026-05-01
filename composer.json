@@ -15,6 +15,8 @@
         "laravel/octane": "*",
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
+        "phpoffice/phpword": "*",
+        "smalot/pdfparser": "*",
         "spiral/roadrunner-cli": "*",
         "spiral/roadrunner-http": "*"
     },
