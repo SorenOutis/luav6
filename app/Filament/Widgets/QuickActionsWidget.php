@@ -10,7 +10,7 @@ use Filament\Widgets\Widget;
 
 class QuickActionsWidget extends Widget
 {
-    protected static ?int $sort = 9;
+    protected static ?int $sort = 2;
 
     protected int|string|array $columnSpan = 'full';
 

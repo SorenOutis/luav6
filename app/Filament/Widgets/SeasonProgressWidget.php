@@ -13,7 +13,7 @@ class SeasonProgressWidget extends BaseWidget
 {
     protected ?string $pollingInterval = '60s';
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
     protected int|string|array $columnSpan = 'full';
 

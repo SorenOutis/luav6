@@ -12,10 +12,7 @@ class ActivityFeedWidget extends Widget
 {
     protected static ?int $sort = 6;
 
-    protected int|string|array $columnSpan = [
-        'md' => 2,
-        'xl' => 1,
-    ];
+    protected int|string|array $columnSpan = 'full';
 
     protected string $view = 'filament.widgets.activity-feed';
 
