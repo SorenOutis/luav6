@@ -62,8 +62,12 @@ class AIService
 
         $responses = Http::pool(function ($pool) use ($essays) {
             foreach ($essays as $index => $essay) {
-                $prompt = $this->buildPrompt($essay['essayText'], $essay['questionText']);
-                $pool->as((string) $index)->timeout(300)->post("{$this->baseUrl}/api/generate", [
+                $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
+                $prompt = $feedbackOnly
+                    ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'])
+                    : $this->buildPrompt($essay['essayText'], $essay['questionText']);
+
+                $pool->as((string) $index)->timeout(45)->post("{$this->baseUrl}/api/generate", [
                     'model' => $this->model,
                     'prompt' => $prompt,
                     'stream' => false,
@@ -71,7 +75,8 @@ class AIService
                     'keep_alive' => -1,
                     'options' => [
                         'temperature' => 0,
-                        'num_predict' => 50, // Increased to ensure JSON is not cut off
+                        // Keep responses short to speed up local inference.
+                        'num_predict' => $feedbackOnly ? 28 : 40,
                         'num_ctx' => 1024,
                         'top_k' => 5,
                         'top_p' => 0.1,
@@ -85,14 +90,18 @@ class AIService
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0, 'feedback' => ''];
             $maxPoints = (int) ($essay['maxPoints'] ?? 1);
+            $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
 
             if ($response && $response->successful()) {
                 $data = json_decode($response->json('response'), true);
-                if (isset($data['score'])) {
+                if (! $feedbackOnly && isset($data['score'])) {
                     // AI provides a score from 0-100, we scale it to maxPoints
                     $percentage = (float) $data['score'];
                     $scaledScore = ($percentage / 100) * $maxPoints;
                     $result['score'] = (float) round($scaledScore, 2);
+                }
+                if (isset($data['feedback'])) {
+                    $result['feedback'] = (string) $data['feedback'];
                 }
             } elseif ($response) {
                 Log::error("AI Batch Assessment failed for index $index: ".$response->body());
@@ -132,10 +141,30 @@ SCORING CRITERIA (0-100 SCALE):
 - 0: Irrelevant, nonsensical, or explicitly states they don't know.
 
 Response Format:
-You MUST respond with a valid JSON object ONLY. DO NOT provide feedback, explanations, or reasoning.
+You MUST respond with a valid JSON object ONLY.
 The score MUST be a WHOLE NUMBER between 0 and 100.
+The feedback MUST be at most 1 short sentence (max 18 words), actionable, and mention the biggest missing point.
 {
-    "score": <integer_value_between_0_and_100>
+    "score": <integer_value_between_0_and_100>,
+    "feedback": "<short_actionable_feedback>"
+}
+PROMPT;
+    }
+
+    /**
+     * Build a compact prompt for feedback-only generation (faster).
+     */
+    protected function buildFeedbackOnlyPrompt(string $essayText, string $questionText): string
+    {
+        return <<<PROMPT
+Act as a strict academic examiner.
+Question: "$questionText"
+Student Essay: "$essayText"
+
+Return ONLY valid JSON with one concise actionable feedback sentence (max 18 words).
+No score, no explanation.
+{
+    "feedback": "<one concise actionable sentence>"
 }
 PROMPT;
     }
@@ -153,7 +182,7 @@ PROMPT;
         $prompt = $this->buildPrompt($essayText, $questionText);
 
         try {
-            $response = Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
+            $response = Http::timeout(90)->post("{$this->baseUrl}/api/generate", [
                 'model' => $this->model,
                 'prompt' => $prompt,
                 'stream' => false,
@@ -177,7 +206,7 @@ PROMPT;
 
                     return [
                         'score' => (float) round($scaledScore, 2),
-                        'feedback' => '',
+                        'feedback' => isset($data['feedback']) ? (string) $data['feedback'] : '',
                     ];
                 }
             }

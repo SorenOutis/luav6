@@ -47,6 +47,7 @@ class ExamSubmissionsTable
                 SelectColumn::make('status')
                     ->options([
                         'submitted' => 'Submitted',
+                        'pending_ai' => 'Pending AI',
                         'pending_review' => 'Pending Review',
                         'graded' => 'Graded',
                     ])

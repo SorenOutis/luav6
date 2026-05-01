@@ -13,12 +13,16 @@ class Exam extends Model
         'exam_date',
         'duration_minutes',
         'status',
+        'ai_feedback_enabled',
+        'ai_feedback_enabled_at',
         'url',
         'section_id',
     ];
 
     protected $casts = [
         'exam_date' => 'datetime',
+        'ai_feedback_enabled' => 'boolean',
+        'ai_feedback_enabled_at' => 'datetime',
     ];
 
     protected static function booted()

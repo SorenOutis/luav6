@@ -718,6 +718,29 @@ onMounted(() => {
                                                         <span class="inline-block skew-x-12">SCORE: {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score }} / {{ question.points }}</span>
                                                     </div>
                                                 </div>
+
+                                                <div
+                                                    v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback"
+                                                    class="space-y-2 border-t border-primary/10 pt-4"
+                                                >
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] font-mono">FEEDBACK</span>
+                                                    </div>
+                                                    <p class="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                                                        {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback }}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                v-else-if="getSubmissionForPart(selectedExamForReview, part.id)?.status === 'pending_ai'"
+                                                class="p-5 bg-muted/20 border border-border/40 flex items-center justify-between"
+                                            >
+                                                <div class="flex items-center gap-3">
+                                                    <Timer class="w-4 h-4 text-amber-500" />
+                                                    <span class="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] font-mono">AI_FEEDBACK_PENDING</span>
+                                                </div>
+                                                <span class="text-[10px] font-bold text-muted-foreground font-mono uppercase tracking-widest">Awaiting release</span>
                                             </div>
                                         </div>
                                     </div>
