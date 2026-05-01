@@ -12,10 +12,7 @@ class TopStudentsWidget extends BaseWidget
 {
     protected static ?int $sort = 4;
 
-    protected int|string|array $columnSpan = [
-        'md' => 6,
-        'xl' => 5,
-    ];
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Top Students by XP';
 

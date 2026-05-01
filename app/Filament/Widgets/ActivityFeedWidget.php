@@ -13,8 +13,8 @@ class ActivityFeedWidget extends Widget
     protected static ?int $sort = 6;
 
     protected int|string|array $columnSpan = [
-        'md' => 6,
-        'xl' => 5,
+        'md' => 2,
+        'xl' => 1,
     ];
 
     protected string $view = 'filament.widgets.activity-feed';
@@ -32,6 +32,7 @@ class ActivityFeedWidget extends Widget
             ->orderByDesc('created_at')
             ->limit(15)
             ->get()
+            ->toBase()
             ->map(fn ($u) => [
                 'type' => 'registration',
                 'user_name' => $u->name,
@@ -47,6 +48,7 @@ class ActivityFeedWidget extends Widget
             ->orderByDesc('created_at')
             ->limit(15)
             ->get()
+            ->toBase()
             ->map(fn ($s) => [
                 'type' => 'exam',
                 'user_name' => $s->user?->name ?? 'Unknown',

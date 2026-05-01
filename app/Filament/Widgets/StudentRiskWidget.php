@@ -13,10 +13,7 @@ class StudentRiskWidget extends BaseWidget
 {
     protected static ?int $sort = 8;
 
-    protected int|string|array $columnSpan = [
-        'md' => 6,
-        'xl' => 5,
-    ];
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Students At Risk';
 

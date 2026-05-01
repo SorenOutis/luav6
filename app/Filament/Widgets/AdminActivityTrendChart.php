@@ -19,8 +19,8 @@ class AdminActivityTrendChart extends ChartWidget
     protected static ?int $sort = 3;
 
     protected int|string|array $columnSpan = [
-        'md' => 6,
-        'xl' => 7,
+        'md' => 2,
+        'xl' => 2,
     ];
 
     protected ?string $maxHeight = '330px';

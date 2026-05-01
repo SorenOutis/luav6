@@ -15,10 +15,7 @@ class ExamPerformanceWidget extends ChartWidget
 
     protected static ?int $sort = 5;
 
-    protected int|string|array $columnSpan = [
-        'md' => 6,
-        'xl' => 6,
-    ];
+    protected int|string|array $columnSpan = 'full';
 
     protected ?string $maxHeight = '330px';
 

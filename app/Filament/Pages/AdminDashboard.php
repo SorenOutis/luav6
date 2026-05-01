@@ -16,8 +16,8 @@ class AdminDashboard extends BaseDashboard
     {
         return [
             'default' => 1,
-            'md' => 6,
-            'xl' => 12,
+            'md' => 2,
+            'xl' => 3,
         ];
     }
 

@@ -13,10 +13,7 @@ class SectionComparisonWidget extends BaseWidget
 {
     protected static ?int $sort = 7;
 
-    protected int|string|array $columnSpan = [
-        'md' => 6,
-        'xl' => 7,
-    ];
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Section Comparison';
 
