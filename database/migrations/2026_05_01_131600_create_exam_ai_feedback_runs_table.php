@@ -30,4 +30,3 @@ return new class extends Migration
         Schema::dropIfExists('exam_ai_feedback_runs');
     }
 };
-

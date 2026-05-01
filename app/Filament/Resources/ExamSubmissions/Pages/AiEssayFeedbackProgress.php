@@ -200,4 +200,3 @@ class AiEssayFeedbackProgress extends Page implements HasTable
         return 'AI Essay Feedback Progress: '.$this->exam->title;
     }
 }
-

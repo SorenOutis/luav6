@@ -12,6 +12,7 @@ use App\Support\AiQueueWorker;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\EmbeddedTable;
@@ -64,7 +65,7 @@ class ListExamSubmissions extends ListRecords
                         )
                         ->searchable()
                         ->required(),
-                    \Filament\Forms\Components\Toggle::make('enabled')
+                    Toggle::make('enabled')
                         ->label('Enable and generate feedback')
                         ->helperText('When enabled, AI feedback will be generated for essay answers that do not have it yet.')
                         ->default(true),

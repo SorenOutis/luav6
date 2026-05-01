@@ -29,4 +29,3 @@ class ExamAiFeedbackRun extends Model
         return $this->belongsTo(Exam::class);
     }
 }
-

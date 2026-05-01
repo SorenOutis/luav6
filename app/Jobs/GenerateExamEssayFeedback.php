@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Collection;
 
 class GenerateExamEssayFeedback implements ShouldQueue
 {
@@ -45,7 +46,7 @@ class GenerateExamEssayFeedback implements ShouldQueue
                 ->select(['id', 'answers'])
                 ->orderBy('id')
                 ->chunkById(200, function ($submissions) use (&$total) {
-                    /** @var \Illuminate\Support\Collection<int, ExamSubmission> $submissions */
+                    /** @var Collection<int, ExamSubmission> $submissions */
                     foreach ($submissions as $submission) {
                         $answers = is_array($submission->answers)
                             ? $submission->answers
@@ -92,7 +93,7 @@ class GenerateExamEssayFeedback implements ShouldQueue
                         return false;
                     }
 
-                    /** @var \Illuminate\Support\Collection<int, ExamSubmission> $submissions */
+                    /** @var Collection<int, ExamSubmission> $submissions */
                     foreach ($submissions as $submission) {
                         $latestRunState = ExamAiFeedbackRun::query()->find($run->id);
                         if (! $latestRunState || $latestRunState->status !== 'running') {
@@ -274,4 +275,3 @@ class GenerateExamEssayFeedback implements ShouldQueue
         return false;
     }
 }
-
