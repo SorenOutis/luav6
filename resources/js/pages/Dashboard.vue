@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed, watch, nextTick } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Motion } from '@motionone/vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -48,6 +49,9 @@ import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
 import { edit as profileEdit } from '@/routes/profile';
 import { index as assignmentsIndex } from '@/routes/assignments';
+import { useLoader } from '@/composables/useLoader';
+
+const { isVisible: isLoaderVisible } = useLoader();
 
 const lastSyncTime = ref(new Date());
 const isRefreshing = ref(false);
@@ -155,7 +159,7 @@ const handleGlobalMouseMove = (e: MouseEvent) => {
         ease: 'power3.out'
     });
 
-    // Grid Parallax
+    // Grid Parallax (Mouse)
     gsap.to(backgroundGrid.value, {
         x: (xPercent - 0.5) * 30,
         y: (yPercent - 0.5) * 30,
@@ -163,6 +167,8 @@ const handleGlobalMouseMove = (e: MouseEvent) => {
         ease: 'power2.out'
     });
 };
+
+const isBooted = ref(false);
 
 interface Course {
     id: number;
@@ -409,6 +415,17 @@ onMounted(() => {
     window.addEventListener('resize', syncInteractionModes);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // Sync isBooted with global loader
+    if (!isLoaderVisible.value) {
+        isBooted.value = true;
+    }
+
+    watch(isLoaderVisible, (visible) => {
+        if (!visible) {
+            isBooted.value = true;
+        }
+    }, { immediate: true });
+
     // Kick off polling (respect current tab visibility)
     if (!document.hidden) {
         resumePolling();
@@ -434,80 +451,37 @@ onMounted(() => {
         if (prefersReducedMotion.value) {
             // Make sure everything is visible immediately; skip entrance + ambient animations
             gsap.set(
-                ['.dashboard-hero', '.dashboard-stats', '.dashboard-leaderboard', '.dashboard-main-grid'],
+                ['.dashboard-hero', '.dashboard-stats', '.dashboard-leaderboard', '.dashboard-main-grid', '.today-strip', '.season-progress'],
                 { opacity: 1, y: 0, scale: 1, clearProps: 'transform' },
             );
             return;
         }
 
-        const tl = gsap.timeline({
-            defaults: { ease: 'expo.out', duration: 1.2 }
-        });
-
-        // Reset initial states
-        gsap.set('.dashboard-hero', { opacity: 0, y: 30, scale: 0.99 });
-        gsap.set('.dashboard-stats', { opacity: 0, y: 20, scale: 0.99 });
-        gsap.set('.dashboard-leaderboard', { opacity: 0, y: 20, scale: 0.99 });
-        gsap.set('.dashboard-main-grid', {
-            opacity: 0,
-            y: 40,
-            scale: 0.99,
-        });
-
-        // Hero and Stats Entrance (Immediate)
-        tl.to('.dashboard-hero', { 
-            opacity: 1, 
-            y: 0, 
-            scale: 1,
-            duration: 1
-        })
-        .to('.dashboard-stats', { 
-            opacity: 1, 
-            y: 0, 
-            scale: 1,
-            duration: 0.8
-        }, '-=0.7');
-
-        // Scroll-Triggered Sections
-        gsap.to('.dashboard-leaderboard', {
+        // Grid Scroll Parallax
+        gsap.to(backgroundGrid.value, {
+            y: -100,
+            ease: "none",
             scrollTrigger: {
-                trigger: '.dashboard-leaderboard',
-                start: 'top 75%',
-            },
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 1,
-            ease: 'expo.out'
-        });
-
-        gsap.to('.dashboard-main-grid', {
-            scrollTrigger: {
-                trigger: '.dashboard-main-grid',
-                start: 'top 75%',
-            },
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            duration: 1.2,
-            ease: 'expo.out'
+                trigger: dashboardContainer.value,
+                start: "top top",
+                end: "bottom bottom",
+                scrub: true
+            }
         });
 
         // Background orb animation refinement — re-randomize each cycle (skipped when reduced-motion)
-        if (!prefersReducedMotion.value) {
-            const orbs = dashboardContainer.value?.querySelectorAll('.orb');
-            orbs?.forEach((orb, i) => {
-                gsap.to(orb, {
-                    x: 'random(-100, 100)',
-                    y: 'random(-100, 100)',
-                    duration: 12 + i * 4,
-                    repeat: -1,
-                    repeatRefresh: true,
-                    yoyo: true,
-                    ease: 'sine.inOut',
-                });
+        const orbs = dashboardContainer.value?.querySelectorAll('.orb');
+        orbs?.forEach((orb, i) => {
+            gsap.to(orb, {
+                x: 'random(-100, 100)',
+                y: 'random(-100, 100)',
+                duration: 12 + i * 4,
+                repeat: -1,
+                repeatRefresh: true,
+                yoyo: true,
+                ease: 'sine.inOut',
             });
-        }
+        });
     }, dashboardContainer.value);
 });
 
@@ -587,9 +561,14 @@ const handleLogout = () => {
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
             <!-- Hero Banner Section -->
-            <div class="relative space-y-6">
+            <Motion 
+                :initial="{ opacity: 0, y: 30 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }"
+                class="relative space-y-6"
+            >
                 <DashboardHero 
-                    class="animate-section dashboard-hero"
+                    class="dashboard-hero"
                     :user-name="userName"
                     :user-avatar="userAvatar"
                     :user-stats="userStats"
@@ -602,43 +581,75 @@ const handleLogout = () => {
                     @close-announcement="announcements = []"
                     @refresh="manualRefresh"
                 />
-            </div>
+            </Motion>
 
             <!-- Header Section with User Stats -->
-            <DashboardStats 
-                class="animate-section stagger-2 dashboard-stats"
-                :user-stats="userStats"
-                :streak="streak"
-                :progress-percentage="progressPercentage"
-            />
+            <Motion
+                :initial="{ opacity: 0, y: 20 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
+            >
+                <DashboardStats 
+                    class="dashboard-stats"
+                    :user-stats="userStats"
+                    :streak="streak"
+                    :progress-percentage="progressPercentage"
+                />
+            </Motion>
 
             <!-- Today snapshot strip -->
-            <TodayStrip
-                :due-today-count="todaySummary.dueTodayCount"
-                :overdue-count="todaySummary.overdueCount"
-                :upcoming24h-count="todaySummary.upcoming24hCount"
-                :next-item="nextUpItem"
-            />
+            <Motion
+                :initial="{ opacity: 0, y: 20 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.3 }"
+            >
+                <TodayStrip
+                    class="today-strip"
+                    :due-today-count="todaySummary.dueTodayCount"
+                    :overdue-count="todaySummary.overdueCount"
+                    :upcoming24h-count="todaySummary.upcoming24hCount"
+                    :next-item="nextUpItem"
+                />
+            </Motion>
 
             <!-- Season progress band -->
-            <SeasonProgressBand
-                :name="activeSeason?.name ?? null"
-                :start-date="activeSeason?.startDate ?? null"
-                :end-date="activeSeason?.endDate ?? null"
-                :xp-earned="userStats.currentXP"
-                :xp-target="seasonalXpTarget"
-            />
+            <Motion
+                :initial="{ opacity: 0, y: 20 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
+            >
+                <SeasonProgressBand
+                    class="season-progress"
+                    :name="activeSeason?.name ?? null"
+                    :start-date="activeSeason?.startDate ?? null"
+                    :end-date="activeSeason?.endDate ?? null"
+                    :xp-earned="userStats.currentXP"
+                    :xp-target="seasonalXpTarget"
+                />
+            </Motion>
 
             <!-- Improved Leaderboard -->
-            <div class="animate-section stagger-3 dashboard-leaderboard">
+            <Motion 
+                :initial="{ opacity: 0, y: 30 }"
+                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                :in-view-options="{ once: true, margin: '-50px' }"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1] }"
+                class="dashboard-leaderboard"
+            >
                 <ImprovedLeaderboard 
                     :section-leaderboards="sectionLeaderboards" 
                     :active-season-name="activeSeason?.name"
                 />
-            </div>
+            </Motion>
 
             <!-- Main Content Grid -->
-            <div class="grid gap-8 grid-cols-1 lg:grid-cols-3 items-start animate-section stagger-4 dashboard-main-grid min-w-0">
+            <Motion 
+                :initial="{ opacity: 0, y: 40 }"
+                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                :in-view-options="{ once: true, margin: '-50px' }"
+                :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
+                class="grid gap-8 grid-cols-1 lg:grid-cols-3 items-start dashboard-main-grid min-w-0"
+            >
                 <!-- Courses Progress - Main Section -->
                 <div class="lg:col-span-2 space-y-8 min-w-0">
                     <!-- Streak Heatmap Card -->
@@ -676,7 +687,7 @@ const handleLogout = () => {
                         @quick-action="handleQuickAction"
                     />
                 </div>
-            </div>
+            </Motion>
         </div>
 
         <SectionSelectionModal 
