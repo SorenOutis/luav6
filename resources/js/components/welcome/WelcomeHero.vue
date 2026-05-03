@@ -61,6 +61,7 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
 
 // Scroll Parallax and Premium Reveals
 const titleLetters = "LEARNING".split("");
+const systemsLetters = "SYSTEMS".split("");
 const subtitleLetters = "INTELLIGENCE".split("");
 const heroRef = ref<HTMLElement | null>(null);
 
@@ -121,6 +122,18 @@ onBeforeUnmount(() => {
                         :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : {}"
                         :transition="{ duration: 1.2, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }"
                         class="title-letter inline-block transform-gpu"
+                    >
+                        {{ letter }}
+                    </Motion>
+                </span>
+                <span class="flex overflow-hidden">
+                    <Motion 
+                        v-for="(letter, i) in systemsLetters" 
+                        :key="i"
+                        :initial="{ y: 100, opacity: 0, rotateX: -90 }"
+                        :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : {}"
+                        :transition="{ duration: 1.2, delay: 0.2 + i * 0.04, ease: [0.16, 1, 0.3, 1] }"
+                        class="systems-letter inline-block transform-gpu"
                     >
                         {{ letter }}
                     </Motion>
