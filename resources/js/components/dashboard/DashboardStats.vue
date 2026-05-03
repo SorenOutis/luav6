@@ -97,9 +97,12 @@ const displayStats = computed(() => [
             :class="`stagger-${idx + 1}`"
             className="p-4 sm:p-5 group animate-fade-up bg-card/40 flex flex-col justify-between"
         >
-            <!-- Silhouette Background Icon -->
-            <div class="absolute -right-2 -top-2 sm:-right-3 sm:-top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-all duration-700 pointer-events-none group-hover:scale-110 group-hover:rotate-[20deg]">
-                <component :is="stat.icon" class="w-16 h-16 sm:w-24 sm:h-24" />
+            <!-- Inner container to clip overflowing background icons without clipping the outer glow -->
+            <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                <!-- Silhouette Background Icon -->
+                <div class="absolute -right-2 -top-2 sm:-right-3 sm:-top-3 opacity-[0.03] group-hover:opacity-[0.06] transition-all duration-700 pointer-events-none group-hover:scale-110 group-hover:rotate-[20deg]">
+                    <component :is="stat.icon" class="w-16 h-16 sm:w-24 sm:h-24" />
+                </div>
             </div>
 
             <div class="relative z-10 w-full h-full flex flex-col justify-between">
