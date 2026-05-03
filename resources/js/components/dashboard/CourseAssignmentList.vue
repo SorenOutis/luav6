@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Progress from '@/components/ui/progress/Progress.vue';
 import { Clock } from 'lucide-vue-next';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface Course {
     id: number;
@@ -39,22 +40,12 @@ const handleAssignmentClick = (assignment: Assignment) => {
     emit('assignment-click', assignment);
 };
 
-const handleMouseMove = (e: MouseEvent) => {
-    const card = e.currentTarget as HTMLElement;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    card.style.setProperty('--mouse-x', `${x}px`);
-    card.style.setProperty('--mouse-y', `${y}px`);
-};
+// SpotlightCard handles internal mouse tracking automatically
 </script>
 
 <template>
-    <div class="surface-card p-5 sm:p-8 flex flex-col relative overflow-hidden group/board" @mousemove="handleMouseMove">
-        <!-- Hover Bloom Effect -->
-        <div class="absolute inset-0 opacity-0 group-hover/board:opacity-100 transition-opacity duration-700 pointer-events-none"
-            :style="{ background: `radial-gradient(800px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.05), transparent 40%)` }">
-        </div>
+    <SpotlightCard customSize glowColor="blue" className="surface-card p-0 w-full min-w-0">
+        <div class="relative flex flex-col w-full h-full p-5 sm:p-8">
 
         <div class="mb-6 sm:mb-8 relative z-10 border-b border-border/10 pb-4 flex items-center justify-between">
             <div>
@@ -95,16 +86,17 @@ const handleMouseMove = (e: MouseEvent) => {
                     <h4 class="text-[9px] sm:text-[10px] font-black tracking-[0.2em] uppercase text-foreground/80 border-l-2 border-primary pl-2">Active Modules</h4>
                     <span class="text-[8px] sm:text-[9px] font-bold text-primary/60 uppercase tracking-widest">{{ courses.length }} total</span>
                 </div>
-                <div v-for="(course, idx) in courses" :key="course.id"
-                    class="group/course relative overflow-hidden space-y-3 sm:space-y-4 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border/40 hover:border-primary/50 bg-card/20 hover:bg-white/[0.03] cursor-pointer transition-all duration-500 animate-fade-up premium-hover backdrop-blur-sm"
+                <SpotlightCard v-for="(course, idx) in courses" :key="course.id"
+                    as="div"
+                    customSize
+                    glowColor="blue"
+                    :className="[
+                        'group/course relative space-y-3 sm:space-y-4 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-border/40 bg-card/20 hover:bg-white/[0.03] cursor-pointer transition-all duration-500 animate-fade-up premium-hover backdrop-blur-sm w-full min-w-0',
+                    ].join(' ')"
                     :class="`stagger-${idx + 1}`"
-                    @click="handleCourseClick(course)"
-                    @mousemove="handleMouseMove">
+                    @click="handleCourseClick(course)">
                     
-                    <!-- Item Bloom Effect -->
-                    <div class="absolute inset-0 opacity-0 group-hover/course:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.12), transparent 40%)">
-                    </div>
+                    <div class="relative flex flex-col w-full h-full">
 
                     <div class="flex items-center justify-between relative z-10 gap-3">
                         <div class="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -136,22 +128,24 @@ const handleMouseMove = (e: MouseEvent) => {
                             </div>
                         </div>
                     </div>
-                </div>
+                    </div>
+                </SpotlightCard>
             </div>
 
             <!-- Assignments Section -->
             <div v-if="assignments.length > 0" class="space-y-3 pt-2">
                 <h4 class="text-[10px] font-black tracking-[0.2em] uppercase text-foreground/80 mb-3 border-l-2 border-destructive/80 pl-2">Pending Transmissions</h4>
-                <div v-for="(assignment, idx) in assignments" :key="assignment.id"
-                    class="group/task relative overflow-hidden p-5 rounded-2xl border border-border/30 hover:border-primary/40 bg-card/10 hover:bg-white/[0.02] cursor-pointer transition-all duration-500 animate-fade-up premium-hover"
+                <SpotlightCard v-for="(assignment, idx) in assignments" :key="assignment.id"
+                    as="div"
+                    customSize
+                    :glowColor="assignment.isOverdue ? 'red' : 'blue'"
+                    :className="[
+                        'group/task relative p-5 rounded-2xl border border-border/30 bg-card/10 hover:bg-white/[0.02] cursor-pointer transition-all duration-500 animate-fade-up premium-hover w-full min-w-0',
+                    ].join(' ')"
                     :class="`stagger-${idx + courses.length + 1}`"
-                    @click="handleAssignmentClick(assignment)"
-                    @mousemove="handleMouseMove">
+                    @click="handleAssignmentClick(assignment)">
                     
-                    <!-- Item Bloom Effect -->
-                    <div class="absolute inset-0 opacity-0 group-hover/task:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        style="background: radial-gradient(300px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.05), transparent 40%)">
-                    </div>
+                    <div class="relative flex flex-col w-full h-full">
 
                     <div class="flex items-center justify-between relative z-10">
                         <div class="flex-1 min-w-0 pr-4">
@@ -165,8 +159,10 @@ const handleMouseMove = (e: MouseEvent) => {
                             <p class="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1.5 tabular-nums">{{ assignment.dueDate }}</p>
                         </div>
                     </div>
-                </div>
+                    </div>
+                </SpotlightCard>
             </div>
         </div>
-    </div>
+        </div>
+    </SpotlightCard>
 </template>
