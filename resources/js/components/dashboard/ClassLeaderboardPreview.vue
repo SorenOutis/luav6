@@ -3,6 +3,7 @@ import { computed, ref, watch, onMounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Award, Crown, Medal, Sparkles, Trophy, User } from 'lucide-vue-next';
 import EmptyState from './EmptyState.vue';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface LeaderboardUser {
     id: number;
@@ -76,8 +77,8 @@ const rankClass = (rank: number) => {
 </script>
 
 <template>
-    <section class="surface-card overflow-hidden p-4 sm:p-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <SpotlightCard customSize glowColor="blue" className="overflow-hidden p-4 sm:p-6 !bg-card/40" as="section">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between relative z-10">
             <div>
                 <div class="mb-2 flex items-center gap-2">
                     <Trophy class="h-4 w-4 text-primary" />
@@ -118,22 +119,22 @@ const rankClass = (rank: number) => {
 
         <EmptyState
             v-if="!activeLeaderboard || topUsers.length === 0"
-            class="mt-5"
+            class="mt-5 relative z-10"
             compact
             :icon="Trophy"
             title="No rankings yet"
             message="Earn XP from exams, assignments, and activities to start the class leaderboard."
         />
 
-        <div v-else class="mt-5 grid gap-3 lg:grid-cols-5">
-            <Link
+        <div v-else class="mt-5 grid gap-3 lg:grid-cols-5 relative z-10">
+            <SpotlightCard
                 v-for="(user, index) in topUsers"
                 :key="user.id"
+                :as="Link"
                 :href="`/u/${user.id}`"
-                :class="[
-                    'group relative overflow-hidden rounded-2xl border bg-card/30 p-3 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card/50',
-                    user.isCurrentUser ? 'border-primary/40 ring-1 ring-primary/25' : 'border-border/35',
-                ]"
+                customSize
+                glowColor="purple"
+                :className="`group relative overflow-hidden rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-center ${user.isCurrentUser ? 'border-primary/40 ring-1 ring-primary/25 !bg-primary/[0.05] hover:!bg-primary/[0.1]' : 'border-border/35 !bg-card/30 hover:border-primary/40 hover:!bg-card/50'}`"
             >
                 <div
                     v-if="user.isCurrentUser"
@@ -141,7 +142,7 @@ const rankClass = (rank: number) => {
                     aria-hidden="true"
                 />
 
-                <div class="relative flex items-center gap-3 lg:flex-col lg:text-center">
+                <div class="relative flex items-center gap-3 lg:flex-col lg:text-center z-10">
                     <div
                         :class="[
                             'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-xs font-black lg:h-9 lg:w-9',
@@ -177,7 +178,7 @@ const rankClass = (rank: number) => {
                         </div>
                     </div>
                 </div>
-            </Link>
+            </SpotlightCard>
         </div>
 
         <div
