@@ -26,6 +26,7 @@ import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import { Calendar } from 'lucide-vue-next';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard() },
@@ -653,18 +654,20 @@ const handleLogout = () => {
                 <!-- Courses Progress - Main Section -->
                 <div class="lg:col-span-2 space-y-8 min-w-0">
                     <!-- Streak Heatmap Card -->
-                    <div class="surface-card p-4 sm:p-8">
-                        <div class="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 class="text-xl font-bold flex items-center gap-2">
-                                    <Calendar class="w-5 h-5 text-primary" />
-                                    Activity Pulse
-                                </h3>
-                                <p class="text-xs text-muted-foreground mt-1">Consistency is the bridge between goals and accomplishment.</p>
+                    <SpotlightCard customSize glowColor="blue" className="surface-card p-0 w-full min-w-0">
+                        <div class="relative flex flex-col w-full h-full p-4 sm:p-8">
+                            <div class="flex items-center justify-between mb-6 relative z-10">
+                                <div>
+                                    <h3 class="text-xl font-bold flex items-center gap-2">
+                                        <Calendar class="w-5 h-5 text-primary" />
+                                        Activity Pulse
+                                    </h3>
+                                    <p class="text-xs text-muted-foreground mt-1">Consistency is the bridge between goals and accomplishment.</p>
+                                </div>
                             </div>
+                            <StreakHeatmap :login-dates="streak.loginDates" />
                         </div>
-                        <StreakHeatmap :login-dates="streak.loginDates" />
-                    </div>
+                    </SpotlightCard>
 
                     <CourseAssignmentList 
                         :courses="courses"
