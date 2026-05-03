@@ -129,7 +129,7 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
                         class="group relative flex items-center justify-center bg-foreground px-12 py-5 lg:py-6 text-background transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-foreground/90"
                     >
                         <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
-                            Access Engine
+                            Login
                             <ArrowRight class="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
                         </span>
                     </Link>
@@ -140,7 +140,7 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
                         class="group relative flex items-center justify-center border border-border bg-background/50 backdrop-blur-sm px-12 py-5 lg:py-6 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-muted/50"
                     >
                         <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
-                            Initialize Node
+                            Register
                         </span>
                     </Link>
                 </template>
