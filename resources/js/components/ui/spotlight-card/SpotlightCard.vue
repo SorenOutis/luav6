@@ -118,7 +118,7 @@ const inlineStyles = computed(() => {
   const baseStyles: Record<string, any> = {
     '--base': base,
     '--spread': spread,
-    '--radius': '16',
+    '--radius': '26',
     '--border': '2',
     '--backdrop': 'hsl(0 0% 60% / 0.12)',
     '--backup-border': 'var(--backdrop)',
