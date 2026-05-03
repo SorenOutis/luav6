@@ -9,6 +9,7 @@ import EmptyState from './EmptyState.vue';
 import { Link } from '@inertiajs/vue3';
 import { BookOpen, Clock, RefreshCw, Trophy, Sparkles, CalendarX, Shield } from 'lucide-vue-next';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface Exam {
     id: number;
@@ -66,12 +67,15 @@ const weeklyPercent = (xp: number, goal: number) => {
         <NextUpCard v-if="nextUpItem" :item="nextUpItem" />
 
         <!-- Compact Quick Actions -->
-        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
-            <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
-            <CardHeader class="pb-3">
-                <CardTitle class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <SpotlightCard customSize glowColor="blue" className="surface-card premium-hover relative p-0">
+            <div class="relative flex flex-col w-full h-full py-6 gap-6">
+                <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                    <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+                </div>
+                <CardHeader class="pb-3 relative z-10">
+                    <CardTitle class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent class="grid grid-cols-2 sm:grid-cols-4 gap-2 relative z-10">
                 <Button
                     variant="outline"
                     size="sm"
@@ -109,12 +113,16 @@ const weeklyPercent = (xp: number, goal: number) => {
                     <span class="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Profile</span>
                 </Button>
             </CardContent>
-        </Card>
+            </div>
+        </SpotlightCard>
 
         <!-- Badges -->
-        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
-            <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
-            <CardHeader class="pb-3 flex flex-row items-center justify-between">
+        <SpotlightCard customSize glowColor="purple" className="surface-card premium-hover relative p-0">
+            <div class="relative flex flex-col w-full h-full py-6 gap-6">
+                <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                    <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+                </div>
+                <CardHeader class="pb-3 flex flex-row items-center justify-between relative z-10">
                 <CardTitle class="text-sm font-bold flex items-center gap-2">
                     <Shield class="h-4 w-4 text-primary" />
                     My Badges
@@ -123,7 +131,7 @@ const weeklyPercent = (xp: number, goal: number) => {
                     View all →
                 </Link>
             </CardHeader>
-            <CardContent class="pt-0">
+            <CardContent class="pt-0 relative z-10">
                 <div v-if="badges.length > 0" class="space-y-2">
                     <div
                         v-for="badge in badges.slice(0, 4)"
@@ -150,18 +158,22 @@ const weeklyPercent = (xp: number, goal: number) => {
                     message="Reach higher levels to unlock lifetime badges and show where you earned them."
                 />
             </CardContent>
-        </Card>
+            </div>
+        </SpotlightCard>
 
         <!-- Weekly Goal -->
-        <Card
+        <SpotlightCard
             v-if="weeklyGoal"
-            class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative"
+            customSize glowColor="green" className="surface-card premium-hover relative p-0"
         >
-            <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
-            <CardHeader class="pb-2">
+            <div class="relative flex flex-col w-full h-full py-6 gap-6">
+                <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                    <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+                </div>
+                <CardHeader class="pb-2 relative z-10">
                 <CardTitle class="text-xs sm:text-sm font-bold">Weekly Goal</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent class="relative z-10">
                 <div class="space-y-3">
                     <div class="flex justify-between items-end">
                         <div class="text-xl sm:text-2xl font-bold tabular-nums">
@@ -183,12 +195,16 @@ const weeklyPercent = (xp: number, goal: number) => {
                     </p>
                 </div>
             </CardContent>
-        </Card>
+            </div>
+        </SpotlightCard>
 
         <!-- Upcoming Exams -->
-        <Card class="surface-card premium-hover border-sidebar-border/70 dark:border-sidebar-border overflow-hidden relative">
-            <div class="absolute -right-12 -top-12 w-28 h-28 bg-primary/5 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
-            <CardHeader class="pb-3 flex flex-row items-center justify-between">
+        <SpotlightCard customSize glowColor="orange" className="surface-card premium-hover relative p-0">
+            <div class="relative flex flex-col w-full h-full py-6 gap-6">
+                <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                    <div class="absolute -right-12 -top-12 w-28 h-28 bg-primary/5 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+                </div>
+                <CardHeader class="pb-3 flex flex-row items-center justify-between relative z-10">
                 <CardTitle class="text-sm font-bold flex items-center gap-2">
                     <BookOpen class="h-4 w-4 text-primary" />
                     Upcoming Activities
@@ -197,7 +213,7 @@ const weeklyPercent = (xp: number, goal: number) => {
                     All →
                 </Link>
             </CardHeader>
-            <CardContent>
+            <CardContent class="relative z-10">
                 <div v-if="upcomingExams && upcomingExams.length > 0" class="space-y-2">
                     <Link
                         v-for="exam in upcomingExams.slice(0, 2)"
@@ -237,6 +253,7 @@ const weeklyPercent = (xp: number, goal: number) => {
                     message="No scheduled activities right now. New exams will appear here the moment they're published."
                 />
             </CardContent>
-        </Card>
+            </div>
+        </SpotlightCard>
     </div>
 </template>

@@ -91,7 +91,7 @@
     }
 
     .surface-card {
-        @apply rounded-[2rem] border border-border/40 bg-card/30 text-card-foreground backdrop-blur-xl relative overflow-hidden;
+        @apply rounded-[2rem] border border-border/40 bg-card/30 text-card-foreground backdrop-blur-xl relative;
         box-shadow:
             0 10px 30px -10px rgb(0 0 0 / 0.1),
             0 0 0 1px rgb(255 255 255 / 0.05) inset;

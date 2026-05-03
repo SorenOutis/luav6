@@ -2,6 +2,7 @@
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Zap, Clock, ArrowUpRight } from 'lucide-vue-next';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 export interface NextUpItem {
     kind: 'exam' | 'assignment';
@@ -93,18 +94,23 @@ const toneClasses = computed(() => {
 </script>
 
 <template>
-    <section
+    <SpotlightCard
         v-if="item"
-        :class="[
-            'surface-card premium-hover relative overflow-hidden p-5',
-            toneClasses.ring,
-        ]"
+        as="section"
+        customSize
+        :glowColor="countdown?.tone === 'overdue' ? 'red' : countdown?.tone === 'now' ? 'orange' : 'blue'"
+        :className="[
+            'surface-card premium-hover relative p-0',
+        ].join(' ')"
         aria-label="Next up"
     >
-        <div
-            :class="['absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl pointer-events-none bg-gradient-to-br to-transparent', toneClasses.glow]"
-            aria-hidden="true"
-        />
+        <div class="relative flex flex-col w-full h-full p-5">
+            <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                <div
+                    :class="['absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl pointer-events-none bg-gradient-to-br to-transparent', toneClasses.glow]"
+                    aria-hidden="true"
+                />
+            </div>
 
         <div class="relative z-10 flex items-start justify-between gap-3">
             <div class="min-w-0">
@@ -134,5 +140,6 @@ const toneClasses = computed(() => {
                 <ArrowUpRight class="h-3 w-3" />
             </Link>
         </div>
-    </section>
+        </div>
+    </SpotlightCard>
 </template>

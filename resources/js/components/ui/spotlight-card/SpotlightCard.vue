@@ -185,9 +185,9 @@ const inlineStyles = computed(() => {
   background-size: calc(100% + (2 * var(--border-size))) calc(100% + (2 * var(--border-size)));
   background-repeat: no-repeat;
   background-position: 50% 50%;
-  mask: linear-gradient(transparent, transparent), linear-gradient(white, white);
-  mask-clip: padding-box, border-box;
-  mask-composite: intersect;
+  -webkit-mask: linear-gradient(white, white) border-box, linear-gradient(white, white) padding-box;
+  -webkit-mask-composite: destination-out;
+  mask: linear-gradient(white, white) border-box exclude, linear-gradient(white, white) padding-box;
 }
 
 [data-glow]::before {
