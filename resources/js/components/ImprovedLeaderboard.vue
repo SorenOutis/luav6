@@ -7,6 +7,7 @@ import axios from 'axios';
 import {
     Dialog, DialogContent, DialogTitle,
 } from '@/components/ui/dialog';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface LeaderboardUser {
     id: number;
@@ -189,14 +190,25 @@ const openHistory = async (user: LeaderboardUser) => {
             <template v-else>
                 <!-- ═══════ PODIUM ═══════ -->
                 <div class="lb-podium">
-                    <div v-for="({ user, origIdx }) in podiumOrder" :key="user.id"
-                        :class="['lb-podium-card', origIdx === 0 && 'lb-podium-card--champ']"
-                        class="animate-fade-up"
-                        :style="{ animationDelay: `${origIdx * 120}ms` }">
+                    <SpotlightCard v-for="({ user, origIdx }) in podiumOrder" :key="user.id"
+                        customSize
+                        :glowColor="origIdx === 0 ? 'orange' : origIdx === 1 ? 'blue' : 'red'"
+                        :className="[
+                            'lb-podium-card animate-fade-up',
+                            origIdx === 0 && 'lb-podium-card--champ'
+                        ].filter(Boolean).join(' ')"
+                        :style="{ 
+                            animationDelay: `${origIdx * 120}ms`,
+                            backgroundColor: 'transparent',
+                            borderColor: 'transparent'
+                        }">
 
-                        <!-- Glow bg -->
-                        <div class="absolute inset-0 bg-gradient-to-b rounded-2xl opacity-60 pointer-events-none"
-                            :class="rankMeta[origIdx].bg"></div>
+                        <!-- Inner container for decorative background glow -->
+                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                            <!-- Glow bg -->
+                            <div class="absolute inset-0 bg-gradient-to-b rounded-2xl opacity-60 pointer-events-none"
+                                :class="rankMeta[origIdx].bg"></div>
+                        </div>
 
                         <div class="relative z-10 flex flex-col items-center text-center">
                             <!-- Rank badge -->
@@ -248,7 +260,7 @@ const openHistory = async (user: LeaderboardUser) => {
                                 <div class="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-1000" :style="{ width: `${user.xpProgress}%` }"></div>
                             </div>
                         </div>
-                    </div>
+                    </SpotlightCard>
                 </div>
 
                 <!-- ═══════ LIST RANKINGS ═══════ -->
@@ -415,7 +427,7 @@ const openHistory = async (user: LeaderboardUser) => {
     }
 }
 .lb-podium-card {
-    @apply relative rounded-2xl border border-border/30 bg-card/30 backdrop-blur-sm p-5 sm:p-6 overflow-hidden transition-all duration-500;
+    @apply relative rounded-2xl border border-border/30 bg-card/30 backdrop-blur-sm p-5 sm:p-6 transition-all duration-500;
 }
 .lb-podium-card:hover {
     @apply border-border/60 bg-card/50;
