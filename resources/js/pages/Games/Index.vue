@@ -62,13 +62,21 @@ onMounted(() => {
                 glowColor="blue" 
                 className="games-hero surface-card relative mb-2 p-0 w-full min-w-0"
             >
+                <!-- Inner clipping container -->
+                <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                    <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50" />
+                    <!-- Silhouette Background Icon -->
+                    <div class="absolute -right-8 -top-8 opacity-[0.03] scale-150 rotate-12 pointer-events-none">
+                        <Gamepad2 class="h-48 w-48" />
+                    </div>
+                </div>
+
                 <Motion
                     :initial="{ opacity: 0, y: 30 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }"
                     class="relative flex flex-col items-start gap-4 p-6 sm:p-8"
                 >
-                    <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50" />
                     <div class="relative flex items-center gap-3">
                         <div class="rounded-lg bg-primary/10 p-2 text-primary border border-primary/20">
                             <Gamepad2 class="h-6 w-6" />
@@ -78,9 +86,6 @@ onMounted(() => {
                     <p class="max-w-xl text-sm leading-relaxed text-muted-foreground/80 font-medium uppercase tracking-widest text-[10px] relative">
                         Challenge your cognitive boundaries. Earn credits and boost your rank through competitive learning modules.
                     </p>
-                    <div class="absolute -right-8 -top-8 opacity-[0.03] scale-150 rotate-12 pointer-events-none">
-                        <Gamepad2 class="h-48 w-48" />
-                    </div>
                 </Motion>
             </SpotlightCard>
 
@@ -95,6 +100,9 @@ onMounted(() => {
                         glowColor="blue"
                         className="game-card surface-card premium-hover group p-0 w-full min-w-0"
                     >
+                        <!-- Inner clipping container for image and hover effects -->
+                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none"></div>
+                        
                         <Motion
                             :initial="{ opacity: 0, y: 40 }"
                             :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
@@ -106,7 +114,7 @@ onMounted(() => {
                                 :href="game.href"
                                 class="flex flex-col h-full"
                             >
-                                <div class="relative h-48 overflow-hidden border-b border-border/40">
+                                <div class="relative h-48 overflow-hidden border-b border-border/40 rounded-t-[inherit]">
                                     <img :src="game.image" :alt="game.name" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                     <div class="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
                                     <div class="absolute bottom-4 left-4 flex items-center gap-2">
@@ -146,6 +154,7 @@ onMounted(() => {
                 <!-- Sidebar -->
                 <aside class="flex flex-col gap-6">
                     <SpotlightCard customSize glowColor="primary" className="sidebar-card surface-card p-0 w-full min-w-0">
+                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none"></div>
                         <Motion
                             :initial="{ opacity: 0, x: 20 }"
                             :animate="isBooted ? { opacity: 1, x: 0 } : {}"
@@ -170,6 +179,7 @@ onMounted(() => {
                     </SpotlightCard>
 
                     <SpotlightCard customSize glowColor="blue" className="sidebar-card surface-card p-0 w-full min-w-0">
+                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none"></div>
                         <Motion
                             :initial="{ opacity: 0, x: 20 }"
                             :animate="isBooted ? { opacity: 1, x: 0 } : {}"
@@ -193,6 +203,7 @@ onMounted(() => {
                     </SpotlightCard>
 
                     <SpotlightCard customSize glowColor="emerald" className="sidebar-card surface-card p-0 w-full min-w-0">
+                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none"></div>
                         <Motion
                             :initial="{ opacity: 0, x: 20 }"
                             :animate="isBooted ? { opacity: 1, x: 0 } : {}"

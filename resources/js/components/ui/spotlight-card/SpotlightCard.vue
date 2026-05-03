@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 
 interface Props {
   className?: string;
-  glowColor?: 'blue' | 'purple' | 'green' | 'red' | 'orange';
+  glowColor?: 'blue' | 'purple' | 'green' | 'red' | 'orange' | 'emerald';
   size?: 'sm' | 'md' | 'lg';
   width?: string | number;
   height?: string | number;
@@ -25,6 +25,7 @@ const glowColorMap = {
   blue: { base: 220, spread: 200 },
   purple: { base: 280, spread: 300 },
   green: { base: 120, spread: 200 },
+  emerald: { base: 160, spread: 200 },
   red: { base: 0, spread: 200 },
   orange: { base: 30, spread: 200 }
 };
