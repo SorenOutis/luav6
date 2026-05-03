@@ -226,4 +226,8 @@ const inlineStyles = computed(() => {
   inset: -10px;
   border-width: 10px;
 }
+
+.theme-transitioning [data-glow] > [data-glow] {
+  display: none !important;
+}
 </style>
