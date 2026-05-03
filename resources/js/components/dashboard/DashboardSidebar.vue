@@ -67,7 +67,7 @@ const weeklyPercent = (xp: number, goal: number) => {
         <NextUpCard v-if="nextUpItem" :item="nextUpItem" />
 
         <!-- Compact Quick Actions -->
-        <SpotlightCard customSize glowColor="blue" className="surface-card premium-hover relative p-0">
+        <SpotlightCard customSize glowColor="blue" className="surface-card premium-hover relative p-0 w-full min-w-0">
             <div class="relative flex flex-col w-full h-full py-6 gap-6">
                 <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
                     <div class="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
@@ -117,7 +117,7 @@ const weeklyPercent = (xp: number, goal: number) => {
         </SpotlightCard>
 
         <!-- Badges -->
-        <SpotlightCard customSize glowColor="purple" className="surface-card premium-hover relative p-0">
+        <SpotlightCard customSize glowColor="purple" className="surface-card premium-hover relative p-0 w-full min-w-0">
             <div class="relative flex flex-col w-full h-full py-6 gap-6">
                 <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
                     <div class="absolute -right-10 -top-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
@@ -164,7 +164,7 @@ const weeklyPercent = (xp: number, goal: number) => {
         <!-- Weekly Goal -->
         <SpotlightCard
             v-if="weeklyGoal"
-            customSize glowColor="green" className="surface-card premium-hover relative p-0"
+            customSize glowColor="green" className="surface-card premium-hover relative p-0 w-full min-w-0"
         >
             <div class="relative flex flex-col w-full h-full py-6 gap-6">
                 <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
@@ -199,7 +199,7 @@ const weeklyPercent = (xp: number, goal: number) => {
         </SpotlightCard>
 
         <!-- Upcoming Exams -->
-        <SpotlightCard customSize glowColor="orange" className="surface-card premium-hover relative p-0">
+        <SpotlightCard customSize glowColor="orange" className="surface-card premium-hover relative p-0 w-full min-w-0">
             <div class="relative flex flex-col w-full h-full py-6 gap-6">
                 <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
                     <div class="absolute -right-12 -top-12 w-28 h-28 bg-primary/5 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />

@@ -100,11 +100,11 @@ const toneClasses = computed(() => {
         customSize
         :glowColor="countdown?.tone === 'overdue' ? 'red' : countdown?.tone === 'now' ? 'orange' : 'blue'"
         :className="[
-            'surface-card premium-hover relative p-0',
+            'surface-card premium-hover relative p-0 w-full min-w-0',
         ].join(' ')"
         aria-label="Next up"
     >
-        <div class="relative flex flex-col w-full h-full p-5">
+        <div class="relative flex flex-col w-full min-w-0 h-full p-5">
             <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
                 <div
                     :class="['absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl pointer-events-none bg-gradient-to-br to-transparent', toneClasses.glow]"
@@ -112,10 +112,10 @@ const toneClasses = computed(() => {
                 />
             </div>
 
-        <div class="relative z-10 flex items-start justify-between gap-3">
-            <div class="min-w-0">
+        <div class="relative z-10 flex items-start justify-between gap-3 w-full min-w-0">
+            <div class="min-w-0 flex-1">
                 <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/70">Next Up</p>
-                <h3 class="mt-1 text-sm sm:text-base font-bold text-foreground truncate">{{ item.title }}</h3>
+                <h3 class="mt-1 text-sm sm:text-base font-black text-foreground truncate drop-shadow-sm">{{ item.title }}</h3>
                 <p v-if="item.meta" class="mt-0.5 text-[11px] text-muted-foreground truncate">{{ item.meta }}</p>
             </div>
             <span :class="['shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em]', toneClasses.chip]">
@@ -125,8 +125,8 @@ const toneClasses = computed(() => {
             </span>
         </div>
 
-        <div class="relative z-10 mt-4 flex items-end justify-between gap-3">
-            <div>
+        <div class="relative z-10 mt-4 flex items-end justify-between gap-3 w-full">
+            <div class="min-w-0">
                 <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/60">{{ toneClasses.badge }}</p>
                 <p class="mt-0.5 text-xl sm:text-2xl font-black tracking-tight tabular-nums" :class="countdown?.overdue ? 'text-destructive' : 'text-foreground'">
                     {{ countdown?.label ?? '—' }}
@@ -134,7 +134,7 @@ const toneClasses = computed(() => {
             </div>
             <Link
                 :href="item.href"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-primary transition-all hover:bg-primary hover:text-primary-foreground"
+                class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-primary transition-all hover:bg-primary hover:text-primary-foreground shadow-sm"
             >
                 Open
                 <ArrowUpRight class="h-3 w-3" />
