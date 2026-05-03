@@ -68,6 +68,7 @@ const isCoarsePointer = ref(false);
 const prefersReducedMotion = ref(false);
 const isLoggingOut = ref(false);
 const showBootOverlay = ref(true);
+const isBooted = ref(false);
 
 const { isTransitioningTheme } = useAppearance();
 
@@ -219,6 +220,7 @@ onMounted(() => {
             ease: 'power4.inOut',
             onComplete: () => {
                 showBootOverlay.value = false;
+                isBooted.value = true;
                 if (isLoggingOut.value) {
                     sessionStorage.removeItem('logged_out');
                     isLoggingOut.value = false;
@@ -238,6 +240,18 @@ onMounted(() => {
             stagger: 0.05,
             duration: 0.4 * motionFactor
         }, '-=0.8');
+
+        // Premium Scroll Parallax for Background Grid
+        gsap.to(backgroundGrid.value, {
+            y: -200,
+            ease: "none",
+            scrollTrigger: {
+                trigger: mainContainer.value,
+                start: "top top",
+                end: "bottom bottom",
+                scrub: true
+            }
+        });
 
         // Global Ambient Animations
         if (ambientOrbs.value.length > 0) {
@@ -307,6 +321,7 @@ const orbLayers = [
             :dashboard="dashboard"
             :login="login"
             :register="register"
+            :is-booted="isBooted"
             @magnetic="handleMagnetic"
             @reset-magnetic="resetMagnetic"
         />
@@ -318,6 +333,7 @@ const orbLayers = [
                 :dashboard="dashboard"
                 :login="login"
                 :register="register"
+                :is-booted="isBooted"
                 @magnetic="handleMagnetic"
                 @reset-magnetic="resetMagnetic"
             >
@@ -332,7 +348,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, y: 30 }"
-                :in-view="{ opacity: 1, y: 0 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
                 :in-view-options="{ once: true, margin: '-100px' }"
                 :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1] }"
             >
@@ -341,7 +358,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, y: 30 }"
-                :in-view="{ opacity: 1, y: 0 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
                 :in-view-options="{ once: true, margin: '-100px' }"
                 :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
                 class="mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.4fr_1fr]"
@@ -352,7 +370,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0 }"
-                :in-view="{ opacity: 1 }"
+                :animate="isBooted ? { opacity: 1 } : {}"
+                :in-view="isBooted ? { opacity: 1 } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 1.5 }"
             >
@@ -366,7 +385,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, scale: 0.95 }"
-                :in-view="{ opacity: 1, scale: 1 }"
+                :animate="isBooted ? { opacity: 1, scale: 1 } : {}"
+                :in-view="isBooted ? { opacity: 1, scale: 1 } : {}"
                 :in-view-options="{ once: true, margin: '-50px' }"
                 :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
             >
@@ -375,7 +395,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, y: 50 }"
-                :in-view="{ opacity: 1, y: 0 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 1, ease: 'ease-out' }"
             >
@@ -392,7 +413,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, y: 40 }"
-                :in-view="{ opacity: 1, y: 0 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 0.8, ease: 'ease-out' }"
             >
@@ -401,7 +423,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, x: -20 }"
-                :in-view="{ opacity: 1, x: 0 }"
+                :animate="isBooted ? { opacity: 1, x: 0 } : {}"
+                :in-view="isBooted ? { opacity: 1, x: 0 } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 0.8, delay: 0.1 }"
             >
@@ -414,7 +437,8 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0 }"
-                :in-view="{ opacity: 1 }"
+                :animate="isBooted ? { opacity: 1 } : {}"
+                :in-view="isBooted ? { opacity: 1 } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 2 }"
             >

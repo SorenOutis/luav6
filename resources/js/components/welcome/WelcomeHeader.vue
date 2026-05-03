@@ -10,6 +10,7 @@ defineProps<{
     dashboard: () => string;
     login: () => string;
     register: () => string;
+    isBooted?: boolean;
 }>();
 
 const emit = defineEmits(['magnetic', 'resetMagnetic']);
@@ -27,7 +28,7 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
         
         <Motion 
             :initial="{ x: -20, opacity: 0 }"
-            :animate="{ x: 0, opacity: 1 }"
+            :animate="isBooted ? { x: 0, opacity: 1 } : {}"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
             class="nav-item flex items-center gap-3 lg:gap-4 group cursor-pointer"
         >
@@ -43,7 +44,7 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
 
         <Motion 
             :initial="{ y: -10, opacity: 0 }"
-            :animate="{ y: 0, opacity: 1 }"
+            :animate="isBooted ? { y: 0, opacity: 1 } : {}"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
             as="nav" 
             class="flex items-center gap-4 lg:gap-8"
