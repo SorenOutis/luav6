@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
+import { Motion } from '@motionone/vue';
 
 // Sub-components
 import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
@@ -196,7 +197,6 @@ onMounted(() => {
 
         // Initial State
         gsap.set(bootOverlay.value, { autoAlpha: 1 });
-        gsap.set('.reveal-content', { y: '100%', opacity: 0 });
         gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
         gsap.set('.online-pill', { autoAlpha: 0, y: 16, scale: 0.86 });
 
@@ -237,13 +237,7 @@ onMounted(() => {
             opacity: 0,
             stagger: 0.05,
             duration: 0.4 * motionFactor
-        }, '-=0.8')
-        .to('.hero-reveal .reveal-content', {
-            y: '0%',
-            opacity: 1,
-            stagger: 0.2,
-            duration: 1.5 * motionFactor
-        }, '-=1.2');
+        }, '-=0.8');
 
         // Global Ambient Animations
         if (ambientOrbs.value.length > 0) {
@@ -336,23 +330,57 @@ const orbLayers = [
                 </template>
             </WelcomeHero>
 
-            <SystemTerminal />
+            <Motion
+                :initial="{ opacity: 0, y: 30 }"
+                :in-view="{ opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-100px' }"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1] }"
+            >
+                <SystemTerminal />
+            </Motion>
 
-            <div class="reveal-section mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+            <Motion
+                :initial="{ opacity: 0, y: 30 }"
+                :in-view="{ opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-100px' }"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
+                class="mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.4fr_1fr]"
+            >
                 <LivePulse />
                 <EnvironmentPanel />
-            </div>
+            </Motion>
 
-            <SystemMetrics 
-                :total-users="totalUsers"
-                :total-exams="totalExams"
-                :total-assignments="totalAssignments"
-                :total-submissions="totalSubmissions"
-            />
+            <Motion
+                :initial="{ opacity: 0 }"
+                :in-view="{ opacity: 1 }"
+                :in-view-options="{ once: true }"
+                :transition="{ duration: 1.5 }"
+            >
+                <SystemMetrics 
+                    :total-users="totalUsers"
+                    :total-exams="totalExams"
+                    :total-assignments="totalAssignments"
+                    :total-submissions="totalSubmissions"
+                />
+            </Motion>
 
-            <ArchitectureStack />
+            <Motion
+                :initial="{ opacity: 0, scale: 0.95 }"
+                :in-view="{ opacity: 1, scale: 1 }"
+                :in-view-options="{ once: true, margin: '-50px' }"
+                :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
+            >
+                <ArchitectureStack />
+            </Motion>
 
-            <DimensionalCore />
+            <Motion
+                :initial="{ opacity: 0, y: 50 }"
+                :in-view="{ opacity: 1, y: 0 }"
+                :in-view-options="{ once: true }"
+                :transition="{ duration: 1, ease: 'ease-out' }"
+            >
+                <DimensionalCore />
+            </Motion>
 
             <FeatureCards 
                 :is-coarse-pointer="isCoarsePointer"
@@ -362,15 +390,36 @@ const orbLayers = [
                 :login="login"
             />
 
-            <SeasonCountdown :active-season="activeSeason" />
+            <Motion
+                :initial="{ opacity: 0, y: 40 }"
+                :in-view="{ opacity: 1, y: 0 }"
+                :in-view-options="{ once: true }"
+                :transition="{ duration: 0.8, ease: 'ease-out' }"
+            >
+                <SeasonCountdown :active-season="activeSeason" />
+            </Motion>
 
-            <DemoQuiz 
-                :auth="$page.props.auth"
-                :register="register"
-                :dashboard="dashboard"
-            />
+            <Motion
+                :initial="{ opacity: 0, x: -20 }"
+                :in-view="{ opacity: 1, x: 0 }"
+                :in-view-options="{ once: true }"
+                :transition="{ duration: 0.8, delay: 0.1 }"
+            >
+                <DemoQuiz 
+                    :auth="$page.props.auth"
+                    :register="register"
+                    :dashboard="dashboard"
+                />
+            </Motion>
 
-            <TechStackCarousel :is-coarse-pointer="isCoarsePointer" />
+            <Motion
+                :initial="{ opacity: 0 }"
+                :in-view="{ opacity: 1 }"
+                :in-view-options="{ once: true }"
+                :transition="{ duration: 2 }"
+            >
+                <TechStackCarousel :is-coarse-pointer="isCoarsePointer" />
+            </Motion>
         </main>
 
         <WelcomeFooter />

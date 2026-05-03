@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { ChevronDown, Sparkles, ArrowRight } from 'lucide-vue-next';
+import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -93,22 +94,6 @@ const resetFeatureMouse = (e: MouseEvent) => {
 
 onMounted(() => {
     nextTick(() => {
-        // Entrance animation for the cards
-        gsap.utils.toArray('.feature-card').forEach((card: any, i: number) => {
-            gsap.from(card, {
-                scrollTrigger: {
-                    trigger: card,
-                    start: 'top 95%',
-                },
-                y: 60,
-                opacity: 0,
-                duration: 1.2,
-                delay: i * 0.1,
-                ease: 'power4.out',
-                clearProps: 'all'
-            });
-        });
-
         // Continuous bar wave animation
         gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
             gsap.fromTo(bar, {
@@ -147,9 +132,17 @@ onMounted(() => {
 
 <template>
     <div class="mt-12 lg:mt-24 grid w-full lg:grid-cols-3 gap-0 border-b border-border/20 dark:border-border/10">
-        <div 
+        <Motion 
             v-for="(feature, index) in coreFeatures" 
             :key="index"
+            :initial="{ opacity: 0, y: 50 }"
+            :in-view="{ opacity: 1, y: 0 }"
+            :in-view-options="{ once: true, margin: '-100px' }"
+            :transition="{ 
+                duration: 0.8, 
+                delay: index * 0.15,
+                ease: [0.16, 1, 0.3, 1] 
+            }"
             @mousemove="handleFeatureMouseMove"
             @mouseleave="resetFeatureMouse"
             class="feature-card group relative flex flex-col p-8 sm:p-12 lg:p-16 border-border/20 dark:border-border/10 transition-all hover:bg-muted/30 dark:hover:bg-foreground/[0.02] overflow-hidden cursor-pointer"
@@ -200,15 +193,16 @@ onMounted(() => {
                 </button>
             </div>
 
-            <Transition
-                enter-active-class="transition-all duration-700 ease-[0.2,0.8,0.2,1]"
-                enter-from-class="max-h-0 opacity-0 translate-y-4"
-                enter-to-class="max-h-[500px] opacity-100 translate-y-0"
-                leave-active-class="transition-all duration-300 ease-in"
-                leave-from-class="max-h-[500px] opacity-100 translate-y-0"
-                leave-to-class="max-h-0 opacity-0 -translate-y-4"
+            <Motion 
+                :animate="{ 
+                    height: expandedFeature === index ? 'auto' : 0,
+                    opacity: expandedFeature === index ? 1 : 0
+                }"
+                :initial="{ height: 0, opacity: 0 }"
+                :transition="{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }"
+                class="overflow-hidden"
             >
-                <div v-if="expandedFeature === index" class="relative overflow-hidden mt-8 lg:mt-12 pt-8 z-10">
+                <div class="relative overflow-hidden mt-8 lg:mt-12 pt-8 z-10">
                     <div class="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
                     
                     <p class="text-sm leading-relaxed text-muted-foreground mb-8 max-w-md bg-muted/30 dark:bg-foreground/[0.03] p-5 rounded-lg border border-border/20 dark:border-border/10">
@@ -233,7 +227,7 @@ onMounted(() => {
                         <ArrowRight class="h-3.5 w-3.5" />
                     </Link>
                 </div>
-            </Transition>
-        </div>
+            </Motion>
+        </Motion>
     </div>
 </template>

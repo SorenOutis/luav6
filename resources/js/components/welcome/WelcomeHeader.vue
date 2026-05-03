@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { Command, Sun, Moon } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
+import { Motion } from '@motionone/vue';
 
 defineProps<{
     canRegister: boolean;
@@ -23,7 +24,13 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
     <header class="relative z-20 flex w-full items-center justify-between px-6 py-5 lg:px-16 lg:py-6 border-b border-border/10 dark:border-border/5 backdrop-blur-2xl bg-background/60 dark:bg-background/30 transition-colors duration-500">
         <!-- Header glow line -->
         <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-        <div class="nav-item flex items-center gap-3 lg:gap-4 group cursor-pointer">
+        
+        <Motion 
+            :initial="{ x: -20, opacity: 0 }"
+            :animate="{ x: 0, opacity: 1 }"
+            :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
+            class="nav-item flex items-center gap-3 lg:gap-4 group cursor-pointer"
+        >
             <div class="relative flex h-10 w-10 items-center justify-center text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
                 <div class="absolute inset-0 rounded-xl bg-primary/5 dark:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 <Command class="h-6 w-6 lg:h-7 lg:w-7 relative z-10" />
@@ -32,9 +39,15 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
                 <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LSI Engine</span>
                 <span class="text-[7px] lg:text-[8px] font-bold text-primary/60 uppercase mt-1 tracking-widest">v6.4.0</span>
             </div>
-        </div>
+        </Motion>
 
-        <nav class="flex items-center gap-4 lg:gap-8">
+        <Motion 
+            :initial="{ y: -10, opacity: 0 }"
+            :animate="{ y: 0, opacity: 1 }"
+            :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
+            as="nav" 
+            class="flex items-center gap-4 lg:gap-8"
+        >
             <!-- Theme Toggle Button - always visible -->
             <button 
                 @click="toggleTheme" 
@@ -73,6 +86,6 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
                     <div class="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 </Link>
             </template>
-        </nav>
+        </Motion>
     </header>
 </template>

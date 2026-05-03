@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { ArrowRight, LayoutDashboard } from 'lucide-vue-next';
+import { Motion } from '@motionone/vue';
 
 const props = defineProps<{
     canRegister: boolean;
@@ -68,14 +69,20 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
     <div class="max-w-6xl relative">
         <slot name="background"></slot>
 
-        <div class="hero-reveal overflow-hidden mb-2 lg:mb-4 relative z-10">
-            <h1 class="reveal-content text-5xl sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] sm:leading-[0.8] uppercase flex flex-col">
+        <div class="overflow-hidden mb-2 lg:mb-4 relative z-10">
+            <Motion 
+                :initial="{ y: '100%', opacity: 0 }"
+                :animate="{ y: 0, opacity: 1 }"
+                :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
+                as="h1" 
+                class="text-5xl sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] sm:leading-[0.8] uppercase flex flex-col"
+            >
                 <span>Learning</span>
                 <span class="bg-gradient-to-r from-muted-foreground/30 via-muted-foreground/15 to-muted-foreground/5 bg-clip-text text-transparent italic">Intelligence</span>
-            </h1>
+            </Motion>
         </div>
         
-        <div class="hero-reveal mb-10 lg:mb-16 lg:pl-2 relative">
+        <div class="mb-10 lg:mb-16 lg:pl-2 relative">
             <p class="max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium leading-relaxed tracking-tight opacity-0 pointer-events-none select-none invisible whitespace-pre-wrap">
                 An AI-powered learning system that evaluates work, explains results, tracks mastery, and guides improvement through 
                 <span class="font-black uppercase tracking-widest inline-flex items-center">
@@ -83,48 +90,61 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
                 </span> 
             </p>
             
-            <p class="reveal-content absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight">
+            <Motion 
+                :initial="{ opacity: 0, y: 20 }"
+                :animate="{ opacity: 1, y: 0 }"
+                :transition="{ duration: 1.5, ease: 'ease-out', delay: 0.8 }"
+                class="absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight"
+            >
                 An AI-powered learning system that evaluates work, explains results, tracks mastery, and guides improvement through 
                 <span class="text-foreground font-black uppercase tracking-widest inline-flex items-center">
                     {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite] shadow-[0_0_8px_var(--color-primary)]"></span>
                 </span> 
-            </p>
+            </Motion>
         </div>
 
-        <div class="hero-reveal overflow-hidden p-2 -m-2">
-            <div class="reveal-content flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8">
+        <div class="overflow-hidden p-2 -m-2">
+            <Motion 
+                :initial="{ y: 40, opacity: 0 }"
+                :animate="{ y: 0, opacity: 1 }"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 1.2 }"
+                class="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8"
+            >
                 <Link v-if="auth.user" :href="dashboard()" 
                     @mousemove="handleMagnetic" 
                     @mouseleave="resetMagnetic"
                     class="group relative flex items-center justify-center bg-primary px-12 py-5 lg:py-6 text-primary-foreground transition-all active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 -skew-x-[12deg] hover:bg-primary/90"
                 >
-                    <div class="skew-x-[12deg] flex items-center gap-4">
-                        <span class="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.4em] relative z-10">Open Learning Hub</span>
-                        <ArrowRight class="h-4 w-4 lg:h-5 lg:w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-                    </div>
+                    <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                        System Dashboard
+                        <LayoutDashboard class="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
+                    </span>
+                    <div class="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
                 </Link>
-                <Link v-else :href="login()" 
-                    @mousemove="handleMagnetic" 
-                    @mouseleave="resetMagnetic"
-                    class="group relative flex items-center justify-center bg-foreground text-background px-12 py-5 lg:py-6 transition-all active:scale-[0.98] shadow-2xl -skew-x-[12deg] hover:bg-primary hover:text-primary-foreground"
-                >
-                    <div class="skew-x-[12deg] flex items-center gap-4">
-                        <span class="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.4em] relative z-10">Login to Platform</span>
-                        <ArrowRight class="h-4 w-4 lg:h-5 lg:w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                </Link>
-                
-                <Link v-if="!auth.user && canRegister" :href="register()" 
-                    @mousemove="handleMagnetic" 
-                    @mouseleave="resetMagnetic"
-                    class="group relative flex items-center justify-center border-2 border-border/40 dark:border-border/20 px-12 py-5 lg:py-6 transition-all hover:bg-muted/30 hover:border-primary/30 active:scale-[0.98] text-muted-foreground -skew-x-[12deg]"
-                >
-                    <div class="skew-x-[12deg] flex items-center gap-4">
-                        <span class="text-[10px] lg:text-[11px] font-black uppercase tracking-[0.4em]">Create Account</span>
-                        <LayoutDashboard class="h-4 w-4 lg:h-5 lg:w-5 opacity-40 group-hover:opacity-100 group-hover:text-primary transition-all" />
-                    </div>
-                </Link>
-            </div>
+
+                <template v-else>
+                    <Link :href="login()" 
+                        @mousemove="handleMagnetic" 
+                        @mouseleave="resetMagnetic"
+                        class="group relative flex items-center justify-center bg-foreground px-12 py-5 lg:py-6 text-background transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-foreground/90"
+                    >
+                        <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                            Access Engine
+                            <ArrowRight class="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
+                        </span>
+                    </Link>
+
+                    <Link v-if="canRegister" :href="register()" 
+                        @mousemove="handleMagnetic" 
+                        @mouseleave="resetMagnetic"
+                        class="group relative flex items-center justify-center border border-border bg-background/50 backdrop-blur-sm px-12 py-5 lg:py-6 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-muted/50"
+                    >
+                        <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                            Initialize Node
+                        </span>
+                    </Link>
+                </template>
+            </Motion>
         </div>
     </div>
 </template>
