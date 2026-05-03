@@ -10,6 +10,7 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import type { NextUpItem } from './NextUpCard.vue';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface Props {
     dueTodayCount: number;
@@ -226,22 +227,31 @@ const accentClasses = (accent: string, active: boolean) => {
             <!-- Middle: Metric tiles -->
             <div class="grid grid-cols-3 gap-3 sm:gap-3 lg:flex-1">
                 <template v-for="m in metrics" :key="m.key">
-                    <div
-                        :class="[
-                            'relative overflow-hidden rounded-2xl border transition-all duration-300',
+                    <SpotlightCard
+                        customSize
+                        :glowColor="m.accent === 'destructive' ? 'red' : m.accent === 'amber' ? 'orange' : 'blue'"
+                        :className="[
+                            'transition-all duration-300',
                             'flex flex-col items-start gap-2.5 p-3',
                             'sm:flex-row sm:items-center sm:gap-3 sm:p-3 sm:px-4',
                             accentClasses(m.accent, m.active).wrap,
-                        ]"
+                        ].join(' ')"
+                        :style="{
+                            backgroundColor: 'transparent',
+                            borderColor: 'transparent'
+                        }"
                     >
-                        <div
-                            v-if="m.active"
-                            :class="[
-                                'pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl',
-                                accentClasses(m.accent, m.active).glow,
-                            ]"
-                            aria-hidden="true"
-                        />
+                        <!-- Inner container for decorative background glow -->
+                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                            <div
+                                v-if="m.active"
+                                :class="[
+                                    'pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl',
+                                    accentClasses(m.accent, m.active).glow,
+                                ]"
+                                aria-hidden="true"
+                            />
+                        </div>
 
                         <!-- Top row on mobile: icon + label side-by-side -->
                         <div class="relative z-10 flex w-full items-center gap-2 sm:w-auto sm:gap-0">
@@ -288,28 +298,37 @@ const accentClasses = (accent: string, active: boolean) => {
                                 </span>
                             </div>
                         </div>
-                    </div>
+                    </SpotlightCard>
                 </template>
             </div>
 
             <!-- Right: Next item with live countdown -->
-            <Link
+            <SpotlightCard
                 v-if="nextItem"
+                as="Link"
                 :href="nextItem.href"
-                :class="[
-                    'group relative flex items-center gap-4 overflow-hidden rounded-2xl border px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg lg:w-[32%] lg:min-w-[280px]',
+                customSize
+                :glowColor="countdown?.tone === 'overdue' ? 'red' : countdown?.tone === 'now' ? 'orange' : 'blue'"
+                :className="[
+                    'group flex items-center gap-4 px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg lg:w-[32%] lg:min-w-[280px]',
                     nextToneClasses.border,
                     'ring-1',
                     nextToneClasses.ring,
-                ]"
+                ].join(' ')"
+                :style="{
+                    backgroundColor: 'transparent',
+                    borderColor: 'transparent'
+                }"
             >
-                <div
-                    :class="[
-                        'pointer-events-none absolute -right-8 -bottom-8 h-24 w-24 rounded-full blur-2xl opacity-60',
-                        nextToneClasses.glow,
-                    ]"
-                    aria-hidden="true"
-                />
+                <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                    <div
+                        :class="[
+                            'pointer-events-none absolute -right-8 -bottom-8 h-24 w-24 rounded-full blur-2xl opacity-60',
+                            nextToneClasses.glow,
+                        ]"
+                        aria-hidden="true"
+                    />
+                </div>
 
                 <div
                     :class="[
@@ -347,7 +366,7 @@ const accentClasses = (accent: string, active: boolean) => {
                 <ArrowUpRight
                     class="relative z-10 h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
                 />
-            </Link>
+            </SpotlightCard>
         </div>
     </section>
 </template>
