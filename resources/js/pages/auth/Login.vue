@@ -5,6 +5,7 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
@@ -41,8 +42,7 @@ defineProps<{
         >
             <div class="grid gap-6">
                 <div class="grid gap-2">
-                    <Label for="email">Email address</Label>
-                    <Input
+                    <AnimatedInput
                         id="email"
                         type="email"
                         name="email"
@@ -50,14 +50,13 @@ defineProps<{
                         autofocus
                         :tabindex="1"
                         autocomplete="email"
-                        placeholder="email@example.com"
+                        label="Email address"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="grid gap-2">
-                    <div class="flex items-center justify-between">
-                        <Label for="password">Password</Label>
+                    <div class="flex items-center justify-end">
                         <TextLink
                             v-if="canResetPassword"
                             :href="request()"
@@ -67,14 +66,14 @@ defineProps<{
                             Forgot password?
                         </TextLink>
                     </div>
-                    <Input
+                    <AnimatedInput
                         id="password"
                         type="password"
                         name="password"
                         required
                         :tabindex="2"
                         autocomplete="current-password"
-                        placeholder="Password"
+                        label="Password"
                     />
                     <InputError :message="errors.password" />
                 </div>
