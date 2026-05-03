@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
-import { onMounted, onUnmounted, ref, computed, reactive, nextTick } from 'vue';
+import { onMounted, onUnmounted, ref, computed, reactive, nextTick, watch } from 'vue';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Motion } from '@motionone/vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
 import type { BreadcrumbItem } from '@/types';
@@ -11,7 +13,12 @@ import {
     PlayCircle, ArrowRight, Layers, ListChecks, Users2, Trophy, Lock, CheckSquare2,
     Flag, Zap, BarChart3, RotateCcw
 } from 'lucide-vue-next';
-import { watch } from 'vue';
+import { useLoader } from '@/composables/useLoader';
+
+const { isVisible: isLoaderVisible } = useLoader();
+const isBooted = ref(false);
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface Question {
     text: string;
@@ -279,55 +286,9 @@ const clearDraft = () => {
     localStorage.removeItem(getDraftKey());
 };
 
-// Re-trigger entrance animations when returning to list view
-const runEntranceAnimations = () => {
-    const tl = gsap.timeline({
-        defaults: { ease: 'expo.out', duration: 0.8 }
-    });
-
-    // 1. Hero entrance
-    tl.fromTo('.exam-hero', 
-        { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, duration: 0.6 }
-    );
-
-    // 2. Part cards entrance - Tactical slide-in with overshoot
-    tl.fromTo('.exam-part-card', 
-        { 
-            opacity: 0, 
-            x: -40, 
-            skewX: -5, 
-            scale: 0.98 
-        },
-        { 
-            opacity: 1, 
-            x: 0, 
-            skewX: 0,
-            scale: 1, 
-            stagger: 0.08, 
-            duration: 1,
-            ease: 'back.out(1.2)'
-        }, 
-        '-=0.5'
-    );
-
-    // 3. Bracket "Lock-In" reveal
-    tl.fromTo(
-        '.exam-hero .absolute.top-0, .exam-hero .absolute.bottom-0, .exam-part-card .absolute.top-0, .exam-part-card .absolute.bottom-0',
-        { scale: 0 },
-        {
-            scale: 1,
-            stagger: 0.02,
-            duration: 0.5,
-            ease: 'back.out(2)'
-        },
-        '-=0.8'
-    );
-};
-
 watch(selectedPart, (newVal) => {
     if (newVal === null) {
-        setTimeout(runEntranceAnimations, 50);
+        // We no longer need runEntranceAnimations here as we use Motion components
     }
 });
 
@@ -1077,8 +1038,6 @@ const closeSuccessModal = () => {
 };
 
 onMounted(() => {
-    runEntranceAnimations();
-    
     window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleVisibilityChange);
     window.addEventListener('contextmenu', preventCheatingActions);
@@ -1090,6 +1049,17 @@ onMounted(() => {
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
     document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    // Sync isBooted with global loader
+    if (!isLoaderVisible.value) {
+        isBooted.value = true;
+    }
+
+    watch(isLoaderVisible, (visible) => {
+        if (!visible) {
+            isBooted.value = true;
+        }
+    }, { immediate: true });
 
     monitorHeartbeatInterval.value = setInterval(() => {
         if (isExamInProgress.value) {
@@ -1238,7 +1208,12 @@ const onDragEnd = () => {
                 </transition>
 
                 <!-- ─── BREADCRUMB NAV ─────────────────────────────────── -->
-                <div class="animate-up flex items-center justify-between">
+                <Motion
+                    :initial="{ opacity: 0, y: -10 }"
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                    class="flex items-center justify-between"
+                >
                     <div class="flex items-center gap-3">
                         <Link v-if="!selectedPart" href="/exams"
                             class="inline-flex items-center gap-2.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all group px-4 py-2 rounded-xl bg-muted/30 border border-border/40 hover:border-primary/40 backdrop-blur-md">
@@ -1272,11 +1247,14 @@ const onDragEnd = () => {
                             <span class="font-black text-lg tracking-[0.15em] tabular-nums font-mono">{{ formattedTime }}</span>
                         </div>
                     </div>
-                </div>
+                </Motion>
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
-                <div
-                    class="animate-up exam-hero relative overflow-hidden p-6 md:p-8 border border-border bg-card dark:bg-zinc-900/40 shadow-2xl group/hero"
+                <Motion
+                    :initial="{ opacity: 0, y: 30 }"
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }"
+                    class="exam-hero relative overflow-hidden p-6 md:p-8 border border-border bg-card dark:bg-zinc-900/40 shadow-2xl group/hero"
                     @mousemove="handleMouseMove"
                 >
                     <!-- Futuristic Corner Brackets -->
@@ -1344,10 +1322,16 @@ const onDragEnd = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </Motion>
 
                 <!-- Global Progress Bar -->
-                <div v-if="!allPartsSubmitted && examStarted && !selectedPart" class="animate-up w-full mt-2 space-y-4">
+                <Motion
+                    v-if="!allPartsSubmitted && examStarted && !selectedPart"
+                    :initial="{ opacity: 0 }"
+                    :animate="isBooted ? { opacity: 1 } : {}"
+                    :transition="{ duration: 1, delay: 0.3 }"
+                    class="w-full mt-2 space-y-4"
+                >
                     <!-- Overall Evaluation Progress -->
                     <div class="space-y-2">
                         <div class="flex items-center justify-between px-1">
@@ -1358,14 +1342,18 @@ const onDragEnd = () => {
                             <div class="h-full bg-primary/40 transition-all duration-1000 ease-out" :style="{ width: `${overallProgress}%` }"></div>
                         </div>
                     </div>
-
-                </div>
+                </Motion>
 
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <!--  PARTS LIST STATE                                       -->
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <template v-if="!selectedPart">
-                    <div class="animate-up flex items-center justify-between">
+                    <Motion
+                        :initial="{ opacity: 0, y: 20 }"
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
+                        class="flex items-center justify-between"
+                    >
                         <h2 class="text-xl font-black flex items-center gap-3 uppercase italic tracking-tight">
                             <Layers class="w-6 h-6 text-primary" />
                             Exam Parts
@@ -1374,11 +1362,18 @@ const onDragEnd = () => {
                             class="text-xs font-black text-muted-foreground bg-muted/50 px-4 py-1.5 rounded-none border border-border/50 uppercase tracking-widest font-mono">
                             {{ exam.parts.length }} Sections
                         </span>
-                    </div>
+                    </Motion>
 
                     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                        <div v-for="(part, index) in exam.parts" :key="part.id" @click="selectPart(part, index)"
-                            class="exam-part-card animate-up relative flex flex-col justify-between p-6 transition-all duration-500 overflow-hidden group/part border border-border bg-card dark:bg-zinc-900/40"
+                        <Motion 
+                            v-for="(part, index) in exam.parts" 
+                            :key="part.id" 
+                            @click="selectPart(part, index)"
+                            :initial="{ opacity: 0, y: 30 }"
+                            :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                            :in-view-options="{ once: true, margin: '-50px' }"
+                            :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: index * 0.05 }"
+                            class="exam-part-card relative flex flex-col justify-between p-6 transition-all duration-500 overflow-hidden group/part border border-border bg-card dark:bg-zinc-900/40"
                             :class="[
                                 isPartSubmitted(part.id) 
                                     ? 'opacity-80' 
@@ -1456,17 +1451,21 @@ const onDragEnd = () => {
                                     <ArrowRight v-if="!isPartLocked(index)" class="w-3.5 h-3.5 skew-x-12" />
                                 </div>
                             </div>
-                        </div>
+                        </Motion>
                     </div>
 
                     <!-- Instructions footer -->
-                    <div
-                        class="animate-up mt-2 rounded-xl border border-border/20 bg-muted/10 p-3 flex items-start gap-3">
+                    <Motion
+                        :initial="{ opacity: 0, y: 10 }"
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="{ duration: 0.8, delay: 0.5 }"
+                        class="mt-2 rounded-xl border border-border/20 bg-muted/10 p-3 flex items-start gap-3"
+                    >
                         <ListChecks class="w-4 h-4 text-muted-foreground/60 flex-shrink-0 mt-0.5" />
                         <p class="text-[11px] text-muted-foreground/70 leading-relaxed">
                             Click <strong>START</strong> to begin. Sections unlock sequentially. Work is auto-saved locally.
                         </p>
-                    </div>
+                    </Motion>
                 </template>
 
                 <!-- ═══════════════════════════════════════════════════════ -->

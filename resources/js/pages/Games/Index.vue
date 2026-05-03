@@ -1,7 +1,18 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { onMounted, ref, watch } from 'vue';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Motion } from '@motionone/vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Gamepad2, Shield, ChevronRight, Sparkles, Clock, Trophy } from 'lucide-vue-next';
+import { useLoader } from '@/composables/useLoader';
+
+const { isVisible: isLoaderVisible } = useLoader();
+const isBooted = ref(false);
+const container = ref<HTMLElement | null>(null);
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface GameStat { label: string; value: string }
 interface GameCard {
@@ -25,114 +36,110 @@ const upcoming = [
     { name: 'Logic Grid', desc: 'Daily deduction puzzles.' },
     { name: 'Code Duel', desc: 'Head-to-head algorithm battles.' },
 ];
+
+onMounted(() => {
+    // Sync isBooted with global loader
+    if (!isLoaderVisible.value) {
+        isBooted.value = true;
+    }
+
+    watch(isLoaderVisible, (visible) => {
+        if (!visible) {
+            isBooted.value = true;
+        }
+    }, { immediate: true });
+});
 </script>
 
 <template>
     <Head title="Games" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-4 xl:p-6">
+        <div ref="container" class="flex flex-col gap-6 p-4 xl:p-6">
             <!-- Hero -->
-            <div class="surface-card relative mb-2 overflow-hidden">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent" />
-                <div class="relative flex flex-wrap items-center justify-between gap-6 p-6 sm:p-8">
-                    <div class="flex items-center gap-5">
-                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 shadow-inner">
-                            <Gamepad2 class="h-8 w-8 text-primary" />
+            <Motion
+                :initial="{ opacity: 0, y: 30 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }"
+                class="games-hero surface-card relative mb-2 overflow-hidden"
+            >
+                <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50" />
+                <div class="relative flex flex-col items-start gap-4 p-6 sm:p-8">
+                    <div class="flex items-center gap-3">
+                        <div class="rounded-lg bg-primary/10 p-2 text-primary border border-primary/20">
+                            <Gamepad2 class="h-6 w-6" />
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                                <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/80">Arcade Experience</p>
-                            </div>
-                            <h1 class="text-3xl font-black uppercase tracking-tight sm:text-4xl">Games Hub</h1>
-                            <p class="mt-1 text-sm text-muted-foreground/80">Pick a game, climb the leaderboard, earn stars.</p>
-                        </div>
+                        <h1 class="text-2xl font-black uppercase tracking-tighter">Arcade_Node</h1>
                     </div>
-                    <div class="flex items-center gap-8 text-xs">
-                        <div class="flex flex-col items-center gap-1">
-                            <div class="flex items-center gap-2 text-primary">
-                                <Sparkles class="h-4 w-4" />
-                                <span class="font-black tabular-nums">{{ games.length }}</span>
-                            </div>
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Available</span>
-                        </div>
-                        <div class="h-8 w-px bg-border/40" />
-                        <div class="flex flex-col items-center gap-1">
-                            <div class="flex items-center gap-2 text-muted-foreground">
-                                <Clock class="h-4 w-4" />
-                                <span class="font-black tabular-nums">{{ upcoming.length }}</span>
-                            </div>
-                            <span class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Coming Soon</span>
-                        </div>
-                    </div>
+                    <p class="max-w-xl text-sm leading-relaxed text-muted-foreground/80 font-medium uppercase tracking-widest text-[10px]">
+                        Challenge your cognitive boundaries. Earn credits and boost your rank through competitive learning modules.
+                    </p>
                 </div>
-            </div>
+                <div class="absolute -right-8 -top-8 opacity-[0.03] scale-150 rotate-12">
+                    <Gamepad2 class="h-48 w-48" />
+                </div>
+            </Motion>
 
-            <div class="grid grid-cols-1 gap-8 items-start xl:grid-cols-[1fr_320px]">
-                <!-- Games list -->
-                <div class="grid gap-6 items-start sm:grid-cols-2">
-                    <Link
-                        v-for="game in games"
+            <!-- Main Grid -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <!-- Games List -->
+                <div class="grid gap-6 items-start sm:grid-cols-2 lg:col-span-2">
+                    <Motion
+                        v-for="(game, gIdx) in games"
                         :key="game.slug"
-                        :href="game.href"
-                        class="surface-card premium-hover group flex flex-col h-fit"
+                        :initial="{ opacity: 0, y: 40 }"
+                        :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :in-view-options="{ once: true, margin: '-50px' }"
+                        :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: gIdx * 0.1 }"
+                        as="div"
                     >
-                        <div class="relative flex items-center justify-between border-b border-border/40 p-4">
-                            <div class="flex items-center gap-3">
-                                <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 shadow-sm">
-                                    <Shield class="h-5 w-5 text-primary" />
+                        <Link
+                            :href="game.href"
+                            class="game-card surface-card premium-hover group flex flex-col h-fit"
+                        >
+                            <div class="relative h-48 overflow-hidden border-b border-border/40">
+                                <img :src="game.image" :alt="game.name" class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                <div class="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+                                <div class="absolute bottom-4 left-4 flex items-center gap-2">
+                                    <div class="rounded-md bg-background/80 backdrop-blur-md px-2 py-1 text-[8px] font-black uppercase tracking-widest border border-white/10">
+                                        {{ game.category }}
+                                    </div>
                                 </div>
-                                <div>
-                                    <h2 class="text-base font-black uppercase tracking-tight">{{ game.name }}</h2>
-                                    <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-primary/70">{{ game.tagline }}</p>
-                                </div>
-                            </div>
-                            <span
-                                class="rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-widest shadow-sm border"
-                                :class="game.status === 'live'
-                                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
-                                    : 'border-border bg-muted text-muted-foreground'"
-                            >
-                                {{ game.status === 'live' ? 'Live' : 'Soon' }}
-                            </span>
-                        </div>
-
-                        <div class="relative flex flex-col p-4">
-                            <p class="text-[13px] leading-snug text-muted-foreground/90">{{ game.description }}</p>
-
-                            <div class="mt-3 flex flex-wrap gap-1">
-                                <span
-                                    v-for="tag in game.tags"
-                                    :key="tag"
-                                    class="rounded border border-border/40 bg-muted/30 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-muted-foreground"
-                                >
-                                    {{ tag }}
-                                </span>
-                            </div>
-
-                            <!-- Stats Row - Ultra Compact -->
-                            <div class="mt-4 flex items-center gap-5 overflow-x-auto pb-1 scrollbar-none">
-                                <div
-                                    v-for="s in game.stats"
-                                    :key="s.label"
-                                    class="flex shrink-0 flex-col gap-0"
-                                >
-                                    <p class="text-[7px] font-bold uppercase tracking-[0.1em] text-muted-foreground/60">{{ s.label }}</p>
-                                    <p class="text-xs font-black tabular-nums">{{ s.value }}</p>
+                                <div v-if="game.isBeta" class="absolute right-4 top-4 rounded-md bg-amber-500/20 backdrop-blur-md px-2 py-1 text-[8px] font-black uppercase tracking-widest text-amber-500 border border-amber-500/20">
+                                    Experimental
                                 </div>
                             </div>
 
-                            <div class="mt-5 flex items-center justify-between rounded-lg bg-primary px-3 py-2 text-[10px] font-black uppercase tracking-[0.15em] text-primary-foreground shadow-md transition group-hover:bg-primary/90">
-                                <span>Play Game</span>
-                                <ChevronRight class="h-3.5 w-3.5" />
+                            <div class="flex flex-col gap-4 p-5">
+                                <div class="flex items-center justify-between">
+                                    <h3 class="text-sm font-black uppercase tracking-tight group-hover:text-primary transition-colors">{{ game.name }}</h3>
+                                    <Sparkles class="h-4 w-4 text-primary opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-110" />
+                                </div>
+                                <p class="text-xs leading-relaxed text-muted-foreground/70 line-clamp-2">{{ game.description }}</p>
+                                
+                                <div class="flex items-center justify-between pt-4 border-t border-border/40">
+                                    <div class="flex gap-4">
+                                        <div v-for="stat in game.stats" :key="stat.label" class="flex flex-col gap-0.5">
+                                            <span class="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/50">{{ stat.label }}</span>
+                                            <span class="text-[9px] font-black uppercase">{{ stat.value }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+                                        <ChevronRight class="h-4 w-4" />
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                    </Motion>
                 </div>
 
                 <!-- Sidebar -->
                 <aside class="flex flex-col gap-6">
-                    <div class="surface-card">
+                    <Motion
+                        :initial="{ opacity: 0, x: 20 }"
+                        :animate="isBooted ? { opacity: 1, x: 0 } : {}"
+                        :transition="{ duration: 0.8, delay: 0.3 }"
+                        class="sidebar-card surface-card"
+                    >
                         <div class="flex items-center gap-2 border-b border-border/40 px-5 py-3">
                             <Trophy class="h-4 w-4 text-primary" />
                             <h2 class="text-[10px] font-black uppercase tracking-[0.25em]">Featured Game</h2>
@@ -147,9 +154,14 @@ const upcoming = [
                                 Jump In <ChevronRight class="h-3 w-3" />
                             </Link>
                         </div>
-                    </div>
+                    </Motion>
 
-                    <div class="surface-card">
+                    <Motion
+                        :initial="{ opacity: 0, x: 20 }"
+                        :animate="isBooted ? { opacity: 1, x: 0 } : {}"
+                        :transition="{ duration: 0.8, delay: 0.4 }"
+                        class="sidebar-card surface-card"
+                    >
                         <div class="flex items-center gap-2 border-b border-border/40 px-5 py-3">
                             <Clock class="h-4 w-4 text-muted-foreground" />
                             <h2 class="text-[10px] font-black uppercase tracking-[0.25em]">Upcoming</h2>
@@ -163,19 +175,20 @@ const upcoming = [
                                 </div>
                             </li>
                         </ul>
-                    </div>
+                    </Motion>
 
-                    <div class="surface-card p-5">
-                        <div class="flex items-center gap-2">
-                            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-                                <Sparkles class="h-4 w-4 text-primary" />
-                            </div>
-                            <h2 class="text-[10px] font-black uppercase tracking-[0.25em]">Pro Tip</h2>
+                    <Motion
+                        :initial="{ opacity: 0, x: 20 }"
+                        :animate="isBooted ? { opacity: 1, x: 0 } : {}"
+                        :transition="{ duration: 0.8, delay: 0.5 }"
+                        class="sidebar-card surface-card p-5"
+                    >
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-[10px] font-black uppercase tracking-[0.2em]">Security Protocol</h2>
+                            <Shield class="h-4 w-4 text-primary" />
                         </div>
-                        <p class="mt-3 text-xs leading-relaxed text-muted-foreground/80">
-                            Earn stars by clearing levels at higher difficulty. Stars contribute to your seasonal rank.
-                        </p>
-                    </div>
+                        <p class="text-[10px] leading-relaxed text-muted-foreground/70 font-medium">All arcade progress is verified through the core assessment engine. Exploits will result in session termination.</p>
+                    </Motion>
                 </aside>
             </div>
         </div>

@@ -9,7 +9,7 @@ const props = withDefaults(defineProps<{
     title?: string;
     minDisplayMs?: number;
 }>(), {
-    title: 'KOAMISHIN.ORG',
+    title: 'KOAMISHIN.COM',
     minDisplayMs: 600,
 });
 

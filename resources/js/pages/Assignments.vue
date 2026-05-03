@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, watch } from 'vue';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Motion } from '@motionone/vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import { useLoader } from '@/composables/useLoader';
+
+const { isVisible: isLoaderVisible } = useLoader();
+const isBooted = ref(false);
+
+gsap.registerPlugin(ScrollTrigger);
 import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
@@ -195,54 +203,16 @@ const handleMouseMove = (e: MouseEvent) => {
 onMounted(() => {
     if (!container.value) return;
 
-    const tl = gsap.timeline({
-        defaults: { ease: 'power4.out', duration: 1.0 }
-    });
+    // Sync isBooted with global loader
+    if (!isLoaderVisible.value) {
+        isBooted.value = true;
+    }
 
-    // Hero/header entrance
-    gsap.set('.assignments-hero', { opacity: 0, y: 30, scale: 0.98 });
-    gsap.set('.stats-card', { opacity: 0, y: 30, scale: 0.96 });
-    gsap.set('.tabs-nav', { opacity: 0, y: 20 });
-    gsap.set('.assignment-card', {
-        opacity: 0,
-        y: 40,
-        scale: 0.97,
-        rotationX: -6,
-        transformOrigin: 'center top'
-    });
-
-    tl.to('.assignments-hero', { opacity: 1, y: 0, scale: 1 });
-
-    tl.to(
-        '.stats-card',
-        {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            stagger: 0.12,
-            clearProps: 'transform,opacity'
-        },
-        '-=0.5'
-    );
-
-    tl.to(
-        '.tabs-nav',
-        { opacity: 1, y: 0, clearProps: 'transform,opacity' },
-        '-=0.4'
-    );
-
-    tl.to(
-        '.assignment-card',
-        {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            rotationX: 0,
-            stagger: 0.08,
-            clearProps: 'transform,opacity'
-        },
-        '-=0.2'
-    );
+    watch(isLoaderVisible, (visible) => {
+        if (!visible) {
+            isBooted.value = true;
+        }
+    }, { immediate: true });
 
     const orbs = container.value.querySelectorAll('.orb');
     orbs.forEach((orb, i) => {
@@ -272,7 +242,12 @@ declare const route: any;
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-            <div class="assignments-hero header-content flex flex-col md:flex-row md:items-end justify-between gap-6 z-10 relative group/hero">
+            <Motion
+                :initial="{ opacity: 0, y: 30 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }"
+                class="assignments-hero header-content flex flex-col md:flex-row md:items-end justify-between gap-6 z-10 relative group/hero"
+            >
                 <div class="space-y-1">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-[2px] bg-primary/40 rounded-full group-hover/hero:w-12 transition-all duration-500"></div>
@@ -313,15 +288,20 @@ declare const route: any;
                         <span class="text-[9px] font-black uppercase tracking-widest">RANK:VANGUARD</span>
                     </div>
                 </div>
-            </div>
+            </Motion>
 
             <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 z-10">
-                <div v-for="(stat, sIdx) in [
-                    { label: 'ACTIVE_OBJECTIVES', value: assignments.filter(a => !a.submission?.submitted).length, sub: 'IMMEDIATE_PRIORITY', icon: Clock },
-                    { label: 'COMPLETED_MISSIONS', value: assignments.filter(a => a.submission?.submitted).length, sub: 'OBJECTIVES_ACHIEVED', icon: CheckCircle2 },
-                    { label: 'PERFORMANCE_RANK', value: 'A+', sub: 'TOP_1%_OF_BATTALION', icon: Sparkles }
-                ]" :key="sIdx"
+                <Motion 
+                    v-for="(stat, sIdx) in [
+                        { label: 'ACTIVE_OBJECTIVES', value: assignments.filter(a => !a.submission?.submitted).length, sub: 'IMMEDIATE_PRIORITY', icon: Clock },
+                        { label: 'COMPLETED_MISSIONS', value: assignments.filter(a => a.submission?.submitted).length, sub: 'OBJECTIVES_ACHIEVED', icon: CheckCircle2 },
+                        { label: 'PERFORMANCE_RANK', value: 'A+', sub: 'TOP_1%_OF_BATTALION', icon: Sparkles }
+                    ]" 
+                    :key="sIdx"
+                    :initial="{ opacity: 0, y: 20 }"
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 + sIdx * 0.1 }"
                     class="stats-card surface-card p-5 relative overflow-hidden group/stat premium-hover" 
                     @mousemove="handleMouseMove"
                 >
@@ -363,11 +343,16 @@ declare const route: any;
                             <span class="text-[8px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">{{ stat.sub }}</span>
                         </div>
                     </div>
-                </div>
+                </Motion>
             </div>
 
             <!-- Tabs Navigation -->
-            <div class="tabs-nav z-10 flex border-b border-border/10">
+            <Motion
+                :initial="{ opacity: 0, y: 10 }"
+                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :transition="{ duration: 0.8, delay: 0.5 }"
+                class="tabs-nav z-10 flex border-b border-border/10"
+            >
                 <button 
                     @click="activeTab = 'pending'"
                     :class="[
@@ -388,7 +373,7 @@ declare const route: any;
                     Completed
                     <div v-if="activeTab === 'completed'" class="absolute bottom-0 left-0 right-0 h-0.5 bg-primary animate-in slide-in-from-left duration-300"></div>
                 </button>
-            </div>
+            </Motion>
 
             <!-- Assignments Grid -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 z-10">
@@ -396,7 +381,13 @@ declare const route: any;
                     enter-active-class="animate-in fade-in slide-in-from-bottom-4 duration-500"
                     leave-active-class="animate-out fade-out slide-out-to-top-4 duration-300 absolute"
                 >
-                    <div v-for="(assignment, aIdx) in filteredAssignments" :key="assignment.id" 
+                    <Motion 
+                        v-for="(assignment, aIdx) in filteredAssignments" 
+                        :key="assignment.id"
+                        :initial="{ opacity: 0, y: 40 }"
+                        :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :in-view-options="{ once: true, margin: '-50px' }"
+                        :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: aIdx * 0.05 }"
                         class="assignment-card surface-card p-5 md:p-6 group/card premium-hover relative overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10"
                         @mousemove="handleMouseMove"
                     >
@@ -494,7 +485,7 @@ declare const route: any;
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Motion>
                 </TransitionGroup>
             </div>
 
