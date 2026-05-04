@@ -17,7 +17,7 @@ import { useLoader } from '@/composables/useLoader';
 import { useAccessibility } from '@/composables/useAccessibility';
 
 const { isVisible: isLoaderVisible } = useLoader();
-const { isDyslexiaFriendly, toggleDyslexiaMode } = useAccessibility();
+const { isDyslexiaFriendly, toggleDyslexiaMode, updateDyslexiaMode } = useAccessibility();
 const isBooted = ref(false);
 
 gsap.registerPlugin(ScrollTrigger);
@@ -1062,6 +1062,9 @@ onMounted(() => {
             isBooted.value = true;
         }
     }, { immediate: true });
+
+    // Default to Dyslexia-Friendly mode for exams as requested
+    updateDyslexiaMode(true);
 
     monitorHeartbeatInterval.value = setInterval(() => {
         if (isExamInProgress.value) {
