@@ -14,8 +14,10 @@ import {
     Flag, Zap, BarChart3, RotateCcw
 } from 'lucide-vue-next';
 import { useLoader } from '@/composables/useLoader';
+import { useAccessibility } from '@/composables/useAccessibility';
 
 const { isVisible: isLoaderVisible } = useLoader();
+const { isDyslexiaFriendly, toggleDyslexiaMode } = useAccessibility();
 const isBooted = ref(false);
 
 gsap.registerPlugin(ScrollTrigger);
@@ -1246,6 +1248,22 @@ const onDragEnd = () => {
                             <Clock class="w-4 h-4 group-hover/timer:rotate-12 transition-transform" />
                             <span class="font-black text-lg tracking-[0.15em] tabular-nums font-mono">{{ formattedTime }}</span>
                         </div>
+                        
+                        <!-- Accessibility Toggle -->
+                        <button
+                            @click="toggleDyslexiaMode"
+                            class="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 backdrop-blur-md"
+                            :class="isDyslexiaFriendly 
+                                ? 'bg-primary text-primary-foreground border-primary' 
+                                : 'bg-white/5 text-white/40 border-white/10 hover:border-white/30 hover:text-white/60'"
+                            title="Toggle Dyslexia-Friendly Font"
+                        >
+                            <span class="font-black text-[10px] uppercase tracking-widest">Font_Accessibility</span>
+                            <div class="relative">
+                                <span class="font-black text-xs">Aa</span>
+                                <div v-if="isDyslexiaFriendly" class="absolute -bottom-0.5 left-0 w-full h-0.5 bg-current"></div>
+                            </div>
+                        </button>
                     </div>
                 </Motion>
 
@@ -1293,7 +1311,7 @@ const onDragEnd = () => {
                         </div>
 
                         <!-- Stats Architecture -->
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 bg-muted/20 dark:bg-zinc-950/20 p-6 border border-border/50 relative">
+                        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6 bg-muted/20 dark:bg-zinc-950/20 p-6 border border-border/50 relative">
                              <!-- Stat Decoration -->
                              <div class="absolute -top-1 -left-1 w-2 h-2 bg-primary"></div>
                              <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-primary"></div>
@@ -1320,6 +1338,19 @@ const onDragEnd = () => {
                                 <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">TOTAL_TASKS</span>
                                 <div class="text-lg font-black font-mono tabular-nums text-foreground">{{ totalQuestions }}</div>
                             </div>
+
+                            <!-- Accessibility Toggle -->
+                            <button 
+                                @click="toggleDyslexiaMode"
+                                class="flex flex-col gap-1 text-left group/acc transition-all p-3 -m-3 rounded-xl border border-transparent hover:border-primary/30 hover:bg-primary/5 active:scale-95"
+                                :class="isDyslexiaFriendly ? 'border-primary/20 bg-primary/5' : ''"
+                            >
+                                <span class="text-[8px] font-black uppercase tracking-[0.3em] font-mono transition-colors" :class="isDyslexiaFriendly ? 'text-primary' : 'text-muted-foreground'">ACCESSIBILITY</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="text-lg font-black font-mono tabular-nums transition-colors" :class="isDyslexiaFriendly ? 'text-primary' : 'text-foreground'">Aa</div>
+                                    <div class="w-2 h-2 rounded-full transition-all" :class="isDyslexiaFriendly ? 'bg-primary scale-110 shadow-[0_0_8px_rgba(var(--primary),0.5)]' : 'bg-muted-foreground/30'"></div>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </Motion>

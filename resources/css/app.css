@@ -190,3 +190,40 @@
 .theme-transitioning .particle-canvas {
     display: none !important;
 }
+
+/* Dyslexia-Friendly UI Overrides */
+.dyslexia-friendly {
+    font-family: 'Inter', sans-serif !important;
+}
+
+.dyslexia-friendly * {
+    text-transform: none !important;
+    font-style: normal !important;
+    letter-spacing: normal !important;
+    font-weight: 400 !important;
+}
+
+.dyslexia-friendly h1, 
+.dyslexia-friendly h2, 
+.dyslexia-friendly h3, 
+.dyslexia-friendly .font-black {
+    font-weight: 700 !important;
+}
+
+.dyslexia-friendly .italic {
+    font-style: normal !important;
+}
+
+/* Specifically target the tactical italic-caps in exams */
+.dyslexia-friendly [class*="tracking-tight"],
+.dyslexia-friendly [class*="tracking-tighter"],
+.dyslexia-friendly [class*="tracking-widest"],
+.dyslexia-friendly [class*="tracking-["] {
+    letter-spacing: 0.05em !important; /* Slightly more space between letters helps dyslexia */
+}
+
+.dyslexia-friendly p, 
+.dyslexia-friendly span, 
+.dyslexia-friendly li {
+    line-height: 1.6 !important;
+}

@@ -12,6 +12,7 @@ import { router, usePage } from '@inertiajs/vue3';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Bell, Moon, Shield, Sun, TrendingUp, Zap } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
+import { useAccessibility } from '@/composables/useAccessibility';
 
 withDefaults(
     defineProps<{
@@ -23,6 +24,7 @@ withDefaults(
 );
 
 const { appearance, toggleTheme } = useAppearance();
+const { isDyslexiaFriendly, toggleDyslexiaMode } = useAccessibility();
 const page = usePage();
 
 interface HeaderNotification {
@@ -191,6 +193,18 @@ const markAllNotificationsAsRead = () => {
             >
                 <Sun v-if="appearance === 'dark'" class="h-4 w-4 sm:h-5 sm:w-5" />
                 <Moon v-else class="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+
+            <button
+                @click="toggleDyslexiaMode"
+                class="inline-flex items-center justify-center rounded-md p-1.5 sm:p-2 text-sm font-medium transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                :class="isDyslexiaFriendly ? 'text-primary' : 'text-muted-foreground'"
+                aria-label="Toggle Dyslexia-Friendly mode"
+            >
+                <div class="relative">
+                    <span class="font-black text-[10px] sm:text-xs">Aa</span>
+                    <div v-if="isDyslexiaFriendly" class="absolute -bottom-1 left-0 w-full h-0.5 bg-primary"></div>
+                </div>
             </button>
         </div>
     </header>
