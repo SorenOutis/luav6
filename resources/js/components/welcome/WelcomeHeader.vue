@@ -19,10 +19,19 @@ const { appearance, toggleTheme } = useAppearance();
 
 const handleMagnetic = (e: MouseEvent) => emit('magnetic', e);
 const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
+
+const scrollToSection = (e: MouseEvent, targetId: string) => {
+    e.preventDefault();
+    const el = document.getElementById(targetId);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.pushState(null, '', `#${targetId}`);
+    }
+};
 </script>
 
 <template>
-    <header class="relative z-20 flex w-full items-center justify-between px-6 py-5 lg:px-16 lg:py-6 border-b border-border/10 dark:border-border/5 backdrop-blur-2xl bg-background/60 dark:bg-background/30 transition-colors duration-500">
+    <header class="sticky top-0 z-50 flex w-full items-center justify-between px-6 py-5 lg:px-16 lg:py-6 border-b border-border/10 dark:border-border/5 backdrop-blur-2xl bg-background/60 dark:bg-background/30 transition-colors duration-500">
         <!-- Header glow line -->
         <div class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
         
@@ -40,6 +49,30 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
                 <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LSI Engine</span>
                 <span class="text-[7px] lg:text-[8px] font-bold text-primary/60 uppercase mt-1 tracking-widest">v6.4.0</span>
             </div>
+        </Motion>
+
+        <Motion 
+            :initial="{ y: -20, opacity: 0 }"
+            :animate="isBooted ? { y: 0, opacity: 1 } : {}"
+            :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }"
+            class="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-10"
+        >
+            <a href="#engine" @click="(e) => scrollToSection(e, 'engine')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
+                Home
+                <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+            <a href="#metrics" @click="(e) => scrollToSection(e, 'metrics')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
+                Metrics
+                <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+            <a href="#architecture" @click="(e) => scrollToSection(e, 'architecture')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
+                Architecture
+                <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
+            </a>
+            <a href="#features" @click="(e) => scrollToSection(e, 'features')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
+                Features
+                <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
+            </a>
         </Motion>
 
         <Motion 

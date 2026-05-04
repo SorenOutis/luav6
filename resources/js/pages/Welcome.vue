@@ -347,6 +347,8 @@ const orbLayers = [
             </WelcomeHero>
 
             <Motion
+                id="engine"
+                class="scroll-mt-32"
                 :initial="{ opacity: 0, y: 30 }"
                 :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                 :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
@@ -369,6 +371,8 @@ const orbLayers = [
             </Motion>
 
             <Motion
+                id="metrics"
+                class="scroll-mt-32"
                 :initial="{ opacity: 0 }"
                 :animate="isBooted ? { opacity: 1 } : {}"
                 :in-view="isBooted ? { opacity: 1 } : {}"
@@ -384,6 +388,8 @@ const orbLayers = [
             </Motion>
 
             <Motion
+                id="architecture"
+                class="scroll-mt-32"
                 :initial="{ opacity: 0, scale: 0.95 }"
                 :animate="isBooted ? { opacity: 1, scale: 1 } : {}"
                 :in-view="isBooted ? { opacity: 1, scale: 1 } : {}"
@@ -404,6 +410,8 @@ const orbLayers = [
             </Motion>
 
             <FeatureCards 
+                id="features"
+                class="scroll-mt-32"
                 :is-coarse-pointer="isCoarsePointer"
                 :prefers-reduced-motion="prefersReducedMotion"
                 :auth="$page.props.auth"
