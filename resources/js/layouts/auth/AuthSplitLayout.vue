@@ -5,10 +5,8 @@ import { home } from '@/routes';
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import gsap from 'gsap';
 
-defineProps<{
-    title?: string;
-    description?: string;
-}>();
+// Layout doesn't need title/description props anymore since pages provide them
+
 
 // Refs
 const leftPanel = ref<HTMLElement | null>(null);
@@ -277,19 +275,13 @@ onBeforeUnmount(() => {
                     </Link>
                 </div>
 
-                <!-- Title & Description -->
-                <div class="space-y-3 form-reveal">
-                    <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
-                        {{ title }}
-                    </h1>
-                    <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
-                        {{ description }}
-                    </p>
-                </div>
-
                 <!-- Form Slot -->
-                <div class="form-reveal">
-                    <slot />
+                <div class="form-reveal w-full flex flex-col gap-6 relative">
+                    <Transition name="form-swap" mode="out-in">
+                        <div :key="$page.component" class="w-full">
+                            <slot />
+                        </div>
+                    </Transition>
                 </div>
 
                 <!-- Decorative bottom element -->
@@ -327,5 +319,21 @@ onBeforeUnmount(() => {
 /* Tagline transition group needs position context */
 .relative > :deep(.absolute) {
     width: 100%;
+}
+
+/* Form Swap Transition */
+.form-swap-enter-active,
+.form-swap-leave-active {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.form-swap-enter-from {
+    opacity: 0;
+    transform: translateX(15px);
+    filter: blur(4px);
+}
+.form-swap-leave-to {
+    opacity: 0;
+    transform: translateX(-15px);
+    filter: blur(4px);
 }
 </style>

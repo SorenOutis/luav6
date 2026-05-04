@@ -17,14 +17,21 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
+
+defineOptions({ layout: AuthBase });
 </script>
 
 <template>
-    <AuthBase
-        title="Create an account"
-        description="Enter your details below to create your account"
-    >
-        <Head title="Register" />
+    <Head title="Register" />
+
+    <div class="space-y-3">
+        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+            Create an account
+        </h1>
+        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+            Enter your details below to create your account
+        </p>
+    </div>
 
         <Form
             v-bind="store.form()"
@@ -244,5 +251,4 @@ import { store } from '@/routes/register';
                 >
             </div>
         </Form>
-    </AuthBase>
 </template>

@@ -7,14 +7,21 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { store } from '@/routes/password/confirm';
+
+defineOptions({ layout: AuthLayout });
 </script>
 
 <template>
-    <AuthLayout
-        title="Confirm your password"
-        description="This is a secure area of the application. Please confirm your password before continuing."
-    >
-        <Head title="Confirm password" />
+    <Head title="Confirm password" />
+
+    <div class="space-y-3">
+        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+            Confirm your password
+        </h1>
+        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+            This is a secure area of the application. Please confirm your password before continuing.
+        </p>
+    </div>
 
         <Form
             v-bind="store.form()"
@@ -49,5 +56,4 @@ import { store } from '@/routes/password/confirm';
                 </div>
             </div>
         </Form>
-    </AuthLayout>
 </template>

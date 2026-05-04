@@ -10,14 +10,21 @@ import { send } from '@/routes/verification';
 defineProps<{
     status?: string;
 }>();
+
+defineOptions({ layout: AuthLayout });
 </script>
 
 <template>
-    <AuthLayout
-        title="Verify email"
-        description="Please verify your email address by clicking on the link we just emailed to you."
-    >
-        <Head title="Email verification" />
+    <Head title="Email verification" />
+
+    <div class="space-y-3">
+        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+            Verify email
+        </h1>
+        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+            Please verify your email address by clicking on the link we just emailed to you.
+        </p>
+    </div>
 
         <div
             v-if="status === 'verification-link-sent'"
@@ -45,5 +52,4 @@ defineProps<{
                 Log out
             </TextLink>
         </Form>
-    </AuthLayout>
 </template>

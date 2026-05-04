@@ -40,14 +40,21 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
 };
 
 const code = ref<string>('');
+
+defineOptions({ layout: AuthLayout });
 </script>
 
 <template>
-    <AuthLayout
-        :title="authConfigContent.title"
-        :description="authConfigContent.description"
-    >
-        <Head title="Two-factor authentication" />
+    <Head title="Two-factor authentication" />
+
+    <div class="space-y-3">
+        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+            {{ authConfigContent.title }}
+        </h1>
+        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+            {{ authConfigContent.description }}
+        </p>
+    </div>
 
         <div class="space-y-6">
             <template v-if="!showRecoveryInput">
@@ -129,5 +136,4 @@ const code = ref<string>('');
                 </Form>
             </template>
         </div>
-    </AuthLayout>
 </template>

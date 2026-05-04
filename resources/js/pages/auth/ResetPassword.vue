@@ -15,14 +15,21 @@ const props = defineProps<{
 }>();
 
 const inputEmail = ref(props.email);
+
+defineOptions({ layout: AuthLayout });
 </script>
 
 <template>
-    <AuthLayout
-        title="Reset password"
-        description="Please enter your new password below"
-    >
-        <Head title="Reset password" />
+    <Head title="Reset password" />
+
+    <div class="space-y-3">
+        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+            Reset password
+        </h1>
+        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+            Please enter your new password below
+        </p>
+    </div>
 
         <Form
             v-bind="update.form()"
@@ -85,5 +92,4 @@ const inputEmail = ref(props.email);
                 </Button>
             </div>
         </Form>
-    </AuthLayout>
 </template>

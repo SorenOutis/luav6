@@ -18,14 +18,21 @@ defineProps<{
     canResetPassword: boolean;
     canRegister: boolean;
 }>();
+
+defineOptions({ layout: AuthBase });
 </script>
 
 <template>
-    <AuthBase
-        title="Log in to your account"
-        description="Enter your email and password below to log in"
-    >
-        <Head title="Log in" />
+    <Head title="Log in" />
+
+    <div class="space-y-3">
+        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+            Log in to your account
+        </h1>
+        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+            Enter your email and password below to log in
+        </p>
+    </div>
 
         <div
             v-if="status"
@@ -105,5 +112,4 @@ defineProps<{
                 <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
             </div>
         </Form>
-    </AuthBase>
 </template>

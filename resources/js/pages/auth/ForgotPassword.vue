@@ -13,14 +13,21 @@ import { email } from '@/routes/password';
 defineProps<{
     status?: string;
 }>();
+
+defineOptions({ layout: AuthLayout });
 </script>
 
 <template>
-    <AuthLayout
-        title="Forgot password"
-        description="Enter your email to receive a password reset link"
-    >
-        <Head title="Forgot password" />
+    <Head title="Forgot password" />
+
+    <div class="space-y-3">
+        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+            Forgot password
+        </h1>
+        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+            Enter your email to receive a password reset link
+        </p>
+    </div>
 
         <div
             v-if="status"
@@ -61,5 +68,4 @@ defineProps<{
                 <TextLink :href="login()">log in</TextLink>
             </div>
         </div>
-    </AuthLayout>
 </template>
