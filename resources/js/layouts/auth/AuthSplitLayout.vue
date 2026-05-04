@@ -28,10 +28,10 @@ let taglineInterval: ReturnType<typeof setInterval> | null = null;
 
 // Ambient orb configurations
 const orbs = [
-    { size: 'w-72 h-72', position: '-left-20 -top-20', color: 'bg-indigo-500/[0.07] dark:bg-indigo-400/[0.12]', delay: 0 },
-    { size: 'w-96 h-96', position: '-right-32 top-1/4', color: 'bg-violet-500/[0.05] dark:bg-violet-400/[0.08]', delay: 0.3 },
-    { size: 'w-64 h-64', position: 'left-1/4 -bottom-16', color: 'bg-cyan-500/[0.06] dark:bg-cyan-400/[0.1]', delay: 0.6 },
-    { size: 'w-48 h-48', position: 'right-1/3 top-12', color: 'bg-fuchsia-500/[0.04] dark:bg-fuchsia-400/[0.07]', delay: 0.9 },
+    { size: 'w-72 h-72', position: '-left-20 -top-20', color: 'bg-zinc-500/[0.05] dark:bg-zinc-400/[0.08]', delay: 0 },
+    { size: 'w-96 h-96', position: '-right-32 top-1/4', color: 'bg-zinc-600/[0.03] dark:bg-zinc-500/[0.05]', delay: 0.3 },
+    { size: 'w-64 h-64', position: 'left-1/4 -bottom-16', color: 'bg-zinc-500/[0.04] dark:bg-zinc-400/[0.06]', delay: 0.6 },
+    { size: 'w-48 h-48', position: 'right-1/3 top-12', color: 'bg-zinc-600/[0.02] dark:bg-zinc-500/[0.04]', delay: 0.9 },
 ];
 
 // Current time display
@@ -147,8 +147,8 @@ onBeforeUnmount(() => {
             <!-- Ambient Gradient Base -->
             <div class="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950"></div>
 
-            <!-- Secondary warm gradient layer -->
-            <div class="absolute inset-0 bg-gradient-to-tl from-indigo-950/30 via-transparent to-violet-950/20"></div>
+            <!-- Secondary subtle dark gradient layer (replaces blueish tints) -->
+            <div class="absolute inset-0 bg-gradient-to-tl from-zinc-900/40 via-transparent to-zinc-800/20"></div>
 
             <!-- Animated Grid Overlay -->
             <div
