@@ -219,7 +219,7 @@
 .dyslexia-friendly [class*="tracking-tighter"],
 .dyslexia-friendly [class*="tracking-widest"],
 .dyslexia-friendly [class*="tracking-["] {
-    letter-spacing: 0.05em !important; /* Slightly more space between letters helps dyslexia */
+    letter-spacing: normal !important;
 }
 
 .dyslexia-friendly p, 
