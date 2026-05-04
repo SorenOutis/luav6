@@ -96,7 +96,7 @@ function ensureFormMethod(route: any): void {
  */
 (async () => {
     try {
-        const modules = await Promise.all([
+        const modules = await Promise.allSettled([
             import('@/routes/login'),
             import('@/routes/register'),
             import('@/routes/password'),
@@ -108,25 +108,34 @@ function ensureFormMethod(route: any): void {
             import('@/actions/App/Http/Controllers/Settings/PasswordController'),
         ]);
 
-        modules.forEach((mod) => {
-            if (mod.default) {
-                Object.values(mod.default).forEach(route => ensureFormMethod(route));
+        modules.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+                const mod = result.value;
+                if (mod.default) {
+                    Object.values(mod.default).forEach((route) => ensureFormMethod(route));
+                }
+                Object.keys(mod)
+                    .filter((key) => key !== 'default')
+                    .forEach((key) => {
+                        const route = (mod as any)[key];
+                        if (route && typeof route === 'object') {
+                            ensureFormMethod(route);
+                            Object.values(route).forEach((nested) => {
+                                if (nested && typeof nested === 'object') {
+                                    ensureFormMethod(nested);
+                                }
+                            });
+                        }
+                    });
+            } else {
+                console.warn(`[App] Failed to patch module at index ${index}:`, result.reason);
             }
-            Object.keys(mod)
-                .filter(key => key !== 'default')
-                .forEach(key => {
-                    const route = (mod as any)[key];
-                    if (route && typeof route === 'object') {
-                        ensureFormMethod(route);
-                        Object.values(route).forEach(nested => {
-                            if (nested && typeof nested === 'object') {
-                                ensureFormMethod(nested);
-                            }
-                        });
-                    }
-                });
         });
+    } catch (error) {
+        console.error('[App] Unexpected error during module patching:', error);
+    }
 
+    try {
         createInertiaApp({
             title: (title) => (title ? `${title} - ${appName}` : appName),
             resolve: (name) =>
@@ -149,15 +158,13 @@ function ensureFormMethod(route: any): void {
                     },
                 };
 
-                createApp(RootApp)
-                    .use(plugin)
-                    .mount(el);
+                createApp(RootApp).use(plugin).mount(el);
             },
             progress: false,
         });
 
         initializeTheme();
     } catch (error) {
-        console.error('[App] Failed to initialize:', error);
+        console.error('[App] Failed to initialize Inertia application:', error);
     }
 })();
