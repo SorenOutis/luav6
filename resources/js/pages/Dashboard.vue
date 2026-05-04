@@ -129,6 +129,68 @@ const personalizedGreeting = computed(() => {
     return greeting;
 });
 
+const greetingTheme = computed(() => {
+    const hour = new Date().getHours();
+    const streak = props.userStats.streak;
+    const overdue = todaySummary.value.overdueCount;
+
+    if (overdue > 0) return "from-rose-500 to-red-600 dark:from-rose-400 dark:to-red-500";
+    if (streak >= 7) return "from-amber-400 to-orange-500 dark:from-amber-300 dark:to-orange-400";
+    if (streak > 0) return "from-emerald-400 to-teal-500 dark:from-emerald-300 dark:to-teal-400";
+
+    if (hour >= 0 && hour < 4) return "from-indigo-400 to-purple-600 dark:from-indigo-300 dark:to-purple-500"; // Late night
+    if (hour >= 4 && hour < 7) return "from-sky-400 to-blue-500 dark:from-sky-300 dark:to-blue-400"; // Early bird
+    if (hour >= 7 && hour < 12) return "from-amber-300 to-yellow-500 dark:from-amber-200 dark:to-yellow-400"; // Morning
+    if (hour >= 12 && hour < 17) return "from-orange-400 to-rose-500 dark:from-orange-300 dark:to-rose-400"; // Afternoon
+    if (hour >= 17 && hour < 21) return "from-violet-500 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-500"; // Evening
+    return "from-blue-400 to-indigo-600 dark:from-blue-300 dark:to-indigo-500"; // Winding down
+});
+
+const statusColor = computed(() => {
+    const overdue = todaySummary.value.overdueCount;
+    const streak = props.userStats.streak;
+    
+    if (overdue > 0) return "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.4)]";
+    if (streak >= 7) return "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.4)]";
+    if (streak > 0) return "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]";
+    
+    return "bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.4)]";
+});
+
+const ambientColor = computed(() => {
+    const hour = new Date().getHours();
+    const streak = props.userStats.streak;
+    const overdue = todaySummary.value.overdueCount;
+
+    if (overdue > 0) return "bg-rose-500/10 dark:bg-rose-500/20";
+    if (streak >= 7) return "bg-amber-500/10 dark:bg-amber-500/20";
+    if (streak > 0) return "bg-emerald-500/10 dark:bg-emerald-500/20";
+
+    if (hour >= 0 && hour < 4) return "bg-purple-500/10 dark:bg-purple-500/20";
+    if (hour >= 4 && hour < 7) return "bg-sky-500/10 dark:bg-sky-500/20";
+    if (hour >= 7 && hour < 12) return "bg-amber-400/10 dark:bg-amber-400/20";
+    if (hour >= 12 && hour < 17) return "bg-orange-500/10 dark:bg-orange-500/20";
+    if (hour >= 17 && hour < 21) return "bg-fuchsia-500/10 dark:bg-fuchsia-500/20";
+    return "bg-indigo-500/10 dark:bg-indigo-500/20";
+});
+
+const accentBadge = computed(() => {
+    const hour = new Date().getHours();
+    const streak = props.userStats.streak;
+    const overdue = todaySummary.value.overdueCount;
+
+    if (overdue > 0) return { text: "Requires Attention", theme: "bg-rose-500/10 text-rose-500 border-rose-500/20" };
+    if (streak >= 7) return { text: "Legendary Streak", theme: "bg-amber-500/10 text-amber-500 border-amber-500/20" };
+    if (streak > 0) return { text: "Active Streak", theme: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" };
+
+    if (hour >= 0 && hour < 4) return { text: "Late Night Session", theme: "bg-purple-500/10 text-purple-500 border-purple-500/20" };
+    if (hour >= 4 && hour < 7) return { text: "Early Bird", theme: "bg-sky-500/10 text-sky-500 border-sky-500/20" };
+    if (hour >= 7 && hour < 12) return { text: "Morning Session", theme: "bg-amber-400/10 text-amber-500 border-amber-400/20" };
+    if (hour >= 12 && hour < 17) return { text: "Afternoon Focus", theme: "bg-orange-500/10 text-orange-500 border-orange-500/20" };
+    if (hour >= 17 && hour < 21) return { text: "Evening Grind", theme: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20" };
+    return { text: "Winding Down", theme: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" };
+});
+
 // Smarter status subtext for the hero
 const smarterStatus = computed(() => {
     const xpRemaining = props.userStats.maxXPForLevel - props.userStats.currentXP;
@@ -136,12 +198,12 @@ const smarterStatus = computed(() => {
     const overdue = todaySummary.value.overdueCount;
     const dueToday = todaySummary.value.dueTodayCount;
 
-    if (overdue > 0) return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} requiring <span class="text-foreground font-black">immediate attention</span>.`;
-    if (xpRemaining < 200) return `Only <span class="text-foreground font-black">${xpRemaining} XP</span> until you reach Level ${props.userStats.level + 1}!`;
-    if (streak >= 3) return `You've maintained a <span class="text-foreground font-black">${streak}-day streak</span>. Keep the momentum!`;
-    if (dueToday > 0) return `You have ${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your <span class="text-foreground font-black">schedule for today</span>.`;
+    if (overdue > 0) return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} requiring <span class="text-rose-500 dark:text-rose-400 font-black drop-shadow-md">immediate attention</span>.`;
+    if (xpRemaining < 200) return `Only <span class="text-emerald-500 dark:text-emerald-400 font-black drop-shadow-md">${xpRemaining} XP</span> until you reach Level ${props.userStats.level + 1}!`;
+    if (streak >= 3) return `You've maintained a <span class="text-amber-500 dark:text-amber-400 font-black drop-shadow-md">${streak}-day streak</span>. Keep the momentum!`;
+    if (dueToday > 0) return `You have ${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your <span class="text-blue-500 dark:text-blue-400 font-black drop-shadow-md">schedule for today</span>.`;
     
-    return `Your learning engine is performing at <span class="text-foreground font-black">peak capacity</span>.`;
+    return `Your learning engine is performing at <span class="text-primary font-black drop-shadow-md">peak capacity</span>.`;
 });
 
 // Interactive Background Logic
@@ -549,7 +611,8 @@ const handleLogout = () => {
             <!-- Global Mouse Glow -->
             <div 
                 ref="mouseGlow"
-                class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[120px] will-change-transform dark:bg-primary/10"
+                class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 h-[400px] w-[400px] rounded-full blur-[120px] will-change-transform transition-colors duration-1000"
+                :class="ambientColor"
             ></div>
 
             <!-- Monolithic Grid Overlay -->
@@ -558,8 +621,8 @@ const handleLogout = () => {
             </div>
 
             <!-- Glassy background decorative orbs -->
-            <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
-            <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+            <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor"></div>
+            <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor"></div>
 
             <!-- Hero Banner Section -->
             <Motion 
@@ -576,6 +639,9 @@ const handleLogout = () => {
                     :announcements="announcements"
                     :total-x-p-progress="totalXPProgress"
                     :time-based-greeting="personalizedGreeting"
+                    :greeting-theme="greetingTheme"
+                    :status-color="statusColor"
+                    :accent-badge="accentBadge"
                     :smarter-status="smarterStatus"
                     :is-refreshing="isRefreshing"
                     :last-sync-time="lastSyncTime"

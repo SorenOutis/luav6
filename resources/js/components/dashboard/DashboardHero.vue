@@ -32,6 +32,9 @@ interface Props {
     announcements: Announcement[];
     totalXPProgress: number;
     timeBasedGreeting: string;
+    greetingTheme?: string;
+    statusColor?: string;
+    accentBadge?: { text: string; theme: string };
     smarterStatus: string;
     isRefreshing?: boolean;
     lastSyncTime?: Date;
@@ -108,12 +111,13 @@ const xpPercentage = computed(() => {
                     <div class="shrink-0 relative group/avatar">
                         <div class="relative">
                             <!-- Level Badge integrated into Avatar -->
-                            <div class="absolute -top-1 -right-1 z-30 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[7px] sm:text-[8px] font-black uppercase tracking-tighter shadow-lg border border-background tabular-nums">
+                            <div class="absolute -top-1 -right-1 z-30 px-1.5 py-0.5 rounded-md text-primary-foreground text-[7px] sm:text-[8px] font-black uppercase tracking-tighter shadow-lg border border-background tabular-nums bg-gradient-to-br"
+                                :class="greetingTheme || 'from-primary to-primary'">
                                 Lvl {{ animatedLevel }}
                             </div>
 
                             <div class="absolute -bottom-0.5 -right-0.5 z-20 w-3 h-3 sm:w-5 sm:h-5 rounded-full bg-background flex items-center justify-center border-2 border-background shadow-lg">
-                                <span class="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"></span>
+                                <span class="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full" :class="statusColor || 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'"></span>
                             </div>
                             
                             <Avatar class="size-12 sm:size-20 lg:size-28 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 shadow-xl">
@@ -131,12 +135,14 @@ const xpPercentage = computed(() => {
                     </div>
 
                     <div class="flex-1 min-w-0 space-y-1 sm:space-y-3">
-                        <div class="flex items-center gap-2 text-[7px] sm:text-[10px] lg:text-xs font-black tracking-[0.1em] sm:tracking-[0.2em] lg:tracking-[0.3em] uppercase text-muted-foreground/40">
+                        <div class="flex flex-wrap items-center gap-2 text-[7px] sm:text-[10px] lg:text-xs font-black tracking-[0.1em] sm:tracking-[0.2em] lg:tracking-[0.3em] uppercase text-muted-foreground/40">
                             <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/5 border border-primary/10 group/sync cursor-pointer hover:bg-primary/10 transition-colors" @click="emit('refresh')">
                                 <RefreshCw class="w-2 sm:w-2.5 h-2 sm:h-2.5 text-primary/60" :class="{ 'animate-spin': isRefreshing }" />
                                 <span class="whitespace-nowrap tabular-nums text-[6px] sm:text-[9px] lg:text-xs">{{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
                             </div>
-                            <!-- <span class="opacity-40 tracking-widest hidden sm:inline">Active</span> -->
+                            <span v-if="accentBadge" class="px-2 py-0.5 rounded-full border backdrop-blur-md transition-colors duration-500 hidden sm:inline-block" :class="accentBadge.theme">
+                                {{ accentBadge.text }}
+                            </span>
                         </div>
 
                         <div class="space-y-0.5 sm:space-y-1">
@@ -162,7 +168,8 @@ const xpPercentage = computed(() => {
                                 </div>
                             </div>
                             <div class="relative h-1 lg:h-6 w-full bg-muted/30 dark:bg-black/20 rounded-full overflow-hidden border border-white/10 shadow-inner backdrop-blur-sm">
-                                <div class="h-full bg-gradient-to-r from-primary via-primary/90 to-primary rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_20px_rgba(var(--primary),0.5)]" 
+                                <div class="h-full rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_20px_rgba(var(--primary),0.5)] bg-gradient-to-r" 
+                                    :class="greetingTheme || 'from-primary via-primary/90 to-primary'"
                                     :style="{ width: `${xpPercentage}%` }">
                                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full -skew-x-[45deg] animate-shimmer"></div>
                                 </div>
