@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import AuthLayout from '@/layouts/auth/AuthSplitLayout.vue';
+import AuthSplitLayout from '@/layouts/auth/AuthSplitLayout.vue';
 </script>
 
 <template>
-    <AuthLayout>
+    <AuthSplitLayout>
         <slot />
-    </AuthLayout>
+    </AuthSplitLayout>
 </template>

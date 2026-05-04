@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import { Command, ArrowUpRight } from 'lucide-vue-next';
 import { home } from '@/routes';
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import gsap from 'gsap';
 
 // Layout doesn't need title/description props anymore since pages provide them
+const page = usePage();
 
 
 // Refs
@@ -278,7 +279,7 @@ onBeforeUnmount(() => {
                 <!-- Form Slot -->
                 <div class="form-reveal w-full flex flex-col gap-6 relative">
                     <Transition name="form-swap" mode="out-in">
-                        <div :key="$page.component" class="w-full">
+                        <div :key="page.component" class="w-full">
                             <slot />
                         </div>
                     </Transition>
