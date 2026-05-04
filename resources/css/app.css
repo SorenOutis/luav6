@@ -227,3 +227,41 @@
 .dyslexia-friendly li {
     line-height: 1.6 !important;
 }
+/* Normalize Tactical Cards & Elements */
+.dyslexia-friendly .transform,
+.dyslexia-friendly [class*='-skew-x-'],
+.dyslexia-friendly [class*='skew-x-'] {
+    transform: none !important;
+}
+
+.dyslexia-friendly .exam-part-card,
+.dyslexia-friendly .question-card,
+.dyslexia-friendly .exam-hero {
+    border-radius: 1rem !important;
+    border-style: solid !important;
+    border-width: 1px !important;
+    clip-path: none !important;
+}
+
+.dyslexia-friendly [class*='border-t-2 border-l-2'],
+.dyslexia-friendly [class*='border-b-2 border-r-2'],
+.dyslexia-friendly .absolute[class*='top-0 left-0'],
+.dyslexia-friendly .absolute[class*='bottom-0 right-0'] {
+    display: none !important;
+}
+
+.dyslexia-friendly button,
+.dyslexia-friendly .badge,
+.dyslexia-friendly [class*='skew-x'] span {
+    transform: none !important;
+    border-radius: 0.5rem !important;
+}
+
+.dyslexia-friendly .h-1 {
+    height: 0.5rem !important;
+    border-radius: 9999px !important;
+}
+
+.dyslexia-friendly .bg-primary\/40 {
+    border-radius: 9999px !important;
+}
