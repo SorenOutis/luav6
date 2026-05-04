@@ -70,3 +70,14 @@ const chars = computed(() => props.label.split(''))
     />
   </div>
 </template>
+
+<style scoped>
+/* Override browser's default autofill styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    transition: background-color 5000s ease-in-out 0s;
+}
+</style>
