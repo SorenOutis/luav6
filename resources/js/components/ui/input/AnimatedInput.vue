@@ -71,13 +71,20 @@ const chars = computed(() => props.label.split(''))
   </div>
 </template>
 
-<style scoped>
+<style>
 /* Override browser's default autofill styling */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active {
-    -webkit-text-fill-color: hsl(var(--foreground));
+    -webkit-text-fill-color: #18181b !important; /* zinc-900 */
     transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover, 
+.dark input:-webkit-autofill:focus, 
+.dark input:-webkit-autofill:active {
+    -webkit-text-fill-color: #fafafa !important; /* zinc-50 */
 }
 </style>
