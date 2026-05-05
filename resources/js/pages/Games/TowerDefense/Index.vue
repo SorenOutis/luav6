@@ -279,7 +279,7 @@ const handleMouseMove = (e: MouseEvent) => {
                                 :href="`/games/tower-defense/play/${level.slug}`"
                                 :glowColor="diffGlowColor(level.difficulty.slug)"
                                 :spotlightSize="300"
-                                className="level-card relative group/level premium-hover bg-card/40 flex flex-col h-full"
+                                className="level-card relative group/level premium-hover bg-card/40 !flex flex-col h-full min-w-0 w-full overflow-hidden"
                                 @mousemove="handleMouseMove"
                             >
                                 <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
@@ -316,33 +316,33 @@ const handleMouseMove = (e: MouseEvent) => {
                                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-32 h-full -translate-x-full group-hover/level:animate-scan-horizontal opacity-0 group-hover/level:opacity-100 transition-opacity"></div>
                                 </div>
 
-                                <div class="relative flex items-center justify-between gap-4 border-b border-border/40 p-5 z-10">
-                                    <div class="flex flex-1 min-w-0 items-center gap-4">
+                                <div class="relative flex flex-col gap-3 border-b border-border/40 p-5 z-10">
+                                    <div class="flex items-center gap-3 min-w-0">
                                         <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 shadow-sm group-hover/level:border-primary/40 transition-colors">
                                             <span class="text-sm font-black tabular-nums text-primary">{{ level.order }}</span>
                                         </div>
-                                        <div class="min-w-0">
+                                        <div class="min-w-0 flex-1">
                                             <h2 class="truncate text-sm font-black uppercase tracking-widest text-foreground group-hover/level:text-primary transition-colors">{{ level.name }}</h2>
-                                            <p class="mt-0.5 text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">{{ level.map.name }}</p>
+                                            <p class="mt-0.5 truncate text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">{{ level.map.name }}</p>
                                         </div>
-                                    </div>
-                                    <div class="flex shrink-0 gap-1">
-                                        <Star
-                                            v-for="i in 3" :key="i"
-                                            class="h-3 w-3 transition-all duration-500"
-                                            :class="i <= (level.progress?.stars || 0) ? 'fill-primary text-primary group-hover/level:scale-110' : 'text-muted-foreground/20'"
-                                        />
+                                        <div class="flex shrink-0 gap-0.5">
+                                            <Star
+                                                v-for="i in 3" :key="i"
+                                                class="h-3 w-3 transition-all duration-500"
+                                                :class="i <= (level.progress?.stars || 0) ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)] group-hover/level:scale-110' : 'text-muted-foreground/50 fill-muted-foreground/10'"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="flex flex-col gap-4 p-5 relative z-10">
                                     <p class="text-[11px] leading-relaxed text-muted-foreground/80 line-clamp-2 h-8">{{ level.description }}</p>
 
-                                    <div class="flex items-center justify-between pt-4 border-t border-border/40">
-                                        <div class="flex gap-4">
-                                            <div class="flex flex-col gap-0.5">
+                                    <div class="flex items-center justify-between gap-2 pt-4 border-t border-border/40">
+                                        <div class="flex gap-3 min-w-0">
+                                            <div class="flex flex-col gap-0.5 min-w-0">
                                                 <span class="text-[7px] font-bold uppercase tracking-widest text-muted-foreground/50 font-mono">Difficulty</span>
-                                                <span class="text-[9px] font-black uppercase tracking-wider" :class="diffColor(level.difficulty.slug)">{{ level.difficulty.name }}</span>
+                                                <span class="truncate text-[9px] font-black uppercase tracking-wider" :class="diffColor(level.difficulty.slug)">{{ level.difficulty.name }}</span>
                                             </div>
                                             <div class="flex flex-col gap-0.5">
                                                 <span class="text-[7px] font-bold uppercase tracking-widest text-muted-foreground/50 font-mono">Waves</span>
@@ -351,14 +351,16 @@ const handleMouseMove = (e: MouseEvent) => {
                                         </div>
 
                                         <div v-if="level.progress?.wins"
-                                            class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)] group-hover/level:shadow-[0_0_25px_rgba(16,185,129,0.3)] group-hover/level:bg-emerald-500 group-hover/level:text-white transition-all duration-500"
+                                            class="shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 group-hover/level:bg-emerald-500/20 group-hover/level:border-emerald-500/50 transition-all duration-500"
+                                            :title="'Cleared'"
                                         >
-                                            <Swords class="h-4 w-4 group-hover/level:scale-110 transition-transform duration-300" />
+                                            <Swords class="h-3.5 w-3.5 group-hover/level:scale-110 transition-transform duration-300" />
                                         </div>
                                         <div v-else
-                                            class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/30 shadow-[0_0_15px_rgba(var(--primary-rgb),0.15)] group-hover/level:shadow-[0_0_25px_rgba(var(--primary-rgb),0.3)] group-hover/level:bg-primary group-hover/level:text-primary-foreground transition-all duration-500"
+                                            class="shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-primary/10 text-primary border border-primary/30 group-hover/level:bg-primary group-hover/level:text-primary-foreground group-hover/level:border-primary transition-all duration-500"
+                                            :title="'Deploy'"
                                         >
-                                            <ChevronRight class="h-4 w-4 group-hover/level:translate-x-0.5 transition-all duration-300" />
+                                            <ChevronRight class="h-3.5 w-3.5 group-hover/level:translate-x-0.5 transition-all duration-300" />
                                         </div>
                                     </div>
                                 </div>
