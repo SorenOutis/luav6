@@ -5,6 +5,8 @@ interface Props {
   className?: string;
   glowColor?: 'blue' | 'purple' | 'green' | 'red' | 'orange' | 'emerald';
   size?: 'sm' | 'md' | 'lg';
+  spotlightSize?: number;
+  radius?: number;
   width?: string | number;
   height?: string | number;
   customSize?: boolean; // When true, ignores size prop and uses width/height or className
@@ -15,6 +17,8 @@ const props = withDefaults(defineProps<Props>(), {
   className: '',
   glowColor: 'blue',
   size: 'md',
+  spotlightSize: 200,
+  radius: 26,
   customSize: false,
   as: 'div',
 });
@@ -119,11 +123,11 @@ const inlineStyles = computed(() => {
   const baseStyles: Record<string, any> = {
     '--base': base,
     '--spread': spread,
-    '--radius': '26',
+    '--radius': String(props.radius),
     '--border': '2',
     '--backdrop': 'hsl(0 0% 60% / 0.12)',
     '--backup-border': 'var(--backdrop)',
-    '--size': '200',
+    '--size': String(props.spotlightSize),
     '--outer': '1',
     '--border-size': 'calc(var(--border, 2) * 1px)',
     '--spotlight-size': 'calc(var(--size, 150) * 1px)',

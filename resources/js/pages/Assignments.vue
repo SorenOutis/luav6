@@ -307,65 +307,72 @@ declare const route: any;
                     <SpotlightCard
                         customSize
                         :glowColor="stat.glowColor"
-                        className="stats-card p-5 relative group/stat premium-hover bg-card/40"
+                        :spotlightSize="350"
+                        className="stats-card p-5 relative group/stat premium-hover bg-card/40 flex flex-col justify-between"
                         @mousemove="handleMouseMove"
                     >
-                    <!-- Persistent colored corner highlight -->
-                    <div
-                        class="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-40 blur-3xl group-hover/stat:opacity-70 transition-opacity duration-700"
-                        :class="{
-                            'bg-orange-500/30': stat.glowColor === 'orange',
-                            'bg-emerald-500/30': stat.glowColor === 'green',
-                            'bg-purple-500/30': stat.glowColor === 'purple',
-                        }"
-                    ></div>
-                    <div
-                        class="pointer-events-none absolute -bottom-20 -left-20 w-56 h-56 rounded-full opacity-25 blur-3xl group-hover/stat:opacity-50 transition-opacity duration-700"
-                        :class="{
-                            'bg-orange-400/25': stat.glowColor === 'orange',
-                            'bg-emerald-400/25': stat.glowColor === 'green',
-                            'bg-purple-400/25': stat.glowColor === 'purple',
-                        }"
-                    ></div>
+                        <!-- Inner container to clip overflowing background icons without clipping the outer glow -->
+                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                            <!-- Persistent colored corner highlights -->
+                            <div
+                                class="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-40 blur-3xl group-hover/stat:opacity-70 transition-opacity duration-700"
+                                :class="{
+                                    'bg-orange-500/30': stat.glowColor === 'orange',
+                                    'bg-emerald-500/30': stat.glowColor === 'green',
+                                    'bg-purple-500/30': stat.glowColor === 'purple',
+                                }"
+                            ></div>
+                            <div
+                                class="absolute -bottom-20 -left-20 w-56 h-56 rounded-full opacity-25 blur-3xl group-hover/stat:opacity-50 transition-opacity duration-700"
+                                :class="{
+                                    'bg-orange-400/25': stat.glowColor === 'orange',
+                                    'bg-emerald-400/25': stat.glowColor === 'green',
+                                    'bg-purple-400/25': stat.glowColor === 'purple',
+                                }"
+                            ></div>
 
-                    <!-- Tech Grid Background -->
-                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/stat:opacity-[0.05] transition-opacity">
-                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                            <defs>
-                                <pattern :id="`stat-grid-${sIdx}`" width="15" height="15" patternUnits="userSpaceOnUse">
-                                    <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
-                                </pattern>
-                            </defs>
-                            <rect width="100%" height="100%" :fill="`url(#stat-grid-${sIdx})`" />
-                        </svg>
-                    </div>
+                            <!-- Tech Grid Background -->
+                            <div class="absolute inset-0 opacity-[0.03] group-hover/stat:opacity-[0.05] transition-opacity">
+                                <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                                    <defs>
+                                        <pattern :id="`stat-grid-${sIdx}`" width="15" height="15" patternUnits="userSpaceOnUse">
+                                            <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                        </pattern>
+                                    </defs>
+                                    <rect width="100%" height="100%" :fill="`url(#stat-grid-${sIdx})`" />
+                                </svg>
+                            </div>
 
-                    <!-- Tech Scanning Line -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-32 h-full -translate-x-full group-hover/stat:animate-scan-horizontal pointer-events-none opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+                            <!-- Tech Scanning Line -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-32 h-full -translate-x-full group-hover/stat:animate-scan-horizontal opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
 
-                    <!-- Hover Bloom Effect -->
-                    <div class="absolute inset-0 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-700 pointer-events-none"
-                        :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08), transparent 40%)` }">
-                    </div>
+                            <!-- Hover Bloom Effect -->
+                            <div class="absolute inset-0 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-700"
+                                :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08), transparent 40%)` }">
+                            </div>
 
-                    <!-- Corner Accents -->
-                    <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500"></div>
-                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500"></div>
+                            <!-- Corner Accents -->
+                            <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500 rounded-tl-lg"></div>
+                            <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500 rounded-br-lg"></div>
 
-                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover/stat:opacity-[0.08] transition-all duration-700 pointer-events-none group-hover:scale-110 rotate-12 group-hover:rotate-0">
-                        <component :is="stat.icon" class="w-20 h-20" />
-                    </div>
-
-                    <div class="relative z-10">
-                        <p class="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 font-mono">>_{{ stat.label }}</p>
-                        <h3 class="text-3xl font-black tracking-tighter mt-1 font-mono text-foreground group-hover/stat:text-primary transition-colors">
-                            {{ stat.value }}
-                        </h3>
-                        <div class="mt-4 pt-4 border-t border-border/10 flex items-center gap-2">
-                            <div class="w-1 h-1 rounded-full bg-primary/40 animate-pulse"></div>
-                            <span class="text-[8px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">{{ stat.sub }}</span>
+                            <!-- Silhouette Background Icon -->
+                            <div class="absolute -right-2 -top-2 sm:-right-3 sm:-top-3 opacity-[0.03] group-hover/stat:opacity-[0.06] transition-all duration-700 group-hover/stat:scale-110 group-hover/stat:rotate-[20deg]">
+                                <component :is="stat.icon" class="w-16 h-16 sm:w-20 sm:h-20" />
+                            </div>
                         </div>
-                    </div>
+
+                        <div class="relative z-10 w-full h-full flex flex-col justify-between">
+                            <div>
+                                <p class="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 font-mono">>_{{ stat.label }}</p>
+                                <h3 class="text-3xl font-black tracking-tighter mt-1 font-mono text-foreground group-hover/stat:text-primary transition-colors">
+                                    {{ stat.value }}
+                                </h3>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-border/10 flex items-center gap-2">
+                                <div class="w-1 h-1 rounded-full bg-primary/40 animate-pulse"></div>
+                                <span class="text-[8px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">{{ stat.sub }}</span>
+                            </div>
+                        </div>
                     </SpotlightCard>
                 </Motion>
             </div>
