@@ -47,7 +47,9 @@ class LevelCurve
      */
     public static function xpForLevel(int $level): int
     {
-        if ($level <= 1) return 0;
+        if ($level <= 1) {
+            return 0;
+        }
 
         $thresholds = config('gamification.level_thresholds', []);
         $idx = $level - 2;
@@ -64,6 +66,7 @@ class LevelCurve
         $delta = max(1, $last - $prev);
 
         $extra = $idx - (count($thresholds) - 1);
+
         return $last + ($delta * $extra);
     }
 }

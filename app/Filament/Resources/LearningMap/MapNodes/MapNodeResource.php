@@ -8,7 +8,6 @@ use App\Filament\Resources\LearningMap\MapNodes\Pages\ListMapNodes;
 use App\Models\Badge;
 use App\Models\Exam;
 use App\Models\LearningMap\MapNode;
-use App\Models\LearningMap\MapNodeRequirement;
 use App\Models\LearningMap\MapWorld;
 use BackedEnum;
 use Filament\Forms\Components\Hidden;

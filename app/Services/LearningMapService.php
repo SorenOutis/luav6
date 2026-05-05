@@ -66,40 +66,59 @@ class LearningMapService
      * (unlocked, uncompleted) node in world/node order.
      */
     protected function suggestNextNodeSlug(
-        \Illuminate\Support\Collection $serializedWorlds,
+        Collection $serializedWorlds,
         User $user,
-        \Illuminate\Support\Collection $completedSlugs,
-        \Illuminate\Support\Collection $badgeIds,
+        Collection $completedSlugs,
+        Collection $badgeIds,
     ): ?string {
         foreach ($serializedWorlds as $w) {
             foreach ($w['nodes'] as $n) {
-                if ($completedSlugs->contains($n['id'])) continue;
+                if ($completedSlugs->contains($n['id'])) {
+                    continue;
+                }
                 $reqs = $n['requirements'] ?? [];
-                if (empty($reqs)) return $n['id'];
+                if (empty($reqs)) {
+                    return $n['id'];
+                }
                 $allMet = true;
                 foreach ($reqs as $r) {
                     switch ($r['kind']) {
                         case 'node':
-                            if (! $completedSlugs->contains($r['nodeSlug'])) { $allMet = false; }
+                            if (! $completedSlugs->contains($r['nodeSlug'])) {
+                                $allMet = false;
+                            }
                             break;
                         case 'xp':
-                            if ((int) $user->exp < (int) ($r['amount'] ?? 0)) { $allMet = false; }
+                            if ((int) $user->exp < (int) ($r['amount'] ?? 0)) {
+                                $allMet = false;
+                            }
                             break;
                         case 'level':
-                            if ((int) $user->level < (int) ($r['level'] ?? 0)) { $allMet = false; }
+                            if ((int) $user->level < (int) ($r['level'] ?? 0)) {
+                                $allMet = false;
+                            }
                             break;
                         case 'badge':
-                            if (! $badgeIds->contains((int) ($r['badgeId'] ?? 0))) { $allMet = false; }
+                            if (! $badgeIds->contains((int) ($r['badgeId'] ?? 0))) {
+                                $allMet = false;
+                            }
                             break;
                         case 'streak':
-                            if ((int) ($user->current_streak ?? 0) < (int) ($r['amount'] ?? 0)) { $allMet = false; }
+                            if ((int) ($user->current_streak ?? 0) < (int) ($r['amount'] ?? 0)) {
+                                $allMet = false;
+                            }
                             break;
                     }
-                    if (! $allMet) break;
+                    if (! $allMet) {
+                        break;
+                    }
                 }
-                if ($allMet) return $n['id'];
+                if ($allMet) {
+                    return $n['id'];
+                }
             }
         }
+
         return null;
     }
 
@@ -155,25 +174,30 @@ class LearningMapService
         switch ($req->kind) {
             case MapNodeRequirement::KIND_NODE:
                 $done = $completedSlugs->contains($req->target_node_slug);
+
                 return [$done, $done ? 1.0 : 0.0, 'Complete node'];
 
             case MapNodeRequirement::KIND_XP:
                 $have = (int) $user->exp;
                 $need = max(1, (int) $req->amount);
+
                 return [$have >= $need, min(1.0, $have / $need), "Reach {$need} XP"];
 
             case MapNodeRequirement::KIND_LEVEL:
                 $have = (int) $user->level;
                 $need = max(1, (int) $req->level);
+
                 return [$have >= $need, min(1.0, $have / $need), "Reach level {$need}"];
 
             case MapNodeRequirement::KIND_BADGE:
                 $has = $req->badge_id && $badgeIds->contains((int) $req->badge_id);
+
                 return [$has, $has ? 1.0 : 0.0, 'Earn badge'];
 
             case MapNodeRequirement::KIND_STREAK:
                 $have = (int) ($user->current_streak ?? 0);
                 $need = max(1, (int) $req->amount);
+
                 return [$have >= $need, min(1.0, $have / $need), "Maintain {$need}-day streak"];
         }
 

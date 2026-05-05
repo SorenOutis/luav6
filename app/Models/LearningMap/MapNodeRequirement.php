@@ -8,10 +8,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MapNodeRequirement extends Model
 {
-    public const KIND_NODE   = 'node';
-    public const KIND_XP     = 'xp';
-    public const KIND_LEVEL  = 'level';
-    public const KIND_BADGE  = 'badge';
+    public const KIND_NODE = 'node';
+
+    public const KIND_XP = 'xp';
+
+    public const KIND_LEVEL = 'level';
+
+    public const KIND_BADGE = 'badge';
+
     public const KIND_STREAK = 'streak';
 
     protected $fillable = [

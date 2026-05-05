@@ -31,7 +31,7 @@ class LearningMapSeeder extends Seeder
                 'primary_color' => '#3b82f6', 'accent_color' => '#60a5fa', 'background_class' => 'bg-blue-50/30',
                 'nodes' => [
                     ['slug' => 'cp-1', 'title' => 'Array Ascent',   'type' => 'lesson', 'x' => 100, 'y' => 300, 'reward_xp' => 75, 'reqs' => [['kind' => 'node', 'target_node_slug' => 'os-boss']]],
-                    ['slug' => 'cp-2', 'title' => 'Object Overlook','type' => 'lesson', 'x' => 350, 'y' => 250, 'reward_xp' => 100, 'reqs' => [['kind' => 'node', 'target_node_slug' => 'cp-1']]],
+                    ['slug' => 'cp-2', 'title' => 'Object Overlook', 'type' => 'lesson', 'x' => 350, 'y' => 250, 'reward_xp' => 100, 'reqs' => [['kind' => 'node', 'target_node_slug' => 'cp-1']]],
                     ['slug' => 'cp-boss', 'title' => 'The Loop Master', 'type' => 'boss', 'x' => 600, 'y' => 400, 'reward_xp' => 300, 'reqs' => [
                         ['kind' => 'node', 'target_node_slug' => 'cp-2'],
                         ['kind' => 'level', 'level' => 4],
