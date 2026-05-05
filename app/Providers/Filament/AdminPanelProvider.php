@@ -52,6 +52,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 'Learning',
+                'Learning Map',
                 'Community',
                 'Gamification',
                 'Administration',

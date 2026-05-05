@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use App\Casts\ExamSubmissionAnswersCast;
+use App\Models\LearningMap\MapNode;
+use App\Services\LearningMapService;
+use App\Support\LevelCurve;
 use Illuminate\Database\Eloquent\Model;
 
 class ExamSubmission extends Model
@@ -26,6 +29,7 @@ class ExamSubmission extends Model
     {
         static::created(function (ExamSubmission $submission): void {
             self::applyScoreDeltaToStudent($submission, 0.0, self::scoreAsFloat($submission->score));
+            self::syncLearningMapProgress($submission);
         });
 
         static::updated(function (ExamSubmission $submission): void {
@@ -37,7 +41,36 @@ class ExamSubmission extends Model
             $new = self::scoreAsFloat($submission->score);
 
             self::applyScoreDeltaToStudent($submission, $old, $new);
+            self::syncLearningMapProgress($submission);
         });
+    }
+
+    /**
+     * Mark every MapNode targeting this exam as complete if the latest
+     * score meets the node's configured pass threshold.
+     */
+    private static function syncLearningMapProgress(ExamSubmission $submission): void
+    {
+        if (! $submission->user_id || ! $submission->exam_id) {
+            return;
+        }
+
+        $score = (int) round(self::scoreAsFloat($submission->score));
+
+        $nodes = MapNode::where('target_type', Exam::class)
+            ->where('target_id', $submission->exam_id)
+            ->get();
+
+        if ($nodes->isEmpty()) {
+            return;
+        }
+
+        $service = app(LearningMapService::class);
+        foreach ($nodes as $node) {
+            if ($score >= $node->effectivePassScore()) {
+                $service->complete($submission->user, $node, $score);
+            }
+        }
     }
 
     private static function scoreAsFloat(mixed $value): float
@@ -78,7 +111,7 @@ class ExamSubmission extends Model
         } else {
             $user->increment('points', $delta);
             $user->increment('exp', $delta);
-            $user->level = floor($user->exp / 100) + 1;
+            $user->level = LevelCurve::levelForXp((int) $user->exp);
             $user->save();
 
             $user->recordGamificationHistory($delta, $delta, $reason, $description);

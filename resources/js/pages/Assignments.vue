@@ -20,7 +20,6 @@ import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { 
     FileUp, 
     CheckCircle2, 
@@ -192,7 +191,14 @@ const isOverdue = (dueDate: string) => {
     return new Date(dueDate) < new Date();
 };
 
-// SpotlightCard handles internal mouse tracking automatically
+const handleMouseMove = (e: MouseEvent) => {
+    const card = e.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+};
 
 onMounted(() => {
     if (!container.value) return;
@@ -286,58 +292,58 @@ declare const route: any;
 
             <!-- Stats Overview -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 z-10">
-                <SpotlightCard 
+                <Motion 
                     v-for="(stat, sIdx) in [
-                        { label: 'ACTIVE_OBJECTIVES', value: assignments.filter(a => !a.submission?.submitted).length, sub: 'IMMEDIATE_PRIORITY', icon: Clock, color: 'blue' },
-                        { label: 'COMPLETED_MISSIONS', value: assignments.filter(a => a.submission?.submitted).length, sub: 'OBJECTIVES_ACHIEVED', icon: CheckCircle2, color: 'emerald' },
-                        { label: 'PERFORMANCE_RANK', value: 'A+', sub: 'TOP_1%_OF_BATTALION', icon: Sparkles, color: 'purple' }
+                        { label: 'ACTIVE_OBJECTIVES', value: assignments.filter(a => !a.submission?.submitted).length, sub: 'IMMEDIATE_PRIORITY', icon: Clock },
+                        { label: 'COMPLETED_MISSIONS', value: assignments.filter(a => a.submission?.submitted).length, sub: 'OBJECTIVES_ACHIEVED', icon: CheckCircle2 },
+                        { label: 'PERFORMANCE_RANK', value: 'A+', sub: 'TOP_1%_OF_BATTALION', icon: Sparkles }
                     ]" 
                     :key="sIdx"
-                    customSize
-                    :glowColor="stat.color"
-                    className="stats-card surface-card p-0 relative group/stat premium-hover"
+                    :initial="{ opacity: 0, y: 20 }"
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 + sIdx * 0.1 }"
+                    class="stats-card surface-card p-5 relative overflow-hidden group/stat premium-hover" 
+                    @mousemove="handleMouseMove"
                 >
-                    <!-- Inner clipping container for background elements -->
-                    <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
-                        <!-- Tech Grid Background -->
-                        <div class="absolute inset-0 opacity-[0.03] group-hover/stat:opacity-[0.05] transition-opacity">
-                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                                <defs>
-                                    <pattern :id="`stat-grid-${sIdx}`" width="15" height="15" patternUnits="userSpaceOnUse">
-                                        <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
-                                    </pattern>
-                                </defs>
-                                <rect width="100%" height="100%" :fill="`url(#stat-grid-${sIdx})`" />
-                            </svg>
-                        </div>
-
-                        <!-- Tech Scanning Line -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-32 h-full -translate-x-full group-hover/stat:animate-scan-horizontal opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
-
-                        <!-- Silhouette Background Icon -->
-                        <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover/stat:opacity-[0.08] transition-all duration-700 pointer-events-none group-hover:scale-110 rotate-12 group-hover:rotate-[20deg]">
-                            <component :is="stat.icon" class="w-20 h-20" />
-                        </div>
+                    <!-- Tech Grid Background -->
+                    <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/stat:opacity-[0.05] transition-opacity">
+                        <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                            <defs>
+                                <pattern :id="`stat-grid-${sIdx}`" width="15" height="15" patternUnits="userSpaceOnUse">
+                                    <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                </pattern>
+                            </defs>
+                            <rect width="100%" height="100%" :fill="`url(#stat-grid-${sIdx})`" />
+                        </svg>
                     </div>
 
-                    <Motion
-                        :initial="{ opacity: 0, y: 20 }"
-                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                        :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 + sIdx * 0.1 }"
-                        class="relative flex flex-col w-full h-full p-5 sm:p-6"
-                    >
-                        <div class="relative z-10">
-                            <p class="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 font-mono">>_{{ stat.label }}</p>
-                            <h3 class="text-3xl font-black tracking-tighter mt-1 font-mono text-foreground group-hover/stat:text-primary transition-colors">
-                                {{ stat.value }}
-                            </h3>
-                            <div class="mt-4 pt-4 border-t border-border/10 flex items-center gap-2">
-                                <div class="w-1 h-1 rounded-full bg-primary/40 animate-pulse"></div>
-                                <span class="text-[8px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">{{ stat.sub }}</span>
-                            </div>
+                    <!-- Tech Scanning Line -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent w-32 h-full -translate-x-full group-hover/stat:animate-scan-horizontal pointer-events-none opacity-0 group-hover/stat:opacity-100 transition-opacity"></div>
+
+                    <!-- Hover Bloom Effect -->
+                    <div class="absolute inset-0 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-700 pointer-events-none"
+                        :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08), transparent 40%)` }">
+                    </div>
+
+                    <!-- Corner Accents -->
+                    <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500"></div>
+                    <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary/20 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-500"></div>
+
+                    <div class="absolute -right-3 -top-3 opacity-[0.03] group-hover/stat:opacity-[0.08] transition-all duration-700 pointer-events-none group-hover:scale-110 rotate-12 group-hover:rotate-0">
+                        <component :is="stat.icon" class="w-20 h-20" />
+                    </div>
+
+                    <div class="relative z-10">
+                        <p class="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/60 font-mono">>_{{ stat.label }}</p>
+                        <h3 class="text-3xl font-black tracking-tighter mt-1 font-mono text-foreground group-hover/stat:text-primary transition-colors">
+                            {{ stat.value }}
+                        </h3>
+                        <div class="mt-4 pt-4 border-t border-border/10 flex items-center gap-2">
+                            <div class="w-1 h-1 rounded-full bg-primary/40 animate-pulse"></div>
+                            <span class="text-[8px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">{{ stat.sub }}</span>
                         </div>
-                    </Motion>
-                </SpotlightCard>
+                    </div>
+                </Motion>
             </div>
 
             <!-- Tabs Navigation -->
@@ -375,111 +381,111 @@ declare const route: any;
                     enter-active-class="animate-in fade-in slide-in-from-bottom-4 duration-500"
                     leave-active-class="animate-out fade-out slide-out-to-top-4 duration-300 absolute"
                 >
-                    <SpotlightCard 
+                    <Motion 
                         v-for="(assignment, aIdx) in filteredAssignments" 
                         :key="assignment.id"
-                        customSize
-                        :glowColor="assignment.submission?.submitted ? 'emerald' : (isOverdue(assignment.due_date) ? 'red' : 'blue')"
-                        className="assignment-card surface-card p-0 group/card premium-hover relative transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 w-full min-w-0"
+                        :initial="{ opacity: 0, y: 40 }"
+                        :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :in-view-options="{ once: true, margin: '-50px' }"
+                        :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: aIdx * 0.05 }"
+                        class="assignment-card surface-card p-5 md:p-6 group/card premium-hover relative overflow-hidden transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10"
+                        @mousemove="handleMouseMove"
                     >
-                        <Motion 
-                            :initial="{ opacity: 0, y: 40 }"
-                            :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
-                            :in-view-options="{ once: true, margin: '-50px' }"
-                            :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: aIdx * 0.05 }"
-                            class="relative flex flex-col w-full h-full p-5 md:p-6"
-                        >
-                            <!-- Tech Grid Background -->
-                            <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/card:opacity-[0.05] transition-opacity">
-                                <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                                    <defs>
-                                        <pattern :id="`assignment-grid-${assignment.id}`" width="15" height="15" patternUnits="userSpaceOnUse">
-                                            <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
-                                        </pattern>
-                                    </defs>
-                                    <rect width="100%" height="100%" :fill="`url(#assignment-grid-${assignment.id})`" />
-                                </svg>
-                            </div>
+                        <!-- Tech Grid Background -->
+                        <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/card:opacity-[0.05] transition-opacity">
+                            <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                                <defs>
+                                    <pattern :id="`assignment-grid-${assignment.id}`" width="15" height="15" patternUnits="userSpaceOnUse">
+                                        <path d="M 15 0 L 0 0 0 15" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                                    </pattern>
+                                </defs>
+                                <rect width="100%" height="100%" :fill="`url(#assignment-grid-${assignment.id})`" />
+                            </svg>
+                        </div>
 
-                            <!-- Tech Scanning Line -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-32 h-full -translate-x-full group-hover/card:animate-scan-horizontal pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
+                        <!-- Tech Scanning Line -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent w-32 h-full -translate-x-full group-hover/card:animate-scan-horizontal pointer-events-none opacity-0 group-hover/card:opacity-100 transition-opacity"></div>
 
-                            <!-- Silhouette Background Icon -->
-                            <div class="absolute -right-6 -bottom-6 opacity-[0.03] group-hover/card:opacity-[0.08] transition-all duration-700 pointer-events-none rotate-12 group-hover:rotate-0 scale-110">
-                                <BookOpen class="w-32 h-32" />
-                            </div>
+                        <!-- Hover Bloom Effect -->
+                        <div class="absolute inset-0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-700 pointer-events-none"
+                            :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.1), transparent 40%)` }">
+                        </div>
 
-                            <div class="relative z-10 h-full flex flex-col">
-                                <div class="flex items-start justify-between mb-4">
-                                    <div class="space-y-2">
-                                        <div class="flex items-center gap-2">
-                                            <div class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 font-mono">
-                                                {{ assignment.course?.name?.toUpperCase() || 'GENERAL_UNIT' }}
-                                            </div>
-                                            <div :class="[
-                                                'px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border font-mono', 
-                                                getStatusColor(assignment.submission?.status || 'Pending').split(' ').filter(c => !c.includes('bg-')).join(' '),
-                                                getStatusColor(assignment.submission?.status || 'Pending').split(' ').find(c => c.includes('bg-'))?.replace('/10', '/20')
-                                            ]">
-                                                {{ assignment.submission?.status?.toUpperCase() || 'PENDING_OPS' }}
-                                            </div>
+                        <!-- Silhouette Background Icon -->
+                        <div class="absolute -right-6 -bottom-6 opacity-[0.03] group-hover/card:opacity-[0.08] transition-all duration-700 pointer-events-none rotate-12 group-hover:rotate-0 scale-110">
+                            <BookOpen class="w-32 h-32" />
+                        </div>
+
+                        <div class="relative z-10 h-full flex flex-col">
+                            <div class="flex items-start justify-between mb-4">
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2">
+                                        <div class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20 font-mono">
+                                            {{ assignment.course?.name?.toUpperCase() || 'GENERAL_UNIT' }}
                                         </div>
-                                        <h3 class="text-xl font-black tracking-tighter leading-tight group-hover/card:text-primary transition-colors duration-500 uppercase">
-                                            {{ assignment.title }}
-                                        </h3>
+                                        <div :class="[
+                                            'px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border font-mono', 
+                                            getStatusColor(assignment.submission?.status || 'Pending').split(' ').filter(c => !c.includes('bg-')).join(' '),
+                                            getStatusColor(assignment.submission?.status || 'Pending').split(' ').find(c => c.includes('bg-'))?.replace('/10', '/20')
+                                        ]">
+                                            {{ assignment.submission?.status?.toUpperCase() || 'PENDING_OPS' }}
+                                        </div>
                                     </div>
-                                    
-                                    <div class="text-right">
-                                        <p class="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-1 font-mono">
-                                            {{ assignment.submission?.submitted ? '>_TRANSMISSION' : '>_DEADLINE' }}
-                                        </p>
-                                        <p class="text-xs font-black font-mono tracking-tight" :class="isOverdue(assignment.due_date) && !assignment.submission?.submitted ? 'text-red-500' : 'text-muted-foreground'">
-                                            {{ assignment.submission?.submitted_at ? new Date(assignment.submission.submitted_at).toLocaleDateString().toUpperCase() : (assignment.due_date ? new Date(assignment.due_date).toLocaleDateString().toUpperCase() : 'UNDEFINED') }}
-                                        </p>
-                                    </div>
+                                    <h3 class="text-xl font-black tracking-tighter leading-tight group-hover/card:text-primary transition-colors duration-500 uppercase">
+                                        {{ assignment.title }}
+                                    </h3>
                                 </div>
-
-                                <p class="text-muted-foreground/70 text-xs leading-relaxed line-clamp-2 mb-4 flex-grow font-medium">
-                                    {{ assignment.description || 'No specialized mission intelligence provided for this objective. Proceed with standard operational procedures.' }}
-                                </p>
-
-                                <div class="flex items-center justify-between mt-auto pt-4 border-t border-border/10">
-                                    <!-- Enhanced Mission Status -->
-                                    <div v-if="assignment.submission?.submitted" class="flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center">
-                                            <FileText class="w-5 h-5 text-emerald-500" />
-                                        </div>
-                                        <div>
-                                            <p class="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 font-mono">>_SECURE_DATA</p>
-                                            <p class="text-xs font-black font-mono text-emerald-500/80">VERIFIED_TRANSMISSION</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div v-else class="flex items-center gap-2">
-                                        <div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
-                                        <span class="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500/80 font-mono">>_OBJECTIVE_INCOMPLETE</span>
-                                    </div>
-
-                                    <div class="flex gap-3">
-                                        <Button v-if="assignment.submission?.submitted" variant="outline" size="sm" class="h-9 px-4 rounded-xl gap-2 bg-transparent border-white/5 hover:bg-white/5 text-[9px] font-black uppercase tracking-widest font-mono">
-                                            <Download class="w-3.5 h-3.5" />
-                                            INTEL
-                                        </Button>
-                                        <Button 
-                                            v-if="!assignment.submission?.submitted" 
-                                            @click="selectedAssignment = assignment; selectedAssignmentId = assignment.id; showUploadModal = true"
-                                            variant="default" 
-                                            size="sm" 
-                                            class="h-9 px-6 rounded-xl gap-2 text-[9px] font-black uppercase tracking-[0.15em] shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all duration-500 group/btn"
-                                        >
-                                            <FileUp class="w-3.5 h-3.5 transition-transform group-hover/btn:-translate-y-0.5" />
-                                            SUBMIT_INTEL
-                                        </Button>
-                                    </div>
+                                
+                                <div class="text-right">
+                                    <p class="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-1 font-mono">
+                                        {{ assignment.submission?.submitted ? '>_TRANSMISSION' : '>_DEADLINE' }}
+                                    </p>
+                                    <p class="text-xs font-black font-mono tracking-tight" :class="isOverdue(assignment.due_date) && !assignment.submission?.submitted ? 'text-red-500' : 'text-muted-foreground'">
+                                        {{ assignment.submission?.submitted_at ? new Date(assignment.submission.submitted_at).toLocaleDateString().toUpperCase() : (assignment.due_date ? new Date(assignment.due_date).toLocaleDateString().toUpperCase() : 'UNDEFINED') }}
+                                    </p>
                                 </div>
                             </div>
-                        </Motion>
-                    </SpotlightCard>
+
+                            <p class="text-muted-foreground/70 text-xs leading-relaxed line-clamp-2 mb-4 flex-grow font-medium">
+                                {{ assignment.description || 'No specialized mission intelligence provided for this objective. Proceed with standard operational procedures.' }}
+                            </p>
+
+                            <div class="flex items-center justify-between mt-auto pt-4 border-t border-border/10">
+                                <!-- Enhanced Mission Status -->
+                                <div v-if="assignment.submission?.submitted" class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center">
+                                        <FileText class="w-5 h-5 text-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <p class="text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 font-mono">>_SECURE_DATA</p>
+                                        <p class="text-xs font-black font-mono text-emerald-500/80">VERIFIED_TRANSMISSION</p>
+                                    </div>
+                                </div>
+                                
+                                <div v-else class="flex items-center gap-2">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                                    <span class="text-[8px] font-black uppercase tracking-[0.2em] text-amber-500/80 font-mono">>_OBJECTIVE_INCOMPLETE</span>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <Button v-if="assignment.submission?.submitted" variant="outline" size="sm" class="h-9 px-4 rounded-xl gap-2 bg-transparent border-white/5 hover:bg-white/5 text-[9px] font-black uppercase tracking-widest font-mono">
+                                        <Download class="w-3.5 h-3.5" />
+                                        INTEL
+                                    </Button>
+                                    <Button 
+                                        v-if="!assignment.submission?.submitted" 
+                                        @click="selectedAssignment = assignment; selectedAssignmentId = assignment.id; showUploadModal = true"
+                                        variant="default" 
+                                        size="sm" 
+                                        class="h-9 px-6 rounded-xl gap-2 text-[9px] font-black uppercase tracking-[0.15em] shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)] transition-all duration-500 group/btn"
+                                    >
+                                        <FileUp class="w-3.5 h-3.5 transition-transform group-hover/btn:-translate-y-0.5" />
+                                        SUBMIT_INTEL
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </Motion>
                 </TransitionGroup>
             </div>
 
@@ -566,56 +572,59 @@ declare const route: any;
                                     <BookOpen class="w-6 h-6 opacity-10 group-hover:scale-110 group-hover:opacity-20 transition-all duration-500" />
                                 </div>
 
-                                <SpotlightCard 
+                                <!-- Upload Zone -->
+                                <div 
                                     @click="fileInput?.click()"
-                                    customSize
-                                    glowColor="blue"
-                                    className="upload-zone border-2 border-dashed border-primary/20 rounded-2xl p-0 flex flex-col items-center justify-center gap-4 hover:border-primary hover:bg-primary/[0.03] transition-all duration-700 cursor-pointer group relative overflow-hidden w-full min-w-0"
+                                    @mousemove="handleMouseMove"
+                                    class="upload-zone border-2 border-dashed border-primary/20 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 hover:border-primary hover:bg-primary/[0.03] transition-all duration-700 cursor-pointer group relative overflow-hidden"
                                     :class="{'opacity-40 grayscale-[0.5]': !selectedAssignmentId}"
                                 >
-                                    <div class="relative flex flex-col items-center justify-center w-full h-full p-8">
-                                        <input 
-                                            type="file" 
-                                            class="hidden" 
-                                            ref="fileInput"
-                                            @change="(e: any) => form.file = e.target.files[0]"
-                                        >
-                                        
-                                        <div v-if="!form.file" class="flex flex-col items-center gap-4 relative z-10">
-                                            <div class="relative">
-                                                <div class="absolute inset-0 bg-primary rounded-2xl blur-2xl opacity-0 group-hover:opacity-20 transition-all duration-700"></div>
-                                                <div class="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:scale-110 group-hover:border-primary/40 transition-all duration-700 shadow-2xl">
-                                                    <FileUp class="w-6 h-6 text-primary" />
-                                                </div>
-                                            </div>
-                                            <div class="text-center">
-                                                <p class="text-[11px] font-black uppercase tracking-[0.2em]">Initialize Transmission</p>
-                                                <div class="flex items-center gap-3 mt-2">
-                                                    <span class="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest px-2 py-0.5 bg-white/5 rounded-full border border-white/5">PDF / PNG</span>
-                                                    <span class="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest px-2 py-0.5 bg-white/5 rounded-full border border-white/5">MAX 10MB</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div v-else class="flex flex-col items-center gap-4 relative z-10">
-                                            <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-                                                <FileText class="w-6 h-6 text-emerald-400" />
-                                            </div>
-                                            <div class="text-center">
-                                                <p class="text-[10px] font-black text-emerald-400 truncate max-w-[250px] tracking-tight uppercase px-3 py-1.5 bg-emerald-500/5 rounded-lg border border-emerald-500/10">{{ form.file.name.toUpperCase() }}</p>
-                                                <button @click.stop="form.file = null" class="text-[8px] font-black uppercase tracking-[0.25em] text-red-400/80 mt-3 hover:text-red-400 hover:scale-110 transition-all flex items-center gap-2 mx-auto decoration-red-400/40 underline-offset-4 hover:underline">
-                                                    Discard Intelligence
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <!-- Corner accents -->
-                                        <div class="absolute top-3 left-3 w-3 h-3 border-t-2 border-l-2 border-primary/20 rounded-tl-md"></div>
-                                        <div class="absolute top-3 right-3 w-3 h-3 border-t-2 border-r-2 border-primary/20 rounded-tr-md"></div>
-                                        <div class="absolute bottom-3 left-3 w-3 h-3 border-b-2 border-l-2 border-primary/20 rounded-bl-md"></div>
-                                        <div class="absolute bottom-3 right-3 w-3 h-3 border-b-2 border-r-2 border-primary/20 rounded-br-md"></div>
+                                    <!-- Dynamic Radial Glow -->
+                                    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                                        :style="{ background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.15), transparent 40%)` }">
                                     </div>
-                                </SpotlightCard>
+
+                                    <input 
+                                        type="file" 
+                                        class="hidden" 
+                                        ref="fileInput"
+                                        @change="(e: any) => form.file = e.target.files[0]"
+                                    >
+                                    
+                                    <div v-if="!form.file" class="flex flex-col items-center gap-4 relative z-10">
+                                        <div class="relative">
+                                            <div class="absolute inset-0 bg-primary rounded-2xl blur-2xl opacity-0 group-hover:opacity-20 transition-all duration-700"></div>
+                                            <div class="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:scale-110 group-hover:border-primary/40 transition-all duration-700 shadow-2xl">
+                                                <FileUp class="w-6 h-6 text-primary" />
+                                            </div>
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-[11px] font-black uppercase tracking-[0.2em]">Initialize Transmission</p>
+                                            <div class="flex items-center gap-3 mt-2">
+                                                <span class="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest px-2 py-0.5 bg-white/5 rounded-full border border-white/5">PDF / PNG</span>
+                                                <span class="text-[8px] font-bold text-muted-foreground/40 uppercase tracking-widest px-2 py-0.5 bg-white/5 rounded-full border border-white/5">MAX 10MB</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div v-else class="flex flex-col items-center gap-4 relative z-10">
+                                        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                                            <FileText class="w-6 h-6 text-emerald-400" />
+                                        </div>
+                                        <div class="text-center">
+                                            <p class="text-[10px] font-black text-emerald-400 truncate max-w-[250px] tracking-tight uppercase px-3 py-1.5 bg-emerald-500/5 rounded-lg border border-emerald-500/10">{{ form.file.name.toUpperCase() }}</p>
+                                            <button @click.stop="form.file = null" class="text-[8px] font-black uppercase tracking-[0.25em] text-red-400/80 mt-3 hover:text-red-400 hover:scale-110 transition-all flex items-center gap-2 mx-auto decoration-red-400/40 underline-offset-4 hover:underline">
+                                                Discard Intelligence
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Corner accents -->
+                                    <div class="absolute top-3 left-3 w-3 h-3 border-t-2 border-l-2 border-primary/20 rounded-tl-md"></div>
+                                    <div class="absolute top-3 right-3 w-3 h-3 border-t-2 border-r-2 border-primary/20 rounded-tr-md"></div>
+                                    <div class="absolute bottom-3 left-3 w-3 h-3 border-b-2 border-l-2 border-primary/20 rounded-bl-md"></div>
+                                    <div class="absolute bottom-3 right-3 w-3 h-3 border-b-2 border-r-2 border-primary/20 rounded-br-md"></div>
+                                </div>
 
                                 <div class="flex gap-4 mt-8 relative z-10">
                                     <button 

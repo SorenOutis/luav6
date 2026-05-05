@@ -346,6 +346,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     // Games hub
     Route::get('games', [GamesController::class, 'index'])->name('games.index');
 
+    // Interactive Maps
+    Route::get('maps', [\App\Http\Controllers\LearningMapController::class, 'index'])->name('maps.index');
+    Route::post('maps/nodes/{slug}/complete', [\App\Http\Controllers\LearningMapController::class, 'complete'])
+        ->name('maps.nodes.complete');
+
     // Tower Defense game routes
     Route::prefix('games/tower-defense')->name('games.tower-defense.')->group(function () {
         Route::get('/', [TowerDefenseController::class, 'index'])->name('index');
