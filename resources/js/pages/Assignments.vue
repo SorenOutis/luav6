@@ -20,6 +20,7 @@ import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { 
     FileUp, 
     CheckCircle2, 
@@ -294,17 +295,39 @@ declare const route: any;
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 z-10">
                 <Motion 
                     v-for="(stat, sIdx) in [
-                        { label: 'ACTIVE_OBJECTIVES', value: assignments.filter(a => !a.submission?.submitted).length, sub: 'IMMEDIATE_PRIORITY', icon: Clock },
-                        { label: 'COMPLETED_MISSIONS', value: assignments.filter(a => a.submission?.submitted).length, sub: 'OBJECTIVES_ACHIEVED', icon: CheckCircle2 },
-                        { label: 'PERFORMANCE_RANK', value: 'A+', sub: 'TOP_1%_OF_BATTALION', icon: Sparkles }
+                        { label: 'ACTIVE_OBJECTIVES', value: assignments.filter(a => !a.submission?.submitted).length, sub: 'IMMEDIATE_PRIORITY', icon: Clock, glowColor: 'orange' as const },
+                        { label: 'COMPLETED_MISSIONS', value: assignments.filter(a => a.submission?.submitted).length, sub: 'OBJECTIVES_ACHIEVED', icon: CheckCircle2, glowColor: 'green' as const },
+                        { label: 'PERFORMANCE_RANK', value: 'A+', sub: 'TOP_1%_OF_BATTALION', icon: Sparkles, glowColor: 'purple' as const }
                     ]" 
                     :key="sIdx"
                     :initial="{ opacity: 0, y: 20 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 + sIdx * 0.1 }"
-                    class="stats-card surface-card p-5 relative overflow-hidden group/stat premium-hover" 
-                    @mousemove="handleMouseMove"
                 >
+                    <SpotlightCard
+                        customSize
+                        :glowColor="stat.glowColor"
+                        className="stats-card p-5 relative group/stat premium-hover bg-card/40"
+                        @mousemove="handleMouseMove"
+                    >
+                    <!-- Persistent colored corner highlight -->
+                    <div
+                        class="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-40 blur-3xl group-hover/stat:opacity-70 transition-opacity duration-700"
+                        :class="{
+                            'bg-orange-500/30': stat.glowColor === 'orange',
+                            'bg-emerald-500/30': stat.glowColor === 'green',
+                            'bg-purple-500/30': stat.glowColor === 'purple',
+                        }"
+                    ></div>
+                    <div
+                        class="pointer-events-none absolute -bottom-20 -left-20 w-56 h-56 rounded-full opacity-25 blur-3xl group-hover/stat:opacity-50 transition-opacity duration-700"
+                        :class="{
+                            'bg-orange-400/25': stat.glowColor === 'orange',
+                            'bg-emerald-400/25': stat.glowColor === 'green',
+                            'bg-purple-400/25': stat.glowColor === 'purple',
+                        }"
+                    ></div>
+
                     <!-- Tech Grid Background -->
                     <div class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/stat:opacity-[0.05] transition-opacity">
                         <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
@@ -343,6 +366,7 @@ declare const route: any;
                             <span class="text-[8px] font-black text-muted-foreground/40 tracking-[0.2em] uppercase font-mono">{{ stat.sub }}</span>
                         </div>
                     </div>
+                    </SpotlightCard>
                 </Motion>
             </div>
 
