@@ -142,6 +142,111 @@ const scrambleText = (el: HTMLElement) => {
     requestAnimationFrame(tick);
 };
 
+// Scroll-reveal system: any element with [data-reveal] gets a slick fade+slide+blur reveal.
+// Variants via attribute value: 'up' (default) | 'down' | 'left' | 'right' | 'fade' | 'scale'.
+// Optional: data-reveal-stagger (seconds) staggers immediate children instead of the element.
+// Optional: data-reveal-delay (seconds), data-reveal-duration (seconds).
+const initScrollReveal = () => {
+    const reduced = prefersReducedMotion.value;
+    const els = document.querySelectorAll<HTMLElement>('[data-reveal]');
+
+    els.forEach((el) => {
+        const variant = (el.dataset.reveal || 'up').toLowerCase();
+        const staggerAttr = parseFloat(el.dataset.revealStagger || '0');
+        const delay = parseFloat(el.dataset.revealDelay || '0');
+        const duration = parseFloat(el.dataset.revealDuration || '1.1');
+
+        const offsetMap: Record<string, { x?: number; y?: number; scale?: number }> = {
+            up: { y: 40 },
+            down: { y: -40 },
+            left: { x: -50 },
+            right: { x: 50 },
+            fade: {},
+            scale: { scale: 0.92 },
+        };
+        const offset = offsetMap[variant] ?? offsetMap.up;
+
+        const targets: Element[] | HTMLElement = staggerAttr > 0 && el.children.length > 0
+            ? Array.from(el.children)
+            : el;
+
+        const fromVars: gsap.TweenVars = {
+            opacity: 0,
+            ...offset,
+            filter: reduced ? 'none' : 'blur(12px)',
+            willChange: 'transform, opacity, filter',
+        };
+
+        const toVars: gsap.TweenVars = {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            filter: 'blur(0px)',
+            duration: reduced ? 0.4 : duration,
+            ease: 'expo.out',
+            delay,
+            stagger: staggerAttr > 0 ? staggerAttr : 0,
+            clearProps: 'willChange,filter',
+            scrollTrigger: {
+                trigger: el,
+                start: 'top 85%',
+                once: true,
+            },
+        };
+
+        gsap.fromTo(targets, fromVars, toVars);
+    });
+};
+
+// Directional reveal: when a section scrolls past the top of the viewport, animate it out;
+// when the user scrolls back up and it re-enters, animate it back in.
+const initDirectionalReveal = () => {
+    if (prefersReducedMotion.value || !mainContainer.value) return;
+
+    const main = mainContainer.value.querySelector('main');
+    if (!main) return;
+
+    const sections = Array.from(main.children) as HTMLElement[];
+
+    sections.forEach((section) => {
+        // Skip tiny / non-visual wrappers
+        if (section.offsetHeight < 40) return;
+
+        gsap.set(section, { willChange: 'transform, opacity, filter' });
+
+        const hide = () => {
+            gsap.to(section, {
+                opacity: 0,
+                y: -40,
+                filter: 'blur(10px)',
+                duration: 0.55,
+                ease: 'power2.in',
+                overwrite: 'auto',
+            });
+        };
+
+        const show = () => {
+            gsap.to(section, {
+                opacity: 1,
+                y: 0,
+                filter: 'blur(0px)',
+                duration: 0.7,
+                ease: 'expo.out',
+                overwrite: 'auto',
+            });
+        };
+
+        ScrollTrigger.create({
+            trigger: section,
+            start: 'bottom top+=40',
+            end: 'bottom top',
+            onLeave: hide,        // scrolled down past the section
+            onEnterBack: show,    // scrolled back up into the section
+        });
+    });
+};
+
 const initScrambleElements = () => {
     const els = document.querySelectorAll<HTMLElement>('[data-scramble]');
     els.forEach(el => {
@@ -271,6 +376,8 @@ onMounted(() => {
 
     nextTick(() => {
         initScrambleElements();
+        initScrollReveal();
+        initDirectionalReveal();
         
         // Signal Jitter for LivePulse (if we want to keep some logic here, but better in component)
         // We'll let components handle their own local animations for better performance
@@ -349,9 +456,9 @@ const orbLayers = [
             <Motion
                 id="engine"
                 class="scroll-mt-32"
-                :initial="{ opacity: 0, y: 30 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                :initial="{ opacity: 0, y: 30, filter: 'blur(12px)' }"
+                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
                 :in-view-options="{ once: true, margin: '-100px' }"
                 :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1] }"
             >
@@ -359,9 +466,9 @@ const orbLayers = [
             </Motion>
 
             <Motion
-                :initial="{ opacity: 0, y: 30 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                :initial="{ opacity: 0, y: 30, filter: 'blur(10px)' }"
+                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
                 :in-view-options="{ once: true, margin: '-100px' }"
                 :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
                 class="mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.4fr_1fr]"
@@ -390,9 +497,9 @@ const orbLayers = [
             <Motion
                 id="architecture"
                 class="scroll-mt-32"
-                :initial="{ opacity: 0, scale: 0.95 }"
-                :animate="isBooted ? { opacity: 1, scale: 1 } : {}"
-                :in-view="isBooted ? { opacity: 1, scale: 1 } : {}"
+                :initial="{ opacity: 0, scale: 0.95, filter: 'blur(14px)' }"
+                :animate="isBooted ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : {}"
+                :in-view="isBooted ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : {}"
                 :in-view-options="{ once: true, margin: '-50px' }"
                 :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
             >
@@ -400,9 +507,9 @@ const orbLayers = [
             </Motion>
 
             <Motion
-                :initial="{ opacity: 0, y: 50 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                :initial="{ opacity: 0, y: 50, filter: 'blur(16px)' }"
+                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 1, ease: 'ease-out' }"
             >
@@ -420,9 +527,9 @@ const orbLayers = [
             />
 
             <Motion
-                :initial="{ opacity: 0, y: 40 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                :initial="{ opacity: 0, y: 40, filter: 'blur(10px)' }"
+                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
+                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 0.8, ease: 'ease-out' }"
             >
@@ -430,9 +537,9 @@ const orbLayers = [
             </Motion>
 
             <Motion
-                :initial="{ opacity: 0, x: -20 }"
-                :animate="isBooted ? { opacity: 1, x: 0 } : {}"
-                :in-view="isBooted ? { opacity: 1, x: 0 } : {}"
+                :initial="{ opacity: 0, x: -20, filter: 'blur(8px)' }"
+                :animate="isBooted ? { opacity: 1, x: 0, filter: 'blur(0px)' } : {}"
+                :in-view="isBooted ? { opacity: 1, x: 0, filter: 'blur(0px)' } : {}"
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 0.8, delay: 0.1 }"
             >
@@ -494,5 +601,10 @@ const orbLayers = [
 @keyframes scan-horizontal {
     from { transform: translateX(-100%); }
     to { transform: translateX(1000%); }
+}
+/* Anti-FOUC for scroll-reveal targets — GSAP takes over on mount. */
+[data-reveal] { opacity: 0; will-change: transform, opacity, filter; }
+@media (prefers-reduced-motion: reduce) {
+    [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; }
 }
 </style>
