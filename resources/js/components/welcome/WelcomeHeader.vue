@@ -22,12 +22,24 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
 
 const scrollToSection = (e: MouseEvent, targetId: string) => {
     e.preventDefault();
+    if (targetId === 'top') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        history.pushState(null, '', window.location.pathname);
+        return;
+    }
     const el = document.getElementById(targetId);
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         history.pushState(null, '', `#${targetId}`);
     }
 };
+
+const navItems = [
+    { label: 'Home',         target: 'top' },
+    { label: 'Stats',        target: 'metrics' },
+    { label: 'How It Works', target: 'architecture' },
+    { label: 'Features',     target: 'features' },
+];
 </script>
 
 <template>
@@ -57,22 +69,27 @@ const scrollToSection = (e: MouseEvent, targetId: string) => {
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }"
             class="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-10"
         >
-            <a href="#engine" @click="(e) => scrollToSection(e, 'engine')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
-                Home
+            <a
+                v-for="item in navItems"
+                :key="item.label"
+                :href="`#${item.target}`"
+                @click="(e) => scrollToSection(e, item.target)"
+                @mousemove="handleMagnetic"
+                @mouseleave="resetMagnetic"
+                class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group"
+            >
+                {{ item.label }}
                 <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
             </a>
-            <a href="#metrics" @click="(e) => scrollToSection(e, 'metrics')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
-                Metrics
+            <Link
+                href="/about"
+                @mousemove="handleMagnetic"
+                @mouseleave="resetMagnetic"
+                class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group"
+            >
+                About
                 <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
-            </a>
-            <a href="#architecture" @click="(e) => scrollToSection(e, 'architecture')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
-                Architecture
-                <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
-            </a>
-            <a href="#features" @click="(e) => scrollToSection(e, 'features')" @mousemove="handleMagnetic" @mouseleave="resetMagnetic" class="nav-item text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors relative group">
-                Features
-                <span class="absolute -bottom-2 left-1/2 w-0 h-px bg-primary -translate-x-1/2 transition-all duration-300 group-hover:w-full"></span>
-            </a>
+            </Link>
         </Motion>
 
         <Motion 

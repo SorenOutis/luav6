@@ -48,6 +48,14 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+Route::get('/about', function () {
+    return inertia('About', [
+        'totalUsers' => User::count(),
+        'totalExams' => Exam::where('status', '!=', 'draft')->count(),
+        'totalSubmissions' => ExamSubmission::count(),
+    ]);
+})->name('about');
+
 Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', function () {
         $user = auth()->user();
