@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { onMounted, onBeforeUnmount, ref } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
     Command, ArrowLeft, Target, Compass, Sparkles, ShieldCheck,
     Users, Layers, BookOpenCheck, Mail, Github, Twitter, Linkedin, ArrowUp,
+    GraduationCap, Briefcase, UserCog, CheckCircle2, XCircle, RotateCcw,
 } from 'lucide-vue-next';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import { useAppearance } from '@/composables/useAppearance';
@@ -64,9 +65,60 @@ const team = [
 const faqs = [
     { q: 'What does LSI stand for?', a: 'Learning Systems Infrastructure — the underlying engine powering everything you see in this product.' },
     { q: 'Is LSI free for educators?', a: 'Pilot programs are free for verified institutions during the v6 cycle. Get in touch via the contact link below.' },
-    { q: 'Can I integrate with my existing LMS?', a: 'Yes. LSI exposes a clean API and supports standard SSO. Custom integrations are possible for enterprise deployments.' },
+    { q: 'Do students need any special device or software?', a: 'No. LSI runs in any modern browser on phones, tablets, or laptops — no installs, no plug-ins. A reliable internet connection is all that\'s required.' },
     { q: 'How is student data protected?', a: 'All submissions are encrypted at rest and in transit. We do not sell data, and institutions retain full ownership of their content.' },
 ];
+
+// Interactive: role picker
+const activeRole = ref<'educator' | 'student' | 'admin'>('educator');
+const roles = [
+    {
+        key: 'educator' as const,
+        icon: GraduationCap,
+        label: 'Educator',
+        headline: 'Spend less time grading, more time teaching.',
+        body: 'Author exams in minutes, push assignments to whole sections, and watch real-time mastery build through the Live Pulse dashboard.',
+        bullets: ['Section-aware leaderboards', 'AI-assisted feedback drafts', 'One-click reusable exam parts'],
+    },
+    {
+        key: 'student' as const,
+        icon: Users,
+        label: 'Student',
+        headline: 'Learn with momentum, not anxiety.',
+        body: 'Streaks, badges, and the Learning Map turn each lesson into a checkpoint on a clear journey — instead of a wall of grades.',
+        bullets: ['Daily streaks & XP', 'Personal learning map', 'Anonymous classroom messaging'],
+    },
+    {
+        key: 'admin' as const,
+        icon: UserCog,
+        label: 'Administrator',
+        headline: 'See your whole campus at a glance.',
+        body: 'Filament-powered admin tools give you full visibility into seasons, sections, submissions, and engagement across the institution.',
+        bullets: ['Per-section analytics', 'Season & cohort management', 'Granular permissions'],
+    },
+];
+const currentRole = computed(() => roles.find(r => r.key === activeRole.value)!);
+
+// Interactive: mini quiz demo
+const demoQuestion = {
+    prompt: 'Which of the following best describes formative assessment?',
+    options: [
+        { id: 'a', text: 'A high-stakes ranking exam at the end of a course.' },
+        { id: 'b', text: 'Ongoing checks for understanding that guide further learning.', correct: true },
+        { id: 'c', text: 'A standardized test administered nationally.' },
+    ],
+};
+const selectedAnswer = ref<string | null>(null);
+const showFeedback = computed(() => selectedAnswer.value !== null);
+const isCorrect = computed(() => {
+    const opt = demoQuestion.options.find(o => o.id === selectedAnswer.value);
+    return !!opt?.correct;
+});
+const selectAnswer = (id: string) => {
+    if (selectedAnswer.value !== null) return;
+    selectedAnswer.value = id;
+};
+const resetDemo = () => { selectedAnswer.value = null; };
 
 onMounted(() => {
     ctx = gsap.context(() => {
@@ -89,6 +141,26 @@ onMounted(() => {
                 opacity: 0, filter: 'blur(8px)',
                 duration: 0.9, ease: 'expo.out',
                 scrollTrigger: { trigger: el, start: 'top 85%' },
+            });
+        });
+
+        // Directional reveal: each section is visible only while it overlaps the viewport.
+        nextTick(() => {
+            const sections = Array.from(root.value?.querySelectorAll<HTMLElement>('main > section') ?? []);
+            const viewportH = window.innerHeight;
+            sections.forEach((section) => {
+                if (section.offsetHeight < 40) return;
+                gsap.set(section, { willChange: 'transform, opacity, filter' });
+                const hideUp = () => gsap.to(section, { opacity: 0, y: -40, filter: 'blur(10px)', duration: 0.55, ease: 'power2.in', overwrite: 'auto' });
+                const hideDown = () => gsap.to(section, { opacity: 0, y: 40, filter: 'blur(10px)', duration: 0.55, ease: 'power2.in', overwrite: 'auto' });
+                const show = () => gsap.to(section, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.7, ease: 'expo.out', overwrite: 'auto' });
+
+                const rect = section.getBoundingClientRect();
+                if (rect.top > viewportH * 0.95) {
+                    gsap.set(section, { opacity: 0, y: 40, filter: 'blur(10px)' });
+                }
+                ScrollTrigger.create({ trigger: section, start: 'bottom top+=40', end: 'bottom top', onLeave: hideUp, onEnterBack: show });
+                ScrollTrigger.create({ trigger: section, start: 'top bottom-=40', end: 'top bottom', onEnter: show, onLeaveBack: hideDown });
             });
         });
     }, root);
@@ -236,25 +308,179 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                     </div>
                 </div>
                 <div class="relative">
+                    <!-- Spine: mobile at left edge, desktop centered -->
                     <div class="absolute left-3 lg:left-1/2 top-0 bottom-0 w-px bg-border/30 -translate-x-1/2"></div>
-                    <div class="flex flex-col gap-10 lg:gap-16">
+                    <div class="flex flex-col gap-12 lg:gap-20">
                         <div
                             v-for="(m, i) in milestones"
                             :key="m.year"
-                            class="timeline-row relative grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16"
-                            :class="i % 2 === 0 ? '' : 'lg:[&>*:first-child]:order-2'"
+                            class="timeline-row relative grid grid-cols-[24px_1fr] lg:grid-cols-[1fr_24px_1fr] gap-x-6 lg:gap-x-10 items-start"
                         >
-                            <div class="flex flex-col gap-2 pl-10 lg:pl-0" :class="i % 2 === 0 ? 'lg:text-right lg:pr-10' : 'lg:pl-10'">
-                                <span class="text-5xl lg:text-7xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
+                            <!-- LEFT side (desktop) — year on even, details on odd -->
+                            <div class="hidden lg:block" :class="i % 2 === 0 ? 'text-right pr-2' : 'order-3 pl-2'">
+                                <template v-if="i % 2 === 0">
+                                    <span class="text-5xl lg:text-7xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
+                                </template>
+                                <template v-else>
+                                    <h3 class="text-xl lg:text-2xl font-black uppercase tracking-tight mb-2">{{ m.title }}</h3>
+                                    <p class="text-xs lg:text-sm text-muted-foreground leading-relaxed max-w-md">{{ m.body }}</p>
+                                </template>
                             </div>
-                            <div class="relative pl-10 lg:pl-0" :class="i % 2 === 0 ? 'lg:pl-10' : 'lg:text-right lg:pr-10'">
-                                <span class="absolute left-3 lg:left-auto top-2 -translate-x-1/2 lg:translate-x-0 lg:-left-2 h-3 w-3 rounded-full bg-primary ring-4 ring-background"
-                                      :class="i % 2 === 0 ? 'lg:-left-2' : 'lg:-right-2 lg:left-auto'"></span>
-                                <h3 class="text-xl lg:text-2xl font-black uppercase tracking-tight mb-2">{{ m.title }}</h3>
-                                <p class="text-xs lg:text-sm text-muted-foreground leading-relaxed max-w-md" :class="i % 2 !== 0 ? 'lg:ml-auto' : ''">{{ m.body }}</p>
+
+                            <!-- SPINE column (always centered, holds the dot) -->
+                            <div class="relative flex justify-center lg:order-2">
+                                <span class="mt-2 inline-block h-3 w-3 rounded-full bg-primary ring-4 ring-background"></span>
+                            </div>
+
+                            <!-- RIGHT side: details on even, year on odd; mobile shows everything stacked here -->
+                            <div class="lg:order-3" :class="i % 2 === 0 ? 'lg:pl-2' : 'lg:order-1 lg:text-right lg:pr-2'">
+                                <!-- Mobile: always show year + content together -->
+                                <div class="lg:hidden flex flex-col gap-2">
+                                    <span class="text-5xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
+                                    <h3 class="text-xl font-black uppercase tracking-tight mt-2">{{ m.title }}</h3>
+                                    <p class="text-xs text-muted-foreground leading-relaxed">{{ m.body }}</p>
+                                </div>
+                                <!-- Desktop: alternates -->
+                                <div class="hidden lg:block">
+                                    <template v-if="i % 2 === 0">
+                                        <h3 class="text-xl lg:text-2xl font-black uppercase tracking-tight mb-2">{{ m.title }}</h3>
+                                        <p class="text-xs lg:text-sm text-muted-foreground leading-relaxed max-w-md">{{ m.body }}</p>
+                                    </template>
+                                    <template v-else>
+                                        <span class="text-5xl lg:text-7xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Interactive: Role Picker -->
+            <section class="mt-24 lg:mt-40">
+                <div class="reveal-block flex items-end justify-between gap-4 mb-10 lg:mb-14">
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-center gap-3">
+                            <Briefcase class="h-4 w-4 text-primary" />
+                            <span class="text-[10px] font-black uppercase tracking-[0.4em] text-primary">/ explore</span>
+                        </div>
+                        <h2 class="text-3xl lg:text-5xl font-black uppercase tracking-tight">What LSI does for <span class="text-primary">you</span></h2>
+                        <p class="text-sm text-muted-foreground max-w-xl">Pick the role that fits — see what changes for you on day one.</p>
+                    </div>
+                </div>
+                <div class="reveal-block border border-border/20 bg-gradient-to-br from-muted/[0.03] to-transparent">
+                    <!-- Tabs -->
+                    <div role="tablist" class="grid grid-cols-3 border-b border-border/15">
+                        <button
+                            v-for="r in roles"
+                            :key="r.key"
+                            role="tab"
+                            :aria-selected="activeRole === r.key"
+                            @click="activeRole = r.key"
+                            class="group relative flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 px-3 py-5 lg:py-6 text-[10px] lg:text-xs font-black uppercase tracking-[0.25em] transition-colors"
+                            :class="activeRole === r.key ? 'text-foreground bg-background' : 'text-muted-foreground hover:text-foreground'"
+                        >
+                            <component :is="r.icon" class="h-4 w-4" :class="activeRole === r.key ? 'text-primary' : ''" />
+                            <span>{{ r.label }}</span>
+                            <span
+                                class="absolute inset-x-0 bottom-0 h-0.5 bg-primary origin-left transition-transform duration-500"
+                                :class="activeRole === r.key ? 'scale-x-100' : 'scale-x-0'"
+                            ></span>
+                        </button>
+                    </div>
+                    <!-- Panel -->
+                    <div :key="activeRole" class="role-panel grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8 lg:gap-12 p-6 lg:p-12">
+                        <div class="flex flex-col gap-4">
+                            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-primary">{{ currentRole.label }}</span>
+                            <h3 class="text-2xl lg:text-4xl font-black uppercase tracking-tight leading-tight">{{ currentRole.headline }}</h3>
+                            <p class="text-sm lg:text-base text-muted-foreground leading-relaxed max-w-xl">{{ currentRole.body }}</p>
+                        </div>
+                        <ul class="flex flex-col gap-3 lg:border-l lg:border-border/20 lg:pl-8">
+                            <li
+                                v-for="(b, i) in currentRole.bullets"
+                                :key="b"
+                                class="flex items-start gap-3 text-xs lg:text-sm"
+                                :style="{ animationDelay: `${i * 80}ms` }"
+                            >
+                                <span class="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
+                                <span class="text-foreground/90">{{ b }}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Interactive: Try a question -->
+            <section class="mt-24 lg:mt-40">
+                <div class="reveal-block flex items-end justify-between gap-4 mb-10 lg:mb-14">
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-center gap-3">
+                            <Sparkles class="h-4 w-4 text-primary" />
+                            <span class="text-[10px] font-black uppercase tracking-[0.4em] text-primary">/ try_it</span>
+                        </div>
+                        <h2 class="text-3xl lg:text-5xl font-black uppercase tracking-tight">A taste of the engine</h2>
+                        <p class="text-sm text-muted-foreground max-w-xl">A 10-second demo of what an LSI question feels like — instant feedback, no judgment, no scoreboard.</p>
+                    </div>
+                </div>
+                <div class="reveal-block grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-px bg-border/15 border border-border/15">
+                    <div class="bg-background p-6 lg:p-10 flex flex-col gap-6">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">Question · 01</span>
+                            <span class="text-[9px] font-black uppercase tracking-[0.3em] text-primary">Pedagogy 101</span>
+                        </div>
+                        <h3 class="text-lg lg:text-2xl font-black tracking-tight leading-snug">{{ demoQuestion.prompt }}</h3>
+                        <div class="flex flex-col gap-3">
+                            <button
+                                v-for="opt in demoQuestion.options"
+                                :key="opt.id"
+                                type="button"
+                                @click="selectAnswer(opt.id)"
+                                :disabled="selectedAnswer !== null"
+                                class="group relative flex items-start gap-4 border p-4 text-left transition-all"
+                                :class="[
+                                    selectedAnswer === null && 'border-border/30 hover:border-primary/60 hover:bg-primary/5 cursor-pointer',
+                                    selectedAnswer !== null && opt.correct && 'border-emerald-500/60 bg-emerald-500/5',
+                                    selectedAnswer === opt.id && !opt.correct && 'border-rose-500/60 bg-rose-500/5',
+                                    selectedAnswer !== null && selectedAnswer !== opt.id && !opt.correct && 'border-border/20 opacity-50',
+                                ]"
+                            >
+                                <span class="mt-0.5 flex h-6 w-6 items-center justify-center border border-border/40 text-[10px] font-black uppercase tracking-widest shrink-0">{{ opt.id }}</span>
+                                <span class="text-sm lg:text-[15px] font-medium leading-snug flex-1">{{ opt.text }}</span>
+                                <CheckCircle2 v-if="selectedAnswer !== null && opt.correct" class="h-5 w-5 text-emerald-500 shrink-0" />
+                                <XCircle v-else-if="selectedAnswer === opt.id && !opt.correct" class="h-5 w-5 text-rose-500 shrink-0" />
+                            </button>
+                        </div>
+                    </div>
+                    <aside class="bg-background p-6 lg:p-8 flex flex-col gap-4 justify-between">
+                        <div class="flex flex-col gap-3">
+                            <span class="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">Live feedback</span>
+                            <div v-if="!showFeedback" class="text-xs text-muted-foreground leading-relaxed">
+                                Pick an answer to see how LSI replies — students get the same kind of instant, supportive feedback after every prompt.
+                            </div>
+                            <div v-else-if="isCorrect" class="flex flex-col gap-2">
+                                <div class="flex items-center gap-2 text-emerald-500">
+                                    <CheckCircle2 class="h-5 w-5" />
+                                    <span class="text-xs font-black uppercase tracking-[0.25em]">Correct</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground leading-relaxed">Exactly. Formative assessment is about <span class="text-foreground font-bold">guiding</span> learning while it's still happening — not ranking it after.</p>
+                            </div>
+                            <div v-else class="flex flex-col gap-2">
+                                <div class="flex items-center gap-2 text-rose-500">
+                                    <XCircle class="h-5 w-5" />
+                                    <span class="text-xs font-black uppercase tracking-[0.25em]">Not quite</span>
+                                </div>
+                                <p class="text-xs text-muted-foreground leading-relaxed">That describes <span class="text-foreground font-bold">summative</span> assessment. Formative happens <em>during</em> learning to inform what comes next.</p>
+                            </div>
+                        </div>
+                        <button
+                            v-if="showFeedback"
+                            @click="resetDemo"
+                            class="self-start inline-flex items-center gap-2 border border-border/30 hover:border-primary/60 px-3 py-2 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <RotateCcw class="h-3 w-3" />
+                            Try again
+                        </button>
+                    </aside>
                 </div>
             </section>
 
@@ -353,4 +579,22 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
 <style scoped>
 details > summary::-webkit-details-marker { display: none; }
+
+.role-panel {
+    animation: rolePanelIn .55s cubic-bezier(.16,1,.3,1) both;
+}
+.role-panel li {
+    animation: roleBulletIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes rolePanelIn {
+    from { opacity: 0; transform: translateY(12px); filter: blur(6px); }
+    to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+}
+@keyframes roleBulletIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .role-panel, .role-panel li { animation: none; }
+}
 </style>
