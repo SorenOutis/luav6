@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Motion } from '@motionone/vue';
+
+gsap.registerPlugin(ScrollTrigger);
 
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard, logout } from '@/routes';
@@ -28,6 +32,39 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const dashboardContainer = ref<HTMLElement | null>(null);
+const backgroundGrid = ref<HTMLElement | null>(null);
+const mouseGlow = ref<HTMLElement | null>(null);
+
+let gsapCtx: gsap.Context | null = null;
+const isCoarsePointer = ref(false);
+const prefersReducedMotion = ref(false);
+
+const syncInteractionModes = () => {
+    isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
+    prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
+const handleGlobalMouseMove = (e: MouseEvent) => {
+    if (!mouseGlow.value || !backgroundGrid.value || isCoarsePointer.value || prefersReducedMotion.value) return;
+
+    const { clientX, clientY } = e;
+    const xPercent = clientX / window.innerWidth;
+    const yPercent = clientY / window.innerHeight;
+
+    gsap.to(mouseGlow.value, {
+        x: clientX,
+        y: clientY,
+        duration: 1.2,
+        ease: 'power3.out',
+    });
+
+    gsap.to(backgroundGrid.value, {
+        x: (xPercent - 0.5) * 30,
+        y: (yPercent - 0.5) * 30,
+        duration: 1.5,
+        ease: 'power2.out',
+    });
+};
 
 import { usePage, Link, usePoll, router } from '@inertiajs/vue3';
 import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
@@ -433,6 +470,8 @@ const handleVisibilityChange = () => {
 };
 
 onMounted(() => {
+    syncInteractionModes();
+    window.addEventListener('resize', syncInteractionModes);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Sync isBooted with global loader
@@ -464,20 +503,62 @@ onMounted(() => {
             showBanModal.value = true;
         }, 450);
     }
+
+    if (!dashboardContainer.value) return;
+
+    gsapCtx = gsap.context(() => {
+        if (prefersReducedMotion.value) {
+            gsap.set(
+                ['.dashboard-hero', '.dashboard-stats', '.dashboard-leaderboard', '.dashboard-main-grid'],
+                { opacity: 1, y: 0, scale: 1, clearProps: 'transform' },
+            );
+            return;
+        }
+
+        gsap.to(backgroundGrid.value, {
+            y: -100,
+            ease: 'none',
+            scrollTrigger: {
+                trigger: dashboardContainer.value,
+                start: 'top top',
+                end: 'bottom bottom',
+                scrub: true,
+            },
+        });
+
+        const orbs = dashboardContainer.value?.querySelectorAll('.orb');
+        orbs?.forEach((orb, i) => {
+            gsap.to(orb, {
+                x: 'random(-100, 100)',
+                y: 'random(-100, 100)',
+                duration: 12 + i * 4,
+                repeat: -1,
+                repeatRefresh: true,
+                yoyo: true,
+                ease: 'sine.inOut',
+            });
+        });
+    }, dashboardContainer.value);
 });
 
-// Pause/resume polling in response to ban modal
+// Pause/resume polling + animations in response to ban modal
 watch(showBanModal, (open) => {
     if (open) {
         pausePolling();
+        gsap.globalTimeline.pause();
     } else {
+        gsap.globalTimeline.resume();
         if (!document.hidden) resumePolling();
     }
 });
 
 onBeforeUnmount(() => {
+    window.removeEventListener('resize', syncInteractionModes);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     pausePolling();
+    if (gsapCtx) {
+        gsapCtx.revert();
+    }
 });
 
 const handleQuickAction = (action: string) => {
@@ -514,13 +595,28 @@ const handleLogout = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div 
             ref="dashboardContainer" 
+            @mousemove="handleGlobalMouseMove"
             class="flex h-full flex-1 flex-col gap-5 md:gap-6 p-4 sm:p-5 md:p-8 relative overflow-hidden bg-background min-w-0 w-full max-w-full"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
         >
-            <!-- Single subtle ambient orb -->
-            <div class="absolute -top-48 -right-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor" aria-hidden="true"></div>
+            <!-- Global Mouse Glow -->
+            <div
+                ref="mouseGlow"
+                class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 h-[400px] w-[400px] rounded-full blur-[120px] will-change-transform transition-colors duration-1000"
+                :class="ambientColor"
+                aria-hidden="true"
+            ></div>
+
+            <!-- Monolithic Grid Overlay -->
+            <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] will-change-transform" aria-hidden="true">
+                <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
+            </div>
+
+            <!-- Ambient orbs -->
+            <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor" aria-hidden="true"></div>
+            <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor" aria-hidden="true"></div>
 
             <!-- Hero Banner Section -->
             <Motion 
