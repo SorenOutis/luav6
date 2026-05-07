@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, onBeforeUnmount, ref, computed, watch, nextTick } from 'vue';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import { Motion } from '@motionone/vue';
-
-gsap.registerPlugin(ScrollTrigger);
 
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard, logout } from '@/routes';
@@ -20,7 +16,6 @@ import DashboardStats from '@/components/dashboard/DashboardStats.vue';
 import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';
-import TodayStrip from '@/components/dashboard/TodayStrip.vue';
 import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
 import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
@@ -33,17 +28,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const dashboardContainer = ref<HTMLElement | null>(null);
-const backgroundGrid = ref<HTMLElement | null>(null);
-const mouseGlow = ref<HTMLElement | null>(null);
-
-let gsapCtx: gsap.Context | null = null;
-const isCoarsePointer = ref(false);
-const prefersReducedMotion = ref(false);
-
-const syncInteractionModes = () => {
-    isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
-    prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-};
 
 import { usePage, Link, usePoll, router } from '@inertiajs/vue3';
 import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
@@ -205,31 +189,6 @@ const smarterStatus = computed(() => {
     
     return `Your learning engine is performing at <span class="text-primary font-black drop-shadow-md">peak capacity</span>.`;
 });
-
-// Interactive Background Logic
-const handleGlobalMouseMove = (e: MouseEvent) => {
-    if (!mouseGlow.value || !backgroundGrid.value || isCoarsePointer.value || prefersReducedMotion.value) return;
-
-    const { clientX, clientY } = e;
-    const xPercent = clientX / window.innerWidth;
-    const yPercent = clientY / window.innerHeight;
-
-    // Background Glow
-    gsap.to(mouseGlow.value, {
-        x: clientX,
-        y: clientY,
-        duration: 1.2,
-        ease: 'power3.out'
-    });
-
-    // Grid Parallax (Mouse)
-    gsap.to(backgroundGrid.value, {
-        x: (xPercent - 0.5) * 30,
-        y: (yPercent - 0.5) * 30,
-        duration: 1.5,
-        ease: 'power2.out'
-    });
-};
 
 const isBooted = ref(false);
 
@@ -474,8 +433,6 @@ const handleVisibilityChange = () => {
 };
 
 onMounted(() => {
-    syncInteractionModes();
-    window.addEventListener('resize', syncInteractionModes);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Sync isBooted with global loader
@@ -507,65 +464,20 @@ onMounted(() => {
             showBanModal.value = true;
         }, 450);
     }
-
-    if (!dashboardContainer.value) return;
-
-    gsapCtx = gsap.context(() => {
-        if (prefersReducedMotion.value) {
-            // Make sure everything is visible immediately; skip entrance + ambient animations
-            gsap.set(
-                ['.dashboard-hero', '.dashboard-stats', '.dashboard-leaderboard', '.dashboard-main-grid', '.today-strip', '.season-progress'],
-                { opacity: 1, y: 0, scale: 1, clearProps: 'transform' },
-            );
-            return;
-        }
-
-        // Grid Scroll Parallax
-        gsap.to(backgroundGrid.value, {
-            y: -100,
-            ease: "none",
-            scrollTrigger: {
-                trigger: dashboardContainer.value,
-                start: "top top",
-                end: "bottom bottom",
-                scrub: true
-            }
-        });
-
-        // Background orb animation refinement — re-randomize each cycle (skipped when reduced-motion)
-        const orbs = dashboardContainer.value?.querySelectorAll('.orb');
-        orbs?.forEach((orb, i) => {
-            gsap.to(orb, {
-                x: 'random(-100, 100)',
-                y: 'random(-100, 100)',
-                duration: 12 + i * 4,
-                repeat: -1,
-                repeatRefresh: true,
-                yoyo: true,
-                ease: 'sine.inOut',
-            });
-        });
-    }, dashboardContainer.value);
 });
 
-// Pause/resume polling + animations in response to ban modal
+// Pause/resume polling in response to ban modal
 watch(showBanModal, (open) => {
     if (open) {
         pausePolling();
-        gsap.globalTimeline.pause();
     } else {
-        gsap.globalTimeline.resume();
         if (!document.hidden) resumePolling();
     }
 });
 
 onBeforeUnmount(() => {
-    window.removeEventListener('resize', syncInteractionModes);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     pausePolling();
-    if (gsapCtx) {
-        gsapCtx.revert();
-    }
 });
 
 const handleQuickAction = (action: string) => {
@@ -602,27 +514,13 @@ const handleLogout = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div 
             ref="dashboardContainer" 
-            @mousemove="handleGlobalMouseMove"
-            class="flex h-full flex-1 flex-col gap-6 md:gap-8 p-4 sm:p-5 md:p-10 relative overflow-hidden bg-background transition-all duration-300 min-w-0 w-full max-w-full"
+            class="flex h-full flex-1 flex-col gap-5 md:gap-6 p-4 sm:p-5 md:p-8 relative overflow-hidden bg-background min-w-0 w-full max-w-full"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
         >
-            <!-- Global Mouse Glow -->
-            <div 
-                ref="mouseGlow"
-                class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 h-[400px] w-[400px] rounded-full blur-[120px] will-change-transform transition-colors duration-1000"
-                :class="ambientColor"
-            ></div>
-
-            <!-- Monolithic Grid Overlay -->
-            <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] will-change-transform">
-                <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
-            </div>
-
-            <!-- Glassy background decorative orbs -->
-            <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor"></div>
-            <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor"></div>
+            <!-- Single subtle ambient orb -->
+            <div class="absolute -top-48 -right-48 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none transition-colors duration-1000" :class="ambientColor" aria-hidden="true"></div>
 
             <!-- Hero Banner Section -->
             <Motion 
@@ -664,51 +562,6 @@ const handleLogout = () => {
                 />
             </Motion>
 
-            <!-- Today snapshot strip -->
-            <Motion
-                :initial="{ opacity: 0, y: 20 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.3 }"
-            >
-                <TodayStrip
-                    class="today-strip"
-                    :due-today-count="todaySummary.dueTodayCount"
-                    :overdue-count="todaySummary.overdueCount"
-                    :upcoming24h-count="todaySummary.upcoming24hCount"
-                    :next-item="nextUpItem"
-                />
-            </Motion>
-
-            <!-- Season progress band -->
-            <Motion
-                :initial="{ opacity: 0, y: 20 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
-            >
-                <SeasonProgressBand
-                    class="season-progress"
-                    :name="activeSeason?.name ?? null"
-                    :start-date="activeSeason?.startDate ?? null"
-                    :end-date="activeSeason?.endDate ?? null"
-                    :xp-earned="userStats.currentXP"
-                    :xp-target="seasonalXpTarget"
-                />
-            </Motion>
-
-            <!-- Improved Leaderboard -->
-            <Motion 
-                :initial="{ opacity: 0, y: 30 }"
-                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
-                :in-view-options="{ once: true, margin: '-50px' }"
-                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1] }"
-                class="dashboard-leaderboard"
-            >
-                <ImprovedLeaderboard 
-                    :section-leaderboards="sectionLeaderboards" 
-                    :active-season-name="activeSeason?.name"
-                />
-            </Motion>
-
             <!-- Main Content Grid -->
             <Motion 
                 :initial="{ opacity: 0, y: 40 }"
@@ -717,23 +570,13 @@ const handleLogout = () => {
                 :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
                 class="grid gap-8 grid-cols-1 lg:grid-cols-3 items-start dashboard-main-grid min-w-0"
             >
-                <!-- Courses Progress - Main Section -->
+                <!-- Main Section: Leaderboard + Mission Control -->
                 <div class="lg:col-span-2 space-y-8 min-w-0">
-                    <!-- Streak Heatmap Card -->
-                    <SpotlightCard customSize glowColor="blue" className="surface-card p-0 w-full min-w-0">
-                        <div class="relative flex flex-col w-full h-full p-4 sm:p-8">
-                            <div class="flex items-center justify-between mb-6 relative z-10">
-                                <div>
-                                    <h3 class="text-xl font-bold flex items-center gap-2">
-                                        <Calendar class="w-5 h-5 text-primary" />
-                                        Activity Pulse
-                                    </h3>
-                                    <p class="text-xs text-muted-foreground mt-1">Consistency is the bridge between goals and accomplishment.</p>
-                                </div>
-                            </div>
-                            <StreakHeatmap :login-dates="streak.loginDates" />
-                        </div>
-                    </SpotlightCard>
+                    <ImprovedLeaderboard
+                        class="dashboard-leaderboard"
+                        :section-leaderboards="sectionLeaderboards"
+                        :active-season-name="activeSeason?.name"
+                    />
 
                     <CourseAssignmentList 
                         :courses="courses"
@@ -743,8 +586,32 @@ const handleLogout = () => {
                     />
                 </div>
 
-                <!-- Sidebar - Notifications & Achievements -->
-                <div class="lg:sticky lg:top-24 lg:self-start min-w-0">
+                <!-- Sidebar - Season / Activity Pulse / Notifications & Achievements -->
+                <div class="lg:sticky lg:top-24 lg:self-start min-w-0 space-y-6">
+                    <SeasonProgressBand
+                        :name="activeSeason?.name ?? null"
+                        :start-date="activeSeason?.startDate ?? null"
+                        :end-date="activeSeason?.endDate ?? null"
+                        :xp-earned="userStats.currentXP"
+                        :xp-target="seasonalXpTarget"
+                    />
+
+                    <!-- Streak Heatmap Card (compact) -->
+                    <SpotlightCard customSize glowColor="blue" className="surface-card p-0 w-full min-w-0">
+                        <div class="relative flex flex-col w-full h-full p-4 sm:p-5">
+                            <div class="flex items-center justify-between mb-4 relative z-10">
+                                <div>
+                                    <h3 class="text-sm font-bold flex items-center gap-2">
+                                        <Calendar class="w-4 h-4 text-primary" />
+                                        Activity Pulse
+                                    </h3>
+                                    <p class="text-[10px] text-muted-foreground mt-0.5">Consistency builds momentum.</p>
+                                </div>
+                            </div>
+                            <StreakHeatmap :login-dates="streak.loginDates" />
+                        </div>
+                    </SpotlightCard>
+
                     <DashboardSidebar
                         :unread-notification-count="3"
                         :badges="userBadges"
