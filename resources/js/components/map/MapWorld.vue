@@ -267,7 +267,7 @@ watch(() => props.world.id, () => recenter(true));
                 class="w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition">
                 <Minus class="w-4 h-4" />
             </button>
-            <button type="button" @click="recenter(true)" title="Recenter on next objective (0)"
+            <button type="button" @click="recenter(true)" title="Jump back to your next step (0)"
                 class="w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition">
                 <Locate class="w-4 h-4" />
             </button>
@@ -275,18 +275,18 @@ watch(() => props.world.id, () => recenter(true));
 
         <!-- Legend -->
         <div class="absolute left-4 bottom-24 z-30 flex flex-col gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md pointer-events-none">
-            <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40 font-semibold">Legend</div>
+            <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40 font-semibold">Key</div>
             <div class="flex items-center gap-2 text-xs text-white/70">
-                <CheckCircle2 class="w-3.5 h-3.5 text-emerald-400" /> Completed
+                <CheckCircle2 class="w-3.5 h-3.5 text-emerald-400" /> Done
             </div>
             <div class="flex items-center gap-2 text-xs text-white/70">
-                <Play class="w-3.5 h-3.5" :style="{ color: world.theme.primary }" /> Available
+                <Play class="w-3.5 h-3.5" :style="{ color: world.theme.primary }" /> Ready to play
             </div>
             <div class="flex items-center gap-2 text-xs text-white/70">
                 <Lock class="w-3.5 h-3.5 text-white/40" /> Locked
             </div>
             <div class="mt-1 pt-1 border-t border-white/10 text-[10px] text-white/40 tracking-wide">
-                Scroll to zoom · Drag to pan · Arrows / 0
+                Scroll to zoom · Drag to move
             </div>
         </div>
     </div>

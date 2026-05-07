@@ -155,16 +155,16 @@ const handleWorldDetailNode = (node: MapNodeDefinition) => {
                 <div class="flex items-center gap-2 pointer-events-auto">
                     <div class="flex items-center gap-2.5 px-3 py-1.5 bg-white/5 backdrop-blur-lg border border-white/10 rounded-full">
                         <Trophy class="w-4 h-4 text-emerald-400 shrink-0" />
-                        <span class="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Progress</span>
+                        <span class="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Done</span>
                         <span class="text-white text-sm font-medium tabular-nums">{{ completedCount }} / {{ totalNodes }}</span>
                     </div>
 
                     <!-- Level + XP bar toward next level -->
                     <div
                         class="group flex items-center gap-2.5 px-3 py-1.5 bg-white/5 backdrop-blur-lg border border-white/10 rounded-full min-w-[180px]"
-                        :title="`${(player.xpIntoLevel ?? 0).toLocaleString()} / ${(player.xpForNextLevel ?? 0).toLocaleString()} XP to level ${player.level + 1}`"
+                        :title="`${(player.xpIntoLevel ?? 0).toLocaleString()} of ${(player.xpForNextLevel ?? 0).toLocaleString()} XP to level ${player.level + 1}`"
                     >
-                        <span class="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Lvl</span>
+                        <span class="text-[10px] text-white/50 uppercase tracking-widest font-semibold">Level</span>
                         <span class="text-white text-sm font-medium tabular-nums">{{ player.level }}</span>
                         <div class="relative flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                             <div
@@ -187,10 +187,10 @@ const handleWorldDetailNode = (node: MapNodeDefinition) => {
                         type="button"
                         @click="focusNextNode"
                         class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 rounded-full transition"
-                        title="Jump to your next recommended step"
+                        title="Go to your next step"
                     >
                         <Target class="w-4 h-4 text-emerald-300 shrink-0" />
-                        <span class="text-[10px] text-emerald-300/80 uppercase tracking-widest font-semibold">Next</span>
+                        <span class="text-[10px] text-emerald-300/80 uppercase tracking-widest font-semibold">Up next</span>
                         <span class="text-white text-sm font-medium tracking-tight max-w-[200px] truncate">{{ nextNode.title }}</span>
                     </button>
                 </div>
@@ -199,11 +199,11 @@ const handleWorldDetailNode = (node: MapNodeDefinition) => {
                     type="button"
                     class="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/20 rounded-full pointer-events-auto transition"
                     @click="openCurrentWorldDetail"
-                    :title="`View details for ${currentWorld.name}`"
+                    :title="`See what's in ${currentWorld.name}`"
                 >
                     <MapIcon class="w-4 h-4 text-white shrink-0" />
                     <span class="text-white text-sm font-medium tracking-tight">{{ currentWorld.name }}</span>
-                    <span class="text-[10px] uppercase tracking-widest text-white/50 font-semibold">Info</span>
+                    <span class="text-[10px] uppercase tracking-widest text-white/50 font-semibold">Details</span>
                 </button>
             </div>
 
