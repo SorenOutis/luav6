@@ -199,8 +199,10 @@ const initScrollReveal = () => {
     });
 };
 
-// Directional reveal: when a section scrolls past the top of the viewport, animate it out;
-// when the user scrolls back up and it re-enters, animate it back in.
+// Directional reveal: a section is visible only while it overlaps the viewport.
+//   - Scrolled past it (above viewport)  -> hide UP
+//   - Scrolled before it (below viewport) -> hide DOWN
+//   - Re-entering from either edge        -> show
 const initDirectionalReveal = () => {
     if (prefersReducedMotion.value || !mainContainer.value) return;
 
@@ -208,6 +210,7 @@ const initDirectionalReveal = () => {
     if (!main) return;
 
     const sections = Array.from(main.children) as HTMLElement[];
+    const viewportH = window.innerHeight;
 
     sections.forEach((section) => {
         // Skip tiny / non-visual wrappers
@@ -215,34 +218,49 @@ const initDirectionalReveal = () => {
 
         gsap.set(section, { willChange: 'transform, opacity, filter' });
 
-        const hide = () => {
+        const hideUp = () => {
             gsap.to(section, {
-                opacity: 0,
-                y: -40,
-                filter: 'blur(10px)',
-                duration: 0.55,
-                ease: 'power2.in',
-                overwrite: 'auto',
+                opacity: 0, y: -40, filter: 'blur(10px)',
+                duration: 0.55, ease: 'power2.in', overwrite: 'auto',
+            });
+        };
+
+        const hideDown = () => {
+            gsap.to(section, {
+                opacity: 0, y: 40, filter: 'blur(10px)',
+                duration: 0.55, ease: 'power2.in', overwrite: 'auto',
             });
         };
 
         const show = () => {
             gsap.to(section, {
-                opacity: 1,
-                y: 0,
-                filter: 'blur(0px)',
-                duration: 0.7,
-                ease: 'expo.out',
-                overwrite: 'auto',
+                opacity: 1, y: 0, filter: 'blur(0px)',
+                duration: 0.7, ease: 'expo.out', overwrite: 'auto',
             });
         };
 
+        // Pre-hide sections that start below the viewport so initial scroll-down reveals them.
+        const rect = section.getBoundingClientRect();
+        if (rect.top > viewportH * 0.95) {
+            gsap.set(section, { opacity: 0, y: 40, filter: 'blur(10px)' });
+        }
+
+        // Top edge: hide/show as section leaves/re-enters past the top of the viewport.
         ScrollTrigger.create({
             trigger: section,
             start: 'bottom top+=40',
             end: 'bottom top',
-            onLeave: hide,        // scrolled down past the section
-            onEnterBack: show,    // scrolled back up into the section
+            onLeave: hideUp,        // scrolled down past the section
+            onEnterBack: show,      // scrolled back up into the section
+        });
+
+        // Bottom edge: hide/show as section enters/leaves past the bottom of the viewport.
+        ScrollTrigger.create({
+            trigger: section,
+            start: 'top bottom-=40',
+            end: 'top bottom',
+            onEnter: show,          // scrolled down into the section from below
+            onLeaveBack: hideDown,  // scrolled up so the section drops below the viewport
         });
     });
 };
