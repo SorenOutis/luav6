@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,11 @@ import { login } from '@/routes';
 import { store } from '@/routes/register';
 
 defineOptions({ layout: AuthBase });
+
+const submitting = ref(false);
+const onSubmit = () => {
+    submitting.value = true;
+};
 </script>
 
 <template>
@@ -38,6 +44,9 @@ defineOptions({ layout: AuthBase });
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"
+            @submit="onSubmit"
+            @error="submitting = false"
+            @success="submitting = false"
         >
             <div class="grid gap-6">
                 <div class="grid gap-2">
@@ -233,11 +242,11 @@ defineOptions({ layout: AuthBase });
                     type="submit"
                     class="mt-2 w-full"
                     :tabindex="6"
-                    :disabled="processing"
+                    :disabled="processing || submitting"
                     data-test="register-user-button"
                 >
-                    <Spinner v-if="processing" />
-                    Create account
+                    <Spinner v-if="processing || submitting" class="mr-2" />
+                    {{ (processing || submitting) ? 'Creating account...' : 'Create account' }}
                 </Button>
             </div>
 

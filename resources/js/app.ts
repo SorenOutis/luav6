@@ -10,6 +10,25 @@ import { useLoader } from '@/composables/useLoader';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const { isVisible, show, hide, hideWhenReady } = useLoader();
 
+// Delay before the global loader appears, so in-button spinners are visible first.
+const GLOBAL_LOADER_DELAY_MS = 250;
+let pendingShowTimer: ReturnType<typeof setTimeout> | null = null;
+
+const showDeferred = (message: string) => {
+    if (pendingShowTimer) clearTimeout(pendingShowTimer);
+    pendingShowTimer = setTimeout(() => {
+        show(message);
+        pendingShowTimer = null;
+    }, GLOBAL_LOADER_DELAY_MS);
+};
+
+const cancelPendingShow = () => {
+    if (pendingShowTimer) {
+        clearTimeout(pendingShowTimer);
+        pendingShowTimer = null;
+    }
+};
+
 /**
  * Handle Global Navigation Transitions for the Boot Loader
  */
@@ -43,13 +62,16 @@ router.on('start', (event) => {
     console.log(`[app.ts] Navigation started to: ${targetPath}. isAuthFlow: ${isAuthFlow}, isLogout: ${isLogout}`);
 
     if (isAuthFlow) {
-        show('AUTHENTICATING');
+        showDeferred('AUTHENTICATING');
     } else if (isLogout) {
-        show('TERMINATING SESSION');
+        showDeferred('TERMINATING SESSION');
     }
 });
 
 router.on('finish', (event) => {
+    // If the request finished before the deferred loader appeared, cancel it.
+    cancelPendingShow();
+
     // Signal the loader to hide
     if (isVisible.value) {
         // Use the errors from the event detail if available, or the current page
@@ -71,6 +93,7 @@ router.on('finish', (event) => {
 });
 
 router.on('error', () => {
+    cancelPendingShow();
     hide();
 });
 
