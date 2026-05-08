@@ -72,7 +72,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             $sectionId = $grade->section_id;
             $period = $grade->period;
 
-            if (!isset($gradesBySection[$sectionId])) {
+            if (! isset($gradesBySection[$sectionId])) {
                 $gradesBySection[$sectionId] = [];
             }
 
@@ -111,9 +111,15 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         // Calculate semester grades
         foreach ($subjectGrades as &$subjectData) {
             $scores = [];
-            if ($subjectData['prelim']) $scores[] = $subjectData['prelim']['percentage'];
-            if ($subjectData['midterm']) $scores[] = $subjectData['midterm']['percentage'];
-            if ($subjectData['final']) $scores[] = $subjectData['final']['percentage'];
+            if ($subjectData['prelim']) {
+                $scores[] = $subjectData['prelim']['percentage'];
+            }
+            if ($subjectData['midterm']) {
+                $scores[] = $subjectData['midterm']['percentage'];
+            }
+            if ($subjectData['final']) {
+                $scores[] = $subjectData['final']['percentage'];
+            }
 
             if (count($scores) > 0) {
                 $subjectData['semesterGrade'] = round(array_sum($scores) / count($scores), 2);

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Grades\Tables;
 
+use App\Models\Grade;
 use App\Models\Section;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -68,7 +69,7 @@ class GradesTable
                     ->options(fn () => Section::orderBy('name')->pluck('name', 'id'))
                     ->searchable(),
                 SelectFilter::make('subject')
-                    ->options(fn () => \App\Models\Grade::query()
+                    ->options(fn () => Grade::query()
                         ->select('subject')
                         ->distinct()
                         ->orderBy('subject')
