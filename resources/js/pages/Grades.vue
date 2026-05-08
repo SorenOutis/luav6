@@ -86,7 +86,7 @@ const gradeLabel = (percentage: number | null) => {
         <div class="container mx-auto px-4 py-6 lg:px-8 lg:py-8">
             <div class="mb-8">
                 <h1 class="text-3xl font-bold tracking-tight">My Grades</h1>
-                <p class="text-muted-foreground mt-2">View your academic performance across all enrolled sections.</p>
+                <p class="text-muted-foreground mt-2">View your academic performance across all Enrolled Subjects.</p>
             </div>
 
             <!-- Overview Cards -->
