@@ -182,6 +182,22 @@ class User extends Authenticatable
         return $this->belongsToMany(Section::class);
     }
 
+    /**
+     * Grades the user (student) has received.
+     */
+    public function grades()
+    {
+        return $this->hasMany(Grade::class);
+    }
+
+    /**
+     * Grades the user (admin/teacher) has recorded for others.
+     */
+    public function recordedGrades()
+    {
+        return $this->hasMany(Grade::class, 'recorded_by');
+    }
+
     public function gamificationHistories()
     {
         return $this->hasMany(GamificationHistory::class);

@@ -45,4 +45,9 @@ class Section extends Model
     {
         return $this->hasMany(SectionProgress::class);
     }
+
+    public function grades()
+    {
+        return $this->hasMany(Grade::class);
+    }
 }

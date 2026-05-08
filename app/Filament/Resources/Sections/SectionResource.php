@@ -40,6 +40,7 @@ class SectionResource extends Resource
     {
         return [
             UsersRelationManager::class,
+            GradesRelationManager::class,
         ];
     }
 

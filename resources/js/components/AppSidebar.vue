@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, ClipboardList, GraduationCap, Gamepad2 } from 'lucide-vue-next';
+import { BookOpen, FolderGit2, LayoutGrid, ClipboardList, GraduationCap, Gamepad2, Award } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -14,10 +14,11 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { computed } from 'vue';
 import type { NavItem } from '@/types';
+import { dashboard } from '@/routes';
 
-const mainNavItems: NavItem[] = [
+const mainNavItems = computed(() => [
     {
         title: 'Dashboard',
         href: dashboard(),
@@ -38,7 +39,12 @@ const mainNavItems: NavItem[] = [
         href: '/games',
         icon: Gamepad2,
     },
-];
+    {
+        title: 'Grades',
+        href: '/grades',
+        icon: Award,
+    },
+]);
 
 // const footerNavItems: NavItem[] = [
 //     {
@@ -73,7 +79,6 @@ const mainNavItems: NavItem[] = [
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>

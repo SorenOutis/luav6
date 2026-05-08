@@ -57,6 +57,73 @@ Route::get('/about', function () {
 })->name('about');
 
 Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
+    Route::get('grades', function () {
+        $user = auth()->user();
+
+        // Get all grades for the user
+        $grades = $user->grades()->with('section')->get();
+
+        // Group grades by subject (section name)
+        $subjectGrades = [];
+        foreach ($grades as $grade) {
+            $subject = $grade->section->name ?? $grade->subject;
+            $period = $grade->period;
+
+            if (!isset($subjectGrades[$subject])) {
+                $subjectGrades[$subject] = [
+                    'subject' => $subject,
+                    'section' => $grade->section ? [
+                        'id' => $grade->section->id,
+                        'name' => $grade->section->name,
+                    ] : null,
+                    'prelim' => null,
+                    'midterm' => null,
+                    'final' => null,
+                ];
+            }
+
+            // Store grade by period
+            $percentage = (float) $grade->max_score > 0
+                ? round(((float) $grade->score / (float) $grade->max_score) * 100, 2)
+                : 0;
+
+            $gradeData = [
+                'id' => $grade->id,
+                'score' => number_format((float) $grade->score, 2),
+                'maxScore' => number_format((float) $grade->max_score, 2),
+                'percentage' => $percentage,
+                'remarks' => $grade->remarks,
+                'updatedAt' => $grade->updated_at->format('M d, Y'),
+            ];
+
+            if ($period === 'Prelim') {
+                $subjectGrades[$subject]['prelim'] = $gradeData;
+            } elseif ($period === 'Midterm') {
+                $subjectGrades[$subject]['midterm'] = $gradeData;
+            } elseif ($period === 'Final') {
+                $subjectGrades[$subject]['final'] = $gradeData;
+            }
+        }
+
+        // Calculate semester grades
+        foreach ($subjectGrades as &$subjectData) {
+            $scores = [];
+            if ($subjectData['prelim']) $scores[] = $subjectData['prelim']['percentage'];
+            if ($subjectData['midterm']) $scores[] = $subjectData['midterm']['percentage'];
+            if ($subjectData['final']) $scores[] = $subjectData['final']['percentage'];
+
+            if (count($scores) > 0) {
+                $subjectData['semesterGrade'] = round(array_sum($scores) / count($scores), 2);
+            } else {
+                $subjectData['semesterGrade'] = null;
+            }
+        }
+
+        return inertia('Grades', [
+            'subjectGrades' => array_values($subjectGrades),
+        ]);
+    })->name('grades');
+
     Route::get('dashboard', function () {
         $user = auth()->user();
         $currentSeason = Season::current();
