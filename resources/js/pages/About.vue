@@ -316,40 +316,36 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                             :key="m.year"
                             class="timeline-row relative grid grid-cols-[24px_1fr] lg:grid-cols-[1fr_24px_1fr] gap-x-6 lg:gap-x-10 items-start"
                         >
-                            <!-- LEFT side (desktop) — year on even, details on odd -->
-                            <div class="hidden lg:block" :class="i % 2 === 0 ? 'text-right pr-2' : 'order-3 pl-2'">
-                                <template v-if="i % 2 === 0">
-                                    <span class="text-5xl lg:text-7xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
-                                </template>
-                                <template v-else>
-                                    <h3 class="text-xl lg:text-2xl font-black uppercase tracking-tight mb-2">{{ m.title }}</h3>
-                                    <p class="text-xs lg:text-sm text-muted-foreground leading-relaxed max-w-md">{{ m.body }}</p>
-                                </template>
+                            <!-- Mobile: stacked year + title + body (full width on mobile, hidden on lg) -->
+                            <div class="lg:hidden col-start-2 flex flex-col gap-2">
+                                <span class="text-5xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
+                                <h3 class="text-xl font-black uppercase tracking-tight mt-2">{{ m.title }}</h3>
+                                <p class="text-xs text-muted-foreground leading-relaxed">{{ m.body }}</p>
                             </div>
 
-                            <!-- SPINE column (always centered, holds the dot) -->
-                            <div class="relative flex justify-center lg:order-2">
+                            <!-- Desktop: YEAR (placed left on even rows, right on odd rows) -->
+                            <div
+                                class="hidden lg:flex items-start"
+                                :class="i % 2 === 0 ? 'lg:col-start-1 lg:justify-end lg:pr-2' : 'lg:col-start-3 lg:justify-start lg:pl-2'"
+                            >
+                                <span class="text-5xl lg:text-7xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
+                            </div>
+
+                            <!-- Spine dot (mobile col 1, desktop col 2) -->
+                            <div class="col-start-1 lg:col-start-2 row-start-1 relative flex justify-center">
                                 <span class="mt-2 inline-block h-3 w-3 rounded-full bg-primary ring-4 ring-background"></span>
                             </div>
 
-                            <!-- RIGHT side: details on even, year on odd; mobile shows everything stacked here -->
-                            <div class="lg:order-3" :class="i % 2 === 0 ? 'lg:pl-2' : 'lg:order-1 lg:text-right lg:pr-2'">
-                                <!-- Mobile: always show year + content together -->
-                                <div class="lg:hidden flex flex-col gap-2">
-                                    <span class="text-5xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
-                                    <h3 class="text-xl font-black uppercase tracking-tight mt-2">{{ m.title }}</h3>
-                                    <p class="text-xs text-muted-foreground leading-relaxed">{{ m.body }}</p>
-                                </div>
-                                <!-- Desktop: alternates -->
-                                <div class="hidden lg:block">
-                                    <template v-if="i % 2 === 0">
-                                        <h3 class="text-xl lg:text-2xl font-black uppercase tracking-tight mb-2">{{ m.title }}</h3>
-                                        <p class="text-xs lg:text-sm text-muted-foreground leading-relaxed max-w-md">{{ m.body }}</p>
-                                    </template>
-                                    <template v-else>
-                                        <span class="text-5xl lg:text-7xl font-black tabular-nums leading-none text-primary/90">{{ m.year }}</span>
-                                    </template>
-                                </div>
+                            <!-- Desktop: DETAILS (placed right on even rows, left on odd rows) -->
+                            <div
+                                class="hidden lg:block"
+                                :class="i % 2 === 0 ? 'lg:col-start-3 lg:pl-2 lg:text-left' : 'lg:col-start-1 lg:pr-2 lg:text-right'"
+                            >
+                                <h3 class="text-xl lg:text-2xl font-black uppercase tracking-tight mb-2">{{ m.title }}</h3>
+                                <p
+                                    class="text-xs lg:text-sm text-muted-foreground leading-relaxed max-w-md"
+                                    :class="i % 2 === 0 ? '' : 'lg:ml-auto'"
+                                >{{ m.body }}</p>
                             </div>
                         </div>
                     </div>
