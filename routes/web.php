@@ -60,34 +60,27 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('grades', function () {
         $user = auth()->user();
 
+        // Get all sections the user is enrolled in
+        $sections = $user->sections()->orderBy('name')->get();
+
         // Get all grades for the user
         $grades = $user->grades()->with('section')->get();
 
-        // Group grades by subject (section name)
-        $subjectGrades = [];
+        // Group grades by section ID for easy lookup
+        $gradesBySection = [];
         foreach ($grades as $grade) {
-            $subject = $grade->section->name ?? $grade->subject;
+            $sectionId = $grade->section_id;
             $period = $grade->period;
 
-            if (!isset($subjectGrades[$subject])) {
-                $subjectGrades[$subject] = [
-                    'subject' => $subject,
-                    'section' => $grade->section ? [
-                        'id' => $grade->section->id,
-                        'name' => $grade->section->name,
-                    ] : null,
-                    'prelim' => null,
-                    'midterm' => null,
-                    'final' => null,
-                ];
+            if (!isset($gradesBySection[$sectionId])) {
+                $gradesBySection[$sectionId] = [];
             }
 
-            // Store grade by period
             $percentage = (float) $grade->max_score > 0
                 ? round(((float) $grade->score / (float) $grade->max_score) * 100, 2)
                 : 0;
 
-            $gradeData = [
+            $gradesBySection[$sectionId][$period] = [
                 'id' => $grade->id,
                 'score' => number_format((float) $grade->score, 2),
                 'maxScore' => number_format((float) $grade->max_score, 2),
@@ -95,14 +88,24 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 'remarks' => $grade->remarks,
                 'updatedAt' => $grade->updated_at->format('M d, Y'),
             ];
+        }
 
-            if ($period === 'Prelim') {
-                $subjectGrades[$subject]['prelim'] = $gradeData;
-            } elseif ($period === 'Midterm') {
-                $subjectGrades[$subject]['midterm'] = $gradeData;
-            } elseif ($period === 'Final') {
-                $subjectGrades[$subject]['final'] = $gradeData;
-            }
+        // Build subject grades array for all enrolled sections
+        $subjectGrades = [];
+        foreach ($sections as $section) {
+            $sectionId = $section->id;
+            $subjectName = $section->name;
+
+            $subjectGrades[$subjectName] = [
+                'subject' => $subjectName,
+                'section' => [
+                    'id' => $section->id,
+                    'name' => $section->name,
+                ],
+                'prelim' => $gradesBySection[$sectionId]['Prelim'] ?? null,
+                'midterm' => $gradesBySection[$sectionId]['Midterm'] ?? null,
+                'final' => $gradesBySection[$sectionId]['Final'] ?? null,
+            ];
         }
 
         // Calculate semester grades
