@@ -180,16 +180,16 @@ onBeforeUnmount(() => {
                 :initial="{ y: 40, opacity: 0 }"
                 :animate="isBooted ? { y: 0, opacity: 1 } : {}"
                 :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
-                class="flex flex-col sm:flex-row gap-4 sm:gap-6 lg:gap-8"
+                class="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-5"
             >
                 <Link v-if="auth.user" :href="dashboard()" 
                     @mousemove="handleMagnetic" 
                     @mouseleave="resetMagnetic"
-                    class="group relative flex items-center justify-center bg-primary px-12 py-5 lg:py-6 text-primary-foreground transition-all active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 -skew-x-[12deg] hover:bg-primary/90"
+                    class="group relative flex items-center justify-center bg-primary px-8 py-4 text-primary-foreground transition-all active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 -skew-x-[12deg] hover:bg-primary/90 sm:px-10"
                 >
-                    <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                    <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg] sm:text-base">
                         System Dashboard
-                        <LayoutDashboard class="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
+                        <LayoutDashboard class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5" />
                     </span>
                     <div class="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
                 </Link>
@@ -200,31 +200,31 @@ onBeforeUnmount(() => {
                         @click="watchDemo"
                         @mousemove="handleMagnetic"
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center bg-foreground px-12 py-5 lg:py-6 text-background transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary hover:text-primary-foreground"
+                        class="group relative flex items-center justify-center bg-foreground px-8 py-4 text-background transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary hover:text-primary-foreground sm:px-10"
                     >
-                        <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                        <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg] sm:text-base">
                             Watch Demo
-                            <CalendarCheck class="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
+                            <CalendarCheck class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5" />
                         </span>
                     </button>
 
                     <Link :href="login()" 
                         @mousemove="handleMagnetic" 
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center border border-border bg-background/50 backdrop-blur-sm px-12 py-5 lg:py-6 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-muted/50"
+                        class="group relative flex items-center justify-center border border-border bg-background/50 backdrop-blur-sm px-8 py-4 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-muted/50 sm:px-10"
                     >
-                        <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                        <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg] sm:text-base">
                             Login
-                            <ArrowRight class="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
+                            <ArrowRight class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5" />
                         </span>
                     </Link>
 
                     <Link v-if="canRegister" :href="register()" 
                         @mousemove="handleMagnetic" 
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center border border-primary/30 bg-primary/5 backdrop-blur-sm px-12 py-5 lg:py-6 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary/10 sm:hidden"
+                        class="group relative flex items-center justify-center border border-primary/30 bg-primary/5 backdrop-blur-sm px-8 py-4 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary/10 sm:hidden"
                     >
-                        <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                        <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg]">
                             Join
                         </span>
                     </Link>
