@@ -70,8 +70,11 @@ const demoChapters = [
                                     :src="videoUrl || undefined"
                                     class="aspect-video h-full w-full bg-black"
                                     controls
+                                    controlsList="nodownload noplaybackrate"
+                                    disablePictureInPicture
                                     playsinline
                                     preload="metadata"
+                                    @contextmenu.prevent
                                 ></video>
 
                                 <div v-else class="relative flex aspect-video min-h-[300px] flex-col items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.18),transparent_44%),linear-gradient(135deg,#111827,#020617)] p-8 text-center text-white">
