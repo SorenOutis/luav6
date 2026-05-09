@@ -10,6 +10,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 
 class GradesTable
@@ -62,6 +63,21 @@ class GradesTable
                     ->label('Updated')
                     ->sortable(),
             ])
+            ->groups([
+                Group::make('section.name')
+                    ->label('Section')
+                    ->collapsible(),
+                Group::make('subject')
+                    ->label('Subject')
+                    ->collapsible(),
+                Group::make('student.name')
+                    ->label('Student')
+                    ->collapsible(),
+                Group::make('period')
+                    ->label('Period')
+                    ->collapsible(),
+            ])
+            ->defaultGroup('section.name')
             ->defaultSort('updated_at', 'desc')
             ->filters([
                 SelectFilter::make('section_id')
