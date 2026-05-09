@@ -96,6 +96,39 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             $sectionId = $section->id;
             $subjectName = $section->name;
             $periods = $section->gradePeriods();
+            $isSeniorHigh = $section->school_level === Section::SCHOOL_LEVEL_SENIOR_HIGH;
+            $semesterGrades = [];
+
+            if ($isSeniorHigh) {
+                $semesterGrades = collect(Section::seniorHighGradeSemesters())
+                    ->map(function (array $semester) use ($gradesBySection, $sectionId) {
+                        $quarters = collect($semester['quarters'])
+                            ->map(fn (array $quarter) => [
+                                'key' => $quarter['key'],
+                                'label' => $quarter['label'],
+                                'grade' => $gradesBySection[$sectionId][$quarter['key']] ?? null,
+                            ])
+                            ->values()
+                            ->all();
+
+                        $scores = collect($quarters)
+                            ->pluck('grade')
+                            ->filter()
+                            ->pluck('percentage')
+                            ->all();
+
+                        return [
+                            'key' => $semester['key'],
+                            'label' => $semester['label'],
+                            'quarters' => $quarters,
+                            'finalGrade' => count($scores) === 2
+                                ? round(array_sum($scores) / count($scores), 2)
+                                : null,
+                        ];
+                    })
+                    ->values()
+                    ->all();
+            }
 
             $subjectGrades[$subjectName] = [
                 'subject' => $subjectName,
@@ -120,16 +153,24 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                     ])
                     ->values()
                     ->all(),
+                'semesterGrades' => $semesterGrades,
             ];
         }
 
         // Calculate semester grades
         foreach ($subjectGrades as &$subjectData) {
-            $scores = collect($subjectData['periodGrades'])
-                ->pluck('grade')
-                ->filter()
-                ->pluck('percentage')
-                ->all();
+            if (($subjectData['section']['schoolLevel'] ?? null) === Section::SCHOOL_LEVEL_SENIOR_HIGH) {
+                $scores = collect($subjectData['semesterGrades'])
+                    ->pluck('finalGrade')
+                    ->filter(fn ($grade) => $grade !== null)
+                    ->all();
+            } else {
+                $scores = collect($subjectData['periodGrades'])
+                    ->pluck('grade')
+                    ->filter()
+                    ->pluck('percentage')
+                    ->all();
+            }
 
             if (count($scores) > 0) {
                 $subjectData['semesterGrade'] = round(array_sum($scores) / count($scores), 2);

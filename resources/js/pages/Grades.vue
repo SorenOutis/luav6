@@ -25,6 +25,13 @@ interface GradePeriod {
     grade: GradePeriodScore | null;
 }
 
+interface SemesterGrade {
+    key: string;
+    label: string;
+    quarters: GradePeriod[];
+    finalGrade: number | null;
+}
+
 interface SubjectGrade {
     subject: string;
     section: {
@@ -38,6 +45,7 @@ interface SubjectGrade {
         label: string;
     }>;
     periodGrades: GradePeriod[];
+    semesterGrades: SemesterGrade[];
     semesterGrade: number | null;
 }
 
@@ -64,6 +72,7 @@ const gradeGroups = computed(() => {
         key: string;
         label: string;
         finalGradeLabel: string;
+        isSeniorHigh: boolean;
         periods: SubjectGrade['periods'];
         subjects: SubjectGrade[];
     }>();
@@ -77,6 +86,7 @@ const gradeGroups = computed(() => {
                 key,
                 label,
                 finalGradeLabel: subjectGrade.section?.schoolLevel === 'senior_high' ? 'Final Grade' : 'Semester Grade',
+                isSeniorHigh: subjectGrade.section?.schoolLevel === 'senior_high',
                 periods: subjectGrade.periods,
                 subjects: [],
             });
@@ -108,6 +118,12 @@ const gradeLabel = (percentage: number | null) => {
     if (percentage >= 70) return 'Good';
     if (percentage >= 60) return 'Satisfactory';
     return 'Needs Improvement';
+};
+
+const formatGrade = (grade: number | null) => {
+    if (grade === null) return '';
+
+    return Number.isInteger(grade) ? String(grade) : grade.toFixed(2);
 };
 </script>
 
@@ -182,7 +198,81 @@ const gradeLabel = (percentage: number | null) => {
                     </CardHeader>
                     <CardContent>
                         <div class="overflow-x-auto">
-                            <table class="w-full">
+                            <table v-if="group.isSeniorHigh" class="w-full">
+                                <thead>
+                                    <tr class="border-b">
+                                        <th class="text-left p-4 font-semibold" rowspan="2">Subject</th>
+                                        <th
+                                            v-for="semester in group.subjects[0]?.semesterGrades ?? []"
+                                            :key="semester.key"
+                                            class="text-center p-4 font-semibold"
+                                            colspan="3"
+                                        >
+                                            {{ semester.label }}
+                                        </th>
+                                        <th class="text-center p-4 font-semibold" rowspan="2">{{ group.finalGradeLabel }}</th>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <template v-for="semester in group.subjects[0]?.semesterGrades ?? []" :key="`${semester.key}-quarters`">
+                                            <th v-for="quarter in semester.quarters" :key="quarter.key" class="text-center p-4 font-semibold">
+                                                {{ quarter.label }}
+                                            </th>
+                                            <th class="text-center p-4 font-semibold">Final Grade</th>
+                                        </template>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="subjectGrade in group.subjects" :key="subjectGrade.subject" class="border-b last:border-b-0 hover:bg-muted/50">
+                                        <td class="p-4 font-medium">{{ subjectGrade.subject }}</td>
+                                        <template v-for="semester in subjectGrade.semesterGrades" :key="semester.key">
+                                            <td v-for="quarter in semester.quarters" :key="quarter.key" class="p-4 text-center">
+                                                <div v-if="quarter.grade" class="flex flex-col items-center">
+                                                    <div class="text-lg font-bold" :class="gradeColor(quarter.grade.percentage)">
+                                                        {{ quarter.grade.percentage }}
+                                                    </div>
+                                                    <div class="text-xs text-muted-foreground">
+                                                        {{ quarter.grade.score }} / {{ quarter.grade.maxScore }}
+                                                    </div>
+                                                </div>
+                                                <div v-else class="flex items-center justify-center gap-1 text-muted-foreground">
+                                                    <Clock class="h-4 w-4" />
+                                                    <span class="text-sm">Pending</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-4 text-center">
+                                                <div v-if="semester.finalGrade !== null" class="flex flex-col items-center">
+                                                    <div class="text-xl font-bold" :class="gradeColor(semester.finalGrade)">
+                                                        {{ formatGrade(semester.finalGrade) }}
+                                                    </div>
+                                                    <div class="text-xs text-muted-foreground mt-1">
+                                                        {{ gradeLabel(semester.finalGrade) }}
+                                                    </div>
+                                                </div>
+                                                <div v-else class="flex items-center justify-center gap-1 text-muted-foreground">
+                                                    <Clock class="h-4 w-4" />
+                                                    <span class="text-sm">Pending</span>
+                                                </div>
+                                            </td>
+                                        </template>
+                                        <td class="p-4 text-center">
+                                            <div v-if="subjectGrade.semesterGrade !== null" class="flex flex-col items-center">
+                                                <div class="text-2xl font-bold" :class="gradeColor(subjectGrade.semesterGrade)">
+                                                    {{ formatGrade(subjectGrade.semesterGrade) }}
+                                                </div>
+                                                <div class="text-xs text-muted-foreground mt-1">
+                                                    {{ gradeLabel(subjectGrade.semesterGrade) }}
+                                                </div>
+                                            </div>
+                                            <div v-else class="flex items-center justify-center gap-1 text-muted-foreground">
+                                                <Clock class="h-4 w-4" />
+                                                <span class="text-sm">Pending</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <table v-else class="w-full">
                                 <thead>
                                     <tr class="border-b">
                                         <th class="text-left p-4 font-semibold">Subject</th>

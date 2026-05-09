@@ -85,10 +85,44 @@ class Section extends Model
     public static function seniorHighGradePeriods(): array
     {
         return [
-            '1st Quarter Grade' => '1st Quarter Grade',
-            '2nd Quarter Grade' => '2nd Quarter Grade',
-            '3rd Quarter Grade' => '3rd Quarter Grade',
-            '4th Quarter Grade' => '4th Quarter Grade',
+            'First Semester - 1st Quarter Grade' => 'First Semester - 1st Quarter Grade',
+            'First Semester - 2nd Quarter Grade' => 'First Semester - 2nd Quarter Grade',
+            'Second Semester - 1st Quarter Grade' => 'Second Semester - 1st Quarter Grade',
+            'Second Semester - 2nd Quarter Grade' => 'Second Semester - 2nd Quarter Grade',
+        ];
+    }
+
+    public static function seniorHighGradeSemesters(): array
+    {
+        return [
+            [
+                'key' => 'first_semester',
+                'label' => 'First Semester',
+                'quarters' => [
+                    [
+                        'key' => 'First Semester - 1st Quarter Grade',
+                        'label' => '1st Quarter Grade',
+                    ],
+                    [
+                        'key' => 'First Semester - 2nd Quarter Grade',
+                        'label' => '2nd Quarter Grade',
+                    ],
+                ],
+            ],
+            [
+                'key' => 'second_semester',
+                'label' => 'Second Semester',
+                'quarters' => [
+                    [
+                        'key' => 'Second Semester - 1st Quarter Grade',
+                        'label' => '1st Quarter Grade',
+                    ],
+                    [
+                        'key' => 'Second Semester - 2nd Quarter Grade',
+                        'label' => '2nd Quarter Grade',
+                    ],
+                ],
+            ],
         ];
     }
 }
