@@ -18,6 +18,7 @@ use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\SectionProgress;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\BadgeAwardService;
 use Carbon\Carbon;
@@ -27,6 +28,7 @@ use Laravel\Fortify\Features;
 
 Route::get('/', function () {
     $currentSeason = Season::current();
+    $demoVideoPath = Setting::get('welcome_demo_video_path');
 
     return inertia('Welcome', [
         'canRegister' => Features::enabled(Features::registration()),
@@ -45,6 +47,7 @@ Route::get('/', function () {
             'endDate' => $currentSeason->end_date?->toISOString(),
             'showCountdown' => (bool) $currentSeason->show_countdown_on_welcome,
         ] : null,
+        'demoVideoUrl' => filled($demoVideoPath) ? asset('storage/'.$demoVideoPath) : null,
     ]);
 })->name('home');
 

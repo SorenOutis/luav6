@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { ArrowRight, LayoutDashboard } from 'lucide-vue-next';
+import { ArrowRight, CalendarCheck, LayoutDashboard } from 'lucide-vue-next';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -17,9 +17,9 @@ const props = defineProps<{
     isBooted?: boolean;
 }>();
 
-const emit = defineEmits(['magnetic', 'resetMagnetic']);
+const emit = defineEmits(['magnetic', 'resetMagnetic', 'watchDemo']);
 
-const words = ['Clear Feedback.', 'Smarter Assessment.', 'Learning Insight.', 'Visible Progress.', 'Guided Growth.'];
+const words = ['School-Ready Assessment.', 'Teacher Clarity.', 'Student Momentum.', 'Actionable Reports.', 'Guided Growth.'];
 const currentWordIndex = ref(0);
 const currentCharIndex = ref(words[0].length);
 const isTyping = ref(false);
@@ -58,6 +58,7 @@ const type = () => {
 
 const handleMagnetic = (e: MouseEvent) => emit('magnetic', e);
 const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
+const watchDemo = () => emit('watchDemo');
 
 // Scroll Parallax and Premium Reveals
 const titleLetters = "LEARNING".split("");
@@ -155,7 +156,7 @@ onBeforeUnmount(() => {
         
         <div class="mb-10 lg:mb-16 lg:pl-2 relative hero-parallax" data-speed="0.05">
             <p class="max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium leading-relaxed tracking-tight opacity-0 pointer-events-none select-none invisible whitespace-pre-wrap">
-                An AI-powered learning system that evaluates work, explains results, tracks mastery, and guides improvement through 
+                A school-ready learning platform for exams, assignments, grades, AI feedback, and student engagement through
                 <span class="font-black uppercase tracking-widest inline-flex items-center">
                     Guided Growth.<span class="ml-1 w-1 h-[0.8em] bg-primary"></span>
                 </span> 
@@ -167,7 +168,7 @@ onBeforeUnmount(() => {
                 :transition="{ duration: 1.5, ease: 'ease-out', delay: 0.2 }"
                 class="absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight"
             >
-                An AI-powered learning system that evaluates work, explains results, tracks mastery, and guides improvement through 
+                A school-ready learning platform for exams, assignments, grades, AI feedback, and student engagement through
                 <span class="text-foreground font-black uppercase tracking-widest inline-flex items-center">
                     {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite] shadow-[0_0_8px_var(--color-primary)]"></span>
                 </span> 
@@ -194,10 +195,23 @@ onBeforeUnmount(() => {
                 </Link>
 
                 <template v-else>
+                    <button
+                        type="button"
+                        @click="watchDemo"
+                        @mousemove="handleMagnetic"
+                        @mouseleave="resetMagnetic"
+                        class="group relative flex items-center justify-center bg-foreground px-12 py-5 lg:py-6 text-background transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary hover:text-primary-foreground"
+                    >
+                        <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
+                            Watch Demo
+                            <CalendarCheck class="w-5 h-5 transition-transform duration-500 group-hover:translate-x-1" />
+                        </span>
+                    </button>
+
                     <Link :href="login()" 
                         @mousemove="handleMagnetic" 
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center bg-foreground px-12 py-5 lg:py-6 text-background transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-foreground/90"
+                        class="group relative flex items-center justify-center border border-border bg-background/50 backdrop-blur-sm px-12 py-5 lg:py-6 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-muted/50"
                     >
                         <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
                             Login
@@ -208,10 +222,10 @@ onBeforeUnmount(() => {
                     <Link v-if="canRegister" :href="register()" 
                         @mousemove="handleMagnetic" 
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center border border-border bg-background/50 backdrop-blur-sm px-12 py-5 lg:py-6 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-muted/50"
+                        class="group relative flex items-center justify-center border border-primary/30 bg-primary/5 backdrop-blur-sm px-12 py-5 lg:py-6 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary/10 sm:hidden"
                     >
                         <span class="relative z-10 flex items-center gap-3 text-lg font-bold tracking-widest uppercase skew-x-[12deg]">
-                            Register
+                            Join
                         </span>
                     </Link>
                 </template>

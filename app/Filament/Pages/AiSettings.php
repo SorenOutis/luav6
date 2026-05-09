@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Setting;
 use Filament\Actions\Action;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -23,9 +24,9 @@ class AiSettings extends Page implements HasSchemas
 
     protected static ?int $navigationSort = 1;
 
-    protected static ?string $title = 'AI Chat Settings';
+    protected static ?string $title = 'Platform Settings';
 
-    protected static ?string $navigationLabel = 'AI Settings';
+    protected static ?string $navigationLabel = 'Platform Settings';
 
     protected string $view = 'filament.pages.ai-settings';
 
@@ -36,6 +37,7 @@ class AiSettings extends Page implements HasSchemas
         $this->form->fill([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'KOA is currently under maintenance. Please try again later.'),
+            'welcome_demo_video_path' => Setting::get('welcome_demo_video_path'),
         ]);
     }
 
@@ -57,6 +59,20 @@ class AiSettings extends Page implements HasSchemas
                             ->required()
                             ->visible(fn ($get) => ! $get('ai_chat_enabled')),
                     ]),
+
+                Section::make('Welcome Demo Video')
+                    ->description('Upload the video shown when visitors click Watch Demo on the welcome page.')
+                    ->schema([
+                        FileUpload::make('welcome_demo_video_path')
+                            ->label('Demo Video')
+                            ->disk('public')
+                            ->directory('welcome-demo')
+                            ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg'])
+                            ->maxSize(204800)
+                            ->downloadable()
+                            ->openable()
+                            ->helperText('Upload an MP4, WebM, or OGG video. If this is empty, the welcome page shows a polished placeholder.'),
+                    ]),
             ])
             ->statePath('data');
     }
@@ -68,6 +84,7 @@ class AiSettings extends Page implements HasSchemas
 
             Setting::set('ai_chat_enabled', $data['ai_chat_enabled'] ? '1' : '0');
             Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
+            Setting::set('welcome_demo_video_path', $data['welcome_demo_video_path'] ?? null);
 
             Notification::make()
                 ->title('Settings saved successfully!')

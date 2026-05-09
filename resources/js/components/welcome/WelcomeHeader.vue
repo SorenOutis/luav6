@@ -133,7 +133,7 @@ const navItems = [
                     @mouseleave="resetMagnetic"
                     class="nav-item relative bg-foreground text-background px-5 lg:px-8 py-2.5 lg:py-3 text-[9px] lg:text-[10px] font-black uppercase tracking-[0.2em] hover:bg-primary transition-all shadow-2xl overflow-hidden group"
                 >
-                    <span class="relative z-10">Init</span>
+                    <span class="relative z-10">Join</span>
                     <div class="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 </Link>
             </template>

@@ -17,6 +17,11 @@ import ArchitectureStack from '@/components/welcome/ArchitectureStack.vue';
 import DimensionalCore from '@/components/welcome/DimensionalCore.vue';
 import FloatingPrisms from '@/components/welcome/FloatingPrisms.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
+import AudiencePathways from '@/components/welcome/AudiencePathways.vue';
+import TrustReadiness from '@/components/welcome/TrustReadiness.vue';
+import AppPreviewShowcase from '@/components/welcome/AppPreviewShowcase.vue';
+import ReportSuite from '@/components/welcome/ReportSuite.vue';
+import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
 import SeasonCountdown from '@/components/welcome/SeasonCountdown.vue';
 import DemoQuiz from '@/components/welcome/DemoQuiz.vue';
 import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
@@ -43,6 +48,7 @@ const props = withDefaults(
         totalAssignments?: number;
         totalSubmissions?: number;
         activeSeason?: ActiveSeason | null;
+        demoVideoUrl?: string | null;
     }>(),
     {
         canRegister: true,
@@ -51,6 +57,7 @@ const props = withDefaults(
         totalAssignments: 0,
         totalSubmissions: 0,
         activeSeason: null,
+        demoVideoUrl: null,
     },
 );
 
@@ -69,6 +76,7 @@ const prefersReducedMotion = ref(false);
 const isLoggingOut = ref(false);
 const showBootOverlay = ref(true);
 const isBooted = ref(false);
+const isDemoVideoOpen = ref(false);
 
 const { isTransitioningTheme } = useAppearance();
 
@@ -113,6 +121,14 @@ const handleMagnetic = (e: MouseEvent) => {
 const resetMagnetic = (e: MouseEvent) => {
     const btn = e.currentTarget as HTMLElement;
     gsap.to(btn, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
+};
+
+const openDemoVideo = () => {
+    isDemoVideoOpen.value = true;
+};
+
+const closeDemoVideo = () => {
+    isDemoVideoOpen.value = false;
 };
 
 // Text Scramble Utility
@@ -461,6 +477,7 @@ const orbLayers = [
                 :is-booted="isBooted"
                 @magnetic="handleMagnetic"
                 @reset-magnetic="resetMagnetic"
+                @watch-demo="openDemoVideo"
             >
                 <template #background>
                     <NeuralParticleNetwork 
@@ -544,6 +561,14 @@ const orbLayers = [
                 :login="login"
             />
 
+            <AudiencePathways />
+
+            <TrustReadiness />
+
+            <AppPreviewShowcase />
+
+            <ReportSuite />
+
             <Motion
                 :initial="{ opacity: 0, y: 40, filter: 'blur(10px)' }"
                 :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
@@ -602,6 +627,8 @@ const orbLayers = [
                 </div>
             </div>
         </div>
+
+        <DemoVideoModal :open="isDemoVideoOpen" :video-url="demoVideoUrl" @close="closeDemoVideo" />
     </div>
 </template>
 
