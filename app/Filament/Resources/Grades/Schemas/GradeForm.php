@@ -26,6 +26,7 @@ class GradeForm
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set) {
                         $set('user_id', null);
+                        $set('period', null);
                         $sectionId = $get('section_id');
                         if ($sectionId) {
                             $section = Section::find($sectionId);
@@ -63,11 +64,15 @@ class GradeForm
 
                 Select::make('period')
                     ->label('Period')
-                    ->options([
-                        'Prelim' => 'Prelim',
-                        'Midterm' => 'Midterm',
-                        'Final' => 'Final',
-                    ])
+                    ->options(function (Get $get) {
+                        $sectionId = $get('section_id');
+
+                        if (! $sectionId) {
+                            return Section::collegeGradePeriods();
+                        }
+
+                        return Section::find($sectionId)?->gradePeriods() ?? Section::collegeGradePeriods();
+                    })
                     ->placeholder('Select a period')
                     ->helperText('Select the grading period.'),
 

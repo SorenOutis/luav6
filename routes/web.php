@@ -95,31 +95,41 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         foreach ($sections as $section) {
             $sectionId = $section->id;
             $subjectName = $section->name;
+            $periods = $section->gradePeriods();
 
             $subjectGrades[$subjectName] = [
                 'subject' => $subjectName,
                 'section' => [
                     'id' => $section->id,
                     'name' => $section->name,
+                    'schoolLevel' => $section->school_level,
+                    'schoolLevelLabel' => Section::schoolLevelOptions()[$section->school_level] ?? 'College',
                 ],
-                'prelim' => $gradesBySection[$sectionId]['Prelim'] ?? null,
-                'midterm' => $gradesBySection[$sectionId]['Midterm'] ?? null,
-                'final' => $gradesBySection[$sectionId]['Final'] ?? null,
+                'periods' => collect($periods)
+                    ->map(fn (string $label, string $key) => [
+                        'key' => $key,
+                        'label' => $label,
+                    ])
+                    ->values()
+                    ->all(),
+                'periodGrades' => collect($periods)
+                    ->map(fn (string $label, string $key) => [
+                        'key' => $key,
+                        'label' => $label,
+                        'grade' => $gradesBySection[$sectionId][$key] ?? null,
+                    ])
+                    ->values()
+                    ->all(),
             ];
         }
 
         // Calculate semester grades
         foreach ($subjectGrades as &$subjectData) {
-            $scores = [];
-            if ($subjectData['prelim']) {
-                $scores[] = $subjectData['prelim']['percentage'];
-            }
-            if ($subjectData['midterm']) {
-                $scores[] = $subjectData['midterm']['percentage'];
-            }
-            if ($subjectData['final']) {
-                $scores[] = $subjectData['final']['percentage'];
-            }
+            $scores = collect($subjectData['periodGrades'])
+                ->pluck('grade')
+                ->filter()
+                ->pluck('percentage')
+                ->all();
 
             if (count($scores) > 0) {
                 $subjectData['semesterGrade'] = round(array_sum($scores) / count($scores), 2);

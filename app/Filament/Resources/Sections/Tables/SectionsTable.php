@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Sections\Tables;
 
+use App\Models\Section;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -17,6 +18,12 @@ class SectionsTable
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
+                    ->sortable(),
+                TextColumn::make('school_level')
+                    ->label('School level')
+                    ->formatStateUsing(fn (?string $state): string => Section::schoolLevelOptions()[$state] ?? 'College')
+                    ->badge()
+                    ->color('gray')
                     ->sortable(),
                 TextColumn::make('users_count')
                     ->counts('users')

@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Sections\Schemas;
 
+use App\Models\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -14,6 +16,11 @@ class SectionForm
                 TextInput::make('name')
                     ->required()
                     ->unique(ignoreRecord: true),
+                Select::make('school_level')
+                    ->label('School level')
+                    ->options(Section::schoolLevelOptions())
+                    ->default(Section::SCHOOL_LEVEL_COLLEGE)
+                    ->required(),
                 TextInput::make('password')
                     ->password()
                     ->revealable()

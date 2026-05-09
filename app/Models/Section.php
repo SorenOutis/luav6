@@ -11,8 +11,13 @@ class Section extends Model
 
     protected $fillable = [
         'name',
+        'school_level',
         'password',
     ];
+
+    public const SCHOOL_LEVEL_COLLEGE = 'college';
+
+    public const SCHOOL_LEVEL_SENIOR_HIGH = 'senior_high';
 
     protected $hidden = [
         'password',
@@ -49,5 +54,41 @@ class Section extends Model
     public function grades()
     {
         return $this->hasMany(Grade::class);
+    }
+
+    public function gradePeriods(): array
+    {
+        if ($this->school_level === self::SCHOOL_LEVEL_SENIOR_HIGH) {
+            return self::seniorHighGradePeriods();
+        }
+
+        return self::collegeGradePeriods();
+    }
+
+    public static function schoolLevelOptions(): array
+    {
+        return [
+            self::SCHOOL_LEVEL_COLLEGE => 'College',
+            self::SCHOOL_LEVEL_SENIOR_HIGH => 'Senior High School',
+        ];
+    }
+
+    public static function collegeGradePeriods(): array
+    {
+        return [
+            'Prelim' => 'Prelim',
+            'Midterm' => 'Midterm',
+            'Final' => 'Final',
+        ];
+    }
+
+    public static function seniorHighGradePeriods(): array
+    {
+        return [
+            '1st Quarter Grade' => '1st Quarter Grade',
+            '2nd Quarter Grade' => '2nd Quarter Grade',
+            '3rd Quarter Grade' => '3rd Quarter Grade',
+            '4th Quarter Grade' => '4th Quarter Grade',
+        ];
     }
 }

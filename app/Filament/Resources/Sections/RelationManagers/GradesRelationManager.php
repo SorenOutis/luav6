@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Sections\RelationManagers;
 
+use App\Models\Section;
 use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -47,11 +48,9 @@ class GradesRelationManager extends RelationManager
 
                 Select::make('period')
                     ->label('Period')
-                    ->options([
-                        'Prelim' => 'Prelim',
-                        'Midterm' => 'Midterm',
-                        'Final' => 'Final',
-                    ])
+                    ->options(fn () => $this->ownerRecord instanceof Section
+                        ? $this->ownerRecord->gradePeriods()
+                        : Section::collegeGradePeriods())
                     ->placeholder('Select a period'),
 
                 TextInput::make('score')

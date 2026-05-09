@@ -8,38 +8,41 @@ import CardContent from '@/components/ui/card/CardContent.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
-import { GraduationCap, TrendingUp, AlertCircle, FileText, CheckCircle2, Clock } from 'lucide-vue-next';
+import { GraduationCap, TrendingUp, AlertCircle, FileText, Clock } from 'lucide-vue-next';
+
+interface GradePeriodScore {
+    id: number;
+    score: string;
+    maxScore: string;
+    percentage: number;
+    remarks: string | null;
+    updatedAt: string;
+}
+
+interface GradePeriod {
+    key: string;
+    label: string;
+    grade: GradePeriodScore | null;
+}
+
+interface SubjectGrade {
+    subject: string;
+    section: {
+        id: number;
+        name: string;
+        schoolLevel: string;
+        schoolLevelLabel: string;
+    } | null;
+    periods: Array<{
+        key: string;
+        label: string;
+    }>;
+    periodGrades: GradePeriod[];
+    semesterGrade: number | null;
+}
 
 const props = defineProps<{
-    subjectGrades: Array<{
-        subject: string;
-        section: { id: number; name: string } | null;
-        prelim: {
-            id: number;
-            score: string;
-            maxScore: string;
-            percentage: number;
-            remarks: string | null;
-            updatedAt: string;
-        } | null;
-        midterm: {
-            id: number;
-            score: string;
-            maxScore: string;
-            percentage: number;
-            remarks: string | null;
-            updatedAt: string;
-        } | null;
-        final: {
-            id: number;
-            score: string;
-            maxScore: string;
-            percentage: number;
-            remarks: string | null;
-            updatedAt: string;
-        } | null;
-        semesterGrade: number | null;
-    }>;
+    subjectGrades: SubjectGrade[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -54,6 +57,35 @@ const averageSemesterGrade = computed(() => {
 
     if (validGrades.length === 0) return 0;
     return Math.round(validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length);
+});
+
+const gradeGroups = computed(() => {
+    const groups = new Map<string, {
+        key: string;
+        label: string;
+        finalGradeLabel: string;
+        periods: SubjectGrade['periods'];
+        subjects: SubjectGrade[];
+    }>();
+
+    for (const subjectGrade of props.subjectGrades) {
+        const key = subjectGrade.section?.schoolLevel ?? subjectGrade.periods.map(period => period.key).join('|');
+        const label = subjectGrade.section?.schoolLevelLabel ?? 'Grades';
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                label,
+                finalGradeLabel: subjectGrade.section?.schoolLevel === 'senior_high' ? 'Final Grade' : 'Semester Grade',
+                periods: subjectGrade.periods,
+                subjects: [],
+            });
+        }
+
+        groups.get(key)?.subjects.push(subjectGrade);
+    }
+
+    return Array.from(groups.values());
 });
 
 const gradeColor = (percentage: number | null) => {
@@ -93,7 +125,7 @@ const gradeLabel = (percentage: number | null) => {
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                 <Card>
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle class="text-sm font-medium">Semester Average</CardTitle>
+                        <CardTitle class="text-sm font-medium">Overall Average</CardTitle>
                         <TrendingUp class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -136,13 +168,13 @@ const gradeLabel = (percentage: number | null) => {
                 </CardContent>
             </Card>
 
-            <!-- Grades Table -->
+            <!-- Grades Tables -->
             <template v-else>
-                <Card>
+                <Card v-for="group in gradeGroups" :key="group.key" class="mb-6">
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
                             <GraduationCap class="h-5 w-5 text-primary" />
-                            Academic Performance
+                            {{ group.label }} Performance
                         </CardTitle>
                         <CardDescription>
                             Grades by subject across all grading periods
@@ -154,50 +186,22 @@ const gradeLabel = (percentage: number | null) => {
                                 <thead>
                                     <tr class="border-b">
                                         <th class="text-left p-4 font-semibold">Subject</th>
-                                        <th class="text-center p-4 font-semibold">Prelim</th>
-                                        <th class="text-center p-4 font-semibold">Midterm</th>
-                                        <th class="text-center p-4 font-semibold">Final</th>
-                                        <th class="text-center p-4 font-semibold">Semester Grade</th>
+                                        <th v-for="period in group.periods" :key="period.key" class="text-center p-4 font-semibold">
+                                            {{ period.label }}
+                                        </th>
+                                        <th class="text-center p-4 font-semibold">{{ group.finalGradeLabel }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="subjectGrade in subjectGrades" :key="subjectGrade.subject" class="border-b last:border-b-0 hover:bg-muted/50">
+                                    <tr v-for="subjectGrade in group.subjects" :key="subjectGrade.subject" class="border-b last:border-b-0 hover:bg-muted/50">
                                         <td class="p-4 font-medium">{{ subjectGrade.subject }}</td>
-                                        <td class="p-4 text-center">
-                                            <div v-if="subjectGrade.prelim" class="flex flex-col items-center">
-                                                <div class="text-lg font-bold" :class="gradeColor(subjectGrade.prelim.percentage)">
-                                                    {{ subjectGrade.prelim.percentage }}
+                                        <td v-for="periodGrade in subjectGrade.periodGrades" :key="periodGrade.key" class="p-4 text-center">
+                                            <div v-if="periodGrade.grade" class="flex flex-col items-center">
+                                                <div class="text-lg font-bold" :class="gradeColor(periodGrade.grade.percentage)">
+                                                    {{ periodGrade.grade.percentage }}
                                                 </div>
                                                 <div class="text-xs text-muted-foreground">
-                                                    {{ subjectGrade.prelim.score }} / {{ subjectGrade.prelim.maxScore }}
-                                                </div>
-                                            </div>
-                                            <div v-else class="flex items-center justify-center gap-1 text-muted-foreground">
-                                                <Clock class="h-4 w-4" />
-                                                <span class="text-sm">Pending</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-4 text-center">
-                                            <div v-if="subjectGrade.midterm" class="flex flex-col items-center">
-                                                <div class="text-lg font-bold" :class="gradeColor(subjectGrade.midterm.percentage)">
-                                                    {{ subjectGrade.midterm.percentage }}
-                                                </div>
-                                                <div class="text-xs text-muted-foreground">
-                                                    {{ subjectGrade.midterm.score }} / {{ subjectGrade.midterm.maxScore }}
-                                                </div>
-                                            </div>
-                                            <div v-else class="flex items-center justify-center gap-1 text-muted-foreground">
-                                                <Clock class="h-4 w-4" />
-                                                <span class="text-sm">Pending</span>
-                                            </div>
-                                        </td>
-                                        <td class="p-4 text-center">
-                                            <div v-if="subjectGrade.final" class="flex flex-col items-center">
-                                                <div class="text-lg font-bold" :class="gradeColor(subjectGrade.final.percentage)">
-                                                    {{ subjectGrade.final.percentage }}
-                                                </div>
-                                                <div class="text-xs text-muted-foreground">
-                                                    {{ subjectGrade.final.score }} / {{ subjectGrade.final.maxScore }}
+                                                    {{ periodGrade.grade.score }} / {{ periodGrade.grade.maxScore }}
                                                 </div>
                                             </div>
                                             <div v-else class="flex items-center justify-center gap-1 text-muted-foreground">
