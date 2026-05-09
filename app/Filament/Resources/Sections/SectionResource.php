@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Sections;
 use App\Filament\Resources\Sections\Pages\CreateSection;
 use App\Filament\Resources\Sections\Pages\EditSection;
 use App\Filament\Resources\Sections\Pages\ListSections;
+use App\Filament\Resources\Sections\RelationManagers\GradesRelationManager;
 use App\Filament\Resources\Sections\RelationManagers\UsersRelationManager;
 use App\Filament\Resources\Sections\Schemas\SectionForm;
 use App\Filament\Resources\Sections\Tables\SectionsTable;
