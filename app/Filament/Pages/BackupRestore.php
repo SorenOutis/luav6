@@ -15,6 +15,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
@@ -54,7 +55,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
                         ->directory('backups')
                         ->required()
                         ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed', 'zip'])
-                        ->maxSize(51200), // 50MB
+                        ->maxSize(524288), // 512MB
                 ])
                 ->action(function (array $data) {
                     $path = is_array($data['backup_file']) ? reset($data['backup_file']) : $data['backup_file'];
@@ -93,7 +94,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
     {
         return $table
             ->records(fn () => $this->getBackupRecords())
-            ->description('Manage your database backups. Current database size: '.$this->formatBytes(File::exists(database_path('database.sqlite')) ? File::size(database_path('database.sqlite')) : 0))
+            ->description('Manage full backups for the database and public uploaded files. Current database size: '.$this->formatBytes(File::exists(database_path('database.sqlite')) ? File::size(database_path('database.sqlite')) : 0))
             ->columns([
                 TextColumn::make('name')
                     ->label('Backup Name'),
@@ -186,26 +187,8 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
 
             $zip = new ZipArchive;
             if ($zip->open($backupPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
-                // Add database file
-                $zip->addFile($databasePath, 'database.sqlite');
-
-                // Add avatars
-                $avatarsPath = storage_path('app/public/avatars');
-                if (File::exists($avatarsPath)) {
-                    $files = File::allFiles($avatarsPath);
-                    foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/avatars/'.$file->getRelativePathname());
-                    }
-                }
-
-                // Add covers
-                $coversPath = storage_path('app/public/covers');
-                if (File::exists($coversPath)) {
-                    $files = File::allFiles($coversPath);
-                    foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/covers/'.$file->getRelativePathname());
-                    }
-                }
+                $this->addDatabaseToZip($zip);
+                $this->addPublicStorageToZip($zip);
 
                 $zip->close();
 
@@ -233,7 +216,7 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
     {
         $backupPath = storage_path('app/private/'.$path);
         $databasePath = database_path('database.sqlite');
-        $publicStoragePath = storage_path('app/public');
+        $restoreTempPath = storage_path('app/private/backups/restore-'.date('Y-m-d-H-i-s').'-'.uniqid().'.sqlite');
 
         if (! File::exists($backupPath)) {
             Notification::make()
@@ -246,32 +229,69 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
         }
 
         try {
+            $zip = new ZipArchive;
+            if ($zip->open($backupPath) !== true) {
+                Notification::make()
+                    ->title('Restore failed')
+                    ->body('Could not open backup zip archive.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
+            if ($zip->locateName('database.sqlite') === false) {
+                $zip->close();
+
+                Notification::make()
+                    ->title('Restore failed')
+                    ->body('The backup does not contain database.sqlite.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
+            if (! copy('zip://'.realpath($backupPath).'#database.sqlite', $restoreTempPath)) {
+                $zip->close();
+
+                Notification::make()
+                    ->title('Restore failed')
+                    ->body('Could not extract the database from the backup.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
+            $integrity = $this->checkSqliteIntegrity($restoreTempPath);
+            if ($integrity !== 'ok') {
+                $zip->close();
+                File::delete($restoreTempPath);
+
+                Notification::make()
+                    ->title('Restore failed')
+                    ->body('The backup database failed integrity check: '.$integrity)
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
             // It's safer to backup the current DB before restoring
             $currentBackup = 'pre-restore-'.date('Y-m-d-H-i-s').'.zip';
             $currentBackupPath = storage_path('app/private/backups/'.$currentBackup);
 
-            // Create a pre-restore backup of the current state (DB + images)
-            $zip = new ZipArchive;
-            if ($zip->open($currentBackupPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
-                $zip->addFile($databasePath, 'database.sqlite');
-
-                $avatarsPath = storage_path('app/public/avatars');
-                if (File::exists($avatarsPath)) {
-                    $files = File::allFiles($avatarsPath);
-                    foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/avatars/'.$file->getRelativePathname());
-                    }
-                }
-
-                $coversPath = storage_path('app/public/covers');
-                if (File::exists($coversPath)) {
-                    $files = File::allFiles($coversPath);
-                    foreach ($files as $file) {
-                        $zip->addFile($file->getPathname(), 'public/covers/'.$file->getRelativePathname());
-                    }
-                }
-                $zip->close();
+            // Create a pre-restore backup of the current state (DB + public uploads)
+            $preRestoreZip = new ZipArchive;
+            if ($preRestoreZip->open($currentBackupPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
+                $this->addDatabaseToZip($preRestoreZip);
+                $this->addPublicStorageToZip($preRestoreZip);
+                $preRestoreZip->close();
             } else {
+                $zip->close();
+                File::delete($restoreTempPath);
+
                 Notification::make()
                     ->title('Pre-restore backup failed')
                     ->body('Could not create pre-restore zip archive.')
@@ -281,34 +301,32 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
                 return;
             }
 
-            // Restore from the uploaded backup ZIP
-            $zip = new ZipArchive;
-            if ($zip->open($backupPath) === true) {
-                for ($i = 0; $i < $zip->numFiles; $i++) {
-                    $filename = $zip->getNameIndex($i);
+            DB::disconnect();
 
-                    if ($filename === 'database.sqlite') {
-                        $zip->extractTo(database_path(), $filename);
-                    } elseif (str_starts_with($filename, 'public/')) {
-                        $zip->extractTo(storage_path('app'), $filename);
-                    }
+            File::copy($restoreTempPath, $databasePath);
+
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $filename = $zip->getNameIndex($i);
+
+                if (str_starts_with($filename, 'public/')) {
+                    $zip->extractTo(storage_path('app'), $filename);
                 }
-
-                $zip->close();
-
-                Notification::make()
-                    ->title('Database restored successfully')
-                    ->body('A pre-restore backup was created: '.$currentBackup)
-                    ->success()
-                    ->send();
-            } else {
-                Notification::make()
-                    ->title('Restore failed')
-                    ->body('Could not open backup zip archive.')
-                    ->danger()
-                    ->send();
             }
+
+            $zip->close();
+            File::delete($restoreTempPath);
+            DB::purge();
+
+            Notification::make()
+                ->title('Database restored successfully')
+                ->body('A pre-restore backup was created: '.$currentBackup)
+                ->success()
+                ->send();
         } catch (\Exception $e) {
+            if (File::exists($restoreTempPath)) {
+                File::delete($restoreTempPath);
+            }
+
             Notification::make()
                 ->title('Restore failed')
                 ->body($e->getMessage())
@@ -332,6 +350,56 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
+        }
+    }
+
+    protected function addDatabaseToZip(ZipArchive $zip): void
+    {
+        $databasePath = database_path('database.sqlite');
+        $snapshotPath = storage_path('app/private/backups/database-snapshot-'.date('Y-m-d-H-i-s').'-'.uniqid().'.sqlite');
+
+        if (! File::exists($databasePath)) {
+            return;
+        }
+
+        if (! File::exists(dirname($snapshotPath))) {
+            File::makeDirectory(dirname($snapshotPath), 0755, true);
+        }
+
+        $escapedSnapshotPath = str_replace("'", "''", $snapshotPath);
+        DB::statement("VACUUM INTO '{$escapedSnapshotPath}'");
+
+        $zip->addFile($snapshotPath, 'database.sqlite');
+        register_shutdown_function(static function () use ($snapshotPath): void {
+            if (File::exists($snapshotPath)) {
+                File::delete($snapshotPath);
+            }
+        });
+    }
+
+    protected function checkSqliteIntegrity(string $databasePath): string
+    {
+        try {
+            $pdo = new \PDO('sqlite:'.$databasePath);
+            $result = $pdo->query('PRAGMA integrity_check')->fetchColumn();
+
+            return is_string($result) ? $result : 'Unable to read integrity result.';
+        } catch (\Throwable $e) {
+            return $e->getMessage();
+        }
+    }
+
+    protected function addPublicStorageToZip(ZipArchive $zip): void
+    {
+        $publicStoragePath = storage_path('app/public');
+
+        if (! File::exists($publicStoragePath)) {
+            return;
+        }
+
+        foreach (File::allFiles($publicStoragePath) as $file) {
+            $relativePath = str_replace('\\', '/', $file->getRelativePathname());
+            $zip->addFile($file->getPathname(), 'public/'.$relativePath);
         }
     }
 
