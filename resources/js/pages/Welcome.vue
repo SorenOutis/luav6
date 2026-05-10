@@ -40,6 +40,13 @@ interface ActiveSeason {
     showCountdown: boolean;
 }
 
+interface SchoolBranding {
+    name?: string;
+    tagline?: string;
+    logoUrl?: string | null;
+    accentColor?: string;
+}
+
 const props = withDefaults(
     defineProps<{
         canRegister: boolean;
@@ -49,6 +56,7 @@ const props = withDefaults(
         totalSubmissions?: number;
         activeSeason?: ActiveSeason | null;
         demoVideoUrl?: string | null;
+        schoolBranding?: SchoolBranding;
     }>(),
     {
         canRegister: true,
@@ -58,6 +66,12 @@ const props = withDefaults(
         totalSubmissions: 0,
         activeSeason: null,
         demoVideoUrl: null,
+        schoolBranding: () => ({
+            name: 'LSI Engine',
+            tagline: 'Learning Systems Intelligence',
+            logoUrl: null,
+            accentColor: '#f59e0b',
+        }),
     },
 );
 
@@ -79,6 +93,9 @@ const isBooted = ref(false);
 const isDemoVideoOpen = ref(false);
 
 const { isTransitioningTheme } = useAppearance();
+
+const brandName = computed(() => props.schoolBranding?.name || 'LSI Engine');
+const brandAccentColor = computed(() => props.schoolBranding?.accentColor || '#f59e0b');
 
 // Interaction Modes
 const syncInteractionModes = () => {
@@ -299,7 +316,7 @@ const bootMessage = computed(() => {
     if (typeof window !== 'undefined' && sessionStorage.getItem('logged_out') === 'true') {
         return 'SESSION TERMINATED';
     }
-    return 'LSI ENGINE';
+    return brandName.value.toUpperCase();
 });
 
 const bootSubtext = computed(() => {
@@ -440,6 +457,7 @@ const orbLayers = [
         ref="mainContainer"
         @mousemove="handleGlobalMouseMove"
         class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20 transition-colors duration-500"
+        :style="{ '--school-accent': brandAccentColor }"
     >
         <!-- Global Background Elements -->
         <div ref="mouseGlow" class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 hidden h-[400px] w-[400px] rounded-full bg-primary/[0.06] blur-[150px] will-change-transform dark:bg-primary/[0.12] md:block"></div>
@@ -463,6 +481,7 @@ const orbLayers = [
             :login="login"
             :register="register"
             :is-booted="isBooted"
+            :branding="schoolBranding"
             @magnetic="handleMagnetic"
             @reset-magnetic="resetMagnetic"
         />
@@ -475,6 +494,7 @@ const orbLayers = [
                 :login="login"
                 :register="register"
                 :is-booted="isBooted"
+                :branding="schoolBranding"
                 @magnetic="handleMagnetic"
                 @reset-magnetic="resetMagnetic"
                 @watch-demo="openDemoVideo"

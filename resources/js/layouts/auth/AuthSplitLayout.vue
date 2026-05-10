@@ -8,6 +8,27 @@ import gsap from 'gsap';
 // Layout doesn't need title/description props anymore since pages provide them
 const page = usePage();
 
+interface SchoolBranding {
+    name?: string;
+    tagline?: string;
+    logoUrl?: string | null;
+    accentColor?: string;
+}
+
+const schoolBranding = computed(() => (page.props.schoolBranding || {}) as SchoolBranding);
+const brandName = computed(() => schoolBranding.value.name || 'LSI Engine');
+const brandTagline = computed(() => schoolBranding.value.tagline || 'Learning Systems Intelligence');
+const brandLogoUrl = computed(() => schoolBranding.value.logoUrl || null);
+const brandAccentColor = computed(() => schoolBranding.value.accentColor || '#f59e0b');
+const heroTitleLines = computed(() => {
+    const words = brandTagline.value.trim().split(/\s+/).filter(Boolean);
+
+    if (words.length >= 3) {
+        return [words[0], words.slice(1, -1).join(' '), words.at(-1) || ''];
+    }
+
+    return ['Learning', 'Systems', 'Intelligence'];
+});
 
 // Refs
 const leftPanel = ref<HTMLElement | null>(null);
@@ -18,6 +39,7 @@ const gridOverlay = ref<HTMLElement | null>(null);
 
 // Rotating taglines
 const taglines = [
+    brandTagline.value,
     'Clear Feedback.',
     'Smarter Assessment.',
     'Learning Insight.',
@@ -136,7 +158,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="relative min-h-svh flex bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden">
+    <div class="relative min-h-svh flex bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden" :style="{ '--school-accent': brandAccentColor }">
 
         <!-- ═══════════════════════════════════════════ -->
         <!-- LEFT PANEL — Cinematic Visual Canvas       -->
@@ -173,13 +195,19 @@ onBeforeUnmount(() => {
             <!-- Top: Brand Block -->
             <div class="relative z-10 p-10 xl:p-14">
                 <Link :href="home()" class="group inline-flex items-center gap-4 auth-cinematic-reveal">
-                    <div class="relative flex h-12 w-12 items-center justify-center text-white/90 transition-all duration-700 group-hover:rotate-[180deg]">
+                    <div class="relative flex h-12 w-12 items-center justify-center overflow-hidden text-white/90 transition-all duration-700 group-hover:rotate-[180deg]">
                         <div class="absolute inset-0 rounded-2xl bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] group-hover:bg-white/[0.1] transition-all duration-500"></div>
-                        <Command class="h-6 w-6 relative z-10" />
+                        <img
+                            v-if="brandLogoUrl"
+                            :src="brandLogoUrl"
+                            :alt="`${brandName} logo`"
+                            class="relative z-10 h-full w-full rounded-2xl object-cover"
+                        />
+                        <Command v-else class="h-6 w-6 relative z-10" />
                     </div>
                     <div class="flex flex-col leading-none">
-                        <span class="text-[11px] font-black tracking-[0.5em] uppercase text-white/80">LSI Engine</span>
-                        <span class="text-[9px] font-bold text-white/30 uppercase mt-1.5 tracking-widest">v6.4.0</span>
+                        <span class="max-w-[16rem] truncate text-[11px] font-black tracking-[0.42em] uppercase text-white/80">{{ brandName }}</span>
+                        <span class="max-w-[16rem] truncate text-[9px] font-bold text-white/30 uppercase mt-1.5 tracking-widest">{{ brandTagline }}</span>
                     </div>
                 </Link>
             </div>
@@ -189,9 +217,9 @@ onBeforeUnmount(() => {
                 <div class="max-w-lg">
                     <div class="auth-cinematic-reveal">
                         <h2 class="text-5xl xl:text-6xl font-black uppercase tracking-[-0.04em] leading-[0.9] text-white/90">
-                            Learning<br />
-                            <span class="text-white/40">Systems</span><br />
-                            Intelligence
+                            {{ heroTitleLines[0] }}<br />
+                            <span class="text-white/40">{{ heroTitleLines[1] }}</span><br />
+                            {{ heroTitleLines[2] }}
                         </h2>
                     </div>
 
@@ -265,13 +293,19 @@ onBeforeUnmount(() => {
                 <!-- Mobile brand mark (hidden on desktop since left panel shows it) -->
                 <div class="flex flex-col items-center lg:hidden form-reveal">
                     <Link :href="home()" class="group flex flex-col items-center gap-3">
-                        <div class="relative flex h-12 w-12 items-center justify-center text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
+                        <div class="relative flex h-12 w-12 items-center justify-center overflow-hidden text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
                             <div class="absolute inset-0 rounded-2xl bg-primary/[0.04] dark:bg-primary/[0.08] group-hover:bg-primary/[0.08] transition-all duration-500"></div>
-                            <Command class="h-6 w-6 relative z-10" />
+                            <img
+                                v-if="brandLogoUrl"
+                                :src="brandLogoUrl"
+                                :alt="`${brandName} logo`"
+                                class="relative z-10 h-full w-full rounded-2xl object-cover"
+                            />
+                            <Command v-else class="h-6 w-6 relative z-10" />
                         </div>
                         <div class="flex flex-col items-center leading-none">
-                            <span class="text-[10px] font-black tracking-[0.5em] uppercase text-foreground/60">LSI Engine</span>
-                            <span class="text-[8px] font-bold text-primary/40 uppercase mt-1 tracking-widest">v6.4.0</span>
+                            <span class="max-w-[18rem] truncate text-[10px] font-black tracking-[0.42em] uppercase text-foreground/60">{{ brandName }}</span>
+                            <span class="max-w-[18rem] truncate text-[8px] font-bold text-primary/40 uppercase mt-1 tracking-widest">{{ brandTagline }}</span>
                         </div>
                     </Link>
                 </div>

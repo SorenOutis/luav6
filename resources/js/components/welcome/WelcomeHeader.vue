@@ -3,19 +3,28 @@ import { Link } from '@inertiajs/vue3';
 import { Command, Sun, Moon } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
 import { Motion } from '@motionone/vue';
+import { computed } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     canRegister: boolean;
     auth: { user: any };
     dashboard: () => string;
     login: () => string;
     register: () => string;
     isBooted?: boolean;
+    branding?: {
+        name?: string;
+        tagline?: string;
+        logoUrl?: string | null;
+        accentColor?: string;
+    };
 }>();
 
 const emit = defineEmits(['magnetic', 'resetMagnetic']);
 
 const { appearance, toggleTheme } = useAppearance();
+const brandName = computed(() => props.branding?.name || 'LSI Engine');
+const brandTagline = computed(() => props.branding?.tagline || 'Learning Systems Intelligence');
 
 const handleMagnetic = (e: MouseEvent) => emit('magnetic', e);
 const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
@@ -53,13 +62,19 @@ const navItems = [
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
             class="nav-item flex items-center gap-3 lg:gap-4 group cursor-pointer"
         >
-            <div class="relative flex h-10 w-10 items-center justify-center text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
+            <div class="relative flex h-10 w-10 items-center justify-center overflow-hidden text-foreground transition-all duration-700 group-hover:rotate-[180deg]">
                 <div class="absolute inset-0 rounded-xl bg-primary/5 dark:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <Command class="h-6 w-6 lg:h-7 lg:w-7 relative z-10" />
+                <img
+                    v-if="branding?.logoUrl"
+                    :src="branding.logoUrl"
+                    :alt="`${brandName} logo`"
+                    class="relative z-10 h-full w-full rounded-xl object-cover"
+                />
+                <Command v-else class="h-6 w-6 lg:h-7 lg:w-7 relative z-10" />
             </div>
             <div class="flex flex-col leading-none">
-                <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LSI Engine</span>
-                <span class="text-[7px] lg:text-[8px] font-bold text-primary/60 uppercase mt-1 tracking-widest">v6.4.0</span>
+                <span class="max-w-[11rem] truncate text-[10px] lg:text-xs font-black tracking-[0.24em] uppercase">{{ brandName }}</span>
+                <span class="max-w-[11rem] truncate text-[7px] lg:text-[8px] font-bold text-primary/60 uppercase mt-1 tracking-widest">{{ brandTagline }}</span>
             </div>
         </Motion>
 

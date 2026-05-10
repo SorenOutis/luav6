@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { ArrowRight, CalendarCheck, LayoutDashboard } from 'lucide-vue-next';
 import { Motion } from '@motionone/vue';
@@ -15,6 +15,12 @@ const props = defineProps<{
     login: () => string;
     register: () => string;
     isBooted?: boolean;
+    branding?: {
+        name?: string;
+        tagline?: string;
+        logoUrl?: string | null;
+        accentColor?: string;
+    };
 }>();
 
 const emit = defineEmits(['magnetic', 'resetMagnetic', 'watchDemo']);
