@@ -280,6 +280,71 @@
     box-shadow: inset 2px 0 0 #f59e0b;
 }
 
+.theme-neutral-page {
+    --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+    --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --color-background: #ffffff;
+    --color-foreground: #09090b;
+    --color-card: #ffffff;
+    --color-card-foreground: #09090b;
+    --color-primary: #1a1a1e;
+    --color-primary-foreground: #fafafa;
+    --color-secondary: #f4f4f5;
+    --color-secondary-foreground: #18181b;
+    --color-muted: #f4f4f5;
+    --color-muted-foreground: #71717a;
+    --color-accent: #f4f4f5;
+    --color-accent-foreground: #18181b;
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #fafafa;
+    --color-border: #eeeff1;
+    --color-input: #eeeff1;
+    --color-ring: #18181b;
+    --color-sidebar: #fafafa;
+    --color-sidebar-foreground: #09090b;
+    --color-sidebar-primary: #1a1a1e;
+    --color-sidebar-primary-foreground: #fafafa;
+    --color-sidebar-accent: #f4f4f5;
+    --color-sidebar-accent-foreground: #18181b;
+    --color-sidebar-border: #eeeff1;
+    --color-sidebar-ring: #18181b;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+}
+
+.dark .theme-neutral-page {
+    --color-background: #09090b;
+    --color-foreground: #fafafa;
+    --color-card: #09090b;
+    --color-card-foreground: #fafafa;
+    --color-primary: #fafafa;
+    --color-primary-foreground: #1a1a1e;
+    --color-secondary: #27272a;
+    --color-secondary-foreground: #fafafa;
+    --color-muted: #27272a;
+    --color-muted-foreground: #a1a1aa;
+    --color-accent: #27272a;
+    --color-accent-foreground: #fafafa;
+    --color-border: #27272a;
+    --color-input: #27272a;
+    --color-ring: #d4d4d8;
+    --color-sidebar: #09090b;
+    --color-sidebar-foreground: #fafafa;
+    --color-sidebar-primary: #fafafa;
+    --color-sidebar-primary-foreground: #1a1a1e;
+    --color-sidebar-accent: #27272a;
+    --color-sidebar-accent-foreground: #fafafa;
+    --color-sidebar-border: #27272a;
+    --color-sidebar-ring: #d4d4d8;
+}
+
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-md { border-radius: 0.375rem !important; }
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-lg { border-radius: 0.5rem !important; }
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-xl { border-radius: 0.75rem !important; }
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-2xl { border-radius: 1rem !important; }
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-3xl { border-radius: 1.5rem !important; }
+
 :root[data-font-preset='academic'] {
     --font-sans: Georgia, Cambria, "Times New Roman", Times, serif;
 }

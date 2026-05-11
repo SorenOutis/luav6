@@ -44,7 +44,7 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="relative min-h-svh flex flex-col items-center justify-center bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden perspective-[1000px]">
+    <div class="theme-neutral-page relative min-h-svh flex flex-col items-center justify-center bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden perspective-[1000px]">
         
         <!-- Structural Grid Background -->
         <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] bg-[radial-gradient(circle_at_50%_50%,rgba(var(--primary),0.05),transparent_70%)]">
@@ -164,4 +164,3 @@ onMounted(() => {
     transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 </style>
-

@@ -456,7 +456,7 @@ const orbLayers = [
     <div 
         ref="mainContainer"
         @mousemove="handleGlobalMouseMove"
-        class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20 transition-colors duration-500"
+        class="theme-neutral-page relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20 transition-colors duration-500"
         :style="{ '--school-accent': brandAccentColor }"
     >
         <!-- Global Background Elements -->

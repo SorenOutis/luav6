@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="relative min-h-svh flex bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden" :style="{ '--school-accent': brandAccentColor }">
+    <div class="theme-neutral-page relative min-h-svh flex bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden" :style="{ '--school-accent': brandAccentColor }">
 
         <!-- ═══════════════════════════════════════════ -->
         <!-- LEFT PANEL — Cinematic Visual Canvas       -->
