@@ -881,6 +881,157 @@
     display: none !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   REVIEW MODAL — student-friendly (non-tactical presets)
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root:not([data-theme-preset='tactical']) .exam-review-modal {
+    border-radius: var(--radius-2xl) !important;
+}
+
+/* Hide tactical corner brackets */
+:root:not([data-theme-preset='tactical']) .exam-review-modal > div.absolute.border-t-2.border-l-2,
+:root:not([data-theme-preset='tactical']) .exam-review-modal > div.absolute.border-b-2.border-r-2 {
+    display: none !important;
+}
+
+/* Hide the rotated amber diamond in modal header */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .border-amber-500.rotate-45 {
+    display: none !important;
+}
+
+/* Friendlier dialog title (no italic, no extreme uppercase tracking) */
+:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-title'],
+:root:not([data-theme-preset='tactical']) .exam-review-modal h3 {
+    font-style: normal !important;
+    text-transform: none !important;
+    letter-spacing: -0.01em !important;
+    font-weight: 700 !important;
+}
+
+:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-description'] {
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 500 !important;
+}
+
+/* Score panel: rounded */
+:root:not([data-theme-preset='tactical']) .exam-review-modal [class*='border-border/50'].bg-muted\/30 {
+    border-radius: 0.875rem !important;
+}
+
+/* Part tabs: un-skew, rounded pills */
+:root:not([data-theme-preset='tactical']) .exam-review-modal button.transform.-skew-x-12 {
+    transform: none !important;
+    border-radius: 999px !important;
+}
+
+:root:not([data-theme-preset='tactical']) .exam-review-modal button.transform.-skew-x-12 > div.skew-x-12,
+:root:not([data-theme-preset='tactical']) .exam-review-modal button.transform.-skew-x-12 span.skew-x-12,
+:root:not([data-theme-preset='tactical']) .exam-review-modal div.transform.-skew-x-12 span.skew-x-12,
+:root:not([data-theme-preset='tactical']) .exam-review-modal div.transform.-skew-x-12 div.skew-x-12 {
+    transform: none !important;
+}
+
+/* Part header score chip un-skew */
+:root:not([data-theme-preset='tactical']) .exam-review-modal div.transform.-skew-x-12 {
+    transform: none !important;
+    border-radius: 999px !important;
+}
+
+/* Question cards in modal: rounded, calmer borders */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .group\/question {
+    border-radius: var(--radius-2xl) !important;
+    border-width: 1px !important;
+}
+
+/* Question text: drop italic, ease readability */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .group\/question p.italic {
+    font-style: normal !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+}
+
+/* Part title: drop italic + tracking-tight */
+:root:not([data-theme-preset='tactical']) .exam-review-modal h3.italic {
+    font-style: normal !important;
+    text-transform: none !important;
+    letter-spacing: -0.01em !important;
+}
+
+/* Correct/Wrong status labels: friendlier */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .text-emerald-500.uppercase,
+:root:not([data-theme-preset='tactical']) .exam-review-modal .text-red-500.uppercase {
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 700 !important;
+    font-size: 0.8125rem !important;
+    font-family: var(--font-sans) !important;
+}
+
+/* Answer option rows in modal: rounded, less mono caps */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .grid > div.text-sm.p-5.border {
+    border-radius: 0.875rem !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-family: var(--font-sans) !important;
+    font-weight: 500 !important;
+}
+
+/* "Your answer" tag pill */
+:root:not([data-theme-preset='tactical']) .exam-review-modal div.bg-foreground.text-background.transform.-skew-x-12 {
+    transform: none !important;
+    border-radius: 999px !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    padding: 0.25rem 0.625rem !important;
+}
+
+/* Identification / essay panels rounded */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-muted\/30.border,
+:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-emerald-500\/5.border,
+:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-primary\/5.border,
+:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-muted\/20.border {
+    border-radius: 0.875rem !important;
+}
+
+/* User-input / correct-answer text: drop heavy tracking */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .font-black.tracking-widest.whitespace-pre-wrap {
+    letter-spacing: 0 !important;
+    font-weight: 600 !important;
+    font-family: var(--font-sans) !important;
+}
+
+/* Footer buttons: un-skew, round */
+:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-footer'] button {
+    transform: none !important;
+    border-radius: 0.75rem !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    height: auto !important;
+    padding: 0.625rem 1.25rem !important;
+}
+
+:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-footer'] button span {
+    transform: none !important;
+}
+
+/* Hide AI panel's rotated decorative square */
+:root:not([data-theme-preset='tactical']) .exam-review-modal .group\/ai > div.absolute.-rotate-45 {
+    display: none !important;
+}
+
+/* AI score pill un-skew */
+:root:not([data-theme-preset='tactical']) .exam-review-modal div.bg-primary.text-primary-foreground.transform.-skew-x-12 {
+    transform: none !important;
+    border-radius: 999px !important;
+    text-transform: none !important;
+    letter-spacing: 0.02em !important;
+    padding: 0.25rem 0.75rem !important;
+}
+
 /* — Sticky exam footer: reserve bottom space on page so content doesn't hide under it — */
 .exam-theme-page:has(~ .exam-sticky-header),
 .exam-theme-page:has(.exam-sticky-header) {

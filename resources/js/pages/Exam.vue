@@ -108,8 +108,13 @@ const getExamTimeInfo = (exam: Exam) => {
 
 // --- Status Badge Info ---
 const getStatusBadgeInfo = (exam: Exam) => {
+    const totalParts = exam.total_parts ?? exam.parts?.length ?? 0;
+    const submittedParts = exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
+    const allPartsDone = totalParts > 0 && submittedParts >= totalParts;
+
+    if (allPartsDone) return { label: 'COMPLETED', color: 'bg-emerald-500' };
     if (exam.is_locked && exam.status === 'closed') return { label: 'CLOSED', color: 'bg-red-500' };
-    if (exam.is_locked) return { label: 'IN PROGRESS', color: 'bg-emerald-500' };
+    if (exam.is_locked) return { label: 'IN PROGRESS', color: 'bg-amber-500' };
     if (exam.status === 'published') return { label: 'PUBLISHED', color: 'bg-blue-500' };
     if (exam.status === 'closed') return { label: 'CLOSED', color: 'bg-red-500' };
     return { label: 'DRAFT', color: 'bg-muted text-muted-foreground' };
@@ -519,9 +524,9 @@ onMounted(() => {
         </div>
     </AppLayout>
 
-    <!-- Review Modal (UNCHANGED) -->
+    <!-- Review Modal -->
     <Dialog v-model:open="showReviewModal">
-        <DialogContent class="sm:max-w-[1000px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-card dark:bg-zinc-900 border-border shadow-2xl rounded-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <DialogContent class="exam-review-modal sm:max-w-[1000px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-card dark:bg-zinc-900 border-border shadow-2xl rounded-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
             <!-- Futuristic Corner Brackets -->
             <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-foreground z-50 pointer-events-none"></div>
             <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-foreground z-50 pointer-events-none"></div>
@@ -533,7 +538,7 @@ onMounted(() => {
                              <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                         </div>
                             <div class="space-y-1">
-                                <span class="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">ASSESSMENT_DEBRIEF_PROTOCOL</span>
+                                <span class="exam-friendly-label text-[8px] md:text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">Your results</span>
                                 <DialogTitle class="text-xl md:text-3xl font-black italic uppercase tracking-tighter text-foreground leading-none">
                                     {{ selectedExamForReview?.title }}
                                 </DialogTitle>
@@ -552,16 +557,16 @@ onMounted(() => {
                             <div class="absolute top-0 left-0 w-full h-[1px] bg-primary/30 group-hover/privacy:bg-primary transition-colors"></div>
                             <div class="flex items-center gap-2">
                                 <component :is="privacyMode ? Shield : ShieldOff" class="w-2.5 h-2.5 md:w-3 md:h-3" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'" />
-                                <span class="text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] font-mono" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'">
-                                    {{ privacyMode ? 'SHIELD_ON' : 'SHIELD_OFF' }}
+                                <span class="exam-friendly-label text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] font-mono" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'">
+                                    {{ privacyMode ? 'Hide answers' : 'Show answers' }}
                                 </span>
                             </div>
-                            <span class="hidden md:block text-[7px] font-bold text-muted-foreground/60 uppercase tracking-widest">Anti-Glance</span>
+                            <span class="exam-friendly-label hidden md:block text-[7px] font-bold text-muted-foreground/60 uppercase tracking-widest">Hover to reveal</span>
                         </button>
 
                         <div class="px-4 md:px-6 py-1.5 md:py-3 bg-muted/30 border border-border/50 relative overflow-hidden group/total">
                             <div class="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover/total:bg-primary transition-colors"></div>
-                            <span class="block text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-0.5 md:mb-1 font-mono leading-none">SCORE</span>
+                            <span class="exam-friendly-label block text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-0.5 md:mb-1 font-mono leading-none">Score</span>
                             <span class="text-lg md:text-2xl font-black text-foreground font-mono tabular-nums leading-none">
                                 {{ selectedExamForReview?.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
                             </span>
@@ -582,8 +587,8 @@ onMounted(() => {
                         : 'bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'"
                 >
                     <div class="flex items-center gap-3 skew-x-12">
-                        <span class="text-[8px] font-black uppercase tracking-[0.2em] font-mono opacity-60">
-                            PART_{{ (selectedExamForReview.parts.indexOf(part) + 1).toString().padStart(2, '0') }}
+                        <span class="exam-friendly-label text-[8px] font-black uppercase tracking-[0.2em] font-mono opacity-60">
+                            Part {{ selectedExamForReview.parts.indexOf(part) + 1 }}
                         </span>
                         <span class="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
                             {{ part.title }}
@@ -606,7 +611,7 @@ onMounted(() => {
                             <div v-if="getSubmissionForPart(selectedExamForReview, part.id)" 
                                 class="px-6 py-3 bg-foreground text-background font-black text-xs uppercase tracking-[0.2em] transform -skew-x-12">
                                 <span class="inline-block skew-x-12 font-mono">
-                                    PART_SCORE: {{ getSubmissionForPart(selectedExamForReview, part.id)?.score }} / {{ part.questions?.reduce((acc, q) => acc + (parseInt(q.points) || 1), 0) }}
+                                    Score: {{ getSubmissionForPart(selectedExamForReview, part.id)?.score }} / {{ part.questions?.reduce((acc, q) => acc + (parseInt(q.points) || 1), 0) }}
                                 </span>
                             </div>
                         </div>
@@ -629,7 +634,7 @@ onMounted(() => {
                                 <div v-if="privacyMode" class="absolute inset-0 z-20 flex items-center justify-center opacity-100 group-hover/question:opacity-0 pointer-events-none transition-opacity duration-300">
                                     <div class="flex items-center gap-3 px-4 py-2 bg-background/80 border border-primary/20 backdrop-blur-sm shadow-xl transform rotate-[-2deg]">
                                         <Shield class="w-4 h-4 text-primary animate-pulse" />
-                                        <span class="text-xs font-black text-primary uppercase tracking-[0.2em]">Data Shielded</span>
+                                        <span class="text-xs font-black text-primary uppercase tracking-[0.2em]">Hover to reveal</span>
                                     </div>
                                 </div>
 
@@ -638,17 +643,17 @@ onMounted(() => {
                                     <div class="space-y-4">
                                         <div class="flex items-center justify-between">
                                             <div class="flex items-center gap-4">
-                                                <span class="text-xs font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">NUMBER_{{ (qIndex + 1).toString().padStart(2, '0') }}</span>
+                                                <span class="exam-friendly-label text-xs font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Question {{ qIndex + 1 }}</span>
                                                 <span class="text-[10px] font-black text-primary uppercase tracking-widest px-2 py-0.5 border border-primary/20 font-mono">{{ question.type.replace('_', ' ') }}</span>
                                             </div>
                                             <div v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))" 
                                                 class="text-emerald-500 font-black text-xs font-mono uppercase tracking-widest flex items-center gap-2">
                                                 <CheckCircle2 class="w-4 h-4" />
-                                                {{ question.type === 'essay' ? 'ASSESSED' : 'CORRECT' }}
+                                                {{ question.type === 'essay' ? 'Reviewed' : 'Correct' }}
                                             </div>
                                             <div v-else class="text-red-500 font-black text-xs font-mono uppercase tracking-widest flex items-center gap-2">
                                                 <XCircle class="w-4 h-4" />
-                                                {{ question.type === 'essay' ? 'ZERO_SCORE' : 'WRONG' }}
+                                                {{ question.type === 'essay' ? 'Needs work' : 'Incorrect' }}
                                             </div>
                                         </div>
                                         <p class="font-black italic tracking-tight text-lg text-foreground leading-snug whitespace-pre-wrap">{{ question.text }}</p>
@@ -672,7 +677,7 @@ onMounted(() => {
                                                 <span class="flex-1 whitespace-pre-wrap">{{ option.text }}</span>
                                                 <div v-if="parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex" 
                                                     class="ml-4 px-3 py-1.5 bg-foreground text-background text-[10px] font-black uppercase tracking-[0.2em] transform -skew-x-12">
-                                                    <span class="inline-block skew-x-12">YOUR_ANSWER</span>
+                                                    <span class="inline-block skew-x-12">Your answer</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -681,13 +686,13 @@ onMounted(() => {
                                         <div v-else-if="question.type === 'identification'" class="space-y-4">
                                             <div class="p-5 bg-muted/30 border border-border/50 flex flex-col gap-2 relative overflow-hidden">
                                                 <div class="absolute top-0 left-0 w-1.5 h-full" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500/40' : 'bg-red-500/40'"></div>
-                                                <span class="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">USER_INPUT</span>
+                                                <span class="exam-friendly-label text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Your answer</span>
                                                 <span class="font-black text-base tracking-widest whitespace-pre-wrap" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-500' : 'text-red-500'">
-                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'NO_ANSWER' }}
+                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No answer' }}
                                                 </span>
                                             </div>
                                             <div class="p-5 bg-emerald-500/5 border border-emerald-500/30 flex flex-col gap-2">
-                                                <span class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] font-mono">CORRECT_ANSWER</span>
+                                                <span class="exam-friendly-label text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] font-mono">Correct answer</span>
                                                 <span class="font-black text-base tracking-widest text-emerald-600 whitespace-pre-wrap">
                                                     {{ question.correct_answer }}
                                                 </span>
@@ -698,9 +703,9 @@ onMounted(() => {
                                         <div v-else-if="question.type === 'essay'" class="space-y-6">
                                             <div class="p-5 bg-muted/30 border border-border/50 flex flex-col gap-2 relative overflow-hidden">
                                                 <div class="absolute top-0 left-0 w-1.5 h-full bg-primary/40"></div>
-                                                <span class="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">USER_NARRATIVE_INPUT</span>
+                                                <span class="exam-friendly-label text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Your response</span>
                                                 <p class="font-bold text-base leading-relaxed tracking-tight text-foreground whitespace-pre-wrap">
-                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'NULL_NARRATIVE' }}
+                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No response submitted' }}
                                                 </p>
                                             </div>
 
@@ -712,10 +717,10 @@ onMounted(() => {
                                                 <div class="flex items-center justify-between">
                                                     <div class="flex items-center gap-3">
                                                         <Zap class="w-4 h-4 text-primary animate-pulse" />
-                                                        <span class="text-[10px] font-black text-primary uppercase tracking-[0.3em] font-mono">ESSAY ANALYSIS SCORE</span>
+                                                        <span class="exam-friendly-label text-[10px] font-black text-primary uppercase tracking-[0.3em] font-mono">Essay feedback</span>
                                                     </div>
                                                     <div class="px-3 py-1 bg-primary text-primary-foreground font-black text-[10px] font-mono tracking-widest transform -skew-x-12">
-                                                        <span class="inline-block skew-x-12">SCORE: {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score }} / {{ question.points }}</span>
+                                                        <span class="inline-block skew-x-12">Score: {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score }} / {{ question.points }}</span>
                                                     </div>
                                                 </div>
 
@@ -724,7 +729,7 @@ onMounted(() => {
                                                     class="space-y-2 border-t border-primary/10 pt-4"
                                                 >
                                                     <div class="flex items-center justify-between">
-                                                        <span class="text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] font-mono">FEEDBACK</span>
+                                                        <span class="exam-friendly-label text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] font-mono">Feedback</span>
                                                     </div>
                                                     <p class="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
                                                         {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback }}
@@ -738,7 +743,7 @@ onMounted(() => {
                                             >
                                                 <div class="flex items-center gap-3">
                                                     <Timer class="w-4 h-4 text-amber-500" />
-                                                    <span class="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] font-mono">FEEDBACK</span>
+                                                    <span class="exam-friendly-label text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] font-mono">Feedback</span>
                                                 </div>
                                                 <span class="text-[10px] font-bold text-muted-foreground font-mono uppercase tracking-widest">Awaiting release</span>
                                             </div>
@@ -754,7 +759,7 @@ onMounted(() => {
             <DialogFooter class="p-8 md:p-10 border-t border-border bg-muted/10 flex flex-col md:flex-row gap-4 items-center justify-between">
                 <Button variant="secondary" @click="showReviewModal = false" 
                     class="w-full md:w-auto bg-muted/20 text-muted-foreground font-black uppercase tracking-[0.3em] text-[10px] transform -skew-x-12 hover:bg-red-500/10 hover:text-red-500 px-8 h-12 rounded-none border border-border/50">
-                    <span class="inline-block skew-x-12">Close_Review</span>
+                    <span class="inline-block skew-x-12">Close</span>
                 </Button>
 
                 <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="flex items-center gap-4 w-full md:w-auto">
@@ -763,7 +768,7 @@ onMounted(() => {
                         @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) - 1].id"
                         class="flex-1 md:flex-none px-6 py-3 bg-muted/30 text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 border border-border/50 hover:bg-primary/10 hover:text-primary transition-all"
                     >
-                        <span class="inline-block skew-x-12">Previous_Part</span>
+                        <span class="inline-block skew-x-12">Previous part</span>
                     </button>
                     
                     <button 
@@ -771,7 +776,7 @@ onMounted(() => {
                         @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) + 1].id"
                         class="flex-1 md:flex-none px-10 py-3 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary),0.5)] transition-all"
                     >
-                        <span class="inline-block skew-x-12">Next_Part</span>
+                        <span class="inline-block skew-x-12">Next part</span>
                     </button>
                 </div>
             </DialogFooter>
