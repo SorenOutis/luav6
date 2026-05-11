@@ -5,6 +5,7 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import gsap from 'gsap';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import AppearanceMenu from '@/components/AppearanceMenu.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -359,6 +360,8 @@ const rightNavItems: NavItem[] = [
                                 <Sun v-if="appearance === 'dark'" class="h-4 w-4 sm:h-5 sm:w-5" />
                                 <Moon v-else class="h-4 w-4 sm:h-5 sm:w-5" />
                             </button>
+
+                            <AppearanceMenu />
                         </div>
 
                         <div class="hidden space-x-1 lg:flex">
