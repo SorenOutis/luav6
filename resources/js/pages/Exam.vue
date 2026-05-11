@@ -66,11 +66,36 @@ const privacyMode = ref(true);
 
 // --- Filter State ---
 const activeFilter = ref<'all' | 'active' | 'completed'>('all');
+const activeSection = ref('all');
 
-const filteredExams = computed(() => {
+const getExamSectionName = (exam: Exam) => exam.section_name?.trim() || 'General';
+
+const statusFilteredExams = computed(() => {
     if (activeFilter.value === 'active') return props.exams.filter(e => !e.is_locked);
     if (activeFilter.value === 'completed') return props.exams.filter(e => e.is_locked);
     return props.exams;
+});
+
+const sectionTabs = computed(() => {
+    const sections = new Map<string, number>();
+
+    statusFilteredExams.value.forEach((exam) => {
+        const sectionName = getExamSectionName(exam);
+        sections.set(sectionName, (sections.get(sectionName) ?? 0) + 1);
+    });
+
+    return [
+        { key: 'all', label: 'All sections', count: statusFilteredExams.value.length },
+        ...Array.from(sections.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([label, count]) => ({ key: label, label, count })),
+    ];
+});
+
+const filteredExams = computed(() => {
+    if (activeSection.value === 'all') return statusFilteredExams.value;
+
+    return statusFilteredExams.value.filter(exam => getExamSectionName(exam) === activeSection.value);
 });
 
 // --- Summary Stats ---
@@ -252,8 +277,14 @@ const animateCards = () => {
 };
 
 // Re-animate when filter changes
-watch(activeFilter, () => {
+watch([activeFilter, activeSection], () => {
     setTimeout(animateCards, 50);
+});
+
+watch(sectionTabs, (tabs) => {
+    if (!tabs.some(tab => tab.key === activeSection.value)) {
+        activeSection.value = 'all';
+    }
 });
 
 onMounted(() => {
@@ -382,6 +413,34 @@ onMounted(() => {
                         <component :is="filter === 'all' ? Calendar : filter === 'active' ? AlertCircle : CheckCircle2" class="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] font-mono">{{ filter }}</span>
                     </div>
+                </button>
+            </div>
+
+            <!-- Section Tabs -->
+            <div v-if="sectionTabs.length > 1" class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1">
+                <button
+                    v-for="section in sectionTabs"
+                    :key="section.key"
+                    @click="activeSection = section.key"
+                    class="exam-section-tab relative flex min-w-[8rem] shrink-0 items-center justify-between gap-3 border px-3 py-2 transition-all duration-300 sm:min-w-[10rem] sm:px-4"
+                    :class="activeSection === section.key
+                        ? 'border-primary/60 bg-primary/10 text-foreground shadow-[0_0_18px_rgba(var(--primary),0.12)]'
+                        : 'border-border/50 bg-muted/10 text-muted-foreground hover:border-border hover:bg-muted/30 hover:text-foreground'"
+                >
+                    <div class="min-w-0 text-left">
+                        <span class="block truncate text-[9px] font-black uppercase tracking-[0.18em] sm:text-[10px]">
+                            {{ section.label }}
+                        </span>
+                        <span class="block text-[7px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 sm:text-[8px]">
+                            {{ section.count }} {{ section.count === 1 ? 'exam' : 'exams' }}
+                        </span>
+                    </div>
+                    <span
+                        class="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] font-black font-mono"
+                        :class="activeSection === section.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'"
+                    >
+                        {{ section.count }}
+                    </span>
                 </button>
             </div>
 
