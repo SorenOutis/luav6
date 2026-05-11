@@ -1181,7 +1181,7 @@ const onDragEnd = () => {
     <Head :title="`${exam.title} — Exam`" />
 
     <AppLayout :breadcrumbs="breadcrumbs" :hide-sidebar="hideSidebar">
-        <div ref="container" class="min-h-full flex flex-col gap-0 relative overflow-hidden bg-background">
+        <div ref="container" class="exam-theme-page min-h-full flex flex-col gap-0 relative overflow-hidden bg-background">
             <!-- Ambient background decorations -->
             <div
                 class="fixed -top-64 -right-64 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[180px] pointer-events-none opacity-50 dark:opacity-40 animate-pulse"
@@ -1275,17 +1275,17 @@ const onDragEnd = () => {
                     :initial="{ opacity: 0, y: 30 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }"
-                    class="exam-hero relative overflow-hidden p-6 md:p-8 border border-border bg-card dark:bg-zinc-900/40 shadow-2xl group/hero"
+                    class="exam-hero relative overflow-hidden p-6 md:p-8 border border-border bg-card shadow-2xl group/hero"
                     @mousemove="handleMouseMove"
                 >
                     <!-- Futuristic Corner Brackets -->
-                    <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
-                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
+                    <div class="exam-bracket absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
+                    <div class="exam-bracket absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
 
                     <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                         <div class="space-y-4 max-w-3xl">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 border-2 border-amber-500 rotate-45 flex items-center justify-center shrink-0">
+                                <div class="exam-tactical-mark w-12 h-12 border-2 border-amber-500 rotate-45 flex items-center justify-center shrink-0">
                                      <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                                 </div>
                                 <div class="space-y-0.5">

@@ -61,6 +61,13 @@ export const themePresets: ThemePresetOption[] = [
         appearance: 'dark',
         swatches: ['#000000', '#facc15', '#ffffff'],
     },
+    {
+        id: 'tactical',
+        name: 'Tactical',
+        description: 'The original sharp exam interface.',
+        appearance: 'dark',
+        swatches: ['#050505', '#ffffff', '#f59e0b'],
+    },
 ];
 
 export const fontPresets: FontPresetOption[] = [

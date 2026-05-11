@@ -318,7 +318,7 @@ onMounted(() => {
     <Head title="Exams" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div ref="examContainer" class="flex h-full flex-1 flex-col gap-4 p-3 md:p-8 relative overflow-hidden bg-background perspective-[1000px]">
+        <div ref="examContainer" class="exam-theme-page flex h-full flex-1 flex-col gap-4 p-3 md:p-8 relative overflow-hidden bg-background perspective-[1000px]">
             <!-- Glassy background decorative orbs -->
             <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
             <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
@@ -336,7 +336,7 @@ onMounted(() => {
 
             <!-- Summary Stats -->
             <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <div class="relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
+                <div class="exam-stat relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-amber-500/60 group-hover/stat:bg-amber-500 transition-colors"></div>
                     <div class="flex items-center gap-2 skew-x-[-12deg]">
                         <AlertCircle class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
@@ -344,7 +344,7 @@ onMounted(() => {
                         <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ activeCount }}</span>
                     </div>
                 </div>
-                <div class="relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
+                <div class="exam-stat relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-emerald-500/60 group-hover/stat:bg-emerald-500 transition-colors"></div>
                     <div class="flex items-center gap-2 skew-x-[-12deg]">
                         <CheckCircle2 class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-500" />
@@ -352,7 +352,7 @@ onMounted(() => {
                         <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ completedCount }}</span>
                     </div>
                 </div>
-                <div class="relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
+                <div class="exam-stat relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-primary/60 group-hover/stat:bg-primary transition-colors"></div>
                     <div class="flex items-center gap-2 skew-x-[-12deg]">
                         <Calendar class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
@@ -368,7 +368,7 @@ onMounted(() => {
                     v-for="filter in ['all', 'active', 'completed']"
                     :key="filter"
                     @click="activeFilter = filter as 'all' | 'active' | 'completed'"
-                    class="relative px-4 sm:px-6 py-1 sm:py-1.5 transition-all duration-300 transform -skew-x-12 shrink-0 group/tab border"
+                    class="exam-filter-tab relative px-4 sm:px-6 py-1 sm:py-1.5 transition-all duration-300 transform -skew-x-12 shrink-0 group/tab border"
                     :class="activeFilter === filter 
                         ? 'bg-primary text-primary-foreground shadow-[0_0_12px_rgba(var(--primary),0.3)] border-primary/50' 
                         : 'bg-muted/20 text-muted-foreground hover:bg-muted hover:text-foreground border-border/50'"
@@ -385,10 +385,10 @@ onMounted(() => {
                 <div 
                     v-for="exam in filteredExams" 
                     :key="exam.id"
-                    class="animate-section exam-card relative flex flex-col justify-between p-2 sm:p-5 transition-all duration-500 overflow-hidden group/card border border-border bg-card dark:bg-zinc-900/40 min-w-0"
+                    class="animate-section exam-card relative flex flex-col justify-between p-2 sm:p-5 transition-all duration-500 overflow-hidden group/card border border-border bg-card min-w-0"
                     :class="exam.is_locked 
                         ? 'opacity-60 grayscale-[0.8] cursor-not-allowed bg-muted/10' 
-                        : 'hover:shadow-2xl hover:-translate-y-1'"
+                        : 'hover:-translate-y-1'"
                     @mousemove="handleMouseMove"
                 >
                     <!-- Futuristic Corner Brackets -->
@@ -405,7 +405,7 @@ onMounted(() => {
 
                     <!-- Score / Completion Badge (Top Right) -->
                     <div v-if="exam.is_locked" class="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col items-end gap-1 sm:gap-1.5 z-20">
-                        <div class="px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 bg-foreground text-background font-black text-[7px] sm:text-[9px] font-mono tracking-widest transform -skew-x-12">
+                        <div class="px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 bg-primary text-primary-foreground font-black text-[7px] sm:text-[9px] font-mono tracking-widest transform -skew-x-12">
                             <span class="inline-block skew-x-12">
                                 {{ exam.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
                             </span>
@@ -413,7 +413,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Center Diamond Icon -->
-                    <div class="flex justify-center mb-2 sm:mb-3">
+                    <div class="exam-tactical-mark flex justify-center mb-2 sm:mb-3">
                         <div class="w-6 h-6 sm:w-8 sm:h-8 border-2 rotate-45 flex items-center justify-center transition-colors duration-500"
                             :class="exam.is_locked ? 'border-muted-foreground/30' : 'border-amber-500/40 group-hover/card:border-amber-500'">
                              <div class="w-1.5 h-1.5 rotate-45" :class="exam.is_locked ? 'bg-muted-foreground/30' : 'bg-amber-500 animate-pulse'"></div>
@@ -450,7 +450,7 @@ onMounted(() => {
                         </div>
 
                         <!-- System Alerts Box -->
-                        <div class="bg-muted/30 dark:bg-zinc-950/40 p-1.5 sm:p-3 space-y-1 sm:space-y-1.5 text-left border border-border/50">
+                        <div class="exam-alert-box bg-muted/30 p-1.5 sm:p-3 space-y-1 sm:space-y-1.5 text-left border border-border/50">
                             <div class="hidden sm:flex items-start gap-2">
                                 <span class="text-amber-500 font-black text-[8px] shrink-0">[!]</span>
                                 <p class="text-[8px] font-bold text-muted-foreground uppercase leading-relaxed tracking-wider">
@@ -478,7 +478,7 @@ onMounted(() => {
                             <button 
                                 v-if="exam.is_locked"
                                 @click="openReview(exam)"
-                                class="relative w-full py-1.5 sm:py-2.5 bg-foreground text-background font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12"
+                                class="exam-action relative w-full py-1.5 sm:py-2.5 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-foreground hover:text-background transform -skew-x-12"
                             >
                                 <span class="inline-block skew-x-12">Review</span>
                             </button>
@@ -487,7 +487,7 @@ onMounted(() => {
                                 v-else-if="exam.url" 
                                 :href="exam.url" 
                                 target="_blank"
-                                class="relative w-full py-1.5 sm:py-2.5 bg-foreground text-background font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-1.5 sm:gap-2"
+                                class="exam-action relative w-full py-1.5 sm:py-2.5 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-foreground hover:text-background transform -skew-x-12 flex items-center justify-center gap-1.5 sm:gap-2"
                             >
                                 <span class="inline-block skew-x-12">Start</span>
                                 <ArrowRight class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 skew-x-12" />
@@ -495,7 +495,7 @@ onMounted(() => {
                             <Link 
                                 v-else
                                 :href="examsShow(exam.id).url"
-                                class="relative w-full py-1.5 sm:py-2.5 bg-foreground text-background font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-primary hover:text-primary-foreground transform -skew-x-12 flex items-center justify-center gap-1.5 sm:gap-2"
+                                class="exam-action relative w-full py-1.5 sm:py-2.5 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-foreground hover:text-background transform -skew-x-12 flex items-center justify-center gap-1.5 sm:gap-2"
                             >
                                 <span class="inline-block skew-x-12">Start</span>
                                 <ArrowRight class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 skew-x-12" />
