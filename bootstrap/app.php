@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\EnsureStudentPageIsAvailable;
 use App\Http\Middleware\RedirectBannedUsers;
 use App\Http\Middleware\SanitizeInput;
 use Illuminate\Foundation\Application;
@@ -19,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
         $middleware->alias([
             'banned.redirect' => RedirectBannedUsers::class,
+            'student.page' => EnsureStudentPageIsAvailable::class,
         ]);
 
         $middleware->web(append: [

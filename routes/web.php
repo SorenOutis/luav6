@@ -185,7 +185,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         return inertia('Grades', [
             'subjectGrades' => array_values($subjectGrades),
         ]);
-    })->name('grades');
+    })->middleware('student.page:grades')->name('grades');
 
     Route::get('dashboard', function () {
         $user = auth()->user();
@@ -441,7 +441,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 'has_password' => filled($s->getRawOriginal('password')),
             ]),
         ]);
-    })->name('dashboard');
+    })->middleware('student.page:dashboard')->name('dashboard');
 
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
@@ -466,37 +466,38 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
     Route::post('sections/{section}/verify-password', [ProfileController::class, 'verifySectionPassword'])->name('sections.verify-password');
 
-    Route::get('assignments', [AssignmentController::class, 'index'])->name('assignments.index');
-    Route::post('assignments/{assignment}/submit', [AssignmentController::class, 'store'])->name('assignments.submit');
+    Route::get('assignments', [AssignmentController::class, 'index'])->middleware('student.page:assignments')->name('assignments.index');
+    Route::post('assignments/{assignment}/submit', [AssignmentController::class, 'store'])->middleware('student.page:assignments')->name('assignments.submit');
 
-    Route::get('exams', [ExamController::class, 'index'])->name('exams.index');
-    Route::get('exams/{exam}', [ExamController::class, 'show'])->name('exams.show');
-    Route::post('exams/pre-warm-ai', [ExamController::class, 'preWarmAI'])->name('exams.preWarmAI');
-    Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->name('exams.monitorProgress')->middleware('throttle:60,1');
-    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->name('exams.submitPart')->middleware('throttle:10,1');
+    Route::get('exams', [ExamController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
+    Route::get('exams/{exam}', [ExamController::class, 'show'])->middleware('student.page:exams')->name('exams.show');
+    Route::post('exams/pre-warm-ai', [ExamController::class, 'preWarmAI'])->middleware('student.page:exams')->name('exams.preWarmAI');
+    Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->middleware(['student.page:exams', 'throttle:60,1'])->name('exams.monitorProgress');
+    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->middleware(['student.page:exams', 'throttle:10,1'])->name('exams.submitPart');
 
-    Route::get('ngl', [AnonymousMessageController::class, 'index'])->name('ngl.index');
-    Route::post('ngl', [AnonymousMessageController::class, 'store'])->name('ngl.store');
-    Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->name('ngl.like');
+    Route::get('ngl', [AnonymousMessageController::class, 'index'])->middleware('student.page:ngl')->name('ngl.index');
+    Route::post('ngl', [AnonymousMessageController::class, 'store'])->middleware('student.page:ngl')->name('ngl.store');
+    Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->middleware('student.page:ngl')->name('ngl.like');
 
     Route::post('api/chat', ChatController::class)->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
 
     // Games hub
-    Route::get('games', [GamesController::class, 'index'])->name('games.index');
+    Route::get('games', [GamesController::class, 'index'])->middleware('student.page:games')->name('games.index');
 
     // Interactive Maps
-    Route::get('maps', [LearningMapController::class, 'index'])->name('maps.index');
+    Route::get('maps', [LearningMapController::class, 'index'])->middleware('student.page:maps')->name('maps.index');
     Route::post('maps/nodes/{slug}/complete', [LearningMapController::class, 'complete'])
+        ->middleware('student.page:maps')
         ->name('maps.nodes.complete');
 
     // Tower Defense game routes
     Route::prefix('games/tower-defense')->name('games.tower-defense.')->group(function () {
-        Route::get('/', [TowerDefenseController::class, 'index'])->name('index');
-        Route::get('/play/{level}', [TowerDefenseController::class, 'play'])->name('play');
-        Route::post('/runs', [TowerDefenseController::class, 'startRun'])->name('runs.start')->middleware('throttle:30,1');
-        Route::post('/runs/{run}/finish', [TowerDefenseController::class, 'finishRun'])->name('runs.finish')->middleware('throttle:30,1');
-        Route::get('/leaderboard/{level}', [TowerDefenseController::class, 'leaderboard'])->name('leaderboard');
+        Route::get('/', [TowerDefenseController::class, 'index'])->middleware('student.page:games')->name('index');
+        Route::get('/play/{level}', [TowerDefenseController::class, 'play'])->middleware('student.page:games')->name('play');
+        Route::post('/runs', [TowerDefenseController::class, 'startRun'])->middleware(['student.page:games', 'throttle:30,1'])->name('runs.start');
+        Route::post('/runs/{run}/finish', [TowerDefenseController::class, 'finishRun'])->middleware(['student.page:games', 'throttle:30,1'])->name('runs.finish');
+        Route::get('/leaderboard/{level}', [TowerDefenseController::class, 'leaderboard'])->middleware('student.page:games')->name('leaderboard');
     });
 
     // Admin routes

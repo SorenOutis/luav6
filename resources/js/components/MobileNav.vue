@@ -7,12 +7,12 @@ import { edit } from '@/routes/profile';
 
 const page = usePage();
 
-const navItems = [
-    { label: 'Home', href: dashboard.url(), icon: Home },
-    { label: 'Assignments', href: '/assignments', icon: ClipboardList },
-    { label: 'Exams', href: '/exams', icon: GraduationCap },
-    { label: 'Profile', href: edit.url(), icon: User },
-];
+const navItems = computed(() => [
+    { label: 'Home', href: dashboard.url(), icon: Home, studentPageKey: 'dashboard' },
+    { label: 'Assignments', href: '/assignments', icon: ClipboardList, studentPageKey: 'assignments' },
+    { label: 'Exams', href: '/exams', icon: GraduationCap, studentPageKey: 'exams' },
+    { label: 'Profile', href: edit.url(), icon: User, studentPageKey: 'profile' },
+].filter((item) => page.props.studentPageControls?.pages?.[item.studentPageKey]?.mode !== 'disabled'));
 
 const isActive = (href: string) => {
     // Current URL without query parameters

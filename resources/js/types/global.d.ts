@@ -1,5 +1,6 @@
 import type { Auth } from '@/types/auth';
 import type { AiChatSettings } from '@/types/aiChat';
+import type { StudentPageControls } from '@/types/studentPageControls';
 
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
@@ -20,6 +21,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             aiChat: AiChatSettings;
+            studentPageControls: StudentPageControls;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

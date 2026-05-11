@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Support\StudentPageRegistry;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -69,6 +70,7 @@ class HandleInertiaRequests extends Middleware
                 'enabled' => (bool) Setting::get('ai_chat_enabled', true),
                 'maintenanceMessage' => Setting::get('ai_chat_maintenance_message', 'KOA is currently under maintenance. Please try again later.'),
             ],
+            'studentPageControls' => fn () => StudentPageRegistry::sharedForPath($request->path()),
             'schoolBranding' => fn () => [
                 'name' => Setting::get('school_name', 'LSI Engine'),
                 'tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),
