@@ -2017,6 +2017,46 @@ const onDragEnd = () => {
                     </div>
                 </div>
             </transition>
+            <!-- ─── STICKY EXAM FOOTER (shows when a part is being taken) ─── -->
+            <transition name="modal-fade">
+                <div v-if="examStarted && selectedPart && !showSuccessModal"
+                    class="exam-sticky-header fixed bottom-0 left-0 right-0 z-[90] bg-card/95 dark:bg-zinc-950/90 backdrop-blur-xl border-t border-border shadow-[0_-2px_12px_-4px_rgba(0,0,0,0.1)]">
+                    <div class="max-w-screen-2xl mx-auto px-3 md:px-6 py-2.5 flex items-center gap-3 md:gap-5">
+                        <!-- Part title (left) -->
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <div class="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0"></div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none">In progress</span>
+                                <span class="text-sm font-bold text-foreground truncate leading-tight">{{ selectedPart.title }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Progress (center, hidden on small) -->
+                        <div class="hidden md:flex items-center gap-3 min-w-[200px]">
+                            <span class="text-[10px] font-bold text-muted-foreground whitespace-nowrap">
+                                {{ Object.keys(answers).length }} / {{ selectedPart.questions?.length ?? 0 }}
+                            </span>
+                            <div class="h-1.5 flex-1 bg-muted/40 rounded-full overflow-hidden">
+                                <div class="h-full bg-primary transition-all duration-500 ease-out rounded-full"
+                                    :style="{ width: `${partProgress}%` }"></div>
+                            </div>
+                            <span class="text-[10px] font-bold text-primary tabular-nums whitespace-nowrap">{{ Math.round(partProgress) }}%</span>
+                        </div>
+
+                        <!-- Timer (right) -->
+                        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-colors shrink-0"
+                            :class="timeLeftSeconds < 60
+                                ? 'bg-red-500/15 border-red-500/40 text-red-500 animate-pulse'
+                                : timeLeftSeconds < 300
+                                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400'
+                                    : 'bg-primary/10 border-primary/30 text-primary'">
+                            <Clock class="w-4 h-4" />
+                            <span class="font-mono font-bold text-base tabular-nums tracking-tight">{{ formattedTime }}</span>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+
             <!-- ─── DRAGGABLE EXAM WIDGET ────────────────────────────── -->
             <transition name="modal-fade">
                 <div ref="widgetRef" v-if="examStarted && selectedPart && !showSuccessModal" 

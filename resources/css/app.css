@@ -881,6 +881,23 @@
     display: none !important;
 }
 
+/* — Sticky exam footer: reserve bottom space on page so content doesn't hide under it — */
+.exam-theme-page:has(~ .exam-sticky-header),
+.exam-theme-page:has(.exam-sticky-header) {
+    padding-bottom: 5rem !important;
+}
+
+/* Lift the in-page sticky submit button above the fixed footer */
+.exam-theme-page:has(.exam-sticky-header) .sticky.bottom-6 {
+    bottom: 5.5rem !important;
+}
+
+/* Tactical preset variant: keep the bar tactical-styled */
+:root[data-theme-preset='tactical'] .exam-sticky-header {
+    background: rgb(5 5 5 / 0.95) !important;
+    border-bottom-color: rgb(255 255 255 / 0.08) !important;
+}
+
 :root[data-theme-preset='tactical'] .exam-theme-page {
     background:
         radial-gradient(circle at 80% 0%, rgb(255 255 255 / 0.04), transparent 30%),
