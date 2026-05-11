@@ -327,7 +327,7 @@ onMounted(() => {
             <div class="animate-section exam-hero space-y-1 relative group/hero">
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-[2px] bg-primary/40 rounded-full group-hover/hero:w-12 transition-all duration-500"></div>
-                    <h1 class="text-xl font-black tracking-tighter uppercase">Upcoming_Activities</h1>
+                            <h1 class="text-xl font-black tracking-tighter uppercase">Upcoming Exams</h1>
                 </div>
                 <p class="text-muted-foreground text-xs font-medium pl-11 border-l-2 border-primary/10 group-hover/hero:border-primary/30 transition-colors">
                     Manage your assessments and upcoming academic challenges.
@@ -340,7 +340,7 @@ onMounted(() => {
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-amber-500/60 group-hover/stat:bg-amber-500 transition-colors"></div>
                     <div class="flex items-center gap-2 skew-x-[-12deg]">
                         <AlertCircle class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
-                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">ACTIVE</span>
+                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">Active</span>
                         <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ activeCount }}</span>
                     </div>
                 </div>
@@ -348,7 +348,7 @@ onMounted(() => {
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-emerald-500/60 group-hover/stat:bg-emerald-500 transition-colors"></div>
                     <div class="flex items-center gap-2 skew-x-[-12deg]">
                         <CheckCircle2 class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-500" />
-                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">COMPLETED</span>
+                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">Completed</span>
                         <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ completedCount }}</span>
                     </div>
                 </div>
@@ -356,7 +356,7 @@ onMounted(() => {
                     <div class="absolute top-0 left-0 w-0.5 h-full bg-primary/60 group-hover/stat:bg-primary transition-colors"></div>
                     <div class="flex items-center gap-2 skew-x-[-12deg]">
                         <Calendar class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
-                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">TOTAL</span>
+                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">Total</span>
                         <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ totalCount }}</span>
                     </div>
                 </div>
@@ -397,7 +397,7 @@ onMounted(() => {
 
                     <!-- Status Badge (Top Left) -->
                     <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20">
-                        <div class="px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 font-black text-[7px] sm:text-[8px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transform -skew-x-12"
+                        <div class="exam-status-pill px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 font-black text-[7px] sm:text-[8px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transform -skew-x-12"
                             :class="getStatusBadgeInfo(exam).color">
                             <span class="inline-block skew-x-12">{{ getStatusBadgeInfo(exam).label }}</span>
                         </div>
@@ -405,7 +405,7 @@ onMounted(() => {
 
                     <!-- Score / Completion Badge (Top Right) -->
                     <div v-if="exam.is_locked" class="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col items-end gap-1 sm:gap-1.5 z-20">
-                        <div class="px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 bg-primary text-primary-foreground font-black text-[7px] sm:text-[9px] font-mono tracking-widest transform -skew-x-12">
+                        <div class="exam-score-pill px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 bg-primary text-primary-foreground font-black text-[7px] sm:text-[9px] font-mono tracking-widest transform -skew-x-12">
                             <span class="inline-block skew-x-12">
                                 {{ exam.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
                             </span>
@@ -423,7 +423,7 @@ onMounted(() => {
                     <div class="relative z-10 space-y-1.5 sm:space-y-3 text-center min-w-0">
                         <!-- Section Label -->
                         <div v-if="exam.section_name" class="text-[7px] sm:text-[8px] font-mono uppercase tracking-[0.25em] text-muted-foreground/70">
-                            SECTION: {{ exam.section_name }}
+                            Section: {{ exam.section_name }}
                         </div>
 
                         <!-- Title -->

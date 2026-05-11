@@ -1285,11 +1285,11 @@ const onDragEnd = () => {
                     <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                         <div class="space-y-4 max-w-3xl">
                             <div class="flex items-center gap-4">
-                                <div class="exam-tactical-mark w-12 h-12 border-2 border-amber-500 rotate-45 flex items-center justify-center shrink-0">
+                                <div class="exam-tactical-mark exam-hero-mark w-12 h-12 border-2 border-amber-500 rotate-45 flex items-center justify-center shrink-0">
                                      <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
                                 </div>
                                 <div class="space-y-0.5">
-                                    <span class="text-[9px] font-black text-primary uppercase tracking-[0.4em] font-mono">ASSESSMENT_READY_PROTOCOL</span>
+                                    <span class="exam-friendly-label text-[9px] font-black text-primary uppercase tracking-[0.4em] font-mono">Ready to begin</span>
                                     <h1 class="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-foreground leading-[0.95]">
                                         {{ selectedPart ? selectedPart.title : exam.title }}
                                     </h1>
@@ -1320,25 +1320,25 @@ const onDragEnd = () => {
                              <div class="absolute -bottom-1 -right-1 w-2 h-2 bg-primary"></div>
 
                             <div v-if="allPartsSubmitted" class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">ACHIEVEMENT</span>
+                                <span class="exam-friendly-label text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Score</span>
                                 <div class="text-lg font-black text-primary font-mono tabular-nums">{{ totalScore }}/{{ totalPossiblePoints }}</div>
                             </div>
                             
                             <div class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">TIME_LIMIT</span>
+                                <span class="exam-friendly-label text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Time Limit</span>
                                 <div class="flex items-baseline gap-1">
                                     <span class="text-lg font-black font-mono tabular-nums text-foreground">{{ exam.duration_minutes }}</span>
-                                    <span class="text-[8px] font-black text-primary uppercase font-mono">MIN</span>
+                                    <span class="exam-friendly-label text-[8px] font-black text-primary uppercase font-mono">MIN</span>
                                 </div>
                             </div>
 
                             <div class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">SECTIONS</span>
+                                <span class="exam-friendly-label text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Sections</span>
                                 <div class="text-lg font-black font-mono tabular-nums text-foreground">{{ exam.parts.length }}</div>
                             </div>
 
                             <div class="flex flex-col gap-1">
-                                <span class="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">TOTAL_TASKS</span>
+                                <span class="exam-friendly-label text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Questions</span>
                                 <div class="text-lg font-black font-mono tabular-nums text-foreground">{{ totalQuestions }}</div>
                             </div>
 
@@ -1421,9 +1421,9 @@ const onDragEnd = () => {
                             <!-- Onboarding/Focus Highlight -->
                             <div v-if="nextPartId === part.id" class="absolute inset-0 pointer-events-none z-0">
                                 <div class="absolute inset-0 bg-primary/5 animate-pulse"></div>
-                                <div class="absolute top-0 right-0 px-4 py-1.5 bg-primary text-primary-foreground font-black text-[8px] uppercase tracking-[0.3em] transform -skew-x-12 shadow-lg z-20 flex items-center gap-2">
+                                <div class="exam-recommended-tag absolute top-0 right-0 px-4 py-1.5 bg-primary text-primary-foreground font-black text-[8px] uppercase tracking-[0.3em] transform -skew-x-12 shadow-lg z-20 flex items-center gap-2">
                                     <div class="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-ping"></div>
-                                    <span class="inline-block skew-x-12">RECOMMENDED_NEXT</span>
+                                    <span class="exam-friendly-label inline-block skew-x-12">Recommended</span>
                                 </div>
                             </div>
 
@@ -1434,13 +1434,13 @@ const onDragEnd = () => {
                             <!-- Top: Status & Metadata -->
                             <div class="relative z-10 flex flex-col gap-3">
                                 <div class="flex items-center justify-between">
-                                    <div class="w-10 h-10 border border-amber-500/30 rotate-45 flex items-center justify-center group-hover/part:border-amber-500 transition-colors">
+                                    <div class="exam-part-diamond w-10 h-10 border border-amber-500/30 rotate-45 flex items-center justify-center group-hover/part:border-amber-500 transition-colors">
                                          <div class="w-2 h-2 bg-amber-500 rotate-45"></div>
                                     </div>
                                     <div v-if="isPartLocked(index)" class="p-1.5 rounded-lg bg-zinc-950/50 border border-white/5">
                                         <Lock class="w-3.5 h-3.5 text-muted-foreground/40" />
                                     </div>
-                                    <div v-else-if="isPartSubmitted(part.id)" class="px-3 py-2 bg-emerald-500 text-white dark:text-zinc-950 font-black text-xs font-mono tracking-widest transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                                    <div v-else-if="isPartSubmitted(part.id)" class="exam-part-score-pill px-3 py-2 bg-emerald-500 text-white dark:text-zinc-950 font-black text-xs font-mono tracking-widest transform -skew-x-12 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
                                         <span class="inline-block skew-x-12">
                                             {{ submissions[part.id]?.score ?? 0 }} / {{ part.questions?.reduce((sum, q) => sum + (q.points ?? part.points ?? 1), 0) ?? 0 }}
                                         </span>
@@ -1448,7 +1448,7 @@ const onDragEnd = () => {
                                 </div>
 
                                 <div class="space-y-1">
-                                    <span class="text-[10px] font-black text-primary uppercase tracking-[0.2em] font-mono">PART_{{ (index + 1).toString().padStart(2, '0') }}</span>
+                                    <span class="exam-friendly-label text-[10px] font-black text-primary uppercase tracking-[0.2em] font-mono">Part {{ index + 1 }}</span>
                                     <h3 class="text-xl font-black text-foreground uppercase italic tracking-tight group-hover/part:text-primary transition-colors leading-none">
                                         {{ part.title }}
                                     </h3>
@@ -1470,7 +1470,7 @@ const onDragEnd = () => {
                                 <div class="flex items-center gap-6 font-mono">
                                     <div class="flex items-center gap-2">
                                         <span class="text-xs font-black text-primary">{{ part.questions?.length ?? 0 }}</span>
-                                        <span class="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">TASKS</span>
+                                        <span class="exam-friendly-label text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">Questions</span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <span class="text-xs font-black text-amber-500">{{ part.questions?.reduce((sum, q) => sum + (parseInt(q.points) || parseInt(part.points) || 1), 0) ?? 0 }}</span>
@@ -1479,7 +1479,7 @@ const onDragEnd = () => {
                                 </div>
                                 
                                 <div v-if="!isPartSubmitted(part.id)"
-                                    class="px-4 py-2 bg-foreground text-background font-black text-[10px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-2"
+                                    class="exam-part-action px-4 py-2 bg-foreground text-background font-black text-[10px] uppercase tracking-[0.2em] transform -skew-x-12 transition-all hover:bg-primary hover:text-primary-foreground flex items-center gap-2"
                                     :class="isPartLocked(index) ? 'opacity-20 grayscale' : ''">
                                     <span class="inline-block skew-x-12">{{ isPartLocked(index) ? 'LOCKED' : 'START' }}</span>
                                     <ArrowRight v-if="!isPartLocked(index)" class="w-3.5 h-3.5 skew-x-12" />
@@ -1521,19 +1521,17 @@ const onDragEnd = () => {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span
-                                        class="text-[9px] font-black text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg border border-border/40 uppercase tracking-widest">
-                                        {{ selectedPart!.questions?.length ?? 0 }} Tasks
+                                    <span class="exam-friendly-label text-[9px] font-black text-muted-foreground bg-muted/30 px-3 py-1 rounded-lg border border-border/40 uppercase tracking-widest">
+                                        {{ selectedPart!.questions?.length ?? 0 }} Questions
                                     </span>
-                                    <span
-                                        class="text-[9px] font-black text-amber-500 bg-amber-500/5 px-3 py-1 rounded-lg border border-amber-500/20 uppercase tracking-widest font-mono">
+                                    <span class="exam-friendly-label text-[9px] font-black text-amber-500 bg-amber-500/5 px-3 py-1 rounded-lg border border-amber-500/20 uppercase tracking-widest font-mono">
                                         {{ selectedPart!.questions?.reduce((sum, q) => sum + (parseInt(q.points) || parseInt(selectedPart!.points) || 1), 0) ?? 0 }} Points
                                     </span>
                                 </div>
                             </div>
 
                             <!-- Part Instructions -->
-                            <div v-if="selectedPart!.instructions" class="relative p-6 bg-gradient-to-br from-amber-500/10 via-primary/10 to-primary/5 border-2 border-primary/30 rounded-none shadow-[0_0_40px_rgba(var(--primary),0.15)] overflow-hidden">
+                            <div v-if="selectedPart!.instructions" class="exam-instruction-callout relative p-6 bg-gradient-to-br from-amber-500/10 via-primary/10 to-primary/5 border-2 border-primary/30 rounded-none shadow-[0_0_40px_rgba(var(--primary),0.15)] overflow-hidden">
                                 <!-- Animated gradient border effect -->
                                 <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(var(--primary),0.1),transparent)] animate-[shimmer_3s_linear_infinite] bg-[length:200%_100%] pointer-events-none"></div>
                                 
@@ -1578,11 +1576,11 @@ const onDragEnd = () => {
                                     <div class="flex flex-col md:flex-row gap-6 items-start">
                                         <!-- ID & Flag -->
                                         <div class="flex items-center gap-4 flex-shrink-0">
-                                            <div class="w-14 h-14 flex items-center justify-center border-2 border-primary/40 bg-primary/5 text-xl font-black text-primary rotate-45">
+                                            <div class="exam-question-number w-14 h-14 flex items-center justify-center border-2 border-primary/40 bg-primary/5 text-xl font-black text-primary rotate-45">
                                                 <span class="-rotate-45">{{ qIndex + 1 }}</span>
                                             </div>
                                             <button @click="toggleFlag(qIndex)"
-                                                class="w-10 h-10 flex items-center justify-center transition-all duration-300 border border-border/40 hover:bg-amber-500/10 hover:border-amber-500/50"
+                                                class="exam-flag-btn w-10 h-10 flex items-center justify-center transition-all duration-300 border border-border/40 hover:bg-amber-500/10 hover:border-amber-500/50"
                                                 :class="flaggedQuestions.has(qIndex) ? 'bg-amber-500/20 border-amber-500/60 text-amber-500' : 'text-muted-foreground/30'">
                                                 <Flag class="w-4 h-4" :class="flaggedQuestions.has(qIndex) ? 'fill-amber-500' : ''" />
                                             </button>
@@ -1594,8 +1592,8 @@ const onDragEnd = () => {
                                                 <span class="text-[9px] font-black text-primary uppercase tracking-[0.3em] bg-primary/10 px-2 py-0.5 border border-primary/20 italic">
                                                     {{ formatType(question.type) }}
                                                 </span>
-                                                <span class="text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em]">
-                                                    Value: {{ question.points ?? selectedPart!.points ?? 1 }} Units
+                                                <span class="exam-friendly-points text-[9px] font-black text-muted-foreground uppercase tracking-[0.3em]">
+                                                    {{ question.points ?? selectedPart!.points ?? 1 }} {{ (question.points ?? selectedPart!.points ?? 1) === 1 ? 'point' : 'points' }}
                                                 </span>
                                             </div>
                                             <p class="text-lg md:text-xl font-black leading-tight text-foreground/90 italic tracking-tight whitespace-pre-wrap">
@@ -1610,25 +1608,25 @@ const onDragEnd = () => {
                                         <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'"
                                             class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <label v-for="(option, oIndex) in question.options" :key="option.text"
-                                                class="flex items-center gap-4 px-6 py-4 border border-border/60 bg-muted/20 hover:border-primary/60 hover:bg-primary/5 cursor-pointer transition-all duration-300 group/option relative overflow-hidden has-[:checked]:border-primary has-[:checked]:bg-primary/10">
+                                                class="exam-answer-option flex items-center gap-4 px-6 py-4 border border-border/60 bg-muted/20 hover:border-primary/60 hover:bg-primary/5 cursor-pointer transition-all duration-300 group/option relative overflow-hidden has-[:checked]:border-primary has-[:checked]:bg-primary/10">
                                                 
                                                 <!-- Background Decoration -->
                                                 <div class="absolute right-0 bottom-0 w-8 h-8 bg-primary/5 -rotate-45 translate-x-4 translate-y-4 group-hover/option:bg-primary/10 transition-colors"></div>
 
-                                                <div class="relative flex items-center justify-center w-5 h-5 border-2 border-border/60 group-hover/option:border-primary/40 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary">
+                                                <div class="exam-answer-radio relative flex items-center justify-center w-5 h-5 border-2 border-border/60 group-hover/option:border-primary/40 transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary">
                                                     <input type="radio" :name="`q-${qIndex}`" :value="oIndex"
                                                         v-model.number="answers[qIndex]" class="sr-only" />
                                                     <Check v-if="answers[qIndex] === oIndex" class="w-3 h-3 text-primary-foreground" />
                                                 </div>
-                                                <span class="relative text-sm font-black tracking-wider text-muted-foreground group-hover/option:text-foreground transition-colors has-[:checked]:text-primary whitespace-pre-wrap">{{ option.text }}</span>
+                                                <span class="exam-answer-text relative text-sm font-black tracking-wider text-muted-foreground group-hover/option:text-foreground transition-colors has-[:checked]:text-primary whitespace-pre-wrap">{{ option.text }}</span>
                                             </label>
                                         </div>
 
                                         <!-- Identification -->
                                         <div v-else-if="question.type === 'identification'" class="max-w-xl">
                                             <div class="relative group/input">
-                                                <input v-model="answers[qIndex]" type="text" placeholder="ENTER RESPONSE..."
-                                                    class="w-full px-6 py-4 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-sm font-black tracking-widest placeholder:text-muted-foreground/30" />
+                                                <input v-model="answers[qIndex]" type="text" placeholder="Type your answer here..."
+                                                    class="exam-text-input w-full px-6 py-4 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-sm font-black tracking-widest placeholder:text-muted-foreground/30" />
                                                 <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within/input:opacity-100 transition-opacity">
                                                     <Zap class="w-4 h-4 text-primary animate-pulse" />
                                                 </div>
@@ -1638,8 +1636,8 @@ const onDragEnd = () => {
                                         <!-- Essay -->
                                         <div v-else-if="question.type === 'essay'" class="w-full">
                                             <div class="relative group/textarea">
-                                                <textarea v-model="answers[qIndex]" rows="10" placeholder="INITIALIZE DETAILED RESPONSE..."
-                                                    class="w-full px-8 py-6 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-base font-bold leading-relaxed resize-y min-h-[300px] placeholder:text-muted-foreground/30"></textarea>
+                                                <textarea v-model="answers[qIndex]" rows="10" placeholder="Write your answer here..."
+                                                    class="exam-essay-input w-full px-8 py-6 rounded-none border border-border/60 bg-muted/20 focus:border-primary outline-none transition-all duration-300 text-base font-bold leading-relaxed resize-y min-h-[300px] placeholder:text-muted-foreground/30"></textarea>
                                                 <div class="absolute bottom-4 right-6 flex items-center gap-3 text-[9px] font-black text-primary uppercase tracking-[0.4em] opacity-40">
                                                     <Terminal class="w-3 h-3" />
                                                     SECURE DATA ENTRY
@@ -1757,7 +1755,7 @@ const onDragEnd = () => {
                         <button @click="submitPart" :disabled="isSubmitting"
                             class="group relative px-10 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center gap-6 disabled:opacity-50 disabled:cursor-not-allowed skew-x-[-12deg] shadow-[0_20px_40px_-10px_rgba(var(--primary),0.4)]">
                             
-                            <span class="skew-x-[12deg] text-base tracking-[0.2em] uppercase">{{ isSubmitting ? (currentPartHasEssay ? 'Assessing Answers...' : 'Transmitting Data...') : 'Finalize Section' }}</span>
+                            <span class="skew-x-[12deg] text-base tracking-[0.2em] uppercase">{{ isSubmitting ? (currentPartHasEssay ? 'Checking your answers...' : 'Submitting...') : 'Submit this part' }}</span>
                             
                             <div class="skew-x-[12deg] p-1.5 bg-primary-foreground/20 group-hover:bg-primary-foreground/30 transition-colors">
                                 <ArrowRight v-if="!isSubmitting" class="w-5 h-5 group-hover:translate-x-1 transition-transform" />
