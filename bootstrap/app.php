@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureStudentPageIsAvailable;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\EnsureStudentPageIsAvailable;
 use App\Http\Middleware\RedirectBannedUsers;
 use App\Http\Middleware\SanitizeInput;
 use Illuminate\Foundation\Application;
