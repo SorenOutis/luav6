@@ -149,6 +149,27 @@
     --color-sidebar-ring: #34d399;
 }
 
+:root[data-theme-preset='midnight']:not(.dark) {
+    --color-background: #f8fafc;
+    --color-foreground: #0f172a;
+    --color-card: #ffffff;
+    --color-card-foreground: #0f172a;
+    --color-primary: #10b981;
+    --color-primary-foreground: #ffffff;
+    --color-secondary: #f1f5f9;
+    --color-secondary-foreground: #1e293b;
+    --color-muted: #f1f5f9;
+    --color-muted-foreground: #64748b;
+    --color-accent: #f1f5f9;
+    --color-accent-foreground: #10b981;
+    --color-border: #e2e8f0;
+    --color-input: #e2e8f0;
+    --color-ring: #10b981;
+    --color-sidebar: #f8fafc;
+    --color-sidebar-foreground: #0f172a;
+    --color-sidebar-border: #e2e8f0;
+}
+
 :root[data-theme-preset='academic'] {
     --color-background: #f8fafc;
     --color-foreground: #0f172a;
@@ -173,6 +194,27 @@
     --color-sidebar-accent-foreground: #1e3a8a;
     --color-sidebar-border: #bfdbfe;
     --color-sidebar-ring: #2563eb;
+}
+
+:root[data-theme-preset='academic'].dark {
+    --color-background: #0f172a;
+    --color-foreground: #f8fafc;
+    --color-card: #1e293b;
+    --color-card-foreground: #f8fafc;
+    --color-primary: #3b82f6;
+    --color-primary-foreground: #0f172a;
+    --color-secondary: #1e293b;
+    --color-secondary-foreground: #bfdbfe;
+    --color-muted: #1e293b;
+    --color-muted-foreground: #94a3b8;
+    --color-accent: #1e293b;
+    --color-accent-foreground: #bfdbfe;
+    --color-border: #334155;
+    --color-input: #334155;
+    --color-ring: #3b82f6;
+    --color-sidebar: #0f172a;
+    --color-sidebar-foreground: #f8fafc;
+    --color-sidebar-border: #334155;
 }
 
 :root[data-theme-preset='forest'] {
@@ -201,6 +243,27 @@
     --color-sidebar-ring: #2f7d51;
 }
 
+:root[data-theme-preset='forest'].dark {
+    --color-background: #0c120e;
+    --color-foreground: #f5f7f0;
+    --color-card: #141a15;
+    --color-card-foreground: #f5f7f0;
+    --color-primary: #4ade80;
+    --color-primary-foreground: #0c120e;
+    --color-secondary: #1a2e1f;
+    --color-secondary-foreground: #dcfce7;
+    --color-muted: #1a2e1f;
+    --color-muted-foreground: #8a9a8d;
+    --color-accent: #1a2e1f;
+    --color-accent-foreground: #4ade80;
+    --color-border: #223a28;
+    --color-input: #223a28;
+    --color-ring: #4ade80;
+    --color-sidebar: #0c120e;
+    --color-sidebar-foreground: #f5f7f0;
+    --color-sidebar-border: #223a28;
+}
+
 :root[data-theme-preset='contrast'] {
     --color-background: #000000;
     --color-foreground: #ffffff;
@@ -225,6 +288,27 @@
     --color-sidebar-accent-foreground: #facc15;
     --color-sidebar-border: #ffffff;
     --color-sidebar-ring: #facc15;
+}
+
+:root[data-theme-preset='contrast']:not(.dark) {
+    --color-background: #ffffff;
+    --color-foreground: #000000;
+    --color-card: #ffffff;
+    --color-card-foreground: #000000;
+    --color-primary: #eab308;
+    --color-primary-foreground: #ffffff;
+    --color-secondary: #f3f4f6;
+    --color-secondary-foreground: #000000;
+    --color-muted: #f3f4f6;
+    --color-muted-foreground: #4b5563;
+    --color-accent: #f3f4f6;
+    --color-accent-foreground: #eab308;
+    --color-border: #000000;
+    --color-input: #000000;
+    --color-ring: #eab308;
+    --color-sidebar: #ffffff;
+    --color-sidebar-foreground: #000000;
+    --color-sidebar-border: #000000;
 }
 
 :root[data-theme-preset='tactical'] {
@@ -253,18 +337,39 @@
     --color-sidebar-ring: #f59e0b;
 }
 
+:root[data-theme-preset='tactical']:not(.dark) {
+    --color-background: #ffffff;
+    --color-foreground: #000000;
+    --color-card: #ffffff;
+    --color-card-foreground: #000000;
+    --color-primary: #000000;
+    --color-primary-foreground: #ffffff;
+    --color-secondary: #f3f4f6;
+    --color-secondary-foreground: #000000;
+    --color-muted: #f3f4f6;
+    --color-muted-foreground: #4b5563;
+    --color-accent: #f3f4f6;
+    --color-accent-foreground: #000000;
+    --color-border: #d1d5db;
+    --color-input: #d1d5db;
+    --color-ring: #f59e0b;
+    --color-sidebar: #ffffff;
+    --color-sidebar-foreground: #000000;
+    --color-sidebar-border: #d1d5db;
+}
+
 :root[data-theme-preset='tactical'] body {
     background:
-        radial-gradient(circle at 82% 4%, rgb(255 255 255 / 0.045), transparent 30rem),
-        radial-gradient(circle at 8% 100%, rgb(245 158 11 / 0.06), transparent 28rem),
-        #050505;
+        radial-gradient(circle at 82% 4%, color-mix(in srgb, var(--color-foreground), transparent 95%), transparent 30rem),
+        radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--color-ring), transparent 94%), transparent 28rem),
+        var(--color-background);
 }
 
 :root[data-theme-preset='tactical'] body::before {
     opacity: 0.07;
     background-image:
-        linear-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px),
-        linear-gradient(90deg, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+        linear-gradient(color-mix(in srgb, var(--color-foreground), transparent 94%) 1px, transparent 1px),
+        linear-gradient(90deg, color-mix(in srgb, var(--color-foreground), transparent 94%) 1px, transparent 1px);
     background-size: 72px 72px;
 }
 
@@ -281,15 +386,15 @@
 :root[data-theme-preset='tactical'] .surface-card,
 :root[data-theme-preset='tactical'] [class*='bg-background/'],
 :root[data-theme-preset='tactical'] [class*='bg-muted/'] {
-    border-color: rgb(255 255 255 / 0.13) !important;
+    border-color: color-mix(in srgb, var(--color-foreground), transparent 87%) !important;
     box-shadow:
-        0 18px 60px -52px rgb(255 255 255 / 0.55),
-        inset 0 1px 0 rgb(255 255 255 / 0.04) !important;
+        0 18px 60px -52px color-mix(in srgb, var(--color-foreground), transparent 45%),
+        inset 0 1px 0 color-mix(in srgb, var(--color-foreground), transparent 96%) !important;
 }
 
 :root[data-theme-preset='tactical'] .premium-hover:hover {
     transform: translateY(-2px) scale(1.005);
-    box-shadow: 0 18px 60px -42px rgb(245 158 11 / 0.24) !important;
+    box-shadow: 0 18px 60px -42px color-mix(in srgb, var(--color-ring), transparent 76%) !important;
 }
 
 :root[data-theme-preset='tactical'] button,
@@ -319,9 +424,9 @@
 
 :root[data-theme-preset='tactical'] [data-sidebar='menu-button'][data-active='true'],
 :root[data-theme-preset='tactical'] [data-sidebar='menu-button']:hover {
-    background: rgb(255 255 255 / 0.1) !important;
-    color: #ffffff !important;
-    box-shadow: inset 2px 0 0 #f59e0b;
+    background: color-mix(in srgb, var(--color-foreground), transparent 90%) !important;
+    color: var(--color-foreground) !important;
+    box-shadow: inset 2px 0 0 var(--color-ring);
 }
 
 .theme-neutral-page {
