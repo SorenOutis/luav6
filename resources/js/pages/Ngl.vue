@@ -274,7 +274,7 @@ onMounted(() => {
 
         <!-- Submission Modal - Revamped -->
         <Dialog :open="showSubmissionModal" @update:open="showSubmissionModal = $event">
-            <DialogContent class="max-w-[95vw] sm:max-w-[600px] border-primary/30 bg-background/95 backdrop-blur-3xl rounded-[2rem] sm:rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(var(--primary),0.2)] p-0 overflow-hidden">
+            <DialogContent class="max-w-[95vw] sm:max-w-[600px] border-primary/30 bg-background/95 backdrop-blur-3xl rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl shadow-primary/20 p-0 overflow-hidden">
                 <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-transparent via-primary to-transparent"></div>
                 
                 <div class="p-6 sm:p-12 space-y-6 sm:space-y-8">

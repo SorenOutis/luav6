@@ -404,43 +404,60 @@ onMounted(() => {
                     v-for="filter in ['all', 'active', 'completed']"
                     :key="filter"
                     @click="activeFilter = filter as 'all' | 'active' | 'completed'"
-                    class="exam-filter-tab relative px-4 sm:px-6 py-1 sm:py-1.5 transition-all duration-300 transform -skew-x-12 shrink-0 group/tab border"
+                    class="exam-filter-tab relative px-4 sm:px-6 py-1.5 sm:py-2 transition-all duration-300 transform -skew-x-12 shrink-0 group/tab border-2"
                     :class="activeFilter === filter 
-                        ? 'bg-primary text-primary-foreground shadow-[0_0_12px_rgba(var(--primary),0.3)] border-primary/50' 
-                        : 'bg-muted/20 text-muted-foreground hover:bg-muted hover:text-foreground border-border/50'"
+                        ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 z-10' 
+                        : 'bg-muted/10 text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent'"
                 >
                     <div class="flex items-center gap-2 skew-x-12">
-                        <component :is="filter === 'all' ? Calendar : filter === 'active' ? AlertCircle : CheckCircle2" class="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                        <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] font-mono">{{ filter }}</span>
+                        <component :is="filter === 'all' ? Calendar : filter === 'active' ? AlertCircle : CheckCircle2" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span class="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] font-mono">{{ filter }}</span>
                     </div>
+                    <!-- Active Indicator -->
+                    <div v-if="activeFilter === filter" class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary-foreground rounded-full skew-x-12"></div>
                 </button>
             </div>
 
             <!-- Section Tabs -->
-            <div v-if="sectionTabs.length > 1" class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div v-if="sectionTabs.length > 1" class="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-3">
                 <button
                     v-for="section in sectionTabs"
                     :key="section.key"
                     @click="activeSection = section.key"
-                    class="exam-section-tab relative flex min-w-[8rem] shrink-0 items-center justify-between gap-3 border px-3 py-2 transition-all duration-300 sm:min-w-[10rem] sm:px-4"
+                    class="exam-section-tab relative flex min-w-[10rem] shrink-0 flex-col gap-2 border px-4 py-3.5 transition-all duration-500 sm:min-w-[12rem] sm:px-6 sm:py-5 group rounded-xl overflow-hidden"
                     :class="activeSection === section.key
-                        ? 'border-primary/60 bg-primary/10 text-foreground shadow-[0_0_18px_rgba(var(--primary),0.12)]'
-                        : 'border-border/50 bg-muted/10 text-muted-foreground hover:border-border hover:bg-muted/30 hover:text-foreground'"
+                        ? 'border-primary/50 bg-primary/[0.04] shadow-lg shadow-primary/10'
+                        : 'border-border/40 bg-card hover:border-primary/30 hover:bg-muted/30'"
                 >
-                    <div class="min-w-0 text-left">
-                        <span class="block truncate text-[9px] font-black uppercase tracking-[0.18em] sm:text-[10px]">
-                            {{ section.label }}
-                        </span>
-                        <span class="block text-[7px] font-bold uppercase tracking-[0.2em] text-muted-foreground/70 sm:text-[8px]">
-                            {{ section.count }} {{ section.count === 1 ? 'exam' : 'exams' }}
-                        </span>
+                    <div class="flex items-center justify-between w-full relative z-10">
+                        <div class="min-w-0 text-left space-y-1">
+                            <span class="block truncate text-[10px] font-black uppercase tracking-[0.2em] sm:text-[11px] transition-colors duration-300"
+                                :class="activeSection === section.key ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'">
+                                {{ section.label }}
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="block text-[8px] font-bold uppercase tracking-[0.15em] opacity-50 sm:text-[9px]">
+                                    {{ section.count }} {{ section.count === 1 ? 'exam' : 'exams' }}
+                                </span>
+                                <div v-if="activeSection === section.key" class="h-1 w-4 bg-primary/40 rounded-full animate-pulse"></div>
+                            </div>
+                        </div>
+                        
+                        <div
+                            class="flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black font-mono transition-all duration-500"
+                            :class="activeSection === section.key 
+                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110 rotate-3' 
+                                : 'bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'"
+                        >
+                            {{ section.count }}
+                        </div>
                     </div>
-                    <span
-                        class="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[9px] font-black font-mono"
-                        :class="activeSection === section.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'"
-                    >
-                        {{ section.count }}
-                    </span>
+
+                    <!-- Decorative elements for active state -->
+                    <div v-if="activeSection === section.key" 
+                        class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+                    <div v-if="activeSection === section.key" 
+                        class="absolute -right-4 -bottom-4 w-12 h-12 bg-primary/5 rounded-full blur-2xl"></div>
                 </button>
             </div>
 
@@ -642,7 +659,7 @@ onMounted(() => {
                     @click="selectedPartId = part.id"
                     class="relative px-6 py-2 transition-all duration-300 transform -skew-x-12 shrink-0 group"
                     :class="selectedPartId === part.id 
-                        ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)]' 
+                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
                         : 'bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'"
                 >
                     <div class="flex items-center gap-3 skew-x-12">
@@ -833,7 +850,7 @@ onMounted(() => {
                     <button 
                         v-if="selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) < selectedExamForReview.parts.length - 1"
                         @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) + 1].id"
-                        class="flex-1 md:flex-none px-10 py-3 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary),0.5)] transition-all"
+                        class="flex-1 md:flex-none px-10 py-3 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all"
                     >
                         <span class="inline-block skew-x-12">Next part</span>
                     </button>
@@ -887,11 +904,13 @@ onMounted(() => {
     background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(var(--primary), 0.1);
+    background: var(--color-primary);
+    opacity: 0.1;
     border-radius: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar:hover {
-    background: rgba(var(--primary), 0.2);
+    background: var(--color-primary);
+    opacity: 0.2;
 }
 
 .no-scrollbar::-webkit-scrollbar {

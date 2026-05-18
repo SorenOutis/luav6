@@ -47,7 +47,7 @@ onMounted(() => {
     <div class="theme-neutral-page relative min-h-svh flex flex-col items-center justify-center bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden perspective-[1000px]">
         
         <!-- Structural Grid Background -->
-        <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] bg-[radial-gradient(circle_at_50%_50%,rgba(var(--primary),0.05),transparent_70%)]">
+        <div class="fixed inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06] bg-[radial-gradient(circle_at_50%_50%,var(--color-primary),transparent_70%)]">
             <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
         </div>
 
@@ -55,8 +55,8 @@ onMounted(() => {
         <div class="scanline fixed inset-0 z-10 pointer-events-none opacity-[0.03] dark:opacity-[0.07]"></div>
 
         <!-- Vertical & Horizontal Structural Lines -->
-        <div class="fixed left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-primary/10 z-0 origin-top shadow-[0_0_15px_rgba(var(--primary),0.1)]" ref="structuralLines"></div>
-        <div class="fixed left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-primary/10 z-0 origin-left shadow-[0_0_15px_rgba(var(--primary),0.1)]" ref="structuralLines"></div>
+        <div class="fixed left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-primary/10 z-0 origin-top shadow-lg shadow-primary/5" ref="structuralLines"></div>
+        <div class="fixed left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-primary/10 z-0 origin-left shadow-lg shadow-primary/5" ref="structuralLines"></div>
 
         <main class="relative z-20 w-full max-w-md px-10 py-12" ref="terminalRef">
 
@@ -128,10 +128,10 @@ onMounted(() => {
 }
 
 :deep(input) {
-    background: rgba(var(--background), 0.05);
-    border-color: rgba(var(--border), 0.1);
+    background: color-mix(in srgb, var(--color-background), transparent 95%);
+    border-color: color-mix(in srgb, var(--color-border), transparent 90%);
     font-weight: 600;
-}
+  }
 
 /* CRT Scanline Animation */
 .scanline {

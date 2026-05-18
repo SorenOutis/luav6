@@ -168,7 +168,7 @@ const xpPercentage = computed(() => {
                                 </div>
                             </div>
                             <div class="relative h-1 lg:h-6 w-full bg-muted/30 dark:bg-black/20 rounded-full overflow-hidden border border-white/10 shadow-inner backdrop-blur-sm">
-                                <div class="h-full rounded-full transition-all duration-1000 ease-out relative shadow-[0_0_20px_rgba(var(--primary),0.5)] bg-gradient-to-r" 
+                                <div class="h-full rounded-full transition-all duration-1000 ease-out relative shadow-lg shadow-primary/50 bg-gradient-to-r" 
                                     :class="greetingTheme || 'from-primary via-primary/90 to-primary'"
                                     :style="{ width: `${xpPercentage}%` }">
                                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full -skew-x-[45deg] animate-shimmer"></div>

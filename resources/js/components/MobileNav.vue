@@ -56,7 +56,7 @@ const isActive = (href: string) => {
             <!-- Active Indicator Dot -->
             <div 
                 v-if="isActive(item.href)"
-                class="absolute bottom-0 h-1 w-1 rounded-full bg-primary animate-in fade-in zoom-in duration-500 shadow-[0_0_8px_rgba(var(--primary),0.6)]"
+                class="absolute bottom-0 h-1 w-1 rounded-full bg-primary animate-in fade-in zoom-in duration-500 shadow-lg shadow-primary/60"
             />
         </Link>
     </nav>

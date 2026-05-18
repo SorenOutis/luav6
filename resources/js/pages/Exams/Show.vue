@@ -1351,7 +1351,7 @@ const onDragEnd = () => {
                                 <span class="text-[8px] font-black uppercase tracking-[0.3em] font-mono transition-colors" :class="isDyslexiaFriendly ? 'text-primary' : 'text-muted-foreground'">ACCESSIBILITY</span>
                                 <div class="flex items-center gap-2">
                                     <div class="text-lg font-black font-mono tabular-nums transition-colors" :class="isDyslexiaFriendly ? 'text-primary' : 'text-foreground'">Aa</div>
-                                    <div class="w-2 h-2 rounded-full transition-all" :class="isDyslexiaFriendly ? 'bg-primary scale-110 shadow-[0_0_8px_rgba(var(--primary),0.5)]' : 'bg-muted-foreground/30'"></div>
+                                    <div class="w-2 h-2 rounded-full transition-all" :class="isDyslexiaFriendly ? 'bg-primary scale-110 shadow-lg shadow-primary/50' : 'bg-muted-foreground/30'"></div>
                                 </div>
                             </button>
                         </div>
@@ -1414,7 +1414,7 @@ const onDragEnd = () => {
                                     : isPartLocked(index) 
                                         ? 'opacity-60 cursor-not-allowed grayscale' 
                                         : 'hover:shadow-xl hover:-translate-y-1 cursor-pointer',
-                                nextPartId === part.id ? 'ring-2 ring-primary shadow-[0_0_40px_rgba(var(--primary),0.2)] border-primary/50' : ''
+                                nextPartId === part.id ? 'ring-2 ring-primary shadow-xl shadow-primary/20 border-primary/50' : ''
                             ]"
                             @mousemove="handleMouseMove"
                         >
@@ -1531,9 +1531,9 @@ const onDragEnd = () => {
                             </div>
 
                             <!-- Part Instructions -->
-                            <div v-if="selectedPart!.instructions" class="exam-instruction-callout relative p-6 bg-gradient-to-br from-amber-500/10 via-primary/10 to-primary/5 border-2 border-primary/30 rounded-none shadow-[0_0_40px_rgba(var(--primary),0.15)] overflow-hidden">
+                            <div v-if="selectedPart!.instructions" class="exam-instruction-callout relative p-6 bg-gradient-to-br from-amber-500/10 via-primary/10 to-primary/5 border-2 border-primary/30 rounded-none shadow-2xl shadow-primary/15 overflow-hidden">
                                 <!-- Animated gradient border effect -->
-                                <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,rgba(var(--primary),0.1),transparent)] animate-[shimmer_3s_linear_infinite] bg-[length:200%_100%] pointer-events-none"></div>
+                                <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent,var(--color-primary),transparent)] opacity-10 animate-[shimmer_3s_linear_infinite] bg-[length:200%_100%] pointer-events-none"></div>
                                 
                                 <!-- Corner decorations -->
                                 <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary"></div>
@@ -1542,7 +1542,7 @@ const onDragEnd = () => {
                                 <div class="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-primary"></div>
                                 
                                 <div class="relative flex items-start gap-5">
-                                    <div class="w-14 h-14 rounded-none bg-primary flex items-center justify-center border-2 border-primary shadow-[0_0_20px_rgba(var(--primary),0.4)] flex-shrink-0">
+                                    <div class="w-14 h-14 rounded-none bg-primary flex items-center justify-center border-2 border-primary shadow-lg shadow-primary/40 flex-shrink-0">
                                         <FileText class="w-7 h-7 text-primary-foreground" />
                                     </div>
                                     <div class="space-y-2 flex-1">
@@ -1564,7 +1564,7 @@ const onDragEnd = () => {
                                     :class="[
                                         'question-card relative rounded-none border-l-4 border-r border-t border-b p-6 md:p-8 flex flex-col gap-8 transition-all duration-500',
                                         getQuestionStatus(qIndex) === 'answered' 
-                                            ? 'border-l-primary border-primary/20 bg-primary/[0.02] shadow-[0_0_40px_rgba(var(--primary),0.05)]' 
+                                            ? 'border-l-primary border-primary/20 bg-primary/[0.02] shadow-xl shadow-primary/5' 
                                             : 'border-l-muted border-border/40 bg-card/40',
                                         question.type === 'essay' ? 'md:col-span-2' : ''
                                     ]">
@@ -1669,7 +1669,7 @@ const onDragEnd = () => {
                                             class="aspect-square rounded-none flex items-center justify-center text-xs font-black transition-all duration-300 border border-border/40 relative group/nav-item"
                                             :class="[
                                                 getQuestionStatus(qIndex) === 'answered'
-                                                    ? 'bg-primary text-primary-foreground border-primary shadow-[0_0_15px_rgba(var(--primary),0.3)] scale-105'
+                                                    ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 scale-105'
                                                     : getQuestionStatus(qIndex) === 'flagged'
                                                     ? 'bg-amber-500 text-white border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
                                                     : 'bg-muted/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50'
@@ -1691,7 +1691,7 @@ const onDragEnd = () => {
                                             <Trophy class="w-6 h-6 text-primary/20" />
                                         </div>
                                         <div class="h-1.5 w-full bg-muted/30 rounded-none overflow-hidden border border-border/40">
-                                            <div class="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]" 
+                                            <div class="h-full bg-primary transition-all duration-1000 ease-out shadow-lg shadow-primary/50" 
                                                 :style="{ width: `${(Object.keys(answers).length / selectedPart!.questions!.length) * 100}%` }"></div>
                                         </div>
                                     </div>
@@ -1753,7 +1753,7 @@ const onDragEnd = () => {
                     <!-- Submit bar -->
                     <div class="sticky bottom-6 flex justify-end pt-8">
                         <button @click="submitPart" :disabled="isSubmitting"
-                            class="group relative px-10 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center gap-6 disabled:opacity-50 disabled:cursor-not-allowed skew-x-[-12deg] shadow-[0_20px_40px_-10px_rgba(var(--primary),0.4)]">
+                            class="group relative px-10 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center gap-6 disabled:opacity-50 disabled:cursor-not-allowed skew-x-[-12deg] shadow-xl shadow-primary/40">
                             
                             <span class="skew-x-[12deg] text-base tracking-[0.2em] uppercase">{{ isSubmitting ? (currentPartHasEssay ? 'Checking your answers...' : 'Submitting...') : 'Submit this part' }}</span>
                             
@@ -1827,7 +1827,7 @@ const onDragEnd = () => {
             <transition name="modal-fade">
                 <div v-if="showStartModal" class="fixed inset-0 bg-background/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
                     <div ref="startModalRef" 
-                        class="relative max-w-md w-full rounded-none border-2 border-primary/20 bg-card p-6 md:p-10 shadow-[0_0_50px_rgba(var(--primary),0.1)] overflow-hidden">
+                        class="relative max-w-md w-full rounded-none border-2 border-primary/20 bg-card p-6 md:p-10 shadow-2xl shadow-primary/10 overflow-hidden">
                         
                         <!-- Futuristic Corner Accents -->
                         <div class="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-primary"></div>
@@ -1926,7 +1926,7 @@ const onDragEnd = () => {
             <transition name="modal-fade">
                 <div v-if="showSuccessModal" class="fixed inset-0 bg-background/90 backdrop-blur-2xl z-50 flex items-center justify-center p-4">
                     <div ref="successModalRef" 
-                        class="relative max-w-md w-full rounded-none border-2 border-primary/30 bg-card p-6 md:p-10 shadow-[0_0_80px_rgba(var(--primary),0.15)] overflow-hidden">
+                        class="relative max-w-md w-full rounded-none border-2 border-primary/30 bg-card p-6 md:p-10 shadow-2xl shadow-primary/15 overflow-hidden">
                         
                         <!-- Futuristic Grid Background -->
                         <div class="absolute inset-0 opacity-[0.03] pointer-events-none bg-[length:40px_40px] bg-[linear-gradient(to_right,#888_1px,transparent_1px),linear-gradient(to_bottom,#888_1px,transparent_1px)]"></div>
@@ -1936,7 +1936,7 @@ const onDragEnd = () => {
                             <div class="success-checkmark relative w-24 h-24 flex items-center justify-center">
                                 <div class="absolute inset-0 border border-dashed border-primary/40 rounded-full animate-[spin_10s_linear_infinite]"></div>
                                 <div class="absolute inset-1 border border-primary rounded-full"></div>
-                                <div class="w-16 h-16 bg-primary flex items-center justify-center shadow-[0_0_30px_rgba(var(--primary),0.5)]">
+                                <div class="w-16 h-16 bg-primary flex items-center justify-center shadow-lg shadow-primary/50">
                                     <svg class="w-8 h-8 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
                                     </svg>
@@ -2008,7 +2008,7 @@ const onDragEnd = () => {
                             </div>
 
                             <button @click="closeSuccessModal" :disabled="isCalculatingScore"
-                                class="w-full px-8 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs skew-x-[-12deg] shadow-[0_15px_30px_rgba(var(--primary),0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
+                                class="w-full px-8 py-5 bg-primary text-primary-foreground font-black hover:bg-primary/90 transition-all flex items-center justify-center gap-4 uppercase tracking-[0.3em] text-xs skew-x-[-12deg] shadow-lg shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed">
                                 <span class="skew-x-[12deg]">{{ isCalculatingScore ? (currentPartHasEssay ? 'Assessing...' : 'Calculating...') : (partsPendingCount > 0 ? 'Next Deployment' : 'Return to Page') }}</span>
                                 <ChevronRight v-if="!isCalculatingScore" class="w-5 h-5 skew-x-[12deg]" />
                                 <div v-else class="w-5 h-5 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin skew-x-[12deg]"></div>
@@ -2096,7 +2096,7 @@ const onDragEnd = () => {
                                     <span class="text-[8px] font-black text-primary font-mono">{{ Math.round(partProgress) }}%</span>
                                 </div>
                                 <div class="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden border border-border dark:border-white/5 relative">
-                                    <div class="h-full bg-primary transition-all duration-500 ease-out shadow-[0_0_10px_rgba(var(--primary),0.4)]"
+                                    <div class="h-full bg-primary transition-all duration-500 ease-out shadow-lg shadow-primary/40"
                                         :style="{ width: `${partProgress}%` }">
                                         <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                                     </div>
