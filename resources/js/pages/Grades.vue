@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import Card from '@/components/ui/card/Card.vue';
@@ -125,21 +126,71 @@ const formatGrade = (grade: number | null) => {
 
     return Number.isInteger(grade) ? String(grade) : grade.toFixed(2);
 };
+
+const gradesContainer = ref<HTMLElement | null>(null);
+
+onMounted(() => {
+    if (!gradesContainer.value) return;
+
+    const tl = gsap.timeline({
+        defaults: { ease: 'power3.out' }
+    });
+
+    // 1. Title and Description entrance
+    tl.fromTo(
+        '.animate-section',
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.8, stagger: 0.1 }
+    );
+
+    // 2. Overview Cards - Tactical slide-in
+    tl.fromTo(
+        '.animate-card',
+        {
+            opacity: 0,
+            x: -20,
+            scale: 0.98
+        },
+        {
+            opacity: 1,
+            x: 0,
+            scale: 1,
+            stagger: 0.1,
+            duration: 0.8,
+            ease: 'back.out(1.2)'
+        },
+        '-=0.4'
+    );
+
+    // 3. Tables / Grade Groups
+    tl.fromTo(
+        '.animate-group',
+        { opacity: 0, y: 30 },
+        {
+            opacity: 1,
+            y: 0,
+            duration: 1,
+            stagger: 0.15,
+            ease: 'expo.out'
+        },
+        '-=0.6'
+    );
+});
 </script>
 
 <template>
     <Head title="My Grades" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="container mx-auto px-4 py-6 lg:px-8 lg:py-8">
-            <div class="mb-8">
+        <div ref="gradesContainer" class="container mx-auto px-4 py-6 lg:px-8 lg:py-8 perspective-[1000px]">
+            <div class="mb-8 animate-section">
                 <h1 class="text-3xl font-bold tracking-tight">My Grades</h1>
                 <p class="text-muted-foreground mt-2">View your academic performance across all Enrolled Subjects.</p>
             </div>
 
             <!-- Overview Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <Card>
+                <Card class="animate-card">
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle class="text-sm font-medium">Overall Average</CardTitle>
                         <TrendingUp class="h-4 w-4 text-muted-foreground" />
@@ -150,7 +201,7 @@ const formatGrade = (grade: number | null) => {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card class="animate-card">
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle class="text-sm font-medium">Total Subjects</CardTitle>
                         <FileText class="h-4 w-4 text-muted-foreground" />
@@ -161,7 +212,7 @@ const formatGrade = (grade: number | null) => {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card class="animate-card">
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle class="text-sm font-medium">Completed</CardTitle>
                         <GraduationCap class="h-4 w-4 text-muted-foreground" />
@@ -174,7 +225,7 @@ const formatGrade = (grade: number | null) => {
             </div>
 
             <!-- Empty State -->
-            <Card v-if="subjectGrades.length === 0" class="border-dashed">
+            <Card v-if="subjectGrades.length === 0" class="border-dashed animate-section">
                 <CardContent class="flex flex-col items-center justify-center py-12">
                     <AlertCircle class="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 class="text-lg font-semibold">No subjects enrolled</h3>
@@ -186,7 +237,7 @@ const formatGrade = (grade: number | null) => {
 
             <!-- Grades Tables -->
             <template v-else>
-                <Card v-for="group in gradeGroups" :key="group.key" class="mb-6">
+                <Card v-for="group in gradeGroups" :key="group.key" class="mb-6 animate-group">
                     <CardHeader>
                         <CardTitle class="flex items-center gap-2">
                             <GraduationCap class="h-5 w-5 text-primary" />
