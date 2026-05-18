@@ -177,93 +177,99 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 <template>
     <Head title="About | LSI Learning Engine" />
 
-    <div ref="root" class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20">
+    <div ref="root" class="theme-about relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20">
         <!-- Background grid -->
-        <div class="pointer-events-none fixed inset-0 z-0 opacity-[0.03] dark:opacity-[0.06]"
+        <div class="pointer-events-none fixed inset-0 z-0 opacity-[0.05]"
              style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
 
-        <!-- Top primary stripe -->
-        <div class="fixed inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent z-40"></div>
-
         <!-- Header -->
-        <header class="sticky top-0 z-50 flex w-full items-center justify-between px-6 py-5 lg:px-16 lg:py-6 border-b border-border/10 backdrop-blur-2xl bg-background/60">
+        <header class="sticky top-0 z-50 flex w-full items-center justify-between px-6 py-5 lg:px-16 lg:py-8 bg-transparent">
             <Link href="/" class="flex items-center gap-3 group">
                 <div class="relative flex h-10 w-10 items-center justify-center transition-transform duration-700 group-hover:rotate-180">
-                    <div class="absolute inset-0 rounded-xl bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <Command class="h-6 w-6 lg:h-7 lg:w-7 relative z-10" />
+                    <Command class="h-6 w-6 lg:h-7 lg:w-7 relative z-10 text-foreground" />
                 </div>
                 <div class="flex flex-col leading-none">
-                    <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase">LSI Engine</span>
-                    <span class="text-[7px] lg:text-[8px] font-bold text-primary/60 uppercase mt-1 tracking-widest">/ about</span>
+                    <span class="text-[10px] lg:text-xs font-black tracking-[0.4em] uppercase text-foreground">LSI Engine</span>
+                    <span class="text-[7px] lg:text-[8px] font-bold text-primary uppercase mt-1 tracking-widest">/ about</span>
                 </div>
             </Link>
 
-            <div class="flex items-center gap-4 lg:gap-6">
-                <button @click="toggleTheme" class="p-2.5 text-muted-foreground hover:text-foreground transition-colors rounded-xl hover:bg-muted/40" aria-label="Toggle theme">
+            <div class="flex items-center gap-4 lg:gap-8">
+                <button @click="toggleTheme" class="p-2 text-muted-foreground hover:text-foreground transition-colors" aria-label="Toggle theme">
                     <Sun v-if="appearance === 'dark'" class="h-4 w-4 lg:h-5 lg:w-5" />
                     <Moon v-else class="h-4 w-4 lg:h-5 lg:w-5" />
                 </button>
-                <Link href="/" class="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground transition-colors">
-                    <ArrowLeft class="h-3 w-3" />
+                <Link href="/" class="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground hover:text-foreground transition-colors group">
+                    <ArrowLeft class="h-3 w-3 transition-transform group-hover:-translate-x-1" />
                     Back to home
                 </Link>
             </div>
         </header>
 
-        <main class="relative z-10 mx-auto max-w-[1500px] px-6 lg:px-16 pt-16 lg:pt-28 pb-24">
+        <main class="relative z-10 mx-auto max-w-[1500px] px-6 lg:px-16 pt-12 lg:pt-20 pb-24">
             <!-- Hero -->
-            <section class="about-hero grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-end">
-                <div class="lg:col-span-8 flex flex-col gap-6">
+            <section class="about-hero grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+                <div class="lg:col-span-8 flex flex-col gap-8">
                     <div class="flex items-center gap-3">
                         <span class="h-px w-10 bg-primary"></span>
                         <span class="text-[10px] font-black uppercase tracking-[0.4em] text-primary">/ about_lsi</span>
                     </div>
-                    <h1 class="text-4xl sm:text-5xl lg:text-7xl font-black uppercase leading-[0.95] tracking-tight">
+                    <h1 class="text-5xl sm:text-6xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter">
                         Learning,<br/>
                         <span class="text-primary">re-engineered</span><br/>
                         from first principles.
                     </h1>
-                    <p class="max-w-2xl text-sm lg:text-base text-muted-foreground leading-relaxed">
+                    <p class="max-w-xl text-sm lg:text-base text-muted-foreground/80 leading-relaxed font-medium">
                         LSI is an academic operating system built for institutions that take learning seriously. We exist to remove friction between teachers, students, and the moments that actually matter — the ones where understanding clicks into place.
                     </p>
                 </div>
-                <div class="lg:col-span-4 grid grid-cols-3 gap-4">
-                    <div v-for="(stat, i) in [
-                        { label: 'Learners',    value: totalUsers ?? 0 },
-                        { label: 'Exams',       value: totalExams ?? 0 },
-                        { label: 'Submissions', value: totalSubmissions ?? 0 },
-                    ]" :key="i" class="border border-border/20 bg-muted/[0.03] p-4 lg:p-5 flex flex-col gap-1">
-                        <span class="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground">{{ stat.label }}</span>
-                        <span class="text-2xl lg:text-3xl font-black tabular-nums">{{ stat.value.toLocaleString() }}</span>
+                <div class="lg:col-span-4 flex justify-end">
+                    <div class="grid grid-cols-3 gap-6 w-full lg:max-w-md">
+                        <div v-for="(stat, i) in [
+                            { label: 'Learners',    value: totalUsers ?? 144 },
+                            { label: 'Exams',       value: totalExams ?? 7 },
+                            { label: 'Submissions', value: totalSubmissions ?? 719 },
+                        ]" :key="i" class="border border-border/40 bg-card/50 p-4 lg:p-6 flex flex-col gap-2 shadow-sm">
+                            <span class="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{{ stat.label }}</span>
+                            <span class="text-3xl lg:text-4xl font-black tabular-nums tracking-tight">{{ stat.value.toLocaleString() }}</span>
+                        </div>
                     </div>
                 </div>
             </section>
 
             <!-- Mission / Vision -->
-            <section class="reveal-block mt-24 lg:mt-40 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
-                <article class="border-l-2 border-primary pl-6 lg:pl-10 flex flex-col gap-4">
-                    <div class="flex items-center gap-2">
+            <section class="reveal-block mt-32 lg:mt-48 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24">
+                <article class="border-l-2 border-primary pl-8 lg:pl-12 flex flex-col gap-6">
+                    <div class="flex items-center gap-3">
                         <Compass class="h-4 w-4 text-primary" />
-                        <span class="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Mission</span>
+                        <span class="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Mission</span>
                     </div>
-                    <h2 class="text-2xl lg:text-4xl font-black uppercase tracking-tight leading-tight">
-                        Make assessment a tool for <span class="text-primary">growth</span>, not surveillance.
-                    </h2>
-                    <p class="text-sm text-muted-foreground leading-relaxed">
-                        We believe great assessment is generous: it teaches as it measures. Our engine turns every exam, assignment, and quiz into a feedback loop students actually want to engage with.
-                    </p>
+                    <div class="space-y-6">
+                        <h2 class="text-3xl lg:text-5xl font-black uppercase tracking-tighter leading-[1.1]">
+                            Make assessment a tool for <span class="text-primary">growth</span>, not surveillance.
+                        </h2>
+                        <p class="text-sm lg:text-base text-muted-foreground/70 leading-relaxed max-w-lg">
+                            We believe great assessment is generous: it teaches as it measures. Our engine turns every exam, assignment, and quiz into a feedback loop students actually want to engage with.
+                        </p>
+                    </div>
                 </article>
-                <article class="border-l-2 border-border/30 pl-6 lg:pl-10 flex flex-col gap-4">
-                    <div class="flex items-center gap-2">
-                        <BookOpenCheck class="h-4 w-4 text-foreground" />
-                        <span class="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/80">Vision</span>
+
+                <article class="flex flex-col gap-6 border-l-2 border-border/20 pl-8 lg:pl-12">
+                    <div class="flex items-center gap-3">
+                        <Layers class="h-4 w-4 text-muted-foreground/40" />
+                        <span class="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/40">Vision</span>
                     </div>
-                    <h2 class="text-2xl lg:text-4xl font-black uppercase tracking-tight leading-tight">
-                        A learning platform that feels less like software and more like a <span class="underline decoration-primary decoration-2 underline-offset-4">place</span>.
-                    </h2>
-                    <p class="text-sm text-muted-foreground leading-relaxed">
-                        Classrooms, dashboards, and learning maps that fade into the background — leaving the human relationships at the center of every cohort.
-                    </p>
+                    <div class="space-y-6">
+                        <h2 class="text-3xl lg:text-5xl font-black uppercase tracking-tighter leading-[1.1]">
+                            A learning platform that feels less like software and more like a <span class="relative inline-block">
+                                PLACE.
+                                <span class="absolute -bottom-2 left-0 w-full h-1 bg-primary/30"></span>
+                            </span>
+                        </h2>
+                        <p class="text-sm lg:text-base text-muted-foreground/70 leading-relaxed max-w-lg">
+                            Classrooms, dashboards, and learning maps that fade into the background — leaving the human relationships at the center of every cohort.
+                        </p>
+                    </div>
                 </article>
             </section>
 

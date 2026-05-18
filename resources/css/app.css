@@ -44,6 +44,50 @@
     --ease-premium: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+.theme-about {
+    --color-background: #f5f7f0;
+    --color-foreground: #172119;
+    --color-card: #fffdf7;
+    --color-card-foreground: #172119;
+    --color-primary: #2f7d51;
+    --color-primary-foreground: #ffffff;
+    --color-secondary: #dcebd4;
+    --color-secondary-foreground: #1f3a28;
+    --color-muted: #e6ecdd;
+    --color-muted-foreground: #5d6b56;
+    --color-accent: #dcebd4;
+    --color-accent-foreground: #1f3a28;
+    --color-border: #cbd9c2;
+    --color-input: #cbd9c2;
+    --color-ring: #2f7d51;
+    --color-sidebar: #eef4e7;
+    --color-sidebar-foreground: #172119;
+    --color-sidebar-primary: #2f7d51;
+    --color-sidebar-primary-foreground: #ffffff;
+    --color-sidebar-accent: #dcebd4;
+    --color-sidebar-accent-foreground: #1f3a28;
+    --color-sidebar-border: #cbd9c2;
+    --color-sidebar-ring: #2f7d51;
+}
+
+.dark .theme-about {
+    --color-background: #0f1410;
+    --color-foreground: #e1e8e2;
+    --color-card: #141a15;
+    --color-card-foreground: #e1e8e2;
+    --color-primary: #4ade80;
+    --color-primary-foreground: #061a0c;
+    --color-secondary: #1a2e1f;
+    --color-secondary-foreground: #d1fae5;
+    --color-muted: #1a2e1f;
+    --color-muted-foreground: #8a9a8d;
+    --color-accent: #1e3a28;
+    --color-accent-foreground: #4ade80;
+    --color-border: #223a28;
+    --color-input: #223a28;
+    --color-ring: #4ade80;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 .dark {
