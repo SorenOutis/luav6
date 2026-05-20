@@ -31,6 +31,14 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+
+        Fortify::authenticateThrough(function (Request $request) {
+            return array_filter([
+                \App\Actions\Fortify\CheckLoginEnabled::class,
+                \Laravel\Fortify\Http\Middleware\AttemptToAuthenticate::class,
+                \Laravel\Fortify\Http\Middleware\PrepareAuthenticatedSession::class,
+            ]);
+        });
     }
 
     /**
@@ -49,7 +57,9 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'canRegister' => Features::enabled(Features::registration()),
+            'canRegister' => Features::enabled(Features::registration()) && (bool) \App\Models\Setting::get('registration_enabled', true),
+            'loginEnabled' => (bool) \App\Models\Setting::get('login_enabled', true),
+            'loginDisabledMessage' => \App\Models\Setting::get('login_disabled_message', 'Login is currently disabled.'),
             'status' => $request->session()->get('status'),
         ]));
 
@@ -66,7 +76,10 @@ class FortifyServiceProvider extends ServiceProvider
             'status' => $request->session()->get('status'),
         ]));
 
-        Fortify::registerView(fn () => Inertia::render('auth/Register'));
+        Fortify::registerView(fn () => Inertia::render('auth/Register', [
+            'registrationEnabled' => (bool) \App\Models\Setting::get('registration_enabled', true),
+            'registrationDisabledMessage' => \App\Models\Setting::get('registration_disabled_message', 'Registration is currently disabled.'),
+        ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
 

@@ -5,6 +5,13 @@ import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
@@ -14,16 +21,26 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
-defineProps<{
+const props = defineProps<{
     status?: string;
     canResetPassword: boolean;
     canRegister: boolean;
+    loginEnabled: boolean;
+    loginDisabledMessage: string;
 }>();
 
 defineOptions({ layout: AuthBase });
 
 const submitting = ref(false);
-const onSubmit = () => {
+const showDisabledModal = ref(false);
+
+const onSubmit = (event: Event) => {
+    if (!props.loginEnabled) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        showDisabledModal.value = true;
+        return;
+    }
     submitting.value = true;
 };
 </script>
@@ -121,4 +138,23 @@ const onSubmit = () => {
                 <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
             </div>
         </Form>
+
+        <Dialog v-model:open="showDisabledModal">
+            <DialogContent class="sm:max-w-md border-border/40 bg-background/95 backdrop-blur-xl">
+                <DialogHeader>
+                    <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    </div>
+                    <DialogTitle class="text-center text-xl font-black uppercase tracking-tight">Login Disabled</DialogTitle>
+                    <DialogDescription class="text-center pt-2 leading-relaxed">
+                        {{ loginDisabledMessage }}
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="mt-6 flex flex-col gap-3">
+                    <Button variant="outline" @click="showDisabledModal = false" class="w-full">
+                        Close
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
 </template>

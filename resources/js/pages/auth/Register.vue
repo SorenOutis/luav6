@@ -10,6 +10,7 @@ import {
     DialogDescription,
     DialogHeader,
     DialogTitle,
+    DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
@@ -18,6 +19,11 @@ import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
+
+defineProps<{
+    registrationEnabled: boolean;
+    registrationDisabledMessage: string;
+}>();
 
 defineOptions({ layout: AuthBase });
 
@@ -39,8 +45,35 @@ const onSubmit = () => {
         </p>
     </div>
 
-        <Form
-            v-bind="store.form()"
+    <div
+        v-if="!registrationEnabled"
+        class="mt-6 rounded-lg bg-amber-500/10 p-4 border border-amber-500/20"
+    >
+        <div class="flex items-center gap-3 text-amber-500">
+            <div class="p-1 rounded-md bg-amber-500/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-alert-triangle"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </div>
+            <p class="text-sm font-semibold tracking-tight uppercase">Registration Closed</p>
+        </div>
+        <p class="mt-2 text-sm text-amber-500/80 leading-relaxed font-medium">
+            {{ registrationDisabledMessage }}
+        </p>
+        <div class="mt-4 pt-4 border-t border-amber-500/10">
+            <p class="text-sm text-muted-foreground">
+                Already have an account?
+                <TextLink
+                    :href="login()"
+                    class="underline underline-offset-4"
+                    :tabindex="7"
+                    >Log in</TextLink
+                >
+            </p>
+        </div>
+    </div>
+
+    <Form
+        v-if="registrationEnabled"
+        v-bind="store.form()"
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"
             class="flex flex-col gap-6"

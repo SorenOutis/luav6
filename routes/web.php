@@ -31,7 +31,7 @@ Route::get('/', function () {
     $demoVideoPath = Setting::get('welcome_demo_video_path');
 
     return inertia('Welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
+        'canRegister' => Features::enabled(Features::registration()) && (bool) Setting::get('registration_enabled', true),
         'totalUsers' => User::count(),
         'totalExams' => Exam::where('status', '!=', 'draft')->count(),
         'totalAssignments' => Assignment::count(),

@@ -11,6 +11,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
@@ -38,7 +39,11 @@ class AiSettings extends Page implements HasSchemas
     {
         $this->form->fill([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
-            'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'KOA is currently under maintenance. Please try again later.'),
+            'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
+            'login_enabled' => (bool) Setting::get('login_enabled', true),
+            'login_disabled_message' => Setting::get('login_disabled_message', 'Login is currently disabled. Please try again later.'),
+            'registration_enabled' => (bool) Setting::get('registration_enabled', true),
+            'registration_disabled_message' => Setting::get('registration_disabled_message', 'Registration is currently disabled. Please try again later.'),
             'welcome_demo_video_path' => Setting::get('welcome_demo_video_path'),
             'school_name' => Setting::get('school_name', 'LSI Engine'),
             'school_tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),
@@ -51,6 +56,37 @@ class AiSettings extends Page implements HasSchemas
     {
         return $form
             ->schema([
+                Section::make('Access Control')
+                    ->description('Manage platform access for students.')
+                    ->schema([
+                        Grid::make(2)
+                            ->schema([
+                                Toggle::make('login_enabled')
+                                    ->label('Enable Login')
+                                    ->helperText('If disabled, students will not be able to log in to their accounts.')
+                                    ->reactive(),
+
+                                Toggle::make('registration_enabled')
+                                    ->label('Enable Registration')
+                                    ->helperText('If disabled, new students will not be able to create accounts.')
+                                    ->reactive(),
+                            ]),
+
+                        Textarea::make('login_disabled_message')
+                            ->label('Login Disabled Message')
+                            ->placeholder('Enter the message to display when login is disabled...')
+                            ->required()
+                            ->visible(fn ($get) => ! $get('login_enabled'))
+                            ->columnSpanFull(),
+
+                        Textarea::make('registration_disabled_message')
+                            ->label('Registration Disabled Message')
+                            ->placeholder('Enter the message to display when registration is disabled...')
+                            ->required()
+                            ->visible(fn ($get) => ! $get('registration_enabled'))
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('AI Chat Configuration')
                     ->description('Manage the availability of the AI floating widget.')
                     ->schema([
@@ -120,8 +156,21 @@ class AiSettings extends Page implements HasSchemas
         try {
             $data = $this->form->getState();
 
-            Setting::set('ai_chat_enabled', $data['ai_chat_enabled'] ? '1' : '0');
-            Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
+            Setting::set('ai_chat_enabled', ($data['ai_chat_enabled'] ?? true) ? '1' : '0');
+            if (isset($data['ai_chat_maintenance_message'])) {
+                Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
+            }
+
+            Setting::set('login_enabled', ($data['login_enabled'] ?? true) ? '1' : '0');
+            if (isset($data['login_disabled_message'])) {
+                Setting::set('login_disabled_message', $data['login_disabled_message']);
+            }
+
+            Setting::set('registration_enabled', ($data['registration_enabled'] ?? true) ? '1' : '0');
+            if (isset($data['registration_disabled_message'])) {
+                Setting::set('registration_disabled_message', $data['registration_disabled_message']);
+            }
+
             Setting::set('welcome_demo_video_path', $data['welcome_demo_video_path'] ?? null);
             Setting::set('school_name', $data['school_name'] ?? 'LSI Engine');
             Setting::set('school_tagline', $data['school_tagline'] ?? 'Learning Systems Intelligence');
