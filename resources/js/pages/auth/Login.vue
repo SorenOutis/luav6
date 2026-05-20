@@ -35,6 +35,8 @@ const submitting = ref(false);
 const showDisabledModal = ref(false);
 
 const onSubmit = (event: Event) => {
+    // If login is disabled, we should have already intercepted this with the button type="button"
+    // or keydown listener. This is a fallback.
     if (!props.loginEnabled) {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -84,6 +86,7 @@ const onSubmit = (event: Event) => {
                         :tabindex="1"
                         autocomplete="email"
                         label="Email address"
+                        @keydown.enter="!loginEnabled && ($event.preventDefault(), showDisabledModal = true)"
                     />
                     <InputError :message="errors.email" />
                 </div>
@@ -107,6 +110,7 @@ const onSubmit = (event: Event) => {
                         :tabindex="2"
                         autocomplete="current-password"
                         label="Password"
+                        @keydown.enter="!loginEnabled && ($event.preventDefault(), showDisabledModal = true)"
                     />
                     <InputError :message="errors.password" />
                 </div>
@@ -119,6 +123,18 @@ const onSubmit = (event: Event) => {
                 </div>
 
                 <Button
+                    v-if="!loginEnabled"
+                    type="button"
+                    class="mt-4 w-full"
+                    :tabindex="4"
+                    @click="showDisabledModal = true"
+                    data-test="login-button-disabled"
+                >
+                    Log in
+                </Button>
+
+                <Button
+                    v-else
                     type="submit"
                     class="mt-4 w-full"
                     :tabindex="4"

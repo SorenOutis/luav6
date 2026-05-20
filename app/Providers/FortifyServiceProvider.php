@@ -31,14 +31,6 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
-
-        Fortify::authenticateThrough(function (Request $request) {
-            return array_filter([
-                \App\Actions\Fortify\CheckLoginEnabled::class,
-                \Laravel\Fortify\Http\Middleware\AttemptToAuthenticate::class,
-                \Laravel\Fortify\Http\Middleware\PrepareAuthenticatedSession::class,
-            ]);
-        });
     }
 
     /**
