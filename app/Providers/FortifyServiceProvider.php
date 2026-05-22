@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\Setting;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -49,9 +50,9 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/Login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'canRegister' => Features::enabled(Features::registration()) && (bool) \App\Models\Setting::get('registration_enabled', true),
-            'loginEnabled' => (bool) \App\Models\Setting::get('login_enabled', true),
-            'loginDisabledMessage' => \App\Models\Setting::get('login_disabled_message', 'Login is currently disabled.'),
+            'canRegister' => Features::enabled(Features::registration()) && (bool) Setting::get('registration_enabled', true),
+            'loginEnabled' => (bool) Setting::get('login_enabled', true),
+            'loginDisabledMessage' => Setting::get('login_disabled_message', 'Login is currently disabled.'),
             'status' => $request->session()->get('status'),
         ]));
 
@@ -69,8 +70,8 @@ class FortifyServiceProvider extends ServiceProvider
         ]));
 
         Fortify::registerView(fn () => Inertia::render('auth/Register', [
-            'registrationEnabled' => (bool) \App\Models\Setting::get('registration_enabled', true),
-            'registrationDisabledMessage' => \App\Models\Setting::get('registration_disabled_message', 'Registration is currently disabled.'),
+            'registrationEnabled' => (bool) Setting::get('registration_enabled', true),
+            'registrationDisabledMessage' => Setting::get('registration_disabled_message', 'Registration is currently disabled.'),
         ]));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/TwoFactorChallenge'));
