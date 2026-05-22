@@ -83,6 +83,7 @@ const structuralLines = ref<HTMLElement[]>([]);
 const ambientOrbs = ref<HTMLElement[]>([]);
 const bootOverlay = ref<HTMLElement | null>(null);
 const bootText = ref<HTMLElement[]>([]);
+const terminalReveal = ref<HTMLElement | null>(null);
 
 // State
 const isCoarsePointer = ref(false);
@@ -90,6 +91,7 @@ const prefersReducedMotion = ref(false);
 const isLoggingOut = ref(false);
 const showBootOverlay = ref(true);
 const isBooted = ref(false);
+const isTerminalActive = ref(false);
 const isDemoVideoOpen = ref(false);
 
 const { isTransitioningTheme } = useAppearance();
@@ -356,6 +358,12 @@ onMounted(() => {
         gsap.set(bootOverlay.value, { autoAlpha: 1 });
         gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
         gsap.set('.online-pill', { autoAlpha: 0, y: 16, scale: 0.86 });
+        gsap.set(terminalReveal.value, {
+            autoAlpha: 0,
+            y: 48,
+            scale: 0.97,
+            filter: prefersReducedMotion.value ? 'none' : 'blur(16px)',
+        });
 
         // Entrance Animation
         tl.to(bootText.value, {
@@ -377,6 +385,19 @@ onMounted(() => {
             onComplete: () => {
                 showBootOverlay.value = false;
                 isBooted.value = true;
+                gsap.to(terminalReveal.value, {
+                    autoAlpha: 1,
+                    y: 0,
+                    scale: 1,
+                    filter: 'blur(0px)',
+                    duration: prefersReducedMotion.value ? 0.35 : 1.15,
+                    delay: prefersReducedMotion.value ? 0 : 0.15,
+                    ease: 'expo.out',
+                    clearProps: 'filter',
+                    onStart: () => {
+                        isTerminalActive.value = true;
+                    },
+                });
                 if (isLoggingOut.value) {
                     sessionStorage.removeItem('logged_out');
                     isLoggingOut.value = false;
@@ -508,17 +529,13 @@ const orbLayers = [
                 </template>
             </WelcomeHero>
 
-            <Motion
+            <div
                 id="engine"
+                ref="terminalReveal"
                 class="scroll-mt-32"
-                :initial="{ opacity: 0, y: 30, filter: 'blur(12px)' }"
-                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
-                :in-view-options="{ once: true, margin: '-100px' }"
-                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1] }"
             >
-                <SystemTerminal />
-            </Motion>
+                <SystemTerminal :active="isTerminalActive" />
+            </div>
 
             <Motion
                 :initial="{ opacity: 0, y: 30, filter: 'blur(10px)' }"

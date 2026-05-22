@@ -58,7 +58,7 @@ const navItems = [
         
         <Motion 
             :initial="{ x: -20, opacity: 0 }"
-            :animate="isBooted ? { x: 0, opacity: 1 } : {}"
+            :animate="isBooted ? { x: 0, opacity: 1 } : { x: -20, opacity: 0 }"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
             class="nav-item flex items-center gap-3 lg:gap-4 group cursor-pointer"
         >
@@ -80,7 +80,7 @@ const navItems = [
 
         <Motion 
             :initial="{ y: -20, opacity: 0 }"
-            :animate="isBooted ? { y: 0, opacity: 1 } : {}"
+            :animate="isBooted ? { y: 0, opacity: 1 } : { y: -20, opacity: 0 }"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }"
             class="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-10"
         >
@@ -109,7 +109,7 @@ const navItems = [
 
         <Motion 
             :initial="{ y: -10, opacity: 0 }"
-            :animate="isBooted ? { y: 0, opacity: 1 } : {}"
+            :animate="isBooted ? { y: 0, opacity: 1 } : { y: -10, opacity: 0 }"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
             as="nav" 
             class="flex items-center gap-4 lg:gap-8"

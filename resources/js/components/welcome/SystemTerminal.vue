@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick, TransitionGroup } from 'vue';
+import { ref, onBeforeUnmount, nextTick, TransitionGroup, watch } from 'vue';
 import { Terminal } from 'lucide-vue-next';
+
+const props = withDefaults(defineProps<{
+    active?: boolean;
+}>(), {
+    active: true,
+});
 
 const terminalLines = ref<{ id: number; time: string; module: string; message: string; displayText: string; isTyping: boolean; type: 'info' | 'success' | 'warn' }[]>([]);
 const terminalPaused = ref(false);
 const terminalEl = ref<HTMLElement | null>(null);
 let terminalInterval: ReturnType<typeof setInterval> | null = null;
+let queueTimeout: ReturnType<typeof setTimeout> | null = null;
 let terminalLineId = 0;
 let isProcessingQueue = false;
+let hasStarted = false;
 const terminalQueue: any[] = [];
 
 const terminalPool = [
@@ -37,7 +45,7 @@ const processTerminalQueue = async () => {
     if (isProcessingQueue || terminalQueue.length === 0) return;
     
     if (terminalPaused.value) {
-        setTimeout(processTerminalQueue, 500);
+        queueTimeout = setTimeout(processTerminalQueue, 500);
         return;
     }
     
@@ -86,7 +94,7 @@ const processTerminalQueue = async () => {
     isProcessingQueue = false;
     
     const nextLineDelay = 1000 + Math.random() * 1500;
-    setTimeout(processTerminalQueue, nextLineDelay);
+    queueTimeout = setTimeout(processTerminalQueue, nextLineDelay);
 };
 
 const pushTerminalLine = () => {
@@ -96,6 +104,8 @@ const pushTerminalLine = () => {
 };
 
 const startTerminal = () => {
+    if (hasStarted) return;
+    hasStarted = true;
     terminalQueue.push(terminalPool[0]);
     terminalQueue.push(terminalPool[1]);
     terminalQueue.push(terminalPool[2]);
@@ -107,14 +117,18 @@ const startTerminal = () => {
     }, 6000);
 };
 
-onMounted(() => {
-    startTerminal();
-});
+watch(() => props.active, (active) => {
+    if (active) startTerminal();
+}, { immediate: true });
 
 onBeforeUnmount(() => {
     if (terminalInterval) {
         clearInterval(terminalInterval);
         terminalInterval = null;
+    }
+    if (queueTimeout) {
+        clearTimeout(queueTimeout);
+        queueTimeout = null;
     }
     terminalLineId = 0;
     isProcessingQueue = false;

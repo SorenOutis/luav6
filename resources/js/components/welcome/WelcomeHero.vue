@@ -126,7 +126,7 @@ onBeforeUnmount(() => {
                         v-for="(letter, i) in titleLetters" 
                         :key="i"
                         :initial="{ y: 100, opacity: 0, rotateX: -90 }"
-                        :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : {}"
+                        :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : { y: 100, opacity: 0, rotateX: -90 }"
                         :transition="{ duration: 1.2, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }"
                         class="title-letter inline-block transform-gpu"
                     >
@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
                         v-for="(letter, i) in systemsLetters" 
                         :key="i"
                         :initial="{ y: 100, opacity: 0, rotateX: -90 }"
-                        :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : {}"
+                        :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : { y: 100, opacity: 0, rotateX: -90 }"
                         :transition="{ duration: 1.2, delay: 0.2 + i * 0.04, ease: [0.16, 1, 0.3, 1] }"
                         class="systems-letter inline-block transform-gpu"
                     >
@@ -150,7 +150,7 @@ onBeforeUnmount(() => {
                         v-for="(letter, i) in subtitleLetters" 
                         :key="i"
                         :initial="{ x: -20, opacity: 0, filter: 'blur(10px)' }"
-                        :animate="isBooted ? { x: 0, opacity: 1, filter: 'blur(0px)' } : {}"
+                        :animate="isBooted ? { x: 0, opacity: 1, filter: 'blur(0px)' } : { x: -20, opacity: 0, filter: 'blur(10px)' }"
                         :transition="{ duration: 1, delay: 0.4 + i * 0.03, ease: 'ease-out' }"
                         class="subtitle-letter inline-block transform-gpu bg-gradient-to-r from-foreground/50 via-foreground/30 to-foreground/10 bg-clip-text text-transparent italic"
                     >
@@ -170,7 +170,7 @@ onBeforeUnmount(() => {
             
             <Motion 
                 :initial="{ opacity: 0, y: 20 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                :animate="isBooted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }"
                 :transition="{ duration: 1.5, ease: 'ease-out', delay: 0.2 }"
                 class="absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight"
             >
@@ -184,7 +184,7 @@ onBeforeUnmount(() => {
         <div class="overflow-hidden p-2 -m-2 hero-parallax" data-speed="0.02">
             <Motion 
                 :initial="{ y: 40, opacity: 0 }"
-                :animate="isBooted ? { y: 0, opacity: 1 } : {}"
+                :animate="isBooted ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }"
                 :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
                 class="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-5"
             >
