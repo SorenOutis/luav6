@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('exams', function (Blueprint $table): void {
-            $table->boolean('ai_feedback_enabled')->default(false)->after('status');
+            $table->boolean('ai_feedback_enabled')->default(true)->after('status');
             $table->timestamp('ai_feedback_enabled_at')->nullable()->after('ai_feedback_enabled');
         });
     }

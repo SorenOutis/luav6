@@ -49,10 +49,10 @@ class AIService
      * @return array{score: float, feedback: string}
      */
     /**
-     * Assess multiple essays in parallel.
+     * Assess multiple essays in parallel (score only or score + feedback).
      *
-     * @param  array<int, array{essayText: string, questionText: string, maxPoints: int}>  $essays
-     * @return array<int, array{score: float, feedback: string}>
+     * @param  array<int, array{essayText: string, questionText: string, maxPoints: int, feedbackOnly?: bool, includeFeedback?: bool}>  $essays
+     * @return array<int, array{score: float, feedback?: string}>
      */
     public function batchAssessEssays(array $essays): array
     {
@@ -63,44 +63,46 @@ class AIService
         $responses = Http::pool(function ($pool) use ($essays) {
             foreach ($essays as $index => $essay) {
                 $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
+                $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
                 $prompt = $feedbackOnly
-                    ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'])
-                    : $this->buildPrompt($essay['essayText'], $essay['questionText']);
+                    ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'], $includeFeedback)
+                    : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
 
-                $pool->as((string) $index)->timeout(45)->post("{$this->baseUrl}/api/generate", [
-                    'model' => $this->model,
-                    'prompt' => $prompt,
-                    'stream' => false,
-                    'format' => 'json',
-                    'keep_alive' => -1,
-                    'options' => [
-                        'temperature' => 0,
-                        // Keep responses short to speed up local inference.
-                        'num_predict' => $feedbackOnly ? 28 : 40,
-                        'num_ctx' => 1024,
-                        'top_k' => 5,
-                        'top_p' => 0.1,
-                    ],
-                ]);
+                $numPredict = ($feedbackOnly || $includeFeedback) ? 200 : 35;
+                        $pool->as((string) $index)->timeout(45)->post("{$this->baseUrl}/api/generate", [
+                            'model' => $this->model,
+                            'prompt' => $prompt,
+                            'stream' => false,
+                            'format' => 'json',
+                            'keep_alive' => -1,
+                            'options' => [
+                                'temperature' => 0,
+                                'num_predict' => $numPredict,
+                                'num_ctx' => 1024,
+                                'top_k' => 5,
+                                'top_p' => 0.1,
+                            ],
+                        ]);
             }
         });
 
         $results = [];
         foreach ($essays as $index => $essay) {
             $response = $responses[(string) $index] ?? null;
-            $result = ['score' => 0.0, 'feedback' => ''];
+            $result = ['score' => 0.0];
             $maxPoints = (int) ($essay['maxPoints'] ?? 1);
             $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
+            $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
 
             if ($response && $response->successful()) {
                 $data = json_decode($response->json('response'), true);
-                if (! $feedbackOnly && isset($data['score'])) {
+                if (isset($data['score'])) {
                     // AI provides a score from 0-100, we scale it to maxPoints
                     $percentage = (float) $data['score'];
                     $scaledScore = ($percentage / 100) * $maxPoints;
                     $result['score'] = (float) round($scaledScore, 2);
                 }
-                if (isset($data['feedback'])) {
+                if ($includeFeedback && isset($data['feedback'])) {
                     $result['feedback'] = (string) $data['feedback'];
                 }
             } elseif ($response) {
@@ -118,9 +120,9 @@ class AIService
     /**
      * Build the prompt for essay assessment.
      */
-    protected function buildPrompt(string $essayText, string $questionText): string
+    protected function buildPrompt(string $essayText, string $questionText, bool $includeFeedback = false): string
     {
-        return <<<PROMPT
+        $prompt = <<<PROMPT
 Act as a STRICT academic examiner. Your task is to evaluate a student's essay response based on a specific question.
 
 Question: "$questionText"
@@ -143,45 +145,82 @@ SCORING CRITERIA (0-100 SCALE):
 Response Format:
 You MUST respond with a valid JSON object ONLY.
 The score MUST be a WHOLE NUMBER between 0 and 100.
+PROMPT;
+
+        if ($includeFeedback) {
+            $prompt .= <<<PROMPT
+
+The feedback MUST start with "Your answer" or "Your essay".
 The feedback MUST be at most 1 short sentence (max 18 words), actionable, and mention the biggest missing point.
+
 {
     "score": <integer_value_between_0_and_100>,
     "feedback": "<short_actionable_feedback>"
 }
 PROMPT;
+        } else {
+            $prompt .= <<<PROMPT
+
+{
+    "score": <integer_value_between_0_and_100>
+}
+PROMPT;
+        }
+
+        return $prompt;
     }
 
     /**
-     * Build a compact prompt for feedback-only generation (faster).
+     * Build a compact prompt for feedback-only generation (still returns score).
      */
-    protected function buildFeedbackOnlyPrompt(string $essayText, string $questionText): string
+    protected function buildFeedbackOnlyPrompt(string $essayText, string $questionText, bool $includeFeedback = true): string
     {
-        return <<<PROMPT
+        $prompt = <<<PROMPT
 Act as a strict academic examiner.
 Question: "$questionText"
 Student Essay: "$essayText"
 
-Return ONLY valid JSON with one concise actionable feedback sentence (max 18 words).
-No score, no explanation.
+Return ONLY valid JSON.
+Score is between 0 and 100.
+PROMPT;
+
+        if ($includeFeedback) {
+            $prompt .= <<<PROMPT
+
+Feedback MUST start with "Your answer" or "Your essay".
+One concise actionable feedback sentence.
 {
+    "score": <integer_value_between_0_and_100>,
     "feedback": "<one concise actionable sentence>"
 }
 PROMPT;
+        } else {
+            $prompt .= <<<PROMPT
+
+{
+    "score": <integer_value_between_0_and_100>
+}
+PROMPT;
+        }
+
+        return $prompt;
     }
 
     /**
-     * Assess an essay and return a score and feedback.
+     * Assess an essay and return a score (and feedback if requested).
      *
      * @param  string  $essayText  The student's essay answer.
      * @param  string  $questionText  The essay prompt/question.
      * @param  int  $maxPoints  The maximum points possible for this question.
-     * @return array{score: float, feedback: string}
+     * @param  bool  $includeFeedback  Whether to include feedback in the response.
+     * @return array{score: float, feedback?: string}
      */
-    public function assessEssay(string $essayText, string $questionText, int $maxPoints): array
+    public function assessEssay(string $essayText, string $questionText, int $maxPoints, bool $includeFeedback = false): array
     {
-        $prompt = $this->buildPrompt($essayText, $questionText);
+        $prompt = $this->buildPrompt($essayText, $questionText, $includeFeedback);
 
         try {
+            $numPredict = $includeFeedback ? 200 : 60;
             $response = Http::timeout(90)->post("{$this->baseUrl}/api/generate", [
                 'model' => $this->model,
                 'prompt' => $prompt,
@@ -190,7 +229,7 @@ PROMPT;
                 'keep_alive' => -1,
                 'options' => [
                     'temperature' => 0,
-                    'num_predict' => 50, // Increased
+                    'num_predict' => $numPredict,
                     'num_ctx' => 1024,
                     'top_k' => 5,
                     'top_p' => 0.1,
@@ -199,16 +238,19 @@ PROMPT;
 
             if ($response->successful()) {
                 $data = json_decode($response->json('response'), true);
+                $result = ['score' => 0.0];
 
                 if (isset($data['score'])) {
                     $percentage = (float) $data['score'];
                     $scaledScore = ($percentage / 100) * $maxPoints;
-
-                    return [
-                        'score' => (float) round($scaledScore, 2),
-                        'feedback' => isset($data['feedback']) ? (string) $data['feedback'] : '',
-                    ];
+                    $result['score'] = (float) round($scaledScore, 2);
                 }
+
+                if ($includeFeedback && isset($data['feedback'])) {
+                    $result['feedback'] = (string) $data['feedback'];
+                }
+
+                return $result;
             }
 
             Log::error('AI Assessment failed: '.$response->body());
@@ -216,9 +258,6 @@ PROMPT;
             Log::error('AI Assessment error: '.$e->getMessage());
         }
 
-        return [
-            'score' => 0.0,
-            'feedback' => '',
-        ];
+        return ['score' => 0.0];
     }
 }

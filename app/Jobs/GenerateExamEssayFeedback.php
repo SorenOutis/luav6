@@ -131,6 +131,7 @@ class GenerateExamEssayFeedback implements ShouldQueue
                                 'maxPoints' => (int) ($answer['points'] ?? 1),
                                 // When score already exists, ask AI for feedback only (faster).
                                 'feedbackOnly' => $hasExistingScore,
+                                'includeFeedback' => true,
                             ];
                         }
 
@@ -159,8 +160,10 @@ class GenerateExamEssayFeedback implements ShouldQueue
                             $newScore = $assessment ? (float) ($assessment['score'] ?? 0.0) : 0.0;
                             $newFeedback = $assessment ? trim((string) ($assessment['feedback'] ?? '')) : '';
 
-                            if ($assessment && $newFeedback !== '') {
-                                $answers[$idx]['ai_feedback'] = $newFeedback;
+                            if ($assessment) {
+                                if ($newFeedback !== '') {
+                                    $answers[$idx]['ai_feedback'] = $newFeedback;
+                                }
                                 $answers[$idx]['ai_feedback_attempts'] = (int) ($answer['ai_feedback_attempts'] ?? 0);
 
                                 // Only set score if it didn't exist yet (avoid double-counting in totals).

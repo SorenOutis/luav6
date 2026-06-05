@@ -182,10 +182,9 @@ class ExamController extends Controller
             }
         }
 
-        // Batch process essays if any
+        // Batch process essays (always score and feedback)
         $essayAssessments = [];
-        $aiFeedbackEnabled = (bool) ($exam->ai_feedback_enabled ?? false);
-        if (! empty($essaysToProcess) && $aiFeedbackEnabled) {
+        if (! empty($essaysToProcess)) {
             $essayAssessments = $this->aiService->batchAssessEssays($essaysToProcess);
         }
 
@@ -202,18 +201,14 @@ class ExamController extends Controller
             }
 
             if ($question['type'] === 'essay') {
-                $assessment = $essayAssessments[$questionNumber] ?? ['score' => 0.0, 'feedback' => ''];
+                $assessment = $essayAssessments[$questionNumber] ?? ['score' => 0.0];
 
-                if ($aiFeedbackEnabled) {
-                    // Add AI score to the total score
-                    $score += $assessment['score'];
-                }
+                // Always add AI score
+                $score += $assessment['score'];
 
-                // Update the answer data with AI results
-                if ($submittedAnswerData && $aiFeedbackEnabled) {
+                if ($submittedAnswerData) {
                     $submittedAnswers[$questionNumber] = array_merge($submittedAnswerData, [
                         'ai_score' => $assessment['score'],
-                        'ai_feedback' => $assessment['feedback'],
                     ]);
                 }
 
@@ -246,7 +241,7 @@ class ExamController extends Controller
             ],
             [
                 'answers' => json_encode($submittedAnswers->values()->toArray()),
-                'status' => $hasEssay ? ($aiFeedbackEnabled ? 'pending_review' : 'pending_ai') : 'submitted',
+                'status' => $hasEssay ? 'pending_review' : 'submitted',
                 'score' => $score,
             ]
         );
