@@ -69,20 +69,20 @@ class AIService
                     : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
 
                 $numPredict = ($feedbackOnly || $includeFeedback) ? 200 : 35;
-                        $pool->as((string) $index)->timeout(45)->post("{$this->baseUrl}/api/generate", [
-                            'model' => $this->model,
-                            'prompt' => $prompt,
-                            'stream' => false,
-                            'format' => 'json',
-                            'keep_alive' => -1,
-                            'options' => [
-                                'temperature' => 0,
-                                'num_predict' => $numPredict,
-                                'num_ctx' => 1024,
-                                'top_k' => 5,
-                                'top_p' => 0.1,
-                            ],
-                        ]);
+                $pool->as((string) $index)->timeout(45)->post("{$this->baseUrl}/api/generate", [
+                    'model' => $this->model,
+                    'prompt' => $prompt,
+                    'stream' => false,
+                    'format' => 'json',
+                    'keep_alive' => -1,
+                    'options' => [
+                        'temperature' => 0,
+                        'num_predict' => $numPredict,
+                        'num_ctx' => 1024,
+                        'top_k' => 5,
+                        'top_p' => 0.1,
+                    ],
+                ]);
             }
         });
 
@@ -148,7 +148,7 @@ The score MUST be a WHOLE NUMBER between 0 and 100.
 PROMPT;
 
         if ($includeFeedback) {
-            $prompt .= <<<PROMPT
+            $prompt .= <<<'PROMPT'
 
 The feedback MUST start with "Your answer" or "Your essay".
 The feedback MUST be at most 1 short sentence (max 18 words), actionable, and mention the biggest missing point.
@@ -159,7 +159,7 @@ The feedback MUST be at most 1 short sentence (max 18 words), actionable, and me
 }
 PROMPT;
         } else {
-            $prompt .= <<<PROMPT
+            $prompt .= <<<'PROMPT'
 
 {
     "score": <integer_value_between_0_and_100>
@@ -185,7 +185,7 @@ Score is between 0 and 100.
 PROMPT;
 
         if ($includeFeedback) {
-            $prompt .= <<<PROMPT
+            $prompt .= <<<'PROMPT'
 
 Feedback MUST start with "Your answer" or "Your essay".
 One concise actionable feedback sentence.
@@ -195,7 +195,7 @@ One concise actionable feedback sentence.
 }
 PROMPT;
         } else {
-            $prompt .= <<<PROMPT
+            $prompt .= <<<'PROMPT'
 
 {
     "score": <integer_value_between_0_and_100>
