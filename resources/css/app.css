@@ -458,7 +458,8 @@
     box-shadow: inset 2px 0 0 var(--color-ring);
 }
 
-.theme-neutral-page {
+.theme-neutral-page,
+.global-loader {
     --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
     --font-serif: Georgia, Cambria, 'Times New Roman', Times, serif;
     --font-mono:
@@ -493,7 +494,15 @@
     --radius-2xl: 1.5rem;
 }
 
-.dark .theme-neutral-page {
+.theme-neutral-page,
+.theme-neutral-page *,
+.global-loader,
+.global-loader * {
+    font-family: var(--font-sans) !important;
+}
+
+.dark .theme-neutral-page,
+.dark .global-loader {
     --color-background: #09090b;
     --color-foreground: #fafafa;
     --color-card: #09090b;
@@ -519,20 +528,29 @@
     --color-sidebar-ring: #d4d4d8;
 }
 
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-md {
-    border-radius: 0.375rem !important;
+.theme-neutral-page .rounded-md,
+.theme-neutral-page .rounded-lg,
+.theme-neutral-page .rounded-xl,
+.theme-neutral-page .rounded-2xl,
+.theme-neutral-page .rounded-3xl,
+.global-loader .rounded-md,
+.global-loader .rounded-lg,
+.global-loader .rounded-xl,
+.global-loader .rounded-2xl,
+.global-loader .rounded-3xl,
+.theme-neutral-page .surface-card,
+.global-loader .surface-card {
+    border-radius: var(--radius-xl) !important;
 }
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-lg {
-    border-radius: 0.5rem !important;
-}
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-xl {
-    border-radius: 0.75rem !important;
-}
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-2xl {
-    border-radius: 1rem !important;
-}
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-3xl {
-    border-radius: 1.5rem !important;
+
+.theme-neutral-page [class*='bg-card'],
+.theme-neutral-page .surface-card,
+.global-loader [class*='bg-card'],
+.global-loader .surface-card {
+    background-color: var(--color-card) !important;
+    border-color: var(--color-border) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
 }
 
 :root[data-font-preset='academic'] {
