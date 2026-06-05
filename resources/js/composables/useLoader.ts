@@ -5,10 +5,14 @@ export const LOADER_MESSAGES = {
     TERMINATING: 'TERMINATING SESSION',
 } as const;
 
-export type LoaderMessage = typeof LOADER_MESSAGES[keyof typeof LOADER_MESSAGES] | string;
+export type LoaderMessage =
+    | (typeof LOADER_MESSAGES)[keyof typeof LOADER_MESSAGES]
+    | string;
 
 const DEV = import.meta.env.DEV;
-const log = (...args: unknown[]) => { if (DEV) console.log(...args); };
+const log = (...args: unknown[]) => {
+    if (DEV) console.log(...args);
+};
 
 const state = reactive({
     isVisible: false,

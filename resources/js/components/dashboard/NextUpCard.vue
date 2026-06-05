@@ -98,48 +98,92 @@ const toneClasses = computed(() => {
         v-if="item"
         as="section"
         customSize
-        :glowColor="countdown?.tone === 'overdue' ? 'red' : countdown?.tone === 'now' ? 'orange' : 'blue'"
-        :className="[
-            'surface-card premium-hover relative p-0 w-full min-w-0',
-        ].join(' ')"
+        :glowColor="
+            countdown?.tone === 'overdue'
+                ? 'red'
+                : countdown?.tone === 'now'
+                  ? 'orange'
+                  : 'blue'
+        "
+        :className="
+            ['surface-card premium-hover relative p-0 w-full min-w-0'].join(' ')
+        "
         aria-label="Next up"
     >
-        <div class="relative flex flex-col w-full min-w-0 h-full p-5">
-            <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+        <div class="relative flex h-full w-full min-w-0 flex-col p-5">
+            <div
+                class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+            >
                 <div
-                    :class="['absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl pointer-events-none bg-gradient-to-br to-transparent', toneClasses.glow]"
+                    :class="[
+                        'pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-gradient-to-br to-transparent blur-3xl',
+                        toneClasses.glow,
+                    ]"
                     aria-hidden="true"
                 />
             </div>
 
-        <div class="relative z-10 flex items-start justify-between gap-3 w-full min-w-0">
-            <div class="min-w-0 flex-1">
-                <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/70">Next Up</p>
-                <h3 class="mt-1 text-sm sm:text-base font-black text-foreground truncate drop-shadow-sm">{{ item.title }}</h3>
-                <p v-if="item.meta" class="mt-0.5 text-[11px] text-muted-foreground truncate">{{ item.meta }}</p>
-            </div>
-            <span :class="['shrink-0 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.2em]', toneClasses.chip]">
-                <Zap v-if="item.kind === 'exam'" class="h-3 w-3" />
-                <Clock v-else class="h-3 w-3" />
-                {{ item.kind }}
-            </span>
-        </div>
-
-        <div class="relative z-10 mt-4 flex items-end justify-between gap-3 w-full">
-            <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground/60">{{ toneClasses.badge }}</p>
-                <p class="mt-0.5 text-xl sm:text-2xl font-black tracking-tight tabular-nums" :class="countdown?.overdue ? 'text-destructive' : 'text-foreground'">
-                    {{ countdown?.label ?? '—' }}
-                </p>
-            </div>
-            <Link
-                :href="item.href"
-                class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-primary transition-all hover:bg-primary hover:text-primary-foreground shadow-sm"
+            <div
+                class="relative z-10 flex w-full min-w-0 items-start justify-between gap-3"
             >
-                Open
-                <ArrowUpRight class="h-3 w-3" />
-            </Link>
-        </div>
+                <div class="min-w-0 flex-1">
+                    <p
+                        class="text-[10px] font-black tracking-[0.25em] text-muted-foreground/70 uppercase"
+                    >
+                        Next Up
+                    </p>
+                    <h3
+                        class="mt-1 truncate text-sm font-black text-foreground drop-shadow-sm sm:text-base"
+                    >
+                        {{ item.title }}
+                    </h3>
+                    <p
+                        v-if="item.meta"
+                        class="mt-0.5 truncate text-[11px] text-muted-foreground"
+                    >
+                        {{ item.meta }}
+                    </p>
+                </div>
+                <span
+                    :class="[
+                        'inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black tracking-[0.2em] uppercase',
+                        toneClasses.chip,
+                    ]"
+                >
+                    <Zap v-if="item.kind === 'exam'" class="h-3 w-3" />
+                    <Clock v-else class="h-3 w-3" />
+                    {{ item.kind }}
+                </span>
+            </div>
+
+            <div
+                class="relative z-10 mt-4 flex w-full items-end justify-between gap-3"
+            >
+                <div class="min-w-0">
+                    <p
+                        class="text-[10px] font-black tracking-[0.25em] text-muted-foreground/60 uppercase"
+                    >
+                        {{ toneClasses.badge }}
+                    </p>
+                    <p
+                        class="mt-0.5 text-xl font-black tracking-tight tabular-nums sm:text-2xl"
+                        :class="
+                            countdown?.overdue
+                                ? 'text-destructive'
+                                : 'text-foreground'
+                        "
+                    >
+                        {{ countdown?.label ?? '—' }}
+                    </p>
+                </div>
+                <Link
+                    :href="item.href"
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-[10px] font-black tracking-[0.2em] text-primary uppercase shadow-sm transition-all hover:bg-primary hover:text-primary-foreground"
+                >
+                    Open
+                    <ArrowUpRight class="h-3 w-3" />
+                </Link>
+            </div>
         </div>
     </SpotlightCard>
 </template>

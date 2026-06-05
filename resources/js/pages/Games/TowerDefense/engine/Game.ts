@@ -11,7 +11,13 @@ import {
     TextureStyle,
     type Renderer,
 } from 'pixi.js';
-import type { EnemyDef, HudState, LevelPayload, TowerDef, WaveDef } from './types';
+import type {
+    EnemyDef,
+    HudState,
+    LevelPayload,
+    TowerDef,
+    WaveDef,
+} from './types';
 
 // Prefer crisp pixel-art scaling globally for generated textures.
 TextureStyle.defaultOptions.scaleMode = 'nearest';
@@ -73,7 +79,14 @@ interface Projectile {
 
 type ListenerMap = {
     hud: (state: HudState) => void;
-    end: (result: { status: 'win' | 'lose'; score: number; waves: number; lives: number; goldSpent: number; duration: number }) => void;
+    end: (result: {
+        status: 'win' | 'lose';
+        score: number;
+        waves: number;
+        lives: number;
+        goldSpent: number;
+        duration: number;
+    }) => void;
     waveComplete: (payload: { waveIdx: number }) => void;
     waveStarting: (payload: { waveIdx: number; totalWaves: number }) => void;
 };
@@ -87,7 +100,13 @@ export interface GameSnapshot {
     score: number;
     goldSpent: number;
     elapsedMs: number;
-    towers: Array<{ slug: string; tileX: number; tileY: number; tier: number; totalCost: number }>;
+    towers: Array<{
+        slug: string;
+        tileX: number;
+        tileY: number;
+        tier: number;
+        totalCost: number;
+    }>;
 }
 
 // ---------- Pixel-art texture generation ----------
@@ -96,7 +115,11 @@ export interface GameSnapshot {
 
 const PIXEL = 4; // logical pixel size in real pixels for generated textures
 
-function buildEnemyTexture(renderer: Renderer, color: number, accent = 0x111111): Texture {
+function buildEnemyTexture(
+    renderer: Renderer,
+    color: number,
+    accent = 0x111111,
+): Texture {
     // 8x8 pixel-art blob with eyes, like a little creep
     const g = new Graphics();
     const size = 8;
@@ -104,16 +127,25 @@ function buildEnemyTexture(renderer: Renderer, color: number, accent = 0x111111)
     g.rect(1 * PIXEL, 6 * PIXEL, 6 * PIXEL, PIXEL).fill(0x000000);
     // body (roundish)
     const body: [number, number, number, number][] = [
-        [2, 1, 4, 1], [1, 2, 6, 3], [1, 5, 6, 1], [2, 6, 4, 1],
+        [2, 1, 4, 1],
+        [1, 2, 6, 3],
+        [1, 5, 6, 1],
+        [2, 6, 4, 1],
     ];
-    body.forEach(([x, y, w, h]) => g.rect(x * PIXEL, y * PIXEL, w * PIXEL, h * PIXEL).fill(color));
+    body.forEach(([x, y, w, h]) =>
+        g.rect(x * PIXEL, y * PIXEL, w * PIXEL, h * PIXEL).fill(color),
+    );
     // eyes
     g.rect(2 * PIXEL, 3 * PIXEL, PIXEL, PIXEL).fill(accent);
     g.rect(5 * PIXEL, 3 * PIXEL, PIXEL, PIXEL).fill(accent);
     // highlight
     g.rect(2 * PIXEL, 2 * PIXEL, PIXEL, PIXEL).fill(0xffffff);
 
-    const rt = RenderTexture.create({ width: size * PIXEL, height: size * PIXEL, antialias: false });
+    const rt = RenderTexture.create({
+        width: size * PIXEL,
+        height: size * PIXEL,
+        antialias: false,
+    });
     renderer.render({ container: g, target: rt });
     g.destroy();
     return rt;
@@ -127,13 +159,24 @@ function buildTowerBaseTexture(renderer: Renderer, color: number): Texture {
     g.rect(PIXEL, PIXEL, (S - 2) * PIXEL, (S - 2) * PIXEL).fill(0x0f172a);
     g.rect(2 * PIXEL, 2 * PIXEL, (S - 4) * PIXEL, (S - 4) * PIXEL).fill(color);
     // corner bolts
-    [[1, 1], [S - 2, 1], [1, S - 2], [S - 2, S - 2]].forEach(([x, y]) =>
+    [
+        [1, 1],
+        [S - 2, 1],
+        [1, S - 2],
+        [S - 2, S - 2],
+    ].forEach(([x, y]) =>
         g.rect(x * PIXEL, y * PIXEL, PIXEL, PIXEL).fill(0x1e293b),
     );
     // inner dot
-    g.rect((S / 2 - 1) * PIXEL, (S / 2 - 1) * PIXEL, 2 * PIXEL, 2 * PIXEL).fill(0x0f172a);
+    g.rect((S / 2 - 1) * PIXEL, (S / 2 - 1) * PIXEL, 2 * PIXEL, 2 * PIXEL).fill(
+        0x0f172a,
+    );
 
-    const rt = RenderTexture.create({ width: S * PIXEL, height: S * PIXEL, antialias: false });
+    const rt = RenderTexture.create({
+        width: S * PIXEL,
+        height: S * PIXEL,
+        antialias: false,
+    });
     renderer.render({ container: g, target: rt });
     g.destroy();
     return rt;
@@ -149,7 +192,11 @@ function buildTowerBarrelTexture(renderer: Renderer, color: number): Texture {
     g.rect(0, 0, 4 * PIXEL, H * PIXEL).fill(0x1e293b); // back block
     g.rect((W - 2) * PIXEL, PIXEL, 2 * PIXEL, (H - 2) * PIXEL).fill(0xffffff); // muzzle highlight
 
-    const rt = RenderTexture.create({ width: W * PIXEL, height: H * PIXEL, antialias: false });
+    const rt = RenderTexture.create({
+        width: W * PIXEL,
+        height: H * PIXEL,
+        antialias: false,
+    });
     renderer.render({ container: g, target: rt });
     g.destroy();
     return rt;
@@ -161,7 +208,11 @@ function buildProjectileTexture(renderer: Renderer, color: number): Texture {
     g.rect(0, PIXEL, 3 * PIXEL, PIXEL).fill(color);
     g.rect(PIXEL, 2 * PIXEL, PIXEL, PIXEL).fill(color);
     g.rect(PIXEL, PIXEL, PIXEL, PIXEL).fill(0xffffff);
-    const rt = RenderTexture.create({ width: 3 * PIXEL, height: 3 * PIXEL, antialias: false });
+    const rt = RenderTexture.create({
+        width: 3 * PIXEL,
+        height: 3 * PIXEL,
+        antialias: false,
+    });
     renderer.render({ container: g, target: rt });
     g.destroy();
     return rt;
@@ -177,7 +228,11 @@ function buildTilePathTexture(renderer: Renderer, tileSize: number): Texture {
     for (let i = 4; i < tileSize; i += 8) {
         g.rect(i, tileSize / 2 - 1, 2, 2).fill(0x38bdf8);
     }
-    const rt = RenderTexture.create({ width: tileSize, height: tileSize, antialias: false });
+    const rt = RenderTexture.create({
+        width: tileSize,
+        height: tileSize,
+        antialias: false,
+    });
     renderer.render({ container: g, target: rt });
     g.destroy();
     return rt;
@@ -208,13 +263,20 @@ function buildCoreTexture(renderer: Renderer): Texture {
     g.rect(3 * P, 13 * P, P, P).fill(0x0f172a);
     g.rect(12 * P, 13 * P, P, P).fill(0x0f172a);
     const size = 16 * P;
-    const rt = RenderTexture.create({ width: size, height: size, antialias: false });
+    const rt = RenderTexture.create({
+        width: size,
+        height: size,
+        antialias: false,
+    });
     renderer.render({ container: g, target: rt });
     g.destroy();
     return rt;
 }
 
-function buildBuildableTileTexture(renderer: Renderer, tileSize: number): Texture {
+function buildBuildableTileTexture(
+    renderer: Renderer,
+    tileSize: number,
+): Texture {
     const g = new Graphics();
     g.rect(0, 0, tileSize, tileSize).fill(0x0a0a0a);
     // dithered background
@@ -228,7 +290,11 @@ function buildBuildableTileTexture(renderer: Renderer, tileSize: number): Textur
     g.rect(0, tileSize - 1, tileSize, 1).fill(0x1f2937);
     g.rect(0, 0, 1, tileSize).fill(0x1f2937);
     g.rect(tileSize - 1, 0, 1, tileSize).fill(0x1f2937);
-    const rt = RenderTexture.create({ width: tileSize, height: tileSize, antialias: false });
+    const rt = RenderTexture.create({
+        width: tileSize,
+        height: tileSize,
+        antialias: false,
+    });
     renderer.render({ container: g, target: rt });
     g.destroy();
     return rt;
@@ -339,8 +405,14 @@ export class TowerDefenseGame {
         this.app.canvas.style.imageRendering = 'pixelated';
 
         // Build textures
-        this.pathTileTex = buildTilePathTexture(this.app.renderer, this.tileSize);
-        this.buildableTileTex = buildBuildableTileTexture(this.app.renderer, this.tileSize);
+        this.pathTileTex = buildTilePathTexture(
+            this.app.renderer,
+            this.tileSize,
+        );
+        this.buildableTileTex = buildBuildableTileTexture(
+            this.app.renderer,
+            this.tileSize,
+        );
 
         // Layers
         this.bgLayer = new Container();
@@ -351,7 +423,16 @@ export class TowerDefenseGame {
         this.projectileLayer = new Container();
         this.uiLayer = new Graphics();
         this.coreLayer = new Container();
-        this.app.stage.addChild(this.bgLayer, this.pathLayer, this.hoverLayer, this.uiLayer, this.towerLayer, this.coreLayer, this.enemyLayer, this.projectileLayer);
+        this.app.stage.addChild(
+            this.bgLayer,
+            this.pathLayer,
+            this.hoverLayer,
+            this.uiLayer,
+            this.towerLayer,
+            this.coreLayer,
+            this.enemyLayer,
+            this.projectileLayer,
+        );
 
         // Ghost sprites for preview
         this.ghostBase = new Sprite();
@@ -437,7 +518,9 @@ export class TowerDefenseGame {
 
     sellSelected() {
         if (this.selectedPlacedTowerId == null) return;
-        const idx = this.towers.findIndex((x) => x.id === this.selectedPlacedTowerId);
+        const idx = this.towers.findIndex(
+            (x) => x.id === this.selectedPlacedTowerId,
+        );
         if (idx < 0) return;
         const t = this.towers[idx];
         const refund = Math.floor(t.totalCost * 0.7);
@@ -463,7 +546,8 @@ export class TowerDefenseGame {
         if (next.damage != null) t.damage = next.damage;
         if (next.range != null) t.range = next.range * this.tileSize;
         if (next.fire_rate != null) t.fireRate = next.fire_rate;
-        if (next.splash_radius != null) t.splashRadius = next.splash_radius * this.tileSize;
+        if (next.splash_radius != null)
+            t.splashRadius = next.splash_radius * this.tileSize;
         this.drawTierMarks(t);
         this.emitHud();
     }
@@ -481,7 +565,9 @@ export class TowerDefenseGame {
             range: t.range / this.tileSize,
             fireRate: t.fireRate,
             sellRefund: Math.floor(t.totalCost * 0.7),
-            nextUpgrade: next ? { cost: next.cost, damage: next.damage, range: next.range } : null,
+            nextUpgrade: next
+                ? { cost: next.cost, damage: next.damage, range: next.range }
+                : null,
         };
     }
 
@@ -537,9 +623,11 @@ export class TowerDefenseGame {
                     if (!up) break;
                     placed.tier++;
                     if (up.damage != null) placed.damage = up.damage;
-                    if (up.range != null) placed.range = up.range * this.tileSize;
+                    if (up.range != null)
+                        placed.range = up.range * this.tileSize;
                     if (up.fire_rate != null) placed.fireRate = up.fire_rate;
-                    if (up.splash_radius != null) placed.splashRadius = up.splash_radius * this.tileSize;
+                    if (up.splash_radius != null)
+                        placed.splashRadius = up.splash_radius * this.tileSize;
                 }
                 this.drawTierMarks(placed);
             }
@@ -550,9 +638,17 @@ export class TowerDefenseGame {
 
     getResult() {
         return {
-            status: this.status === 'win' ? 'win' : this.status === 'lose' ? 'lose' : 'abandoned',
+            status:
+                this.status === 'win'
+                    ? 'win'
+                    : this.status === 'lose'
+                      ? 'lose'
+                      : 'abandoned',
             score: this.score,
-            waves_completed: Math.max(0, this.currentWaveIdx + (this.waveActive ? 0 : 1)),
+            waves_completed: Math.max(
+                0,
+                this.currentWaveIdx + (this.waveActive ? 0 : 1),
+            ),
             gold_spent: this.goldSpent,
             lives_remaining: this.lives,
             duration_ms: Math.floor(this.elapsedMs),
@@ -617,14 +713,19 @@ export class TowerDefenseGame {
                 cur.timer = 0;
                 return;
             }
-            while (cur.timer >= spawn.interval_ms && cur.emitted < spawn.count) {
+            while (
+                cur.timer >= spawn.interval_ms &&
+                cur.emitted < spawn.count
+            ) {
                 cur.timer -= spawn.interval_ms;
                 this.spawnEnemy(spawn.enemy);
                 cur.emitted++;
             }
         });
 
-        const allEmitted = wave.spawns.every((s, i) => this.spawnCursors[i].emitted >= s.count);
+        const allEmitted = wave.spawns.every(
+            (s, i) => this.spawnCursors[i].emitted >= s.count,
+        );
         const allGone = this.enemies.every((e) => !e.alive || e.reachedEnd);
         if (allEmitted && allGone) {
             this.waveActive = false;
@@ -672,8 +773,12 @@ export class TowerDefenseGame {
         sprite.y = wp.y;
         this.enemyLayer.addChild(sprite);
 
-        const hpBarBg = new Graphics().rect(-def.radius, -def.radius - 8, def.radius * 2, 4).fill(0x000000);
-        const hpBar = new Graphics().rect(-def.radius, -def.radius - 8, def.radius * 2, 4).fill(0x22c55e);
+        const hpBarBg = new Graphics()
+            .rect(-def.radius, -def.radius - 8, def.radius * 2, 4)
+            .fill(0x000000);
+        const hpBar = new Graphics()
+            .rect(-def.radius, -def.radius - 8, def.radius * 2, 4)
+            .fill(0x22c55e);
         sprite.addChild(hpBarBg, hpBar);
 
         const e: Enemy = {
@@ -763,7 +868,10 @@ export class TowerDefenseGame {
         const speed = t.def.projectile_speed * this.tileSize;
         let tex = this.projectileTextures.get(t.def.color);
         if (!tex) {
-            tex = buildProjectileTexture(this.app.renderer, parseColor(t.def.color));
+            tex = buildProjectileTexture(
+                this.app.renderer,
+                parseColor(t.def.color),
+            );
             this.projectileTextures.set(t.def.color, tex);
         }
         const sprite = new Sprite(tex);
@@ -793,7 +901,9 @@ export class TowerDefenseGame {
         for (const p of this.projectiles) {
             if (!p.alive) continue;
             if (p.targetId != null) {
-                const t = this.enemies.find((e) => e.id === p.targetId && e.alive && !e.reachedEnd);
+                const t = this.enemies.find(
+                    (e) => e.id === p.targetId && e.alive && !e.reachedEnd,
+                );
                 if (t) {
                     const dx = t.x - p.x;
                     const dy = t.y - p.y;
@@ -811,8 +921,12 @@ export class TowerDefenseGame {
                     this.applyDamage(e, p.damage);
                     if (p.splashRadius > 0) {
                         for (const e2 of this.enemies) {
-                            if (e2 === e || !e2.alive || e2.reachedEnd) continue;
-                            if (Math.hypot(e2.x - e.x, e2.y - e.y) <= p.splashRadius) {
+                            if (e2 === e || !e2.alive || e2.reachedEnd)
+                                continue;
+                            if (
+                                Math.hypot(e2.x - e.x, e2.y - e.y) <=
+                                p.splashRadius
+                            ) {
                                 this.applyDamage(e2, p.damage * 0.6);
                             }
                         }
@@ -823,7 +937,8 @@ export class TowerDefenseGame {
             }
             const w = this.level.map.grid_width * this.tileSize;
             const h = this.level.map.grid_height * this.tileSize;
-            if (p.x < -40 || p.y < -40 || p.x > w + 40 || p.y > h + 40) p.alive = false;
+            if (p.x < -40 || p.y < -40 || p.x > w + 40 || p.y > h + 40)
+                p.alive = false;
         }
         const next: Projectile[] = [];
         for (const p of this.projectiles) {
@@ -841,8 +956,12 @@ export class TowerDefenseGame {
         e.hp -= effective;
         if (e.hp <= 0) {
             e.alive = false;
-            this.gold += Math.round(e.def.bounty * this.level.difficulty.gold_mult);
-            this.score += Math.round(e.def.score * this.level.difficulty.score_mult);
+            this.gold += Math.round(
+                e.def.bounty * this.level.difficulty.gold_mult,
+            );
+            this.score += Math.round(
+                e.def.score * this.level.difficulty.score_mult,
+            );
         }
     }
 
@@ -858,7 +977,9 @@ export class TowerDefenseGame {
     private tryPlaceTower(tileX: number, tileY: number) {
         if (!this.selectedTowerSlug) return;
         if (!this.isBuildable(tileX, tileY)) return;
-        const def = this.level.towers.find((t) => t.slug === this.selectedTowerSlug);
+        const def = this.level.towers.find(
+            (t) => t.slug === this.selectedTowerSlug,
+        );
         if (!def) return;
         if (this.gold < def.cost) return;
         this.gold -= def.cost;
@@ -866,12 +987,18 @@ export class TowerDefenseGame {
 
         let baseTex = this.towerBaseTextures.get(def.slug);
         if (!baseTex) {
-            baseTex = buildTowerBaseTexture(this.app.renderer, parseColor(def.color));
+            baseTex = buildTowerBaseTexture(
+                this.app.renderer,
+                parseColor(def.color),
+            );
             this.towerBaseTextures.set(def.slug, baseTex);
         }
         let barrelTex = this.towerBarrelTextures.get(def.slug);
         if (!barrelTex) {
-            barrelTex = buildTowerBarrelTexture(this.app.renderer, parseColor(def.color));
+            barrelTex = buildTowerBarrelTexture(
+                this.app.renderer,
+                parseColor(def.color),
+            );
             this.towerBarrelTextures.set(def.slug, barrelTex);
         }
 
@@ -924,25 +1051,46 @@ export class TowerDefenseGame {
         if (!t.tierMarks) return;
         t.tierMarks.clear();
         for (let i = 0; i < t.tier; i++) {
-            t.tierMarks.rect(-9 + i * 6, this.tileSize * 0.3, 4, 4).fill(0xfde68a);
+            t.tierMarks
+                .rect(-9 + i * 6, this.tileSize * 0.3, 4, 4)
+                .fill(0xfde68a);
         }
     }
 
     private isBuildable(tx: number, ty: number): boolean {
-        if (tx < 0 || ty < 0 || tx >= this.level.map.grid_width || ty >= this.level.map.grid_height) return false;
+        if (
+            tx < 0 ||
+            ty < 0 ||
+            tx >= this.level.map.grid_width ||
+            ty >= this.level.map.grid_height
+        )
+            return false;
         if (this.pathTiles.has(`${tx},${ty}`)) return false;
-        if (this.towers.some((t) => t.tileX === tx && t.tileY === ty)) return false;
+        if (this.towers.some((t) => t.tileX === tx && t.tileY === ty))
+            return false;
         return true;
     }
 
-    private moveTower(towerId: number, newTileX: number, newTileY: number): boolean {
+    private moveTower(
+        towerId: number,
+        newTileX: number,
+        newTileY: number,
+    ): boolean {
         if (!this.awaitingWaveStart) return false; // Can only move towers during build phase
         const towerToMove = this.towers.find((t) => t.id === towerId);
         if (!towerToMove) return false;
 
         // Check if the new tile is buildable and not occupied by another tower
         if (!this.isBuildable(newTileX, newTileY)) return false;
-        if (this.towers.some((t) => t.id !== towerId && t.tileX === newTileX && t.tileY === newTileY)) return false;
+        if (
+            this.towers.some(
+                (t) =>
+                    t.id !== towerId &&
+                    t.tileX === newTileX &&
+                    t.tileY === newTileY,
+            )
+        )
+            return false;
 
         // Update tower's position
         towerToMove.tileX = newTileX;
@@ -1029,16 +1177,22 @@ export class TowerDefenseGame {
         const barW = this.tileSize * 1.6;
         const barH = 6;
         const barY = last.y - targetPx / 2 - 12;
-        const bg = new Graphics().rect(last.x - barW / 2, barY, barW, barH).fill(0x000000);
-        const fg = new Graphics().rect(last.x - barW / 2, barY, barW, barH).fill(0x22c55e);
+        const bg = new Graphics()
+            .rect(last.x - barW / 2, barY, barW, barH)
+            .fill(0x000000);
+        const fg = new Graphics()
+            .rect(last.x - barW / 2, barY, barW, barH)
+            .fill(0x22c55e);
         this.coreLayer.addChild(bg, fg);
         this.coreHpBarBg = bg;
         this.coreHpBar = fg;
     }
 
     private updateCoreAnim(dt: number) {
-        if (this.coreHitTimer > 0) this.coreHitTimer = Math.max(0, this.coreHitTimer - dt);
-        if (this.coreShakeTimer > 0) this.coreShakeTimer = Math.max(0, this.coreShakeTimer - dt);
+        if (this.coreHitTimer > 0)
+            this.coreHitTimer = Math.max(0, this.coreHitTimer - dt);
+        if (this.coreShakeTimer > 0)
+            this.coreShakeTimer = Math.max(0, this.coreShakeTimer - dt);
         if (!this.coreSprite) return;
         const last = this.waypointsPx[this.waypointsPx.length - 1];
         if (this.coreShakeTimer > 0) {
@@ -1066,8 +1220,12 @@ export class TowerDefenseGame {
             const barH = 6;
             const targetPx = this.tileSize * 1.5;
             const barY = last.y - targetPx / 2 - 12;
-            const color = pct > 0.5 ? 0x22c55e : pct > 0.25 ? 0xeab308 : 0xef4444;
-            this.coreHpBar.clear().rect(last.x - barW / 2, barY, barW * pct, barH).fill(color);
+            const color =
+                pct > 0.5 ? 0x22c55e : pct > 0.25 ? 0xeab308 : 0xef4444;
+            this.coreHpBar
+                .clear()
+                .rect(last.x - barW / 2, barY, barW * pct, barH)
+                .fill(color);
         }
     }
 
@@ -1081,9 +1239,17 @@ export class TowerDefenseGame {
             e.sprite.y = Math.round(e.y);
             if (e.hpBar && e.hpBarBg) {
                 const pct = Math.max(0, e.hp / e.maxHp);
-                e.hpBar.clear().rect(-e.def.radius, -e.def.radius - 8, e.def.radius * 2 * pct, 4).fill(
-                    pct > 0.5 ? 0x22c55e : pct > 0.25 ? 0xeab308 : 0xef4444,
-                );
+                e.hpBar
+                    .clear()
+                    .rect(
+                        -e.def.radius,
+                        -e.def.radius - 8,
+                        e.def.radius * 2 * pct,
+                        4,
+                    )
+                    .fill(
+                        pct > 0.5 ? 0x22c55e : pct > 0.25 ? 0xeab308 : 0xef4444,
+                    );
             }
         }
         // Towers (rotate barrels)
@@ -1112,14 +1278,20 @@ export class TowerDefenseGame {
             let isBuildable = false;
 
             if (this.selectedTowerSlug) {
-                def = this.level.towers.find((t) => t.slug === this.selectedTowerSlug);
+                def = this.level.towers.find(
+                    (t) => t.slug === this.selectedTowerSlug,
+                );
                 isBuildable = this.isBuildable(tx, ty);
             } else if (this.movingTowerId) {
-                const towerToMove = this.towers.find((t) => t.id === this.movingTowerId);
+                const towerToMove = this.towers.find(
+                    (t) => t.id === this.movingTowerId,
+                );
                 if (towerToMove) {
                     def = towerToMove.def;
                     // For moving, check if the new tile is buildable AND not the tower's original spot
-                    isBuildable = this.isBuildable(tx, ty) && !(towerToMove.tileX === tx && towerToMove.tileY === ty);
+                    isBuildable =
+                        this.isBuildable(tx, ty) &&
+                        !(towerToMove.tileX === tx && towerToMove.tileY === ty);
                 }
             }
 
@@ -1127,12 +1299,18 @@ export class TowerDefenseGame {
                 // Draw ghost tower
                 let baseTex = this.towerBaseTextures.get(def.slug);
                 if (!baseTex) {
-                    baseTex = buildTowerBaseTexture(this.app.renderer, parseColor(def.color));
+                    baseTex = buildTowerBaseTexture(
+                        this.app.renderer,
+                        parseColor(def.color),
+                    );
                     this.towerBaseTextures.set(def.slug, baseTex);
                 }
                 let barrelTex = this.towerBarrelTextures.get(def.slug);
                 if (!barrelTex) {
-                    barrelTex = buildTowerBarrelTexture(this.app.renderer, parseColor(def.color));
+                    barrelTex = buildTowerBarrelTexture(
+                        this.app.renderer,
+                        parseColor(def.color),
+                    );
                     this.towerBarrelTextures.set(def.slug, barrelTex);
                 }
 
@@ -1145,7 +1323,9 @@ export class TowerDefenseGame {
                 this.ghostBase.visible = true;
 
                 this.ghostBarrel.texture = barrelTex;
-                this.ghostBarrel.scale.set((this.tileSize * 0.55) / barrelTex.width);
+                this.ghostBarrel.scale.set(
+                    (this.tileSize * 0.55) / barrelTex.width,
+                );
                 this.ghostBarrel.x = x;
                 this.ghostBarrel.y = y;
                 this.ghostBarrel.alpha = 0.4;
@@ -1156,32 +1336,62 @@ export class TowerDefenseGame {
                 const pulse = 0.15 + Math.sin(Date.now() / 300) * 0.05;
                 this.hoverLayer
                     .circle(x, y, def.range * this.tileSize)
-                    .fill({ color: isBuildable ? 0xffffff : 0xff0000, alpha: pulse })
-                    .stroke({ color: isBuildable ? 0xffffff : 0xff0000, width: 1, alpha: 0.25 });
+                    .fill({
+                        color: isBuildable ? 0xffffff : 0xff0000,
+                        alpha: pulse,
+                    })
+                    .stroke({
+                        color: isBuildable ? 0xffffff : 0xff0000,
+                        width: 1,
+                        alpha: 0.25,
+                    });
             }
 
             // Highlight the hovered tile
             this.hoverLayer
-                .rect(tx * this.tileSize, ty * this.tileSize, this.tileSize, this.tileSize)
-                .fill({ color: isBuildable ? 0x22c55e : 0xef4444, alpha: 0.25 });
+                .rect(
+                    tx * this.tileSize,
+                    ty * this.tileSize,
+                    this.tileSize,
+                    this.tileSize,
+                )
+                .fill({
+                    color: isBuildable ? 0x22c55e : 0xef4444,
+                    alpha: 0.25,
+                });
         }
 
         // Selected tower range ring and original position highlight if moving
         this.uiLayer.clear();
         if (this.selectedPlacedTowerId != null) {
-            const t = this.towers.find((x) => x.id === this.selectedPlacedTowerId);
+            const t = this.towers.find(
+                (x) => x.id === this.selectedPlacedTowerId,
+            );
             if (t) {
-                this.uiLayer.circle(t.x, t.y, t.range)
+                this.uiLayer
+                    .circle(t.x, t.y, t.range)
                     .fill({ color: 0xffffff, alpha: 0.05 })
                     .stroke({ color: 0xffffff, width: 1, alpha: 0.35 });
-                this.uiLayer.rect(t.tileX * this.tileSize, t.tileY * this.tileSize, this.tileSize, this.tileSize)
+                this.uiLayer
+                    .rect(
+                        t.tileX * this.tileSize,
+                        t.tileY * this.tileSize,
+                        this.tileSize,
+                        this.tileSize,
+                    )
                     .stroke({ color: 0xffffff, width: 1, alpha: 0.4 });
             }
         } else if (this.movingTowerId != null) {
             const t = this.towers.find((x) => x.id === this.movingTowerId);
             if (t) {
                 // Highlight original position of the tower being moved
-                this.uiLayer.rect(t.tileX * this.tileSize, t.tileY * this.tileSize, this.tileSize, this.tileSize)
+                this.uiLayer
+                    .rect(
+                        t.tileX * this.tileSize,
+                        t.tileY * this.tileSize,
+                        this.tileSize,
+                        this.tileSize,
+                    )
                     .stroke({ color: 0x38bdf8, width: 2, alpha: 0.8 }); // Blue highlight for original position
             }
         }
@@ -1191,16 +1401,24 @@ export class TowerDefenseGame {
     private emitHud() {
         const cb = this.listeners.hud;
         if (!cb) return;
-        const canBuild = !!(this.selectedTowerSlug && this.hoverTile && this.isBuildable(this.hoverTile.x, this.hoverTile.y));
+        const canBuild = !!(
+            this.selectedTowerSlug &&
+            this.hoverTile &&
+            this.isBuildable(this.hoverTile.x, this.hoverTile.y)
+        );
         cb({
             gold: this.gold,
             lives: this.lives,
             wave: Math.max(0, this.currentWaveIdx + 1),
             totalWaves: this.level.waves.length,
             awaitingWaveStart: this.awaitingWaveStart,
-            nextWaveIdx: Math.min(this.level.waves.length, this.currentWaveIdx + 2),
+            nextWaveIdx: Math.min(
+                this.level.waves.length,
+                this.currentWaveIdx + 2,
+            ),
             score: this.score,
-            enemiesAlive: this.enemies.filter((e) => e.alive && !e.reachedEnd).length,
+            enemiesAlive: this.enemies.filter((e) => e.alive && !e.reachedEnd)
+                .length,
             status: this.status,
             selectedTowerSlug: this.selectedTowerSlug,
             hoverTile: this.hoverTile,
@@ -1260,11 +1478,20 @@ export class TowerDefenseGame {
 
     private eventToTile(ev: MouseEvent) {
         const rect = this.app.canvas.getBoundingClientRect();
-        const scaleX = this.app.canvas.width / rect.width / (this.app.renderer.resolution || 1);
-        const scaleY = this.app.canvas.height / rect.height / (this.app.renderer.resolution || 1);
+        const scaleX =
+            this.app.canvas.width /
+            rect.width /
+            (this.app.renderer.resolution || 1);
+        const scaleY =
+            this.app.canvas.height /
+            rect.height /
+            (this.app.renderer.resolution || 1);
         const x = (ev.clientX - rect.left) * scaleX;
         const y = (ev.clientY - rect.top) * scaleY;
-        return { tx: Math.floor(x / this.tileSize), ty: Math.floor(y / this.tileSize) };
+        return {
+            tx: Math.floor(x / this.tileSize),
+            ty: Math.floor(y / this.tileSize),
+        };
     }
 
     private attachInput() {

@@ -97,17 +97,27 @@ const isDemoVideoOpen = ref(false);
 const { isTransitioningTheme } = useAppearance();
 
 const brandName = computed(() => props.schoolBranding?.name || 'LSI Engine');
-const brandAccentColor = computed(() => props.schoolBranding?.accentColor || '#f59e0b');
+const brandAccentColor = computed(
+    () => props.schoolBranding?.accentColor || '#f59e0b',
+);
 
 // Interaction Modes
 const syncInteractionModes = () => {
     isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
-    prefersReducedMotion.value = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    prefersReducedMotion.value = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+    ).matches;
 };
 
 // Mouse Effects
 const handleGlobalMouseMove = (e: MouseEvent) => {
-    if (!mouseGlow.value || !backgroundGrid.value || isCoarsePointer.value || prefersReducedMotion.value) return;
+    if (
+        !mouseGlow.value ||
+        !backgroundGrid.value ||
+        isCoarsePointer.value ||
+        prefersReducedMotion.value
+    )
+        return;
 
     const { clientX, clientY } = e;
     const xPercent = clientX / window.innerWidth;
@@ -117,14 +127,14 @@ const handleGlobalMouseMove = (e: MouseEvent) => {
         x: clientX,
         y: clientY,
         duration: 1.2,
-        ease: 'power3.out'
+        ease: 'power3.out',
     });
 
     gsap.to(backgroundGrid.value, {
         x: (xPercent - 0.5) * 40,
         y: (yPercent - 0.5) * 40,
         duration: 1.5,
-        ease: 'power2.out'
+        ease: 'power2.out',
     });
 };
 
@@ -151,7 +161,8 @@ const closeDemoVideo = () => {
 };
 
 // Text Scramble Utility
-const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*_-+';
+const SCRAMBLE_CHARS =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*_-+';
 const scrambleText = (el: HTMLElement) => {
     const original = el.dataset.scramble || el.textContent || '';
     const totalDuration = 600;
@@ -165,11 +176,15 @@ const scrambleText = (el: HTMLElement) => {
         const resolveCount = Math.floor(progress * chars.length);
         for (let i = 0; i < resolveCount; i++) resolved[i] = true;
 
-        el.textContent = chars.map((c, i) => {
-            if (c === ' ') return ' ';
-            if (resolved[i]) return c;
-            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-        }).join('');
+        el.textContent = chars
+            .map((c, i) => {
+                if (c === ' ') return ' ';
+                if (resolved[i]) return c;
+                return SCRAMBLE_CHARS[
+                    Math.floor(Math.random() * SCRAMBLE_CHARS.length)
+                ];
+            })
+            .join('');
 
         if (progress < 1) requestAnimationFrame(tick);
         else el.textContent = original;
@@ -191,7 +206,10 @@ const initScrollReveal = () => {
         const delay = parseFloat(el.dataset.revealDelay || '0');
         const duration = parseFloat(el.dataset.revealDuration || '1.1');
 
-        const offsetMap: Record<string, { x?: number; y?: number; scale?: number }> = {
+        const offsetMap: Record<
+            string,
+            { x?: number; y?: number; scale?: number }
+        > = {
             up: { y: 40 },
             down: { y: -40 },
             left: { x: -50 },
@@ -201,9 +219,10 @@ const initScrollReveal = () => {
         };
         const offset = offsetMap[variant] ?? offsetMap.up;
 
-        const targets: Element[] | HTMLElement = staggerAttr > 0 && el.children.length > 0
-            ? Array.from(el.children)
-            : el;
+        const targets: Element[] | HTMLElement =
+            staggerAttr > 0 && el.children.length > 0
+                ? Array.from(el.children)
+                : el;
 
         const fromVars: gsap.TweenVars = {
             opacity: 0,
@@ -255,22 +274,34 @@ const initDirectionalReveal = () => {
 
         const hideUp = () => {
             gsap.to(section, {
-                opacity: 0, y: -40, filter: 'blur(10px)',
-                duration: 0.55, ease: 'power2.in', overwrite: 'auto',
+                opacity: 0,
+                y: -40,
+                filter: 'blur(10px)',
+                duration: 0.55,
+                ease: 'power2.in',
+                overwrite: 'auto',
             });
         };
 
         const hideDown = () => {
             gsap.to(section, {
-                opacity: 0, y: 40, filter: 'blur(10px)',
-                duration: 0.55, ease: 'power2.in', overwrite: 'auto',
+                opacity: 0,
+                y: 40,
+                filter: 'blur(10px)',
+                duration: 0.55,
+                ease: 'power2.in',
+                overwrite: 'auto',
             });
         };
 
         const show = () => {
             gsap.to(section, {
-                opacity: 1, y: 0, filter: 'blur(0px)',
-                duration: 0.7, ease: 'expo.out', overwrite: 'auto',
+                opacity: 1,
+                y: 0,
+                filter: 'blur(0px)',
+                duration: 0.7,
+                ease: 'expo.out',
+                overwrite: 'auto',
             });
         };
 
@@ -285,8 +316,8 @@ const initDirectionalReveal = () => {
             trigger: section,
             start: 'bottom top+=40',
             end: 'bottom top',
-            onLeave: hideUp,        // scrolled down past the section
-            onEnterBack: show,      // scrolled back up into the section
+            onLeave: hideUp, // scrolled down past the section
+            onEnterBack: show, // scrolled back up into the section
         });
 
         // Bottom edge: hide/show as section enters/leaves past the bottom of the viewport.
@@ -294,15 +325,15 @@ const initDirectionalReveal = () => {
             trigger: section,
             start: 'top bottom-=40',
             end: 'top bottom',
-            onEnter: show,          // scrolled down into the section from below
-            onLeaveBack: hideDown,  // scrolled up so the section drops below the viewport
+            onEnter: show, // scrolled down into the section from below
+            onLeaveBack: hideDown, // scrolled up so the section drops below the viewport
         });
     });
 };
 
 const initScrambleElements = () => {
     const els = document.querySelectorAll<HTMLElement>('[data-scramble]');
-    els.forEach(el => {
+    els.forEach((el) => {
         el.dataset.scramble = el.textContent?.trim() || '';
         ScrollTrigger.create({
             trigger: el,
@@ -315,14 +346,20 @@ const initScrambleElements = () => {
 
 // Boot Overlay Content
 const bootMessage = computed(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('logged_out') === 'true') {
+    if (
+        typeof window !== 'undefined' &&
+        sessionStorage.getItem('logged_out') === 'true'
+    ) {
         return 'SESSION TERMINATED';
     }
     return brandName.value.toUpperCase();
 });
 
 const bootSubtext = computed(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('logged_out') === 'true') {
+    if (
+        typeof window !== 'undefined' &&
+        sessionStorage.getItem('logged_out') === 'true'
+    ) {
         return 'Safely Terminating Active Node Sessions...';
     }
     return 'Booting System Components...';
@@ -332,13 +369,18 @@ let gsapCtx: gsap.Context | null = null;
 let removeMediaListeners = () => {};
 
 onMounted(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('logged_out') === 'true') {
+    if (
+        typeof window !== 'undefined' &&
+        sessionStorage.getItem('logged_out') === 'true'
+    ) {
         isLoggingOut.value = true;
     }
 
     syncInteractionModes();
     const coarsePointerQuery = window.matchMedia('(pointer: coarse)');
-    const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const reducedMotionQuery = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+    );
     const onMediaChange = () => syncInteractionModes();
     coarsePointerQuery.addEventListener('change', onMediaChange);
     reducedMotionQuery.addEventListener('change', onMediaChange);
@@ -351,7 +393,7 @@ onMounted(() => {
         const motionFactor = prefersReducedMotion.value ? 0.55 : 1;
         const tl = gsap.timeline({
             paused: true,
-            defaults: { ease: 'expo.out', duration: 1.4 * motionFactor }
+            defaults: { ease: 'expo.out', duration: 1.4 * motionFactor },
         });
 
         // Initial State
@@ -371,63 +413,79 @@ onMounted(() => {
             y: 0,
             stagger: 0.04,
             duration: 0.8 * motionFactor,
-            ease: 'back.out(2)'
+            ease: 'back.out(2)',
         })
-        .to('.boot-progress', {
-            scaleX: 1,
-            duration: 0.4 * motionFactor,
-            ease: 'power4.inOut'
-        }, '-=0.4')
-        .to(bootOverlay.value, {
-            clipPath: 'inset(0 0 100% 0)',
-            duration: 1.4 * motionFactor,
-            ease: 'power4.inOut',
-            onComplete: () => {
-                showBootOverlay.value = false;
-                isBooted.value = true;
-                gsap.to(terminalReveal.value, {
-                    autoAlpha: 1,
-                    y: 0,
-                    scale: 1,
-                    filter: 'blur(0px)',
-                    duration: prefersReducedMotion.value ? 0.35 : 1.15,
-                    delay: prefersReducedMotion.value ? 0 : 0.15,
-                    ease: 'expo.out',
-                    clearProps: 'filter',
-                    onStart: () => {
-                        isTerminalActive.value = true;
+            .to(
+                '.boot-progress',
+                {
+                    scaleX: 1,
+                    duration: 0.4 * motionFactor,
+                    ease: 'power4.inOut',
+                },
+                '-=0.4',
+            )
+            .to(
+                bootOverlay.value,
+                {
+                    clipPath: 'inset(0 0 100% 0)',
+                    duration: 1.4 * motionFactor,
+                    ease: 'power4.inOut',
+                    onComplete: () => {
+                        showBootOverlay.value = false;
+                        isBooted.value = true;
+                        gsap.to(terminalReveal.value, {
+                            autoAlpha: 1,
+                            y: 0,
+                            scale: 1,
+                            filter: 'blur(0px)',
+                            duration: prefersReducedMotion.value ? 0.35 : 1.15,
+                            delay: prefersReducedMotion.value ? 0 : 0.15,
+                            ease: 'expo.out',
+                            clearProps: 'filter',
+                            onStart: () => {
+                                isTerminalActive.value = true;
+                            },
+                        });
+                        if (isLoggingOut.value) {
+                            sessionStorage.removeItem('logged_out');
+                            isLoggingOut.value = false;
+                        }
                     },
-                });
-                if (isLoggingOut.value) {
-                    sessionStorage.removeItem('logged_out');
-                    isLoggingOut.value = false;
-                }
-            }
-        }, '+=0.2')
-        .to(structuralLines.value, {
-            scaleX: 1,
-            scaleY: 1,
-            stagger: 0.1,
-            duration: 1.2,
-            ease: 'power4.inOut'
-        }, '-=0.8')
-        .from('.nav-item', {
-            y: -20,
-            opacity: 0,
-            stagger: 0.05,
-            duration: 0.4 * motionFactor
-        }, '-=0.8');
+                },
+                '+=0.2',
+            )
+            .to(
+                structuralLines.value,
+                {
+                    scaleX: 1,
+                    scaleY: 1,
+                    stagger: 0.1,
+                    duration: 1.2,
+                    ease: 'power4.inOut',
+                },
+                '-=0.8',
+            )
+            .from(
+                '.nav-item',
+                {
+                    y: -20,
+                    opacity: 0,
+                    stagger: 0.05,
+                    duration: 0.4 * motionFactor,
+                },
+                '-=0.8',
+            );
 
         // Premium Scroll Parallax for Background Grid
         gsap.to(backgroundGrid.value, {
             y: -200,
-            ease: "none",
+            ease: 'none',
             scrollTrigger: {
                 trigger: mainContainer.value,
-                start: "top top",
-                end: "bottom bottom",
-                scrub: true
-            }
+                start: 'top top',
+                end: 'bottom bottom',
+                scrub: true,
+            },
         });
 
         // Global Ambient Animations
@@ -439,7 +497,7 @@ onMounted(() => {
                 ease: 'sine.inOut',
                 yoyo: true,
                 repeat: -1,
-                stagger: 0.5
+                stagger: 0.5,
             });
         }
 
@@ -450,7 +508,7 @@ onMounted(() => {
         initScrambleElements();
         initScrollReveal();
         initDirectionalReveal();
-        
+
         // Signal Jitter for LivePulse (if we want to keep some logic here, but better in component)
         // We'll let components handle their own local animations for better performance
     });
@@ -473,29 +531,68 @@ const orbLayers = [
 
 <template>
     <Head title="Welcome | LUAV Learning Engine" />
-    
-    <div 
+
+    <div
         ref="mainContainer"
         @mousemove="handleGlobalMouseMove"
-        class="theme-neutral-page relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20 transition-colors duration-500"
+        class="theme-neutral-page relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
         :style="{ '--school-accent': brandAccentColor }"
     >
         <!-- Global Background Elements -->
-        <div ref="mouseGlow" class="pointer-events-none fixed -left-[200px] -top-[200px] z-0 hidden h-[400px] w-[400px] rounded-full bg-primary/[0.06] blur-[150px] will-change-transform dark:bg-primary/[0.12] md:block"></div>
-        <div ref="backgroundGrid" class="fixed inset-[-100px] z-0 pointer-events-none opacity-[0.025] dark:opacity-[0.05] will-change-transform">
-            <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 60px 60px;"></div>
+        <div
+            ref="mouseGlow"
+            class="pointer-events-none fixed -top-[200px] -left-[200px] z-0 hidden h-[400px] w-[400px] rounded-full bg-primary/[0.06] blur-[150px] will-change-transform md:block dark:bg-primary/[0.12]"
+        ></div>
+        <div
+            ref="backgroundGrid"
+            class="pointer-events-none fixed inset-[-100px] z-0 opacity-[0.025] will-change-transform dark:opacity-[0.05]"
+        >
+            <div
+                class="absolute inset-0"
+                style="
+                    background-image:
+                        linear-gradient(
+                            var(--color-border) 1px,
+                            transparent 1px
+                        ),
+                        linear-gradient(
+                            90deg,
+                            var(--color-border) 1px,
+                            transparent 1px
+                        );
+                    background-size: 60px 60px;
+                "
+            ></div>
         </div>
-        <div v-for="(orb, index) in orbLayers" :key="index" ref="ambientOrbs" class="ambient-orb pointer-events-none absolute z-[1] rounded-full bg-primary/5 blur-3xl" :style="orb.style"></div>
+        <div
+            v-for="(orb, index) in orbLayers"
+            :key="index"
+            ref="ambientOrbs"
+            class="ambient-orb pointer-events-none absolute z-[1] rounded-full bg-primary/5 blur-3xl"
+            :style="orb.style"
+        ></div>
 
         <FloatingPrisms :prefers-reduced-motion="prefersReducedMotion" />
 
         <!-- Structural Lines -->
-        <div class="fixed inset-y-0 left-4 lg:left-24 w-px bg-border/10 lg:bg-border/20 z-0 origin-top" ref="structuralLines"></div>
-        <div class="fixed inset-y-0 right-4 lg:right-24 w-px bg-border/10 lg:bg-border/20 z-0 origin-bottom" ref="structuralLines"></div>
-        <div class="fixed inset-x-0 top-1/4 h-px bg-border/20 z-0 hidden lg:block origin-left" ref="structuralLines"></div>
-        <div class="fixed inset-x-0 bottom-1/4 h-px bg-border/20 z-0 hidden lg:block origin-right" ref="structuralLines"></div>
+        <div
+            class="fixed inset-y-0 left-4 z-0 w-px origin-top bg-border/10 lg:left-24 lg:bg-border/20"
+            ref="structuralLines"
+        ></div>
+        <div
+            class="fixed inset-y-0 right-4 z-0 w-px origin-bottom bg-border/10 lg:right-24 lg:bg-border/20"
+            ref="structuralLines"
+        ></div>
+        <div
+            class="fixed inset-x-0 top-1/4 z-0 hidden h-px origin-left bg-border/20 lg:block"
+            ref="structuralLines"
+        ></div>
+        <div
+            class="fixed inset-x-0 bottom-1/4 z-0 hidden h-px origin-right bg-border/20 lg:block"
+            ref="structuralLines"
+        ></div>
 
-        <WelcomeHeader 
+        <WelcomeHeader
             :can-register="canRegister"
             :auth="$page.props.auth"
             :dashboard="dashboard"
@@ -507,8 +604,10 @@ const orbLayers = [
             @reset-magnetic="resetMagnetic"
         />
 
-        <main class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-6 pt-12 pb-32 lg:px-16 lg:pt-28">
-            <WelcomeHero 
+        <main
+            class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-6 pt-12 pb-32 lg:px-16 lg:pt-28"
+        >
+            <WelcomeHero
                 :can-register="canRegister"
                 :auth="$page.props.auth"
                 :dashboard="dashboard"
@@ -521,29 +620,33 @@ const orbLayers = [
                 @watch-demo="openDemoVideo"
             >
                 <template #background>
-                    <NeuralParticleNetwork 
-                        :is-coarse-pointer="isCoarsePointer" 
+                    <NeuralParticleNetwork
+                        :is-coarse-pointer="isCoarsePointer"
                         :prefers-reduced-motion="prefersReducedMotion"
                         :paused="isTransitioningTheme"
                     />
                 </template>
             </WelcomeHero>
 
-            <div
-                id="engine"
-                ref="terminalReveal"
-                class="scroll-mt-32"
-            >
+            <div id="engine" ref="terminalReveal" class="scroll-mt-32">
                 <SystemTerminal :active="isTerminalActive" />
             </div>
 
             <Motion
                 :initial="{ opacity: 0, y: 30, filter: 'blur(10px)' }"
-                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
+                :animate="
+                    isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}
+                "
+                :in-view="
+                    isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}
+                "
                 :in-view-options="{ once: true, margin: '-100px' }"
-                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
-                class="mt-10 lg:mt-16 grid gap-4 lg:grid-cols-[1.4fr_1fr]"
+                :transition="{
+                    duration: 1,
+                    ease: [0.16, 1, 0.3, 1],
+                    delay: 0.2,
+                }"
+                class="mt-10 grid gap-4 lg:mt-16 lg:grid-cols-[1.4fr_1fr]"
             >
                 <LivePulse />
                 <EnvironmentPanel />
@@ -558,7 +661,7 @@ const orbLayers = [
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 1.5 }"
             >
-                <SystemMetrics 
+                <SystemMetrics
                     :total-users="totalUsers"
                     :total-exams="totalExams"
                     :total-assignments="totalAssignments"
@@ -570,8 +673,16 @@ const orbLayers = [
                 id="architecture"
                 class="scroll-mt-32"
                 :initial="{ opacity: 0, scale: 0.95, filter: 'blur(14px)' }"
-                :animate="isBooted ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : {}"
-                :in-view="isBooted ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : {}"
+                :animate="
+                    isBooted
+                        ? { opacity: 1, scale: 1, filter: 'blur(0px)' }
+                        : {}
+                "
+                :in-view="
+                    isBooted
+                        ? { opacity: 1, scale: 1, filter: 'blur(0px)' }
+                        : {}
+                "
                 :in-view-options="{ once: true, margin: '-50px' }"
                 :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
             >
@@ -580,15 +691,19 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, y: 50, filter: 'blur(16px)' }"
-                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
+                :animate="
+                    isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}
+                "
+                :in-view="
+                    isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}
+                "
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 1, ease: 'ease-out' }"
             >
                 <DimensionalCore />
             </Motion>
 
-            <FeatureCards 
+            <FeatureCards
                 id="features"
                 class="scroll-mt-32"
                 :is-coarse-pointer="isCoarsePointer"
@@ -608,8 +723,12 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, y: 40, filter: 'blur(10px)' }"
-                :animate="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
-                :in-view="isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}"
+                :animate="
+                    isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}
+                "
+                :in-view="
+                    isBooted ? { opacity: 1, y: 0, filter: 'blur(0px)' } : {}
+                "
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 0.8, ease: 'ease-out' }"
             >
@@ -618,12 +737,16 @@ const orbLayers = [
 
             <Motion
                 :initial="{ opacity: 0, x: -20, filter: 'blur(8px)' }"
-                :animate="isBooted ? { opacity: 1, x: 0, filter: 'blur(0px)' } : {}"
-                :in-view="isBooted ? { opacity: 1, x: 0, filter: 'blur(0px)' } : {}"
+                :animate="
+                    isBooted ? { opacity: 1, x: 0, filter: 'blur(0px)' } : {}
+                "
+                :in-view="
+                    isBooted ? { opacity: 1, x: 0, filter: 'blur(0px)' } : {}
+                "
                 :in-view-options="{ once: true }"
                 :transition="{ duration: 0.8, delay: 0.1 }"
             >
-                <DemoQuiz 
+                <DemoQuiz
                     :auth="$page.props.auth"
                     :register="register"
                     :dashboard="dashboard"
@@ -644,49 +767,86 @@ const orbLayers = [
         <WelcomeFooter />
 
         <!-- Entrance Boot Overlay -->
-        <div 
+        <div
             v-if="showBootOverlay"
             ref="bootOverlay"
             class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background p-6"
         >
-            <div class="scanline absolute inset-0 pointer-events-none opacity-[0.05]"></div>
+            <div
+                class="scanline pointer-events-none absolute inset-0 opacity-[0.05]"
+            ></div>
             <div class="relative flex flex-col items-center gap-4">
                 <div class="flex flex-col items-center gap-2">
                     <div class="flex items-center gap-2 overflow-hidden">
-                        <span v-for="(letter, i) in bootMessage.split('')" :key="i" ref="bootText" class="text-xs font-black tracking-[0.6em] uppercase opacity-0 translate-y-4">
+                        <span
+                            v-for="(letter, i) in bootMessage.split('')"
+                            :key="i"
+                            ref="bootText"
+                            class="translate-y-4 text-xs font-black tracking-[0.6em] uppercase opacity-0"
+                        >
                             {{ letter === ' ' ? '\u00A0' : letter }}
                         </span>
                     </div>
-                    <div class="h-px w-32 bg-primary/20 overflow-hidden">
-                        <div class="boot-progress h-full w-full bg-primary origin-left scale-x-0"></div>
+                    <div class="h-px w-32 overflow-hidden bg-primary/20">
+                        <div
+                            class="boot-progress h-full w-full origin-left scale-x-0 bg-primary"
+                        ></div>
                     </div>
-                    <span class="text-[8px] font-bold text-muted-foreground uppercase tracking-widest opacity-60 mt-1">{{ bootSubtext }}</span>
+                    <span
+                        class="mt-1 text-[8px] font-bold tracking-widest text-muted-foreground uppercase opacity-60"
+                        >{{ bootSubtext }}</span
+                    >
                 </div>
             </div>
         </div>
 
-        <DemoVideoModal :open="isDemoVideoOpen" :video-url="demoVideoUrl" @close="closeDemoVideo" />
+        <DemoVideoModal
+            :open="isDemoVideoOpen"
+            :video-url="demoVideoUrl"
+            @close="closeDemoVideo"
+        />
     </div>
 </template>
 
 <style>
 /* Core necessary styles that are global or used by GSAP */
-.preserve-3d { transform-style: preserve-3d; }
+.preserve-3d {
+    transform-style: preserve-3d;
+}
 .scanline {
-    background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.5) 51%);
+    background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(0, 0, 0, 0.5) 51%
+    );
     background-size: 100% 4px;
 }
 @keyframes scan-vertical {
-    from { transform: translateY(0); }
-    to { transform: translateY(100vh); }
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(100vh);
+    }
 }
 @keyframes scan-horizontal {
-    from { transform: translateX(-100%); }
-    to { transform: translateX(1000%); }
+    from {
+        transform: translateX(-100%);
+    }
+    to {
+        transform: translateX(1000%);
+    }
 }
 /* Anti-FOUC for scroll-reveal targets — GSAP takes over on mount. */
-[data-reveal] { opacity: 0; will-change: transform, opacity, filter; }
+[data-reveal] {
+    opacity: 0;
+    will-change: transform, opacity, filter;
+}
 @media (prefers-reduced-motion: reduce) {
-    [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; }
+    [data-reveal] {
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+    }
 }
 </style>

@@ -1,29 +1,43 @@
 <script setup lang="ts">
 import gsap from 'gsap';
 import { Terminal, Command } from 'lucide-vue-next';
-import { ref, onMounted, onBeforeUnmount, watch, computed, type VNodeRef } from 'vue';
+import {
+    ref,
+    onMounted,
+    onBeforeUnmount,
+    watch,
+    computed,
+    type VNodeRef,
+} from 'vue';
 import { useLoader, LOADER_MESSAGES } from '@/composables/useLoader';
 
-const props = withDefaults(defineProps<{
-    show: boolean;
-    title?: string;
-    minDisplayMs?: number;
-}>(), {
-    title: 'KOAMISHIN.COM',
-    minDisplayMs: 600,
-});
+const props = withDefaults(
+    defineProps<{
+        show: boolean;
+        title?: string;
+        minDisplayMs?: number;
+    }>(),
+    {
+        title: 'KOAMISHIN.COM',
+        minDisplayMs: 600,
+    },
+);
 
 const { pendingHide, hide, message } = useLoader();
 
 const DEV = import.meta.env.DEV;
-const log = (...args: unknown[]) => { if (DEV) console.log(...args); };
+const log = (...args: unknown[]) => {
+    if (DEV) console.log(...args);
+};
 
 const loaderContainer = ref<HTMLElement | null>(null);
 const structuralLines = ref<HTMLElement[]>([]);
 const letterEls = ref<HTMLElement[]>([]);
 const progress = ref(0);
 
-const isTerminating = computed(() => message.value === LOADER_MESSAGES.TERMINATING);
+const isTerminating = computed(
+    () => message.value === LOADER_MESSAGES.TERMINATING,
+);
 const titleChars = computed(() => Array.from(props.title));
 
 // Reduced-motion preference
@@ -59,7 +73,9 @@ const setStructuralLineRef: VNodeRef = (el) => {
 };
 
 const tryExit = () => {
-    log(`[GlobalLoader] tryExit. progressDone: ${progressDone}, pendingHide: ${pendingHide.value}`);
+    log(
+        `[GlobalLoader] tryExit. progressDone: ${progressDone}, pendingHide: ${pendingHide.value}`,
+    );
     if (!(progressDone && pendingHide.value)) return;
 
     const elapsed = performance.now() - shownAt;
@@ -84,15 +100,21 @@ onBeforeUnmount(() => {
     setInertOnSiblings(false);
 });
 
-watch(() => props.show, (newVal) => {
-    log('[GlobalLoader] show ->', newVal);
-    if (newVal) {
-        startEntrance();
-    } else if (loaderContainer.value && loaderContainer.value.style.display !== 'none') {
-        log('[GlobalLoader] forcing exit');
-        startExit(true);
-    }
-});
+watch(
+    () => props.show,
+    (newVal) => {
+        log('[GlobalLoader] show ->', newVal);
+        if (newVal) {
+            startEntrance();
+        } else if (
+            loaderContainer.value &&
+            loaderContainer.value.style.display !== 'none'
+        ) {
+            log('[GlobalLoader] forcing exit');
+            startExit(true);
+        }
+    },
+);
 
 const startEntrance = () => {
     log('[GlobalLoader] Entrance');
@@ -127,18 +149,52 @@ const startEntrance = () => {
 
         if (isTerminating.value) {
             tl.to(structuralLines.value, {
-                scaleX: 1, scaleY: 1, stagger: 0.06, duration: 0.35, ease: 'power2.out',
-            }).to('.loader-reveal', {
-                y: 0, opacity: 1, stagger: 0.06, duration: 0.35, ease: 'power2.out',
-            }, '-=0.2');
+                scaleX: 1,
+                scaleY: 1,
+                stagger: 0.06,
+                duration: 0.35,
+                ease: 'power2.out',
+            }).to(
+                '.loader-reveal',
+                {
+                    y: 0,
+                    opacity: 1,
+                    stagger: 0.06,
+                    duration: 0.35,
+                    ease: 'power2.out',
+                },
+                '-=0.2',
+            );
         } else {
             tl.to(structuralLines.value, {
-                scaleX: 1, scaleY: 1, stagger: 0.1, duration: 0.8, ease: 'power4.inOut',
-            }).to(letterEls.value, {
-                y: '0%', opacity: 1, stagger: 0.06, duration: 0.9, ease: 'expo.out',
-            }, '-=0.3').to('.loader-reveal', {
-                y: 0, opacity: 1, stagger: 0.1, duration: 0.8, ease: 'expo.out',
-            }, '-=0.4');
+                scaleX: 1,
+                scaleY: 1,
+                stagger: 0.1,
+                duration: 0.8,
+                ease: 'power4.inOut',
+            })
+                .to(
+                    letterEls.value,
+                    {
+                        y: '0%',
+                        opacity: 1,
+                        stagger: 0.06,
+                        duration: 0.9,
+                        ease: 'expo.out',
+                    },
+                    '-=0.3',
+                )
+                .to(
+                    '.loader-reveal',
+                    {
+                        y: 0,
+                        opacity: 1,
+                        stagger: 0.1,
+                        duration: 0.8,
+                        ease: 'expo.out',
+                    },
+                    '-=0.4',
+                );
         }
     }
 
@@ -160,20 +216,26 @@ const startEntrance = () => {
                 tryExit();
             } else {
                 // Wait for pendingHide, then jump to 100
-                const stopWatch = watch(pendingHide, (v) => {
-                    if (!v) return;
-                    stopWatch();
-                    gsap.to(progressProxy, {
-                        val: 100,
-                        duration: 0.35,
-                        ease: 'power2.out',
-                        onUpdate: () => { progress.value = Math.floor(progressProxy.val); },
-                        onComplete: () => {
-                            progressDone = true;
-                            tryExit();
-                        },
-                    });
-                }, { immediate: true });
+                const stopWatch = watch(
+                    pendingHide,
+                    (v) => {
+                        if (!v) return;
+                        stopWatch();
+                        gsap.to(progressProxy, {
+                            val: 100,
+                            duration: 0.35,
+                            ease: 'power2.out',
+                            onUpdate: () => {
+                                progress.value = Math.floor(progressProxy.val);
+                            },
+                            onComplete: () => {
+                                progressDone = true;
+                                tryExit();
+                            },
+                        });
+                    },
+                    { immediate: true },
+                );
             }
         },
     });
@@ -190,7 +252,7 @@ const startExit = (fast: boolean = false) => {
 
     gsap.to(loaderContainer.value, {
         y: '-100%',
-        duration: prefersReducedMotion ? 0.2 : (fast ? 0.6 : 1.2),
+        duration: prefersReducedMotion ? 0.2 : fast ? 0.6 : 1.2,
         ease: fast ? 'expo.in' : 'expo.inOut',
         delay: fast || prefersReducedMotion ? 0 : 0.4,
         onComplete: () => {
@@ -218,24 +280,42 @@ watch(pendingHide, (isPending) => {
         aria-live="polite"
         aria-busy="true"
         :aria-label="`${message} — ${progress}%`"
-        class="global-loader fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background font-sans text-foreground selection:bg-primary/20 overflow-hidden"
-        style="display: none;"
+        class="global-loader fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
+        style="display: none"
     >
         <!-- Structural Grid Background -->
-        <div class="absolute inset-0 z-0 pointer-events-none opacity-[0.03] dark:opacity-[0.06]" aria-hidden="true">
-            <div class="absolute inset-0" style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 80px 80px;"></div>
+        <div
+            class="pointer-events-none absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.06]"
+            aria-hidden="true"
+        >
+            <div
+                class="absolute inset-0"
+                style="
+                    background-image:
+                        linear-gradient(
+                            var(--color-border) 1px,
+                            transparent 1px
+                        ),
+                        linear-gradient(
+                            90deg,
+                            var(--color-border) 1px,
+                            transparent 1px
+                        );
+                    background-size: 80px 80px;
+                "
+            ></div>
         </div>
 
         <!-- Structural Frame Lines -->
         <div
             :ref="setStructuralLineRef"
             aria-hidden="true"
-            class="fixed left-1/2 -translate-x-1/2 top-0 bottom-0 w-px bg-border/20 z-0 origin-top"
+            class="fixed top-0 bottom-0 left-1/2 z-0 w-px origin-top -translate-x-1/2 bg-border/20"
         ></div>
         <div
             :ref="setStructuralLineRef"
             aria-hidden="true"
-            class="fixed left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-border/20 z-0 origin-left"
+            class="fixed top-1/2 right-0 left-0 z-0 h-px origin-left -translate-y-1/2 bg-border/20"
         ></div>
 
         <main class="relative z-10 flex flex-col items-center gap-12 px-6">
@@ -244,15 +324,20 @@ watch(pendingHide, (isPending) => {
                 <h1
                     v-if="!isTerminating"
                     :aria-label="title"
-                    class="flex items-end overflow-hidden text-[12vw] md:text-8xl lg:text-[10rem] font-black tracking-[-0.04em] leading-none uppercase select-none"
+                    class="flex items-end overflow-hidden text-[12vw] leading-none font-black tracking-[-0.04em] uppercase select-none md:text-8xl lg:text-[10rem]"
                 >
                     <span
                         v-for="(char, i) in titleChars"
                         :key="i"
-                        :ref="(el) => { if (el) letterEls[i] = el as HTMLElement }"
+                        :ref="
+                            (el) => {
+                                if (el) letterEls[i] = el as HTMLElement;
+                            }
+                        "
                         aria-hidden="true"
                         class="loader-letter inline-block"
-                    >{{ char }}</span>
+                        >{{ char }}</span
+                    >
                 </h1>
                 <div
                     v-else
@@ -262,14 +347,16 @@ watch(pendingHide, (isPending) => {
             </div>
 
             <!-- Initialization Status -->
-            <div class="flex flex-col items-center gap-6 w-full max-w-xs">
-                <div class="flex items-center justify-between w-full text-[9px] font-black tracking-[0.4em] uppercase text-muted-foreground/60 loader-reveal">
+            <div class="flex w-full max-w-xs flex-col items-center gap-6">
+                <div
+                    class="loader-reveal flex w-full items-center justify-between text-[9px] font-black tracking-[0.4em] text-muted-foreground/60 uppercase"
+                >
                     <span>{{ message }}</span>
                     <span aria-hidden="true">{{ progress }}%</span>
                 </div>
 
                 <div
-                    class="h-px w-full bg-border/20 overflow-hidden loader-reveal"
+                    class="loader-reveal h-px w-full overflow-hidden bg-border/20"
                     role="progressbar"
                     :aria-valuenow="progress"
                     aria-valuemin="0"
@@ -281,10 +368,21 @@ watch(pendingHide, (isPending) => {
                     ></div>
                 </div>
 
-                <div class="flex items-center gap-3 opacity-30 loader-reveal" aria-hidden="true">
-                    <div class="h-1 w-1 rounded-full bg-primary animate-pulse"></div>
-                    <span class="text-[8px] font-black uppercase tracking-[0.5em] animate-pulse">
-                        {{ isTerminating ? 'Safely Disconnecting Active Node...' : 'Establishing Node Connectivity...' }}
+                <div
+                    class="loader-reveal flex items-center gap-3 opacity-30"
+                    aria-hidden="true"
+                >
+                    <div
+                        class="h-1 w-1 animate-pulse rounded-full bg-primary"
+                    ></div>
+                    <span
+                        class="animate-pulse text-[8px] font-black tracking-[0.5em] uppercase"
+                    >
+                        {{
+                            isTerminating
+                                ? 'Safely Disconnecting Active Node...'
+                                : 'Establishing Node Connectivity...'
+                        }}
                     </span>
                 </div>
             </div>
@@ -292,11 +390,15 @@ watch(pendingHide, (isPending) => {
 
         <!-- Environment Metadata Footer -->
         <div
-            class="fixed bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-8 opacity-20 text-[9px] font-bold tracking-[0.3em] uppercase loader-reveal"
+            class="loader-reveal fixed bottom-12 left-1/2 flex -translate-x-1/2 items-center gap-8 text-[9px] font-bold tracking-[0.3em] uppercase opacity-20"
             aria-hidden="true"
         >
-            <span class="flex items-center gap-2"><Terminal class="w-3 h-3" /> System_Root</span>
-            <span class="flex items-center gap-2"><Command class="w-3 h-3" /> Core_v6.4</span>
+            <span class="flex items-center gap-2"
+                ><Terminal class="h-3 w-3" /> System_Root</span
+            >
+            <span class="flex items-center gap-2"
+                ><Command class="h-3 w-3" /> Core_v6.4</span
+            >
         </div>
     </div>
 </template>

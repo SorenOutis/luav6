@@ -1,4 +1,9 @@
-export type UnlockRequirementKind = 'node' | 'xp' | 'level' | 'badge' | 'streak';
+export type UnlockRequirementKind =
+    | 'node'
+    | 'xp'
+    | 'level'
+    | 'badge'
+    | 'streak';
 
 export interface UnlockRequirement {
     kind: UnlockRequirementKind;
@@ -16,12 +21,12 @@ export interface NodeRewards {
 }
 
 export interface NodeTarget {
-    type: string;   // e.g. 'Exam'
+    type: string; // e.g. 'Exam'
     id: number;
 }
 
 export interface MapNodeDefinition {
-    id: string;          // slug
+    id: string; // slug
     title: string;
     type: 'lesson' | 'exam' | 'boss';
     x: number;
@@ -70,7 +75,11 @@ export interface RequirementEvaluation {
     detail: string;
 }
 
-export function evaluateRequirement(req: UnlockRequirement, player: PlayerProgress, nodeTitleLookup: Record<string, string>): RequirementEvaluation {
+export function evaluateRequirement(
+    req: UnlockRequirement,
+    player: PlayerProgress,
+    nodeTitleLookup: Record<string, string>,
+): RequirementEvaluation {
     switch (req.kind) {
         case 'node': {
             const slug = req.nodeSlug ?? '';
@@ -129,13 +138,19 @@ export function nodeStatus(
 ): 'locked' | 'available' | 'completed' {
     if (player.completedNodeSlugs.includes(node.id)) return 'completed';
 
-    const requirements = node.requirements && node.requirements.length
-        ? node.requirements
-        : (node.dependsOn ?? []).map<UnlockRequirement>(slug => ({ kind: 'node', nodeSlug: slug }));
+    const requirements =
+        node.requirements && node.requirements.length
+            ? node.requirements
+            : (node.dependsOn ?? []).map<UnlockRequirement>((slug) => ({
+                  kind: 'node',
+                  nodeSlug: slug,
+              }));
 
     if (!requirements.length) return 'available';
 
-    const allMet = requirements.every(r => evaluateRequirement(r, player, nodeTitleLookup).met);
+    const allMet = requirements.every(
+        (r) => evaluateRequirement(r, player, nodeTitleLookup).met,
+    );
     return allMet ? 'available' : 'locked';
 }
 
@@ -150,11 +165,38 @@ export const MAP_CONFIG: WorldBiome[] = [
             background: 'bg-emerald-50/30',
         },
         nodes: [
-            { id: 'os-1', title: 'The Call to Logic', type: 'lesson', x: 100, y: 100 },
-            { id: 'os-2', title: 'Variable Valley', type: 'lesson', x: 300, y: 150, dependsOn: ['os-1'] },
-            { id: 'os-3', title: 'Conditional Caves', type: 'lesson', x: 500, y: 100, dependsOn: ['os-2'] },
-            { id: 'os-boss', title: 'Guardian of Syntax', type: 'boss', x: 750, y: 200, dependsOn: ['os-3'] },
-        ]
+            {
+                id: 'os-1',
+                title: 'The Call to Logic',
+                type: 'lesson',
+                x: 100,
+                y: 100,
+            },
+            {
+                id: 'os-2',
+                title: 'Variable Valley',
+                type: 'lesson',
+                x: 300,
+                y: 150,
+                dependsOn: ['os-1'],
+            },
+            {
+                id: 'os-3',
+                title: 'Conditional Caves',
+                type: 'lesson',
+                x: 500,
+                y: 100,
+                dependsOn: ['os-2'],
+            },
+            {
+                id: 'os-boss',
+                title: 'Guardian of Syntax',
+                type: 'boss',
+                x: 750,
+                y: 200,
+                dependsOn: ['os-3'],
+            },
+        ],
     },
     {
         id: 'crystal-peak',
@@ -166,10 +208,30 @@ export const MAP_CONFIG: WorldBiome[] = [
             background: 'bg-blue-50/30',
         },
         nodes: [
-            { id: 'cp-1', title: 'Array Ascent', type: 'lesson', x: 100, y: 300 },
-            { id: 'cp-2', title: 'Object Overlook', type: 'lesson', x: 350, y: 250, dependsOn: ['cp-1'] },
-            { id: 'cp-boss', title: 'The Loop Master', type: 'boss', x: 600, y: 400, dependsOn: ['cp-2'] },
-        ]
+            {
+                id: 'cp-1',
+                title: 'Array Ascent',
+                type: 'lesson',
+                x: 100,
+                y: 300,
+            },
+            {
+                id: 'cp-2',
+                title: 'Object Overlook',
+                type: 'lesson',
+                x: 350,
+                y: 250,
+                dependsOn: ['cp-1'],
+            },
+            {
+                id: 'cp-boss',
+                title: 'The Loop Master',
+                type: 'boss',
+                x: 600,
+                y: 400,
+                dependsOn: ['cp-2'],
+            },
+        ],
     },
     {
         id: 'sunken-library',
@@ -181,9 +243,22 @@ export const MAP_CONFIG: WorldBiome[] = [
             background: 'bg-teal-50/30',
         },
         nodes: [
-            { id: 'sl-1', title: 'Data Depths', type: 'lesson', x: 200, y: 100 },
-            { id: 'sl-boss', title: 'The Archivist', type: 'boss', x: 500, y: 300, dependsOn: ['sl-1'] },
-        ]
+            {
+                id: 'sl-1',
+                title: 'Data Depths',
+                type: 'lesson',
+                x: 200,
+                y: 100,
+            },
+            {
+                id: 'sl-boss',
+                title: 'The Archivist',
+                type: 'boss',
+                x: 500,
+                y: 300,
+                dependsOn: ['sl-1'],
+            },
+        ],
     },
     {
         id: 'celestial-spire',
@@ -195,9 +270,22 @@ export const MAP_CONFIG: WorldBiome[] = [
             background: 'bg-violet-50/30',
         },
         nodes: [
-            { id: 'cs-1', title: 'Async Asteroids', type: 'lesson', x: 150, y: 400 },
-            { id: 'cs-boss', title: 'Event Horizon', type: 'boss', x: 450, y: 150, dependsOn: ['cs-1'] },
-        ]
+            {
+                id: 'cs-1',
+                title: 'Async Asteroids',
+                type: 'lesson',
+                x: 150,
+                y: 400,
+            },
+            {
+                id: 'cs-boss',
+                title: 'Event Horizon',
+                type: 'boss',
+                x: 450,
+                y: 150,
+                dependsOn: ['cs-1'],
+            },
+        ],
     },
     {
         id: 'hall-echoes',
@@ -209,7 +297,13 @@ export const MAP_CONFIG: WorldBiome[] = [
             background: 'bg-rose-50/30',
         },
         nodes: [
-            { id: 'final-exam', title: 'The Great Synthesis', type: 'boss', x: 400, y: 300 },
-        ]
-    }
+            {
+                id: 'final-exam',
+                title: 'The Great Synthesis',
+                type: 'boss',
+                x: 400,
+                y: 300,
+            },
+        ],
+    },
 ];

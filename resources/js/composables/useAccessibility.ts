@@ -6,7 +6,7 @@ export function useAccessibility() {
     const updateDyslexiaMode = (value: boolean) => {
         isDyslexiaFriendly.value = value;
         localStorage.setItem('dyslexia-friendly', value ? 'true' : 'false');
-        
+
         if (value) {
             document.documentElement.classList.add('dyslexia-friendly');
         } else {
@@ -28,6 +28,6 @@ export function useAccessibility() {
     return {
         isDyslexiaFriendly,
         toggleDyslexiaMode,
-        updateDyslexiaMode
+        updateDyslexiaMode,
     };
 }

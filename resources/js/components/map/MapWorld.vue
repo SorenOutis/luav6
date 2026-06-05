@@ -3,7 +3,12 @@ import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import gsap from 'gsap';
 import MapNode from './MapNode.vue';
 import MapPath from './MapPath.vue';
-import type { WorldBiome, MapNodeDefinition, PlayerProgress, UnlockRequirement } from '@/config/mapConfig';
+import type {
+    WorldBiome,
+    MapNodeDefinition,
+    PlayerProgress,
+    UnlockRequirement,
+} from '@/config/mapConfig';
 import { nodeStatus, evaluateRequirement } from '@/config/mapConfig';
 import { Plus, Minus, Locate, CheckCircle2, Play, Lock } from 'lucide-vue-next';
 
@@ -27,8 +32,8 @@ const titleLookup = computed(() => {
 const prereqSlugs = (node: MapNodeDefinition): string[] => {
     if (node.requirements?.length) {
         return node.requirements
-            .filter(r => r.kind === 'node' && r.nodeSlug)
-            .map(r => r.nodeSlug as string);
+            .filter((r) => r.kind === 'node' && r.nodeSlug)
+            .map((r) => r.nodeSlug as string);
     }
     return node.dependsOn ?? [];
 };
@@ -45,14 +50,27 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 1.8;
 
 // Evaluate a node's status via the shared helper (handles node/xp/level/badge/streak).
-const getNodeStatus = (node: MapNodeDefinition) => nodeStatus(node, props.player, titleLookup.value);
+const getNodeStatus = (node: MapNodeDefinition) =>
+    nodeStatus(node, props.player, titleLookup.value);
 
 /** For each node, how many of its unlock requirements are currently met. */
-const getReqProgress = (node: MapNodeDefinition): { met: number; total: number } => {
+const getReqProgress = (
+    node: MapNodeDefinition,
+): { met: number; total: number } => {
     const reqs: UnlockRequirement[] = node.requirements?.length
         ? node.requirements
-        : (node.dependsOn ?? []).map(slug => ({ kind: 'node', nodeSlug: slug }));
-    const met = reqs.reduce((acc, r) => acc + (evaluateRequirement(r, props.player, titleLookup.value).met ? 1 : 0), 0);
+        : (node.dependsOn ?? []).map((slug) => ({
+              kind: 'node',
+              nodeSlug: slug,
+          }));
+    const met = reqs.reduce(
+        (acc, r) =>
+            acc +
+            (evaluateRequirement(r, props.player, titleLookup.value).met
+                ? 1
+                : 0),
+        0,
+    );
     return { met, total: reqs.length };
 };
 
@@ -60,8 +78,12 @@ const getReqProgress = (node: MapNodeDefinition): { met: number; total: number }
 const stars = computed(() => {
     const seedStr = props.world.id;
     let seed = 0;
-    for (let i = 0; i < seedStr.length; i++) seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
-    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 0xffffffff; };
+    for (let i = 0; i < seedStr.length; i++)
+        seed = (seed * 31 + seedStr.charCodeAt(i)) >>> 0;
+    const rand = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 0xffffffff;
+    };
     const out: { x: number; y: number; r: number; o: number; d: number }[] = [];
     for (let i = 0; i < 90; i++) {
         out.push({
@@ -78,7 +100,13 @@ const stars = computed(() => {
 const applyOffset = (animate = false) => {
     if (!canvas.value) return;
     if (animate) {
-        gsap.to(canvas.value, { x: offset.x, y: offset.y, scale: zoom.value, duration: 0.6, ease: 'power3.out' });
+        gsap.to(canvas.value, {
+            x: offset.x,
+            y: offset.y,
+            scale: zoom.value,
+            duration: 0.6,
+            ease: 'power3.out',
+        });
     } else {
         gsap.set(canvas.value, { x: offset.x, y: offset.y, scale: zoom.value });
     }
@@ -128,7 +156,9 @@ const handleTouchMove = (e: TouchEvent) => {
     offset.y = startOffset.y + (e.touches[0].clientY - startPointer.y);
     applyOffset(false);
 };
-const handleTouchEnd = () => { isDragging.value = false; };
+const handleTouchEnd = () => {
+    isDragging.value = false;
+};
 
 // --- Wheel zoom (centred on cursor) ---
 const handleWheel = (e: WheelEvent) => {
@@ -156,7 +186,8 @@ const recenter = (animate = true) => {
     if (!viewport.value || props.world.nodes.length === 0) return;
     // Focus on the recommended next node when present, else first node.
     const focusNode = props.nextNodeSlug
-        ? (props.world.nodes.find(n => n.id === props.nextNodeSlug) ?? props.world.nodes[0])
+        ? (props.world.nodes.find((n) => n.id === props.nextNodeSlug) ??
+          props.world.nodes[0])
         : props.world.nodes[0];
     const rect = viewport.value.getBoundingClientRect();
     zoom.value = 1;
@@ -166,12 +197,25 @@ const recenter = (animate = true) => {
 };
 
 const onKey = (e: KeyboardEvent) => {
-    if (e.target && (e.target as HTMLElement).closest('input, textarea')) return;
+    if (e.target && (e.target as HTMLElement).closest('input, textarea'))
+        return;
     const step = 60;
-    if (e.key === 'ArrowLeft')  { offset.x += step; applyOffset(true); }
-    if (e.key === 'ArrowRight') { offset.x -= step; applyOffset(true); }
-    if (e.key === 'ArrowUp')    { offset.y += step; applyOffset(true); }
-    if (e.key === 'ArrowDown')  { offset.y -= step; applyOffset(true); }
+    if (e.key === 'ArrowLeft') {
+        offset.x += step;
+        applyOffset(true);
+    }
+    if (e.key === 'ArrowRight') {
+        offset.x -= step;
+        applyOffset(true);
+    }
+    if (e.key === 'ArrowUp') {
+        offset.y += step;
+        applyOffset(true);
+    }
+    if (e.key === 'ArrowDown') {
+        offset.y -= step;
+        applyOffset(true);
+    }
     if (e.key === '+' || e.key === '=') zoomIn();
     if (e.key === '-' || e.key === '_') zoomOut();
     if (e.key === '0') recenter(true);
@@ -184,13 +228,16 @@ onMounted(() => {
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 
 // Recenter when switching worlds
-watch(() => props.world.id, () => recenter(true));
+watch(
+    () => props.world.id,
+    () => recenter(true),
+);
 </script>
 
 <template>
-    <div 
+    <div
         ref="viewport"
-        class="relative w-full h-full overflow-hidden cursor-grab active:cursor-grabbing select-none"
+        class="relative h-full w-full cursor-grab overflow-hidden select-none active:cursor-grabbing"
         @mousedown="handleMouseDown"
         @mousemove="handleMouseMove"
         @mouseup="handleMouseUp"
@@ -201,12 +248,16 @@ watch(() => props.world.id, () => recenter(true));
         @wheel="handleWheel"
     >
         <!-- Background Layer (Parallax + Starfield) -->
-        <div class="absolute inset-0 z-0 pointer-events-none">
-            <div 
-                class="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,var(--tw-gradient-from)_0%,transparent_70%)]"
+        <div class="pointer-events-none absolute inset-0 z-0">
+            <div
+                class="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--tw-gradient-from)_0%,transparent_70%)] opacity-20"
                 :class="world.theme.background"
             ></div>
-            <svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+            <svg
+                class="absolute inset-0 h-full w-full"
+                preserveAspectRatio="none"
+                viewBox="0 0 100 100"
+            >
                 <circle
                     v-for="(s, i) in stars"
                     :key="i"
@@ -222,15 +273,18 @@ watch(() => props.world.id, () => recenter(true));
         </div>
 
         <!-- The Map Canvas -->
-        <div ref="canvas" class="absolute z-10 w-[2000px] h-[2000px]">
+        <div ref="canvas" class="absolute z-10 h-[2000px] w-[2000px]">
             <!-- Render Paths First (Underneath Nodes) -->
             <template v-for="node in world.nodes" :key="'path-' + node.id">
-                <template v-for="depId in prereqSlugs(node)" :key="`${depId}-${node.id}`">
-                    <MapPath 
-                        v-if="world.nodes.find(n => n.id === depId)"
+                <template
+                    v-for="depId in prereqSlugs(node)"
+                    :key="`${depId}-${node.id}`"
+                >
+                    <MapPath
+                        v-if="world.nodes.find((n) => n.id === depId)"
                         :id="`${depId}-${node.id}`"
-                        :startX="world.nodes.find(n => n.id === depId)!.x"
-                        :startY="world.nodes.find(n => n.id === depId)!.y"
+                        :startX="world.nodes.find((n) => n.id === depId)!.x"
+                        :startY="world.nodes.find((n) => n.id === depId)!.y"
                         :endX="node.x"
                         :endY="node.y"
                         :status="getNodeStatus(node)"
@@ -240,8 +294,8 @@ watch(() => props.world.id, () => recenter(true));
             </template>
 
             <!-- Render Nodes -->
-            <MapNode 
-                v-for="node in world.nodes" 
+            <MapNode
+                v-for="node in world.nodes"
                 :key="node.id"
                 :title="node.title"
                 :type="node.type"
@@ -258,34 +312,60 @@ watch(() => props.world.id, () => recenter(true));
         </div>
 
         <!-- Zoom / Recenter controls -->
-        <div class="absolute right-4 bottom-24 z-30 flex flex-col gap-1.5 p-1 bg-white/5 border border-white/10 rounded-full backdrop-blur-md pointer-events-auto">
-            <button type="button" @click="zoomIn" title="Zoom in (+)"
-                class="w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition">
-                <Plus class="w-4 h-4" />
+        <div
+            class="pointer-events-auto absolute right-4 bottom-24 z-30 flex flex-col gap-1.5 rounded-full border border-white/10 bg-white/5 p-1 backdrop-blur-md"
+        >
+            <button
+                type="button"
+                @click="zoomIn"
+                title="Zoom in (+)"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
+            >
+                <Plus class="h-4 w-4" />
             </button>
-            <button type="button" @click="zoomOut" title="Zoom out (-)"
-                class="w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition">
-                <Minus class="w-4 h-4" />
+            <button
+                type="button"
+                @click="zoomOut"
+                title="Zoom out (-)"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
+            >
+                <Minus class="h-4 w-4" />
             </button>
-            <button type="button" @click="recenter(true)" title="Jump back to your next step (0)"
-                class="w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition">
-                <Locate class="w-4 h-4" />
+            <button
+                type="button"
+                @click="recenter(true)"
+                title="Jump back to your next step (0)"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-white"
+            >
+                <Locate class="h-4 w-4" />
             </button>
         </div>
 
         <!-- Legend -->
-        <div class="absolute left-4 bottom-24 z-30 flex flex-col gap-1.5 px-3 py-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md pointer-events-none">
-            <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40 font-semibold">Key</div>
-            <div class="flex items-center gap-2 text-xs text-white/70">
-                <CheckCircle2 class="w-3.5 h-3.5 text-emerald-400" /> Done
+        <div
+            class="pointer-events-none absolute bottom-24 left-4 z-30 flex flex-col gap-1.5 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur-md"
+        >
+            <div
+                class="flex items-center gap-2 text-[10px] font-semibold tracking-widest text-white/40 uppercase"
+            >
+                Key
             </div>
             <div class="flex items-center gap-2 text-xs text-white/70">
-                <Play class="w-3.5 h-3.5" :style="{ color: world.theme.primary }" /> Ready to play
+                <CheckCircle2 class="h-3.5 w-3.5 text-emerald-400" /> Done
             </div>
             <div class="flex items-center gap-2 text-xs text-white/70">
-                <Lock class="w-3.5 h-3.5 text-white/40" /> Locked
+                <Play
+                    class="h-3.5 w-3.5"
+                    :style="{ color: world.theme.primary }"
+                />
+                Ready to play
             </div>
-            <div class="mt-1 pt-1 border-t border-white/10 text-[10px] text-white/40 tracking-wide">
+            <div class="flex items-center gap-2 text-xs text-white/70">
+                <Lock class="h-3.5 w-3.5 text-white/40" /> Locked
+            </div>
+            <div
+                class="mt-1 border-t border-white/10 pt-1 text-[10px] tracking-wide text-white/40"
+            >
                 Scroll to zoom · Drag to move
             </div>
         </div>
@@ -293,8 +373,12 @@ watch(() => props.world.id, () => recenter(true));
 </template>
 
 <style scoped>
-.cursor-grab { cursor: grab; }
-.cursor-grabbing { cursor: grabbing; }
+.cursor-grab {
+    cursor: grab;
+}
+.cursor-grabbing {
+    cursor: grabbing;
+}
 
 .map-star {
     animation-name: twinkle;
@@ -303,7 +387,12 @@ watch(() => props.world.id, () => recenter(true));
     transform-origin: center;
 }
 @keyframes twinkle {
-    0%, 100% { opacity: 0.25; }
-    50%      { opacity: 0.85; }
+    0%,
+    100% {
+        opacity: 0.25;
+    }
+    50% {
+        opacity: 0.85;
+    }
 }
 </style>

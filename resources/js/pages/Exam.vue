@@ -4,12 +4,29 @@ import { show as examsShow } from '@/routes/exams';
 import { onMounted, ref, computed, watch } from 'vue';
 
 usePoll(10000, {
-    only: ['exams']
+    only: ['exams'],
 });
 import gsap from 'gsap';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
-import { Calendar, Clock, ExternalLink, AlertCircle, Lock, Eye, EyeOff, CheckCircle2, XCircle, HelpCircle, Shield, ShieldOff, ArrowRight, Zap, Timer, TrendingUp } from 'lucide-vue-next';
+import {
+    Calendar,
+    Clock,
+    ExternalLink,
+    AlertCircle,
+    Lock,
+    Eye,
+    EyeOff,
+    CheckCircle2,
+    XCircle,
+    HelpCircle,
+    Shield,
+    ShieldOff,
+    ArrowRight,
+    Zap,
+    Timer,
+    TrendingUp,
+} from 'lucide-vue-next';
 import {
     Dialog,
     DialogContent,
@@ -68,11 +85,14 @@ const privacyMode = ref(true);
 const activeFilter = ref<'all' | 'active' | 'completed'>('all');
 const activeSection = ref('all');
 
-const getExamSectionName = (exam: Exam) => exam.section_name?.trim() || 'General';
+const getExamSectionName = (exam: Exam) =>
+    exam.section_name?.trim() || 'General';
 
 const statusFilteredExams = computed(() => {
-    if (activeFilter.value === 'active') return props.exams.filter(e => !e.is_locked);
-    if (activeFilter.value === 'completed') return props.exams.filter(e => e.is_locked);
+    if (activeFilter.value === 'active')
+        return props.exams.filter((e) => !e.is_locked);
+    if (activeFilter.value === 'completed')
+        return props.exams.filter((e) => e.is_locked);
     return props.exams;
 });
 
@@ -85,7 +105,11 @@ const sectionTabs = computed(() => {
     });
 
     return [
-        { key: 'all', label: 'All sections', count: statusFilteredExams.value.length },
+        {
+            key: 'all',
+            label: 'All sections',
+            count: statusFilteredExams.value.length,
+        },
         ...Array.from(sections.entries())
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([label, count]) => ({ key: label, label, count })),
@@ -95,53 +119,93 @@ const sectionTabs = computed(() => {
 const filteredExams = computed(() => {
     if (activeSection.value === 'all') return statusFilteredExams.value;
 
-    return statusFilteredExams.value.filter(exam => getExamSectionName(exam) === activeSection.value);
+    return statusFilteredExams.value.filter(
+        (exam) => getExamSectionName(exam) === activeSection.value,
+    );
 });
 
 // --- Summary Stats ---
-const activeCount = computed(() => props.exams.filter(e => !e.is_locked).length);
-const completedCount = computed(() => props.exams.filter(e => e.is_locked).length);
+const activeCount = computed(
+    () => props.exams.filter((e) => !e.is_locked).length,
+);
+const completedCount = computed(
+    () => props.exams.filter((e) => e.is_locked).length,
+);
 const totalCount = computed(() => props.exams.length);
 
 // --- Exam Time Info (countdown/overdue) ---
 const getExamTimeInfo = (exam: Exam) => {
     if (!exam.exam_date && !exam.exam_date_iso) {
-        return { label: 'NO_DEADLINE_SET', color: 'text-muted-foreground', isOverdue: false, isUpcoming: false };
+        return {
+            label: 'NO_DEADLINE_SET',
+            color: 'text-muted-foreground',
+            isOverdue: false,
+            isUpcoming: false,
+        };
     }
     const dateStr = exam.exam_date_iso || exam.exam_date;
     const examDate = new Date(dateStr);
     if (Number.isNaN(examDate.getTime())) {
-        return { label: 'INVALID_DATE', color: 'text-muted-foreground', isOverdue: false, isUpcoming: false };
+        return {
+            label: 'INVALID_DATE',
+            color: 'text-muted-foreground',
+            isOverdue: false,
+            isUpcoming: false,
+        };
     }
     const now = new Date();
     const diff = examDate.getTime() - now.getTime();
 
     if (exam.is_locked) {
-        return { label: `COMPLETED ${examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`, color: 'text-emerald-500', isOverdue: false, isUpcoming: false };
+        return {
+            label: `COMPLETED ${examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+            color: 'text-emerald-500',
+            isOverdue: false,
+            isUpcoming: false,
+        };
     }
     if (diff < 0) {
-        return { label: 'OVERDUE', color: 'text-red-500', isOverdue: true, isUpcoming: false };
+        return {
+            label: 'OVERDUE',
+            color: 'text-red-500',
+            isOverdue: true,
+            isUpcoming: false,
+        };
     }
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     if (days > 0) {
-        return { label: `${days}D ${hours}H REMAINING`, color: 'text-amber-500', isOverdue: false, isUpcoming: true };
+        return {
+            label: `${days}D ${hours}H REMAINING`,
+            color: 'text-amber-500',
+            isOverdue: false,
+            isUpcoming: true,
+        };
     }
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return { label: `${hours}H ${minutes}M REMAINING`, color: 'text-red-500', isOverdue: false, isUpcoming: true };
+    return {
+        label: `${hours}H ${minutes}M REMAINING`,
+        color: 'text-red-500',
+        isOverdue: false,
+        isUpcoming: true,
+    };
 };
 
 // --- Status Badge Info ---
 const getStatusBadgeInfo = (exam: Exam) => {
     const totalParts = exam.total_parts ?? exam.parts?.length ?? 0;
-    const submittedParts = exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
+    const submittedParts =
+        exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
     const allPartsDone = totalParts > 0 && submittedParts >= totalParts;
 
     if (allPartsDone) return { label: 'COMPLETED', color: 'bg-emerald-500' };
-    if (exam.is_locked && exam.status === 'closed') return { label: 'CLOSED', color: 'bg-red-500' };
+    if (exam.is_locked && exam.status === 'closed')
+        return { label: 'CLOSED', color: 'bg-red-500' };
     if (exam.is_locked) return { label: 'IN PROGRESS', color: 'bg-amber-500' };
-    if (exam.status === 'published') return { label: 'PUBLISHED', color: 'bg-blue-500' };
-    if (exam.status === 'closed') return { label: 'CLOSED', color: 'bg-red-500' };
+    if (exam.status === 'published')
+        return { label: 'PUBLISHED', color: 'bg-blue-500' };
+    if (exam.status === 'closed')
+        return { label: 'CLOSED', color: 'bg-red-500' };
     return { label: 'DRAFT', color: 'bg-muted text-muted-foreground' };
 };
 
@@ -158,7 +222,7 @@ const openReview = (exam: Exam) => {
 };
 
 const getSubmissionForPart = (exam: Exam, partId: number) => {
-    return exam.submissions?.find(s => s.exam_part_id === partId);
+    return exam.submissions?.find((s) => s.exam_part_id === partId);
 };
 
 const getAnswerForQuestion = (answers: any, questionNumber: number) => {
@@ -176,24 +240,32 @@ const getAnswerObjectForQuestion = (answers: any, questionNumber: number) => {
             return null;
         }
     }
-    
+
     if (!Array.isArray(parsedAnswers)) return null;
-    
+
     return parsedAnswers.find((a: any) => a.question_number === questionNumber);
 };
 
-const isAnswerCorrect = (question: any, submittedAnswer: any, answerObject: any = null) => {
+const isAnswerCorrect = (
+    question: any,
+    submittedAnswer: any,
+    answerObject: any = null,
+) => {
     if (submittedAnswer === null || submittedAnswer === undefined) return false;
 
     if (question.type === 'multiple_choice' || question.type === 'true_false') {
-        const correctIndex = question.options?.findIndex((opt: any) => opt.is_correct);
+        const correctIndex = question.options?.findIndex(
+            (opt: any) => opt.is_correct,
+        );
         return parseInt(submittedAnswer) === correctIndex;
     } else if (question.type === 'identification') {
-        const correctAnswers = Array.isArray(question.correct_answers) 
-            ? question.correct_answers 
+        const correctAnswers = Array.isArray(question.correct_answers)
+            ? question.correct_answers
             : [question.correct_answer];
-        return correctAnswers.some((ans: string) => 
-            ans?.toLowerCase().trim() === submittedAnswer?.toString().toLowerCase().trim()
+        return correctAnswers.some(
+            (ans: string) =>
+                ans?.toLowerCase().trim() ===
+                submittedAnswer?.toString().toLowerCase().trim(),
         );
     } else if (question.type === 'essay') {
         // For essays, we consider it "correct" if it has an AI score > 0
@@ -239,7 +311,7 @@ const animateCards = () => {
     gsap.set('.exam-card .bracket-corner', { scale: 0 });
 
     const tl = gsap.timeline({
-        defaults: { ease: 'expo.out', duration: 0.8 }
+        defaults: { ease: 'expo.out', duration: 0.8 },
     });
 
     tl.fromTo(
@@ -248,7 +320,7 @@ const animateCards = () => {
             opacity: 0,
             x: -40,
             skewX: -5,
-            scale: 0.98
+            scale: 0.98,
         },
         {
             opacity: 1,
@@ -258,9 +330,9 @@ const animateCards = () => {
             stagger: 0.08,
             duration: 1,
             ease: 'back.out(1.2)',
-            clearProps: 'filter'
+            clearProps: 'filter',
         },
-        '-=0.1'
+        '-=0.1',
     );
 
     tl.fromTo(
@@ -270,9 +342,9 @@ const animateCards = () => {
             scale: 1,
             stagger: 0.03,
             duration: 0.5,
-            ease: 'back.out(2)'
+            ease: 'back.out(2)',
         },
-        '-=0.8'
+        '-=0.8',
     );
 };
 
@@ -282,7 +354,7 @@ watch([activeFilter, activeSection], () => {
 });
 
 watch(sectionTabs, (tabs) => {
-    if (!tabs.some(tab => tab.key === activeSection.value)) {
+    if (!tabs.some((tab) => tab.key === activeSection.value)) {
         activeSection.value = 'all';
     }
 });
@@ -291,13 +363,14 @@ onMounted(() => {
     if (!examContainer.value) return;
 
     const tl = gsap.timeline({
-        defaults: { ease: 'expo.out', duration: 0.8 }
+        defaults: { ease: 'expo.out', duration: 0.8 },
     });
 
     // 1. Hero entrance
-    tl.fromTo('.exam-hero', 
+    tl.fromTo(
+        '.exam-hero',
         { opacity: 0, x: -20 },
-        { opacity: 1, x: 0, duration: 0.6 }
+        { opacity: 1, x: 0, duration: 0.6 },
     );
 
     // 2. Card entrance - Tactical slide-in with overshoot
@@ -307,7 +380,7 @@ onMounted(() => {
             opacity: 0,
             x: -40,
             skewX: -5,
-            scale: 0.98
+            scale: 0.98,
         },
         {
             opacity: 1,
@@ -317,9 +390,9 @@ onMounted(() => {
             stagger: 0.08,
             duration: 1,
             ease: 'back.out(1.2)',
-            clearProps: 'filter'
+            clearProps: 'filter',
         },
-        '-=0.5'
+        '-=0.5',
     );
 
     // 3. Bracket reveal - "Locking in" effect
@@ -330,9 +403,9 @@ onMounted(() => {
             scale: 1,
             stagger: 0.03,
             duration: 0.5,
-            ease: 'back.out(2)'
+            ease: 'back.out(2)',
         },
-        '-=0.8'
+        '-=0.8',
     );
 
     // Background orb animation refinement
@@ -344,7 +417,7 @@ onMounted(() => {
             duration: 12 + i * 4,
             repeat: -1,
             yoyo: true,
-            ease: 'sine.inOut'
+            ease: 'sine.inOut',
         });
     });
 });
@@ -354,46 +427,97 @@ onMounted(() => {
     <Head title="Exams" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div ref="examContainer" class="exam-theme-page flex h-full flex-1 flex-col gap-4 p-3 md:p-8 relative overflow-hidden bg-background perspective-[1000px]">
+        <div
+            ref="examContainer"
+            class="exam-theme-page relative flex h-full flex-1 flex-col gap-4 overflow-hidden bg-background p-3 perspective-[1000px] md:p-8"
+        >
             <!-- Glassy background decorative orbs -->
-            <div class="orb absolute -top-48 -right-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
-            <div class="orb absolute -bottom-48 -left-48 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+            <div
+                class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
+            ></div>
+            <div
+                class="orb pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
+            ></div>
 
             <!-- Header Section -->
-            <div class="animate-section exam-hero space-y-1 relative group/hero">
+            <div
+                class="animate-section exam-hero group/hero relative space-y-1"
+            >
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-[2px] bg-primary/40 rounded-full group-hover/hero:w-12 transition-all duration-500"></div>
-                            <h1 class="text-xl font-black tracking-tighter uppercase">Upcoming Exams</h1>
+                    <div
+                        class="h-[2px] w-8 rounded-full bg-primary/40 transition-all duration-500 group-hover/hero:w-12"
+                    ></div>
+                    <h1 class="text-xl font-black tracking-tighter uppercase">
+                        Upcoming Exams
+                    </h1>
                 </div>
-                <p class="text-muted-foreground text-xs font-medium pl-11 border-l-2 border-primary/10 group-hover/hero:border-primary/30 transition-colors">
+                <p
+                    class="border-l-2 border-primary/10 pl-11 text-xs font-medium text-muted-foreground transition-colors group-hover/hero:border-primary/30"
+                >
                     Manage your assessments and upcoming academic challenges.
                 </p>
             </div>
 
             <!-- Summary Stats -->
-            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <div class="exam-stat relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
-                    <div class="absolute top-0 left-0 w-0.5 h-full bg-amber-500/60 group-hover/stat:bg-amber-500 transition-colors"></div>
-                    <div class="flex items-center gap-2 skew-x-[-12deg]">
-                        <AlertCircle class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500" />
-                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">Active</span>
-                        <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ activeCount }}</span>
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div
+                    class="exam-stat group/stat relative overflow-hidden border border-border/50 bg-muted/20 px-3 py-1.5 sm:px-4 sm:py-2"
+                >
+                    <div
+                        class="absolute top-0 left-0 h-full w-0.5 bg-amber-500/60 transition-colors group-hover/stat:bg-amber-500"
+                    ></div>
+                    <div class="flex skew-x-[-12deg] items-center gap-2">
+                        <AlertCircle
+                            class="h-3 w-3 text-amber-500 sm:h-3.5 sm:w-3.5"
+                        />
+                        <span
+                            class="font-mono text-[9px] font-black tracking-[0.15em] text-muted-foreground uppercase sm:text-[10px]"
+                            >Active</span
+                        >
+                        <span
+                            class="font-mono text-sm font-black text-foreground sm:text-lg"
+                            >{{ activeCount }}</span
+                        >
                     </div>
                 </div>
-                <div class="exam-stat relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
-                    <div class="absolute top-0 left-0 w-0.5 h-full bg-emerald-500/60 group-hover/stat:bg-emerald-500 transition-colors"></div>
-                    <div class="flex items-center gap-2 skew-x-[-12deg]">
-                        <CheckCircle2 class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-500" />
-                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">Completed</span>
-                        <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ completedCount }}</span>
+                <div
+                    class="exam-stat group/stat relative overflow-hidden border border-border/50 bg-muted/20 px-3 py-1.5 sm:px-4 sm:py-2"
+                >
+                    <div
+                        class="absolute top-0 left-0 h-full w-0.5 bg-emerald-500/60 transition-colors group-hover/stat:bg-emerald-500"
+                    ></div>
+                    <div class="flex skew-x-[-12deg] items-center gap-2">
+                        <CheckCircle2
+                            class="h-3 w-3 text-emerald-500 sm:h-3.5 sm:w-3.5"
+                        />
+                        <span
+                            class="font-mono text-[9px] font-black tracking-[0.15em] text-muted-foreground uppercase sm:text-[10px]"
+                            >Completed</span
+                        >
+                        <span
+                            class="font-mono text-sm font-black text-foreground sm:text-lg"
+                            >{{ completedCount }}</span
+                        >
                     </div>
                 </div>
-                <div class="exam-stat relative px-3 sm:px-4 py-1.5 sm:py-2 border border-border/50 bg-muted/20 overflow-hidden group/stat">
-                    <div class="absolute top-0 left-0 w-0.5 h-full bg-primary/60 group-hover/stat:bg-primary transition-colors"></div>
-                    <div class="flex items-center gap-2 skew-x-[-12deg]">
-                        <Calendar class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
-                        <span class="text-[9px] sm:text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] font-mono">Total</span>
-                        <span class="text-sm sm:text-lg font-black text-foreground font-mono">{{ totalCount }}</span>
+                <div
+                    class="exam-stat group/stat relative overflow-hidden border border-border/50 bg-muted/20 px-3 py-1.5 sm:px-4 sm:py-2"
+                >
+                    <div
+                        class="absolute top-0 left-0 h-full w-0.5 bg-primary/60 transition-colors group-hover/stat:bg-primary"
+                    ></div>
+                    <div class="flex skew-x-[-12deg] items-center gap-2">
+                        <Calendar
+                            class="h-3 w-3 text-primary sm:h-3.5 sm:w-3.5"
+                        />
+                        <span
+                            class="font-mono text-[9px] font-black tracking-[0.15em] text-muted-foreground uppercase sm:text-[10px]"
+                            >Total</span
+                        >
+                        <span
+                            class="font-mono text-sm font-black text-foreground sm:text-lg"
+                            >{{ totalCount }}</span
+                        >
                     </div>
                 </div>
             </div>
@@ -403,183 +527,325 @@ onMounted(() => {
                 <button
                     v-for="filter in ['all', 'active', 'completed']"
                     :key="filter"
-                    @click="activeFilter = filter as 'all' | 'active' | 'completed'"
-                    class="exam-filter-tab relative px-4 sm:px-6 py-1.5 sm:py-2 transition-all duration-300 transform -skew-x-12 shrink-0 group/tab border-2"
-                    :class="activeFilter === filter 
-                        ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30 z-10' 
-                        : 'bg-muted/10 text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent'"
+                    @click="
+                        activeFilter = filter as 'all' | 'active' | 'completed'
+                    "
+                    class="exam-filter-tab group/tab relative shrink-0 -skew-x-12 transform border-2 px-4 py-1.5 transition-all duration-300 sm:px-6 sm:py-2"
+                    :class="
+                        activeFilter === filter
+                            ? 'z-10 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+                            : 'border-transparent bg-muted/10 text-muted-foreground hover:bg-muted/30 hover:text-foreground'
+                    "
                 >
-                    <div class="flex items-center gap-2 skew-x-12">
-                        <component :is="filter === 'all' ? Calendar : filter === 'active' ? AlertCircle : CheckCircle2" class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                        <span class="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] font-mono">{{ filter }}</span>
+                    <div class="flex skew-x-12 items-center gap-2">
+                        <component
+                            :is="
+                                filter === 'all'
+                                    ? Calendar
+                                    : filter === 'active'
+                                      ? AlertCircle
+                                      : CheckCircle2
+                            "
+                            class="h-3 w-3 sm:h-3.5 sm:w-3.5"
+                        />
+                        <span
+                            class="font-mono text-[10px] font-black tracking-[0.2em] uppercase sm:text-[11px]"
+                            >{{ filter }}</span
+                        >
                     </div>
                     <!-- Active Indicator -->
-                    <div v-if="activeFilter === filter" class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary-foreground rounded-full skew-x-12"></div>
+                    <div
+                        v-if="activeFilter === filter"
+                        class="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 skew-x-12 rounded-full bg-primary-foreground"
+                    ></div>
                 </button>
             </div>
 
             <!-- Section Tabs -->
-            <div v-if="sectionTabs.length > 1" class="flex items-center gap-2 sm:gap-3 overflow-x-auto no-scrollbar pb-3">
+            <div
+                v-if="sectionTabs.length > 1"
+                class="no-scrollbar flex items-center gap-2 overflow-x-auto pb-3 sm:gap-3"
+            >
                 <button
                     v-for="section in sectionTabs"
                     :key="section.key"
                     @click="activeSection = section.key"
-                    class="exam-section-tab relative flex min-w-[10rem] shrink-0 flex-col gap-2 border px-4 py-3.5 transition-all duration-500 sm:min-w-[12rem] sm:px-6 sm:py-5 group rounded-xl overflow-hidden"
-                    :class="activeSection === section.key
-                        ? 'border-primary/50 bg-primary/[0.04] shadow-lg shadow-primary/10'
-                        : 'border-border/40 bg-card hover:border-primary/30 hover:bg-muted/30'"
+                    class="exam-section-tab group relative flex min-w-[10rem] shrink-0 flex-col gap-2 overflow-hidden rounded-xl border px-4 py-3.5 transition-all duration-500 sm:min-w-[12rem] sm:px-6 sm:py-5"
+                    :class="
+                        activeSection === section.key
+                            ? 'border-primary/50 bg-primary/[0.04] shadow-lg shadow-primary/10'
+                            : 'border-border/40 bg-card hover:border-primary/30 hover:bg-muted/30'
+                    "
                 >
-                    <div class="flex items-center justify-between w-full relative z-10">
-                        <div class="min-w-0 text-left space-y-1">
-                            <span class="block truncate text-[10px] font-black uppercase tracking-[0.2em] sm:text-[11px] transition-colors duration-300"
-                                :class="activeSection === section.key ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'">
+                    <div
+                        class="relative z-10 flex w-full items-center justify-between"
+                    >
+                        <div class="min-w-0 space-y-1 text-left">
+                            <span
+                                class="block truncate text-[10px] font-black tracking-[0.2em] uppercase transition-colors duration-300 sm:text-[11px]"
+                                :class="
+                                    activeSection === section.key
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground group-hover:text-foreground'
+                                "
+                            >
                                 {{ section.label }}
                             </span>
                             <div class="flex items-center gap-2">
-                                <span class="block text-[8px] font-bold uppercase tracking-[0.15em] opacity-50 sm:text-[9px]">
-                                    {{ section.count }} {{ section.count === 1 ? 'exam' : 'exams' }}
+                                <span
+                                    class="block text-[8px] font-bold tracking-[0.15em] uppercase opacity-50 sm:text-[9px]"
+                                >
+                                    {{ section.count }}
+                                    {{ section.count === 1 ? 'exam' : 'exams' }}
                                 </span>
-                                <div v-if="activeSection === section.key" class="h-1 w-4 bg-primary/40 rounded-full animate-pulse"></div>
+                                <div
+                                    v-if="activeSection === section.key"
+                                    class="h-1 w-4 animate-pulse rounded-full bg-primary/40"
+                                ></div>
                             </div>
                         </div>
-                        
+
                         <div
-                            class="flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black font-mono transition-all duration-500"
-                            :class="activeSection === section.key 
-                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-110 rotate-3' 
-                                : 'bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'"
+                            class="flex h-7 w-7 items-center justify-center rounded-lg font-mono text-[11px] font-black transition-all duration-500"
+                            :class="
+                                activeSection === section.key
+                                    ? 'scale-110 rotate-3 bg-primary text-primary-foreground shadow-lg shadow-primary/25'
+                                    : 'bg-muted/50 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary'
+                            "
                         >
                             {{ section.count }}
                         </div>
                     </div>
 
                     <!-- Decorative elements for active state -->
-                    <div v-if="activeSection === section.key" 
-                        class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-                    <div v-if="activeSection === section.key" 
-                        class="absolute -right-4 -bottom-4 w-12 h-12 bg-primary/5 rounded-full blur-2xl"></div>
+                    <div
+                        v-if="activeSection === section.key"
+                        class="absolute top-0 left-0 h-full w-1 bg-primary"
+                    ></div>
+                    <div
+                        v-if="activeSection === section.key"
+                        class="absolute -right-4 -bottom-4 h-12 w-12 rounded-full bg-primary/5 blur-2xl"
+                    ></div>
                 </button>
             </div>
 
             <!-- Exam Grid -->
-            <div v-if="filteredExams.length > 0" class="grid gap-2 sm:gap-3 grid-cols-2 xl:grid-cols-3">
-                <div 
-                    v-for="exam in filteredExams" 
+            <div
+                v-if="filteredExams.length > 0"
+                class="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-3"
+            >
+                <div
+                    v-for="exam in filteredExams"
                     :key="exam.id"
-                    class="animate-section exam-card relative flex flex-col justify-between p-2 sm:p-5 transition-all duration-500 overflow-hidden group/card border border-border bg-card min-w-0"
-                    :class="exam.is_locked 
-                        ? 'opacity-60 grayscale-[0.8] cursor-not-allowed bg-muted/10' 
-                        : 'hover:-translate-y-1'"
+                    class="animate-section exam-card group/card relative flex min-w-0 flex-col justify-between overflow-hidden border border-border bg-card p-2 transition-all duration-500 sm:p-5"
+                    :class="
+                        exam.is_locked
+                            ? 'cursor-not-allowed bg-muted/10 opacity-60 grayscale-[0.8]'
+                            : 'hover:-translate-y-1'
+                    "
                     @mousemove="handleMouseMove"
                 >
                     <!-- Futuristic Corner Brackets -->
-                    <div class="bracket-corner absolute top-0 left-0 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-l-2 border-foreground pointer-events-none"></div>
-                    <div class="bracket-corner absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-foreground pointer-events-none"></div>
+                    <div
+                        class="bracket-corner pointer-events-none absolute top-0 left-0 h-3 w-3 border-t-2 border-l-2 border-foreground sm:h-4 sm:w-4"
+                    ></div>
+                    <div
+                        class="bracket-corner pointer-events-none absolute right-0 bottom-0 h-3 w-3 border-r-2 border-b-2 border-foreground sm:h-4 sm:w-4"
+                    ></div>
 
                     <!-- Status Badge (Top Left) -->
-                    <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20">
-                        <div class="exam-status-pill px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 font-black text-[7px] sm:text-[8px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transform -skew-x-12"
-                            :class="getStatusBadgeInfo(exam).color">
-                            <span class="inline-block skew-x-12">{{ getStatusBadgeInfo(exam).label }}</span>
+                    <div class="absolute top-2 left-2 z-20 sm:top-4 sm:left-4">
+                        <div
+                            class="exam-status-pill -skew-x-12 transform px-1.5 py-0.5 text-[7px] font-black tracking-[0.15em] uppercase sm:px-2.5 sm:py-0.5 sm:text-[8px] sm:tracking-[0.2em]"
+                            :class="getStatusBadgeInfo(exam).color"
+                        >
+                            <span class="inline-block skew-x-12">{{
+                                getStatusBadgeInfo(exam).label
+                            }}</span>
                         </div>
                     </div>
 
                     <!-- Score / Completion Badge (Top Right) -->
-                    <div v-if="exam.is_locked" class="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col items-end gap-1 sm:gap-1.5 z-20">
-                        <div class="exam-score-pill px-1.5 sm:px-2.5 py-0.5 sm:py-0.5 bg-primary text-primary-foreground font-black text-[7px] sm:text-[9px] font-mono tracking-widest transform -skew-x-12">
+                    <div
+                        v-if="exam.is_locked"
+                        class="absolute top-2 right-2 z-20 flex flex-col items-end gap-1 sm:top-4 sm:right-4 sm:gap-1.5"
+                    >
+                        <div
+                            class="exam-score-pill -skew-x-12 transform bg-primary px-1.5 py-0.5 font-mono text-[7px] font-black tracking-widest text-primary-foreground sm:px-2.5 sm:py-0.5 sm:text-[9px]"
+                        >
                             <span class="inline-block skew-x-12">
-                                {{ exam.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
+                                {{
+                                    exam.submissions
+                                        ?.reduce(
+                                            (acc, s) =>
+                                                acc + parseFloat(s.score),
+                                            0,
+                                        )
+                                        .toFixed(2)
+                                }}
                             </span>
                         </div>
                     </div>
 
                     <!-- Center Diamond Icon -->
-                    <div class="exam-tactical-mark flex justify-center mb-2 sm:mb-3">
-                        <div class="w-6 h-6 sm:w-8 sm:h-8 border-2 rotate-45 flex items-center justify-center transition-colors duration-500"
-                            :class="exam.is_locked ? 'border-muted-foreground/30' : 'border-amber-500/40 group-hover/card:border-amber-500'">
-                             <div class="w-1.5 h-1.5 rotate-45" :class="exam.is_locked ? 'bg-muted-foreground/30' : 'bg-amber-500 animate-pulse'"></div>
+                    <div
+                        class="exam-tactical-mark mb-2 flex justify-center sm:mb-3"
+                    >
+                        <div
+                            class="flex h-6 w-6 rotate-45 items-center justify-center border-2 transition-colors duration-500 sm:h-8 sm:w-8"
+                            :class="
+                                exam.is_locked
+                                    ? 'border-muted-foreground/30'
+                                    : 'border-amber-500/40 group-hover/card:border-amber-500'
+                            "
+                        >
+                            <div
+                                class="h-1.5 w-1.5 rotate-45"
+                                :class="
+                                    exam.is_locked
+                                        ? 'bg-muted-foreground/30'
+                                        : 'animate-pulse bg-amber-500'
+                                "
+                            ></div>
                         </div>
                     </div>
 
-                    <div class="relative z-10 space-y-1.5 sm:space-y-3 text-center min-w-0">
+                    <div
+                        class="relative z-10 min-w-0 space-y-1.5 text-center sm:space-y-3"
+                    >
                         <!-- Section Label -->
-                        <div v-if="exam.section_name" class="text-[7px] sm:text-[8px] font-mono uppercase tracking-[0.25em] text-muted-foreground/70">
+                        <div
+                            v-if="exam.section_name"
+                            class="font-mono text-[7px] tracking-[0.25em] text-muted-foreground/70 uppercase sm:text-[8px]"
+                        >
                             Section: {{ exam.section_name }}
                         </div>
 
                         <!-- Title -->
                         <div class="space-y-0.5 sm:space-y-1">
-                            <h2 class="text-xs sm:text-lg font-black italic uppercase tracking-tight text-foreground leading-tight sm:leading-none break-words">
+                            <h2
+                                class="text-xs leading-tight font-black tracking-tight break-words text-foreground uppercase italic sm:text-lg sm:leading-none"
+                            >
                                 {{ exam.title }}
                             </h2>
-                            <div class="h-px w-6 sm:w-8 bg-foreground/20 mx-auto"></div>
+                            <div
+                                class="mx-auto h-px w-6 bg-foreground/20 sm:w-8"
+                            ></div>
                         </div>
 
                         <!-- Progress Bar -->
-                        <div v-if="exam.total_parts && exam.total_parts > 0" class="space-y-1">
-                            <div class="flex items-center justify-center gap-1.5 text-[7px] sm:text-[9px] font-black uppercase tracking-widest font-mono">
-                                <span :class="exam.is_locked ? 'text-emerald-500' : 'text-muted-foreground'">
-                                    {{ exam.submitted_parts_count }} / {{ exam.total_parts }} PARTS
+                        <div
+                            v-if="exam.total_parts && exam.total_parts > 0"
+                            class="space-y-1"
+                        >
+                            <div
+                                class="flex items-center justify-center gap-1.5 font-mono text-[7px] font-black tracking-widest uppercase sm:text-[9px]"
+                            >
+                                <span
+                                    :class="
+                                        exam.is_locked
+                                            ? 'text-emerald-500'
+                                            : 'text-muted-foreground'
+                                    "
+                                >
+                                    {{ exam.submitted_parts_count }} /
+                                    {{ exam.total_parts }} PARTS
                                 </span>
                             </div>
-                            <div class="h-1 bg-muted/50 rounded-full overflow-hidden mx-auto max-w-[80%]">
-                                <div class="h-full rounded-full transition-all duration-700 ease-out"
-                                    :class="exam.is_locked ? 'bg-emerald-500 w-full' : 'bg-primary'"
-                                    :style="{ width: `${getProgressPercent(exam)}%` }">
-                                </div>
+                            <div
+                                class="mx-auto h-1 max-w-[80%] overflow-hidden rounded-full bg-muted/50"
+                            >
+                                <div
+                                    class="h-full rounded-full transition-all duration-700 ease-out"
+                                    :class="
+                                        exam.is_locked
+                                            ? 'w-full bg-emerald-500'
+                                            : 'bg-primary'
+                                    "
+                                    :style="{
+                                        width: `${getProgressPercent(exam)}%`,
+                                    }"
+                                ></div>
                             </div>
                         </div>
 
                         <!-- System Alerts Box -->
-                        <div class="exam-alert-box bg-muted/30 p-1.5 sm:p-3 space-y-1 sm:space-y-1.5 text-left border border-border/50">
-                            <div class="hidden sm:flex items-start gap-2">
-                                <span class="text-amber-500 font-black text-[8px] shrink-0">[!]</span>
-                                <p class="text-[8px] font-bold text-muted-foreground uppercase leading-relaxed tracking-wider">
+                        <div
+                            class="exam-alert-box space-y-1 border border-border/50 bg-muted/30 p-1.5 text-left sm:space-y-1.5 sm:p-3"
+                        >
+                            <div class="hidden items-start gap-2 sm:flex">
+                                <span
+                                    class="shrink-0 text-[8px] font-black text-amber-500"
+                                    >[!]</span
+                                >
+                                <p
+                                    class="text-[8px] leading-relaxed font-bold tracking-wider text-muted-foreground uppercase"
+                                >
                                     {{ exam.description }}
                                 </p>
                             </div>
                             <div class="flex items-center gap-1.5 sm:gap-2">
-                                <span class="text-amber-500 font-black text-[8px] sm:text-[9px] shrink-0">[!]</span>
-                                <p class="text-[7px] sm:text-[8px] font-bold text-muted-foreground uppercase tracking-wider font-mono truncate">
+                                <span
+                                    class="shrink-0 text-[8px] font-black text-amber-500 sm:text-[9px]"
+                                    >[!]</span
+                                >
+                                <p
+                                    class="truncate font-mono text-[7px] font-bold tracking-wider text-muted-foreground uppercase sm:text-[8px]"
+                                >
                                     {{ exam.duration_minutes }} MIN
                                 </p>
                             </div>
                             <!-- Date / Countdown -->
                             <div class="flex items-center gap-1.5 sm:gap-2">
-                                <Clock class="w-2 h-2 sm:w-2.5 sm:h-2.5 shrink-0" :class="getExamTimeInfo(exam).color" />
-                                <p class="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider font-mono truncate"
-                                    :class="getExamTimeInfo(exam).color">
+                                <Clock
+                                    class="h-2 w-2 shrink-0 sm:h-2.5 sm:w-2.5"
+                                    :class="getExamTimeInfo(exam).color"
+                                />
+                                <p
+                                    class="truncate font-mono text-[7px] font-bold tracking-wider uppercase sm:text-[8px]"
+                                    :class="getExamTimeInfo(exam).color"
+                                >
                                     {{ getExamTimeInfo(exam).label }}
                                 </p>
                             </div>
                         </div>
 
                         <!-- Action Button (Slanted) -->
-                        <div class="pt-1 sm:pt-2 space-y-1.5 sm:space-y-2">
-                            <button 
+                        <div class="space-y-1.5 pt-1 sm:space-y-2 sm:pt-2">
+                            <button
                                 v-if="exam.is_locked"
                                 @click="openReview(exam)"
-                                class="exam-action relative w-full py-1.5 sm:py-2.5 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-foreground hover:text-background transform -skew-x-12"
+                                class="exam-action relative w-full -skew-x-12 transform bg-primary py-1.5 text-[8px] font-black tracking-[0.2em] text-primary-foreground uppercase transition-all hover:bg-foreground hover:text-background sm:py-2.5 sm:text-[10px] sm:tracking-[0.3em]"
                             >
-                                <span class="inline-block skew-x-12">Review</span>
+                                <span class="inline-block skew-x-12"
+                                    >Review</span
+                                >
                             </button>
-                            
-                            <a 
-                                v-else-if="exam.url" 
-                                :href="exam.url" 
+
+                            <a
+                                v-else-if="exam.url"
+                                :href="exam.url"
                                 target="_blank"
-                                class="exam-action relative w-full py-1.5 sm:py-2.5 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-foreground hover:text-background transform -skew-x-12 flex items-center justify-center gap-1.5 sm:gap-2"
+                                class="exam-action relative flex w-full -skew-x-12 transform items-center justify-center gap-1.5 bg-primary py-1.5 text-[8px] font-black tracking-[0.2em] text-primary-foreground uppercase transition-all hover:bg-foreground hover:text-background sm:gap-2 sm:py-2.5 sm:text-[10px] sm:tracking-[0.3em]"
                             >
-                                <span class="inline-block skew-x-12">Start</span>
-                                <ArrowRight class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 skew-x-12" />
+                                <span class="inline-block skew-x-12"
+                                    >Start</span
+                                >
+                                <ArrowRight
+                                    class="h-2.5 w-2.5 skew-x-12 sm:h-3.5 sm:w-3.5"
+                                />
                             </a>
-                            <Link 
+                            <Link
                                 v-else
                                 :href="examsShow(exam.id).url"
-                                class="exam-action relative w-full py-1.5 sm:py-2.5 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[8px] sm:text-[10px] transition-all hover:bg-foreground hover:text-background transform -skew-x-12 flex items-center justify-center gap-1.5 sm:gap-2"
+                                class="exam-action relative flex w-full -skew-x-12 transform items-center justify-center gap-1.5 bg-primary py-1.5 text-[8px] font-black tracking-[0.2em] text-primary-foreground uppercase transition-all hover:bg-foreground hover:text-background sm:gap-2 sm:py-2.5 sm:text-[10px] sm:tracking-[0.3em]"
                             >
-                                <span class="inline-block skew-x-12">Start</span>
-                                <ArrowRight class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 skew-x-12" />
+                                <span class="inline-block skew-x-12"
+                                    >Start</span
+                                >
+                                <ArrowRight
+                                    class="h-2.5 w-2.5 skew-x-12 sm:h-3.5 sm:w-3.5"
+                                />
                             </Link>
                         </div>
                     </div>
@@ -587,14 +853,25 @@ onMounted(() => {
             </div>
 
             <!-- Empty State -->
-            <div v-else class="animate-section flex flex-col items-center justify-center py-20 text-center space-y-4 surface-card border-dashed">
-                <div class="p-4 rounded-full bg-muted/30">
-                    <AlertCircle class="w-12 h-12 text-muted-foreground/50" />
+            <div
+                v-else
+                class="animate-section surface-card flex flex-col items-center justify-center space-y-4 border-dashed py-20 text-center"
+            >
+                <div class="rounded-full bg-muted/30 p-4">
+                    <AlertCircle class="h-12 w-12 text-muted-foreground/50" />
                 </div>
                 <div class="space-y-1">
                     <h3 class="text-xl font-semibold">No exams found</h3>
-                    <p v-if="activeFilter !== 'all'" class="text-muted-foreground">Try changing the filter to see more exams.</p>
-                    <p v-else class="text-muted-foreground">Keep an eye out! Your instructor will post new exams here.</p>
+                    <p
+                        v-if="activeFilter !== 'all'"
+                        class="text-muted-foreground"
+                    >
+                        Try changing the filter to see more exams.
+                    </p>
+                    <p v-else class="text-muted-foreground">
+                        Keep an eye out! Your instructor will post new exams
+                        here.
+                    </p>
                 </div>
             </div>
         </div>
@@ -602,49 +879,116 @@ onMounted(() => {
 
     <!-- Review Modal -->
     <Dialog v-model:open="showReviewModal">
-        <DialogContent class="exam-review-modal sm:max-w-[1000px] w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-card dark:bg-zinc-900 border-border shadow-2xl rounded-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <DialogContent
+            class="exam-review-modal fixed top-1/2 left-1/2 flex max-h-[90vh] w-[95vw] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-none border-border bg-card p-0 shadow-2xl sm:max-w-[1000px] dark:bg-zinc-900"
+        >
             <!-- Futuristic Corner Brackets -->
-            <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-foreground z-50 pointer-events-none"></div>
-            <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-foreground z-50 pointer-events-none"></div>
+            <div
+                class="pointer-events-none absolute top-0 left-0 z-50 h-8 w-8 border-t-2 border-l-2 border-foreground"
+            ></div>
+            <div
+                class="pointer-events-none absolute right-0 bottom-0 z-50 h-8 w-8 border-r-2 border-b-2 border-foreground"
+            ></div>
 
-            <DialogHeader class="p-5 md:p-10 border-b border-border bg-muted/10 relative">
-                <div class="flex flex-col md:flex-row md:items-center justify-center gap-4 md:gap-6 text-center md:text-left">
-                    <div class="flex items-center gap-3 md:gap-5 justify-center md:justify-start">
-                        <div class="hidden sm:flex w-12 h-12 border-2 border-amber-500 rotate-45 items-center justify-center shrink-0">
-                             <div class="w-2 h-2 bg-amber-500 rotate-45 animate-pulse"></div>
+            <DialogHeader
+                class="relative border-b border-border bg-muted/10 p-5 md:p-10"
+            >
+                <div
+                    class="flex flex-col justify-center gap-4 text-center md:flex-row md:items-center md:gap-6 md:text-left"
+                >
+                    <div
+                        class="flex items-center justify-center gap-3 md:justify-start md:gap-5"
+                    >
+                        <div
+                            class="hidden h-12 w-12 shrink-0 rotate-45 items-center justify-center border-2 border-amber-500 sm:flex"
+                        >
+                            <div
+                                class="h-2 w-2 rotate-45 animate-pulse bg-amber-500"
+                            ></div>
                         </div>
-                            <div class="space-y-1">
-                                <span class="exam-friendly-label text-[8px] md:text-[10px] font-black text-primary uppercase tracking-[0.4em] font-mono">Your results</span>
-                                <DialogTitle class="text-xl md:text-3xl font-black italic uppercase tracking-tighter text-foreground leading-none">
-                                    {{ selectedExamForReview?.title }}
-                                </DialogTitle>
-                                <DialogDescription class="hidden sm:block text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                    Reviewing performance data and individual operative feedback.
-                                </DialogDescription>
-                            </div>
+                        <div class="space-y-1">
+                            <span
+                                class="exam-friendly-label font-mono text-[8px] font-black tracking-[0.4em] text-primary uppercase md:text-[10px]"
+                                >Your results</span
+                            >
+                            <DialogTitle
+                                class="text-xl leading-none font-black tracking-tighter text-foreground uppercase italic md:text-3xl"
+                            >
+                                {{ selectedExamForReview?.title }}
+                            </DialogTitle>
+                            <DialogDescription
+                                class="hidden text-[10px] font-bold tracking-widest text-muted-foreground uppercase sm:block"
+                            >
+                                Reviewing performance data and individual
+                                operative feedback.
+                            </DialogDescription>
+                        </div>
                     </div>
 
-                    <div class="flex items-center gap-3 md:gap-4 mx-auto md:mx-0">
+                    <div
+                        class="mx-auto flex items-center gap-3 md:mx-0 md:gap-4"
+                    >
                         <!-- Privacy Toggle -->
-                        <button 
+                        <button
                             @click="privacyMode = !privacyMode"
-                            class="group/privacy flex flex-col items-center gap-1 px-3 md:px-4 py-1.5 md:py-2 border border-border/50 hover:border-primary/50 transition-all relative overflow-hidden bg-muted/20"
+                            class="group/privacy relative flex flex-col items-center gap-1 overflow-hidden border border-border/50 bg-muted/20 px-3 py-1.5 transition-all hover:border-primary/50 md:px-4 md:py-2"
                         >
-                            <div class="absolute top-0 left-0 w-full h-[1px] bg-primary/30 group-hover/privacy:bg-primary transition-colors"></div>
+                            <div
+                                class="absolute top-0 left-0 h-[1px] w-full bg-primary/30 transition-colors group-hover/privacy:bg-primary"
+                            ></div>
                             <div class="flex items-center gap-2">
-                                <component :is="privacyMode ? Shield : ShieldOff" class="w-2.5 h-2.5 md:w-3 md:h-3" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'" />
-                                <span class="exam-friendly-label text-[7px] md:text-[8px] font-black uppercase tracking-[0.2em] font-mono" :class="privacyMode ? 'text-primary' : 'text-muted-foreground'">
-                                    {{ privacyMode ? 'Hide answers' : 'Show answers' }}
+                                <component
+                                    :is="privacyMode ? Shield : ShieldOff"
+                                    class="h-2.5 w-2.5 md:h-3 md:w-3"
+                                    :class="
+                                        privacyMode
+                                            ? 'text-primary'
+                                            : 'text-muted-foreground'
+                                    "
+                                />
+                                <span
+                                    class="exam-friendly-label font-mono text-[7px] font-black tracking-[0.2em] uppercase md:text-[8px]"
+                                    :class="
+                                        privacyMode
+                                            ? 'text-primary'
+                                            : 'text-muted-foreground'
+                                    "
+                                >
+                                    {{
+                                        privacyMode
+                                            ? 'Hide answers'
+                                            : 'Show answers'
+                                    }}
                                 </span>
                             </div>
-                            <span class="exam-friendly-label hidden md:block text-[7px] font-bold text-muted-foreground/60 uppercase tracking-widest">Hover to reveal</span>
+                            <span
+                                class="exam-friendly-label hidden text-[7px] font-bold tracking-widest text-muted-foreground/60 uppercase md:block"
+                                >Hover to reveal</span
+                            >
                         </button>
 
-                        <div class="px-4 md:px-6 py-1.5 md:py-3 bg-muted/30 border border-border/50 relative overflow-hidden group/total">
-                            <div class="absolute top-0 left-0 w-1 h-full bg-primary/40 group-hover/total:bg-primary transition-colors"></div>
-                            <span class="exam-friendly-label block text-[7px] md:text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-0.5 md:mb-1 font-mono leading-none">Score</span>
-                            <span class="text-lg md:text-2xl font-black text-foreground font-mono tabular-nums leading-none">
-                                {{ selectedExamForReview?.submissions?.reduce((acc, s) => acc + parseFloat(s.score), 0).toFixed(2) }}
+                        <div
+                            class="group/total relative overflow-hidden border border-border/50 bg-muted/30 px-4 py-1.5 md:px-6 md:py-3"
+                        >
+                            <div
+                                class="absolute top-0 left-0 h-full w-1 bg-primary/40 transition-colors group-hover/total:bg-primary"
+                            ></div>
+                            <span
+                                class="exam-friendly-label mb-0.5 block font-mono text-[7px] leading-none font-black tracking-[0.3em] text-muted-foreground uppercase md:mb-1 md:text-[8px]"
+                                >Score</span
+                            >
+                            <span
+                                class="font-mono text-lg leading-none font-black text-foreground tabular-nums md:text-2xl"
+                            >
+                                {{
+                                    selectedExamForReview?.submissions
+                                        ?.reduce(
+                                            (acc, s) =>
+                                                acc + parseFloat(s.score),
+                                            0,
+                                        )
+                                        .toFixed(2)
+                                }}
                             </span>
                         </div>
                     </div>
@@ -652,176 +996,531 @@ onMounted(() => {
             </DialogHeader>
 
             <!-- Navigation Tabs for Parts -->
-            <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="px-5 md:px-10 py-4 border-b border-border/50 bg-muted/5 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                <button 
-                    v-for="part in selectedExamForReview.parts" 
+            <div
+                v-if="
+                    selectedExamForReview &&
+                    selectedExamForReview.parts.length > 1
+                "
+                class="no-scrollbar flex items-center gap-2 overflow-x-auto border-b border-border/50 bg-muted/5 px-5 py-4 md:px-10"
+            >
+                <button
+                    v-for="part in selectedExamForReview.parts"
                     :key="part.id"
                     @click="selectedPartId = part.id"
-                    class="relative px-6 py-2 transition-all duration-300 transform -skew-x-12 shrink-0 group"
-                    :class="selectedPartId === part.id 
-                        ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' 
-                        : 'bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'"
+                    class="group relative shrink-0 -skew-x-12 transform px-6 py-2 transition-all duration-300"
+                    :class="
+                        selectedPartId === part.id
+                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+                            : 'bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    "
                 >
-                    <div class="flex items-center gap-3 skew-x-12">
-                        <span class="exam-friendly-label text-[8px] font-black uppercase tracking-[0.2em] font-mono opacity-60">
-                            Part {{ selectedExamForReview.parts.indexOf(part) + 1 }}
+                    <div class="flex skew-x-12 items-center gap-3">
+                        <span
+                            class="exam-friendly-label font-mono text-[8px] font-black tracking-[0.2em] uppercase opacity-60"
+                        >
+                            Part
+                            {{ selectedExamForReview.parts.indexOf(part) + 1 }}
                         </span>
-                        <span class="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+                        <span
+                            class="text-[10px] font-black tracking-widest whitespace-nowrap uppercase"
+                        >
                             {{ part.title }}
                         </span>
-                        <div v-if="getSubmissionForPart(selectedExamForReview, part.id)" 
-                            class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]">
-                        </div>
+                        <div
+                            v-if="
+                                getSubmissionForPart(
+                                    selectedExamForReview,
+                                    part.id,
+                                )
+                            "
+                            class="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"
+                        ></div>
                     </div>
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-8 md:p-10 custom-scrollbar bg-card/30">
+            <div
+                class="custom-scrollbar flex-1 overflow-y-auto bg-card/30 p-8 md:p-10"
+            >
                 <div v-if="selectedExamForReview" class="space-y-16">
-                    <div v-for="part in selectedExamForReview.parts" :key="part.id" v-show="selectedPartId === part.id" class="space-y-8">
-                        <div class="flex items-center justify-between border-b border-border/30 pb-6">
+                    <div
+                        v-for="part in selectedExamForReview.parts"
+                        :key="part.id"
+                        v-show="selectedPartId === part.id"
+                        class="space-y-8"
+                    >
+                        <div
+                            class="flex items-center justify-between border-b border-border/30 pb-6"
+                        >
                             <div class="flex items-center gap-5">
-                                <div class="w-2 h-8 bg-primary"></div>
-                                <h3 class="text-2xl font-black italic uppercase tracking-tight text-foreground">{{ part.title }}</h3>
+                                <div class="h-8 w-2 bg-primary"></div>
+                                <h3
+                                    class="text-2xl font-black tracking-tight text-foreground uppercase italic"
+                                >
+                                    {{ part.title }}
+                                </h3>
                             </div>
-                            <div v-if="getSubmissionForPart(selectedExamForReview, part.id)" 
-                                class="px-6 py-3 bg-foreground text-background font-black text-xs uppercase tracking-[0.2em] transform -skew-x-12">
+                            <div
+                                v-if="
+                                    getSubmissionForPart(
+                                        selectedExamForReview,
+                                        part.id,
+                                    )
+                                "
+                                class="-skew-x-12 transform bg-foreground px-6 py-3 text-xs font-black tracking-[0.2em] text-background uppercase"
+                            >
                                 <span class="inline-block skew-x-12 font-mono">
-                                    Score: {{ getSubmissionForPart(selectedExamForReview, part.id)?.score }} / {{ part.questions?.reduce((acc, q) => acc + (parseInt(q.points) || 1), 0) }}
+                                    Score:
+                                    {{
+                                        getSubmissionForPart(
+                                            selectedExamForReview,
+                                            part.id,
+                                        )?.score
+                                    }}
+                                    /
+                                    {{
+                                        part.questions?.reduce(
+                                            (acc, q) =>
+                                                acc + (parseInt(q.points) || 1),
+                                            0,
+                                        )
+                                    }}
                                 </span>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div 
-                                v-for="(question, qIndex) in part.questions" 
+                        <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                            <div
+                                v-for="(question, qIndex) in part.questions"
                                 :key="qIndex"
-                                class="p-8 transition-all duration-500 relative overflow-hidden border bg-muted/5 group/question"
-                                :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))
-                                    ? 'border-emerald-500/20 shadow-[0_0_30px_-15px_rgba(16,185,129,0.1)]' 
-                                    : 'border-red-500/20 shadow-[0_0_30px_-15px_rgba(239,68,68,0.1)]'"
+                                class="group/question relative overflow-hidden border bg-muted/5 p-8 transition-all duration-500"
+                                :class="
+                                    isAnswerCorrect(
+                                        question,
+                                        getAnswerForQuestion(
+                                            getSubmissionForPart(
+                                                selectedExamForReview,
+                                                part.id,
+                                            )?.answers,
+                                            qIndex + 1,
+                                        ),
+                                        getAnswerObjectForQuestion(
+                                            getSubmissionForPart(
+                                                selectedExamForReview,
+                                                part.id,
+                                            )?.answers,
+                                            qIndex + 1,
+                                        ),
+                                    )
+                                        ? 'border-emerald-500/20 shadow-[0_0_30px_-15px_rgba(16,185,129,0.1)]'
+                                        : 'border-red-500/20 shadow-[0_0_30px_-15px_rgba(239,68,68,0.1)]'
+                                "
                             >
                                 <!-- Status Accent -->
-                                <div class="absolute top-0 left-0 w-1.5 h-full"
-                                    :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500' : 'bg-red-500'">
-                                </div>
+                                <div
+                                    class="absolute top-0 left-0 h-full w-1.5"
+                                    :class="
+                                        isAnswerCorrect(
+                                            question,
+                                            getAnswerForQuestion(
+                                                getSubmissionForPart(
+                                                    selectedExamForReview,
+                                                    part.id,
+                                                )?.answers,
+                                                qIndex + 1,
+                                            ),
+                                            getAnswerObjectForQuestion(
+                                                getSubmissionForPart(
+                                                    selectedExamForReview,
+                                                    part.id,
+                                                )?.answers,
+                                                qIndex + 1,
+                                            ),
+                                        )
+                                            ? 'bg-emerald-500'
+                                            : 'bg-red-500'
+                                    "
+                                ></div>
 
                                 <!-- Privacy Overlay for blurred state -->
-                                <div v-if="privacyMode" class="absolute inset-0 z-20 flex items-center justify-center opacity-100 group-hover/question:opacity-0 pointer-events-none transition-opacity duration-300">
-                                    <div class="flex items-center gap-3 px-4 py-2 bg-background/80 border border-primary/20 backdrop-blur-sm shadow-xl transform rotate-[-2deg]">
-                                        <Shield class="w-4 h-4 text-primary animate-pulse" />
-                                        <span class="text-xs font-black text-primary uppercase tracking-[0.2em]">Hover to reveal</span>
+                                <div
+                                    v-if="privacyMode"
+                                    class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-100 transition-opacity duration-300 group-hover/question:opacity-0"
+                                >
+                                    <div
+                                        class="flex rotate-[-2deg] transform items-center gap-3 border border-primary/20 bg-background/80 px-4 py-2 shadow-xl backdrop-blur-sm"
+                                    >
+                                        <Shield
+                                            class="h-4 w-4 animate-pulse text-primary"
+                                        />
+                                        <span
+                                            class="text-xs font-black tracking-[0.2em] text-primary uppercase"
+                                            >Hover to reveal</span
+                                        >
                                     </div>
                                 </div>
 
-                                <div class="space-y-8 transition-all duration-500"
-                                    :class="privacyMode ? 'blur-md group-hover/question:blur-0 select-none' : ''">
+                                <div
+                                    class="space-y-8 transition-all duration-500"
+                                    :class="
+                                        privacyMode
+                                            ? 'group-hover/question:blur-0 blur-md select-none'
+                                            : ''
+                                    "
+                                >
                                     <div class="space-y-4">
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center gap-4">
-                                                <span class="exam-friendly-label text-xs font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Question {{ qIndex + 1 }}</span>
-                                                <span class="text-[10px] font-black text-primary uppercase tracking-widest px-2 py-0.5 border border-primary/20 font-mono">{{ question.type.replace('_', ' ') }}</span>
+                                        <div
+                                            class="flex items-center justify-between"
+                                        >
+                                            <div
+                                                class="flex items-center gap-4"
+                                            >
+                                                <span
+                                                    class="exam-friendly-label font-mono text-xs font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                                    >Question
+                                                    {{ qIndex + 1 }}</span
+                                                >
+                                                <span
+                                                    class="border border-primary/20 px-2 py-0.5 font-mono text-[10px] font-black tracking-widest text-primary uppercase"
+                                                    >{{
+                                                        question.type.replace(
+                                                            '_',
+                                                            ' ',
+                                                        )
+                                                    }}</span
+                                                >
                                             </div>
-                                            <div v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))" 
-                                                class="text-emerald-500 font-black text-xs font-mono uppercase tracking-widest flex items-center gap-2">
-                                                <CheckCircle2 class="w-4 h-4" />
-                                                {{ question.type === 'essay' ? 'Reviewed' : 'Correct' }}
+                                            <div
+                                                v-if="
+                                                    isAnswerCorrect(
+                                                        question,
+                                                        getAnswerForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ),
+                                                        getAnswerObjectForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ),
+                                                    )
+                                                "
+                                                class="flex items-center gap-2 font-mono text-xs font-black tracking-widest text-emerald-500 uppercase"
+                                            >
+                                                <CheckCircle2 class="h-4 w-4" />
+                                                {{
+                                                    question.type === 'essay'
+                                                        ? 'Reviewed'
+                                                        : 'Correct'
+                                                }}
                                             </div>
-                                            <div v-else class="text-red-500 font-black text-xs font-mono uppercase tracking-widest flex items-center gap-2">
-                                                <XCircle class="w-4 h-4" />
-                                                {{ question.type === 'essay' ? 'Needs work' : 'Incorrect' }}
+                                            <div
+                                                v-else
+                                                class="flex items-center gap-2 font-mono text-xs font-black tracking-widest text-red-500 uppercase"
+                                            >
+                                                <XCircle class="h-4 w-4" />
+                                                {{
+                                                    question.type === 'essay'
+                                                        ? 'Needs work'
+                                                        : 'Incorrect'
+                                                }}
                                             </div>
                                         </div>
-                                        <p class="font-black italic tracking-tight text-lg text-foreground leading-snug whitespace-pre-wrap">{{ question.text }}</p>
+                                        <p
+                                            class="text-lg leading-snug font-black tracking-tight whitespace-pre-wrap text-foreground italic"
+                                        >
+                                            {{ question.text }}
+                                        </p>
                                     </div>
 
                                     <div class="space-y-6">
                                         <!-- Multiple Choice / True False -->
-                                        <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'" class="grid grid-cols-1 gap-4">
-                                            <div 
-                                                v-for="(option, oIndex) in question.options" 
+                                        <div
+                                            v-if="
+                                                question.type ===
+                                                    'multiple_choice' ||
+                                                question.type === 'true_false'
+                                            "
+                                            class="grid grid-cols-1 gap-4"
+                                        >
+                                            <div
+                                                v-for="(
+                                                    option, oIndex
+                                                ) in question.options"
                                                 :key="oIndex"
-                                                class="text-sm p-5 border flex items-center justify-between transition-all font-mono uppercase tracking-widest"
+                                                class="flex items-center justify-between border p-5 font-mono text-sm tracking-widest uppercase transition-all"
                                                 :class="[
-                                                    option.is_correct 
-                                                        ? 'bg-emerald-500 text-white dark:text-zinc-950 border-emerald-500 font-black' 
-                                                        : parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex 
-                                                            ? 'bg-red-500/10 border-red-500/50 text-red-500'
-                                                            : 'bg-muted/30 border-border/50 text-muted-foreground opacity-50',
+                                                    option.is_correct
+                                                        ? 'border-emerald-500 bg-emerald-500 font-black text-white dark:text-zinc-950'
+                                                        : parseInt(
+                                                                getAnswerForQuestion(
+                                                                    getSubmissionForPart(
+                                                                        selectedExamForReview,
+                                                                        part.id,
+                                                                    )?.answers,
+                                                                    qIndex + 1,
+                                                                ),
+                                                            ) === oIndex
+                                                          ? 'border-red-500/50 bg-red-500/10 text-red-500'
+                                                          : 'border-border/50 bg-muted/30 text-muted-foreground opacity-50',
                                                 ]"
                                             >
-                                                <span class="flex-1 whitespace-pre-wrap">{{ option.text }}</span>
-                                                <div v-if="parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex" 
-                                                    class="ml-4 px-3 py-1.5 bg-foreground text-background text-[10px] font-black uppercase tracking-[0.2em] transform -skew-x-12">
-                                                    <span class="inline-block skew-x-12">Your answer</span>
+                                                <span
+                                                    class="flex-1 whitespace-pre-wrap"
+                                                    >{{ option.text }}</span
+                                                >
+                                                <div
+                                                    v-if="
+                                                        parseInt(
+                                                            getAnswerForQuestion(
+                                                                getSubmissionForPart(
+                                                                    selectedExamForReview,
+                                                                    part.id,
+                                                                )?.answers,
+                                                                qIndex + 1,
+                                                            ),
+                                                        ) === oIndex
+                                                    "
+                                                    class="ml-4 -skew-x-12 transform bg-foreground px-3 py-1.5 text-[10px] font-black tracking-[0.2em] text-background uppercase"
+                                                >
+                                                    <span
+                                                        class="inline-block skew-x-12"
+                                                        >Your answer</span
+                                                    >
                                                 </div>
                                             </div>
                                         </div>
 
                                         <!-- Identification -->
-                                        <div v-else-if="question.type === 'identification'" class="space-y-4">
-                                            <div class="p-5 bg-muted/30 border border-border/50 flex flex-col gap-2 relative overflow-hidden">
-                                                <div class="absolute top-0 left-0 w-1.5 h-full" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'bg-emerald-500/40' : 'bg-red-500/40'"></div>
-                                                <span class="exam-friendly-label text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Your answer</span>
-                                                <span class="font-black text-base tracking-widest whitespace-pre-wrap" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-500' : 'text-red-500'">
-                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No answer' }}
+                                        <div
+                                            v-else-if="
+                                                question.type ===
+                                                'identification'
+                                            "
+                                            class="space-y-4"
+                                        >
+                                            <div
+                                                class="relative flex flex-col gap-2 overflow-hidden border border-border/50 bg-muted/30 p-5"
+                                            >
+                                                <div
+                                                    class="absolute top-0 left-0 h-full w-1.5"
+                                                    :class="
+                                                        isAnswerCorrect(
+                                                            question,
+                                                            getAnswerForQuestion(
+                                                                getSubmissionForPart(
+                                                                    selectedExamForReview,
+                                                                    part.id,
+                                                                )?.answers,
+                                                                qIndex + 1,
+                                                            ),
+                                                        )
+                                                            ? 'bg-emerald-500/40'
+                                                            : 'bg-red-500/40'
+                                                    "
+                                                ></div>
+                                                <span
+                                                    class="exam-friendly-label font-mono text-[10px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                                    >Your answer</span
+                                                >
+                                                <span
+                                                    class="text-base font-black tracking-widest whitespace-pre-wrap"
+                                                    :class="
+                                                        isAnswerCorrect(
+                                                            question,
+                                                            getAnswerForQuestion(
+                                                                getSubmissionForPart(
+                                                                    selectedExamForReview,
+                                                                    part.id,
+                                                                )?.answers,
+                                                                qIndex + 1,
+                                                            ),
+                                                        )
+                                                            ? 'text-emerald-500'
+                                                            : 'text-red-500'
+                                                    "
+                                                >
+                                                    {{
+                                                        getAnswerForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ) || 'No answer'
+                                                    }}
                                                 </span>
                                             </div>
-                                            <div class="p-5 bg-emerald-500/5 border border-emerald-500/30 flex flex-col gap-2">
-                                                <span class="exam-friendly-label text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] font-mono">Correct answer</span>
-                                                <span class="font-black text-base tracking-widest text-emerald-600 whitespace-pre-wrap">
-                                                    {{ question.correct_answer }}
+                                            <div
+                                                class="flex flex-col gap-2 border border-emerald-500/30 bg-emerald-500/5 p-5"
+                                            >
+                                                <span
+                                                    class="exam-friendly-label font-mono text-[10px] font-black tracking-[0.3em] text-emerald-500 uppercase"
+                                                    >Correct answer</span
+                                                >
+                                                <span
+                                                    class="text-base font-black tracking-widest whitespace-pre-wrap text-emerald-600"
+                                                >
+                                                    {{
+                                                        question.correct_answer
+                                                    }}
                                                 </span>
                                             </div>
                                         </div>
 
                                         <!-- Essay -->
-                                        <div v-else-if="question.type === 'essay'" class="space-y-6">
-                                            <div class="p-5 bg-muted/30 border border-border/50 flex flex-col gap-2 relative overflow-hidden">
-                                                <div class="absolute top-0 left-0 w-1.5 h-full bg-primary/40"></div>
-                                                <span class="exam-friendly-label text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] font-mono">Your response</span>
-                                                <p class="font-bold text-base leading-relaxed tracking-tight text-foreground whitespace-pre-wrap">
-                                                    {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No response submitted' }}
+                                        <div
+                                            v-else-if="
+                                                question.type === 'essay'
+                                            "
+                                            class="space-y-6"
+                                        >
+                                            <div
+                                                class="relative flex flex-col gap-2 overflow-hidden border border-border/50 bg-muted/30 p-5"
+                                            >
+                                                <div
+                                                    class="absolute top-0 left-0 h-full w-1.5 bg-primary/40"
+                                                ></div>
+                                                <span
+                                                    class="exam-friendly-label font-mono text-[10px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                                    >Your response</span
+                                                >
+                                                <p
+                                                    class="text-base leading-relaxed font-bold tracking-tight whitespace-pre-wrap text-foreground"
+                                                >
+                                                    {{
+                                                        getAnswerForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ) ||
+                                                        'No response submitted'
+                                                    }}
                                                 </p>
                                             </div>
 
                                             <!-- AI Assessment Display for Essay -->
-                                            <div v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score !== undefined" 
-                                                class="p-5 bg-primary/5 border border-primary/20 flex flex-col gap-4 relative group/ai overflow-hidden">
-                                                <div class="absolute top-0 right-0 w-16 h-16 bg-primary/5 -rotate-45 translate-x-8 -translate-y-8 group-hover/ai:bg-primary/10 transition-colors"></div>
-                                                
-                                                <div class="flex items-center justify-between">
-                                                    <div class="flex items-center gap-3">
-                                                        <Zap class="w-4 h-4 text-primary animate-pulse" />
-                                                        <span class="exam-friendly-label text-[10px] font-black text-primary uppercase tracking-[0.3em] font-mono">Essay feedback</span>
+                                            <div
+                                                v-if="
+                                                    getAnswerObjectForQuestion(
+                                                        getSubmissionForPart(
+                                                            selectedExamForReview,
+                                                            part.id,
+                                                        )?.answers,
+                                                        qIndex + 1,
+                                                    )?.ai_score !== undefined
+                                                "
+                                                class="group/ai relative flex flex-col gap-4 overflow-hidden border border-primary/20 bg-primary/5 p-5"
+                                            >
+                                                <div
+                                                    class="absolute top-0 right-0 h-16 w-16 translate-x-8 -translate-y-8 -rotate-45 bg-primary/5 transition-colors group-hover/ai:bg-primary/10"
+                                                ></div>
+
+                                                <div
+                                                    class="flex items-center justify-between"
+                                                >
+                                                    <div
+                                                        class="flex items-center gap-3"
+                                                    >
+                                                        <Zap
+                                                            class="h-4 w-4 animate-pulse text-primary"
+                                                        />
+                                                        <span
+                                                            class="exam-friendly-label font-mono text-[10px] font-black tracking-[0.3em] text-primary uppercase"
+                                                            >Essay
+                                                            feedback</span
+                                                        >
                                                     </div>
-                                                    <div class="px-3 py-1 bg-primary text-primary-foreground font-black text-[10px] font-mono tracking-widest transform -skew-x-12">
-                                                        <span class="inline-block skew-x-12">Score: {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score }} / {{ question.points }}</span>
+                                                    <div
+                                                        class="-skew-x-12 transform bg-primary px-3 py-1 font-mono text-[10px] font-black tracking-widest text-primary-foreground"
+                                                    >
+                                                        <span
+                                                            class="inline-block skew-x-12"
+                                                            >Score:
+                                                            {{
+                                                                getAnswerObjectForQuestion(
+                                                                    getSubmissionForPart(
+                                                                        selectedExamForReview,
+                                                                        part.id,
+                                                                    )?.answers,
+                                                                    qIndex + 1,
+                                                                )?.ai_score
+                                                            }}
+                                                            /
+                                                            {{
+                                                                question.points
+                                                            }}</span
+                                                        >
                                                     </div>
                                                 </div>
 
                                                 <div
-                                                    v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback"
+                                                    v-if="
+                                                        getAnswerObjectForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        )?.ai_feedback
+                                                    "
                                                     class="space-y-2 border-t border-primary/10 pt-4"
                                                 >
-                                                    <div class="flex items-center justify-between">
-                                                        <span class="exam-friendly-label text-[10px] font-black text-muted-foreground uppercase tracking-[0.25em] font-mono">Feedback</span>
+                                                    <div
+                                                        class="flex items-center justify-between"
+                                                    >
+                                                        <span
+                                                            class="exam-friendly-label font-mono text-[10px] font-black tracking-[0.25em] text-muted-foreground uppercase"
+                                                            >Feedback</span
+                                                        >
                                                     </div>
-                                                    <p class="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                                                        {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback }}
+                                                    <p
+                                                        class="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90"
+                                                    >
+                                                        {{
+                                                            getAnswerObjectForQuestion(
+                                                                getSubmissionForPart(
+                                                                    selectedExamForReview,
+                                                                    part.id,
+                                                                )?.answers,
+                                                                qIndex + 1,
+                                                            )?.ai_feedback
+                                                        }}
                                                     </p>
                                                 </div>
                                             </div>
 
                                             <div
-                                                v-else-if="getSubmissionForPart(selectedExamForReview, part.id)?.status === 'pending_ai'"
-                                                class="p-5 bg-muted/20 border border-border/40 flex items-center justify-between"
+                                                v-else-if="
+                                                    getSubmissionForPart(
+                                                        selectedExamForReview,
+                                                        part.id,
+                                                    )?.status === 'pending_ai'
+                                                "
+                                                class="flex items-center justify-between border border-border/40 bg-muted/20 p-5"
                                             >
-                                                <div class="flex items-center gap-3">
-                                                    <Timer class="w-4 h-4 text-amber-500" />
-                                                    <span class="exam-friendly-label text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] font-mono">Feedback</span>
+                                                <div
+                                                    class="flex items-center gap-3"
+                                                >
+                                                    <Timer
+                                                        class="h-4 w-4 text-amber-500"
+                                                    />
+                                                    <span
+                                                        class="exam-friendly-label font-mono text-[10px] font-black tracking-[0.3em] text-amber-500 uppercase"
+                                                        >Feedback</span
+                                                    >
                                                 </div>
-                                                <span class="text-[10px] font-bold text-muted-foreground font-mono uppercase tracking-widest">Awaiting release</span>
+                                                <span
+                                                    class="font-mono text-[10px] font-bold tracking-widest text-muted-foreground uppercase"
+                                                    >Awaiting release</span
+                                                >
                                             </div>
                                         </div>
                                     </div>
@@ -832,25 +1531,61 @@ onMounted(() => {
                 </div>
             </div>
 
-            <DialogFooter class="p-8 md:p-10 border-t border-border bg-muted/10 flex flex-col md:flex-row gap-4 items-center justify-between">
-                <Button variant="secondary" @click="showReviewModal = false" 
-                    class="w-full md:w-auto bg-muted/20 text-muted-foreground font-black uppercase tracking-[0.3em] text-[10px] transform -skew-x-12 hover:bg-red-500/10 hover:text-red-500 px-8 h-12 rounded-none border border-border/50">
+            <DialogFooter
+                class="flex flex-col items-center justify-between gap-4 border-t border-border bg-muted/10 p-8 md:flex-row md:p-10"
+            >
+                <Button
+                    variant="secondary"
+                    @click="showReviewModal = false"
+                    class="h-12 w-full -skew-x-12 transform rounded-none border border-border/50 bg-muted/20 px-8 text-[10px] font-black tracking-[0.3em] text-muted-foreground uppercase hover:bg-red-500/10 hover:text-red-500 md:w-auto"
+                >
                     <span class="inline-block skew-x-12">Close</span>
                 </Button>
 
-                <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="flex items-center gap-4 w-full md:w-auto">
-                    <button 
-                        v-if="selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) > 0"
-                        @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) - 1].id"
-                        class="flex-1 md:flex-none px-6 py-3 bg-muted/30 text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 border border-border/50 hover:bg-primary/10 hover:text-primary transition-all"
+                <div
+                    v-if="
+                        selectedExamForReview &&
+                        selectedExamForReview.parts.length > 1
+                    "
+                    class="flex w-full items-center gap-4 md:w-auto"
+                >
+                    <button
+                        v-if="
+                            selectedExamForReview.parts.findIndex(
+                                (p) => p.id === selectedPartId,
+                            ) > 0
+                        "
+                        @click="
+                            selectedPartId =
+                                selectedExamForReview.parts[
+                                    selectedExamForReview.parts.findIndex(
+                                        (p) => p.id === selectedPartId,
+                                    ) - 1
+                                ].id
+                        "
+                        class="flex-1 -skew-x-12 transform border border-border/50 bg-muted/30 px-6 py-3 text-[10px] font-black tracking-[0.2em] text-muted-foreground uppercase transition-all hover:bg-primary/10 hover:text-primary md:flex-none"
                     >
-                        <span class="inline-block skew-x-12">Previous part</span>
+                        <span class="inline-block skew-x-12"
+                            >Previous part</span
+                        >
                     </button>
-                    
-                    <button 
-                        v-if="selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) < selectedExamForReview.parts.length - 1"
-                        @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex(p => p.id === selectedPartId) + 1].id"
-                        class="flex-1 md:flex-none px-10 py-3 bg-primary text-primary-foreground font-black uppercase tracking-[0.2em] text-[10px] transform -skew-x-12 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all"
+
+                    <button
+                        v-if="
+                            selectedExamForReview.parts.findIndex(
+                                (p) => p.id === selectedPartId,
+                            ) <
+                            selectedExamForReview.parts.length - 1
+                        "
+                        @click="
+                            selectedPartId =
+                                selectedExamForReview.parts[
+                                    selectedExamForReview.parts.findIndex(
+                                        (p) => p.id === selectedPartId,
+                                    ) + 1
+                                ].id
+                        "
+                        class="flex-1 -skew-x-12 transform bg-primary px-10 py-3 text-[10px] font-black tracking-[0.2em] text-primary-foreground uppercase shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:shadow-primary/50 md:flex-none"
                     >
                         <span class="inline-block skew-x-12">Next part</span>
                     </button>
@@ -868,7 +1603,7 @@ onMounted(() => {
 }
 
 .surface-card {
-    @apply bg-card/50 backdrop-blur-md border border-border/50 rounded-2xl;
+    @apply rounded-2xl border border-border/50 bg-card/50 backdrop-blur-md;
 }
 
 .animate-section {
@@ -880,8 +1615,12 @@ onMounted(() => {
 }
 
 @keyframes scan-vertical {
-    0% { transform: translateY(-100%); }
-    100% { transform: translateY(1000%); }
+    0% {
+        transform: translateY(-100%);
+    }
+    100% {
+        transform: translateY(1000%);
+    }
 }
 
 .animate-scan-vertical {
@@ -889,8 +1628,12 @@ onMounted(() => {
 }
 
 @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(200%); }
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(200%);
+    }
 }
 
 .animate-shimmer {

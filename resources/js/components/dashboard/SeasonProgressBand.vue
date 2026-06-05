@@ -60,7 +60,10 @@ const pacing = computed(() => {
 
 const formatDate = (iso?: string | null) => {
     if (!iso) return '';
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return new Date(iso).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+    });
 };
 </script>
 
@@ -70,25 +73,44 @@ const formatDate = (iso?: string | null) => {
         class="surface-card relative overflow-hidden px-5 py-4 sm:px-7 sm:py-5"
         aria-label="Current season progress"
     >
-        <div class="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+        <div
+            class="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-primary/10 blur-3xl"
+            aria-hidden="true"
+        />
 
-        <div class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center gap-3 min-w-0">
-                <div class="h-9 w-9 rounded-xl border border-primary/20 bg-primary/10 flex items-center justify-center text-primary shrink-0">
+        <div
+            class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+            <div class="flex min-w-0 items-center gap-3">
+                <div
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary"
+                >
                     <Sparkles class="h-4 w-4" />
                 </div>
                 <div class="min-w-0">
-                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">Season</p>
-                    <h3 class="text-sm sm:text-base font-bold text-foreground truncate">{{ name }}</h3>
+                    <p
+                        class="text-[10px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase"
+                    >
+                        Season
+                    </p>
+                    <h3
+                        class="truncate text-sm font-bold text-foreground sm:text-base"
+                    >
+                        {{ name }}
+                    </h3>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4 text-[11px] text-muted-foreground tabular-nums">
+            <div
+                class="flex items-center gap-4 text-[11px] text-muted-foreground tabular-nums"
+            >
                 <span class="inline-flex items-center gap-1.5">
                     <CalendarDays class="h-3.5 w-3.5" />
                     {{ formatDate(startDate) }} – {{ formatDate(endDate) }}
                 </span>
-                <span class="inline-flex items-center gap-1.5 font-semibold text-foreground">
+                <span
+                    class="inline-flex items-center gap-1.5 font-semibold text-foreground"
+                >
                     <Flag class="h-3.5 w-3.5 text-primary" />
                     {{ seasonTimeline.daysRemaining }}d left
                 </span>
@@ -96,12 +118,18 @@ const formatDate = (iso?: string | null) => {
         </div>
 
         <div class="relative z-10 mt-4 space-y-2">
-            <div class="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">
+            <div
+                class="flex items-center justify-between text-[10px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase"
+            >
                 <span>Time {{ seasonTimeline.percentElapsed }}%</span>
-                <span v-if="pacing" :class="pacing.tone">{{ pacing.label }}</span>
-                <span v-if="xpPercent !== null" class="text-primary">XP {{ xpPercent }}%</span>
+                <span v-if="pacing" :class="pacing.tone">{{
+                    pacing.label
+                }}</span>
+                <span v-if="xpPercent !== null" class="text-primary"
+                    >XP {{ xpPercent }}%</span
+                >
             </div>
-            <div class="relative h-2 rounded-full bg-muted/40 overflow-hidden">
+            <div class="relative h-2 overflow-hidden rounded-full bg-muted/40">
                 <!-- Elapsed time -->
                 <div
                     class="absolute inset-y-0 left-0 bg-muted-foreground/25 transition-[width] duration-1000 ease-out"
@@ -116,7 +144,7 @@ const formatDate = (iso?: string | null) => {
                 />
                 <!-- Pace marker -->
                 <div
-                    class="absolute top-[-3px] bottom-[-3px] w-0.5 bg-foreground/60 rounded-full transition-[left] duration-1000 ease-out"
+                    class="absolute top-[-3px] bottom-[-3px] w-0.5 rounded-full bg-foreground/60 transition-[left] duration-1000 ease-out"
                     :style="{ left: `${seasonTimeline.percentElapsed}%` }"
                     aria-hidden="true"
                 />

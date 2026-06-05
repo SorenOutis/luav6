@@ -1,9 +1,11 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
     --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
-    --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
-    --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-serif: Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono:
+        'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo,
+        Monaco, Consolas, monospace;
 
     --color-background: #ffffff;
     --color-foreground: #09090b;
@@ -360,16 +362,31 @@
 
 :root[data-theme-preset='tactical'] body {
     background:
-        radial-gradient(circle at 82% 4%, color-mix(in srgb, var(--color-foreground), transparent 95%), transparent 30rem),
-        radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--color-ring), transparent 94%), transparent 28rem),
+        radial-gradient(
+            circle at 82% 4%,
+            color-mix(in srgb, var(--color-foreground), transparent 95%),
+            transparent 30rem
+        ),
+        radial-gradient(
+            circle at 8% 100%,
+            color-mix(in srgb, var(--color-ring), transparent 94%),
+            transparent 28rem
+        ),
         var(--color-background);
 }
 
 :root[data-theme-preset='tactical'] body::before {
     opacity: 0.07;
     background-image:
-        linear-gradient(color-mix(in srgb, var(--color-foreground), transparent 94%) 1px, transparent 1px),
-        linear-gradient(90deg, color-mix(in srgb, var(--color-foreground), transparent 94%) 1px, transparent 1px);
+        linear-gradient(
+            color-mix(in srgb, var(--color-foreground), transparent 94%) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--color-foreground), transparent 94%) 1px,
+            transparent 1px
+        );
     background-size: 72px 72px;
 }
 
@@ -386,15 +403,22 @@
 :root[data-theme-preset='tactical'] .surface-card,
 :root[data-theme-preset='tactical'] [class*='bg-background/'],
 :root[data-theme-preset='tactical'] [class*='bg-muted/'] {
-    border-color: color-mix(in srgb, var(--color-foreground), transparent 87%) !important;
+    border-color: color-mix(
+        in srgb,
+        var(--color-foreground),
+        transparent 87%
+    ) !important;
     box-shadow:
-        0 18px 60px -52px color-mix(in srgb, var(--color-foreground), transparent 45%),
-        inset 0 1px 0 color-mix(in srgb, var(--color-foreground), transparent 96%) !important;
+        0 18px 60px -52px
+            color-mix(in srgb, var(--color-foreground), transparent 45%),
+        inset 0 1px 0
+            color-mix(in srgb, var(--color-foreground), transparent 96%) !important;
 }
 
 :root[data-theme-preset='tactical'] .premium-hover:hover {
     transform: translateY(-2px) scale(1.005);
-    box-shadow: 0 18px 60px -42px color-mix(in srgb, var(--color-ring), transparent 76%) !important;
+    box-shadow: 0 18px 60px -42px
+        color-mix(in srgb, var(--color-ring), transparent 76%) !important;
 }
 
 :root[data-theme-preset='tactical'] button,
@@ -422,17 +446,24 @@
     border-radius: 0.125rem !important;
 }
 
-:root[data-theme-preset='tactical'] [data-sidebar='menu-button'][data-active='true'],
+:root[data-theme-preset='tactical']
+    [data-sidebar='menu-button'][data-active='true'],
 :root[data-theme-preset='tactical'] [data-sidebar='menu-button']:hover {
-    background: color-mix(in srgb, var(--color-foreground), transparent 90%) !important;
+    background: color-mix(
+        in srgb,
+        var(--color-foreground),
+        transparent 90%
+    ) !important;
     color: var(--color-foreground) !important;
     box-shadow: inset 2px 0 0 var(--color-ring);
 }
 
 .theme-neutral-page {
     --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
-    --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
-    --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-serif: Georgia, Cambria, 'Times New Roman', Times, serif;
+    --font-mono:
+        'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo,
+        Monaco, Consolas, monospace;
     --color-background: #ffffff;
     --color-foreground: #09090b;
     --color-card: #ffffff;
@@ -488,22 +519,36 @@
     --color-sidebar-ring: #d4d4d8;
 }
 
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-md { border-radius: 0.375rem !important; }
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-lg { border-radius: 0.5rem !important; }
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-xl { border-radius: 0.75rem !important; }
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-2xl { border-radius: 1rem !important; }
-:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-3xl { border-radius: 1.5rem !important; }
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-md {
+    border-radius: 0.375rem !important;
+}
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-lg {
+    border-radius: 0.5rem !important;
+}
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-xl {
+    border-radius: 0.75rem !important;
+}
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-2xl {
+    border-radius: 1rem !important;
+}
+:root[data-theme-preset='tactical'] .theme-neutral-page .rounded-3xl {
+    border-radius: 1.5rem !important;
+}
 
 :root[data-font-preset='academic'] {
-    --font-sans: Georgia, Cambria, "Times New Roman", Times, serif;
+    --font-sans: Georgia, Cambria, 'Times New Roman', Times, serif;
 }
 
 :root[data-font-preset='rounded'] {
-    --font-sans: "Nunito", "Aptos Rounded", "Arial Rounded MT Bold", ui-sans-serif, system-ui, sans-serif;
+    --font-sans:
+        'Nunito', 'Aptos Rounded', 'Arial Rounded MT Bold', ui-sans-serif,
+        system-ui, sans-serif;
 }
 
 :root[data-font-preset='mono'] {
-    --font-sans: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-sans:
+        'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo,
+        Monaco, Consolas, monospace;
 }
 
 :root[data-font-preset='academic'] body,
@@ -530,9 +575,18 @@
 
 :root[data-card-style='glass'] [class*='bg-card'],
 :root[data-card-style='glass'] .surface-card {
-    background-color: color-mix(in srgb, var(--color-card) 68%, transparent) !important;
-    border-color: color-mix(in srgb, var(--color-border) 65%, transparent) !important;
-    box-shadow: 0 22px 70px -28px color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
+    background-color: color-mix(
+        in srgb,
+        var(--color-card) 68%,
+        transparent
+    ) !important;
+    border-color: color-mix(
+        in srgb,
+        var(--color-border) 65%,
+        transparent
+    ) !important;
+    box-shadow: 0 22px 70px -28px
+        color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
     backdrop-filter: blur(18px) saturate(140%);
 }
 
@@ -557,8 +611,16 @@
 
 .exam-theme-page {
     background:
-        radial-gradient(circle at 85% 8%, color-mix(in srgb, var(--color-primary) 8%, transparent), transparent 34%),
-        radial-gradient(circle at 0% 100%, color-mix(in srgb, var(--color-primary) 6%, transparent), transparent 32%),
+        radial-gradient(
+            circle at 85% 8%,
+            color-mix(in srgb, var(--color-primary) 8%, transparent),
+            transparent 34%
+        ),
+        radial-gradient(
+            circle at 0% 100%,
+            color-mix(in srgb, var(--color-primary) 6%, transparent),
+            transparent 32%
+        ),
         var(--color-background);
 }
 
@@ -571,28 +633,47 @@
 
 .exam-theme-page .exam-card {
     background:
-        linear-gradient(135deg, color-mix(in srgb, var(--color-card) 92%, transparent), color-mix(in srgb, var(--color-muted) 34%, transparent)),
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--color-card) 92%, transparent),
+            color-mix(in srgb, var(--color-muted) 34%, transparent)
+        ),
         var(--color-card);
     border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
-    box-shadow: 0 18px 55px -42px color-mix(in srgb, var(--color-primary) 45%, #000000);
+    box-shadow: 0 18px 55px -42px
+        color-mix(in srgb, var(--color-primary) 45%, #000000);
 }
 
 .exam-theme-page .exam-hero,
 .exam-theme-page .question-card {
     background:
-        linear-gradient(135deg, color-mix(in srgb, var(--color-card) 94%, transparent), color-mix(in srgb, var(--color-muted) 28%, transparent)),
+        linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--color-card) 94%, transparent),
+            color-mix(in srgb, var(--color-muted) 28%, transparent)
+        ),
         var(--color-card);
     border-color: color-mix(in srgb, var(--color-border) 76%, transparent);
-    box-shadow: 0 20px 60px -44px color-mix(in srgb, var(--color-primary) 45%, #000000);
+    box-shadow: 0 20px 60px -44px
+        color-mix(in srgb, var(--color-primary) 45%, #000000);
 }
 
 .exam-theme-page .exam-card:not(.cursor-not-allowed):hover {
-    border-color: color-mix(in srgb, var(--color-primary) 45%, var(--color-border));
-    box-shadow: 0 22px 70px -36px color-mix(in srgb, var(--color-primary) 55%, #000000);
+    border-color: color-mix(
+        in srgb,
+        var(--color-primary) 45%,
+        var(--color-border)
+    );
+    box-shadow: 0 22px 70px -36px
+        color-mix(in srgb, var(--color-primary) 55%, #000000);
 }
 
 .exam-theme-page .bracket-corner {
-    border-color: color-mix(in srgb, var(--color-primary) 62%, var(--color-foreground));
+    border-color: color-mix(
+        in srgb,
+        var(--color-primary) 62%,
+        var(--color-foreground)
+    );
 }
 
 .exam-theme-page .exam-filter-tab {
@@ -600,7 +681,8 @@
 }
 
 .exam-theme-page .exam-action {
-    box-shadow: 0 14px 32px -22px color-mix(in srgb, var(--color-primary) 75%, #000000);
+    box-shadow: 0 14px 32px -22px
+        color-mix(in srgb, var(--color-primary) 75%, #000000);
 }
 
 :root[data-theme-preset='academic'] .exam-theme-page .exam-card h2,
@@ -683,10 +765,22 @@
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-bracket,
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-tactical-mark,
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-diamond,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-card > div.absolute.top-0.left-0.border-t-2,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-card > div.absolute.bottom-0.right-0.border-b-2,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-instruction-callout > div.absolute[class*='border-t-2'],
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-instruction-callout > div.absolute[class*='border-b-2'] {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-part-card
+    > div.absolute.top-0.left-0.border-t-2,
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-part-card
+    > div.absolute.bottom-0.right-0.border-b-2,
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-instruction-callout
+    > div.absolute[class*='border-t-2'],
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-instruction-callout
+    > div.absolute[class*='border-b-2'] {
     display: none !important;
 }
 
@@ -706,8 +800,12 @@
 }
 
 /* Calm down extreme tracking on small labels site-wide on these pages */
-:root:not([data-theme-preset='tactical']) .exam-theme-page [class*='tracking-[0.4em]'],
-:root:not([data-theme-preset='tactical']) .exam-theme-page [class*='tracking-[0.3em]'] {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    [class*='tracking-[0.4em]'],
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    [class*='tracking-[0.3em]'] {
     letter-spacing: 0.15em !important;
 }
 
@@ -718,7 +816,8 @@
     border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent) !important;
     box-shadow:
         0 1px 2px rgb(0 0 0 / 0.04),
-        0 8px 24px -16px color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
+        0 8px 24px -16px
+            color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
     padding: 1.25rem !important;
 }
 
@@ -729,22 +828,33 @@
     }
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-card:not(.cursor-not-allowed):hover,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-card:not(.cursor-not-allowed):hover {
-    border-color: color-mix(in srgb, var(--color-primary) 50%, var(--color-border)) !important;
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-card:not(.cursor-not-allowed):hover,
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-part-card:not(.cursor-not-allowed):hover {
+    border-color: color-mix(
+        in srgb,
+        var(--color-primary) 50%,
+        var(--color-border)
+    ) !important;
     box-shadow:
         0 4px 8px rgb(0 0 0 / 0.04),
-        0 18px 40px -22px color-mix(in srgb, var(--color-primary) 45%, transparent) !important;
+        0 18px 40px -22px
+            color-mix(in srgb, var(--color-primary) 45%, transparent) !important;
 }
 
 /* — Hero: cleaner gradient panel — */
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-hero {
-    background:
-        linear-gradient(135deg,
-            color-mix(in srgb, var(--color-primary) 6%, var(--color-card)),
-            var(--color-card) 55%) !important;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-primary) 6%, var(--color-card)),
+        var(--color-card) 55%
+    ) !important;
     border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent) !important;
-    box-shadow: 0 12px 40px -24px color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
+    box-shadow: 0 12px 40px -24px
+        color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
 }
 
 /* — Status pill (PUBLISHED / IN PROGRESS / CLOSED) — */
@@ -759,19 +869,26 @@
 
 /* — Score pill (top right of completed cards) — */
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-score-pill,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-score-pill {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-part-score-pill {
     border-radius: 999px !important;
     padding: 0.25rem 0.75rem !important;
     letter-spacing: 0.04em !important;
-    box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
+    box-shadow: 0 2px 8px -2px
+        color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-score-pill {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-part-score-pill {
     box-shadow: 0 2px 8px -2px rgb(16 185 129 / 0.4) !important;
 }
 
 /* — Recommended Next tag — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-recommended-tag {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-recommended-tag {
     border-radius: 0 var(--radius-2xl) 0 0.875rem !important;
     letter-spacing: 0.1em !important;
 }
@@ -785,7 +902,9 @@
     transition: all 200ms ease !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-filter-tab:hover {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-filter-tab:hover {
     transform: translateY(-1px) !important;
 }
 
@@ -796,14 +915,20 @@
     letter-spacing: 0.08em !important;
     padding: 0.625rem 1rem !important;
     font-size: 0.75rem !important;
-    box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-primary) 60%, transparent) !important;
-    transition: transform 180ms ease, box-shadow 180ms ease !important;
+    box-shadow: 0 4px 12px -4px
+        color-mix(in srgb, var(--color-primary) 60%, transparent) !important;
+    transition:
+        transform 180ms ease,
+        box-shadow 180ms ease !important;
 }
 
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-action:hover,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-action:hover {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-part-action:hover {
     transform: translateY(-1px) !important;
-    box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--color-primary) 75%, transparent) !important;
+    box-shadow: 0 8px 20px -6px
+        color-mix(in srgb, var(--color-primary) 75%, transparent) !important;
 }
 
 /* — Stat chips (Active / Completed / Total) — */
@@ -818,12 +943,19 @@
 /* — Alert box on cards (the [!] info) — */
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-alert-box {
     border-radius: 0.75rem !important;
-    background-color: color-mix(in srgb, var(--color-muted) 55%, transparent) !important;
+    background-color: color-mix(
+        in srgb,
+        var(--color-muted) 55%,
+        transparent
+    ) !important;
     border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent) !important;
 }
 
 /* Hide tactical "[!]" prefix glyphs in alert boxes for cleaner look */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-alert-box span.text-amber-500.font-black {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-alert-box
+    span.text-amber-500.font-black {
     display: none !important;
 }
 
@@ -846,42 +978,74 @@
 }
 
 /* Status accent stripe (left edge) for answered questions */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .question-card.border-l-primary {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .question-card.border-l-primary {
     border-left: 3px solid var(--color-primary) !important;
-    background: color-mix(in srgb, var(--color-primary) 3%, var(--color-card)) !important;
+    background: color-mix(
+        in srgb,
+        var(--color-primary) 3%,
+        var(--color-card)
+    ) !important;
 }
 
 /* — Instruction callout (Assessment Instructions) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-instruction-callout {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-instruction-callout {
     border-radius: var(--radius-2xl) !important;
     border-width: 1px !important;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+        135deg,
         color-mix(in srgb, var(--color-primary) 8%, var(--color-card)),
-        var(--color-card)) !important;
-    border-color: color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
-    box-shadow: 0 4px 24px -12px color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+        var(--color-card)
+    ) !important;
+    border-color: color-mix(
+        in srgb,
+        var(--color-primary) 35%,
+        transparent
+    ) !important;
+    box-shadow: 0 4px 24px -12px
+        color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
     padding: 1.25rem 1.5rem !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-instruction-callout p {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-instruction-callout
+    p {
     font-weight: 500 !important;
     letter-spacing: 0 !important;
 }
 
 /* Round square icon containers (Instruction icon etc.) */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-instruction-callout > div.relative > div.bg-primary {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-instruction-callout
+    > div.relative
+    > div.bg-primary {
     border-radius: 0.875rem !important;
 }
 
 /* — Cleanup oversized shadows — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page [class*='shadow-\\[0_0'],
-:root:not([data-theme-preset='tactical']) .exam-theme-page [class*='shadow-\\[0_15px'],
-:root:not([data-theme-preset='tactical']) .exam-theme-page [class*='shadow-\\[0_20px'] {
-    box-shadow: 0 8px 24px -16px color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    [class*='shadow-\\[0_0'],
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    [class*='shadow-\\[0_15px'],
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    [class*='shadow-\\[0_20px'] {
+    box-shadow: 0 8px 24px -16px
+        color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
 }
 
 /* Drop noisy decorative dots on hero stat grid */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-hero .absolute.w-2.h-2.bg-primary {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-hero
+    .absolute.w-2.h-2.bg-primary {
     display: none !important;
 }
 
@@ -897,7 +1061,8 @@
 :root[data-theme-preset='forest'] .exam-theme-page .exam-part-card {
     box-shadow:
         0 1px 2px rgb(0 0 0 / 0.04),
-        0 12px 30px -20px color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
+        0 12px 30px -20px
+            color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
 }
 
 /* — Contrast preset: enforce solid borders, no soft shadows — */
@@ -920,20 +1085,28 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 /* — Question number: replace rotated diamond with friendly rounded badge — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-question-number {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-question-number {
     transform: none !important;
     border-radius: 1rem !important;
     border-width: 0 !important;
-    background: linear-gradient(135deg,
+    background: linear-gradient(
+        135deg,
         color-mix(in srgb, var(--color-primary) 14%, var(--color-card)),
-        color-mix(in srgb, var(--color-primary) 6%, var(--color-card))) !important;
+        color-mix(in srgb, var(--color-primary) 6%, var(--color-card))
+    ) !important;
     color: var(--color-primary) !important;
-    box-shadow: 0 4px 12px -6px color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
+    box-shadow: 0 4px 12px -6px
+        color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
     width: 3rem !important;
     height: 3rem !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-question-number > span {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-question-number
+    > span {
     transform: none !important;
     font-size: 1.125rem !important;
 }
@@ -946,7 +1119,10 @@
 }
 
 /* — Question type pill — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .question-card span.bg-primary\/10.border.border-primary\/20.italic {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .question-card
+    span.bg-primary\/10.border.border-primary\/20.italic {
     border-radius: 999px !important;
     font-style: normal !important;
     text-transform: capitalize !important;
@@ -956,7 +1132,9 @@
 }
 
 /* — Points label — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-friendly-points {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-friendly-points {
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 600 !important;
@@ -965,7 +1143,10 @@
 }
 
 /* — Question text: softer, more readable — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .question-card p.italic {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .question-card
+    p.italic {
     font-style: normal !important;
     font-weight: 600 !important;
     line-height: 1.45 !important;
@@ -977,25 +1158,52 @@
 :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-answer-option {
     border-radius: 0.875rem !important;
     padding: 0.875rem 1rem !important;
-    background: color-mix(in srgb, var(--color-muted) 35%, transparent) !important;
+    background: color-mix(
+        in srgb,
+        var(--color-muted) 35%,
+        transparent
+    ) !important;
     border: 1.5px solid color-mix(in srgb, var(--color-border) 70%, transparent) !important;
-    transition: background 180ms ease, border-color 180ms ease, transform 180ms ease !important;
+    transition:
+        background 180ms ease,
+        border-color 180ms ease,
+        transform 180ms ease !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-answer-option:hover {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-answer-option:hover {
     transform: translateY(-1px) !important;
-    background: color-mix(in srgb, var(--color-primary) 5%, var(--color-card)) !important;
-    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border)) !important;
+    background: color-mix(
+        in srgb,
+        var(--color-primary) 5%,
+        var(--color-card)
+    ) !important;
+    border-color: color-mix(
+        in srgb,
+        var(--color-primary) 35%,
+        var(--color-border)
+    ) !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-answer-option:has(:checked) {
-    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-card)) !important;
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-answer-option:has(:checked) {
+    background: color-mix(
+        in srgb,
+        var(--color-primary) 10%,
+        var(--color-card)
+    ) !important;
     border-color: var(--color-primary) !important;
-    box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
+    box-shadow: 0 4px 14px -6px
+        color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
 }
 
 /* Hide the rotated decorative square inside answer options */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-answer-option > div.absolute.right-0.bottom-0 {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-answer-option
+    > div.absolute.right-0.bottom-0 {
     display: none !important;
 }
 
@@ -1025,9 +1233,12 @@
     font-size: 0.9375rem !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-text-input:focus {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-text-input:focus {
     border-color: var(--color-primary) !important;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+    box-shadow: 0 0 0 4px
+        color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
 }
 
 /* — Essay textarea — */
@@ -1041,42 +1252,66 @@
     line-height: 1.6 !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-essay-input:focus {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-essay-input:focus {
     border-color: var(--color-primary) !important;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
+    box-shadow: 0 0 0 4px
+        color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
 }
 
 /* Hide the small "SECURE DATA ENTRY" caption on essay */
-:root:not([data-theme-preset='tactical']) .exam-theme-page div.group\/textarea > div.absolute.bottom-4.right-6 {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    div.group\/textarea
+    > div.absolute.bottom-4.right-6 {
     display: none !important;
 }
 
 /* — Submit button — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .sticky.bottom-6 > button {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .sticky.bottom-6
+    > button {
     border-radius: 1rem !important;
     padding: 0.875rem 1.75rem !important;
-    box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--color-primary) 60%, transparent) !important;
+    box-shadow: 0 12px 30px -10px
+        color-mix(in srgb, var(--color-primary) 60%, transparent) !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .sticky.bottom-6 > button span {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .sticky.bottom-6
+    > button
+    span {
     text-transform: none !important;
     letter-spacing: 0.02em !important;
     font-weight: 700 !important;
     font-size: 0.9375rem !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .sticky.bottom-6 > button > div.absolute {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .sticky.bottom-6
+    > button
+    > div.absolute {
     display: none !important;
 }
 
 /* Hide the decorative rotated arrow box inside submit */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .sticky.bottom-6 > button > div.p-1\.5 {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .sticky.bottom-6
+    > button
+    > div.p-1\.5 {
     background: rgb(255 255 255 / 0.15) !important;
     border-radius: 0.625rem !important;
 }
 
 /* — Friendly labels: normalize 'tactical' typography on small labels — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-friendly-label {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-friendly-label {
     font-family: var(--font-sans) !important;
     text-transform: none !important;
     letter-spacing: 0.02em !important;
@@ -1086,12 +1321,17 @@
 }
 
 /* Numbers next to friendly labels stay prominent */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-friendly-label.bg-amber-500\/5 {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .exam-friendly-label.bg-amber-500\/5 {
     color: rgb(180 83 9) !important;
 }
 
 /* — Top corner decorative border on question card — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .question-card > div.absolute.top-0.right-0.border-t-2 {
+:root:not([data-theme-preset='tactical'])
+    .exam-theme-page
+    .question-card
+    > div.absolute.top-0.right-0.border-t-2 {
     display: none !important;
 }
 
@@ -1104,18 +1344,26 @@
 }
 
 /* Hide tactical corner brackets */
-:root:not([data-theme-preset='tactical']) .exam-review-modal > div.absolute.border-t-2.border-l-2,
-:root:not([data-theme-preset='tactical']) .exam-review-modal > div.absolute.border-b-2.border-r-2 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    > div.absolute.border-t-2.border-l-2,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    > div.absolute.border-b-2.border-r-2 {
     display: none !important;
 }
 
 /* Hide the rotated amber diamond in modal header */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .border-amber-500.rotate-45 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .border-amber-500.rotate-45 {
     display: none !important;
 }
 
 /* Friendlier dialog title (no italic, no extreme uppercase tracking) */
-:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-title'],
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    [data-slot='dialog-title'],
 :root:not([data-theme-preset='tactical']) .exam-review-modal h3 {
     font-style: normal !important;
     text-transform: none !important;
@@ -1123,32 +1371,52 @@
     font-weight: 700 !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-description'] {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    [data-slot='dialog-description'] {
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 500 !important;
 }
 
 /* Score panel: rounded */
-:root:not([data-theme-preset='tactical']) .exam-review-modal [class*='border-border/50'].bg-muted\/30 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    [class*='border-border/50'].bg-muted\/30 {
     border-radius: 0.875rem !important;
 }
 
 /* Part tabs: un-skew, rounded pills */
-:root:not([data-theme-preset='tactical']) .exam-review-modal button.transform.-skew-x-12 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    button.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-review-modal button.transform.-skew-x-12 > div.skew-x-12,
-:root:not([data-theme-preset='tactical']) .exam-review-modal button.transform.-skew-x-12 span.skew-x-12,
-:root:not([data-theme-preset='tactical']) .exam-review-modal div.transform.-skew-x-12 span.skew-x-12,
-:root:not([data-theme-preset='tactical']) .exam-review-modal div.transform.-skew-x-12 div.skew-x-12 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    button.transform.-skew-x-12
+    > div.skew-x-12,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    button.transform.-skew-x-12
+    span.skew-x-12,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    div.transform.-skew-x-12
+    span.skew-x-12,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    div.transform.-skew-x-12
+    div.skew-x-12 {
     transform: none !important;
 }
 
 /* Part header score chip un-skew */
-:root:not([data-theme-preset='tactical']) .exam-review-modal div.transform.-skew-x-12 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    div.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
 }
@@ -1160,7 +1428,10 @@
 }
 
 /* Question text: drop italic, ease readability */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .group\/question p.italic {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .group\/question
+    p.italic {
     font-style: normal !important;
     font-weight: 600 !important;
     letter-spacing: 0 !important;
@@ -1174,8 +1445,12 @@
 }
 
 /* Correct/Wrong status labels: friendlier */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .text-emerald-500.uppercase,
-:root:not([data-theme-preset='tactical']) .exam-review-modal .text-red-500.uppercase {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .text-emerald-500.uppercase,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .text-red-500.uppercase {
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 700 !important;
@@ -1184,7 +1459,10 @@
 }
 
 /* Answer option rows in modal: rounded, less mono caps */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .grid > div.text-sm.p-5.border {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .grid
+    > div.text-sm.p-5.border {
     border-radius: 0.875rem !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
@@ -1193,7 +1471,9 @@
 }
 
 /* "Your answer" tag pill */
-:root:not([data-theme-preset='tactical']) .exam-review-modal div.bg-foreground.text-background.transform.-skew-x-12 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    div.bg-foreground.text-background.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
     text-transform: none !important;
@@ -1202,22 +1482,35 @@
 }
 
 /* Identification / essay panels rounded */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-muted\/30.border,
-:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-emerald-500\/5.border,
-:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-primary\/5.border,
-:root:not([data-theme-preset='tactical']) .exam-review-modal .p-5.bg-muted\/20.border {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .p-5.bg-muted\/30.border,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .p-5.bg-emerald-500\/5.border,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .p-5.bg-primary\/5.border,
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .p-5.bg-muted\/20.border {
     border-radius: 0.875rem !important;
 }
 
 /* User-input / correct-answer text: drop heavy tracking */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .font-black.tracking-widest.whitespace-pre-wrap {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .font-black.tracking-widest.whitespace-pre-wrap {
     letter-spacing: 0 !important;
     font-weight: 600 !important;
     font-family: var(--font-sans) !important;
 }
 
 /* Footer buttons: un-skew, round */
-:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-footer'] button {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    [data-slot='dialog-footer']
+    button {
     transform: none !important;
     border-radius: 0.75rem !important;
     text-transform: none !important;
@@ -1228,17 +1521,26 @@
     padding: 0.625rem 1.25rem !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-review-modal [data-slot='dialog-footer'] button span {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    [data-slot='dialog-footer']
+    button
+    span {
     transform: none !important;
 }
 
 /* Hide AI panel's rotated decorative square */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .group\/ai > div.absolute.-rotate-45 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    .group\/ai
+    > div.absolute.-rotate-45 {
     display: none !important;
 }
 
 /* AI score pill un-skew */
-:root:not([data-theme-preset='tactical']) .exam-review-modal div.bg-primary.text-primary-foreground.transform.-skew-x-12 {
+:root:not([data-theme-preset='tactical'])
+    .exam-review-modal
+    div.bg-primary.text-primary-foreground.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
     text-transform: none !important;
@@ -1265,8 +1567,16 @@
 
 :root[data-theme-preset='tactical'] .exam-theme-page {
     background:
-        radial-gradient(circle at 80% 0%, rgb(255 255 255 / 0.04), transparent 30%),
-        radial-gradient(circle at 10% 100%, rgb(245 158 11 / 0.05), transparent 28%),
+        radial-gradient(
+            circle at 80% 0%,
+            rgb(255 255 255 / 0.04),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at 10% 100%,
+            rgb(245 158 11 / 0.05),
+            transparent 28%
+        ),
         #050505;
 }
 
@@ -1285,7 +1595,7 @@
 
 @layer base {
     body {
-        @apply bg-background text-foreground antialiased min-h-screen relative;
+        @apply relative min-h-screen bg-background text-foreground antialiased;
     }
 
     body::before {
@@ -1298,7 +1608,9 @@
         z-index: 0;
         pointer-events: none;
         opacity: 0.02;
-        background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+        background-image:
+            linear-gradient(var(--color-border) 1px, transparent 1px),
+            linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
         background-size: 60px 60px;
     }
 
@@ -1313,11 +1625,11 @@
 
 @layer utilities {
     .premium-gradient-text {
-        @apply bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent font-bold;
+        @apply bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text font-bold text-transparent;
     }
 
     .surface-card {
-        @apply rounded-[2rem] border border-border/40 bg-card/30 text-card-foreground backdrop-blur-xl relative;
+        @apply relative rounded-[2rem] border border-border/40 bg-card/30 text-card-foreground backdrop-blur-xl;
         box-shadow:
             0 10px 30px -10px rgb(0 0 0 / 0.1),
             0 0 0 1px rgb(255 255 255 / 0.05) inset;
@@ -1429,9 +1741,9 @@
     font-weight: 400 !important;
 }
 
-.dyslexia-friendly h1, 
-.dyslexia-friendly h2, 
-.dyslexia-friendly h3, 
+.dyslexia-friendly h1,
+.dyslexia-friendly h2,
+.dyslexia-friendly h3,
 .dyslexia-friendly .font-black {
     font-weight: 700 !important;
 }
@@ -1441,15 +1753,15 @@
 }
 
 /* Specifically target the tactical italic-caps in exams */
-.dyslexia-friendly [class*="tracking-tight"],
-.dyslexia-friendly [class*="tracking-tighter"],
-.dyslexia-friendly [class*="tracking-widest"],
-.dyslexia-friendly [class*="tracking-["] {
+.dyslexia-friendly [class*='tracking-tight'],
+.dyslexia-friendly [class*='tracking-tighter'],
+.dyslexia-friendly [class*='tracking-widest'],
+.dyslexia-friendly [class*='tracking-['] {
     letter-spacing: normal !important;
 }
 
-.dyslexia-friendly p, 
-.dyslexia-friendly span, 
+.dyslexia-friendly p,
+.dyslexia-friendly span,
 .dyslexia-friendly li {
     line-height: 1.6 !important;
 }

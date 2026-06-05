@@ -86,75 +86,121 @@ const triggerCoverInput = () => {
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
                     <!-- Avatar Upload Section -->
-                    <div class="flex flex-col sm:flex-row items-center gap-6 pb-6 border-b border-border/40">
-                        <div class="relative group">
-                            <Avatar class="h-24 w-24 border-2 border-border/50 group-hover:border-primary/50 transition-colors duration-300">
-                                <AvatarImage v-if="previewUrl || user.avatar" :src="previewUrl || user.avatar" :alt="user.name" class="object-cover" />
-                                <AvatarFallback class="text-xl font-bold bg-muted text-foreground">
+                    <div
+                        class="flex flex-col items-center gap-6 border-b border-border/40 pb-6 sm:flex-row"
+                    >
+                        <div class="group relative">
+                            <Avatar
+                                class="h-24 w-24 border-2 border-border/50 transition-colors duration-300 group-hover:border-primary/50"
+                            >
+                                <AvatarImage
+                                    v-if="previewUrl || user.avatar"
+                                    :src="previewUrl || user.avatar"
+                                    :alt="user.name"
+                                    class="object-cover"
+                                />
+                                <AvatarFallback
+                                    class="bg-muted text-xl font-bold text-foreground"
+                                >
                                     {{ getInitials(user.name) }}
                                 </AvatarFallback>
                             </Avatar>
-                            
-                            <button 
+
+                            <button
                                 type="button"
                                 @click="triggerFileInput"
-                                class="absolute inset-0 flex items-center justify-center bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                             >
-                                <Camera class="w-6 h-6" />
+                                <Camera class="h-6 w-6" />
                             </button>
                         </div>
 
-                            <!-- Avatar Upload Section -->
-                            <div class="space-y-2 text-center sm:text-left">
-                                <h4 class="text-sm font-bold">Profile Picture</h4>
-                                <p class="text-xs text-muted-foreground">Recommend: Square PNG, JPG, or GIF, max 10MB.</p>
-                                <div class="flex items-center gap-2 justify-center sm:justify-start">
-                                    <Button type="button" variant="outline" size="sm" @click="triggerFileInput">
-                                        Change Photo
-                                    </Button>
-                                    <input 
-                                        type="file" 
-                                        ref="fileInput" 
-                                        name="avatar" 
-                                        class="hidden" 
-                                        accept="image/*"
-                                        @change="handleFileChange"
-                                    />
-                                </div>
-                                <InputError :message="errors.avatar" />
+                        <!-- Avatar Upload Section -->
+                        <div class="space-y-2 text-center sm:text-left">
+                            <h4 class="text-sm font-bold">Profile Picture</h4>
+                            <p class="text-xs text-muted-foreground">
+                                Recommend: Square PNG, JPG, or GIF, max 10MB.
+                            </p>
+                            <div
+                                class="flex items-center justify-center gap-2 sm:justify-start"
+                            >
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="triggerFileInput"
+                                >
+                                    Change Photo
+                                </Button>
+                                <input
+                                    type="file"
+                                    ref="fileInput"
+                                    name="avatar"
+                                    class="hidden"
+                                    accept="image/*"
+                                    @change="handleFileChange"
+                                />
                             </div>
+                            <InputError :message="errors.avatar" />
                         </div>
+                    </div>
 
-                        <!-- Cover Photo Upload Section -->
-                        <div class="flex flex-col gap-4 pb-6 border-b border-border/40 w-full mt-6">
-                            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                <div class="space-y-1 text-center sm:text-left">
-                                    <h4 class="text-sm font-bold">Cover Photo</h4>
-                                    <p class="text-xs text-muted-foreground">Recommend: Landscape PNG, JPG, or GIF, max 10MB.</p>
-                                </div>
-                                <div class="flex flex-col items-center sm:items-end gap-2">
-                                    <Button type="button" variant="outline" size="sm" @click="triggerCoverInput">
-                                        Change Cover
-                                    </Button>
-                                    <input 
-                                        type="file" 
-                                        ref="coverInput" 
-                                        name="cover_photo" 
-                                        class="hidden" 
-                                        accept="image/*"
-                                        @change="handleCoverChange"
-                                    />
-                                </div>
+                    <!-- Cover Photo Upload Section -->
+                    <div
+                        class="mt-6 flex w-full flex-col gap-4 border-b border-border/40 pb-6"
+                    >
+                        <div
+                            class="flex flex-col items-center justify-between gap-4 sm:flex-row"
+                        >
+                            <div class="space-y-1 text-center sm:text-left">
+                                <h4 class="text-sm font-bold">Cover Photo</h4>
+                                <p class="text-xs text-muted-foreground">
+                                    Recommend: Landscape PNG, JPG, or GIF, max
+                                    10MB.
+                                </p>
                             </div>
-                            <div class="w-full h-32 sm:h-48 rounded-xl bg-muted border-2 border-border/50 border-dashed overflow-hidden relative flex items-center justify-center group" @click="triggerCoverInput">
-                                <img v-if="coverPreviewUrl || user.cover_photo" :src="coverPreviewUrl || user.cover_photo" class="w-full h-full object-cover group-hover:opacity-80 transition-opacity cursor-pointer" />
-                                <div v-else class="text-muted-foreground flex flex-col items-center cursor-pointer group-hover:text-primary transition-colors">
-                                    <Camera class="w-8 h-8 mb-2 opacity-50" />
-                                    <span class="text-xs font-medium">Click to upload cover photo</span>
-                                </div>
+                            <div
+                                class="flex flex-col items-center gap-2 sm:items-end"
+                            >
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    @click="triggerCoverInput"
+                                >
+                                    Change Cover
+                                </Button>
+                                <input
+                                    type="file"
+                                    ref="coverInput"
+                                    name="cover_photo"
+                                    class="hidden"
+                                    accept="image/*"
+                                    @change="handleCoverChange"
+                                />
                             </div>
-                            <InputError :message="errors.cover_photo" />
                         </div>
+                        <div
+                            class="group relative flex h-32 w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border/50 bg-muted sm:h-48"
+                            @click="triggerCoverInput"
+                        >
+                            <img
+                                v-if="coverPreviewUrl || user.cover_photo"
+                                :src="coverPreviewUrl || user.cover_photo"
+                                class="h-full w-full cursor-pointer object-cover transition-opacity group-hover:opacity-80"
+                            />
+                            <div
+                                v-else
+                                class="flex cursor-pointer flex-col items-center text-muted-foreground transition-colors group-hover:text-primary"
+                            >
+                                <Camera class="mb-2 h-8 w-8 opacity-50" />
+                                <span class="text-xs font-medium"
+                                    >Click to upload cover photo</span
+                                >
+                            </div>
+                        </div>
+                        <InputError :message="errors.cover_photo" />
+                    </div>
 
                     <div class="grid gap-2">
                         <Label for="name">Name</Label>

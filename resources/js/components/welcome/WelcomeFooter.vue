@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import gsap from 'gsap';
-import { ArrowUp, Github, Twitter, Linkedin, Mail, Activity, Globe, Cpu } from 'lucide-vue-next';
+import {
+    ArrowUp,
+    Github,
+    Twitter,
+    Linkedin,
+    Mail,
+    Activity,
+    Globe,
+    Cpu,
+} from 'lucide-vue-next';
 
 const footerRef = ref<HTMLElement | null>(null);
 const time = ref('--:--:--');
@@ -57,8 +66,8 @@ const socials = [
 
 const stats = computed(() => [
     { icon: Activity, label: 'Uptime', value: '99.98%' },
-    { icon: Globe,    label: 'Region', value: 'GLOBAL · CAMPUS 01' },
-    { icon: Cpu,      label: 'Engine', value: 'LUAV v6.4 — STABLE' },
+    { icon: Globe, label: 'Region', value: 'GLOBAL · CAMPUS 01' },
+    { icon: Cpu, label: 'Engine', value: 'LUAV v6.4 — STABLE' },
 ]);
 
 const scrollTop = () => {
@@ -86,14 +95,15 @@ onMounted(() => {
             ease: 'expo.out',
         });
 
-        gsap.fromTo(footerRef.value.querySelector('.footer-wordmark'),
+        gsap.fromTo(
+            footerRef.value.querySelector('.footer-wordmark'),
             { backgroundPositionX: '100%' },
             {
                 backgroundPositionX: '0%',
                 duration: 1.4,
                 ease: 'expo.out',
                 scrollTrigger: { trigger: footerRef.value, start: 'top 80%' },
-            }
+            },
         );
     }
 });
@@ -106,71 +116,122 @@ onBeforeUnmount(() => {
 <template>
     <footer
         ref="footerRef"
-        class="relative z-10 mt-24 border-t border-border/10 bg-gradient-to-b from-background via-background to-muted/[0.04] backdrop-blur-sm overflow-hidden"
+        class="relative z-10 mt-24 overflow-hidden border-t border-border/10 bg-gradient-to-b from-background via-background to-muted/[0.04] backdrop-blur-sm"
     >
         <!-- Decorative grid backdrop -->
         <div
             class="pointer-events-none absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
-            style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 56px 56px;"
+            style="
+                background-image:
+                    linear-gradient(var(--color-border) 1px, transparent 1px),
+                    linear-gradient(
+                        90deg,
+                        var(--color-border) 1px,
+                        transparent 1px
+                    );
+                background-size: 56px 56px;
+            "
         ></div>
         <!-- Top primary stripe -->
-        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent"></div>
+        <div
+            class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent"
+        ></div>
 
         <!-- Status bar -->
         <div class="relative border-b border-border/10">
-            <div class="mx-auto max-w-[1500px] flex flex-col md:flex-row items-stretch divide-y md:divide-y-0 md:divide-x divide-border/10">
+            <div
+                class="mx-auto flex max-w-[1500px] flex-col items-stretch divide-y divide-border/10 md:flex-row md:divide-x md:divide-y-0"
+            >
                 <div
                     v-for="stat in stats"
                     :key="stat.label"
-                    class="footer-stagger flex-1 flex items-center gap-3 px-6 lg:px-10 py-5"
+                    class="footer-stagger flex flex-1 items-center gap-3 px-6 py-5 lg:px-10"
                 >
                     <component :is="stat.icon" class="h-4 w-4 text-primary" />
                     <div class="flex flex-col leading-tight">
-                        <span class="text-[8px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">{{ stat.label }}</span>
-                        <span class="text-[10px] lg:text-xs font-black uppercase tracking-[0.18em] text-foreground/90">{{ stat.value }}</span>
+                        <span
+                            class="text-[8px] font-black tracking-[0.4em] text-muted-foreground/60 uppercase"
+                            >{{ stat.label }}</span
+                        >
+                        <span
+                            class="text-[10px] font-black tracking-[0.18em] text-foreground/90 uppercase lg:text-xs"
+                            >{{ stat.value }}</span
+                        >
                     </div>
                 </div>
-                <div class="footer-stagger flex items-center gap-3 px-6 lg:px-10 py-5 md:border-l border-border/10">
+                <div
+                    class="footer-stagger flex items-center gap-3 border-border/10 px-6 py-5 md:border-l lg:px-10"
+                >
                     <span class="relative flex h-2 w-2">
-                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60"></span>
-                        <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                        <span
+                            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60"
+                        ></span>
+                        <span
+                            class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"
+                        ></span>
                     </span>
-                    <span class="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/80 tabular-nums">{{ time }}</span>
+                    <span
+                        class="text-[10px] font-black tracking-[0.3em] text-foreground/80 uppercase tabular-nums"
+                        >{{ time }}</span
+                    >
                 </div>
             </div>
         </div>
 
         <!-- Main grid -->
-        <div class="relative mx-auto max-w-[1500px] px-6 lg:px-16 py-16 lg:py-24">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
+        <div
+            class="relative mx-auto max-w-[1500px] px-6 py-16 lg:px-16 lg:py-24"
+        >
+            <div class="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
                 <!-- Brand block -->
-                <div class="lg:col-span-4 flex flex-col gap-8 footer-stagger">
+                <div class="footer-stagger flex flex-col gap-8 lg:col-span-4">
                     <div class="flex flex-col gap-4">
                         <div class="flex items-center gap-3">
-                            <div class="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></div>
-                            <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.5em] text-foreground">LSI Academic Engine</span>
+                            <div
+                                class="h-1.5 w-1.5 animate-pulse rounded-full bg-primary"
+                            ></div>
+                            <span
+                                class="text-[9px] font-black tracking-[0.5em] text-foreground uppercase lg:text-[10px]"
+                                >LSI Academic Engine</span
+                            >
                         </div>
-                        <h3 class="text-3xl lg:text-5xl font-black uppercase leading-[0.95] tracking-tight">
-                            Built for<br/>
-                            <span class="text-primary">assessment-driven</span><br/>
+                        <h3
+                            class="text-3xl leading-[0.95] font-black tracking-tight uppercase lg:text-5xl"
+                        >
+                            Built for<br />
+                            <span class="text-primary">assessment-driven</span
+                            ><br />
                             learning.
                         </h3>
-                        <p class="max-w-sm text-xs lg:text-sm text-muted-foreground leading-relaxed">
-                            A modern operating system for institutions. Compose exams, track mastery, and orchestrate learning journeys at any scale.
+                        <p
+                            class="max-w-sm text-xs leading-relaxed text-muted-foreground lg:text-sm"
+                        >
+                            A modern operating system for institutions. Compose
+                            exams, track mastery, and orchestrate learning
+                            journeys at any scale.
                         </p>
                     </div>
 
                     <!-- Newsletter -->
                     <form @submit.prevent class="flex flex-col gap-2">
-                        <label for="footer-newsletter" class="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">/ stay_synced</label>
-                        <div class="flex items-stretch border border-border/30 focus-within:border-primary/60 transition-colors bg-background/40">
+                        <label
+                            for="footer-newsletter"
+                            class="text-[9px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                            >/ stay_synced</label
+                        >
+                        <div
+                            class="flex items-stretch border border-border/30 bg-background/40 transition-colors focus-within:border-primary/60"
+                        >
                             <input
                                 id="footer-newsletter"
                                 type="email"
                                 placeholder="you@institution.edu"
                                 class="flex-1 bg-transparent px-3 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
                             />
-                            <button type="submit" class="px-4 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.25em] hover:bg-primary/90 transition-colors">
+                            <button
+                                type="submit"
+                                class="bg-primary px-4 text-[10px] font-black tracking-[0.25em] text-primary-foreground uppercase transition-colors hover:bg-primary/90"
+                            >
                                 Subscribe
                             </button>
                         </div>
@@ -183,21 +244,28 @@ onBeforeUnmount(() => {
                             :key="s.label"
                             :href="s.href"
                             :aria-label="s.label"
-                            class="group flex h-9 w-9 items-center justify-center border border-border/20 hover:border-primary/60 hover:bg-primary/5 transition-colors"
+                            class="group flex h-9 w-9 items-center justify-center border border-border/20 transition-colors hover:border-primary/60 hover:bg-primary/5"
                         >
-                            <component :is="s.icon" class="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                            <component
+                                :is="s.icon"
+                                class="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-primary"
+                            />
                         </a>
                     </div>
                 </div>
 
                 <!-- Sitemap -->
-                <div class="lg:col-span-7 lg:col-start-6 grid grid-cols-2 sm:grid-cols-4 gap-x-8 gap-y-12">
+                <div
+                    class="grid grid-cols-2 gap-x-8 gap-y-12 sm:grid-cols-4 lg:col-span-7 lg:col-start-6"
+                >
                     <div
                         v-for="section in sections"
                         :key="section.title"
-                        class="flex flex-col gap-5 footer-stagger"
+                        class="footer-stagger flex flex-col gap-5"
                     >
-                        <h4 class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.35em] text-foreground/90 flex items-center gap-2">
+                        <h4
+                            class="flex items-center gap-2 text-[9px] font-black tracking-[0.35em] text-foreground/90 uppercase lg:text-[10px]"
+                        >
                             <span class="h-px w-4 bg-primary/60"></span>
                             {{ section.title }}
                         </h4>
@@ -205,9 +273,11 @@ onBeforeUnmount(() => {
                             <li v-for="link in section.links" :key="link.label">
                                 <a
                                     :href="link.href"
-                                    class="group inline-flex items-center gap-2 text-[10px] lg:text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70 hover:text-foreground transition-colors"
+                                    class="group inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase transition-colors hover:text-foreground lg:text-[11px]"
                                 >
-                                    <span class="h-px w-0 group-hover:w-3 bg-primary transition-all duration-300"></span>
+                                    <span
+                                        class="h-px w-0 bg-primary transition-all duration-300 group-hover:w-3"
+                                    ></span>
                                     {{ link.label }}
                                 </a>
                             </li>
@@ -217,30 +287,56 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Wordmark -->
-            <div class="mt-16 lg:mt-24 footer-stagger overflow-hidden">
+            <div class="footer-stagger mt-16 overflow-hidden lg:mt-24">
                 <div
-                    class="footer-wordmark text-[18vw] sm:text-[14vw] lg:text-[11rem] font-black uppercase leading-none tracking-tighter select-none whitespace-nowrap"
-                    style="background-image: linear-gradient(90deg, var(--color-foreground) 0%, color-mix(in oklab, var(--color-foreground) 5%, transparent) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;"
+                    class="footer-wordmark text-[18vw] leading-none font-black tracking-tighter whitespace-nowrap uppercase select-none sm:text-[14vw] lg:text-[11rem]"
+                    style="
+                        background-image: linear-gradient(
+                            90deg,
+                            var(--color-foreground) 0%,
+                            color-mix(
+                                    in oklab,
+                                    var(--color-foreground) 5%,
+                                    transparent
+                                )
+                                100%
+                        );
+                        background-size: 200% 100%;
+                        -webkit-background-clip: text;
+                        background-clip: text;
+                        color: transparent;
+                    "
                 >
                     LSI · v6
                 </div>
             </div>
 
             <!-- Bottom bar -->
-            <div class="mt-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pt-8 border-t border-border/10 footer-stagger">
+            <div
+                class="footer-stagger mt-12 flex flex-col items-start justify-between gap-6 border-t border-border/10 pt-8 md:flex-row md:items-center"
+            >
                 <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-                    <p class="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground/60">
+                    <p
+                        class="text-[9px] font-black tracking-[0.3em] text-muted-foreground/60 uppercase"
+                    >
                         © {{ year }} Koamishin · All rights reserved
                     </p>
-                    <span class="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/30">Build · Stable · {{ year }}.{{ String(new Date().getMonth() + 1).padStart(2, '0') }}</span>
+                    <span
+                        class="text-[9px] font-bold tracking-[0.25em] text-muted-foreground/30 uppercase"
+                        >Build · Stable · {{ year }}.{{
+                            String(new Date().getMonth() + 1).padStart(2, '0')
+                        }}</span
+                    >
                 </div>
                 <button
                     type="button"
                     @click="scrollTop"
-                    class="group inline-flex items-center gap-2 border border-border/30 hover:border-primary/60 px-3 py-2 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors"
+                    class="group inline-flex items-center gap-2 border border-border/30 px-3 py-2 text-[9px] font-black tracking-[0.3em] text-muted-foreground uppercase transition-colors hover:border-primary/60 hover:text-foreground"
                 >
                     <span>Return to top</span>
-                    <ArrowUp class="h-3 w-3 group-hover:-translate-y-0.5 transition-transform" />
+                    <ArrowUp
+                        class="h-3 w-3 transition-transform group-hover:-translate-y-0.5"
+                    />
                 </button>
             </div>
         </div>

@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
-import { X, Sparkles, Zap, Award, Megaphone, ArrowRight, RefreshCw, Trophy } from 'lucide-vue-next';
+import {
+    X,
+    Sparkles,
+    Zap,
+    Award,
+    Megaphone,
+    ArrowRight,
+    RefreshCw,
+    Trophy,
+} from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
@@ -49,7 +58,8 @@ const animatedMaxXP = useNumberAnimation(() => props.userStats.maxXPForLevel);
 
 const xpPercentage = computed(() => {
     if (!props.userStats.maxXPForLevel) return 0;
-    const percent = (props.userStats.currentXP / props.userStats.maxXPForLevel) * 100;
+    const percent =
+        (props.userStats.currentXP / props.userStats.maxXPForLevel) * 100;
     return Math.min(100, Math.max(0, percent));
 });
 </script>
@@ -57,7 +67,7 @@ const xpPercentage = computed(() => {
 <template>
     <div class="space-y-6 lg:space-y-8">
         <!-- Integrated Announcement -->
-        <TransitionGroup 
+        <TransitionGroup
             enter-active-class="transition duration-500 ease-out"
             enter-from-class="opacity-0 -translate-y-4"
             enter-to-class="opacity-100 translate-y-0"
@@ -65,36 +75,67 @@ const xpPercentage = computed(() => {
             leave-from-class="opacity-100 scale-100"
             leave-to-class="opacity-0 scale-95"
         >
-            <div v-for="item in announcements.slice(0, 1)" :key="item.id" 
-                class="relative group bg-card/30 backdrop-blur-xl border border-border/40 rounded-2xl sm:rounded-3xl p-3 sm:p-5 border-primary/10 overflow-hidden shadow-2xl shadow-primary/5 hover:border-primary/30 transition-all duration-500 mb-4"
+            <div
+                v-for="item in announcements.slice(0, 1)"
+                :key="item.id"
+                class="group relative mb-4 overflow-hidden rounded-2xl border border-border/40 border-primary/10 bg-card/30 p-3 shadow-2xl shadow-primary/5 backdrop-blur-xl transition-all duration-500 hover:border-primary/30 sm:rounded-3xl sm:p-5"
             >
-                <div class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent"></div>
-                <div class="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-                    <div class="flex items-center flex-1 gap-3 sm:gap-4 w-full sm:w-auto">
-                        <div class="shrink-0 w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl sm:rounded-2xl bg-primary/10 text-primary shadow-inner group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500">
-                            <Megaphone class="w-5 h-5 sm:w-6 sm:h-6" />
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent"
+                ></div>
+                <div
+                    class="relative flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4"
+                >
+                    <div
+                        class="flex w-full flex-1 items-center gap-3 sm:w-auto sm:gap-4"
+                    >
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-inner transition-all duration-500 group-hover:bg-primary group-hover:text-primary-foreground sm:h-12 sm:w-12 sm:rounded-2xl"
+                        >
+                            <Megaphone class="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center flex-wrap gap-2">
-                                <h4 class="text-xs sm:text-sm font-black tracking-tight text-foreground truncate uppercase tracking-widest">{{ item.title }}</h4>
-                                <span class="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[7px] sm:text-[8px] font-black uppercase tracking-widest animate-pulse shrink-0">New</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h4
+                                    class="truncate text-xs font-black tracking-tight tracking-widest text-foreground uppercase sm:text-sm"
+                                >
+                                    {{ item.title }}
+                                </h4>
+                                <span
+                                    class="shrink-0 animate-pulse rounded-md bg-primary/10 px-1.5 py-0.5 text-[7px] font-black tracking-widest text-primary uppercase sm:text-[8px]"
+                                    >New</span
+                                >
                             </div>
-                            <p v-if="item.description" class="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium line-clamp-1 italic opacity-70">"{{ item.description }}"</p>
+                            <p
+                                v-if="item.description"
+                                class="mt-0.5 line-clamp-1 text-[10px] font-medium text-muted-foreground italic opacity-70 sm:text-xs"
+                            >
+                                "{{ item.description }}"
+                            </p>
                         </div>
                     </div>
-                    
-                    <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-primary/5 sm:border-0">
-                        <Link v-if="item.link" :href="item.link" 
-                            class="flex items-center justify-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground rounded-lg sm:rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all duration-300 group/link flex-1 sm:flex-none"
+
+                    <div
+                        class="flex w-full items-center justify-between gap-2 border-t border-primary/5 pt-2 sm:w-auto sm:justify-end sm:border-0 sm:pt-0"
+                    >
+                        <Link
+                            v-if="item.link"
+                            :href="item.link"
+                            class="group/link flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-[9px] font-black tracking-widest text-primary uppercase transition-all duration-300 hover:bg-primary hover:text-primary-foreground sm:flex-none sm:rounded-xl sm:px-4 sm:py-2 sm:text-[10px]"
                         >
                             Explore
-                            <ArrowRight class="w-3 h-3 group-hover/link:translate-x-1 transition-transform" />
+                            <ArrowRight
+                                class="h-3 w-3 transition-transform group-hover/link:translate-x-1"
+                            />
                         </Link>
-                        <button @click="emit('close-announcement', item.id)" 
-                            class="p-1.5 sm:p-2 rounded-lg sm:rounded-xl hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive group/close shrink-0"
+                        <button
+                            @click="emit('close-announcement', item.id)"
+                            class="group/close shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:rounded-xl sm:p-2"
                             title="Dismiss"
                         >
-                            <X class="w-3.5 h-3.5 sm:w-4 h-4 group-hover/close:rotate-90 transition-transform" />
+                            <X
+                                class="h-3.5 h-4 w-3.5 transition-transform group-hover/close:rotate-90 sm:w-4"
+                            />
                         </button>
                     </div>
                 </div>
@@ -103,75 +144,166 @@ const xpPercentage = computed(() => {
 
         <!-- Bespoke Hero Section - Open Layout -->
         <div class="relative flex flex-col justify-center px-1 sm:px-2 lg:px-4">
-            
-            <div class="relative flex flex-col lg:flex-row lg:items-end justify-between gap-4 lg:gap-10">
+            <div
+                class="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-end lg:gap-10"
+            >
                 <!-- Left side: Profile Picture + Greetings + Integrated Progress -->
-                <div class="flex flex-row items-center lg:items-center gap-3 sm:gap-6 lg:gap-10 w-full lg:w-auto">
+                <div
+                    class="flex w-full flex-row items-center gap-3 sm:gap-6 lg:w-auto lg:items-center lg:gap-10"
+                >
                     <!-- Profile Picture with Integrated Level Badge -->
-                    <div class="shrink-0 relative group/avatar">
+                    <div class="group/avatar relative shrink-0">
                         <div class="relative">
                             <!-- Level Badge integrated into Avatar -->
-                            <div class="absolute -top-1 -right-1 z-30 px-1.5 py-0.5 rounded-md text-primary-foreground text-[7px] sm:text-[8px] font-black uppercase tracking-tighter shadow-lg border border-background tabular-nums bg-gradient-to-br"
-                                :class="greetingTheme || 'from-primary to-primary'">
+                            <div
+                                class="absolute -top-1 -right-1 z-30 rounded-md border border-background bg-gradient-to-br px-1.5 py-0.5 text-[7px] font-black tracking-tighter text-primary-foreground uppercase tabular-nums shadow-lg sm:text-[8px]"
+                                :class="
+                                    greetingTheme || 'from-primary to-primary'
+                                "
+                            >
                                 Lvl {{ animatedLevel }}
                             </div>
 
-                            <div class="absolute -bottom-0.5 -right-0.5 z-20 w-3 h-3 sm:w-5 sm:h-5 rounded-full bg-background flex items-center justify-center border-2 border-background shadow-lg">
-                                <span class="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full" :class="statusColor || 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'"></span>
+                            <div
+                                class="absolute -right-0.5 -bottom-0.5 z-20 flex h-3 w-3 items-center justify-center rounded-full border-2 border-background bg-background shadow-lg sm:h-5 sm:w-5"
+                            >
+                                <span
+                                    class="h-1.5 w-1.5 rounded-full sm:h-2.5 sm:w-2.5"
+                                    :class="
+                                        statusColor ||
+                                        'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'
+                                    "
+                                ></span>
                             </div>
-                            
-                            <Avatar class="size-12 sm:size-20 lg:size-28 border border-primary/20 bg-card/40 backdrop-blur-md relative overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 shadow-xl">
+
+                            <Avatar
+                                class="relative size-12 overflow-hidden rounded-xl border border-primary/20 bg-card/40 shadow-xl backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-20 sm:rounded-2xl lg:size-28 lg:rounded-3xl"
+                            >
                                 <AvatarImage
                                     v-if="userAvatar"
                                     :src="userAvatar"
                                     :alt="userName"
                                     class="object-cover"
                                 />
-                                <AvatarFallback class="bg-primary/5 font-black text-primary text-lg sm:text-2xl lg:text-3xl">
+                                <AvatarFallback
+                                    class="bg-primary/5 text-lg font-black text-primary sm:text-2xl lg:text-3xl"
+                                >
                                     {{ getInitials(userName) }}
                                 </AvatarFallback>
                             </Avatar>
                         </div>
                     </div>
 
-                    <div class="flex-1 min-w-0 space-y-1 sm:space-y-3">
-                        <div class="flex flex-wrap items-center gap-2 text-[7px] sm:text-[10px] lg:text-xs font-black tracking-[0.1em] sm:tracking-[0.2em] lg:tracking-[0.3em] uppercase text-muted-foreground/40">
-                            <div class="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-primary/5 border border-primary/10 group/sync cursor-pointer hover:bg-primary/10 transition-colors" @click="emit('refresh')">
-                                <RefreshCw class="w-2 sm:w-2.5 h-2 sm:h-2.5 text-primary/60" :class="{ 'animate-spin': isRefreshing }" />
-                                <span class="whitespace-nowrap tabular-nums text-[6px] sm:text-[9px] lg:text-xs">{{ lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--' }}</span>
+                    <div class="min-w-0 flex-1 space-y-1 sm:space-y-3">
+                        <div
+                            class="flex flex-wrap items-center gap-2 text-[7px] font-black tracking-[0.1em] text-muted-foreground/40 uppercase sm:text-[10px] sm:tracking-[0.2em] lg:text-xs lg:tracking-[0.3em]"
+                        >
+                            <div
+                                class="group/sync flex cursor-pointer items-center gap-1 rounded-full border border-primary/10 bg-primary/5 px-1.5 py-0.5 transition-colors hover:bg-primary/10"
+                                @click="emit('refresh')"
+                            >
+                                <RefreshCw
+                                    class="h-2 w-2 text-primary/60 sm:h-2.5 sm:w-2.5"
+                                    :class="{ 'animate-spin': isRefreshing }"
+                                />
+                                <span
+                                    class="text-[6px] whitespace-nowrap tabular-nums sm:text-[9px] lg:text-xs"
+                                    >{{
+                                        lastSyncTime
+                                            ? lastSyncTime.toLocaleTimeString(
+                                                  [],
+                                                  {
+                                                      hour: '2-digit',
+                                                      minute: '2-digit',
+                                                  },
+                                              )
+                                            : '--:--'
+                                    }}</span
+                                >
                             </div>
-                            <span v-if="accentBadge" class="px-2 py-0.5 rounded-full border backdrop-blur-md transition-colors duration-500 hidden sm:inline-block" :class="accentBadge.theme">
+                            <span
+                                v-if="accentBadge"
+                                class="hidden rounded-full border px-2 py-0.5 backdrop-blur-md transition-colors duration-500 sm:inline-block"
+                                :class="accentBadge.theme"
+                            >
                                 {{ accentBadge.text }}
                             </span>
                         </div>
 
                         <div class="space-y-0.5 sm:space-y-1">
-                            <h1 class="text-base sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-tight truncate">
+                            <h1
+                                class="truncate text-base leading-tight font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl"
+                            >
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
-                            <p class="text-muted-foreground/60 text-[9px] sm:text-sm lg:text-lg font-medium leading-relaxed line-clamp-1 lg:mt-1" v-html="smarterStatus"></p>
+                            <p
+                                class="line-clamp-1 text-[9px] leading-relaxed font-medium text-muted-foreground/60 sm:text-sm lg:mt-1 lg:text-lg"
+                                v-html="smarterStatus"
+                            ></p>
                         </div>
 
                         <!-- Integrated XP Bar & Mini Stats -->
-                        <div class="w-full max-w-sm lg:max-w-lg space-y-1 sm:space-y-1.5 lg:space-y-3">
-                            <div class="flex justify-between items-center text-[7px] sm:text-[8px] lg:text-xs font-black uppercase tracking-widest text-muted-foreground/40">
+                        <div
+                            class="w-full max-w-sm space-y-1 sm:space-y-1.5 lg:max-w-lg lg:space-y-3"
+                        >
+                            <div
+                                class="flex items-center justify-between text-[7px] font-black tracking-widest text-muted-foreground/40 uppercase sm:text-[8px] lg:text-xs"
+                            >
                                 <div class="flex items-center gap-2">
-                                    <span class="text-primary/60">{{ animatedXP.toLocaleString() }} XP</span>
-                                    <span class="hidden sm:inline opacity-30">/</span>
-                                    <span class="hidden sm:inline">{{ Math.max(0, animatedMaxXP - animatedXP).toLocaleString() }} to Level {{ userStats.level + 1 }}</span>
+                                    <span class="text-primary/60"
+                                        >{{
+                                            animatedXP.toLocaleString()
+                                        }}
+                                        XP</span
+                                    >
+                                    <span class="hidden opacity-30 sm:inline"
+                                        >/</span
+                                    >
+                                    <span class="hidden sm:inline"
+                                        >{{
+                                            Math.max(
+                                                0,
+                                                animatedMaxXP - animatedXP,
+                                            ).toLocaleString()
+                                        }}
+                                        to Level {{ userStats.level + 1 }}</span
+                                    >
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-primary">{{ Math.round(xpPercentage) }}% Efficiency</span>
-                                    <div class="flex gap-0.5 sm:gap-1 lg:gap-1.5">
-                                        <div v-for="i in 5" :key="i" class="w-0.5 sm:w-1 lg:w-1.5 h-0.5 sm:h-1 lg:h-1.5 rounded-full" :class="i <= (userStats.level % 5) + 1 ? 'bg-primary/60' : 'bg-muted/40'"></div>
+                                    <span class="text-primary"
+                                        >{{ Math.round(xpPercentage) }}%
+                                        Efficiency</span
+                                    >
+                                    <div
+                                        class="flex gap-0.5 sm:gap-1 lg:gap-1.5"
+                                    >
+                                        <div
+                                            v-for="i in 5"
+                                            :key="i"
+                                            class="h-0.5 w-0.5 rounded-full sm:h-1 sm:w-1 lg:h-1.5 lg:w-1.5"
+                                            :class="
+                                                i <= (userStats.level % 5) + 1
+                                                    ? 'bg-primary/60'
+                                                    : 'bg-muted/40'
+                                            "
+                                        ></div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="relative h-1 lg:h-6 w-full bg-muted/30 dark:bg-black/20 rounded-full overflow-hidden border border-white/10 shadow-inner backdrop-blur-sm">
-                                <div class="h-full rounded-full transition-all duration-1000 ease-out relative shadow-lg shadow-primary/50 bg-gradient-to-r" 
-                                    :class="greetingTheme || 'from-primary via-primary/90 to-primary'"
-                                    :style="{ width: `${xpPercentage}%` }">
-                                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-full -skew-x-[45deg] animate-shimmer"></div>
+                            <div
+                                class="relative h-1 w-full overflow-hidden rounded-full border border-white/10 bg-muted/30 shadow-inner backdrop-blur-sm lg:h-6 dark:bg-black/20"
+                            >
+                                <div
+                                    class="relative h-full rounded-full bg-gradient-to-r shadow-lg shadow-primary/50 transition-all duration-1000 ease-out"
+                                    :class="
+                                        greetingTheme ||
+                                        'from-primary via-primary/90 to-primary'
+                                    "
+                                    :style="{ width: `${xpPercentage}%` }"
+                                >
+                                    <div
+                                        class="animate-shimmer absolute inset-0 w-full -skew-x-[45deg] bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                                    ></div>
                                 </div>
                             </div>
                         </div>
@@ -179,31 +311,61 @@ const xpPercentage = computed(() => {
                 </div>
 
                 <!-- Right side: Performance Mini-Grid -->
-                <div class="hidden lg:grid grid-cols-2 gap-3 w-72 shrink-0 self-end mb-1">
-                    <div class="group relative p-4 rounded-[2rem] bg-card/40 border border-border/40 backdrop-blur-xl hover:border-primary/30 transition-all duration-500 overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div
+                    class="mb-1 hidden w-72 shrink-0 grid-cols-2 gap-3 self-end lg:grid"
+                >
+                    <div
+                        class="group relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-4 backdrop-blur-xl transition-all duration-500 hover:border-primary/30"
+                    >
+                        <div
+                            class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                        ></div>
                         <div class="relative flex flex-col gap-1">
                             <div class="flex items-center gap-2">
-                                <Trophy class="w-3 h-3 text-primary/60" />
-                                <span class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Global Rank</span>
+                                <Trophy class="h-3 w-3 text-primary/60" />
+                                <span
+                                    class="text-[9px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase"
+                                    >Global Rank</span
+                                >
                             </div>
                             <div class="flex items-baseline gap-1">
-                                <span class="text-2xl font-black tracking-tighter tabular-nums">#{{ userStats.rankNumber || '--' }}</span>
-                                <span class="text-[8px] font-bold text-muted-foreground/20">/{{ userStats.totalPlayers || '0' }}</span>
+                                <span
+                                    class="text-2xl font-black tracking-tighter tabular-nums"
+                                    >#{{ userStats.rankNumber || '--' }}</span
+                                >
+                                <span
+                                    class="text-[8px] font-bold text-muted-foreground/20"
+                                    >/{{ userStats.totalPlayers || '0' }}</span
+                                >
                             </div>
                         </div>
                     </div>
 
-                    <div class="group relative p-4 rounded-[2rem] bg-card/40 border border-border/40 backdrop-blur-xl hover:border-primary/30 transition-all duration-500 overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div
+                        class="group relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-4 backdrop-blur-xl transition-all duration-500 hover:border-primary/30"
+                    >
+                        <div
+                            class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                        ></div>
                         <div class="relative flex flex-col gap-1">
                             <div class="flex items-center gap-2">
-                                <Zap class="w-3 h-3 text-primary/60" />
-                                <span class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Points</span>
+                                <Zap class="h-3 w-3 text-primary/60" />
+                                <span
+                                    class="text-[9px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase"
+                                    >Points</span
+                                >
                             </div>
                             <div class="flex items-baseline gap-1">
-                                <span class="text-2xl font-black tracking-tighter tabular-nums">{{ (userStats.points || 0).toLocaleString() }}</span>
-                                <span class="text-[8px] font-bold text-muted-foreground/20 italic">PTS</span>
+                                <span
+                                    class="text-2xl font-black tracking-tighter tabular-nums"
+                                    >{{
+                                        (userStats.points || 0).toLocaleString()
+                                    }}</span
+                                >
+                                <span
+                                    class="text-[8px] font-bold text-muted-foreground/20 italic"
+                                    >PTS</span
+                                >
                             </div>
                         </div>
                     </div>
@@ -215,18 +377,32 @@ const xpPercentage = computed(() => {
 
 <style scoped>
 @keyframes slow-drift {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(5%, 5%) scale(1.1); }
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(5%, 5%) scale(1.1);
+    }
 }
 
 @keyframes slow-drift-reverse {
-    0%, 100% { transform: translate(0, 0) scale(1.1); }
-    50% { transform: translate(-5%, -5%) scale(1); }
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1.1);
+    }
+    50% {
+        transform: translate(-5%, -5%) scale(1);
+    }
 }
 
 @keyframes shimmer {
-    0% { transform: translateX(-200%) skew-x(-45deg); }
-    100% { transform: translateX(200%) skew-x(-45deg); }
+    0% {
+        transform: translateX(-200%) skew-x(-45deg);
+    }
+    100% {
+        transform: translateX(200%) skew-x(-45deg);
+    }
 }
 
 .animate-slow-drift {
@@ -240,6 +416,4 @@ const xpPercentage = computed(() => {
 .animate-shimmer {
     animation: shimmer 3s infinite ease-in-out;
 }
-
 </style>
-

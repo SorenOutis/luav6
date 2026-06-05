@@ -14,13 +14,21 @@ defineProps<{
 
     <AppLayout :breadcrumbs="[{ title: pageTitle, href: '#' }]">
         <div class="flex min-h-[70vh] items-center justify-center px-6 py-16">
-            <section class="w-full max-w-xl rounded-lg border border-border bg-card p-8 text-center shadow-sm">
-                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <section
+                class="w-full max-w-xl rounded-lg border border-border bg-card p-8 text-center shadow-sm"
+            >
+                <div
+                    class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground"
+                >
                     <LockKeyhole class="h-7 w-7" />
                 </div>
 
-                <h1 class="mt-6 text-2xl font-bold tracking-tight">{{ pageTitle }} is off right now</h1>
-                <p class="mt-3 text-sm leading-6 text-muted-foreground">{{ message }}</p>
+                <h1 class="mt-6 text-2xl font-bold tracking-tight">
+                    {{ pageTitle }} is off right now
+                </h1>
+                <p class="mt-3 text-sm leading-6 text-muted-foreground">
+                    {{ message }}
+                </p>
 
                 <Link
                     href="/"

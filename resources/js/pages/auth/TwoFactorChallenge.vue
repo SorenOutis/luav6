@@ -48,92 +48,96 @@ defineOptions({ layout: AuthLayout });
     <Head title="Two-factor authentication" />
 
     <div class="space-y-3">
-        <h1 class="text-3xl sm:text-4xl font-black uppercase tracking-tighter text-foreground leading-tight">
+        <h1
+            class="text-3xl leading-tight font-black tracking-tighter text-foreground uppercase sm:text-4xl"
+        >
             {{ authConfigContent.title }}
         </h1>
-        <p class="text-sm text-muted-foreground/60 font-medium tracking-wide max-w-xs">
+        <p
+            class="max-w-xs text-sm font-medium tracking-wide text-muted-foreground/60"
+        >
             {{ authConfigContent.description }}
         </p>
     </div>
 
-        <div class="space-y-6">
-            <template v-if="!showRecoveryInput">
-                <Form
-                    v-bind="store.form()"
-                    class="space-y-4"
-                    reset-on-error
-                    @error="code = ''"
-                    #default="{ errors, processing, clearErrors }"
+    <div class="space-y-6">
+        <template v-if="!showRecoveryInput">
+            <Form
+                v-bind="store.form()"
+                class="space-y-4"
+                reset-on-error
+                @error="code = ''"
+                #default="{ errors, processing, clearErrors }"
+            >
+                <input type="hidden" name="code" :value="code" />
+                <div
+                    class="flex flex-col items-center justify-center space-y-3 text-center"
                 >
-                    <input type="hidden" name="code" :value="code" />
-                    <div
-                        class="flex flex-col items-center justify-center space-y-3 text-center"
-                    >
-                        <div class="flex w-full items-center justify-center">
-                            <InputOTP
-                                id="otp"
-                                v-model="code"
-                                :maxlength="6"
-                                :disabled="processing"
-                                autofocus
-                            >
-                                <InputOTPGroup>
-                                    <InputOTPSlot
-                                        v-for="index in 6"
-                                        :key="index"
-                                        :index="index - 1"
-                                    />
-                                </InputOTPGroup>
-                            </InputOTP>
-                        </div>
-                        <InputError :message="errors.code" />
-                    </div>
-                    <Button type="submit" class="w-full" :disabled="processing"
-                        >Continue</Button
-                    >
-                    <div class="text-center text-sm text-muted-foreground">
-                        <span>or you can </span>
-                        <button
-                            type="button"
-                            class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                            @click="() => toggleRecoveryMode(clearErrors)"
+                    <div class="flex w-full items-center justify-center">
+                        <InputOTP
+                            id="otp"
+                            v-model="code"
+                            :maxlength="6"
+                            :disabled="processing"
+                            autofocus
                         >
-                            {{ authConfigContent.buttonText }}
-                        </button>
+                            <InputOTPGroup>
+                                <InputOTPSlot
+                                    v-for="index in 6"
+                                    :key="index"
+                                    :index="index - 1"
+                                />
+                            </InputOTPGroup>
+                        </InputOTP>
                     </div>
-                </Form>
-            </template>
-
-            <template v-else>
-                <Form
-                    v-bind="store.form()"
-                    class="space-y-4"
-                    reset-on-error
-                    #default="{ errors, processing, clearErrors }"
+                    <InputError :message="errors.code" />
+                </div>
+                <Button type="submit" class="w-full" :disabled="processing"
+                    >Continue</Button
                 >
-                    <Input
-                        name="recovery_code"
-                        type="text"
-                        placeholder="Enter recovery code"
-                        :autofocus="showRecoveryInput"
-                        required
-                    />
-                    <InputError :message="errors.recovery_code" />
-                    <Button type="submit" class="w-full" :disabled="processing"
-                        >Continue</Button
+                <div class="text-center text-sm text-muted-foreground">
+                    <span>or you can </span>
+                    <button
+                        type="button"
+                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        @click="() => toggleRecoveryMode(clearErrors)"
                     >
+                        {{ authConfigContent.buttonText }}
+                    </button>
+                </div>
+            </Form>
+        </template>
 
-                    <div class="text-center text-sm text-muted-foreground">
-                        <span>or you can </span>
-                        <button
-                            type="button"
-                            class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
-                            @click="() => toggleRecoveryMode(clearErrors)"
-                        >
-                            {{ authConfigContent.buttonText }}
-                        </button>
-                    </div>
-                </Form>
-            </template>
-        </div>
+        <template v-else>
+            <Form
+                v-bind="store.form()"
+                class="space-y-4"
+                reset-on-error
+                #default="{ errors, processing, clearErrors }"
+            >
+                <Input
+                    name="recovery_code"
+                    type="text"
+                    placeholder="Enter recovery code"
+                    :autofocus="showRecoveryInput"
+                    required
+                />
+                <InputError :message="errors.recovery_code" />
+                <Button type="submit" class="w-full" :disabled="processing"
+                    >Continue</Button
+                >
+
+                <div class="text-center text-sm text-muted-foreground">
+                    <span>or you can </span>
+                    <button
+                        type="button"
+                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        @click="() => toggleRecoveryMode(clearErrors)"
+                    >
+                        {{ authConfigContent.buttonText }}
+                    </button>
+                </div>
+            </Form>
+        </template>
+    </div>
 </template>

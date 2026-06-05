@@ -36,7 +36,8 @@ router.on('start', (event) => {
     const visit = event.detail.visit;
     const method = String(visit.method ?? 'get').toLowerCase();
     const rawUrl = visit.url as string | URL;
-    const url = typeof rawUrl === 'string' ? rawUrl : rawUrl?.toString?.() ?? '';
+    const url =
+        typeof rawUrl === 'string' ? rawUrl : (rawUrl?.toString?.() ?? '');
 
     let targetPath = window.location.pathname;
     try {
@@ -59,7 +60,9 @@ router.on('start', (event) => {
     const isAuthFlow = isMutatingVisit && (isAuthPage || isAuthTarget);
     const isLogout = isMutatingVisit && targetPath.includes('/logout');
 
-    console.log(`[app.ts] Navigation started to: ${targetPath}. isAuthFlow: ${isAuthFlow}, isLogout: ${isLogout}`);
+    console.log(
+        `[app.ts] Navigation started to: ${targetPath}. isAuthFlow: ${isAuthFlow}, isLogout: ${isLogout}`,
+    );
 
     if (isAuthFlow) {
         showDeferred('AUTHENTICATING');
@@ -78,15 +81,21 @@ router.on('finish', (event) => {
         const page = event.detail.page || router.page;
         const errors = page?.props?.errors || {};
         const hasErrors = Object.keys(errors).length > 0;
-        
-        console.log(`[app.ts] Navigation finished. hasErrors: ${hasErrors}, isVisible: ${isVisible.value}`);
+
+        console.log(
+            `[app.ts] Navigation finished. hasErrors: ${hasErrors}, isVisible: ${isVisible.value}`,
+        );
 
         if (hasErrors) {
-            console.log('[app.ts] Validation errors detected — hiding loader immediately');
+            console.log(
+                '[app.ts] Validation errors detected — hiding loader immediately',
+            );
             hide();
         } else {
             // Normal successful navigation — wait for progress bar to hit 100%
-            console.log('[app.ts] Successful navigation — calling hideWhenReady');
+            console.log(
+                '[app.ts] Successful navigation — calling hideWhenReady',
+            );
             hideWhenReady();
         }
     }
@@ -104,7 +113,7 @@ function ensureFormMethod(route: any): void {
     if (!route || typeof route !== 'function') return;
     if (typeof route.form === 'function') return;
 
-    const method = route.method || (route.definition?.methods?.[0]) || 'post';
+    const method = route.method || route.definition?.methods?.[0] || 'post';
     const urlFunc = route.url;
     if (!urlFunc) return;
 
@@ -135,7 +144,9 @@ function ensureFormMethod(route: any): void {
             if (result.status === 'fulfilled') {
                 const mod = result.value;
                 if (mod.default) {
-                    Object.values(mod.default).forEach((route) => ensureFormMethod(route));
+                    Object.values(mod.default).forEach((route) =>
+                        ensureFormMethod(route),
+                    );
                 }
                 Object.keys(mod)
                     .filter((key) => key !== 'default')
@@ -151,7 +162,10 @@ function ensureFormMethod(route: any): void {
                         }
                     });
             } else {
-                console.warn(`[App] Failed to patch module at index ${index}:`, result.reason);
+                console.warn(
+                    `[App] Failed to patch module at index ${index}:`,
+                    result.reason,
+                );
             }
         });
     } catch (error) {

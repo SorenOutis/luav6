@@ -39,7 +39,11 @@ onMounted(() => {
             const p = prisms[i];
 
             // Seed initial 3D state via GSAP so nothing else fights the transform
-            gsap.set(el, { z: p.depth, rotationX: 20 * dir, rotationY: 30 * -dir });
+            gsap.set(el, {
+                z: p.depth,
+                rotationX: 20 * dir,
+                rotationY: 30 * -dir,
+            });
 
             // Continuous tumble
             gsap.to(el, {
@@ -85,7 +89,7 @@ onBeforeUnmount(() => {
     <div
         ref="layer"
         class="fp-layer pointer-events-none fixed inset-0 overflow-hidden"
-        style="z-index: 0;"
+        style="z-index: 0"
         aria-hidden="true"
     >
         <div
@@ -103,20 +107,50 @@ onBeforeUnmount(() => {
         >
             <!-- Cube -->
             <div v-if="p.kind === 'cube'" class="fp-cube">
-                <span class="fp-face" :style="`transform: translateZ(${p.size / 2}px)`"></span>
-                <span class="fp-face" :style="`transform: rotateY(180deg) translateZ(${p.size / 2}px)`"></span>
-                <span class="fp-face" :style="`transform: rotateY(90deg) translateZ(${p.size / 2}px)`"></span>
-                <span class="fp-face" :style="`transform: rotateY(-90deg) translateZ(${p.size / 2}px)`"></span>
-                <span class="fp-face" :style="`transform: rotateX(90deg) translateZ(${p.size / 2}px)`"></span>
-                <span class="fp-face" :style="`transform: rotateX(-90deg) translateZ(${p.size / 2}px)`"></span>
+                <span
+                    class="fp-face"
+                    :style="`transform: translateZ(${p.size / 2}px)`"
+                ></span>
+                <span
+                    class="fp-face"
+                    :style="`transform: rotateY(180deg) translateZ(${p.size / 2}px)`"
+                ></span>
+                <span
+                    class="fp-face"
+                    :style="`transform: rotateY(90deg) translateZ(${p.size / 2}px)`"
+                ></span>
+                <span
+                    class="fp-face"
+                    :style="`transform: rotateY(-90deg) translateZ(${p.size / 2}px)`"
+                ></span>
+                <span
+                    class="fp-face"
+                    :style="`transform: rotateX(90deg) translateZ(${p.size / 2}px)`"
+                ></span>
+                <span
+                    class="fp-face"
+                    :style="`transform: rotateX(-90deg) translateZ(${p.size / 2}px)`"
+                ></span>
             </div>
 
             <!-- Diamond / Octahedron (approximated with two rotated squares) -->
             <div v-else class="fp-diamond">
-                <span class="fp-face fp-face-diamond" :style="`transform: rotateX(55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"></span>
-                <span class="fp-face fp-face-diamond" :style="`transform: rotateX(-55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"></span>
-                <span class="fp-face fp-face-diamond" :style="`transform: rotateY(55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"></span>
-                <span class="fp-face fp-face-diamond" :style="`transform: rotateY(-55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"></span>
+                <span
+                    class="fp-face fp-face-diamond"
+                    :style="`transform: rotateX(55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"
+                ></span>
+                <span
+                    class="fp-face fp-face-diamond"
+                    :style="`transform: rotateX(-55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"
+                ></span>
+                <span
+                    class="fp-face fp-face-diamond"
+                    :style="`transform: rotateY(55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"
+                ></span>
+                <span
+                    class="fp-face fp-face-diamond"
+                    :style="`transform: rotateY(-55deg) rotateZ(45deg) translateZ(${p.size / 3}px)`"
+                ></span>
             </div>
         </div>
     </div>
@@ -164,7 +198,8 @@ onBeforeUnmount(() => {
         color-mix(in srgb, var(--color-primary) 10%, transparent),
         color-mix(in srgb, var(--color-primary) 2%, transparent)
     );
-    box-shadow: 0 0 18px color-mix(in srgb, var(--color-primary) 10%, transparent) inset;
+    box-shadow: 0 0 18px
+        color-mix(in srgb, var(--color-primary) 10%, transparent) inset;
 }
 .fp-face-diamond {
     border-color: color-mix(in srgb, var(--color-primary) 55%, transparent);
@@ -176,6 +211,8 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .fp-item { display: none; }
+    .fp-item {
+        display: none;
+    }
 }
 </style>

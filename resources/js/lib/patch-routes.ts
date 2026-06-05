@@ -4,37 +4,35 @@
  */
 
 type RouteMethod<T extends string = string> = {
-    url?: (options?: any) => string
-    definition?: { url: string }
-    method?: T
-    form?: () => { action: string; method: T }
-}
+    url?: (options?: any) => string;
+    definition?: { url: string };
+    method?: T;
+    form?: () => { action: string; method: T };
+};
 
 /**
  * Patches a route method object to add form() helper
  */
 function patchRouteMethod<T extends string>(routeObj: any): void {
-    if (!routeObj || typeof routeObj !== 'object') return
-    
+    if (!routeObj || typeof routeObj !== 'object') return;
+
     // If form() already exists, don't overwrite
-    if (typeof routeObj.form === 'function') return
-    
+    if (typeof routeObj.form === 'function') return;
+
     // Add form() method if we have url and method
     if (routeObj.url && routeObj.method) {
-        const urlValue = routeObj.url
-        const methodValue = routeObj.method
-        
+        const urlValue = routeObj.url;
+        const methodValue = routeObj.method;
+
         Object.defineProperty(routeObj, 'form', {
             value: () => ({
-                action: typeof urlValue === 'function' 
-                    ? urlValue()
-                    : urlValue,
+                action: typeof urlValue === 'function' ? urlValue() : urlValue,
                 method: methodValue,
             }),
             enumerable: false,
             writable: false,
             configurable: true,
-        })
+        });
     }
 }
 
@@ -42,16 +40,20 @@ function patchRouteMethod<T extends string>(routeObj: any): void {
  * Recursively patch all exported values from a module
  */
 function patchModuleExports(module: any): void {
-    if (!module || typeof module !== 'object') return
-    
+    if (!module || typeof module !== 'object') return;
+
     Object.values(module).forEach((exported: any) => {
-        patchRouteMethod(exported)
-        if (exported && typeof exported === 'object' && !Array.isArray(exported)) {
+        patchRouteMethod(exported);
+        if (
+            exported &&
+            typeof exported === 'object' &&
+            !Array.isArray(exported)
+        ) {
             Object.values(exported).forEach((nested: any) => {
-                patchRouteMethod(nested)
-            })
+                patchRouteMethod(nested);
+            });
         }
-    })
+    });
 }
 
 /**
@@ -64,11 +66,11 @@ export function initRoutePatching(): void {
     const getModuleSync = (path: string) => {
         try {
             // Access via import.meta.glob cached results
-            return (globalThis as any).__viteModuleCache?.[path]
+            return (globalThis as any).__viteModuleCache?.[path];
         } catch {
-            return null
+            return null;
         }
-    }
+    };
 
     // Try to patch modules synchronously if they're already loaded
     const paths = [
@@ -81,19 +83,19 @@ export function initRoutePatching(): void {
         '@/routes/password/confirm',
         '@/actions/App/Http/Controllers/Settings/ProfileController',
         '@/actions/App/Http/Controllers/Settings/PasswordController',
-    ]
+    ];
 
     // Force synchronous imports by using require if available
     if (typeof require !== 'undefined') {
         try {
-            paths.forEach(path => {
+            paths.forEach((path) => {
                 try {
-                    const mod = require(path)
-                    patchModuleExports(mod)
+                    const mod = require(path);
+                    patchModuleExports(mod);
                 } catch {
                     // Module not loaded yet, will be loaded async
                 }
-            })
+            });
         } catch {
             // Fallback to async
         }
@@ -101,19 +103,17 @@ export function initRoutePatching(): void {
 }
 
 // Initialize immediately
-initRoutePatching()
+initRoutePatching();
 
 // Also set up a global wrapper for future imports
 declare global {
     interface Window {
-        __patchRoute?: (mod: any) => any
+        __patchRoute?: (mod: any) => any;
     }
 }
 
 if (typeof window !== 'undefined') {
-    window.__patchRoute = patchModuleExports
+    window.__patchRoute = patchModuleExports;
 }
 
-export { patchRouteMethod, patchModuleExports }
-
-
+export { patchRouteMethod, patchModuleExports };

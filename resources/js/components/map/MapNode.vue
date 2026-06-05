@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Motion } from '@motionone/vue';
-import { Lock, CheckCircle2, Crown, BookOpen, ScrollText, Zap, Sparkles } from 'lucide-vue-next';
+import {
+    Lock,
+    CheckCircle2,
+    Crown,
+    BookOpen,
+    ScrollText,
+    Zap,
+    Sparkles,
+} from 'lucide-vue-next';
 
 interface Props {
     title: string;
@@ -36,8 +44,14 @@ const containerStyle = computed(() => ({
 }));
 
 const nodeClasses = computed(() => {
-    const base = "relative flex items-center justify-center rounded-full transition-all duration-500 cursor-pointer group border-2";
-    const size = props.type === 'boss' ? 'w-20 h-20' : props.type === 'exam' ? 'w-16 h-16' : 'w-14 h-14';
+    const base =
+        'relative flex items-center justify-center rounded-full transition-all duration-500 cursor-pointer group border-2';
+    const size =
+        props.type === 'boss'
+            ? 'w-20 h-20'
+            : props.type === 'exam'
+              ? 'w-16 h-16'
+              : 'w-14 h-14';
 
     if (props.status === 'locked') {
         return `${base} ${size} bg-slate-100/50 border-slate-200 grayscale opacity-60 cursor-pointer hover:opacity-80`;
@@ -49,14 +63,18 @@ const nodeClasses = computed(() => {
     return `${base} ${size} bg-white hover:scale-110`;
 });
 
-const ringSize = computed(() => props.type === 'boss' ? 96 : props.type === 'exam' ? 80 : 72);
-const ringRadius = computed(() => (ringSize.value / 2) - 3);
+const ringSize = computed(() =>
+    props.type === 'boss' ? 96 : props.type === 'exam' ? 80 : 72,
+);
+const ringRadius = computed(() => ringSize.value / 2 - 3);
 const ringCircumference = computed(() => 2 * Math.PI * ringRadius.value);
 const ringDashOffset = computed(() => {
-    const frac = props.totalReqs > 0 ? (props.metReqs / props.totalReqs) : 0;
+    const frac = props.totalReqs > 0 ? props.metReqs / props.totalReqs : 0;
     return ringCircumference.value * (1 - frac);
 });
-const showLockedRing = computed(() => props.status === 'locked' && props.totalReqs > 0);
+const showLockedRing = computed(
+    () => props.status === 'locked' && props.totalReqs > 0,
+);
 
 const nodeStyle = computed(() => {
     if (props.status === 'available') {
@@ -87,13 +105,19 @@ const icon = computed(() => {
 });
 
 const typeLabel = computed(() =>
-    props.type === 'boss' ? 'Boss Challenge' : props.type === 'exam' ? 'Exam' : 'Lesson'
+    props.type === 'boss'
+        ? 'Boss Challenge'
+        : props.type === 'exam'
+          ? 'Exam'
+          : 'Lesson',
 );
 
 const statusLabel = computed(() => {
     if (props.status === 'completed') return 'Completed';
-    if (props.status === 'available') return props.isNext ? 'Recommended next' : 'Ready to start';
-    if (props.totalReqs > 0) return `${props.metReqs} / ${props.totalReqs} requirements met`;
+    if (props.status === 'available')
+        return props.isNext ? 'Recommended next' : 'Ready to start';
+    if (props.totalReqs > 0)
+        return `${props.metReqs} / ${props.totalReqs} requirements met`;
     return 'Locked';
 });
 
@@ -105,33 +129,42 @@ const handleClick = () => {
 </script>
 
 <template>
-    <div 
-        class="absolute" 
+    <div
+        class="absolute"
         :style="containerStyle"
         @click="handleClick"
         @mouseenter="hovered = true"
         @mouseleave="hovered = false"
     >
         <!-- Pulse effect for active nodes (stronger for the recommended next node) -->
-        <div 
+        <div
             v-if="status === 'available'"
-            class="absolute inset-0 rounded-full animate-ping scale-125"
+            class="absolute inset-0 scale-125 animate-ping rounded-full"
             :class="isNext ? 'bg-emerald-400/30' : 'bg-primary/20'"
         ></div>
 
         <!-- Locked: progress ring showing how many requirements are met -->
         <svg
             v-if="showLockedRing"
-            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 pointer-events-none"
-            :width="ringSize" :height="ringSize"
+            class="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90"
+            :width="ringSize"
+            :height="ringSize"
         >
             <circle
-                :cx="ringSize / 2" :cy="ringSize / 2" :r="ringRadius"
-                stroke="rgba(255,255,255,0.08)" stroke-width="3" fill="none"
+                :cx="ringSize / 2"
+                :cy="ringSize / 2"
+                :r="ringRadius"
+                stroke="rgba(255,255,255,0.08)"
+                stroke-width="3"
+                fill="none"
             />
             <circle
-                :cx="ringSize / 2" :cy="ringSize / 2" :r="ringRadius"
-                :stroke="primaryColor" stroke-width="3" fill="none"
+                :cx="ringSize / 2"
+                :cy="ringSize / 2"
+                :r="ringRadius"
+                :stroke="primaryColor"
+                stroke-width="3"
+                fill="none"
                 stroke-linecap="round"
                 :stroke-dasharray="ringCircumference"
                 :stroke-dashoffset="ringDashOffset"
@@ -142,9 +175,9 @@ const handleClick = () => {
         <!-- NEXT badge -->
         <div
             v-if="isNext && status === 'available'"
-            class="absolute -top-3 left-1/2 -translate-x-1/2 z-10 px-1.5 py-0.5 rounded-full bg-emerald-500 text-[9px] font-bold uppercase tracking-widest text-black shadow-lg flex items-center gap-0.5 whitespace-nowrap"
+            class="absolute -top-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold tracking-widest whitespace-nowrap text-black uppercase shadow-lg"
         >
-            <Sparkles class="w-2.5 h-2.5" /> Next
+            <Sparkles class="h-2.5 w-2.5" /> Next
         </div>
 
         <Motion
@@ -154,23 +187,27 @@ const handleClick = () => {
             :style="nodeStyle"
         >
             <!-- Background Glow -->
-            <div 
+            <div
                 v-if="status !== 'locked'"
-                class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/30 to-white/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/30 to-white/50 opacity-0 transition-opacity group-hover:opacity-100"
             ></div>
 
-            <component 
-                :is="icon" 
-                class="w-6 h-6 transition-colors duration-300"
+            <component
+                :is="icon"
+                class="h-6 w-6 transition-colors duration-300"
                 :class="status === 'locked' ? 'text-slate-400' : ''"
                 :style="iconColor ? { color: iconColor } : {}"
             />
 
             <!-- Title Label -->
-            <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                <span 
+            <div
+                class="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap"
+            >
+                <span
                     class="text-xs font-medium tracking-wide transition-colors duration-300"
-                    :class="status === 'locked' ? 'text-white/30' : 'text-white/80'"
+                    :class="
+                        status === 'locked' ? 'text-white/30' : 'text-white/80'
+                    "
                 >
                     {{ title }}
                 </span>
@@ -179,37 +216,79 @@ const handleClick = () => {
 
         <!-- Rich hover card -->
         <transition
-            enter-active-class="transition duration-150" leave-active-class="transition duration-100"
-            enter-from-class="opacity-0 translate-y-1" leave-to-class="opacity-0 translate-y-1"
+            enter-active-class="transition duration-150"
+            leave-active-class="transition duration-100"
+            enter-from-class="opacity-0 translate-y-1"
+            leave-to-class="opacity-0 translate-y-1"
         >
             <div
                 v-if="hovered"
-                class="absolute left-1/2 -translate-x-1/2 bottom-full mb-12 w-56 p-3 rounded-xl border border-white/10 bg-[#0b0b0d]/95 backdrop-blur-xl shadow-2xl z-20 pointer-events-none"
+                class="pointer-events-none absolute bottom-full left-1/2 z-20 mb-12 w-56 -translate-x-1/2 rounded-xl border border-white/10 bg-[#0b0b0d]/95 p-3 shadow-2xl backdrop-blur-xl"
             >
                 <div class="flex items-center gap-2">
-                    <component :is="typeIcon" class="w-3.5 h-3.5" :style="{ color: primaryColor }" />
-                    <span class="text-[10px] uppercase tracking-widest text-white/40 font-semibold">{{ typeLabel }}</span>
+                    <component
+                        :is="typeIcon"
+                        class="h-3.5 w-3.5"
+                        :style="{ color: primaryColor }"
+                    />
+                    <span
+                        class="text-[10px] font-semibold tracking-widest text-white/40 uppercase"
+                        >{{ typeLabel }}</span
+                    >
                 </div>
-                <div class="mt-1 text-sm font-semibold text-white tracking-tight leading-snug">{{ title }}</div>
+                <div
+                    class="mt-1 text-sm leading-snug font-semibold tracking-tight text-white"
+                >
+                    {{ title }}
+                </div>
                 <div
                     class="mt-1 text-[11px] font-medium"
-                    :style="{ color: status === 'locked' ? '#94a3b8' : status === 'completed' ? '#10b981' : primaryColor }"
-                >{{ statusLabel }}</div>
-                <div v-if="rewardXp > 0" class="mt-2 flex items-center gap-1.5 text-[11px] text-white/70">
-                    <Zap class="w-3 h-3 text-amber-400" />
-                    <span class="text-white/40">{{ status === 'completed' ? 'Earned' : 'Reward' }}:</span>
-                    <span class="tabular-nums">+{{ rewardXp.toLocaleString() }} XP</span>
+                    :style="{
+                        color:
+                            status === 'locked'
+                                ? '#94a3b8'
+                                : status === 'completed'
+                                  ? '#10b981'
+                                  : primaryColor,
+                    }"
+                >
+                    {{ statusLabel }}
+                </div>
+                <div
+                    v-if="rewardXp > 0"
+                    class="mt-2 flex items-center gap-1.5 text-[11px] text-white/70"
+                >
+                    <Zap class="h-3 w-3 text-amber-400" />
+                    <span class="text-white/40"
+                        >{{
+                            status === 'completed' ? 'Earned' : 'Reward'
+                        }}:</span
+                    >
+                    <span class="tabular-nums"
+                        >+{{ rewardXp.toLocaleString() }} XP</span
+                    >
                 </div>
                 <div v-if="showLockedRing" class="mt-2">
-                    <div class="h-1 rounded-full bg-white/10 overflow-hidden">
+                    <div class="h-1 overflow-hidden rounded-full bg-white/10">
                         <div
                             class="h-full rounded-full transition-[width] duration-500"
-                            :style="{ width: `${Math.round((metReqs / totalReqs) * 100)}%`, backgroundColor: primaryColor }"
+                            :style="{
+                                width: `${Math.round((metReqs / totalReqs) * 100)}%`,
+                                backgroundColor: primaryColor,
+                            }"
                         ></div>
                     </div>
-                    <div class="mt-1 text-[10px] text-white/40 tracking-wide">{{ metReqs }} of {{ totalReqs }} unlocked · Click for details</div>
+                    <div class="mt-1 text-[10px] tracking-wide text-white/40">
+                        {{ metReqs }} of {{ totalReqs }} unlocked · Click for
+                        details
+                    </div>
                 </div>
-                <div v-else-if="status === 'locked'" class="mt-2 text-[10px] text-white/40">Click for unlock details</div>
+                <div
+                    v-else-if="status === 'locked'"
+                    class="mt-2 text-[10px] text-white/40"
+                >
+                    Click for unlock details
+                </div>
             </div>
         </transition>
     </div>

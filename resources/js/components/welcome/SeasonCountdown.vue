@@ -17,11 +17,15 @@ const countdownActive = ref(false);
 let countdownInterval: ReturnType<typeof setInterval> | null = null;
 
 const progress = computed(() => {
-    if (!props.activeSeason?.startDate || !props.activeSeason?.endDate) return 0;
+    if (!props.activeSeason?.startDate || !props.activeSeason?.endDate)
+        return 0;
     const start = new Date(props.activeSeason.startDate).getTime();
     const end = new Date(props.activeSeason.endDate).getTime();
     const now = Date.now();
-    return Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
+    return Math.min(
+        100,
+        Math.max(0, Math.round(((now - start) / (end - start)) * 100)),
+    );
 });
 
 const updateCountdown = () => {
@@ -52,7 +56,7 @@ const handleMouseMove = (e: MouseEvent) => {
     const rect = card.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     // 3D Tilt calculation
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
@@ -64,14 +68,14 @@ const handleMouseMove = (e: MouseEvent) => {
         rotateY: rotateY,
         transformPerspective: 1000,
         duration: 0.4,
-        ease: 'power2.out'
+        ease: 'power2.out',
     });
 
     // Move internal elements for depth
     gsap.to('.unit-card', {
         z: 20,
         duration: 0.4,
-        ease: 'power2.out'
+        ease: 'power2.out',
     });
 
     card.style.setProperty('--mouse-x', `${x}px`);
@@ -84,13 +88,13 @@ const handleMouseLeave = (e: MouseEvent) => {
         rotateX: 0,
         rotateY: 0,
         duration: 0.8,
-        ease: 'elastic.out(1, 0.3)'
+        ease: 'elastic.out(1, 0.3)',
     });
 
     gsap.to('.unit-card', {
         z: 0,
         duration: 0.8,
-        ease: 'elastic.out(1, 0.3)'
+        ease: 'elastic.out(1, 0.3)',
     });
 };
 
@@ -108,7 +112,7 @@ onMounted(() => {
         opacity: 0,
         scale: 0.95,
         duration: 1.5,
-        ease: 'expo.out'
+        ease: 'expo.out',
     });
 
     // Animate the progress bar fill on scroll
@@ -119,7 +123,7 @@ onMounted(() => {
         },
         width: '0%',
         duration: 2.5,
-        ease: 'expo.inOut'
+        ease: 'expo.inOut',
     });
 
     // Staggered entrance for countdown units
@@ -132,7 +136,7 @@ onMounted(() => {
         opacity: 0,
         stagger: 0.1,
         duration: 1,
-        ease: 'power3.out'
+        ease: 'power3.out',
     });
 });
 
@@ -144,66 +148,120 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div v-if="countdownActive && activeSeason" 
-        class="reveal-section mt-16 lg:mt-24 relative group/season season-card preserve-3d"
+    <div
+        v-if="countdownActive && activeSeason"
+        class="reveal-section group/season season-card preserve-3d relative mt-16 lg:mt-24"
         @mousemove="handleMouseMove"
         @mouseleave="handleMouseLeave"
     >
-        <div class="relative overflow-hidden rounded-xl border border-border/30 dark:border-border/15 bg-card/30 dark:bg-background/30 p-5 sm:p-8 lg:p-10 backdrop-blur-3xl shadow-xl transition-colors duration-500 hover:border-primary/20">
-            
+        <div
+            class="relative overflow-hidden rounded-xl border border-border/30 bg-card/30 p-5 shadow-xl backdrop-blur-3xl transition-colors duration-500 hover:border-primary/20 sm:p-8 lg:p-10 dark:border-border/15 dark:bg-background/30"
+        >
             <!-- Dynamic Mouse Glow -->
-            <div class="absolute inset-0 opacity-0 group-hover/season:opacity-100 transition-opacity duration-700 pointer-events-none"
-                :style="{ background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--color-primary), transparent 85%)` }">
-            </div>
+            <div
+                class="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover/season:opacity-100"
+                :style="{
+                    background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), var(--color-primary), transparent 85%)`,
+                }"
+            ></div>
 
             <!-- Structural Accents -->
-            <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
-            <div class="absolute top-0 left-0 w-6 h-6 border-t border-l border-primary/20 pointer-events-none"></div>
-            <div class="absolute bottom-0 right-0 w-6 h-6 border-b border-r border-primary/20 pointer-events-none"></div>
-            
-            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-10">
+            <div
+                class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"
+            ></div>
+            <div
+                class="pointer-events-none absolute top-0 left-0 h-6 w-6 border-t border-l border-primary/20"
+            ></div>
+            <div
+                class="pointer-events-none absolute right-0 bottom-0 h-6 w-6 border-r border-b border-primary/20"
+            ></div>
+
+            <div
+                class="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10"
+            >
                 <div class="space-y-3 sm:space-y-4">
                     <div class="flex items-center gap-3">
-                        <div class="relative flex h-8 w-8 items-center justify-center rounded-lg bg-primary/5 border border-primary/10">
-                            <Timer class="h-4 w-4 text-primary animate-pulse" />
+                        <div
+                            class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-primary/10 bg-primary/5"
+                        >
+                            <Timer class="h-4 w-4 animate-pulse text-primary" />
                         </div>
-                        <span class="text-[9px] font-black uppercase tracking-[0.3em] text-primary/70">Temporal Sync</span>
+                        <span
+                            class="text-[9px] font-black tracking-[0.3em] text-primary/70 uppercase"
+                            >Temporal Sync</span
+                        >
                     </div>
-                    
+
                     <div>
-                        <h2 class="text-2xl sm:text-3xl lg:text-5xl font-black uppercase tracking-tighter leading-none italic">
+                        <h2
+                            class="text-2xl leading-none font-black tracking-tighter uppercase italic sm:text-3xl lg:text-5xl"
+                        >
                             {{ activeSeason.name }}
                         </h2>
-                        <p class="mt-2 text-[9px] font-bold text-muted-foreground/50 uppercase tracking-[0.2em]">Season Deadline Protocol</p>
+                        <p
+                            class="mt-2 text-[9px] font-bold tracking-[0.2em] text-muted-foreground/50 uppercase"
+                        >
+                            Season Deadline Protocol
+                        </p>
                     </div>
                 </div>
-                
-                <div class="grid grid-cols-4 gap-2 sm:gap-3 lg:gap-4 preserve-3d">
-                    <div v-for="(unit, key) in { DAYS: countdown.days, HRS: countdown.hours, MIN: countdown.minutes, SEC: countdown.seconds }" 
-                        :key="key" 
-                        class="unit-card group/unit relative flex flex-col items-center p-3 sm:p-4 lg:p-5 border border-border/20 dark:border-border/10 bg-muted/10 dark:bg-foreground/[0.02] rounded-lg backdrop-blur-md transition-all hover:bg-muted/30 dark:hover:bg-foreground/[0.05] hover:border-primary/30 preserve-3d"
+
+                <div
+                    class="preserve-3d grid grid-cols-4 gap-2 sm:gap-3 lg:gap-4"
+                >
+                    <div
+                        v-for="(unit, key) in {
+                            DAYS: countdown.days,
+                            HRS: countdown.hours,
+                            MIN: countdown.minutes,
+                            SEC: countdown.seconds,
+                        }"
+                        :key="key"
+                        class="unit-card group/unit preserve-3d relative flex flex-col items-center rounded-lg border border-border/20 bg-muted/10 p-3 backdrop-blur-md transition-all hover:border-primary/30 hover:bg-muted/30 sm:p-4 lg:p-5 dark:border-border/10 dark:bg-foreground/[0.02] dark:hover:bg-foreground/[0.05]"
                     >
-                        <span class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tighter tabular-nums font-mono leading-none text-foreground group-hover/unit:text-primary transition-colors translate-z-10">
+                        <span
+                            class="translate-z-10 font-mono text-2xl leading-none font-black tracking-tighter text-foreground tabular-nums transition-colors group-hover/unit:text-primary sm:text-3xl lg:text-4xl"
+                        >
                             {{ String(unit).padStart(2, '0') }}
                         </span>
-                        <span class="text-[6px] sm:text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 mt-2 translate-z-10">{{ key }}</span>
+                        <span
+                            class="mt-2 translate-z-10 text-[6px] font-black tracking-[0.2em] text-muted-foreground/60 uppercase sm:text-[8px]"
+                            >{{ key }}</span
+                        >
                     </div>
                 </div>
             </div>
-            
-            <div v-if="activeSeason.startDate" class="mt-8 lg:mt-10 relative z-10">
-                <div class="flex items-end justify-between mb-2">
+
+            <div
+                v-if="activeSeason.startDate"
+                class="relative z-10 mt-8 lg:mt-10"
+            >
+                <div class="mb-2 flex items-end justify-between">
                     <div class="flex items-center gap-2">
                         <Zap class="h-2.5 w-2.5 text-primary/60" />
-                        <span class="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/80">Progress</span>
+                        <span
+                            class="text-[9px] font-black tracking-[0.2em] text-muted-foreground/80 uppercase"
+                            >Progress</span
+                        >
                     </div>
-                    <span class="text-lg font-black font-mono leading-none">{{ progress }}<span class="text-[8px] ml-0.5 text-primary">%</span></span>
+                    <span class="font-mono text-lg leading-none font-black"
+                        >{{ progress
+                        }}<span class="ml-0.5 text-[8px] text-primary"
+                            >%</span
+                        ></span
+                    >
                 </div>
-                
-                <div class="relative h-1.5 overflow-hidden rounded-full bg-muted/30 dark:bg-foreground/[0.03] border border-border/5">
-                    <div class="progress-fill absolute inset-y-0 left-0 rounded-full bg-primary/60 transition-all duration-1000 shadow-[0_0_10px_rgba(var(--color-primary),0.3)]" 
-                        :style="{ width: progress + '%' }">
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-20 -translate-x-full animate-[scan-horizontal_2s_linear_infinite]"></div>
+
+                <div
+                    class="relative h-1.5 overflow-hidden rounded-full border border-border/5 bg-muted/30 dark:bg-foreground/[0.03]"
+                >
+                    <div
+                        class="progress-fill absolute inset-y-0 left-0 rounded-full bg-primary/60 shadow-[0_0_10px_rgba(var(--color-primary),0.3)] transition-all duration-1000"
+                        :style="{ width: progress + '%' }"
+                    >
+                        <div
+                            class="absolute inset-0 w-20 -translate-x-full animate-[scan-horizontal_2s_linear_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                        ></div>
                     </div>
                 </div>
             </div>
@@ -219,4 +277,3 @@ onBeforeUnmount(() => {
     transform: translateZ(10px);
 }
 </style>
-

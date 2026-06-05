@@ -166,7 +166,8 @@ const accentClasses = (accent: string, active: boolean) => {
         case 'destructive':
             return {
                 wrap: 'bg-destructive/[0.06] border-destructive/30',
-                iconWrap: 'bg-destructive/10 text-destructive border-destructive/30',
+                iconWrap:
+                    'bg-destructive/10 text-destructive border-destructive/30',
                 value: 'text-destructive',
                 dot: 'bg-destructive',
                 glow: 'bg-destructive/20',
@@ -174,8 +175,7 @@ const accentClasses = (accent: string, active: boolean) => {
         case 'amber':
             return {
                 wrap: 'bg-amber-500/[0.06] border-amber-500/30',
-                iconWrap:
-                    'bg-amber-500/10 text-amber-500 border-amber-500/30',
+                iconWrap: 'bg-amber-500/10 text-amber-500 border-amber-500/30',
                 value: 'text-amber-500',
                 dot: 'bg-amber-500',
                 glow: 'bg-amber-500/20',
@@ -200,7 +200,7 @@ const accentClasses = (accent: string, active: boolean) => {
     >
         <!-- Decorative background glows -->
         <div
-            class="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl"
+            class="pointer-events-none absolute -top-16 -left-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl"
             aria-hidden="true"
         />
         <div
@@ -209,10 +209,7 @@ const accentClasses = (accent: string, active: boolean) => {
         />
 
         <!-- Day timeline bar -->
-        <div
-            class="relative h-1 w-full bg-muted/40"
-            aria-hidden="true"
-        >
+        <div class="relative h-1 w-full bg-muted/40" aria-hidden="true">
             <div
                 class="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/60 via-primary to-primary/60 transition-[width] duration-500"
                 :style="{ width: `${dayPercent}%` }"
@@ -223,30 +220,42 @@ const accentClasses = (accent: string, active: boolean) => {
             />
         </div>
 
-        <div class="relative z-10 flex flex-col gap-3 p-4 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch">
+        <div
+            class="relative z-10 flex flex-col gap-3 p-4 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch"
+        >
             <!-- Middle: Metric tiles -->
             <div class="grid grid-cols-3 gap-3 sm:gap-3 lg:flex-1">
                 <template v-for="m in metrics" :key="m.key">
                     <SpotlightCard
                         customSize
-                        :glowColor="m.accent === 'destructive' ? 'red' : m.accent === 'amber' ? 'orange' : 'blue'"
-                        :className="[
-                            'transition-all duration-300',
-                            'flex flex-col items-start gap-2.5 p-3',
-                            'sm:flex-row sm:items-center sm:gap-3 sm:p-3 sm:px-4',
-                            accentClasses(m.accent, m.active).wrap,
-                        ].join(' ')"
+                        :glowColor="
+                            m.accent === 'destructive'
+                                ? 'red'
+                                : m.accent === 'amber'
+                                  ? 'orange'
+                                  : 'blue'
+                        "
+                        :className="
+                            [
+                                'transition-all duration-300',
+                                'flex flex-col items-start gap-2.5 p-3',
+                                'sm:flex-row sm:items-center sm:gap-3 sm:p-3 sm:px-4',
+                                accentClasses(m.accent, m.active).wrap,
+                            ].join(' ')
+                        "
                         :style="{
                             backgroundColor: 'transparent',
-                            borderColor: 'transparent'
+                            borderColor: 'transparent',
                         }"
                     >
                         <!-- Inner container for decorative background glow -->
-                        <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                        <div
+                            class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+                        >
                             <div
                                 v-if="m.active"
                                 :class="[
-                                    'pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full blur-2xl',
+                                    'pointer-events-none absolute -top-6 -right-6 h-16 w-16 rounded-full blur-2xl',
                                     accentClasses(m.accent, m.active).glow,
                                 ]"
                                 aria-hidden="true"
@@ -254,7 +263,9 @@ const accentClasses = (accent: string, active: boolean) => {
                         </div>
 
                         <!-- Top row on mobile: icon + label side-by-side -->
-                        <div class="relative z-10 flex w-full items-center gap-2 sm:w-auto sm:gap-0">
+                        <div
+                            class="relative z-10 flex w-full items-center gap-2 sm:w-auto sm:gap-0"
+                        >
                             <div
                                 :class="[
                                     'relative flex shrink-0 items-center justify-center rounded-xl border',
@@ -262,38 +273,49 @@ const accentClasses = (accent: string, active: boolean) => {
                                     accentClasses(m.accent, m.active).iconWrap,
                                 ]"
                             >
-                                <component :is="m.icon" class="h-4 w-4 sm:h-4 sm:w-4" />
+                                <component
+                                    :is="m.icon"
+                                    class="h-4 w-4 sm:h-4 sm:w-4"
+                                />
                                 <span
                                     v-if="m.active"
                                     :class="[
-                                        'absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full ring-2 ring-background animate-pulse',
+                                        'absolute -top-0.5 -right-0.5 h-2 w-2 animate-pulse rounded-full ring-2 ring-background',
                                         accentClasses(m.accent, m.active).dot,
                                     ]"
                                     aria-hidden="true"
                                 />
                             </div>
                             <!-- Mobile-only label beside icon; hidden on sm+ (shown in the bottom block) -->
-                            <p class="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/70 truncate sm:hidden">
+                            <p
+                                class="truncate text-[8px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase sm:hidden"
+                            >
                                 {{ m.label }}
                             </p>
                         </div>
 
                         <!-- Bottom/right content -->
-                        <div class="relative z-10 flex min-w-0 flex-1 flex-col sm:flex-col">
-                            <p class="hidden sm:block text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">
+                        <div
+                            class="relative z-10 flex min-w-0 flex-1 flex-col sm:flex-col"
+                        >
+                            <p
+                                class="hidden text-[9px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase sm:block"
+                            >
                                 {{ m.label }}
                             </p>
                             <div class="flex items-baseline gap-1.5">
                                 <span
                                     :class="[
-                                        'text-2xl font-black leading-none tracking-tight tabular-nums sm:text-3xl',
+                                        'text-2xl leading-none font-black tracking-tight tabular-nums sm:text-3xl',
                                         accentClasses(m.accent, m.active).value,
                                     ]"
                                 >
                                     {{ m.value }}
                                 </span>
                                 <!-- Sub-label hidden on xs (tight space); shown from sm+ -->
-                                <span class="hidden truncate text-[9px] font-black uppercase tracking-wider text-muted-foreground/50 sm:inline">
+                                <span
+                                    class="hidden truncate text-[9px] font-black tracking-wider text-muted-foreground/50 uppercase sm:inline"
+                                >
                                     {{ m.sub }}
                                 </span>
                             </div>
@@ -308,22 +330,32 @@ const accentClasses = (accent: string, active: boolean) => {
                 as="Link"
                 :href="nextItem.href"
                 customSize
-                :glowColor="countdown?.tone === 'overdue' ? 'red' : countdown?.tone === 'now' ? 'orange' : 'blue'"
-                :className="[
-                    'group flex items-center gap-4 px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg lg:w-[32%] lg:min-w-[280px]',
-                    nextToneClasses.border,
-                    'ring-1',
-                    nextToneClasses.ring,
-                ].join(' ')"
+                :glowColor="
+                    countdown?.tone === 'overdue'
+                        ? 'red'
+                        : countdown?.tone === 'now'
+                          ? 'orange'
+                          : 'blue'
+                "
+                :className="
+                    [
+                        'group flex items-center gap-4 px-4 py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg lg:w-[32%] lg:min-w-[280px]',
+                        nextToneClasses.border,
+                        'ring-1',
+                        nextToneClasses.ring,
+                    ].join(' ')
+                "
                 :style="{
                     backgroundColor: 'transparent',
-                    borderColor: 'transparent'
+                    borderColor: 'transparent',
                 }"
             >
-                <div class="absolute inset-0 overflow-hidden rounded-[inherit] pointer-events-none">
+                <div
+                    class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+                >
                     <div
                         :class="[
-                            'pointer-events-none absolute -right-8 -bottom-8 h-24 w-24 rounded-full blur-2xl opacity-60',
+                            'pointer-events-none absolute -right-8 -bottom-8 h-24 w-24 rounded-full opacity-60 blur-2xl',
                             nextToneClasses.glow,
                         ]"
                         aria-hidden="true"
@@ -342,29 +374,40 @@ const accentClasses = (accent: string, active: boolean) => {
 
                 <div class="relative z-10 min-w-0 flex-1">
                     <div class="flex items-center gap-2">
-                        <p :class="['text-[9px] font-black uppercase tracking-[0.25em]', nextToneClasses.label]">
+                        <p
+                            :class="[
+                                'text-[9px] font-black tracking-[0.25em] uppercase',
+                                nextToneClasses.label,
+                            ]"
+                        >
                             Next {{ nextItem.kind }}
                         </p>
                         <span
                             v-if="countdown"
                             :class="[
-                                'rounded-full border px-1.5 py-px text-[9px] font-black uppercase tracking-widest tabular-nums',
+                                'rounded-full border px-1.5 py-px text-[9px] font-black tracking-widest uppercase tabular-nums',
                                 nextToneClasses.chip,
                             ]"
                         >
-                            {{ countdown.overdue ? '+' : '' }}{{ countdown.label }}
+                            {{ countdown.overdue ? '+' : ''
+                            }}{{ countdown.label }}
                         </span>
                     </div>
-                    <p class="mt-0.5 truncate text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                    <p
+                        class="mt-0.5 truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary"
+                    >
                         {{ nextItem.title }}
                     </p>
-                    <p v-if="nextItem.meta" class="truncate text-[10px] text-muted-foreground/80">
+                    <p
+                        v-if="nextItem.meta"
+                        class="truncate text-[10px] text-muted-foreground/80"
+                    >
                         {{ nextItem.meta }}
                     </p>
                 </div>
 
                 <ArrowUpRight
-                    class="relative z-10 h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
+                    class="relative z-10 h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
                 />
             </SpotlightCard>
         </div>

@@ -16,11 +16,31 @@ const section = ref<HTMLElement | null>(null);
 
 const faces = [
     { label: 'THESIS', code: 'ESS_01', transform: 'translateZ(110px)' },
-    { label: 'EVIDENCE', code: 'ESS_02', transform: 'rotateY(180deg) translateZ(110px)' },
-    { label: 'STRUCTURE', code: 'ESS_03', transform: 'rotateY(90deg) translateZ(110px)' },
-    { label: 'CLARITY', code: 'ESS_04', transform: 'rotateY(-90deg) translateZ(110px)' },
-    { label: 'GRAMMAR', code: 'ESS_05', transform: 'rotateX(90deg) translateZ(110px)' },
-    { label: 'RELEVANCE', code: 'ESS_06', transform: 'rotateX(-90deg) translateZ(110px)' },
+    {
+        label: 'EVIDENCE',
+        code: 'ESS_02',
+        transform: 'rotateY(180deg) translateZ(110px)',
+    },
+    {
+        label: 'STRUCTURE',
+        code: 'ESS_03',
+        transform: 'rotateY(90deg) translateZ(110px)',
+    },
+    {
+        label: 'CLARITY',
+        code: 'ESS_04',
+        transform: 'rotateY(-90deg) translateZ(110px)',
+    },
+    {
+        label: 'GRAMMAR',
+        code: 'ESS_05',
+        transform: 'rotateX(90deg) translateZ(110px)',
+    },
+    {
+        label: 'RELEVANCE',
+        code: 'ESS_06',
+        transform: 'rotateX(-90deg) translateZ(110px)',
+    },
 ];
 
 const orbitNodes = (count: number) =>
@@ -85,9 +105,24 @@ onMounted(() => {
             repeat: -1,
         });
 
-        gsap.to(ringA.value, { rotationZ: '+=360', duration: 10, ease: 'none', repeat: -1 });
-        gsap.to(ringB.value, { rotationZ: '-=360', duration: 14, ease: 'none', repeat: -1 });
-        gsap.to(ringC.value, { rotationZ: '+=360', duration: 18, ease: 'none', repeat: -1 });
+        gsap.to(ringA.value, {
+            rotationZ: '+=360',
+            duration: 10,
+            ease: 'none',
+            repeat: -1,
+        });
+        gsap.to(ringB.value, {
+            rotationZ: '-=360',
+            duration: 14,
+            ease: 'none',
+            repeat: -1,
+        });
+        gsap.to(ringC.value, {
+            rotationZ: '+=360',
+            duration: 18,
+            ease: 'none',
+            repeat: -1,
+        });
 
         gsap.to('.dc-float', {
             y: (i: number) => (i % 2 ? 14 : -14),
@@ -154,61 +189,114 @@ onBeforeUnmount(() => {
 <template>
     <section
         ref="section"
-        class="dimensional-core relative mt-20 lg:mt-28 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-background via-background to-primary/[0.04] px-4 py-14 sm:px-10 sm:py-20 lg:px-16 lg:py-24"
+        class="dimensional-core relative mt-20 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-background via-background to-primary/[0.04] px-4 py-14 sm:px-10 sm:py-20 lg:mt-28 lg:px-16 lg:py-24"
     >
-        <div class="absolute inset-0 pointer-events-none opacity-[0.04]" aria-hidden="true">
+        <div
+            class="pointer-events-none absolute inset-0 opacity-[0.04]"
+            aria-hidden="true"
+        >
             <div
                 class="absolute inset-0"
-                style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 48px 48px;"
+                style="
+                    background-image:
+                        linear-gradient(
+                            var(--color-border) 1px,
+                            transparent 1px
+                        ),
+                        linear-gradient(
+                            90deg,
+                            var(--color-border) 1px,
+                            transparent 1px
+                        );
+                    background-size: 48px 48px;
+                "
             ></div>
         </div>
 
-        <div class="relative z-10 grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center">
+        <div
+            class="relative z-10 grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-center"
+        >
             <div class="space-y-5">
                 <div class="dc-reveal flex items-center gap-2">
                     <span class="h-px w-10 bg-primary/60"></span>
-                    <span class="text-[10px] font-mono font-bold tracking-[0.35em] text-primary/80 uppercase">
+                    <span
+                        class="font-mono text-[10px] font-bold tracking-[0.35em] text-primary/80 uppercase"
+                    >
                         &gt; ESSAY.ANALYZER
                     </span>
                 </div>
                 <h2
-                    class="dc-reveal text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight leading-[1.05]"
+                    class="dc-reveal text-3xl leading-[1.05] font-black tracking-tight uppercase sm:text-4xl lg:text-5xl"
                 >
                     Transparent
                     <br />
-                    <span class="bg-gradient-to-br from-primary via-primary/80 to-foreground bg-clip-text text-transparent">
+                    <span
+                        class="bg-gradient-to-br from-primary via-primary/80 to-foreground bg-clip-text text-transparent"
+                    >
                         Essay Review Core
                     </span>
                 </h2>
-                <p class="dc-reveal text-sm sm:text-base text-muted-foreground/80 leading-relaxed max-w-md">
-                    Each essay is reviewed across six visible criteria so students can understand how the AI scores
-                    their work through
-                    <span class="text-foreground font-semibold">thesis strength</span>,
-                    <span class="text-foreground font-semibold">supporting evidence</span>, and
-                    <span class="text-foreground font-semibold">writing clarity</span>.
+                <p
+                    class="dc-reveal max-w-md text-sm leading-relaxed text-muted-foreground/80 sm:text-base"
+                >
+                    Each essay is reviewed across six visible criteria so
+                    students can understand how the AI scores their work through
+                    <span class="font-semibold text-foreground"
+                        >thesis strength</span
+                    >,
+                    <span class="font-semibold text-foreground"
+                        >supporting evidence</span
+                    >, and
+                    <span class="font-semibold text-foreground"
+                        >writing clarity</span
+                    >.
                 </p>
 
-                <div class="dc-reveal grid grid-cols-3 gap-2 pt-3 max-w-sm">
-                    <div class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left">
-                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Criteria</p>
+                <div class="dc-reveal grid max-w-sm grid-cols-3 gap-2 pt-3">
+                    <div
+                        class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left"
+                    >
+                        <p
+                            class="font-mono text-[9px] tracking-widest text-muted-foreground/60 uppercase"
+                        >
+                            Criteria
+                        </p>
                         <p class="text-xl font-black text-foreground">6</p>
                     </div>
-                    <div class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left">
-                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Passes</p>
+                    <div
+                        class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left"
+                    >
+                        <p
+                            class="font-mono text-[9px] tracking-widest text-muted-foreground/60 uppercase"
+                        >
+                            Passes
+                        </p>
                         <p class="text-xl font-black text-foreground">3</p>
                     </div>
-                    <div class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left">
-                        <p class="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60">Signals</p>
+                    <div
+                        class="rounded-lg border border-border/40 bg-muted/30 p-3 text-left"
+                    >
+                        <p
+                            class="font-mono text-[9px] tracking-widest text-muted-foreground/60 uppercase"
+                        >
+                            Signals
+                        </p>
                         <p class="text-xl font-black text-primary">19</p>
                     </div>
                 </div>
 
                 <div class="dc-reveal flex items-center gap-2 pt-2">
                     <span class="relative flex h-2 w-2">
-                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60"></span>
-                        <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
+                        <span
+                            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60"
+                        ></span>
+                        <span
+                            class="relative inline-flex h-2 w-2 rounded-full bg-primary"
+                        ></span>
                     </span>
-                    <span class="text-[10px] font-mono font-bold tracking-[0.3em] text-muted-foreground/70 uppercase">
+                    <span
+                        class="font-mono text-[10px] font-bold tracking-[0.3em] text-muted-foreground/70 uppercase"
+                    >
                         Rubric active · feedback traceable
                     </span>
                 </div>
@@ -216,14 +304,20 @@ onBeforeUnmount(() => {
 
             <div
                 ref="stage"
-                class="relative mx-auto h-[360px] w-full max-w-[460px] sm:h-[460px] sm:max-w-[560px] select-none"
+                class="relative mx-auto h-[360px] w-full max-w-[460px] select-none sm:h-[460px] sm:max-w-[560px]"
                 @mousemove="handleMouseMove"
                 @mouseleave="handleMouseLeave"
             >
                 <!-- halos -->
-                <div class="dc-halo dc-float absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[260px] w-[260px] rounded-full bg-primary/20 blur-3xl"></div>
-                <div class="dc-halo dc-float absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[340px] w-[340px] rounded-full border border-primary/10"></div>
-                <div class="dc-halo dc-float absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[420px] w-[420px] rounded-full border border-dashed border-primary/10"></div>
+                <div
+                    class="dc-halo dc-float absolute top-1/2 left-1/2 h-[260px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-3xl"
+                ></div>
+                <div
+                    class="dc-halo dc-float absolute top-1/2 left-1/2 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10"
+                ></div>
+                <div
+                    class="dc-halo dc-float absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/10"
+                ></div>
 
                 <div ref="world" class="dc-world absolute inset-0">
                     <!-- Orbit ring A -->
@@ -232,7 +326,9 @@ onBeforeUnmount(() => {
                             v-for="node in nodesA"
                             :key="`a-${node.id}`"
                             class="dc-node"
-                            :style="{ transform: `rotateZ(${node.angle}deg) translateX(170px)` }"
+                            :style="{
+                                transform: `rotateZ(${node.angle}deg) translateX(170px)`,
+                            }"
                         >
                             <span class="dc-node-dot"></span>
                         </div>
@@ -244,7 +340,9 @@ onBeforeUnmount(() => {
                             v-for="node in nodesB"
                             :key="`b-${node.id}`"
                             class="dc-node"
-                            :style="{ transform: `rotateZ(${node.angle}deg) translateX(200px)` }"
+                            :style="{
+                                transform: `rotateZ(${node.angle}deg) translateX(200px)`,
+                            }"
                         >
                             <span class="dc-node-dot dc-node-dot-sm"></span>
                         </div>
@@ -256,7 +354,9 @@ onBeforeUnmount(() => {
                             v-for="node in nodesC"
                             :key="`c-${node.id}`"
                             class="dc-node"
-                            :style="{ transform: `rotateZ(${node.angle}deg) translateX(230px)` }"
+                            :style="{
+                                transform: `rotateZ(${node.angle}deg) translateX(230px)`,
+                            }"
                         >
                             <span class="dc-node-dot dc-node-accent"></span>
                         </div>
@@ -264,12 +364,30 @@ onBeforeUnmount(() => {
 
                     <!-- Core: inner tetrahedron-like diamond -->
                     <div ref="core" class="dc-core">
-                        <span class="dc-core-face" style="transform: rotateY(0deg) translateZ(45px)"></span>
-                        <span class="dc-core-face" style="transform: rotateY(90deg) translateZ(45px)"></span>
-                        <span class="dc-core-face" style="transform: rotateY(180deg) translateZ(45px)"></span>
-                        <span class="dc-core-face" style="transform: rotateY(270deg) translateZ(45px)"></span>
-                        <span class="dc-core-face dc-core-cap" style="transform: rotateX(90deg) translateZ(45px)"></span>
-                        <span class="dc-core-face dc-core-cap" style="transform: rotateX(-90deg) translateZ(45px)"></span>
+                        <span
+                            class="dc-core-face"
+                            style="transform: rotateY(0deg) translateZ(45px)"
+                        ></span>
+                        <span
+                            class="dc-core-face"
+                            style="transform: rotateY(90deg) translateZ(45px)"
+                        ></span>
+                        <span
+                            class="dc-core-face"
+                            style="transform: rotateY(180deg) translateZ(45px)"
+                        ></span>
+                        <span
+                            class="dc-core-face"
+                            style="transform: rotateY(270deg) translateZ(45px)"
+                        ></span>
+                        <span
+                            class="dc-core-face dc-core-cap"
+                            style="transform: rotateX(90deg) translateZ(45px)"
+                        ></span>
+                        <span
+                            class="dc-core-face dc-core-cap"
+                            style="transform: rotateX(-90deg) translateZ(45px)"
+                        ></span>
                     </div>
 
                     <!-- Outer cube -->
@@ -281,12 +399,24 @@ onBeforeUnmount(() => {
                             :style="{ transform: face.transform }"
                         >
                             <div class="dc-face-inner">
-                                <div class="dc-face-corner dc-face-corner-tl"></div>
-                                <div class="dc-face-corner dc-face-corner-tr"></div>
-                                <div class="dc-face-corner dc-face-corner-bl"></div>
-                                <div class="dc-face-corner dc-face-corner-br"></div>
-                                <span class="dc-face-code">{{ face.code }}</span>
-                                <span class="dc-face-label">{{ face.label }}</span>
+                                <div
+                                    class="dc-face-corner dc-face-corner-tl"
+                                ></div>
+                                <div
+                                    class="dc-face-corner dc-face-corner-tr"
+                                ></div>
+                                <div
+                                    class="dc-face-corner dc-face-corner-bl"
+                                ></div>
+                                <div
+                                    class="dc-face-corner dc-face-corner-br"
+                                ></div>
+                                <span class="dc-face-code">{{
+                                    face.code
+                                }}</span>
+                                <span class="dc-face-label">{{
+                                    face.label
+                                }}</span>
                                 <span class="dc-face-scan"></span>
                             </div>
                         </div>
@@ -294,24 +424,40 @@ onBeforeUnmount(() => {
                 </div>
 
                 <!-- Scanner crosshair -->
-                <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div class="h-full w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent"></div>
+                <div
+                    class="pointer-events-none absolute inset-0 flex items-center justify-center"
+                >
+                    <div
+                        class="h-full w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent"
+                    ></div>
                 </div>
-                <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <div class="h-px w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+                <div
+                    class="pointer-events-none absolute inset-0 flex items-center justify-center"
+                >
+                    <div
+                        class="h-px w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent"
+                    ></div>
                 </div>
 
                 <!-- Corner labels -->
-                <span class="dc-reveal absolute left-3 top-3 text-[9px] font-mono tracking-[0.25em] text-muted-foreground/60 uppercase">
+                <span
+                    class="dc-reveal absolute top-3 left-3 font-mono text-[9px] tracking-[0.25em] text-muted-foreground/60 uppercase"
+                >
                     &gt; essay.review
                 </span>
-                <span class="dc-reveal absolute right-3 top-3 text-[9px] font-mono tracking-[0.25em] text-primary/70 uppercase">
+                <span
+                    class="dc-reveal absolute top-3 right-3 font-mono text-[9px] tracking-[0.25em] text-primary/70 uppercase"
+                >
                     ai.v6
                 </span>
-                <span class="dc-reveal absolute left-3 bottom-3 text-[9px] font-mono tracking-[0.25em] text-muted-foreground/60 uppercase">
+                <span
+                    class="dc-reveal absolute bottom-3 left-3 font-mono text-[9px] tracking-[0.25em] text-muted-foreground/60 uppercase"
+                >
                     axis: thesis · evidence · clarity
                 </span>
-                <span class="dc-reveal absolute right-3 bottom-3 text-[9px] font-mono tracking-[0.25em] text-muted-foreground/60 uppercase">
+                <span
+                    class="dc-reveal absolute right-3 bottom-3 font-mono text-[9px] tracking-[0.25em] text-muted-foreground/60 uppercase"
+                >
                     ▲ review · inspect
                 </span>
             </div>
@@ -354,7 +500,11 @@ onBeforeUnmount(() => {
     width: 100%;
     height: 100%;
     border: 1px solid color-mix(in srgb, var(--color-primary) 35%, transparent);
-    background: linear-gradient(145deg, color-mix(in srgb, var(--color-primary) 8%, transparent), rgba(0, 0, 0, 0.25));
+    background: linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--color-primary) 8%, transparent),
+        rgba(0, 0, 0, 0.25)
+    );
     backdrop-filter: blur(2px);
     display: flex;
     flex-direction: column;
@@ -362,7 +512,8 @@ onBeforeUnmount(() => {
     justify-content: center;
     gap: 6px;
     overflow: hidden;
-    box-shadow: 0 0 40px color-mix(in srgb, var(--color-primary) 6%, transparent) inset;
+    box-shadow: 0 0 40px
+        color-mix(in srgb, var(--color-primary) 6%, transparent) inset;
 }
 .dc-face-code {
     font-family: ui-monospace, monospace;
@@ -385,10 +536,30 @@ onBeforeUnmount(() => {
     border-style: solid;
     border-width: 0;
 }
-.dc-face-corner-tl { top: 4px; left: 4px; border-top-width: 1px; border-left-width: 1px; }
-.dc-face-corner-tr { top: 4px; right: 4px; border-top-width: 1px; border-right-width: 1px; }
-.dc-face-corner-bl { bottom: 4px; left: 4px; border-bottom-width: 1px; border-left-width: 1px; }
-.dc-face-corner-br { bottom: 4px; right: 4px; border-bottom-width: 1px; border-right-width: 1px; }
+.dc-face-corner-tl {
+    top: 4px;
+    left: 4px;
+    border-top-width: 1px;
+    border-left-width: 1px;
+}
+.dc-face-corner-tr {
+    top: 4px;
+    right: 4px;
+    border-top-width: 1px;
+    border-right-width: 1px;
+}
+.dc-face-corner-bl {
+    bottom: 4px;
+    left: 4px;
+    border-bottom-width: 1px;
+    border-left-width: 1px;
+}
+.dc-face-corner-br {
+    bottom: 4px;
+    right: 4px;
+    border-bottom-width: 1px;
+    border-right-width: 1px;
+}
 .dc-face-scan {
     position: absolute;
     inset: 0;
@@ -402,8 +573,12 @@ onBeforeUnmount(() => {
     animation: dc-scan 3.2s ease-in-out infinite;
 }
 @keyframes dc-scan {
-    0%   { transform: translateY(-100%); }
-    100% { transform: translateY(100%); }
+    0% {
+        transform: translateY(-100%);
+    }
+    100% {
+        transform: translateY(100%);
+    }
 }
 
 /* Core diamond */
@@ -422,11 +597,20 @@ onBeforeUnmount(() => {
     position: absolute;
     inset: 0;
     border: 1px solid color-mix(in srgb, var(--color-primary) 70%, transparent);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 20%, transparent), color-mix(in srgb, var(--color-primary) 2%, transparent));
-    box-shadow: 0 0 18px color-mix(in srgb, var(--color-primary) 35%, transparent) inset;
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-primary) 20%, transparent),
+        color-mix(in srgb, var(--color-primary) 2%, transparent)
+    );
+    box-shadow: 0 0 18px
+        color-mix(in srgb, var(--color-primary) 35%, transparent) inset;
 }
 .dc-core-cap {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 32%, transparent), color-mix(in srgb, var(--color-primary) 6%, transparent));
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--color-primary) 32%, transparent),
+        color-mix(in srgb, var(--color-primary) 6%, transparent)
+    );
 }
 
 /* Orbit rings */
@@ -439,9 +623,15 @@ onBeforeUnmount(() => {
     transform-style: preserve-3d;
     will-change: transform;
 }
-.dc-ring-a { transform: rotateX(72deg); }
-.dc-ring-b { transform: rotateX(56deg) rotateY(30deg); }
-.dc-ring-c { transform: rotateX(40deg) rotateY(-40deg); }
+.dc-ring-a {
+    transform: rotateX(72deg);
+}
+.dc-ring-b {
+    transform: rotateX(56deg) rotateY(30deg);
+}
+.dc-ring-c {
+    transform: rotateX(40deg) rotateY(-40deg);
+}
 
 .dc-node {
     position: absolute;
@@ -456,7 +646,9 @@ onBeforeUnmount(() => {
     margin-top: -4px;
     border-radius: 9999px;
     background: color-mix(in srgb, var(--color-primary) 90%, transparent);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 80%, transparent), 0 0 24px color-mix(in srgb, var(--color-primary) 40%, transparent);
+    box-shadow:
+        0 0 10px color-mix(in srgb, var(--color-primary) 80%, transparent),
+        0 0 24px color-mix(in srgb, var(--color-primary) 40%, transparent);
 }
 .dc-node-dot-sm {
     width: 5px;
@@ -471,13 +663,18 @@ onBeforeUnmount(() => {
     margin-left: -3px;
     margin-top: -3px;
     background: var(--color-foreground);
-    box-shadow: 0 0 10px color-mix(in srgb, var(--color-foreground) 70%, transparent);
+    box-shadow: 0 0 10px
+        color-mix(in srgb, var(--color-foreground) 70%, transparent);
 }
 
 /* Halos */
-.dc-halo { will-change: transform; }
+.dc-halo {
+    will-change: transform;
+}
 
 @media (max-width: 640px) {
-    .dc-world { transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(0.78); }
+    .dc-world {
+        transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(0.78);
+    }
 }
 </style>

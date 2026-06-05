@@ -39,12 +39,16 @@ const openLogoutDialog = (event: Event) => {
 const confirmLogout = () => {
     loggingOut.value = true;
     sessionStorage.setItem('logged_out', 'true');
-    router.post(logout(), {}, {
-        onFinish: () => {
-            loggingOut.value = false;
-            showLogoutDialog.value = false;
+    router.post(
+        logout(),
+        {},
+        {
+            onFinish: () => {
+                loggingOut.value = false;
+                showLogoutDialog.value = false;
+            },
         },
-    });
+    );
 };
 </script>
 
@@ -66,7 +70,7 @@ const confirmLogout = () => {
     <DropdownMenuSeparator />
     <DropdownMenuItem :as-child="true" @select="openLogoutDialog">
         <button
-            class="flex w-full items-center px-2 py-1.5 text-sm cursor-pointer"
+            class="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm"
             data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />
@@ -79,7 +83,8 @@ const confirmLogout = () => {
             <DialogHeader>
                 <DialogTitle>Log out of your account?</DialogTitle>
                 <DialogDescription>
-                    You'll need to sign in again to access your dashboard, progress, and learning map.
+                    You'll need to sign in again to access your dashboard,
+                    progress, and learning map.
                 </DialogDescription>
             </DialogHeader>
             <DialogFooter class="gap-2 sm:gap-2">

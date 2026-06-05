@@ -16,8 +16,10 @@ let particleAnimFrame: number | null = null;
 let scrollTriggerInstance: ScrollTrigger | null = null;
 
 interface Particle {
-    x: number; y: number;
-    vx: number; vy: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
     radius: number;
     opacity: number;
     mouseInfluence: number;
@@ -52,7 +54,8 @@ const initParticleNetwork = () => {
             vx: (Math.random() - 0.5) * 1.2,
             vy: (Math.random() - 0.5) * 1.2,
             radius: Math.random() * 1.5 + (isDark ? 1.2 : 0.8),
-            opacity: Math.random() * (isDark ? 0.6 : 0.5) + (isDark ? 0.4 : 0.2),
+            opacity:
+                Math.random() * (isDark ? 0.6 : 0.5) + (isDark ? 0.4 : 0.2),
             mouseInfluence: Math.random() * 0.4 + 0.6,
         }));
     };
@@ -67,7 +70,7 @@ const initParticleNetwork = () => {
             particleAnimFrame = null;
             return;
         }
-        
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const color = getColor();
 
@@ -88,7 +91,7 @@ const initParticleNetwork = () => {
             p.vy += (Math.random() - 0.5) * 0.04;
             p.vx *= 0.985;
             p.vy *= 0.985;
-            
+
             const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
             const maxSpeed = 2.2;
             if (speed > maxSpeed) {
@@ -115,8 +118,10 @@ const initParticleNetwork = () => {
                 const cy = p.y - q.y;
                 const cd = Math.sqrt(cx * cx + cy * cy);
                 if (cd < CONNECTION_DIST) {
-                    const isDark = document.documentElement.classList.contains('dark');
-                    const alpha = (1 - cd / CONNECTION_DIST) * (isDark ? 0.35 : 0.18);
+                    const isDark =
+                        document.documentElement.classList.contains('dark');
+                    const alpha =
+                        (1 - cd / CONNECTION_DIST) * (isDark ? 0.35 : 0.18);
                     ctx.beginPath();
                     ctx.moveTo(p.x, p.y);
                     ctx.lineTo(q.x, q.y);
@@ -134,7 +139,9 @@ const initParticleNetwork = () => {
         const rect = canvas.getBoundingClientRect();
         mouse = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
-    const onMouseLeave = () => { mouse = { x: -9999, y: -9999 }; };
+    const onMouseLeave = () => {
+        mouse = { x: -9999, y: -9999 };
+    };
 
     resize();
     spawnParticles();
@@ -144,18 +151,21 @@ const initParticleNetwork = () => {
     canvas.addEventListener('mouseleave', onMouseLeave);
     window.addEventListener('resize', resize);
 
-    watch(() => props.paused, (isPaused) => {
-        if (!isPaused && isActive && !particleAnimFrame) {
-            draw();
-        }
-    });
+    watch(
+        () => props.paused,
+        (isPaused) => {
+            if (!isPaused && isActive && !particleAnimFrame) {
+                draw();
+            }
+        },
+    );
 
     // Use ScrollTrigger to pause animation when not in view
     scrollTriggerInstance = ScrollTrigger.create({
         trigger: canvas,
         start: 'top bottom',
         end: 'bottom top',
-        onToggle: self => {
+        onToggle: (self) => {
             isActive = self.isActive;
             if (isActive && !particleAnimFrame) {
                 draw();
@@ -163,7 +173,7 @@ const initParticleNetwork = () => {
                 cancelAnimationFrame(particleAnimFrame);
                 particleAnimFrame = null;
             }
-        }
+        },
     });
 };
 
@@ -189,7 +199,7 @@ onBeforeUnmount(() => {
 <template>
     <canvas
         ref="particleCanvas"
-        class="particle-canvas pointer-events-none absolute inset-0 w-full h-full z-0 hidden md:block"
+        class="particle-canvas pointer-events-none absolute inset-0 z-0 hidden h-full w-full md:block"
         aria-hidden="true"
     />
 </template>

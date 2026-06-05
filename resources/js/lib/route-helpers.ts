@@ -1,4 +1,4 @@
-import { type RouteDefinition } from '../wayfinder'
+import { type RouteDefinition } from '../wayfinder';
 
 /**
  * Enhances a route method with a .form() helper for Inertia.js Form component
@@ -6,16 +6,17 @@ import { type RouteDefinition } from '../wayfinder'
  */
 export function withFormHelper<TMethod extends string>(
     routeMethod: RouteDefinition<TMethod> & {
-        url?: (options?: any) => string
-        definition?: { url: string }
+        url?: (options?: any) => string;
+        definition?: { url: string };
     },
 ) {
     return Object.assign(routeMethod, {
         form: () => ({
-            action: typeof routeMethod.url === 'function' 
-                ? routeMethod.url()
-                : routeMethod.definition?.url || '',
+            action:
+                typeof routeMethod.url === 'function'
+                    ? routeMethod.url()
+                    : routeMethod.definition?.url || '',
             method: routeMethod.method,
         }),
-    })
+    });
 }

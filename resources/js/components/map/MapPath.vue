@@ -11,14 +11,17 @@ interface Props {
     availableColor?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), { availableColor: '#3b82f6', id: 'p' });
+const props = withDefaults(defineProps<Props>(), {
+    availableColor: '#3b82f6',
+    id: 'p',
+});
 
 const pathData = computed(() => {
     // Create a smooth curve between points
     const midX = (props.startX + props.endX) / 2;
     // We can add a slight vertical offset to the midpoint for a "curved" look
-    const curveOffset = 20; 
-    
+    const curveOffset = 20;
+
     return `M ${props.startX} ${props.startY} Q ${midX} ${props.startY - curveOffset} ${props.endX} ${props.endY}`;
 });
 
@@ -34,9 +37,17 @@ const strokeDasharray = computed(() => {
 </script>
 
 <template>
-    <svg class="absolute inset-0 pointer-events-none w-full h-full overflow-visible">
+    <svg
+        class="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+    >
         <defs>
-            <filter :id="`glow-${id}`" x="-20%" y="-20%" width="140%" height="140%">
+            <filter
+                :id="`glow-${id}`"
+                x="-20%"
+                y="-20%"
+                width="140%"
+                height="140%"
+            >
                 <feGaussianBlur stdDeviation="2" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
@@ -52,7 +63,7 @@ const strokeDasharray = computed(() => {
             class="transition-all duration-1000"
             :filter="status !== 'locked' ? `url(#glow-${id})` : ''"
         />
-        
+
         <!-- Animated flow effect for completed / available paths -->
         <path
             v-if="status !== 'locked'"

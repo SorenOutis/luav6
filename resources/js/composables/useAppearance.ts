@@ -1,9 +1,21 @@
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
 import gsap from 'gsap';
-import type { Appearance, CardStylePreset, FontPreset, ResolvedAppearance, ThemePreset } from '@/types';
+import type {
+    Appearance,
+    CardStylePreset,
+    FontPreset,
+    ResolvedAppearance,
+    ThemePreset,
+} from '@/types';
 
-export type { Appearance, CardStylePreset, FontPreset, ResolvedAppearance, ThemePreset };
+export type {
+    Appearance,
+    CardStylePreset,
+    FontPreset,
+    ResolvedAppearance,
+    ThemePreset,
+};
 
 export type ThemePresetOption = {
     id: ThemePreset;
@@ -78,9 +90,17 @@ export const fontPresets: FontPresetOption[] = [
 ];
 
 export const cardStylePresets: CardStylePresetOption[] = [
-    { id: 'current', name: 'Current', description: 'Keeps your existing card design.' },
+    {
+        id: 'current',
+        name: 'Current',
+        description: 'Keeps your existing card design.',
+    },
     { id: 'soft', name: 'Soft', description: 'Rounder, calmer panels.' },
-    { id: 'glass', name: 'Glass', description: 'Translucent dashboard surfaces.' },
+    {
+        id: 'glass',
+        name: 'Glass',
+        description: 'Translucent dashboard surfaces.',
+    },
     { id: 'sharp', name: 'Sharp', description: 'Square tactical panels.' },
 ];
 
@@ -121,7 +141,11 @@ export function updateTheme(value: Appearance): void {
     }
 }
 
-const applyAppearanceAttributes = (themePreset: ThemePreset, fontPreset: FontPreset, cardStylePreset: CardStylePreset) => {
+const applyAppearanceAttributes = (
+    themePreset: ThemePreset,
+    fontPreset: FontPreset,
+    cardStylePreset: CardStylePreset,
+) => {
     if (typeof document === 'undefined') {
         return;
     }
@@ -207,7 +231,11 @@ export function initializeTheme(): void {
     const savedCardStylePreset = getStoredCardStylePreset() || 'current';
 
     updateTheme(savedAppearance || 'system');
-    applyAppearanceAttributes(savedThemePreset, savedFontPreset, savedCardStylePreset);
+    applyAppearanceAttributes(
+        savedThemePreset,
+        savedFontPreset,
+        savedCardStylePreset,
+    );
 
     // Set up system theme change listener...
     mediaQuery()?.addEventListener('change', handleSystemThemeChange);
@@ -232,7 +260,11 @@ export function useAppearance(): UseAppearanceReturn {
         themePreset.value = getStoredThemePreset() || 'current';
         fontPreset.value = getStoredFontPreset() || 'system';
         cardStylePreset.value = getStoredCardStylePreset() || 'current';
-        applyAppearanceAttributes(themePreset.value, fontPreset.value, cardStylePreset.value);
+        applyAppearanceAttributes(
+            themePreset.value,
+            fontPreset.value,
+            cardStylePreset.value,
+        );
     });
 
     const resolvedAppearance = computed<ResolvedAppearance>(() => {
@@ -261,7 +293,11 @@ export function useAppearance(): UseAppearanceReturn {
         themePreset.value = value;
         localStorage.setItem('themePreset', value);
         setCookie('themePreset', value);
-        applyAppearanceAttributes(themePreset.value, fontPreset.value, cardStylePreset.value);
+        applyAppearanceAttributes(
+            themePreset.value,
+            fontPreset.value,
+            cardStylePreset.value,
+        );
 
         if (preset) {
             updateAppearance(preset.appearance);
@@ -272,19 +308,27 @@ export function useAppearance(): UseAppearanceReturn {
         fontPreset.value = value;
         localStorage.setItem('fontPreset', value);
         setCookie('fontPreset', value);
-        applyAppearanceAttributes(themePreset.value, fontPreset.value, cardStylePreset.value);
+        applyAppearanceAttributes(
+            themePreset.value,
+            fontPreset.value,
+            cardStylePreset.value,
+        );
     }
 
     function updateCardStylePreset(value: CardStylePreset) {
         cardStylePreset.value = value;
         localStorage.setItem('cardStylePreset', value);
         setCookie('cardStylePreset', value);
-        applyAppearanceAttributes(themePreset.value, fontPreset.value, cardStylePreset.value);
+        applyAppearanceAttributes(
+            themePreset.value,
+            fontPreset.value,
+            cardStylePreset.value,
+        );
     }
 
     function toggleTheme(event: MouseEvent) {
         const newTheme = appearance.value === 'dark' ? 'light' : 'dark';
-        
+
         if (!(document as any).startViewTransition) {
             updateAppearance(newTheme);
             return;
@@ -294,7 +338,7 @@ export function useAppearance(): UseAppearanceReturn {
         const y = event.clientY;
         const endRadius = Math.hypot(
             Math.max(x, innerWidth - x),
-            Math.max(y, innerHeight - y)
+            Math.max(y, innerHeight - y),
         );
 
         isTransitioningTheme.value = true;
@@ -310,23 +354,29 @@ export function useAppearance(): UseAppearanceReturn {
                 `circle(0px at ${x}px ${y}px)`,
                 `circle(${endRadius}px at ${x}px ${y}px)`,
             ];
-            
+
             const animation = document.documentElement.animate(
                 {
-                    clipPath: newTheme === 'dark' ? [...clipPath].reverse() : clipPath,
+                    clipPath:
+                        newTheme === 'dark'
+                            ? [...clipPath].reverse()
+                            : clipPath,
                 },
                 {
                     duration: 400,
                     easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-                    pseudoElement: newTheme === 'dark'
-                        ? '::view-transition-old(root)'
-                        : '::view-transition-new(root)',
-                }
+                    pseudoElement:
+                        newTheme === 'dark'
+                            ? '::view-transition-old(root)'
+                            : '::view-transition-new(root)',
+                },
             );
 
             animation.onfinish = () => {
                 isTransitioningTheme.value = false;
-                document.documentElement.classList.remove('theme-transitioning');
+                document.documentElement.classList.remove(
+                    'theme-transitioning',
+                );
                 gsap.globalTimeline.resume();
             };
         });

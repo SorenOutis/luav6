@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, ClipboardList, GraduationCap, Gamepad2, Award } from 'lucide-vue-next';
+import {
+    LayoutGrid,
+    ClipboardList,
+    GraduationCap,
+    Gamepad2,
+    Award,
+} from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -25,38 +31,40 @@ const isPageVisibleInNav = (key?: string) => {
     return page.props.studentPageControls?.pages?.[key]?.mode !== 'disabled';
 };
 
-const mainNavItems = computed<NavItem[]>(() => [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-        studentPageKey: 'dashboard',
-    },
-    {
-        title: 'Assignments',
-        href: '/assignments',
-        icon: ClipboardList,
-        studentPageKey: 'assignments',
-    },
-    {
-        title: 'Activities',
-        href: '/exams',
-        icon: GraduationCap,
-        studentPageKey: 'exams',
-    },
-    {
-        title: 'Games',
-        href: '/games',
-        icon: Gamepad2,
-        studentPageKey: 'games',
-    },
-    {
-        title: 'Grades',
-        href: '/grades',
-        icon: Award,
-        studentPageKey: 'grades',
-    },
-].filter((item) => isPageVisibleInNav(item.studentPageKey)));
+const mainNavItems = computed<NavItem[]>(() =>
+    [
+        {
+            title: 'Dashboard',
+            href: dashboard(),
+            icon: LayoutGrid,
+            studentPageKey: 'dashboard',
+        },
+        {
+            title: 'Assignments',
+            href: '/assignments',
+            icon: ClipboardList,
+            studentPageKey: 'assignments',
+        },
+        {
+            title: 'Activities',
+            href: '/exams',
+            icon: GraduationCap,
+            studentPageKey: 'exams',
+        },
+        {
+            title: 'Games',
+            href: '/games',
+            icon: Gamepad2,
+            studentPageKey: 'games',
+        },
+        {
+            title: 'Grades',
+            href: '/grades',
+            icon: Award,
+            studentPageKey: 'grades',
+        },
+    ].filter((item) => isPageVisibleInNav(item.studentPageKey)),
+);
 
 // const footerNavItems: NavItem[] = [
 //     {

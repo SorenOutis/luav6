@@ -25,7 +25,13 @@ const props = defineProps<{
 
 const emit = defineEmits(['magnetic', 'resetMagnetic', 'watchDemo']);
 
-const words = ['School-Ready Assessment.', 'Teacher Clarity.', 'Student Momentum.', 'Actionable Reports.', 'Guided Growth.'];
+const words = [
+    'School-Ready Assessment.',
+    'Teacher Clarity.',
+    'Student Momentum.',
+    'Actionable Reports.',
+    'Guided Growth.',
+];
 const currentWordIndex = ref(0);
 const currentCharIndex = ref(words[0].length);
 const isTyping = ref(false);
@@ -34,11 +40,11 @@ let typingTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const type = () => {
     const currentWord = words[currentWordIndex.value];
-    
+
     if (isTyping.value) {
         typedText.value = currentWord.substring(0, currentCharIndex.value + 1);
         currentCharIndex.value++;
-        
+
         if (currentCharIndex.value === currentWord.length) {
             isTyping.value = false;
             typingTimeout = setTimeout(type, 2500);
@@ -47,18 +53,20 @@ const type = () => {
     } else {
         typedText.value = currentWord.substring(0, currentCharIndex.value - 1);
         currentCharIndex.value--;
-        
+
         if (currentCharIndex.value === 0) {
             isTyping.value = true;
-            currentWordIndex.value = (currentWordIndex.value + 1) % words.length;
+            currentWordIndex.value =
+                (currentWordIndex.value + 1) % words.length;
             typingTimeout = setTimeout(type, 800);
             return;
         }
     }
-    
+
     let delay = isTyping.value ? 40 + Math.random() * 60 : 30;
-    if (isTyping.value && typedText.value.endsWith(' ')) delay += 60 + Math.random() * 40;
-    
+    if (isTyping.value && typedText.value.endsWith(' '))
+        delay += 60 + Math.random() * 40;
+
     typingTimeout = setTimeout(type, delay);
 };
 
@@ -67,9 +75,9 @@ const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
 const watchDemo = () => emit('watchDemo');
 
 // Scroll Parallax and Premium Reveals
-const titleLetters = "LEARNING".split("");
-const systemsLetters = "SYSTEMS".split("");
-const subtitleLetters = "INTELLIGENCE".split("");
+const titleLetters = 'LEARNING'.split('');
+const systemsLetters = 'SYSTEMS'.split('');
+const subtitleLetters = 'INTELLIGENCE'.split('');
 const heroRef = ref<HTMLElement | null>(null);
 
 import { watch } from 'vue';
@@ -78,18 +86,18 @@ const initAnimations = () => {
     if (!props.isBooted || !heroRef.value) return;
 
     // Premium Scroll Parallax for Hero
-    gsap.to(".hero-parallax", {
+    gsap.to('.hero-parallax', {
         y: (i, target) => {
             const speed = target.dataset.speed || 0.2;
             return -window.innerHeight * speed;
         },
-        ease: "none",
+        ease: 'none',
         scrollTrigger: {
             trigger: heroRef.value,
-            start: "top top",
-            end: "bottom top",
-            scrub: true
-        }
+            start: 'top top',
+            end: 'bottom top',
+            scrub: true,
+        },
     });
 };
 
@@ -100,11 +108,14 @@ onMounted(() => {
     }
 });
 
-watch(() => props.isBooted, (newVal) => {
-    if (newVal) {
-        initAnimations();
-    }
-});
+watch(
+    () => props.isBooted,
+    (newVal) => {
+        if (newVal) {
+            initAnimations();
+        }
+    },
+);
 
 onBeforeUnmount(() => {
     if (typingTimeout) {
@@ -114,44 +125,70 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div ref="heroRef" class="max-w-6xl relative">
+    <div ref="heroRef" class="relative max-w-6xl">
         <div class="hero-parallax absolute inset-0 -z-10" data-speed="0.1">
             <slot name="background"></slot>
         </div>
 
-        <div class="mb-2 lg:mb-4 relative z-10 preserve-3d">
-            <h1 class="text-5xl sm:text-7xl lg:text-[8rem] font-black tracking-[-0.04em] leading-[0.9] sm:leading-[0.8] uppercase flex flex-col">
+        <div class="preserve-3d relative z-10 mb-2 lg:mb-4">
+            <h1
+                class="flex flex-col text-5xl leading-[0.9] font-black tracking-[-0.04em] uppercase sm:text-7xl sm:leading-[0.8] lg:text-[8rem]"
+            >
                 <span class="flex overflow-hidden">
-                    <Motion 
-                        v-for="(letter, i) in titleLetters" 
+                    <Motion
+                        v-for="(letter, i) in titleLetters"
                         :key="i"
                         :initial="{ y: 100, opacity: 0, rotateX: -90 }"
-                        :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : { y: 100, opacity: 0, rotateX: -90 }"
-                        :transition="{ duration: 1.2, delay: i * 0.04, ease: [0.16, 1, 0.3, 1] }"
+                        :animate="
+                            isBooted
+                                ? { y: 0, opacity: 1, rotateX: 0 }
+                                : { y: 100, opacity: 0, rotateX: -90 }
+                        "
+                        :transition="{
+                            duration: 1.2,
+                            delay: i * 0.04,
+                            ease: [0.16, 1, 0.3, 1],
+                        }"
                         class="title-letter inline-block transform-gpu"
                     >
                         {{ letter }}
                     </Motion>
                 </span>
                 <span class="flex overflow-hidden">
-                    <Motion 
-                        v-for="(letter, i) in systemsLetters" 
+                    <Motion
+                        v-for="(letter, i) in systemsLetters"
                         :key="i"
                         :initial="{ y: 100, opacity: 0, rotateX: -90 }"
-                        :animate="isBooted ? { y: 0, opacity: 1, rotateX: 0 } : { y: 100, opacity: 0, rotateX: -90 }"
-                        :transition="{ duration: 1.2, delay: 0.2 + i * 0.04, ease: [0.16, 1, 0.3, 1] }"
+                        :animate="
+                            isBooted
+                                ? { y: 0, opacity: 1, rotateX: 0 }
+                                : { y: 100, opacity: 0, rotateX: -90 }
+                        "
+                        :transition="{
+                            duration: 1.2,
+                            delay: 0.2 + i * 0.04,
+                            ease: [0.16, 1, 0.3, 1],
+                        }"
                         class="systems-letter inline-block transform-gpu"
                     >
                         {{ letter }}
                     </Motion>
                 </span>
                 <span class="flex overflow-hidden">
-                    <Motion 
-                        v-for="(letter, i) in subtitleLetters" 
+                    <Motion
+                        v-for="(letter, i) in subtitleLetters"
                         :key="i"
                         :initial="{ x: -20, opacity: 0, filter: 'blur(10px)' }"
-                        :animate="isBooted ? { x: 0, opacity: 1, filter: 'blur(0px)' } : { x: -20, opacity: 0, filter: 'blur(10px)' }"
-                        :transition="{ duration: 1, delay: 0.4 + i * 0.03, ease: 'ease-out' }"
+                        :animate="
+                            isBooted
+                                ? { x: 0, opacity: 1, filter: 'blur(0px)' }
+                                : { x: -20, opacity: 0, filter: 'blur(10px)' }
+                        "
+                        :transition="{
+                            duration: 1,
+                            delay: 0.4 + i * 0.03,
+                            ease: 'ease-out',
+                        }"
                         class="subtitle-letter inline-block transform-gpu bg-gradient-to-r from-foreground/50 via-foreground/30 to-foreground/10 bg-clip-text text-transparent italic"
                     >
                         {{ letter === ' ' ? '\u00A0' : letter }}
@@ -159,45 +196,77 @@ onBeforeUnmount(() => {
                 </span>
             </h1>
         </div>
-        
-        <div class="mb-10 lg:mb-16 lg:pl-2 relative hero-parallax" data-speed="0.05">
-            <p class="max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium leading-relaxed tracking-tight opacity-0 pointer-events-none select-none invisible whitespace-pre-wrap">
-                A school-ready learning platform for exams, assignments, grades, AI feedback, and student engagement through
-                <span class="font-black uppercase tracking-widest inline-flex items-center">
-                    Guided Growth.<span class="ml-1 w-1 h-[0.8em] bg-primary"></span>
-                </span> 
-            </p>
-            
-            <Motion 
-                :initial="{ opacity: 0, y: 20 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }"
-                :transition="{ duration: 1.5, ease: 'ease-out', delay: 0.2 }"
-                class="absolute inset-0 max-w-3xl text-sm sm:text-xl lg:text-2xl font-medium text-muted-foreground leading-relaxed tracking-tight"
+
+        <div
+            class="hero-parallax relative mb-10 lg:mb-16 lg:pl-2"
+            data-speed="0.05"
+        >
+            <p
+                class="pointer-events-none invisible max-w-3xl text-sm leading-relaxed font-medium tracking-tight whitespace-pre-wrap opacity-0 select-none sm:text-xl lg:text-2xl"
             >
-                A school-ready learning platform for exams, assignments, grades, AI feedback, and student engagement through
-                <span class="text-foreground font-black uppercase tracking-widest inline-flex items-center">
-                    {{ typedText }}<span class="ml-1 w-1 h-[0.8em] bg-primary animate-[pulse_1s_infinite] shadow-[0_0_8px_var(--color-primary)]"></span>
-                </span> 
+                A school-ready learning platform for exams, assignments, grades,
+                AI feedback, and student engagement through
+                <span
+                    class="inline-flex items-center font-black tracking-widest uppercase"
+                >
+                    Guided Growth.<span
+                        class="ml-1 h-[0.8em] w-1 bg-primary"
+                    ></span>
+                </span>
+            </p>
+
+            <Motion
+                :initial="{ opacity: 0, y: 20 }"
+                :animate="
+                    isBooted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
+                "
+                :transition="{ duration: 1.5, ease: 'ease-out', delay: 0.2 }"
+                class="absolute inset-0 max-w-3xl text-sm leading-relaxed font-medium tracking-tight text-muted-foreground sm:text-xl lg:text-2xl"
+            >
+                A school-ready learning platform for exams, assignments, grades,
+                AI feedback, and student engagement through
+                <span
+                    class="inline-flex items-center font-black tracking-widest text-foreground uppercase"
+                >
+                    {{ typedText
+                    }}<span
+                        class="ml-1 h-[0.8em] w-1 animate-[pulse_1s_infinite] bg-primary shadow-[0_0_8px_var(--color-primary)]"
+                    ></span>
+                </span>
             </Motion>
         </div>
 
-        <div class="overflow-hidden p-2 -m-2 hero-parallax" data-speed="0.02">
-            <Motion 
+        <div class="hero-parallax -m-2 overflow-hidden p-2" data-speed="0.02">
+            <Motion
                 :initial="{ y: 40, opacity: 0 }"
-                :animate="isBooted ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }"
-                :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
-                class="flex flex-col sm:flex-row gap-3 sm:gap-4 lg:gap-5"
+                :animate="
+                    isBooted ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }
+                "
+                :transition="{
+                    duration: 1,
+                    ease: [0.16, 1, 0.3, 1],
+                    delay: 0.4,
+                }"
+                class="flex flex-col gap-3 sm:flex-row sm:gap-4 lg:gap-5"
             >
-                <Link v-if="auth.user" :href="dashboard()" 
-                    @mousemove="handleMagnetic" 
+                <Link
+                    v-if="auth.user"
+                    :href="dashboard()"
+                    @mousemove="handleMagnetic"
                     @mouseleave="resetMagnetic"
-                    class="group relative flex items-center justify-center bg-primary px-8 py-4 text-primary-foreground transition-all active:scale-[0.98] shadow-[0_8px_40px_-12px] shadow-primary/30 -skew-x-[12deg] hover:bg-primary/90 sm:px-10"
+                    class="group relative flex -skew-x-[12deg] items-center justify-center bg-primary px-8 py-4 text-primary-foreground shadow-[0_8px_40px_-12px] shadow-primary/30 transition-all hover:bg-primary/90 active:scale-[0.98] sm:px-10"
                 >
-                    <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg] sm:text-base">
+                    <span
+                        class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase sm:text-base"
+                    >
                         System Dashboard
-                        <LayoutDashboard class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5" />
+                        <LayoutDashboard
+                            class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                        />
                     </span>
-                    <div class="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100"></div>
+                    <div
+                        class="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100"
+                    ></div>
                 </Link>
 
                 <template v-else>
@@ -206,31 +275,44 @@ onBeforeUnmount(() => {
                         @click="watchDemo"
                         @mousemove="handleMagnetic"
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center bg-foreground px-8 py-4 text-background transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary hover:text-primary-foreground sm:px-10"
+                        class="group relative flex -skew-x-[12deg] items-center justify-center bg-foreground px-8 py-4 text-background transition-all hover:bg-primary hover:text-primary-foreground active:scale-[0.98] sm:px-10"
                     >
-                        <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg] sm:text-base">
+                        <span
+                            class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase sm:text-base"
+                        >
                             Watch Demo
-                            <CalendarCheck class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5" />
+                            <CalendarCheck
+                                class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                            />
                         </span>
                     </button>
 
-                    <Link :href="login()" 
-                        @mousemove="handleMagnetic" 
+                    <Link
+                        :href="login()"
+                        @mousemove="handleMagnetic"
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center border border-border bg-background/50 backdrop-blur-sm px-8 py-4 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-muted/50 sm:px-10"
+                        class="group relative flex -skew-x-[12deg] items-center justify-center border border-border bg-background/50 px-8 py-4 text-foreground backdrop-blur-sm transition-all hover:bg-muted/50 active:scale-[0.98] sm:px-10"
                     >
-                        <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg] sm:text-base">
+                        <span
+                            class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase sm:text-base"
+                        >
                             Login
-                            <ArrowRight class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5" />
+                            <ArrowRight
+                                class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                            />
                         </span>
                     </Link>
 
-                    <Link v-if="canRegister" :href="register()" 
-                        @mousemove="handleMagnetic" 
+                    <Link
+                        v-if="canRegister"
+                        :href="register()"
+                        @mousemove="handleMagnetic"
                         @mouseleave="resetMagnetic"
-                        class="group relative flex items-center justify-center border border-primary/30 bg-primary/5 backdrop-blur-sm px-8 py-4 text-foreground transition-all active:scale-[0.98] -skew-x-[12deg] hover:bg-primary/10 sm:hidden"
+                        class="group relative flex -skew-x-[12deg] items-center justify-center border border-primary/30 bg-primary/5 px-8 py-4 text-foreground backdrop-blur-sm transition-all hover:bg-primary/10 active:scale-[0.98] sm:hidden"
                     >
-                        <span class="relative z-10 flex items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase skew-x-[12deg]">
+                        <span
+                            class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase"
+                        >
                             Join
                         </span>
                     </Link>

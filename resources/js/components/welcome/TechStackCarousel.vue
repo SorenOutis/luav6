@@ -1,8 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import {
-    Command, Zap, Target, Award, LayoutDashboard, Database,
-    Code2, Sparkles, Server, GitBranch, Boxes, Cpu,
+    Command,
+    Zap,
+    Target,
+    Award,
+    LayoutDashboard,
+    Database,
+    Code2,
+    Sparkles,
+    Server,
+    GitBranch,
+    Boxes,
+    Cpu,
 } from 'lucide-vue-next';
 import gsap from 'gsap';
 
@@ -15,27 +25,91 @@ const rowBottom = ref<HTMLElement | null>(null);
 const wrapper = ref<HTMLElement | null>(null);
 
 const techStackTop = [
-    { name: 'Laravel 12', description: 'Robust backend architecture', icon: Command, accent: '#FF2D20' },
-    { name: 'Vue 3',      description: 'Reactive UI system',           icon: Zap,     accent: '#42B883' },
-    { name: 'Inertia.js', description: 'Monolith connection layer',    icon: Target,  accent: '#9553E9' },
-    { name: 'TypeScript', description: 'Type-safe development',        icon: Code2,   accent: '#3178C6' },
-    { name: 'GSAP',       description: 'Pro-grade animation engine',   icon: Award,   accent: '#88CE02' },
-    { name: 'Tailwind',   description: 'Utility-first design system',  icon: LayoutDashboard, accent: '#38BDF8' },
+    {
+        name: 'Laravel 12',
+        description: 'Robust backend architecture',
+        icon: Command,
+        accent: '#FF2D20',
+    },
+    {
+        name: 'Vue 3',
+        description: 'Reactive UI system',
+        icon: Zap,
+        accent: '#42B883',
+    },
+    {
+        name: 'Inertia.js',
+        description: 'Monolith connection layer',
+        icon: Target,
+        accent: '#9553E9',
+    },
+    {
+        name: 'TypeScript',
+        description: 'Type-safe development',
+        icon: Code2,
+        accent: '#3178C6',
+    },
+    {
+        name: 'GSAP',
+        description: 'Pro-grade animation engine',
+        icon: Award,
+        accent: '#88CE02',
+    },
+    {
+        name: 'Tailwind',
+        description: 'Utility-first design system',
+        icon: LayoutDashboard,
+        accent: '#38BDF8',
+    },
 ];
 
 const techStackBottom = [
-    { name: 'PostgreSQL', description: 'Battle-tested data layer',     icon: Database,   accent: '#336791' },
-    { name: 'Filament',   description: 'Admin command center',         icon: Sparkles,   accent: '#F59E0B' },
-    { name: 'Vite',       description: 'Lightning build pipeline',     icon: Boxes,      accent: '#646CFF' },
-    { name: 'RoadRunner', description: 'High-performance app server',  icon: Server,     accent: '#EF4444' },
-    { name: 'Pest',       description: 'Elegant testing framework',    icon: Cpu,        accent: '#A855F7' },
-    { name: 'Git',        description: 'Distributed version control',  icon: GitBranch,  accent: '#F05033' },
+    {
+        name: 'PostgreSQL',
+        description: 'Battle-tested data layer',
+        icon: Database,
+        accent: '#336791',
+    },
+    {
+        name: 'Filament',
+        description: 'Admin command center',
+        icon: Sparkles,
+        accent: '#F59E0B',
+    },
+    {
+        name: 'Vite',
+        description: 'Lightning build pipeline',
+        icon: Boxes,
+        accent: '#646CFF',
+    },
+    {
+        name: 'RoadRunner',
+        description: 'High-performance app server',
+        icon: Server,
+        accent: '#EF4444',
+    },
+    {
+        name: 'Pest',
+        description: 'Elegant testing framework',
+        icon: Cpu,
+        accent: '#A855F7',
+    },
+    {
+        name: 'Git',
+        description: 'Distributed version control',
+        icon: GitBranch,
+        accent: '#F05033',
+    },
 ];
 
 let tweens: gsap.core.Tween[] = [];
 
 onMounted(() => {
-    const buildMarquee = (el: HTMLElement | null, direction: 1 | -1, duration: number) => {
+    const buildMarquee = (
+        el: HTMLElement | null,
+        direction: 1 | -1,
+        duration: number,
+    ) => {
         if (!el) return null;
         const start = direction === -1 ? 0 : -50;
         const end = direction === -1 ? -50 : 0;
@@ -69,45 +143,80 @@ onBeforeUnmount(() => {
 <template>
     <div
         ref="wrapper"
-        class="reveal-section relative mt-24 lg:mt-48 -mx-6 sm:mx-0 overflow-hidden border-y border-border/10 bg-gradient-to-b from-background via-muted/[0.02] to-background py-14 lg:py-20"
+        class="reveal-section relative -mx-6 mt-24 overflow-hidden border-y border-border/10 bg-gradient-to-b from-background via-muted/[0.02] to-background py-14 sm:mx-0 lg:mt-48 lg:py-20"
     >
         <!-- Subtle grid backdrop -->
         <div
             class="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.08]"
-            style="background-image: linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px); background-size: 48px 48px;"
+            style="
+                background-image:
+                    linear-gradient(var(--color-border) 1px, transparent 1px),
+                    linear-gradient(
+                        90deg,
+                        var(--color-border) 1px,
+                        transparent 1px
+                    );
+                background-size: 48px 48px;
+            "
         ></div>
 
         <!-- Section header -->
-        <div class="relative flex items-end justify-between gap-4 mb-10 lg:mb-14 px-6 sm:px-10 lg:px-16">
+        <div
+            class="relative mb-10 flex items-end justify-between gap-4 px-6 sm:px-10 lg:mb-14 lg:px-16"
+        >
             <div class="flex flex-col gap-3">
                 <div class="flex items-center gap-3">
                     <div class="h-px w-10 bg-primary"></div>
-                    <span class="text-[9px] lg:text-[10px] font-black uppercase tracking-[0.4em] text-primary">/ stack_matrix</span>
+                    <span
+                        class="text-[9px] font-black tracking-[0.4em] text-primary uppercase lg:text-[10px]"
+                        >/ stack_matrix</span
+                    >
                 </div>
-                <h2 class="text-2xl lg:text-4xl font-black uppercase tracking-tight" data-scramble>
+                <h2
+                    class="text-2xl font-black tracking-tight uppercase lg:text-4xl"
+                    data-scramble
+                >
                     Engineered with Precision
                 </h2>
-                <p class="max-w-md text-[11px] lg:text-xs text-muted-foreground tracking-wide">
-                    A composition of resilient frameworks and lightning tooling — purpose-built for assessment-driven learning at scale.
+                <p
+                    class="max-w-md text-[11px] tracking-wide text-muted-foreground lg:text-xs"
+                >
+                    A composition of resilient frameworks and lightning tooling
+                    — purpose-built for assessment-driven learning at scale.
                 </p>
             </div>
-            <div class="hidden md:flex flex-col items-end gap-2">
+            <div class="hidden flex-col items-end gap-2 md:flex">
                 <div class="flex items-center gap-2">
                     <span class="relative flex h-2 w-2">
-                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60"></span>
-                        <span class="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
+                        <span
+                            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60"
+                        ></span>
+                        <span
+                            class="relative inline-flex h-2 w-2 rounded-full bg-primary"
+                        ></span>
                     </span>
-                    <span class="text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">live · synced</span>
+                    <span
+                        class="text-[9px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                        >live · synced</span
+                    >
                 </div>
-                <span class="text-[9px] font-bold uppercase tracking-[0.25em] text-muted-foreground/50">{{ techStackTop.length + techStackBottom.length }} modules · v6</span>
+                <span
+                    class="text-[9px] font-bold tracking-[0.25em] text-muted-foreground/50 uppercase"
+                    >{{ techStackTop.length + techStackBottom.length }} modules
+                    · v6</span
+                >
             </div>
         </div>
 
         <!-- Marquee viewport with edge fades -->
-        <div class="relative carousel-mask space-y-6">
+        <div class="carousel-mask relative space-y-6">
             <!-- Row 1 -->
             <div class="flex flex-nowrap" ref="rowTop">
-                <div v-for="n in 2" :key="`top-${n}`" class="flex flex-nowrap shrink-0">
+                <div
+                    v-for="n in 2"
+                    :key="`top-${n}`"
+                    class="flex shrink-0 flex-nowrap"
+                >
                     <div
                         v-for="tech in techStackTop"
                         :key="tech.name + n"
@@ -115,11 +224,20 @@ onBeforeUnmount(() => {
                         :style="{ '--accent': tech.accent }"
                     >
                         <div class="tech-chip__icon">
-                            <component :is="tech.icon" class="h-5 w-5 lg:h-6 lg:w-6" />
+                            <component
+                                :is="tech.icon"
+                                class="h-5 w-5 lg:h-6 lg:w-6"
+                            />
                         </div>
                         <div class="flex flex-col leading-tight">
-                            <span class="text-sm lg:text-base font-black uppercase tracking-tight">{{ tech.name }}</span>
-                            <span class="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">{{ tech.description }}</span>
+                            <span
+                                class="text-sm font-black tracking-tight uppercase lg:text-base"
+                                >{{ tech.name }}</span
+                            >
+                            <span
+                                class="text-[9px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase"
+                                >{{ tech.description }}</span
+                            >
                         </div>
                         <div class="tech-chip__dot"></div>
                     </div>
@@ -128,7 +246,11 @@ onBeforeUnmount(() => {
 
             <!-- Row 2 (opposing direction) -->
             <div class="flex flex-nowrap" ref="rowBottom">
-                <div v-for="n in 2" :key="`bot-${n}`" class="flex flex-nowrap shrink-0">
+                <div
+                    v-for="n in 2"
+                    :key="`bot-${n}`"
+                    class="flex shrink-0 flex-nowrap"
+                >
                     <div
                         v-for="tech in techStackBottom"
                         :key="tech.name + n"
@@ -136,11 +258,20 @@ onBeforeUnmount(() => {
                         :style="{ '--accent': tech.accent }"
                     >
                         <div class="tech-chip__icon">
-                            <component :is="tech.icon" class="h-5 w-5 lg:h-6 lg:w-6" />
+                            <component
+                                :is="tech.icon"
+                                class="h-5 w-5 lg:h-6 lg:w-6"
+                            />
                         </div>
                         <div class="flex flex-col leading-tight">
-                            <span class="text-sm lg:text-base font-black uppercase tracking-tight">{{ tech.name }}</span>
-                            <span class="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/70">{{ tech.description }}</span>
+                            <span
+                                class="text-sm font-black tracking-tight uppercase lg:text-base"
+                                >{{ tech.name }}</span
+                            >
+                            <span
+                                class="text-[9px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase"
+                                >{{ tech.description }}</span
+                            >
                         </div>
                         <div class="tech-chip__dot"></div>
                     </div>
@@ -152,8 +283,20 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .carousel-mask {
-    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
-            mask-image: linear-gradient(90deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+    -webkit-mask-image: linear-gradient(
+        90deg,
+        transparent 0,
+        #000 8%,
+        #000 92%,
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        90deg,
+        transparent 0,
+        #000 8%,
+        #000 92%,
+        transparent 100%
+    );
 }
 
 .tech-chip {
@@ -168,7 +311,11 @@ onBeforeUnmount(() => {
     backdrop-filter: blur(6px);
     border-radius: 999px;
     position: relative;
-    transition: border-color .35s ease, transform .35s ease, background .35s ease, box-shadow .35s ease;
+    transition:
+        border-color 0.35s ease,
+        transform 0.35s ease,
+        background 0.35s ease,
+        box-shadow 0.35s ease;
     flex-shrink: 0;
 }
 
@@ -176,7 +323,8 @@ onBeforeUnmount(() => {
     border-color: color-mix(in oklab, var(--accent) 55%, transparent);
     background: color-mix(in oklab, var(--accent) 8%, transparent);
     transform: translateY(-2px);
-    box-shadow: 0 8px 30px -12px color-mix(in oklab, var(--accent) 50%, transparent);
+    box-shadow: 0 8px 30px -12px
+        color-mix(in oklab, var(--accent) 50%, transparent);
 }
 
 .tech-chip--ghost {
@@ -194,7 +342,9 @@ onBeforeUnmount(() => {
     color: color-mix(in oklab, var(--accent) 90%, var(--color-foreground));
     background: color-mix(in oklab, var(--accent) 14%, transparent);
     border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
-    transition: transform .4s ease, background .4s ease;
+    transition:
+        transform 0.4s ease,
+        background 0.4s ease;
 }
 
 .tech-chip:hover .tech-chip__icon {

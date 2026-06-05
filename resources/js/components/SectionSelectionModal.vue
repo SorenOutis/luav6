@@ -69,7 +69,9 @@ const handleCardClick = (section: Section) => {
 
     if (isSelected(section.id)) {
         // Unlocked → lock it (deselect, clear password)
-        selectedSections.value = selectedSections.value.filter((i) => i !== section.id);
+        selectedSections.value = selectedSections.value.filter(
+            (i) => i !== section.id,
+        );
         delete sectionPasswords.value[section.id];
         delete passwordErrors.value[section.id];
         return;
@@ -80,7 +82,9 @@ const handleCardClick = (section: Section) => {
     delete passwordErrors.value[section.id];
     flipTo(section.id, true);
     nextTick(() => {
-        const input = document.getElementById(`section-password-input-${section.id}`);
+        const input = document.getElementById(
+            `section-password-input-${section.id}`,
+        );
         (input as HTMLInputElement | null)?.focus();
     });
 };
@@ -103,7 +107,9 @@ const confirmPassword = async (section: Section) => {
             passwordErrors.value[section.id] = 'Incorrect password.';
             sectionPasswords.value[section.id] = '';
             nextTick(() => {
-                const input = document.getElementById(`section-password-input-${section.id}`);
+                const input = document.getElementById(
+                    `section-password-input-${section.id}`,
+                );
                 (input as HTMLInputElement | null)?.focus();
             });
             return;
@@ -114,7 +120,8 @@ const confirmPassword = async (section: Section) => {
         flipTo(section.id, false);
         flippedId.value = null;
     } catch {
-        passwordErrors.value[section.id] = 'Unable to verify password. Please try again.';
+        passwordErrors.value[section.id] =
+            'Unable to verify password. Please try again.';
     } finally {
         verifyingId.value = null;
     }
@@ -156,7 +163,9 @@ const submit = () => {
             // Clear wrong passwords and deselect so user must re-enter
             failedIds.forEach((id) => {
                 delete sectionPasswords.value[id];
-                selectedSections.value = selectedSections.value.filter((i) => i !== id);
+                selectedSections.value = selectedSections.value.filter(
+                    (i) => i !== id,
+                );
             });
 
             // Flip the first failing card to its back face to reveal the inline error
@@ -164,7 +173,9 @@ const submit = () => {
             flippedId.value = firstId;
             nextTick(() => {
                 flipTo(firstId, true);
-                const input = document.getElementById(`section-password-input-${firstId}`);
+                const input = document.getElementById(
+                    `section-password-input-${firstId}`,
+                );
                 (input as HTMLInputElement | null)?.focus();
             });
         },
@@ -185,53 +196,63 @@ watch(
 <template>
     <Dialog :open="show">
         <DialogContent
-            class="w-[96vw] sm:max-w-[1040px] max-h-[94vh] overflow-y-auto border-primary/20 bg-background shadow-2xl p-5 sm:p-8"
+            class="max-h-[94vh] w-[96vw] overflow-y-auto border-primary/20 bg-background p-5 shadow-2xl sm:max-w-[1040px] sm:p-8"
             :show-close-button="false"
             @pointer-down-outside.prevent
             @escape-key-down.prevent
         >
             <DialogHeader class="sm:text-center">
                 <DialogTitle
-                    class="text-xl sm:text-3xl font-black bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent"
+                    class="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-xl font-black text-transparent sm:text-3xl"
                 >
                     Welcome to the Academy
                 </DialogTitle>
                 <DialogDescription
-                    class="text-muted-foreground/80 pt-2 text-xs sm:text-base leading-relaxed max-w-2xl mx-auto"
+                    class="mx-auto max-w-2xl pt-2 text-xs leading-relaxed text-muted-foreground/80 sm:text-base"
                 >
-                    Select your assigned sections. Sections with a lock will ask for a password on click.
+                    Select your assigned sections. Sections with a lock will ask
+                    for a password on click.
                 </DialogDescription>
             </DialogHeader>
 
-            <div class="py-4 sm:py-6 relative z-50">
+            <div class="relative z-50 py-4 sm:py-6">
                 <label
-                    class="text-[10px] sm:text-xs font-black uppercase tracking-widest text-muted-foreground/60 block sm:text-center mb-4"
+                    class="mb-4 block text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase sm:text-center sm:text-xs"
                 >
                     Choose your sections
                 </label>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div v-for="section in sections" :key="section.id" class="card-perspective">
+                <div
+                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    <div
+                        v-for="section in sections"
+                        :key="section.id"
+                        class="card-perspective"
+                    >
                         <div
                             :ref="(el) => setCardRef(el, section.id)"
-                            class="card-inner relative w-full h-[150px] sm:h-[160px]"
+                            class="card-inner relative h-[150px] w-full sm:h-[160px]"
                         >
                             <!-- FRONT FACE -->
                             <button
                                 type="button"
                                 @click="handleCardClick(section)"
                                 :class="[
-                                    'card-face absolute inset-0 flex items-center justify-center p-5 rounded-2xl border text-center overflow-hidden group/card transition-colors duration-300',
+                                    'card-face group/card absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl border p-5 text-center transition-colors duration-300',
                                     isSelected(section.id)
-                                        ? 'bg-primary border-primary shadow-[0_0_25px_rgba(var(--primary-rgb),0.3)]'
-                                        : 'bg-muted/30 border-border/50 hover:border-primary/40 hover:bg-muted/50',
+                                        ? 'border-primary bg-primary shadow-[0_0_25px_rgba(var(--primary-rgb),0.3)]'
+                                        : 'border-border/50 bg-muted/30 hover:border-primary/40 hover:bg-muted/50',
                                 ]"
                             >
                                 <!-- Tech Grid Background -->
                                 <div
-                                    class="absolute inset-0 opacity-[0.03] pointer-events-none group-hover/card:opacity-[0.05] transition-opacity"
+                                    class="pointer-events-none absolute inset-0 opacity-[0.03] transition-opacity group-hover/card:opacity-[0.05]"
                                 >
-                                    <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                                    <svg
+                                        class="h-full w-full"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
                                         <defs>
                                             <pattern
                                                 :id="`modal-grid-${section.id}`"
@@ -257,12 +278,12 @@ watch(
 
                                 <div
                                     v-if="isSelected(section.id)"
-                                    class="absolute inset-0 bg-white/10 animate-pulse pointer-events-none"
+                                    class="pointer-events-none absolute inset-0 animate-pulse bg-white/10"
                                 ></div>
 
                                 <div class="relative z-10 space-y-1.5">
                                     <p
-                                        class="text-[8px] font-black uppercase tracking-[0.3em] font-mono"
+                                        class="font-mono text-[8px] font-black tracking-[0.3em] uppercase"
                                         :class="
                                             isSelected(section.id)
                                                 ? 'text-primary-foreground/60'
@@ -273,7 +294,7 @@ watch(
                                     </p>
                                     <span
                                         :class="[
-                                            'text-sm font-black uppercase tracking-tight block',
+                                            'block text-sm font-black tracking-tight uppercase',
                                             isSelected(section.id)
                                                 ? 'text-primary-foreground'
                                                 : 'text-foreground/70 group-hover/card:text-primary',
@@ -286,8 +307,12 @@ watch(
                                         class="flex items-center justify-center gap-1 pt-1"
                                     >
                                         <component
-                                            :is="isSelected(section.id) ? LockOpen : Lock"
-                                            class="w-3 h-3"
+                                            :is="
+                                                isSelected(section.id)
+                                                    ? LockOpen
+                                                    : Lock
+                                            "
+                                            class="h-3 w-3"
                                             :class="
                                                 isSelected(section.id)
                                                     ? 'text-primary-foreground/80'
@@ -295,33 +320,42 @@ watch(
                                             "
                                         />
                                         <span
-                                            class="text-[9px] font-bold uppercase tracking-wider"
+                                            class="text-[9px] font-bold tracking-wider uppercase"
                                             :class="
                                                 isSelected(section.id)
                                                     ? 'text-primary-foreground/80'
                                                     : 'text-muted-foreground/50'
                                             "
                                         >
-                                            {{ isSelected(section.id) ? 'Unlocked' : 'Locked — tap to enter password' }}
+                                            {{
+                                                isSelected(section.id)
+                                                    ? 'Unlocked'
+                                                    : 'Locked — tap to enter password'
+                                            }}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div v-if="isSelected(section.id)" class="absolute top-2 right-3">
+                                <div
+                                    v-if="isSelected(section.id)"
+                                    class="absolute top-2 right-3"
+                                >
                                     <div
-                                        class="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-ping opacity-75"
+                                        class="h-1.5 w-1.5 animate-ping rounded-full bg-primary-foreground opacity-75"
                                     ></div>
                                 </div>
                             </button>
 
                             <!-- BACK FACE -->
                             <div
-                                class="card-face card-back absolute inset-0 flex flex-col justify-center gap-2 p-4 rounded-2xl border border-primary/50 bg-muted/50 overflow-hidden"
+                                class="card-face card-back absolute inset-0 flex flex-col justify-center gap-2 overflow-hidden rounded-2xl border border-primary/50 bg-muted/50 p-4"
                             >
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <Lock class="w-3 h-3 text-primary/70" />
+                                <div
+                                    class="flex items-center justify-center gap-1.5"
+                                >
+                                    <Lock class="h-3 w-3 text-primary/70" />
                                     <p
-                                        class="text-[9px] font-black uppercase tracking-[0.25em] text-primary/70 font-mono truncate"
+                                        class="truncate font-mono text-[9px] font-black tracking-[0.25em] text-primary/70 uppercase"
                                     >
                                         {{ section.name }}
                                     </p>
@@ -329,7 +363,9 @@ watch(
                                 <Input
                                     :id="`section-password-input-${section.id}`"
                                     v-model="sectionPasswords[section.id]"
-                                    :tabindex="flippedId === section.id ? 0 : -1"
+                                    :tabindex="
+                                        flippedId === section.id ? 0 : -1
+                                    "
                                     type="password"
                                     autocomplete="off"
                                     placeholder="Section password"
@@ -340,7 +376,9 @@ watch(
                                 <InputError
                                     :message="
                                         passwordErrors[section.id] ||
-                                        (form.errors as Record<string, string>)[`section_passwords.${section.id}`]
+                                        (form.errors as Record<string, string>)[
+                                            `section_passwords.${section.id}`
+                                        ]
                                     "
                                 />
                                 <div class="flex gap-2 pt-1">
@@ -348,29 +386,37 @@ watch(
                                         type="button"
                                         size="sm"
                                         variant="outline"
-                                        class="flex-1 h-8 text-[11px]"
-                                        :tabindex="flippedId === section.id ? 0 : -1"
+                                        class="h-8 flex-1 text-[11px]"
+                                        :tabindex="
+                                            flippedId === section.id ? 0 : -1
+                                        "
                                         @click="cancelPassword(section)"
                                     >
-                                        <X class="w-3 h-3 mr-1" /> Cancel
+                                        <X class="mr-1 h-3 w-3" /> Cancel
                                     </Button>
                                     <Button
                                         type="button"
                                         size="sm"
-                                        class="flex-1 h-8 text-[11px]"
+                                        class="h-8 flex-1 text-[11px]"
                                         :disabled="
                                             !sectionPasswords[section.id] ||
                                             verifyingId === section.id
                                         "
-                                        :tabindex="flippedId === section.id ? 0 : -1"
+                                        :tabindex="
+                                            flippedId === section.id ? 0 : -1
+                                        "
                                         @click="confirmPassword(section)"
                                     >
                                         <Loader2
                                             v-if="verifyingId === section.id"
-                                            class="w-3 h-3 mr-1 animate-spin"
+                                            class="mr-1 h-3 w-3 animate-spin"
                                         />
-                                        <Check v-else class="w-3 h-3 mr-1" />
-                                        {{ verifyingId === section.id ? 'Checking' : 'Unlock' }}
+                                        <Check v-else class="mr-1 h-3 w-3" />
+                                        {{
+                                            verifyingId === section.id
+                                                ? 'Checking'
+                                                : 'Unlock'
+                                        }}
                                     </Button>
                                 </div>
                             </div>
@@ -380,16 +426,18 @@ watch(
 
                 <p
                     v-if="sections.length === 0"
-                    class="text-xs text-destructive mt-4 font-medium italic text-center"
+                    class="mt-4 text-center text-xs font-medium text-destructive italic"
                 >
                     No sections available. Please contact your admin.
                 </p>
             </div>
 
-            <DialogFooter class="relative z-0 pt-2 flex flex-col sm:items-center">
+            <DialogFooter
+                class="relative z-0 flex flex-col pt-2 sm:items-center"
+            >
                 <Button
                     @click="submit"
-                    class="w-full sm:max-w-sm h-12 sm:h-14 text-sm sm:text-base font-black uppercase tracking-wider shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50"
+                    class="h-12 w-full text-sm font-black tracking-wider uppercase shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50 sm:h-14 sm:max-w-sm sm:text-base"
                     :disabled="
                         selectedSections.length === 0 ||
                         !allPasswordsFilled ||
