@@ -189,6 +189,51 @@ PROMPT;
      * @param  array<int, mixed>  $questions
      * @return array<int, array<string, mixed>>
      */
+    public function generateSource(string $subject, string $gradeLevel, string $description, int $length): string
+    {
+        $prompt = <<<PROMPT
+You are an expert educational content creator. Create a comprehensive educational source material based on the following:
+
+Subject: {$subject}
+Grade Level: {$gradeLevel}
+Description of what to cover: {$description}
+
+Guidelines:
+- Create a well-structured lesson with clear sections
+- Use language appropriate for the specified grade level
+- Include key concepts, explanations, and examples
+- Make it informative and educational
+- Aim for approximately {$length} words
+
+Respond only with the source material text, no additional formatting or comments.
+PROMPT;
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
+                'model' => $this->model,
+                'prompt' => $prompt,
+                'stream' => false,
+                'keep_alive' => -1,
+                'options' => [
+                    'temperature' => 0.7,
+                    'num_predict' => min($length * 3, 32768),
+                    'num_ctx' => 8192,
+                    'top_p' => 0.9,
+                ],
+            ]);
+
+            if (! $response->successful()) {
+                \Illuminate\Support\Facades\Log::error('AI source generation HTTP failed: '.$response->body());
+                return '';
+            }
+
+            return trim((string) $response->json('response'));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('AI source generation exception: '.$e->getMessage());
+            return '';
+        }
+    }
+
     public static function normalize(array $questions): array
     {
         $out = [];

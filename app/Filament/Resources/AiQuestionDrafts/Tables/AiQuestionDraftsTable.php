@@ -44,6 +44,7 @@ class AiQuestionDraftsTable
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
                         'pending' => 'gray',
+                        'generating_source' => 'info',
                         'running' => 'info',
                         'ready' => 'success',
                         'failed' => 'danger',
