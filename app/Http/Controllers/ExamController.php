@@ -87,7 +87,9 @@ class ExamController extends Controller
         $submissions = ExamSubmission::where('user_id', $userId)
             ->where('exam_id', $exam->id)
             ->get(['exam_part_id', 'status', 'score'])
-            ->keyBy('exam_part_id')
+            ->mapWithKeys(function ($item) {
+                return [(string)$item['exam_part_id'] => $item];
+            })
             ->toArray();
 
         return Inertia::render('Exams/Show', [
@@ -222,7 +224,18 @@ class ExamController extends Controller
                     $isCorrect = true;
                 }
             } elseif ($question['type'] === 'identification') {
-                if (trim(strtolower($submittedAnswer)) === trim(strtolower($question['correct_answer'] ?? ''))) {
+                $normalize = function (string $text): string {
+                    // Convert to lowercase, trim, collapse multiple spaces, remove common punctuation
+                    $text = strtolower(trim($text));
+                    $text = preg_replace('/\s+/', ' ', $text); // collapse multiple spaces
+                    $text = preg_replace('/[^\w\s]/u', '', $text); // remove punctuation except word chars and spaces
+                    return trim($text);
+                };
+                
+                $normalizedSubmitted = $normalize((string)$submittedAnswer);
+                $normalizedCorrect = $normalize((string)($question['correct_answer'] ?? ''));
+                
+                if ($normalizedSubmitted === $normalizedCorrect) {
                     $isCorrect = true;
                 }
             }

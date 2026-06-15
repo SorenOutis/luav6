@@ -476,7 +476,7 @@ const nextPartId = computed(() => {
 });
 
 const isPartSubmitted = (partId: number) => {
-    return !!props.submissions[partId];
+    return !!props.submissions[String(partId)];
 };
 
 const isPartLocked = (index: number) => {
