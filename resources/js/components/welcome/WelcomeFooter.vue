@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import gsap from 'gsap';
 import {
     ArrowUp,
@@ -11,6 +10,7 @@ import {
     Globe,
     Cpu,
 } from 'lucide-vue-next';
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 
 const footerRef = ref<HTMLElement | null>(null);
 const time = ref('--:--:--');

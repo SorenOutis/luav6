@@ -1,4 +1,4 @@
-import { type RouteDefinition } from '../wayfinder';
+import type {RouteDefinition} from '../wayfinder';
 
 /**
  * Enhances a route method with a .form() helper for Inertia.js Form component

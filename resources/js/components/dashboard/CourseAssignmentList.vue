@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import Progress from '@/components/ui/progress/Progress.vue';
 import { Clock } from 'lucide-vue-next';
+import Progress from '@/components/ui/progress/Progress.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface Course {

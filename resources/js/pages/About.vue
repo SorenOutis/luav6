@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
@@ -25,9 +24,10 @@ import {
     XCircle,
     RotateCcw,
 } from 'lucide-vue-next';
+import { Sun, Moon } from 'lucide-vue-next';
+import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import { useAppearance } from '@/composables/useAppearance';
-import { Sun, Moon } from 'lucide-vue-next';
 
 gsap.registerPlugin(ScrollTrigger);
 

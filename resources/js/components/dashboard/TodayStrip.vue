@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import {
     AlertTriangle,
@@ -9,8 +8,9 @@ import {
     Timer,
     Zap,
 } from 'lucide-vue-next';
-import type { NextUpItem } from './NextUpCard.vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import type { NextUpItem } from './NextUpCard.vue';
 
 interface Props {
     dueTodayCount: number;

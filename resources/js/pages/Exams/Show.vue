@@ -1,20 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
-import {
-    onMounted,
-    onUnmounted,
-    ref,
-    computed,
-    reactive,
-    nextTick,
-    watch,
-} from 'vue';
+import { Motion } from '@motionone/vue';
+import axios from 'axios';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Motion } from '@motionone/vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import axios from 'axios';
-import type { BreadcrumbItem } from '@/types';
 import {
     Calendar,
     Clock,
@@ -39,8 +28,19 @@ import {
     BarChart3,
     RotateCcw,
 } from 'lucide-vue-next';
-import { useLoader } from '@/composables/useLoader';
+import {
+    onMounted,
+    onUnmounted,
+    ref,
+    computed,
+    reactive,
+    nextTick,
+    watch,
+} from 'vue';
 import { useAccessibility } from '@/composables/useAccessibility';
+import { useLoader } from '@/composables/useLoader';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { BreadcrumbItem } from '@/types';
 
 const { isVisible: isLoaderVisible } = useLoader();
 const { isDyslexiaFriendly, toggleDyslexiaMode, updateDyslexiaMode } =

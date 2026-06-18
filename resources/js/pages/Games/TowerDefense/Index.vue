@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { computed, onMounted, ref, watch } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { Motion } from '@motionone/vue';
 import {
     Shield,
     Star,
@@ -17,8 +15,10 @@ import {
     Gauge,
     Crosshair,
 } from 'lucide-vue-next';
+import { computed, onMounted, ref, watch } from 'vue';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
-import { Motion } from '@motionone/vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 
 const { isVisible: isLoaderVisible } = useLoader();
 const isBooted = ref(false);

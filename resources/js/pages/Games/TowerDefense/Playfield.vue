@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
-import { onBeforeUnmount, onMounted, ref, shallowRef, computed } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { TowerDefenseGame, type GameSnapshot } from './engine/Game';
-import type { HudState, LevelPayload } from './engine/types';
 import {
     Coins,
     Heart,
@@ -19,6 +15,11 @@ import {
     Users,
     RefreshCw,
 } from 'lucide-vue-next';
+import { onBeforeUnmount, onMounted, ref, shallowRef, computed } from 'vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { TowerDefenseGame  } from './engine/Game';
+import type {GameSnapshot} from './engine/Game';
+import type { HudState, LevelPayload } from './engine/types';
 
 const props = defineProps<{ level: LevelPayload }>();
 

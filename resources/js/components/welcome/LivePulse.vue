@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { Activity } from 'lucide-vue-next';
 import gsap from 'gsap';
+import { Activity } from 'lucide-vue-next';
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 
 const liveSignals = ref([
     {

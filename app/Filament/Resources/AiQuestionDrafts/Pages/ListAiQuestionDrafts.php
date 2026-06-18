@@ -63,13 +63,13 @@ class ListAiQuestionDrafts extends ListRecords
                         ])
                         ->maxSize(20 * 1024)
                         ->helperText('Or paste content below instead. Max 20 MB.')
-                        ->visible(fn (callable $get) => !$get('generate_source')),
+                        ->visible(fn (callable $get) => ! $get('generate_source')),
                     Textarea::make('pasted_text')
                         ->label('…or paste the source text')
                         ->rows(6)
                         ->maxLength(100000)
                         ->helperText('Leave empty if you uploaded a file.')
-                        ->visible(fn (callable $get) => !$get('generate_source')),
+                        ->visible(fn (callable $get) => ! $get('generate_source')),
                     // Generate Source mode
                     TextInput::make('source_subject')
                         ->label('Subject')

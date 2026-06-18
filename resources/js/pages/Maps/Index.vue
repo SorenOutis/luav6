@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { Motion, Presence } from '@motionone/vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import MapWorld from '@/components/map/MapWorld.vue';
-import WorldSwitcher from '@/components/map/WorldSwitcher.vue';
-import MapNodeDetail from '@/components/map/MapNodeDetail.vue';
-import MapWorldDetail from '@/components/map/MapWorldDetail.vue';
-import {
-    MAP_CONFIG,
-    type MapNodeDefinition,
-    type WorldBiome,
-    type PlayerProgress,
-} from '@/config/mapConfig';
 import { Trophy, Zap, Map as MapIcon, Target, Flame } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import MapNodeDetail from '@/components/map/MapNodeDetail.vue';
+import MapWorld from '@/components/map/MapWorld.vue';
+import MapWorldDetail from '@/components/map/MapWorldDetail.vue';
+import WorldSwitcher from '@/components/map/WorldSwitcher.vue';
+import {
+    MAP_CONFIG
+    
+    
+    
+} from '@/config/mapConfig';
+import type {MapNodeDefinition, WorldBiome, PlayerProgress} from '@/config/mapConfig';
+import AppLayout from '@/layouts/AppLayout.vue';
 
 interface Props {
     worlds?: WorldBiome[];

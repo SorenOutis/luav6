@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { useNumberAnimation } from '@/composables/useNumberAnimation';
+import { Link } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     Trophy,
     Crown,
@@ -18,10 +18,10 @@ import {
     ChevronDown,
     ChevronUp,
 } from 'lucide-vue-next';
-import { Link } from '@inertiajs/vue3';
-import axios from 'axios';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface LeaderboardUser {
     id: number;

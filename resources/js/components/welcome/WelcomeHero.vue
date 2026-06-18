@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { ArrowRight, CalendarCheck, LayoutDashboard } from 'lucide-vue-next';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ArrowRight, CalendarCheck, LayoutDashboard } from 'lucide-vue-next';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 

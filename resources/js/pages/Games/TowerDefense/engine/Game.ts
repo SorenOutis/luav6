@@ -6,11 +6,13 @@ import {
     Container,
     Graphics,
     Sprite,
-    Texture,
     RenderTexture,
-    TextureStyle,
-    type Renderer,
+    TextureStyle
+    
 } from 'pixi.js';
+import type {
+    Texture} from 'pixi.js';
+import type {Renderer} from 'pixi.js';
 import type {
     EnemyDef,
     HudState,

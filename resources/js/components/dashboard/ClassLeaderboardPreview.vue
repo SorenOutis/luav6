@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Award, Crown, Medal, Sparkles, Trophy, User } from 'lucide-vue-next';
-import EmptyState from './EmptyState.vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import EmptyState from './EmptyState.vue';
 
 interface LeaderboardUser {
     id: number;

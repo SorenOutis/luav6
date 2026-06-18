@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import gsap from 'gsap';
 import {
     Command,
     Zap,
@@ -14,7 +14,7 @@ import {
     Boxes,
     Cpu,
 } from 'lucide-vue-next';
-import gsap from 'gsap';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 
 defineProps<{
     isCoarsePointer: boolean;

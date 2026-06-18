@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
 import { Motion } from '@motionone/vue';
 import {
     Lock,
@@ -10,6 +9,7 @@ import {
     Zap,
     Sparkles,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 interface Props {
     title: string;

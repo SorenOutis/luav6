@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Check, LayoutTemplate, Palette, Type } from 'lucide-vue-next';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -7,7 +8,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAccessibility } from '@/composables/useAccessibility';
 import { useAppearance } from '@/composables/useAppearance';
-import { Check, LayoutTemplate, Palette, Type } from 'lucide-vue-next';
 
 const {
     themePreset,

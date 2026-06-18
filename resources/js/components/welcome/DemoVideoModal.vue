@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import {
     BarChart3,
     CheckCircle2,
@@ -14,6 +13,7 @@ import {
     Sparkles,
     X,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 const props = defineProps<{
     open: boolean;

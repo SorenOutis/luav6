@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Motion } from '@motionone/vue';
-import type { WorldBiome } from '@/config/mapConfig';
 import { Globe, Lock } from 'lucide-vue-next';
+import type { WorldBiome } from '@/config/mapConfig';
 
 interface Props {
     worlds: WorldBiome[];

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Command, Sun, Moon } from 'lucide-vue-next';
-import { useAppearance } from '@/composables/useAppearance';
 import { Motion } from '@motionone/vue';
+import { Command, Sun, Moon } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { useAppearance } from '@/composables/useAppearance';
 
 const props = defineProps<{
     canRegister: boolean;

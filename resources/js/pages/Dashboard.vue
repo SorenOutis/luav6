@@ -1,29 +1,30 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Motion } from '@motionone/vue';
+import { Calendar } from 'lucide-vue-next';
+import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
+import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
+import DashboardHero from '@/components/dashboard/DashboardHero.vue';
+import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';
+import DashboardStats from '@/components/dashboard/DashboardStats.vue';
+import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
+import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
+import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
+import Card from '@/components/ui/card/Card.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard, logout } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
-import DashboardHero from '@/components/dashboard/DashboardHero.vue';
-import DashboardStats from '@/components/dashboard/DashboardStats.vue';
-import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
-import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';
-import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
-import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
-import { Calendar } from 'lucide-vue-next';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
@@ -75,7 +76,6 @@ const handleGlobalMouseMove = (e: MouseEvent) => {
 };
 
 import { usePage, Link, usePoll, router } from '@inertiajs/vue3';
-import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
 import { edit as profileEdit } from '@/routes/profile';
 import { index as assignmentsIndex } from '@/routes/assignments';

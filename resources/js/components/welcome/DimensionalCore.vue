@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -55,7 +55,7 @@ const nodesC = orbitNodes(5);
 
 let ctx: gsap.Context | null = null;
 let rafId = 0;
-let mouseTilt = { x: 0, y: 0, targetX: 0, targetY: 0 };
+const mouseTilt = { x: 0, y: 0, targetX: 0, targetY: 0 };
 
 const handleMouseMove = (e: MouseEvent) => {
     if (!stage.value) return;

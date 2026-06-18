@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import { router, usePage } from '@inertiajs/vue3';
+import { Bell, Moon, Shield, Sun, TrendingUp, Zap } from 'lucide-vue-next';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import AppearanceMenu from '@/components/AppearanceMenu.vue';
+import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -8,11 +11,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import type { BreadcrumbItem } from '@/types';
-import { router, usePage } from '@inertiajs/vue3';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { Bell, Moon, Shield, Sun, TrendingUp, Zap } from 'lucide-vue-next';
 import { useAppearance } from '@/composables/useAppearance';
+import type { BreadcrumbItem } from '@/types';
 
 withDefaults(
     defineProps<{

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { Cpu, ClipboardCheck, FileText, Trophy } from 'lucide-vue-next';
-import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import gsap from 'gsap';
+import { Cpu, ClipboardCheck, FileText, Trophy } from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
+import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 const props = defineProps<{
     totalUsers: number;

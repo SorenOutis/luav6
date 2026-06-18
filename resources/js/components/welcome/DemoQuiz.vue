@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import {
     Play,
@@ -9,6 +8,7 @@ import {
     ArrowRight,
     Trophy,
 } from 'lucide-vue-next';
+import { ref } from 'vue';
 
 defineProps<{
     auth: { user: any };

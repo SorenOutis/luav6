@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useNumberAnimation } from '@/composables/useNumberAnimation';
+import { Link } from '@inertiajs/vue3';
 import {
     X,
     Sparkles,
@@ -11,9 +10,10 @@ import {
     RefreshCw,
     Trophy,
 } from 'lucide-vue-next';
-import { Link } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
+import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface Announcement {
     id: number;

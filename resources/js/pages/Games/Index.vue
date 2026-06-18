@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { onMounted, ref, watch } from 'vue';
+import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Motion } from '@motionone/vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 import {
     Gamepad2,
     Shield,
@@ -18,7 +15,10 @@ import {
     Target,
     Swords,
 } from 'lucide-vue-next';
+import { onMounted, ref, watch } from 'vue';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
+import AppLayout from '@/layouts/AppLayout.vue';
 
 const { isVisible: isLoaderVisible } = useLoader();
 const isBooted = ref(false);

@@ -1,6 +1,6 @@
+import gsap from 'gsap';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
-import gsap from 'gsap';
 import type {
     Appearance,
     CardStylePreset,

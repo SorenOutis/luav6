@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import { MessageCircle, Send, X, Bot, User } from 'lucide-vue-next';
+import { ref, computed, nextTick, watch, onMounted } from 'vue';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
     Card,
     CardContent,
@@ -11,7 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import axios from 'axios';
+import { Textarea } from '@/components/ui/textarea';
 
 const page = usePage();
 const isOpen = ref(false);

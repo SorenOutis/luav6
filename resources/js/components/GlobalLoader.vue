@@ -6,9 +6,10 @@ import {
     onMounted,
     onBeforeUnmount,
     watch,
-    computed,
-    type VNodeRef,
+    computed
+    
 } from 'vue';
+import type {VNodeRef} from 'vue';
 import { useLoader, LOADER_MESSAGES } from '@/composables/useLoader';
 
 const props = withDefaults(

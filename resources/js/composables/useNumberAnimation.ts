@@ -1,5 +1,5 @@
-import { ref, watch } from 'vue';
 import gsap from 'gsap';
+import { ref, watch } from 'vue';
 import { useAppearance } from '@/composables/useAppearance';
 
 /**

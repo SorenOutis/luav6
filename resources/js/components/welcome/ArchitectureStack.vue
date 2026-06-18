@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { ArrowRight } from 'lucide-vue-next';
 import gsap from 'gsap';
+import { ArrowRight } from 'lucide-vue-next';
+import { ref, onMounted } from 'vue';
 
 const archContainer = ref<HTMLElement | null>(null);
 

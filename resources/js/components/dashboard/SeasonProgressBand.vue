@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { CalendarDays, Flag, Sparkles } from 'lucide-vue-next';
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 
 interface Props {
     name?: string | null;

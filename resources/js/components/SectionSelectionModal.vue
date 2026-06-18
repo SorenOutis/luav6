@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import axios from 'axios';
 import gsap from 'gsap';
-import { Input } from '@/components/ui/input';
+import { Check, Loader2, Lock, LockOpen, X } from 'lucide-vue-next';
+import { ref, computed, nextTick, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -13,8 +14,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Check, Loader2, Lock, LockOpen, X } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
 import { update as updateSectionRoute } from '@/routes/profile/section';
 
 interface Section {

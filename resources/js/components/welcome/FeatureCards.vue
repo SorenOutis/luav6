@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { ChevronDown, Sparkles, ArrowRight } from 'lucide-vue-next';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ChevronDown, Sparkles, ArrowRight } from 'lucide-vue-next';
+import { ref, computed, onMounted, nextTick } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 

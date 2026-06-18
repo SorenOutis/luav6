@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import gsap from 'gsap';
-import MapNode from './MapNode.vue';
-import MapPath from './MapPath.vue';
+import { Plus, Minus, Locate, CheckCircle2, Play, Lock } from 'lucide-vue-next';
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
 import type {
     WorldBiome,
     MapNodeDefinition,
@@ -10,7 +9,8 @@ import type {
     UnlockRequirement,
 } from '@/config/mapConfig';
 import { nodeStatus, evaluateRequirement } from '@/config/mapConfig';
-import { Plus, Minus, Locate, CheckCircle2, Play, Lock } from 'lucide-vue-next';
+import MapNode from './MapNode.vue';
+import MapPath from './MapPath.vue';
 
 interface Props {
     world: WorldBiome;

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Motion, Presence } from '@motionone/vue';
 import {
     X,
@@ -14,6 +13,7 @@ import {
     Flame,
     Info,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import type {
     WorldBiome,
     MapNodeDefinition,

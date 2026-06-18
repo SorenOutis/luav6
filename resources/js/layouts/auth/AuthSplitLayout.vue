@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Command, ArrowUpRight } from 'lucide-vue-next';
-import { home } from '@/routes';
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import gsap from 'gsap';
+import { Command, ArrowUpRight } from 'lucide-vue-next';
+import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { home } from '@/routes';
 
 // Layout doesn't need title/description props anymore since pages provide them
 const page = usePage();

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Zap, Clock, ArrowUpRight } from 'lucide-vue-next';
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 export interface NextUpItem {

@@ -1,5 +1,5 @@
-import type { Auth } from '@/types/auth';
 import type { AiChatSettings } from '@/types/aiChat';
+import type { Auth } from '@/types/auth';
 import type { StudentPageControls } from '@/types/studentPageControls';
 
 // Extend ImportMeta interface for Vite...

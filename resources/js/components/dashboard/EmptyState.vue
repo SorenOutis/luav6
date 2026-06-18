@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { Component } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Sparkles } from 'lucide-vue-next';
+import type { Component } from 'vue';
 
 interface Props {
     icon?: Component;

@@ -7,6 +7,7 @@ import {
     Gamepad2,
     Award,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -19,9 +20,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { computed } from 'vue';
-import type { NavItem } from '@/types';
 import { dashboard } from '@/routes';
+import type { NavItem } from '@/types';
 
 const page = usePage();
 

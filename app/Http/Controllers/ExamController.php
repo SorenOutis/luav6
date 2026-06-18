@@ -88,7 +88,7 @@ class ExamController extends Controller
             ->where('exam_id', $exam->id)
             ->get(['exam_part_id', 'status', 'score'])
             ->mapWithKeys(function ($item) {
-                return [(string)$item['exam_part_id'] => $item];
+                return [(string) $item['exam_part_id'] => $item];
             })
             ->toArray();
 
@@ -229,12 +229,13 @@ class ExamController extends Controller
                     $text = strtolower(trim($text));
                     $text = preg_replace('/\s+/', ' ', $text); // collapse multiple spaces
                     $text = preg_replace('/[^\w\s]/u', '', $text); // remove punctuation except word chars and spaces
+
                     return trim($text);
                 };
-                
-                $normalizedSubmitted = $normalize((string)$submittedAnswer);
-                $normalizedCorrect = $normalize((string)($question['correct_answer'] ?? ''));
-                
+
+                $normalizedSubmitted = $normalize((string) $submittedAnswer);
+                $normalizedCorrect = $normalize((string) ($question['correct_answer'] ?? ''));
+
                 if ($normalizedSubmitted === $normalizedCorrect) {
                     $isCorrect = true;
                 }

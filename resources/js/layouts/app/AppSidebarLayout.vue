@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
-import MobileNav from '@/components/MobileNav.vue';
 import FloatingWidget from '@/components/FloatingWidget.vue';
-import { usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import MobileNav from '@/components/MobileNav.vue';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {

@@ -7,8 +7,6 @@ usePoll(10000, {
     only: ['exams'],
 });
 import gsap from 'gsap';
-import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem } from '@/types';
 import {
     Calendar,
     Clock,
@@ -27,6 +25,8 @@ import {
     Timer,
     TrendingUp,
 } from 'lucide-vue-next';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -35,8 +35,8 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { BreadcrumbItem } from '@/types';
 
 interface ExamSubmission {
     id: number;

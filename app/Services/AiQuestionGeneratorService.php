@@ -209,7 +209,7 @@ Respond only with the source material text, no additional formatting or comments
 PROMPT;
 
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
+            $response = Http::timeout(300)->post("{$this->baseUrl}/api/generate", [
                 'model' => $this->model,
                 'prompt' => $prompt,
                 'stream' => false,
@@ -223,13 +223,15 @@ PROMPT;
             ]);
 
             if (! $response->successful()) {
-                \Illuminate\Support\Facades\Log::error('AI source generation HTTP failed: '.$response->body());
+                Log::error('AI source generation HTTP failed: '.$response->body());
+
                 return '';
             }
 
             return trim((string) $response->json('response'));
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('AI source generation exception: '.$e->getMessage());
+            Log::error('AI source generation exception: '.$e->getMessage());
+
             return '';
         }
     }

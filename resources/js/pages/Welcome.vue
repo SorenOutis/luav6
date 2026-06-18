@@ -1,29 +1,29 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
+import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
-import { Motion } from '@motionone/vue';
 
 // Sub-components
+import AppPreviewShowcase from '@/components/welcome/AppPreviewShowcase.vue';
+import ArchitectureStack from '@/components/welcome/ArchitectureStack.vue';
+import AudiencePathways from '@/components/welcome/AudiencePathways.vue';
+import DemoQuiz from '@/components/welcome/DemoQuiz.vue';
+import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
+import DimensionalCore from '@/components/welcome/DimensionalCore.vue';
+import EnvironmentPanel from '@/components/welcome/EnvironmentPanel.vue';
+import FeatureCards from '@/components/welcome/FeatureCards.vue';
+import FloatingPrisms from '@/components/welcome/FloatingPrisms.vue';
+import LivePulse from '@/components/welcome/LivePulse.vue';
 import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
 import SystemTerminal from '@/components/welcome/SystemTerminal.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
-import LivePulse from '@/components/welcome/LivePulse.vue';
-import EnvironmentPanel from '@/components/welcome/EnvironmentPanel.vue';
 import SystemMetrics from '@/components/welcome/SystemMetrics.vue';
-import ArchitectureStack from '@/components/welcome/ArchitectureStack.vue';
-import DimensionalCore from '@/components/welcome/DimensionalCore.vue';
-import FloatingPrisms from '@/components/welcome/FloatingPrisms.vue';
-import FeatureCards from '@/components/welcome/FeatureCards.vue';
-import AudiencePathways from '@/components/welcome/AudiencePathways.vue';
 import TrustReadiness from '@/components/welcome/TrustReadiness.vue';
-import AppPreviewShowcase from '@/components/welcome/AppPreviewShowcase.vue';
 import ReportSuite from '@/components/welcome/ReportSuite.vue';
-import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
 import SeasonCountdown from '@/components/welcome/SeasonCountdown.vue';
-import DemoQuiz from '@/components/welcome/DemoQuiz.vue';
 import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 

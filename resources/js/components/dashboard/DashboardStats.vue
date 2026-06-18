@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import {
     Award,
     Zap,
@@ -9,7 +7,9 @@ import {
     TrendingUp,
     Sparkles,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface UserStats {
     totalXP: number;

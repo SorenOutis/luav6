@@ -1,26 +1,8 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { onMounted, ref, computed, watch } from 'vue';
+import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Motion } from '@motionone/vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
-import { useLoader } from '@/composables/useLoader';
-
-const { isVisible: isLoaderVisible } = useLoader();
-const isBooted = ref(false);
-
-gsap.registerPlugin(ScrollTrigger);
-import Card from '@/components/ui/card/Card.vue';
-import CardContent from '@/components/ui/card/CardContent.vue';
-import CardDescription from '@/components/ui/card/CardDescription.vue';
-import CardHeader from '@/components/ui/card/CardHeader.vue';
-import CardTitle from '@/components/ui/card/CardTitle.vue';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 import {
     FileUp,
     CheckCircle2,
@@ -35,6 +17,24 @@ import {
     ShieldCheck,
     Cpu,
 } from 'lucide-vue-next';
+import { onMounted, ref, computed, watch } from 'vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Card from '@/components/ui/card/Card.vue';
+import type { BreadcrumbItem } from '@/types';
+
+const { isVisible: isLoaderVisible } = useLoader();
+const isBooted = ref(false);
+
+gsap.registerPlugin(ScrollTrigger);
+import CardContent from '@/components/ui/card/CardContent.vue';
+import CardDescription from '@/components/ui/card/CardDescription.vue';
+import CardHeader from '@/components/ui/card/CardHeader.vue';
+import CardTitle from '@/components/ui/card/CardTitle.vue';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { useLoader } from '@/composables/useLoader';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { dashboard } from '@/routes';
 
 interface Assignment {
     id: number;
