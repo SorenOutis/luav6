@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Terminal } from 'lucide-vue-next';
-import { ref, onBeforeUnmount, nextTick, TransitionGroup, watch } from 'vue';
+import { ref, onBeforeUnmount, nextTick, watch } from 'vue';
 
 const props = withDefaults(
     defineProps<{

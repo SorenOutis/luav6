@@ -195,5 +195,5 @@ const rankClass = (rank: number) => {
                 Keep climbing
             </span>
         </div>
-    </section>
+    </SpotlightCard>
 </template>

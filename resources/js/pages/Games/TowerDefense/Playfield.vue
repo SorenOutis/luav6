@@ -7,7 +7,6 @@ import {
     Pause,
     Play,
     Shield,
-    Star,
     Trophy,
     ArrowLeft,
     RotateCcw,
@@ -234,13 +233,6 @@ const selectTower = (slug: string) => {
     game.value.selectTower(hud.value.selectedTowerSlug === slug ? null : slug);
 };
 
-const selectPlacedTower = (id: number) => {
-    if (!game.value) return;
-    game.value.selectPlacedTower(
-        hud.value.selectedPlacedTowerId === id ? null : id,
-    );
-};
-
 const startMovingSelectedTower = () => {
     if (!game.value) return;
     game.value.startMovingSelectedTower();
@@ -256,7 +248,7 @@ const setSpeed = (s: 1 | 2 | 3) => game.value?.setSpeed(s);
 const sell = () => game.value?.sellSelected();
 const upgrade = () => game.value?.upgradeSelected();
 
-const formatDuration = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+
 
 const retry = () => {
     clearCheckpoint();

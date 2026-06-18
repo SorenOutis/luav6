@@ -123,13 +123,6 @@ const gradeColor = (percentage: number | null) => {
     return 'text-rose-500';
 };
 
-const gradeBg = (percentage: number | null) => {
-    if (percentage === null) return 'bg-muted';
-    if (percentage >= 85) return 'bg-emerald-500';
-    if (percentage >= 70) return 'bg-amber-500';
-    return 'bg-rose-500';
-};
-
 const gradeLabel = (percentage: number | null) => {
     if (percentage === null) return 'Pending';
     if (percentage >= 85) return 'Excellent';

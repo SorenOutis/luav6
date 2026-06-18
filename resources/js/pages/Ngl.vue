@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import {
     MessageSquare,
@@ -8,19 +8,13 @@ import {
     User,
     Heart,
     Sparkles,
-    Plus,
 } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 import { Button } from '@/components/ui/button';
-import Card from '@/components/ui/card/Card.vue';
-import CardContent from '@/components/ui/card/CardContent.vue';
-import CardHeader from '@/components/ui/card/CardHeader.vue';
-import CardTitle from '@/components/ui/card/CardTitle.vue';
 import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';

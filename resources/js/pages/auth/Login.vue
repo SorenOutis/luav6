@@ -12,7 +12,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';

@@ -12,7 +12,7 @@ interface Exam {
     submissions_count: number;
 }
 
-const props = defineProps<{
+defineProps<{
     exams: Exam[];
 }>();
 

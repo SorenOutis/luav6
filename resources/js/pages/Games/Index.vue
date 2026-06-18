@@ -4,16 +4,12 @@ import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
-    Gamepad2,
     Shield,
     ChevronRight,
     Sparkles,
     Clock,
     Trophy,
     Zap,
-    Flame,
-    Target,
-    Swords,
 } from 'lucide-vue-next';
 import { onMounted, ref, watch } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';

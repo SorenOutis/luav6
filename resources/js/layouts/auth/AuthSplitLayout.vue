@@ -39,7 +39,6 @@ const heroTitleLines = computed(() => {
 // Refs
 const leftPanel = ref<HTMLElement | null>(null);
 const formPanel = ref<HTMLElement | null>(null);
-const brandBlock = ref<HTMLElement | null>(null);
 const orbRefs = ref<HTMLElement[]>([]);
 const gridOverlay = ref<HTMLElement | null>(null);
 

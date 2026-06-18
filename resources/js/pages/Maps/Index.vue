@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { Motion, Presence } from '@motionone/vue';
-import { Trophy, Zap, Map as MapIcon, Target, Flame } from 'lucide-vue-next';
+import { Trophy, Map as MapIcon, Target, Flame } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import MapNodeDetail from '@/components/map/MapNodeDetail.vue';
 import MapWorld from '@/components/map/MapWorld.vue';

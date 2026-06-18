@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import {
     Calendar,
     Shield,
     Trophy,
     LayoutGrid,
     Zap,
-    Target,
 } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
@@ -207,12 +206,12 @@ const formatDelta = (value: number) => {
                         <div
                             class="custom-scrollbar max-h-[380px] space-y-3 overflow-y-auto pr-2"
                         >
-                            <div
-                                v-if="history.length > 0"
-                                v-for="item in history"
-                                :key="item.id"
-                                class="group rounded-xl border border-border/50 bg-card p-3 shadow-sm transition-colors hover:bg-muted/30"
-                            >
+                            <template v-if="history.length > 0">
+                                <div
+                                    v-for="item in history"
+                                    :key="item.id"
+                                    class="group rounded-xl border border-border/50 bg-card p-3 shadow-sm transition-colors hover:bg-muted/30"
+                                >
                                 <div
                                     class="flex items-start justify-between gap-2"
                                 >
@@ -265,7 +264,8 @@ const formatDelta = (value: number) => {
                                         </span>
                                     </div>
                                 </div>
-                            </div>
+                                </div>
+                            </template>
                             <div
                                 v-else
                                 class="rounded-xl border border-dashed bg-card p-8 text-center text-xs font-medium text-muted-foreground"
@@ -324,12 +324,12 @@ const formatDelta = (value: number) => {
                         <div
                             class="custom-scrollbar max-h-[420px] space-y-3 overflow-y-auto pr-2"
                         >
-                            <div
-                                v-if="history.length > 0"
-                                v-for="item in history"
-                                :key="item.id"
-                                class="rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-colors hover:bg-muted/30"
-                            >
+                            <template v-if="history.length > 0">
+                                <div
+                                    v-for="item in history"
+                                    :key="item.id"
+                                    class="rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-colors hover:bg-muted/30"
+                                >
                                 <div
                                     class="flex items-start justify-between gap-3"
                                 >
@@ -383,7 +383,8 @@ const formatDelta = (value: number) => {
                                         </span>
                                     </div>
                                 </div>
-                            </div>
+                                </div>
+                            </template>
                             <div
                                 v-else
                                 class="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground"

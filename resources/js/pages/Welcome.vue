@@ -17,15 +17,15 @@ import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import FloatingPrisms from '@/components/welcome/FloatingPrisms.vue';
 import LivePulse from '@/components/welcome/LivePulse.vue';
 import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
-import SystemTerminal from '@/components/welcome/SystemTerminal.vue';
-import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
-import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
-import SystemMetrics from '@/components/welcome/SystemMetrics.vue';
-import TrustReadiness from '@/components/welcome/TrustReadiness.vue';
 import ReportSuite from '@/components/welcome/ReportSuite.vue';
 import SeasonCountdown from '@/components/welcome/SeasonCountdown.vue';
+import SystemMetrics from '@/components/welcome/SystemMetrics.vue';
+import SystemTerminal from '@/components/welcome/SystemTerminal.vue';
 import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
+import TrustReadiness from '@/components/welcome/TrustReadiness.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
+import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
+import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
 
 // Composables & Routes
 import { useAppearance } from '@/composables/useAppearance';

@@ -2,9 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import {
     X,
-    Sparkles,
     Zap,
-    Award,
     Megaphone,
     ArrowRight,
     RefreshCw,

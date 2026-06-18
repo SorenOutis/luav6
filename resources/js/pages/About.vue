@@ -11,7 +11,6 @@ import {
     ShieldCheck,
     Users,
     Layers,
-    BookOpenCheck,
     Mail,
     Github,
     Twitter,

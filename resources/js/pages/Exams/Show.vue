@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, usePage, router } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import axios from 'axios';
 import gsap from 'gsap';
@@ -9,24 +9,14 @@ import {
     Clock,
     ChevronLeft,
     ChevronRight,
-    BookOpen,
     CheckCircle2,
-    HelpCircle,
     FileText,
-    Settings2,
-    GraduationCap,
-    PlayCircle,
     ArrowRight,
     Layers,
     ListChecks,
-    Users2,
-    Trophy,
     Lock,
-    CheckSquare2,
     Flag,
     Zap,
-    BarChart3,
-    RotateCcw,
 } from 'lucide-vue-next';
 import {
     onMounted,
@@ -34,7 +24,6 @@ import {
     ref,
     computed,
     reactive,
-    nextTick,
     watch,
 } from 'vue';
 import { useAccessibility } from '@/composables/useAccessibility';
@@ -133,7 +122,6 @@ const hasShownUnansweredWarning = ref(false);
 const isTimeoutSubmission = ref(false);
 const currentPartHasEssay = ref(false);
 const calcCountdown = ref(0);
-const calcTimerInterval = ref<ReturnType<typeof setInterval> | null>(null);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
@@ -235,8 +223,7 @@ const calculatePace = () => {
     const avgSecondsPerQuestion = elapsedSeconds / answeredCount;
 
     // Estimate based on ALL questions in the exam, not just the current part
-    const remainingQuestionsTotal =
-        totalQuestions.value - submittedPartsCount.value * 1 - answeredCount; // Simplified: assumes uniform distribution or just current part context
+    
     const remainingQuestionsInPart =
         (selectedPart.value.questions?.length ?? 0) - answeredCount;
 
@@ -248,21 +235,6 @@ const calculatePace = () => {
         estimatedFinishMinutes.value = 0;
     }
 };
-
-const formattedFinishTime = computed(() => {
-    if (!examStarted.value) return null;
-    const now = new Date();
-    // Use the remaining duration if pace isn't established, otherwise use pace
-    const minsToAdd =
-        estimatedFinishMinutes.value !== null
-            ? estimatedFinishMinutes.value
-            : Math.ceil(timeLeftSeconds.value / 60);
-    const finishDate = new Date(now.getTime() + minsToAdd * 60000);
-    return finishDate.toLocaleTimeString([], {
-        hour: 'numeric',
-        minute: '2-digit',
-    });
-});
 
 const overallProgress = computed(() => {
     if (props.exam.parts.length === 0) return 0;
@@ -483,46 +455,6 @@ const isPartLocked = (index: number) => {
     if (index === 0) return false;
     const previousPart = props.exam.parts[index - 1];
     return !isPartSubmitted(previousPart.id);
-};
-
-const formatDateTime = (dateStr: string) =>
-    new Date(dateStr).toLocaleString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-
-const getPartIcon = (type: string) =>
-    ({
-        multiple_choice: HelpCircle,
-        identification: CheckCircle2,
-        essay: FileText,
-        true_false: Settings2,
-    })[type] ?? BookOpen;
-
-const getPartColor = (index: number) => {
-    const colors = [
-        'from-primary/8 to-primary/2 border-primary/15',
-        'from-secondary/60 to-secondary/20 border-border/60',
-        'from-primary/12 to-primary/4 border-primary/20',
-        'from-muted/80 to-muted/30 border-border/50',
-        'from-primary/6 to-transparent border-primary/10',
-    ];
-    return colors[index % colors.length];
-};
-
-const getIconColor = (index: number) => {
-    const colors = [
-        'text-primary/70',
-        'text-foreground/50',
-        'text-primary/80',
-        'text-foreground/60',
-        'text-primary/60',
-    ];
-    return colors[index % colors.length];
 };
 
 const getQuestionTypes = (part: ExamPart) => [
@@ -1050,157 +982,7 @@ const closeUnansweredWarning = (proceed: boolean) => {
     }
 };
 
-const submitPartFinal = async () => {
-    if (isFinalSubmitting.value) return;
-    isFinalSubmitting.value = true;
 
-    // 1. Prepare data
-    const detailedAnswers = (selectedPart.value?.questions || []).map(
-        (question, index) => ({
-            question_number: index + 1,
-            question_text: question.text,
-            question_type: question.type,
-            points: question.points ?? selectedPart.value?.points ?? 1,
-            answer:
-                answers[index] !== undefined && answers[index] !== null
-                    ? answers[index]
-                    : null,
-        }),
-    );
-
-    const hadEssay = selectedPart.value?.questions?.some(
-        (q) => q.type === 'essay',
-    );
-    currentPartHasEssay.value = hadEssay;
-
-    // 2. IMMEDIATELY show calculating modal
-    showSuccessModal.value = true;
-    isCalculatingScore.value = true;
-    displayedScore.value = 0;
-    partsPendingCount.value = Math.max(0, remainingPartsCount.value - 1); // Anticipate the submission
-
-    const calcDurationSeconds = hadEssay ? 2 : 1;
-    calcCountdown.value = calcDurationSeconds;
-
-    // Start UI countdown
-    if (calcTimerInterval.value) clearInterval(calcTimerInterval.value);
-    calcTimerInterval.value = setInterval(() => {
-        if (calcCountdown.value > 0) {
-            calcCountdown.value--;
-        } else {
-            if (calcTimerInterval.value) clearInterval(calcTimerInterval.value);
-        }
-    }, 1000);
-
-    // Ensure DOM is updated before animating
-    await nextTick();
-
-    // GSAP Entrance for Modal (TRULY IMMEDIATE)
-    if (successModalRef.value) {
-        gsap.fromTo(
-            successModalRef.value,
-            { opacity: 0, scale: 0.85, y: 30 },
-            { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: 'power3.out' },
-        );
-    }
-
-    // Trigger AI pre-warm in the background while modal is showing
-    if (hadEssay) {
-        axios.post(route('exams.preWarmAI')).catch(() => {});
-    }
-
-    let requestFinished = false;
-
-    // 3. Start background submission
-    router.post(
-        `/exams/${props.exam.id}/parts/${selectedPart.value.id}/submit`,
-        {
-            answers: detailedAnswers,
-        },
-        {
-            onSuccess: () => {
-                requestFinished = true;
-                clearDraft();
-
-                if (remainingPartsCount.value === 0) {
-                    examStarted.value = false;
-
-                    if (document.fullscreenElement) {
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if ((document as any).webkitExitFullscreen) {
-                            (document as any).webkitExitFullscreen();
-                        } else if ((document as any).msExitFullscreen) {
-                            (document as any).msExitFullscreen();
-                        }
-                    }
-                    isFullscreen.value = false;
-                }
-            },
-            onError: () => {
-                requestFinished = true;
-                isCalculatingScore.value = false;
-                showSuccessModal.value = false;
-                isFinalSubmitting.value = false;
-                isSubmitting.value = false;
-            },
-        },
-    );
-
-    // 4. Reveal logic: Wait for BOTH the minimum timer AND the server request
-    setTimeout(() => {
-        const checkAndReveal = () => {
-            if (requestFinished) {
-                isCalculatingScore.value = false;
-                if (calcTimerInterval.value)
-                    clearInterval(calcTimerInterval.value);
-
-                const targetScore = Number(totalScore.value) || 0;
-
-                gsap.to(displayedScore, {
-                    value: targetScore,
-                    duration: 1.2,
-                    ease: 'none',
-                    onUpdate: () => {
-                        displayedScore.value = Math.floor(displayedScore.value);
-                    },
-                    onComplete: () => {
-                        displayedScore.value = targetScore;
-                        isFinalSubmitting.value = false;
-                        isSubmitting.value = false;
-                    },
-                });
-
-                gsap.fromTo(
-                    '.final-score-box',
-                    { scale: 0.8, opacity: 0, y: 20 },
-                    {
-                        scale: 1,
-                        opacity: 1,
-                        y: 0,
-                        duration: 1.2,
-                        ease: 'elastic.out(1, 0.5)',
-                    },
-                );
-
-                gsap.fromTo(
-                    '.success-checkmark',
-                    { scale: 0, rotate: -180 },
-                    {
-                        scale: 1,
-                        rotate: 0,
-                        duration: 0.8,
-                        delay: 0.2,
-                        ease: 'elastic.out(1.2, 0.4)',
-                    },
-                );
-            } else {
-                setTimeout(checkAndReveal, 200);
-            }
-        };
-        checkAndReveal();
-    }, calcDurationSeconds * 1000);
-};
 
 const closeSuccessModal = () => {
     if (successModalRef.value) {

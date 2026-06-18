@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Calendar } from 'lucide-vue-next';
-import { BookOpen, Clock, RefreshCw } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,72 +15,19 @@ import DashboardStats from '@/components/dashboard/DashboardStats.vue';
 import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
 import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
-import Card from '@/components/ui/card/Card.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { dashboard, logout } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
-import CardContent from '@/components/ui/card/CardContent.vue';
-import CardDescription from '@/components/ui/card/CardDescription.vue';
-import CardHeader from '@/components/ui/card/CardHeader.vue';
-import CardTitle from '@/components/ui/card/CardTitle.vue';
-import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
+import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: dashboard() },
-];
-
-const dashboardContainer = ref<HTMLElement | null>(null);
-const backgroundGrid = ref<HTMLElement | null>(null);
-const mouseGlow = ref<HTMLElement | null>(null);
-
-let gsapCtx: gsap.Context | null = null;
-const isCoarsePointer = ref(false);
-const prefersReducedMotion = ref(false);
-
-const syncInteractionModes = () => {
-    isCoarsePointer.value = window.matchMedia('(pointer: coarse)').matches;
-    prefersReducedMotion.value = window.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-    ).matches;
-};
-
-const handleGlobalMouseMove = (e: MouseEvent) => {
-    if (
-        !mouseGlow.value ||
-        !backgroundGrid.value ||
-        isCoarsePointer.value ||
-        prefersReducedMotion.value
-    )
-        return;
-
-    const { clientX, clientY } = e;
-    const xPercent = clientX / window.innerWidth;
-    const yPercent = clientY / window.innerHeight;
-
-    gsap.to(mouseGlow.value, {
-        x: clientX,
-        y: clientY,
-        duration: 1.2,
-        ease: 'power3.out',
-    });
-
-    gsap.to(backgroundGrid.value, {
-        x: (xPercent - 0.5) * 30,
-        y: (yPercent - 0.5) * 30,
-        duration: 1.5,
-        ease: 'power2.out',
-    });
-};
-
-import { usePage, Link, usePoll, router } from '@inertiajs/vue3';
-import { index as examsIndex, show as examsShow } from '@/routes/exams';
-import { edit as profileEdit } from '@/routes/profile';
-import { index as assignmentsIndex } from '@/routes/assignments';
 import { useLoader } from '@/composables/useLoader';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { logout } from '@/routes';
+import { index as assignmentsIndex } from '@/routes/assignments';
+import { show as examsShow } from '@/routes/exams';
+import { edit as profileEdit } from '@/routes/profile';
 
 const { isVisible: isLoaderVisible } = useLoader();
+
+const breadcrumbs = [];
 
 const lastSyncTime = ref(new Date());
 const isRefreshing = ref(false);

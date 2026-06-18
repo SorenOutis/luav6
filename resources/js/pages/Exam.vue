@@ -1,31 +1,19 @@
 <script setup lang="ts">
 import { Head, Link, usePoll } from '@inertiajs/vue3';
-import { show as examsShow } from '@/routes/exams';
-import { onMounted, ref, computed, watch } from 'vue';
-
-usePoll(10000, {
-    only: ['exams'],
-});
 import gsap from 'gsap';
 import {
     Calendar,
     Clock,
-    ExternalLink,
     AlertCircle,
-    Lock,
-    Eye,
-    EyeOff,
     CheckCircle2,
     XCircle,
-    HelpCircle,
     Shield,
     ShieldOff,
     ArrowRight,
     Zap,
     Timer,
-    TrendingUp,
 } from 'lucide-vue-next';
-import { Badge } from '@/components/ui/badge';
+import { onMounted, ref, computed, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -36,7 +24,12 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { show as examsShow } from '@/routes/exams';
 import type { BreadcrumbItem } from '@/types';
+
+usePoll(10000, {
+    only: ['exams'],
+});
 
 interface ExamSubmission {
     id: number;
@@ -236,7 +229,7 @@ const getAnswerObjectForQuestion = (answers: any, questionNumber: number) => {
     if (typeof answers === 'string') {
         try {
             parsedAnswers = JSON.parse(answers);
-        } catch (e) {
+        } catch {
             return null;
         }
     }
@@ -290,16 +283,7 @@ const handleMouseMove = (e: MouseEvent) => {
     card.style.setProperty('--mouse-y', `${y}px`);
 };
 
-const formatDateTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-};
+
 
 // --- GSAP Animation ---
 const animateCards = () => {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Clock } from 'lucide-vue-next';
-import Progress from '@/components/ui/progress/Progress.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface Course {
@@ -29,7 +28,7 @@ interface Props {
     assignments: Assignment[];
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 const emit = defineEmits(['course-click', 'assignment-click']);
 
 const handleCourseClick = (course: Course) => {

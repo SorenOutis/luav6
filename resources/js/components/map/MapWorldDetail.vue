@@ -4,7 +4,6 @@ import {
     X,
     Lock,
     CheckCircle2,
-    Circle,
     Play,
     Star,
     Zap,

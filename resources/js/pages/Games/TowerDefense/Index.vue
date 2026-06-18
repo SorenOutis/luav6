@@ -9,11 +9,8 @@ import {
     Trophy,
     Target,
     Swords,
-    Layers,
     Flame,
     ChevronRight,
-    Gauge,
-    Crosshair,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
@@ -95,10 +92,7 @@ const stats = computed(() => {
     };
 });
 
-const completionPct = computed(() => {
-    if (stats.value.maxStars === 0) return 0;
-    return Math.round((stats.value.totalStars / stats.value.maxStars) * 100);
-});
+
 
 const sortedLevels = computed(() => {
     const difficultyOrder: Record<string, number> = {
@@ -120,38 +114,7 @@ const nextObjective = computed(() => {
     return props.levels.find((l) => (l.progress?.stars ?? 0) < 3) ?? null;
 });
 
-interface DiffBucket {
-    slug: string;
-    name: string;
-    count: number;
-    cleared: number;
-    stars: number;
-    maxStars: number;
-}
-const byDifficulty = computed<DiffBucket[]>(() => {
-    const map = new Map<string, DiffBucket>();
-    for (const l of props.levels) {
-        const key = l.difficulty.slug;
-        if (!map.has(key)) {
-            map.set(key, {
-                slug: key,
-                name: l.difficulty.name,
-                count: 0,
-                cleared: 0,
-                stars: 0,
-                maxStars: 0,
-            });
-        }
-        const b = map.get(key)!;
-        b.count++;
-        b.maxStars += 3;
-        if (l.progress) {
-            b.stars += l.progress.stars;
-            if (l.progress.wins > 0) b.cleared++;
-        }
-    }
-    return [...map.values()];
-});
+
 
 const diffColor = (slug: string) => {
     switch (slug) {
@@ -165,36 +128,6 @@ const diffColor = (slug: string) => {
             return 'text-rose-400 border-rose-500/40 bg-rose-500/5';
         default:
             return 'text-muted-foreground border-border';
-    }
-};
-
-const diffAccent = (slug: string) => {
-    switch (slug) {
-        case 'easy':
-            return 'from-emerald-500/60 via-emerald-500/20';
-        case 'normal':
-            return 'from-sky-500/60 via-sky-500/20';
-        case 'hard':
-            return 'from-amber-500/60 via-amber-500/20';
-        case 'nightmare':
-            return 'from-rose-500/60 via-rose-500/20';
-        default:
-            return 'from-border via-border/40';
-    }
-};
-
-const diffFill = (slug: string) => {
-    switch (slug) {
-        case 'easy':
-            return 'bg-emerald-500';
-        case 'normal':
-            return 'bg-sky-500';
-        case 'hard':
-            return 'bg-amber-500';
-        case 'nightmare':
-            return 'bg-rose-500';
-        default:
-            return 'bg-border';
     }
 };
 

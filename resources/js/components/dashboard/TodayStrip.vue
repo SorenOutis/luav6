@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
 import {
     AlertTriangle,
     ArrowUpRight,
@@ -40,9 +39,7 @@ const dayPercent = computed(() => {
     return Math.min(100, Math.max(0, (elapsed / 86_400_000) * 100));
 });
 
-const currentHour = computed(() =>
-    now.value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-);
+
 
 // --- Next-item countdown ---
 const countdown = computed(() => {

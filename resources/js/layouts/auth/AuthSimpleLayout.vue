@@ -3,7 +3,6 @@ import { Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { Command, Terminal } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { home } from '@/routes';
 
 defineProps<{

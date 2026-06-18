@@ -7,34 +7,25 @@ import {
     FileUp,
     CheckCircle2,
     Clock,
-    AlertCircle,
     FileText,
     Download,
     TrendingUp,
     Calendar,
     BookOpen,
     Sparkles,
-    ShieldCheck,
-    Cpu,
 } from 'lucide-vue-next';
 import { onMounted, ref, computed, watch } from 'vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import Card from '@/components/ui/card/Card.vue';
-import type { BreadcrumbItem } from '@/types';
 
 const { isVisible: isLoaderVisible } = useLoader();
 const isBooted = ref(false);
 
 gsap.registerPlugin(ScrollTrigger);
-import CardContent from '@/components/ui/card/CardContent.vue';
-import CardDescription from '@/components/ui/card/CardDescription.vue';
-import CardHeader from '@/components/ui/card/CardHeader.vue';
-import CardTitle from '@/components/ui/card/CardTitle.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 interface Assignment {
     id: number;

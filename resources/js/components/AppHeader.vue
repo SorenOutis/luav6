@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import gsap from 'gsap';
 import {
     BookOpen,
     Folder,
@@ -24,7 +23,6 @@ import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {

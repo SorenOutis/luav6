@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-
 interface Props {
     loginDates: string[];
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 

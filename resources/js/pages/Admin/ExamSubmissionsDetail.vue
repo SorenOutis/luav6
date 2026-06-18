@@ -5,8 +5,6 @@ import {
     User,
     Calendar,
     FileText,
-    CheckCircle2,
-    HelpCircle,
     Zap,
 } from 'lucide-vue-next';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -53,16 +51,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: `/admin/exams/${props.exam.id}/submissions`,
     },
 ];
-
-const getQuestionIcon = (type: string) => {
-    const icons: Record<string, any> = {
-        multiple_choice: HelpCircle,
-        identification: FileText,
-        essay: FileText,
-        true_false: CheckCircle2,
-    };
-    return icons[type] || FileText;
-};
 
 const formatType = (type: string) => type.replace(/_/g, ' ').toUpperCase();
 </script>
