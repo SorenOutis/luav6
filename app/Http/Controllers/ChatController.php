@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\AssistantAgent;
 use App\Models\Setting;
+use App\Services\CloudflareAIService;
+use App\Services\GroqAIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Messages\AssistantMessage;
@@ -38,19 +40,30 @@ class ChatController extends Controller
                 return new AssistantMessage($msg['content']);
             })->toArray();
 
-            $agent = new AssistantAgent;
-            $agent->setHistory($history);
+            // Select agent based on provider setting
+            $provider = Setting::get('ai_provider', 'gemini');
 
-            $response = $agent->prompt($request->message);
+            if ($provider === 'cloudflare') {
+                $cloudflareService = new CloudflareAIService;
+                $response = $cloudflareService->prompt($request->message, $historyData);
+            } elseif ($provider === 'groq') {
+                $groqService = new GroqAIService;
+                $response = $groqService->prompt($request->message, $historyData);
+            } else {
+                $agent = new AssistantAgent;
+                $agent->setHistory($history);
+                $agentResponse = $agent->prompt($request->message);
+                $response = $agentResponse->text;
+            }
 
             // Update history in session
             $historyData[] = ['role' => 'user', 'content' => $request->message];
-            $historyData[] = ['role' => 'assistant', 'content' => (string) $response];
+            $historyData[] = ['role' => 'assistant', 'content' => $response];
             session()->put($this->sessionKey, $historyData);
             session()->save(); // Explicitly save session
 
             return response()->json([
-                'response' => (string) $response,
+                'response' => $response,
                 'history' => $historyData,
             ]);
         } catch (\Exception $e) {

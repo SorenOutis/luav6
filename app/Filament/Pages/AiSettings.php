@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Filament\Actions\Action;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -40,6 +41,12 @@ class AiSettings extends Page implements HasSchemas
         $this->form->fill([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
+            'ai_provider' => Setting::get('ai_provider', 'gemini'),
+            'cloudflare_account_id' => Setting::get('cloudflare_account_id'),
+            'cloudflare_api_token' => Setting::get('cloudflare_api_token'),
+            'cloudflare_model' => Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct'),
+            'groq_api_key' => Setting::get('groq_api_key'),
+            'groq_model' => Setting::get('groq_model', 'llama-3.1-8b-instant'),
             'login_enabled' => (bool) Setting::get('login_enabled', true),
             'login_disabled_message' => Setting::get('login_disabled_message', 'Login is currently disabled. Please try again later.'),
             'registration_enabled' => (bool) Setting::get('registration_enabled', true),
@@ -94,6 +101,62 @@ class AiSettings extends Page implements HasSchemas
                             ->label('Enable AI Chat Widget')
                             ->helperText('If disabled, the floating widget will show a maintenance message and prevent chatting.')
                             ->reactive(),
+
+                        Select::make('ai_provider')
+                            ->label('AI Provider')
+                            ->options([
+                                'gemini' => 'Gemini (Google)',
+                                'cloudflare' => 'Cloudflare Workers AI',
+                                'groq' => 'Groq (Free - 14,400 req/day)',
+                            ])
+                            ->default('gemini')
+                            ->required()
+                            ->helperText('Select the AI provider to use for the chat widget. Groq is recommended for exam grading.')
+                            ->visible(fn ($get) => $get('ai_chat_enabled')),
+
+                        Grid::make(2)
+                            ->schema([
+                                TextInput::make('cloudflare_account_id')
+                                    ->label('Cloudflare Account ID')
+                                    ->placeholder('Your Cloudflare Account ID')
+                                    ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
+
+                                TextInput::make('cloudflare_api_token')
+                                    ->label('Cloudflare API Token')
+                                    ->password()
+                                    ->placeholder('Your Workers AI API Token')
+                                    ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
+                            ]),
+
+                        Select::make('cloudflare_model')
+                            ->label('Cloudflare Model')
+                            ->options([
+                                '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (recommended)',
+                                '@cf/meta/llama-3.1-8b-instruct-fast' => 'Llama 3.1 8B Fast (faster)',
+                                '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
+                            ])
+                            ->default('@cf/meta/llama-3.1-8b-instruct')
+                            ->helperText('Llama 3.1 models are stable and well-tested. Use Fast version for quicker responses.')
+                            ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
+
+                        TextInput::make('groq_api_key')
+                            ->label('Groq API Key')
+                            ->password()
+                            ->placeholder('Your Groq API Key (free at console.groq.com)')
+                            ->visible(fn ($get) => $get('ai_provider') === 'groq' && $get('ai_chat_enabled')),
+
+                        Select::make('groq_model')
+                            ->label('Groq Model')
+                            ->options([
+                                'llama-3.1-8b-instant' => 'Llama 3.1 8B Instant (fastest)',
+                                'llama-3.1-70b-versatile' => 'Llama 3.1 70B Versatile',
+                                'llama-3.3-70b-versatile' => 'Llama 3.3 70B Versatile',
+                                'mixtral-8x7b-32768' => 'Mixtral 8x7B',
+                                'gemma-2-9b-it' => 'Gemma 2 9B',
+                            ])
+                            ->default('llama-3.1-8b-instant')
+                            ->helperText('Llama 3.1 8B Instant is ultra-fast. Use 70B for complex tasks.')
+                            ->visible(fn ($get) => $get('ai_provider') === 'groq' && $get('ai_chat_enabled')),
 
                         Textarea::make('ai_chat_maintenance_message')
                             ->label('Maintenance Message')
@@ -160,6 +223,13 @@ class AiSettings extends Page implements HasSchemas
             if (isset($data['ai_chat_maintenance_message'])) {
                 Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
             }
+
+            Setting::set('ai_provider', $data['ai_provider'] ?? 'gemini');
+            Setting::set('cloudflare_account_id', $data['cloudflare_account_id'] ?? null);
+            Setting::set('cloudflare_api_token', $data['cloudflare_api_token'] ?? null);
+            Setting::set('cloudflare_model', $data['cloudflare_model'] ?? '@cf/meta/llama-3.1-8b-instruct');
+            Setting::set('groq_api_key', $data['groq_api_key'] ?? null);
+            Setting::set('groq_model', $data['groq_model'] ?? 'llama-3.1-8b-instant');
 
             Setting::set('login_enabled', ($data['login_enabled'] ?? true) ? '1' : '0');
             if (isset($data['login_disabled_message'])) {
