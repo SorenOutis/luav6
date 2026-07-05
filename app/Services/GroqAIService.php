@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 class GroqAIService
 {
     protected ?string $apiKey;
+
     protected ?string $model;
 
     public function __construct()
@@ -22,7 +23,7 @@ class GroqAIService
      */
     public function prompt(string $prompt, array $history = []): string
     {
-        if (!$this->apiKey) {
+        if (! $this->apiKey) {
             throw new \Exception('Groq is not configured. Please set your API Key in Platform Settings.');
         }
 
@@ -45,7 +46,7 @@ class GroqAIService
             $messages[] = ['role' => 'user', 'content' => $prompt];
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
             ])
                 ->timeout(60)
@@ -56,8 +57,8 @@ class GroqAIService
                     'max_tokens' => 2048,
                 ]);
 
-            if (!$response->successful()) {
-                $errorMessage = 'Groq API Error: Status ' . $response->status() . ' - ' . $response->body();
+            if (! $response->successful()) {
+                $errorMessage = 'Groq API Error: Status '.$response->status().' - '.$response->body();
                 Log::error($errorMessage);
                 throw new \Exception($errorMessage);
             }
@@ -71,7 +72,7 @@ class GroqAIService
 
             throw new \Exception('Unexpected response format from Groq API');
         } catch (\Exception $e) {
-            Log::error('GroqAIService Error: ' . $e->getMessage());
+            Log::error('GroqAIService Error: '.$e->getMessage());
             throw $e;
         }
     }

@@ -9,7 +9,9 @@ use Illuminate\Support\Facades\Log;
 class CloudflareAIService
 {
     protected ?string $accountId;
+
     protected ?string $apiToken;
+
     protected ?string $model;
 
     public function __construct()
@@ -24,7 +26,7 @@ class CloudflareAIService
      */
     public function prompt(string $prompt, array $history = []): string
     {
-        if (!$this->accountId || !$this->apiToken) {
+        if (! $this->accountId || ! $this->apiToken) {
             throw new \Exception('Cloudflare Workers AI is not configured. Please set your Account ID and API Token in Platform Settings.');
         }
 
@@ -52,8 +54,8 @@ class CloudflareAIService
                     'messages' => $messages,
                 ]);
 
-            if (!$response->successful()) {
-                $errorMessage = 'Cloudflare API Error: Status ' . $response->status() . ' - ' . $response->body();
+            if (! $response->successful()) {
+                $errorMessage = 'Cloudflare API Error: Status '.$response->status().' - '.$response->body();
                 Log::error($errorMessage);
                 throw new \Exception($errorMessage);
             }
@@ -71,7 +73,7 @@ class CloudflareAIService
 
             throw new \Exception('Unexpected response format from Cloudflare Workers AI');
         } catch (\Exception $e) {
-            Log::error('CloudflareAIService Error: ' . $e->getMessage());
+            Log::error('CloudflareAIService Error: '.$e->getMessage());
             throw $e;
         }
     }
