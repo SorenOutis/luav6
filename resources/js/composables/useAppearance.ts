@@ -21,7 +21,7 @@ export type ThemePresetOption = {
     id: ThemePreset;
     name: string;
     description: string;
-    appearance: Exclude<Appearance, 'system'>;
+    appearance: Appearance;
     swatches: string[];
 };
 
@@ -39,25 +39,11 @@ export type CardStylePresetOption = {
 
 export const themePresets: ThemePresetOption[] = [
     {
-        id: 'current',
-        name: 'Current',
-        description: 'Your existing LUAV look.',
-        appearance: 'dark',
-        swatches: ['#09090b', '#fafafa', '#27272a'],
-    },
-    {
-        id: 'midnight',
-        name: 'Midnight',
-        description: 'Deep, focused, neon-accented.',
-        appearance: 'dark',
-        swatches: ['#050608', '#10b981', '#1f2937'],
-    },
-    {
-        id: 'academic',
-        name: 'Academic',
-        description: 'Clean blue school dashboard.',
-        appearance: 'light',
-        swatches: ['#f8fafc', '#2563eb', '#dbeafe'],
+        id: 'default',
+        name: 'Default',
+        description: 'Warm cream light mode, pure black dark mode.',
+        appearance: 'system',
+        swatches: ['#f5f0e8', '#000000', '#1a1a1e'],
     },
     {
         id: 'forest',
@@ -65,20 +51,6 @@ export const themePresets: ThemePresetOption[] = [
         description: 'Calm green learning space.',
         appearance: 'light',
         swatches: ['#f5f7f0', '#2f7d51', '#dcebd4'],
-    },
-    {
-        id: 'contrast',
-        name: 'Contrast',
-        description: 'High contrast and crisp edges.',
-        appearance: 'dark',
-        swatches: ['#000000', '#facc15', '#ffffff'],
-    },
-    {
-        id: 'tactical',
-        name: 'Tactical',
-        description: 'The original sharp exam interface.',
-        appearance: 'dark',
-        swatches: ['#050505', '#ffffff', '#f59e0b'],
     },
 ];
 
@@ -93,7 +65,12 @@ export const cardStylePresets: CardStylePresetOption[] = [
     {
         id: 'current',
         name: 'Current',
-        description: 'Keeps your existing card design.',
+        description: 'Clean, solid cards with no extra effects.',
+    },
+    {
+        id: 'vibrant',
+        name: 'Vibrant',
+        description: 'Colorful spotlight glow and backdrop effects on cards.',
     },
     { id: 'soft', name: 'Soft', description: 'Rounder, calmer panels.' },
     {
@@ -187,7 +164,9 @@ const getStoredThemePreset = () => {
     }
 
     return localStorage.getItem('themePreset') as ThemePreset | null;
-};
+}
+
+const DEFAULT_THEME: ThemePreset = 'default';
 
 const getStoredFontPreset = () => {
     if (typeof window === 'undefined') {
@@ -226,7 +205,7 @@ export function initializeTheme(): void {
 
     // Initialize theme from saved preference or default to system...
     const savedAppearance = getStoredAppearance();
-    const savedThemePreset = getStoredThemePreset() || 'current';
+    const savedThemePreset = getStoredThemePreset() || DEFAULT_THEME;
     const savedFontPreset = getStoredFontPreset() || 'system';
     const savedCardStylePreset = getStoredCardStylePreset() || 'current';
 
@@ -242,7 +221,7 @@ export function initializeTheme(): void {
 }
 
 const appearance = ref<Appearance>('system');
-const themePreset = ref<ThemePreset>('current');
+const themePreset = ref<ThemePreset>(DEFAULT_THEME);
 const fontPreset = ref<FontPreset>('system');
 const cardStylePreset = ref<CardStylePreset>('current');
 const isTransitioningTheme = ref(false);
@@ -257,7 +236,7 @@ export function useAppearance(): UseAppearanceReturn {
             appearance.value = savedAppearance;
         }
 
-        themePreset.value = getStoredThemePreset() || 'current';
+        themePreset.value = getStoredThemePreset() || DEFAULT_THEME;
         fontPreset.value = getStoredFontPreset() || 'system';
         cardStylePreset.value = getStoredCardStylePreset() || 'current';
         applyAppearanceAttributes(

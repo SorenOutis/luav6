@@ -8,6 +8,32 @@ import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
+const mouseGlow = ref<HTMLElement | null>(null);
+const prefersReducedMotion = ref(false);
+
+const syncInteractionModes = () => {
+    prefersReducedMotion.value = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+    ).matches;
+};
+
+const handleGlobalMouseMove = (e: MouseEvent) => {
+    if (
+        !mouseGlow.value ||
+        prefersReducedMotion.value
+    )
+        return;
+
+    const { clientX, clientY } = e;
+
+    gsap.to(mouseGlow.value, {
+        x: clientX,
+        y: clientY,
+        duration: 1.2,
+        ease: 'power3.out',
+    });
+};
+
 import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';

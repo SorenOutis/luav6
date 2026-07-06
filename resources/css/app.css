@@ -7,39 +7,42 @@
         'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo,
         Monaco, Consolas, monospace;
 
-    --color-background: #ffffff;
-    --color-foreground: #09090b;
+    /* ════════════════════════════════════════════════════
+       Default Theme — Light Mode (Cream)
+       ════════════════════════════════════════════════════ */
+    --color-background: #f5f0e8;
+    --color-foreground: #1a1a1e;
 
-    --color-card: #ffffff;
-    --color-card-foreground: #09090b;
+    --color-card: #faf7f2;
+    --color-card-foreground: #1a1a1e;
 
     --color-primary: #1a1a1e;
-    --color-primary-foreground: #fafafa;
+    --color-primary-foreground: #faf7f2;
 
-    --color-secondary: #f4f4f5;
-    --color-secondary-foreground: #18181b;
+    --color-secondary: #ebe5dc;
+    --color-secondary-foreground: #1a1a1e;
 
-    --color-muted: #f4f4f5;
-    --color-muted-foreground: #71717a;
+    --color-muted: #ebe5dc;
+    --color-muted-foreground: #7a756e;
 
-    --color-accent: #f4f4f5;
-    --color-accent-foreground: #18181b;
+    --color-accent: #ebe5dc;
+    --color-accent-foreground: #1a1a1e;
 
     --color-destructive: #ef4444;
-    --color-destructive-foreground: #fafafa;
+    --color-destructive-foreground: #faf7f2;
 
-    --color-border: #eeeff1;
-    --color-input: #eeeff1;
-    --color-ring: #18181b;
+    --color-border: #e0dbd3;
+    --color-input: #e0dbd3;
+    --color-ring: #1a1a1e;
 
-    --color-sidebar: #fafafa;
-    --color-sidebar-foreground: #09090b;
+    --color-sidebar: #faf7f2;
+    --color-sidebar-foreground: #1a1a1e;
     --color-sidebar-primary: #1a1a1e;
-    --color-sidebar-primary-foreground: #fafafa;
-    --color-sidebar-accent: #f4f4f5;
-    --color-sidebar-accent-foreground: #18181b;
-    --color-sidebar-border: #eeeff1;
-    --color-sidebar-ring: #18181b;
+    --color-sidebar-primary-foreground: #faf7f2;
+    --color-sidebar-accent: #ebe5dc;
+    --color-sidebar-accent-foreground: #1a1a1e;
+    --color-sidebar-border: #e0dbd3;
+    --color-sidebar-ring: #1a1a1e;
 
     --radius-xl: 1rem;
     --radius-2xl: 1.5rem;
@@ -92,133 +95,103 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ════════════════════════════════════════════════════
+   Default Theme — Dark Mode (Black)
+   ════════════════════════════════════════════════════ */
 .dark {
-    --color-background: #09090b;
+    --color-background: #000000;
     --color-foreground: #fafafa;
 
-    --color-card: #09090b;
+    --color-card: #0a0a0a;
     --color-card-foreground: #fafafa;
 
     --color-primary: #fafafa;
-    --color-primary-foreground: #1a1a1e;
+    --color-primary-foreground: #000000;
 
-    --color-secondary: #27272a;
+    --color-secondary: #141414;
     --color-secondary-foreground: #fafafa;
 
-    --color-muted: #27272a;
+    --color-muted: #141414;
     --color-muted-foreground: #a1a1aa;
 
-    --color-accent: #27272a;
+    --color-accent: #141414;
     --color-accent-foreground: #fafafa;
 
-    --color-border: #27272a;
-    --color-input: #27272a;
+    --color-border: #1f1f1f;
+    --color-input: #1f1f1f;
     --color-ring: #d4d4d8;
 
-    --color-sidebar: #09090b;
+    --color-sidebar: #000000;
     --color-sidebar-foreground: #fafafa;
     --color-sidebar-primary: #fafafa;
-    --color-sidebar-primary-foreground: #1a1a1e;
-    --color-sidebar-accent: #27272a;
+    --color-sidebar-primary-foreground: #000000;
+    --color-sidebar-accent: #141414;
     --color-sidebar-accent-foreground: #fafafa;
-    --color-sidebar-border: #27272a;
+    --color-sidebar-border: #1f1f1f;
     --color-sidebar-ring: #d4d4d8;
 }
 
-:root[data-theme-preset='midnight'] {
-    --color-background: #050608;
-    --color-foreground: #f8fafc;
-    --color-card: #080b10;
-    --color-card-foreground: #f8fafc;
-    --color-primary: #10b981;
-    --color-primary-foreground: #02130d;
-    --color-secondary: #111827;
-    --color-secondary-foreground: #e5e7eb;
-    --color-muted: #111827;
-    --color-muted-foreground: #9ca3af;
-    --color-accent: #0f172a;
-    --color-accent-foreground: #d1fae5;
-    --color-border: #1f2937;
-    --color-input: #1f2937;
-    --color-ring: #34d399;
-    --color-sidebar: #050608;
-    --color-sidebar-foreground: #f8fafc;
-    --color-sidebar-primary: #10b981;
-    --color-sidebar-primary-foreground: #02130d;
-    --color-sidebar-accent: #111827;
-    --color-sidebar-accent-foreground: #d1fae5;
-    --color-sidebar-border: #1f2937;
-    --color-sidebar-ring: #34d399;
+/* ════════════════════════════════════════════════════
+   Default Theme — Explicit data-theme-preset
+   (Matches base @theme for consistency when switching)
+   ════════════════════════════════════════════════════ */
+:root[data-theme-preset='default'] {
+    --color-background: #f5f0e8;
+    --color-foreground: #1a1a1e;
+    --color-card: #faf7f2;
+    --color-card-foreground: #1a1a1e;
+    --color-primary: #1a1a1e;
+    --color-primary-foreground: #faf7f2;
+    --color-secondary: #ebe5dc;
+    --color-secondary-foreground: #1a1a1e;
+    --color-muted: #ebe5dc;
+    --color-muted-foreground: #7a756e;
+    --color-accent: #ebe5dc;
+    --color-accent-foreground: #1a1a1e;
+    --color-destructive: #ef4444;
+    --color-destructive-foreground: #faf7f2;
+    --color-border: #e0dbd3;
+    --color-input: #e0dbd3;
+    --color-ring: #1a1a1e;
+    --color-sidebar: #faf7f2;
+    --color-sidebar-foreground: #1a1a1e;
+    --color-sidebar-primary: #1a1a1e;
+    --color-sidebar-primary-foreground: #faf7f2;
+    --color-sidebar-accent: #ebe5dc;
+    --color-sidebar-accent-foreground: #1a1a1e;
+    --color-sidebar-border: #e0dbd3;
+    --color-sidebar-ring: #1a1a1e;
 }
 
-:root[data-theme-preset='midnight']:not(.dark) {
-    --color-background: #f8fafc;
-    --color-foreground: #0f172a;
-    --color-card: #ffffff;
-    --color-card-foreground: #0f172a;
-    --color-primary: #10b981;
-    --color-primary-foreground: #ffffff;
-    --color-secondary: #f1f5f9;
-    --color-secondary-foreground: #1e293b;
-    --color-muted: #f1f5f9;
-    --color-muted-foreground: #64748b;
-    --color-accent: #f1f5f9;
-    --color-accent-foreground: #10b981;
-    --color-border: #e2e8f0;
-    --color-input: #e2e8f0;
-    --color-ring: #10b981;
-    --color-sidebar: #f8fafc;
-    --color-sidebar-foreground: #0f172a;
-    --color-sidebar-border: #e2e8f0;
+.dark:root[data-theme-preset='default'] {
+    --color-background: #000000;
+    --color-foreground: #fafafa;
+    --color-card: #0a0a0a;
+    --color-card-foreground: #fafafa;
+    --color-primary: #fafafa;
+    --color-primary-foreground: #000000;
+    --color-secondary: #141414;
+    --color-secondary-foreground: #fafafa;
+    --color-muted: #141414;
+    --color-muted-foreground: #a1a1aa;
+    --color-accent: #141414;
+    --color-accent-foreground: #fafafa;
+    --color-border: #1f1f1f;
+    --color-input: #1f1f1f;
+    --color-ring: #d4d4d8;
+    --color-sidebar: #000000;
+    --color-sidebar-foreground: #fafafa;
+    --color-sidebar-primary: #fafafa;
+    --color-sidebar-primary-foreground: #000000;
+    --color-sidebar-accent: #141414;
+    --color-sidebar-accent-foreground: #fafafa;
+    --color-sidebar-border: #1f1f1f;
+    --color-sidebar-ring: #d4d4d8;
 }
 
-:root[data-theme-preset='academic'] {
-    --color-background: #f8fafc;
-    --color-foreground: #0f172a;
-    --color-card: #ffffff;
-    --color-card-foreground: #0f172a;
-    --color-primary: #2563eb;
-    --color-primary-foreground: #ffffff;
-    --color-secondary: #dbeafe;
-    --color-secondary-foreground: #1e3a8a;
-    --color-muted: #e2e8f0;
-    --color-muted-foreground: #475569;
-    --color-accent: #dbeafe;
-    --color-accent-foreground: #1e3a8a;
-    --color-border: #cbd5e1;
-    --color-input: #cbd5e1;
-    --color-ring: #2563eb;
-    --color-sidebar: #eff6ff;
-    --color-sidebar-foreground: #0f172a;
-    --color-sidebar-primary: #2563eb;
-    --color-sidebar-primary-foreground: #ffffff;
-    --color-sidebar-accent: #dbeafe;
-    --color-sidebar-accent-foreground: #1e3a8a;
-    --color-sidebar-border: #bfdbfe;
-    --color-sidebar-ring: #2563eb;
-}
-
-:root[data-theme-preset='academic'].dark {
-    --color-background: #0f172a;
-    --color-foreground: #f8fafc;
-    --color-card: #1e293b;
-    --color-card-foreground: #f8fafc;
-    --color-primary: #3b82f6;
-    --color-primary-foreground: #0f172a;
-    --color-secondary: #1e293b;
-    --color-secondary-foreground: #bfdbfe;
-    --color-muted: #1e293b;
-    --color-muted-foreground: #94a3b8;
-    --color-accent: #1e293b;
-    --color-accent-foreground: #bfdbfe;
-    --color-border: #334155;
-    --color-input: #334155;
-    --color-ring: #3b82f6;
-    --color-sidebar: #0f172a;
-    --color-sidebar-foreground: #f8fafc;
-    --color-sidebar-border: #334155;
-}
-
+/* ════════════════════════════════════════════════════
+   Forest Theme  (unchanged)
+   ════════════════════════════════════════════════════ */
 :root[data-theme-preset='forest'] {
     --color-background: #f5f7f0;
     --color-foreground: #172119;
@@ -266,198 +239,6 @@
     --color-sidebar-border: #223a28;
 }
 
-:root[data-theme-preset='contrast'] {
-    --color-background: #000000;
-    --color-foreground: #ffffff;
-    --color-card: #050505;
-    --color-card-foreground: #ffffff;
-    --color-primary: #facc15;
-    --color-primary-foreground: #000000;
-    --color-secondary: #1f1f1f;
-    --color-secondary-foreground: #ffffff;
-    --color-muted: #171717;
-    --color-muted-foreground: #d4d4d4;
-    --color-accent: #262626;
-    --color-accent-foreground: #facc15;
-    --color-border: #ffffff;
-    --color-input: #ffffff;
-    --color-ring: #facc15;
-    --color-sidebar: #000000;
-    --color-sidebar-foreground: #ffffff;
-    --color-sidebar-primary: #facc15;
-    --color-sidebar-primary-foreground: #000000;
-    --color-sidebar-accent: #171717;
-    --color-sidebar-accent-foreground: #facc15;
-    --color-sidebar-border: #ffffff;
-    --color-sidebar-ring: #facc15;
-}
-
-:root[data-theme-preset='contrast']:not(.dark) {
-    --color-background: #ffffff;
-    --color-foreground: #000000;
-    --color-card: #ffffff;
-    --color-card-foreground: #000000;
-    --color-primary: #eab308;
-    --color-primary-foreground: #ffffff;
-    --color-secondary: #f3f4f6;
-    --color-secondary-foreground: #000000;
-    --color-muted: #f3f4f6;
-    --color-muted-foreground: #4b5563;
-    --color-accent: #f3f4f6;
-    --color-accent-foreground: #eab308;
-    --color-border: #000000;
-    --color-input: #000000;
-    --color-ring: #eab308;
-    --color-sidebar: #ffffff;
-    --color-sidebar-foreground: #000000;
-    --color-sidebar-border: #000000;
-}
-
-:root[data-theme-preset='tactical'] {
-    --color-background: #050505;
-    --color-foreground: #ffffff;
-    --color-card: #070707;
-    --color-card-foreground: #ffffff;
-    --color-primary: #ffffff;
-    --color-primary-foreground: #050505;
-    --color-secondary: #171717;
-    --color-secondary-foreground: #ffffff;
-    --color-muted: #1f1f1f;
-    --color-muted-foreground: #a1a1aa;
-    --color-accent: #262626;
-    --color-accent-foreground: #ffffff;
-    --color-border: #27272a;
-    --color-input: #27272a;
-    --color-ring: #f59e0b;
-    --color-sidebar: #050505;
-    --color-sidebar-foreground: #ffffff;
-    --color-sidebar-primary: #ffffff;
-    --color-sidebar-primary-foreground: #050505;
-    --color-sidebar-accent: #27272a;
-    --color-sidebar-accent-foreground: #ffffff;
-    --color-sidebar-border: #27272a;
-    --color-sidebar-ring: #f59e0b;
-}
-
-:root[data-theme-preset='tactical']:not(.dark) {
-    --color-background: #ffffff;
-    --color-foreground: #000000;
-    --color-card: #ffffff;
-    --color-card-foreground: #000000;
-    --color-primary: #000000;
-    --color-primary-foreground: #ffffff;
-    --color-secondary: #f3f4f6;
-    --color-secondary-foreground: #000000;
-    --color-muted: #f3f4f6;
-    --color-muted-foreground: #4b5563;
-    --color-accent: #f3f4f6;
-    --color-accent-foreground: #000000;
-    --color-border: #d1d5db;
-    --color-input: #d1d5db;
-    --color-ring: #f59e0b;
-    --color-sidebar: #ffffff;
-    --color-sidebar-foreground: #000000;
-    --color-sidebar-border: #d1d5db;
-}
-
-:root[data-theme-preset='tactical'] body {
-    background:
-        radial-gradient(
-            circle at 82% 4%,
-            color-mix(in srgb, var(--color-foreground), transparent 95%),
-            transparent 30rem
-        ),
-        radial-gradient(
-            circle at 8% 100%,
-            color-mix(in srgb, var(--color-ring), transparent 94%),
-            transparent 28rem
-        ),
-        var(--color-background);
-}
-
-:root[data-theme-preset='tactical'] body::before {
-    opacity: 0.07;
-    background-image:
-        linear-gradient(
-            color-mix(in srgb, var(--color-foreground), transparent 94%) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            color-mix(in srgb, var(--color-foreground), transparent 94%) 1px,
-            transparent 1px
-        );
-    background-size: 72px 72px;
-}
-
-:root[data-theme-preset='tactical'] .rounded-md,
-:root[data-theme-preset='tactical'] .rounded-lg,
-:root[data-theme-preset='tactical'] .rounded-xl,
-:root[data-theme-preset='tactical'] .rounded-2xl,
-:root[data-theme-preset='tactical'] .rounded-3xl,
-:root[data-theme-preset='tactical'] .surface-card {
-    border-radius: 0.125rem !important;
-}
-
-:root[data-theme-preset='tactical'] [class*='bg-card'],
-:root[data-theme-preset='tactical'] .surface-card,
-:root[data-theme-preset='tactical'] [class*='bg-background/'],
-:root[data-theme-preset='tactical'] [class*='bg-muted/'] {
-    border-color: color-mix(
-        in srgb,
-        var(--color-foreground),
-        transparent 87%
-    ) !important;
-    box-shadow:
-        0 18px 60px -52px
-            color-mix(in srgb, var(--color-foreground), transparent 45%),
-        inset 0 1px 0
-            color-mix(in srgb, var(--color-foreground), transparent 96%) !important;
-}
-
-:root[data-theme-preset='tactical'] .premium-hover:hover {
-    transform: translateY(-2px) scale(1.005);
-    box-shadow: 0 18px 60px -42px
-        color-mix(in srgb, var(--color-ring), transparent 76%) !important;
-}
-
-:root[data-theme-preset='tactical'] button,
-:root[data-theme-preset='tactical'] a[class*='bg-primary'],
-:root[data-theme-preset='tactical'] a[class*='bg-foreground'],
-:root[data-theme-preset='tactical'] [role='button'] {
-    border-radius: 0.125rem !important;
-}
-
-:root[data-theme-preset='tactical'] h1,
-:root[data-theme-preset='tactical'] h2,
-:root[data-theme-preset='tactical'] h3,
-:root[data-theme-preset='tactical'] .font-black {
-    letter-spacing: 0.02em;
-}
-
-:root[data-theme-preset='tactical'] aside,
-:root[data-theme-preset='tactical'] header {
-    border-color: rgb(255 255 255 / 0.12) !important;
-}
-
-:root[data-theme-preset='tactical'] [data-sidebar='sidebar'],
-:root[data-theme-preset='tactical'] [data-sidebar='content'],
-:root[data-theme-preset='tactical'] [data-sidebar='menu-button'] {
-    border-radius: 0.125rem !important;
-}
-
-:root[data-theme-preset='tactical']
-    [data-sidebar='menu-button'][data-active='true'],
-:root[data-theme-preset='tactical'] [data-sidebar='menu-button']:hover {
-    background: color-mix(
-        in srgb,
-        var(--color-foreground),
-        transparent 90%
-    ) !important;
-    color: var(--color-foreground) !important;
-    box-shadow: inset 2px 0 0 var(--color-ring);
-}
-
 .theme-neutral-page,
 .global-loader {
     --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -465,31 +246,31 @@
     --font-mono:
         'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo,
         Monaco, Consolas, monospace;
-    --color-background: #ffffff;
-    --color-foreground: #09090b;
-    --color-card: #ffffff;
-    --color-card-foreground: #09090b;
+    --color-background: #f5f0e8;
+    --color-foreground: #1a1a1e;
+    --color-card: #faf7f2;
+    --color-card-foreground: #1a1a1e;
     --color-primary: #1a1a1e;
-    --color-primary-foreground: #fafafa;
-    --color-secondary: #f4f4f5;
-    --color-secondary-foreground: #18181b;
-    --color-muted: #f4f4f5;
-    --color-muted-foreground: #71717a;
-    --color-accent: #f4f4f5;
-    --color-accent-foreground: #18181b;
+    --color-primary-foreground: #faf7f2;
+    --color-secondary: #ebe5dc;
+    --color-secondary-foreground: #1a1a1e;
+    --color-muted: #ebe5dc;
+    --color-muted-foreground: #7a756e;
+    --color-accent: #ebe5dc;
+    --color-accent-foreground: #1a1a1e;
     --color-destructive: #ef4444;
-    --color-destructive-foreground: #fafafa;
-    --color-border: #eeeff1;
-    --color-input: #eeeff1;
-    --color-ring: #18181b;
-    --color-sidebar: #fafafa;
-    --color-sidebar-foreground: #09090b;
+    --color-destructive-foreground: #faf7f2;
+    --color-border: #e0dbd3;
+    --color-input: #e0dbd3;
+    --color-ring: #1a1a1e;
+    --color-sidebar: #faf7f2;
+    --color-sidebar-foreground: #1a1a1e;
     --color-sidebar-primary: #1a1a1e;
-    --color-sidebar-primary-foreground: #fafafa;
-    --color-sidebar-accent: #f4f4f5;
-    --color-sidebar-accent-foreground: #18181b;
-    --color-sidebar-border: #eeeff1;
-    --color-sidebar-ring: #18181b;
+    --color-sidebar-primary-foreground: #faf7f2;
+    --color-sidebar-accent: #ebe5dc;
+    --color-sidebar-accent-foreground: #1a1a1e;
+    --color-sidebar-border: #e0dbd3;
+    --color-sidebar-ring: #1a1a1e;
     --radius-xl: 1rem;
     --radius-2xl: 1.5rem;
 }
@@ -503,28 +284,28 @@
 
 .dark .theme-neutral-page,
 .dark .global-loader {
-    --color-background: #09090b;
+    --color-background: #000000;
     --color-foreground: #fafafa;
-    --color-card: #09090b;
+    --color-card: #0a0a0a;
     --color-card-foreground: #fafafa;
     --color-primary: #fafafa;
-    --color-primary-foreground: #1a1a1e;
-    --color-secondary: #27272a;
+    --color-primary-foreground: #000000;
+    --color-secondary: #141414;
     --color-secondary-foreground: #fafafa;
-    --color-muted: #27272a;
+    --color-muted: #141414;
     --color-muted-foreground: #a1a1aa;
-    --color-accent: #27272a;
+    --color-accent: #141414;
     --color-accent-foreground: #fafafa;
-    --color-border: #27272a;
-    --color-input: #27272a;
+    --color-border: #1f1f1f;
+    --color-input: #1f1f1f;
     --color-ring: #d4d4d8;
-    --color-sidebar: #09090b;
+    --color-sidebar: #000000;
     --color-sidebar-foreground: #fafafa;
     --color-sidebar-primary: #fafafa;
-    --color-sidebar-primary-foreground: #1a1a1e;
-    --color-sidebar-accent: #27272a;
+    --color-sidebar-primary-foreground: #000000;
+    --color-sidebar-accent: #141414;
     --color-sidebar-accent-foreground: #fafafa;
-    --color-sidebar-border: #27272a;
+    --color-sidebar-border: #1f1f1f;
     --color-sidebar-ring: #d4d4d8;
 }
 
@@ -578,6 +359,23 @@
     font-family: var(--font-sans) !important;
 }
 
+/* ════════════════════════════════════════════════════
+   Default: SpotlightCard glow effects disabled
+   ════════════════════════════════════════════════════ */
+[data-glow]::before,
+[data-glow]::after {
+    display: none !important;
+}
+
+[data-glow] {
+    background-image: none !important;
+    background-color: var(--color-card) !important;
+}
+
+[data-glow] > [data-glow] {
+    display: none !important;
+}
+
 :root[data-card-style='soft'] {
     --radius-xl: 1.5rem;
     --radius-2xl: 2rem;
@@ -589,6 +387,30 @@
 :root[data-card-style='soft'] .rounded-3xl,
 :root[data-card-style='soft'] .surface-card {
     border-radius: 1.5rem !important;
+}
+
+:root[data-card-style='vibrant'] {
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.75rem;
+}
+
+:root[data-card-style='vibrant'] .surface-card {
+    backdrop-filter: blur(18px) saturate(140%);
+    background-color: color-mix(in srgb, var(--color-card) 75%, transparent) !important;
+    box-shadow:
+        0 10px 30px -10px rgb(0 0 0 / 0.1),
+        0 0 0 1px rgb(255 255 255 / 0.05) inset,
+        0 22px 70px -28px
+            color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
+}
+
+:root[data-card-style='vibrant'] [data-glow]::before,
+:root[data-card-style='vibrant'] [data-glow]::after {
+    display: block !important;
+}
+
+:root[data-card-style='vibrant'] [data-glow] {
+    background-color: var(--backdrop, transparent) !important;
 }
 
 :root[data-card-style='glass'] [class*='bg-card'],
@@ -626,6 +448,10 @@
 :root[data-card-style='sharp'] .surface-card {
     box-shadow: none !important;
 }
+
+/* ════════════════════════════════════════════════════
+   EXAM THEME
+   ════════════════════════════════════════════════════ */
 
 .exam-theme-page {
     background:
@@ -703,20 +529,8 @@
         color-mix(in srgb, var(--color-primary) 75%, #000000);
 }
 
-:root[data-theme-preset='academic'] .exam-theme-page .exam-card h2,
 :root[data-theme-preset='forest'] .exam-theme-page .exam-card h2 {
     font-style: normal;
-}
-
-:root[data-theme-preset='academic'] .exam-theme-page .exam-card {
-    background: linear-gradient(180deg, #ffffff, #eff6ff);
-    border-color: #bfdbfe;
-}
-
-:root[data-theme-preset='academic'] .exam-theme-page .exam-stat,
-:root[data-theme-preset='academic'] .exam-theme-page .exam-alert-box {
-    background-color: rgb(255 255 255 / 0.78);
-    border-color: #bfdbfe;
 }
 
 :root[data-theme-preset='forest'] .exam-theme-page .exam-card {
@@ -730,106 +544,77 @@
     border-color: #cbd9c2;
 }
 
-:root[data-theme-preset='midnight'] .exam-theme-page .exam-card {
-    background: linear-gradient(145deg, #080b10, #030405);
-    border-color: #1f2937;
+/* — Forest: even softer palette — */
+:root[data-theme-preset='forest'] .exam-theme-page .exam-card,
+:root[data-theme-preset='forest'] .exam-theme-page .exam-part-card {
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.04),
+        0 12px 30px -20px
+            color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
 }
 
-:root[data-theme-preset='midnight'] .exam-theme-page .exam-alert-box {
-    background-color: rgb(3 7 18 / 0.62);
-}
-
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-card {
-    background: #000000;
-    border-color: #ffffff;
-    box-shadow: none;
-}
-
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-stat,
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-alert-box {
-    background-color: #050505;
-    border-color: #ffffff;
-}
-
-:root[data-theme-preset='contrast'] .exam-theme-page .bracket-corner {
-    border-color: #facc15;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   MODERN, THEME-AWARE EXAM UI (non-tactical presets)
+/* ════════════════════════════════════════════════════
+   MODERN, THEME-AWARE EXAM UI
    Transforms heavy tactical markup into a clean, calm, modern design
-   for current / midnight / academic / forest / contrast themes.
-   ═══════════════════════════════════════════════════════════════════ */
+   ════════════════════════════════════════════════════ */
 
 /* — Geometry: kill all skews, soften corners — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page [class*='skew-x'],
-:root:not([data-theme-preset='tactical']) .exam-theme-page [class*='-skew-x'] {
+.exam-theme-page [class*='skew-x'],
+.exam-theme-page [class*='-skew-x'] {
     transform: none !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .rounded-none {
+.exam-theme-page .rounded-none {
     border-radius: 0.875rem !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-card,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-hero,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-card,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .question-card {
+.exam-theme-page .exam-card,
+.exam-theme-page .exam-hero,
+.exam-theme-page .exam-part-card,
+.exam-theme-page .question-card {
     border-radius: var(--radius-2xl);
 }
 
 /* — Strip tactical decorations: brackets, rotated diamonds — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .bracket-corner,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-bracket,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-tactical-mark,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-diamond,
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-part-card
+.exam-theme-page .bracket-corner,
+.exam-theme-page .exam-bracket,
+.exam-theme-page .exam-tactical-mark,
+.exam-theme-page .exam-part-diamond,
+.exam-theme-page .exam-part-card
     > div.absolute.top-0.left-0.border-t-2,
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-part-card
+.exam-theme-page .exam-part-card
     > div.absolute.bottom-0.right-0.border-b-2,
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-instruction-callout
+.exam-theme-page .exam-instruction-callout
     > div.absolute[class*='border-t-2'],
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-instruction-callout
+.exam-theme-page .exam-instruction-callout
     > div.absolute[class*='border-b-2'] {
     display: none !important;
 }
 
 /* — Typography normalization — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page h1,
-:root:not([data-theme-preset='tactical']) .exam-theme-page h2,
-:root:not([data-theme-preset='tactical']) .exam-theme-page h3 {
+.exam-theme-page h1,
+.exam-theme-page h2,
+.exam-theme-page h3 {
     font-style: normal !important;
     letter-spacing: -0.01em !important;
     text-transform: none !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-card h2,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-card h3 {
+.exam-theme-page .exam-card h2,
+.exam-theme-page .exam-part-card h3 {
     font-weight: 700 !important;
     line-height: 1.25 !important;
 }
 
-/* Calm down extreme tracking on small labels site-wide on these pages */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    [class*='tracking-[0.4em]'],
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    [class*='tracking-[0.3em]'] {
+/* Calm down extreme tracking on small labels */
+.exam-theme-page [class*='tracking-[0.4em]'],
+.exam-theme-page [class*='tracking-[0.3em]'] {
     letter-spacing: 0.15em !important;
 }
 
 /* — Cards: cleaner, calmer base — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-card,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-card {
+.exam-theme-page .exam-card,
+.exam-theme-page .exam-part-card {
     background: var(--color-card) !important;
     border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent) !important;
     box-shadow:
@@ -840,18 +625,14 @@
 }
 
 @media (min-width: 640px) {
-    :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-card,
-    :root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-card {
+    .exam-theme-page .exam-card,
+    .exam-theme-page .exam-part-card {
         padding: 1.5rem !important;
     }
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-card:not(.cursor-not-allowed):hover,
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-part-card:not(.cursor-not-allowed):hover {
+.exam-theme-page .exam-card:not(.cursor-not-allowed):hover,
+.exam-theme-page .exam-part-card:not(.cursor-not-allowed):hover {
     border-color: color-mix(
         in srgb,
         var(--color-primary) 50%,
@@ -864,7 +645,7 @@
 }
 
 /* — Hero: cleaner gradient panel — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-hero {
+.exam-theme-page .exam-hero {
     background: linear-gradient(
         135deg,
         color-mix(in srgb, var(--color-primary) 6%, var(--color-card)),
@@ -876,7 +657,7 @@
 }
 
 /* — Status pill (PUBLISHED / IN PROGRESS / CLOSED) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-status-pill {
+.exam-theme-page .exam-status-pill {
     border-radius: 999px !important;
     padding: 0.25rem 0.625rem !important;
     font-size: 0.625rem !important;
@@ -885,11 +666,9 @@
     backdrop-filter: blur(8px);
 }
 
-/* — Score pill (top right of completed cards) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-score-pill,
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-part-score-pill {
+/* — Score pill — */
+.exam-theme-page .exam-score-pill,
+.exam-theme-page .exam-part-score-pill {
     border-radius: 999px !important;
     padding: 0.25rem 0.75rem !important;
     letter-spacing: 0.04em !important;
@@ -897,22 +676,18 @@
         color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-part-score-pill {
+.exam-theme-page .exam-part-score-pill {
     box-shadow: 0 2px 8px -2px rgb(16 185 129 / 0.4) !important;
 }
 
 /* — Recommended Next tag — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-recommended-tag {
+.exam-theme-page .exam-recommended-tag {
     border-radius: 0 var(--radius-2xl) 0 0.875rem !important;
     letter-spacing: 0.1em !important;
 }
 
 /* — Filter tabs (All / Active / Completed) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-filter-tab {
+.exam-theme-page .exam-filter-tab {
     border-radius: 999px !important;
     padding: 0.5rem 1.125rem !important;
     letter-spacing: 0.08em !important;
@@ -920,15 +695,13 @@
     transition: all 200ms ease !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-filter-tab:hover {
+.exam-theme-page .exam-filter-tab:hover {
     transform: translateY(-1px) !important;
 }
 
-/* — Primary action buttons (Start / Review / Part action) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-action,
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-part-action {
+/* — Primary action buttons — */
+.exam-theme-page .exam-action,
+.exam-theme-page .exam-part-action {
     border-radius: 0.75rem !important;
     letter-spacing: 0.08em !important;
     padding: 0.625rem 1rem !important;
@@ -940,17 +713,15 @@
         box-shadow 180ms ease !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-action:hover,
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-part-action:hover {
+.exam-theme-page .exam-action:hover,
+.exam-theme-page .exam-part-action:hover {
     transform: translateY(-1px) !important;
     box-shadow: 0 8px 20px -6px
         color-mix(in srgb, var(--color-primary) 75%, transparent) !important;
 }
 
-/* — Stat chips (Active / Completed / Total) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-stat {
+/* — Stat chips — */
+.exam-theme-page .exam-stat {
     border-radius: 999px !important;
     padding: 0.375rem 0.875rem !important;
     background-color: var(--color-card) !important;
@@ -958,8 +729,8 @@
     backdrop-filter: blur(8px);
 }
 
-/* — Alert box on cards (the [!] info) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-alert-box {
+/* — Alert box on cards — */
+.exam-theme-page .exam-alert-box {
     border-radius: 0.75rem !important;
     background-color: color-mix(
         in srgb,
@@ -969,15 +740,12 @@
     border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent) !important;
 }
 
-/* Hide tactical "[!]" prefix glyphs in alert boxes for cleaner look */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-alert-box
+.exam-theme-page .exam-alert-box
     span.text-amber-500.font-black {
     display: none !important;
 }
 
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-alert-box p {
+.exam-theme-page .exam-alert-box p {
     letter-spacing: 0 !important;
     text-transform: none !important;
     font-weight: 500 !important;
@@ -985,7 +753,7 @@
 }
 
 /* — Question cards (taking-exam view) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .question-card {
+.exam-theme-page .question-card {
     border-left-width: 1px !important;
     border-radius: var(--radius-2xl) !important;
     padding: 1.5rem !important;
@@ -995,10 +763,8 @@
     position: relative;
 }
 
-/* Status accent stripe (left edge) for answered questions */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .question-card.border-l-primary {
+/* Status accent stripe for answered questions */
+.exam-theme-page .question-card.border-l-primary {
     border-left: 3px solid var(--color-primary) !important;
     background: color-mix(
         in srgb,
@@ -1007,10 +773,8 @@
     ) !important;
 }
 
-/* — Instruction callout (Assessment Instructions) — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-instruction-callout {
+/* — Instruction callout — */
+.exam-theme-page .exam-instruction-callout {
     border-radius: var(--radius-2xl) !important;
     border-width: 1px !important;
     background: linear-gradient(
@@ -1028,84 +792,42 @@
     padding: 1.25rem 1.5rem !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-instruction-callout
-    p {
+.exam-theme-page .exam-instruction-callout p {
     font-weight: 500 !important;
     letter-spacing: 0 !important;
 }
 
-/* Round square icon containers (Instruction icon etc.) */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-instruction-callout
+/* Round square icon containers */
+.exam-theme-page .exam-instruction-callout
     > div.relative
     > div.bg-primary {
     border-radius: 0.875rem !important;
 }
 
 /* — Cleanup oversized shadows — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    [class*='shadow-\\[0_0'],
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    [class*='shadow-\\[0_15px'],
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    [class*='shadow-\\[0_20px'] {
+.exam-theme-page [class*='shadow-\\[0_0'],
+.exam-theme-page [class*='shadow-\\[0_15px'],
+.exam-theme-page [class*='shadow-\\[0_20px'] {
     box-shadow: 0 8px 24px -16px
         color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
 }
 
 /* Drop noisy decorative dots on hero stat grid */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-hero
-    .absolute.w-2.h-2.bg-primary {
+.exam-theme-page .exam-hero .absolute.w-2.h-2.bg-primary {
     display: none !important;
 }
 
 /* Soften the noisy background orbs slightly */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .orb {
+.exam-theme-page .orb {
     opacity: 0.55 !important;
 }
 
-/* — Academic / Forest: even softer palette — */
-:root[data-theme-preset='academic'] .exam-theme-page .exam-card,
-:root[data-theme-preset='academic'] .exam-theme-page .exam-part-card,
-:root[data-theme-preset='forest'] .exam-theme-page .exam-card,
-:root[data-theme-preset='forest'] .exam-theme-page .exam-part-card {
-    box-shadow:
-        0 1px 2px rgb(0 0 0 / 0.04),
-        0 12px 30px -20px
-            color-mix(in srgb, var(--color-primary) 30%, transparent) !important;
-}
+/* ════════════════════════════════════════════════════
+   STUDENT-FRIENDLY QUESTION + ANSWER UI
+   ════════════════════════════════════════════════════ */
 
-/* — Contrast preset: enforce solid borders, no soft shadows — */
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-card,
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-part-card,
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-hero,
-:root[data-theme-preset='contrast'] .exam-theme-page .question-card {
-    box-shadow: none !important;
-    border-width: 2px !important;
-}
-
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-action,
-:root[data-theme-preset='contrast'] .exam-theme-page .exam-part-action {
-    box-shadow: none !important;
-    border: 2px solid var(--color-primary) !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   STUDENT-FRIENDLY QUESTION + ANSWER UI (non-tactical presets)
-   ═══════════════════════════════════════════════════════════════════ */
-
-/* — Question number: replace rotated diamond with friendly rounded badge — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-question-number {
+/* — Question number badge — */
+.exam-theme-page .exam-question-number {
     transform: none !important;
     border-radius: 1rem !important;
     border-width: 0 !important;
@@ -1121,26 +843,21 @@
     height: 3rem !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-question-number
-    > span {
+.exam-theme-page .exam-question-number > span {
     transform: none !important;
     font-size: 1.125rem !important;
 }
 
 /* — Flag button: rounded, friendlier — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-flag-btn {
+.exam-theme-page .exam-flag-btn {
     border-radius: 0.875rem !important;
     width: 2.5rem !important;
     height: 2.5rem !important;
 }
 
 /* — Question type pill — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .question-card
-    span.bg-primary\/10.border.border-primary\/20.italic {
+.exam-theme-page .question-card
+    span.bg-primary\\/10.border.border-primary\\/20.italic {
     border-radius: 999px !important;
     font-style: normal !important;
     text-transform: capitalize !important;
@@ -1150,9 +867,7 @@
 }
 
 /* — Points label — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-friendly-points {
+.exam-theme-page .exam-friendly-points {
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 600 !important;
@@ -1160,11 +875,8 @@
     font-size: 0.75rem !important;
 }
 
-/* — Question text: softer, more readable — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .question-card
-    p.italic {
+/* — Question text — */
+.exam-theme-page .question-card p.italic {
     font-style: normal !important;
     font-weight: 600 !important;
     line-height: 1.45 !important;
@@ -1172,8 +884,8 @@
     color: var(--color-foreground) !important;
 }
 
-/* — Answer options: bigger, calmer, clearer — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-answer-option {
+/* — Answer options — */
+.exam-theme-page .exam-answer-option {
     border-radius: 0.875rem !important;
     padding: 0.875rem 1rem !important;
     background: color-mix(
@@ -1188,9 +900,7 @@
         transform 180ms ease !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-answer-option:hover {
+.exam-theme-page .exam-answer-option:hover {
     transform: translateY(-1px) !important;
     background: color-mix(
         in srgb,
@@ -1204,9 +914,7 @@
     ) !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-answer-option:has(:checked) {
+.exam-theme-page .exam-answer-option:has(:checked) {
     background: color-mix(
         in srgb,
         var(--color-primary) 10%,
@@ -1217,16 +925,13 @@
         color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
 }
 
-/* Hide the rotated decorative square inside answer options */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-answer-option
-    > div.absolute.right-0.bottom-0 {
+/* Hide rotated decorative square inside answer options */
+.exam-theme-page .exam-answer-option > div.absolute.right-0.bottom-0 {
     display: none !important;
 }
 
 /* Round the radio indicator */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-answer-radio {
+.exam-theme-page .exam-answer-radio {
     border-radius: 999px !important;
     width: 1.25rem !important;
     height: 1.25rem !important;
@@ -1235,14 +940,14 @@
 }
 
 /* Friendly answer text */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-answer-text {
+.exam-theme-page .exam-answer-text {
     font-weight: 600 !important;
     letter-spacing: 0 !important;
     font-size: 0.9375rem !important;
 }
 
 /* — Text input (identification) — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-text-input {
+.exam-theme-page .exam-text-input {
     border-radius: 0.875rem !important;
     background: var(--color-card) !important;
     border: 1.5px solid color-mix(in srgb, var(--color-border) 70%, transparent) !important;
@@ -1251,16 +956,14 @@
     font-size: 0.9375rem !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-text-input:focus {
+.exam-theme-page .exam-text-input:focus {
     border-color: var(--color-primary) !important;
     box-shadow: 0 0 0 4px
         color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
 }
 
 /* — Essay textarea — */
-:root:not([data-theme-preset='tactical']) .exam-theme-page .exam-essay-input {
+.exam-theme-page .exam-essay-input {
     border-radius: 1rem !important;
     background: var(--color-card) !important;
     border: 1.5px solid color-mix(in srgb, var(--color-border) 70%, transparent) !important;
@@ -1270,66 +973,44 @@
     line-height: 1.6 !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-essay-input:focus {
+.exam-theme-page .exam-essay-input:focus {
     border-color: var(--color-primary) !important;
     box-shadow: 0 0 0 4px
         color-mix(in srgb, var(--color-primary) 15%, transparent) !important;
 }
 
-/* Hide the small "SECURE DATA ENTRY" caption on essay */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    div.group\/textarea
-    > div.absolute.bottom-4.right-6 {
+/* Hide "SECURE DATA ENTRY" caption on essay */
+.exam-theme-page div.group\\/textarea > div.absolute.bottom-4.right-6 {
     display: none !important;
 }
 
 /* — Submit button — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .sticky.bottom-6
-    > button {
+.exam-theme-page .sticky.bottom-6 > button {
     border-radius: 1rem !important;
     padding: 0.875rem 1.75rem !important;
     box-shadow: 0 12px 30px -10px
         color-mix(in srgb, var(--color-primary) 60%, transparent) !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .sticky.bottom-6
-    > button
-    span {
+.exam-theme-page .sticky.bottom-6 > button span {
     text-transform: none !important;
     letter-spacing: 0.02em !important;
     font-weight: 700 !important;
     font-size: 0.9375rem !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .sticky.bottom-6
-    > button
-    > div.absolute {
+.exam-theme-page .sticky.bottom-6 > button > div.absolute {
     display: none !important;
 }
 
-/* Hide the decorative rotated arrow box inside submit */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .sticky.bottom-6
-    > button
-    > div.p-1\.5 {
+/* Hide decorative rotated arrow box inside submit */
+.exam-theme-page .sticky.bottom-6 > button > div.p-1\\.5 {
     background: rgb(255 255 255 / 0.15) !important;
     border-radius: 0.625rem !important;
 }
 
-/* — Friendly labels: normalize 'tactical' typography on small labels — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-friendly-label {
+/* — Friendly labels — */
+.exam-theme-page .exam-friendly-label {
     font-family: var(--font-sans) !important;
     text-transform: none !important;
     letter-spacing: 0.02em !important;
@@ -1339,136 +1020,96 @@
 }
 
 /* Numbers next to friendly labels stay prominent */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .exam-friendly-label.bg-amber-500\/5 {
+.exam-theme-page .exam-friendly-label.bg-amber-500\\/5 {
     color: rgb(180 83 9) !important;
 }
 
 /* — Top corner decorative border on question card — */
-:root:not([data-theme-preset='tactical'])
-    .exam-theme-page
-    .question-card
-    > div.absolute.top-0.right-0.border-t-2 {
+.exam-theme-page .question-card > div.absolute.top-0.right-0.border-t-2 {
     display: none !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   REVIEW MODAL — student-friendly (non-tactical presets)
-   ═══════════════════════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════════
+   REVIEW MODAL — student-friendly
+   ════════════════════════════════════════════════════ */
 
-:root:not([data-theme-preset='tactical']) .exam-review-modal {
+.exam-review-modal {
     border-radius: var(--radius-2xl) !important;
 }
 
 /* Hide tactical corner brackets */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    > div.absolute.border-t-2.border-l-2,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    > div.absolute.border-b-2.border-r-2 {
+.exam-review-modal > div.absolute.border-t-2.border-l-2,
+.exam-review-modal > div.absolute.border-b-2.border-r-2 {
     display: none !important;
 }
 
-/* Hide the rotated amber diamond in modal header */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .border-amber-500.rotate-45 {
+/* Hide rotated amber diamond in modal header */
+.exam-review-modal .border-amber-500.rotate-45 {
     display: none !important;
 }
 
-/* Friendlier dialog title (no italic, no extreme uppercase tracking) */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    [data-slot='dialog-title'],
-:root:not([data-theme-preset='tactical']) .exam-review-modal h3 {
+/* Friendlier dialog title */
+.exam-review-modal [data-slot='dialog-title'],
+.exam-review-modal h3 {
     font-style: normal !important;
     text-transform: none !important;
     letter-spacing: -0.01em !important;
     font-weight: 700 !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    [data-slot='dialog-description'] {
+.exam-review-modal [data-slot='dialog-description'] {
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 500 !important;
 }
 
 /* Score panel: rounded */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    [class*='border-border/50'].bg-muted\/30 {
+.exam-review-modal [class*='border-border/50'].bg-muted\\/30 {
     border-radius: 0.875rem !important;
 }
 
 /* Part tabs: un-skew, rounded pills */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    button.transform.-skew-x-12 {
+.exam-review-modal button.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    button.transform.-skew-x-12
-    > div.skew-x-12,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    button.transform.-skew-x-12
-    span.skew-x-12,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    div.transform.-skew-x-12
-    span.skew-x-12,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    div.transform.-skew-x-12
-    div.skew-x-12 {
+.exam-review-modal button.transform.-skew-x-12 > div.skew-x-12,
+.exam-review-modal button.transform.-skew-x-12 span.skew-x-12,
+.exam-review-modal div.transform.-skew-x-12 span.skew-x-12,
+.exam-review-modal div.transform.-skew-x-12 div.skew-x-12 {
     transform: none !important;
 }
 
 /* Part header score chip un-skew */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    div.transform.-skew-x-12 {
+.exam-review-modal div.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
 }
 
-/* Question cards in modal: rounded, calmer borders */
-:root:not([data-theme-preset='tactical']) .exam-review-modal .group\/question {
+/* Question cards in modal */
+.exam-review-modal .group\\/question {
     border-radius: var(--radius-2xl) !important;
     border-width: 1px !important;
 }
 
-/* Question text: drop italic, ease readability */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .group\/question
-    p.italic {
+/* Question text in modal */
+.exam-review-modal .group\\/question p.italic {
     font-style: normal !important;
     font-weight: 600 !important;
     letter-spacing: 0 !important;
 }
 
-/* Part title: drop italic + tracking-tight */
-:root:not([data-theme-preset='tactical']) .exam-review-modal h3.italic {
+/* Part title */
+.exam-review-modal h3.italic {
     font-style: normal !important;
     text-transform: none !important;
     letter-spacing: -0.01em !important;
 }
 
-/* Correct/Wrong status labels: friendlier */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .text-emerald-500.uppercase,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .text-red-500.uppercase {
+/* Correct/Wrong status labels */
+.exam-review-modal .text-emerald-500.uppercase,
+.exam-review-modal .text-red-500.uppercase {
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 700 !important;
@@ -1476,11 +1117,8 @@
     font-family: var(--font-sans) !important;
 }
 
-/* Answer option rows in modal: rounded, less mono caps */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .grid
-    > div.text-sm.p-5.border {
+/* Answer option rows in modal */
+.exam-review-modal .grid > div.text-sm.p-5.border {
     border-radius: 0.875rem !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
@@ -1489,9 +1127,7 @@
 }
 
 /* "Your answer" tag pill */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    div.bg-foreground.text-background.transform.-skew-x-12 {
+.exam-review-modal div.bg-foreground.text-background.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
     text-transform: none !important;
@@ -1500,35 +1136,22 @@
 }
 
 /* Identification / essay panels rounded */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .p-5.bg-muted\/30.border,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .p-5.bg-emerald-500\/5.border,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .p-5.bg-primary\/5.border,
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .p-5.bg-muted\/20.border {
+.exam-review-modal .p-5.bg-muted\\/30.border,
+.exam-review-modal .p-5.bg-emerald-500\\/5.border,
+.exam-review-modal .p-5.bg-primary\\/5.border,
+.exam-review-modal .p-5.bg-muted\\/20.border {
     border-radius: 0.875rem !important;
 }
 
-/* User-input / correct-answer text: drop heavy tracking */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .font-black.tracking-widest.whitespace-pre-wrap {
+/* User-input / correct-answer text */
+.exam-review-modal .font-black.tracking-widest.whitespace-pre-wrap {
     letter-spacing: 0 !important;
     font-weight: 600 !important;
     font-family: var(--font-sans) !important;
 }
 
-/* Footer buttons: un-skew, round */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    [data-slot='dialog-footer']
-    button {
+/* Footer buttons */
+.exam-review-modal [data-slot='dialog-footer'] button {
     transform: none !important;
     border-radius: 0.75rem !important;
     text-transform: none !important;
@@ -1539,26 +1162,17 @@
     padding: 0.625rem 1.25rem !important;
 }
 
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    [data-slot='dialog-footer']
-    button
-    span {
+.exam-review-modal [data-slot='dialog-footer'] button span {
     transform: none !important;
 }
 
 /* Hide AI panel's rotated decorative square */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    .group\/ai
-    > div.absolute.-rotate-45 {
+.exam-review-modal .group\\/ai > div.absolute.-rotate-45 {
     display: none !important;
 }
 
 /* AI score pill un-skew */
-:root:not([data-theme-preset='tactical'])
-    .exam-review-modal
-    div.bg-primary.text-primary-foreground.transform.-skew-x-12 {
+.exam-review-modal div.bg-primary.text-primary-foreground.transform.-skew-x-12 {
     transform: none !important;
     border-radius: 999px !important;
     text-transform: none !important;
@@ -1566,7 +1180,7 @@
     padding: 0.25rem 0.75rem !important;
 }
 
-/* — Sticky exam footer: reserve bottom space on page so content doesn't hide under it — */
+/* — Sticky exam footer — */
 .exam-theme-page:has(~ .exam-sticky-header),
 .exam-theme-page:has(.exam-sticky-header) {
     padding-bottom: 5rem !important;
@@ -1575,40 +1189,6 @@
 /* Lift the in-page sticky submit button above the fixed footer */
 .exam-theme-page:has(.exam-sticky-header) .sticky.bottom-6 {
     bottom: 5.5rem !important;
-}
-
-/* Tactical preset variant: keep the bar tactical-styled */
-:root[data-theme-preset='tactical'] .exam-sticky-header {
-    background: rgb(5 5 5 / 0.95) !important;
-    border-bottom-color: rgb(255 255 255 / 0.08) !important;
-}
-
-:root[data-theme-preset='tactical'] .exam-theme-page {
-    background:
-        radial-gradient(
-            circle at 80% 0%,
-            rgb(255 255 255 / 0.04),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 10% 100%,
-            rgb(245 158 11 / 0.05),
-            transparent 28%
-        ),
-        #050505;
-}
-
-:root[data-theme-preset='tactical'] .exam-theme-page .exam-card,
-:root[data-theme-preset='tactical'] .exam-theme-page .exam-hero,
-:root[data-theme-preset='tactical'] .exam-theme-page .question-card {
-    border-radius: 0;
-    background: linear-gradient(135deg, rgb(8 8 10 / 0.96), rgb(3 3 4 / 0.98));
-    box-shadow: 0 25px 80px -55px rgb(255 255 255 / 0.35);
-}
-
-:root[data-theme-preset='tactical'] .exam-theme-page .bracket-corner,
-:root[data-theme-preset='tactical'] .exam-theme-page .exam-bracket {
-    border-color: #ffffff;
 }
 
 @layer base {
@@ -1647,10 +1227,10 @@
     }
 
     .surface-card {
-        @apply relative rounded-[2rem] border border-border/40 bg-card/30 text-card-foreground backdrop-blur-xl;
+        @apply relative rounded-[2rem] border border-border/60 bg-card text-card-foreground;
         box-shadow:
-            0 10px 30px -10px rgb(0 0 0 / 0.1),
-            0 0 0 1px rgb(255 255 255 / 0.05) inset;
+            0 1px 3px rgb(0 0 0 / 0.04),
+            0 4px 12px -6px rgb(0 0 0 / 0.06);
     }
 
     .premium-hover {
@@ -1770,7 +1350,6 @@
     font-style: normal !important;
 }
 
-/* Specifically target the tactical italic-caps in exams */
 .dyslexia-friendly [class*='tracking-tight'],
 .dyslexia-friendly [class*='tracking-tighter'],
 .dyslexia-friendly [class*='tracking-widest'],
@@ -1783,7 +1362,7 @@
 .dyslexia-friendly li {
     line-height: 1.6 !important;
 }
-/* Normalize Tactical Cards & Elements */
+
 .dyslexia-friendly .transform,
 .dyslexia-friendly [class*='-skew-x-'],
 .dyslexia-friendly [class*='skew-x-'] {
@@ -1818,6 +1397,6 @@
     border-radius: 9999px !important;
 }
 
-.dyslexia-friendly .bg-primary\/40 {
+.dyslexia-friendly .bg-primary\\/40 {
     border-radius: 9999px !important;
 }
