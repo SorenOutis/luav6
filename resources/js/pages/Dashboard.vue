@@ -265,15 +265,15 @@ const smarterStatus = computed(() => {
     const dueToday = todaySummary.value.dueTodayCount;
 
     if (overdue > 0)
-        return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} requiring <span class="text-rose-500 dark:text-rose-400 font-black drop-shadow-md">immediate attention</span>.`;
+        return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} requiring <span class="text-rose-500 dark:text-rose-400 font-semibold drop-shadow-sm">immediate attention</span>.`;
     if (xpRemaining < 200)
-        return `Only <span class="text-emerald-500 dark:text-emerald-400 font-black drop-shadow-md">${xpRemaining} XP</span> until you reach Level ${props.userStats.level + 1}!`;
+        return `Only <span class="text-emerald-500 dark:text-emerald-400 font-semibold drop-shadow-sm">${xpRemaining} XP</span> until you reach Level ${props.userStats.level + 1}!`;
     if (streak >= 3)
-        return `You've maintained a <span class="text-amber-500 dark:text-amber-400 font-black drop-shadow-md">${streak}-day streak</span>. Keep the momentum!`;
+        return `You've maintained a <span class="text-amber-500 dark:text-amber-400 font-semibold drop-shadow-sm">${streak}-day streak</span>. Keep the momentum!`;
     if (dueToday > 0)
-        return `You have ${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your <span class="text-blue-500 dark:text-blue-400 font-black drop-shadow-md">schedule for today</span>.`;
+        return `You have ${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your <span class="text-blue-500 dark:text-blue-400 font-semibold drop-shadow-sm">schedule for today</span>.`;
 
-    return `Your learning engine is performing at <span class="text-primary font-black drop-shadow-md">peak capacity</span>.`;
+    return `Your learning engine is performing at <span class="text-primary font-semibold drop-shadow-sm">peak capacity</span>.`;
 });
 
 const isBooted = ref(false);
@@ -864,7 +864,7 @@ const handleLogout = () => {
                 <div class="p-6 sm:p-8">
                     <div>
                         <p
-                            class="text-xs font-semibold tracking-[0.2em] text-destructive/85 uppercase"
+                            class="text-xs font-medium text-destructive/80"
                         >
                             Access Restricted
                         </p>

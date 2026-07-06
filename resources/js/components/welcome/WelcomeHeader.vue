@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import { Command, Sun, Moon } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { Command, Sun, Moon, Menu, X } from 'lucide-vue-next';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetTrigger,
+} from '@/components/ui/sheet';
 import { useAppearance } from '@/composables/useAppearance';
 
 const props = defineProps<{
@@ -18,112 +24,128 @@ const props = defineProps<{
         logoUrl?: string | null;
         accentColor?: string;
     };
+    /**
+     * When true, only show 'Home' in the scroll nav — hides
+     * section-specific items like 'How It Works' and 'Features'.
+     * Use on dedicated pages (About, HowItWorks) that aren't
+     * scrollable landing sections.
+     */
+    hideScrollNav?: boolean;
 }>();
-
-const emit = defineEmits(['magnetic', 'resetMagnetic']);
 
 const { appearance, toggleTheme } = useAppearance();
 const brandName = computed(() => props.branding?.name || 'LSI Engine');
-const brandTagline = computed(
-    () => props.branding?.tagline || 'Learning Systems Intelligence',
-);
-
-const handleMagnetic = (e: MouseEvent) => emit('magnetic', e);
-const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
 
 const scrollToSection = (e: MouseEvent, targetId: string) => {
     e.preventDefault();
     if (targetId === 'top') {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        history.pushState(null, '', window.location.pathname);
+        if (window.location.pathname !== '/') {
+            // Not on the home page — navigate there
+            window.location.href = '/';
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            history.pushState(null, '', window.location.pathname);
+        }
         return;
     }
     const el = document.getElementById(targetId);
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         history.pushState(null, '', `#${targetId}`);
+    } else {
+        // Section doesn't exist on this page — navigate to home page with anchor
+        window.location.href = `/#${targetId}`;
     }
 };
 
-const navItems = [
-    { label: 'Home', target: 'top' },
-    { label: 'Stats', target: 'metrics' },
-    { label: 'How It Works', target: 'architecture' },
-    { label: 'Features', target: 'features' },
-];
+const navItems = computed(() => {
+    const allItems = [
+        {
+            label: 'Home',
+            target: 'top',
+            preview: 'Back to the top of the page',
+        },
+        {
+            label: 'How It Works',
+            target: 'architecture',
+            preview: 'Learn how LSI works from start to finish',
+        },
+        {
+            label: 'Features',
+            target: 'features',
+            preview: 'Explore key capabilities and tools',
+        },
+    ];
+    if (props.hideScrollNav) {
+        return allItems.filter((item) => item.target === 'top');
+    }
+    return allItems;
+});
+
+const isMobileMenuOpen = ref(false);
+
+watch(isMobileMenuOpen, (open) => {
+    document.body.style.overflow = open ? 'hidden' : '';
+});
+
+// Ensure body scroll is restored if component unmounts while menu is open
+onBeforeUnmount(() => {
+    document.body.style.overflow = '';
+});
+
+const closeMobileMenu = () => {
+    isMobileMenuOpen.value = false;
+};
+
+const handleNavClick = (e: MouseEvent, targetId: string) => {
+    closeMobileMenu();
+    scrollToSection(e, targetId);
+};
 </script>
 
 <template>
     <header
-        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border/10 bg-background/60 px-6 py-5 backdrop-blur-2xl transition-colors duration-500 lg:px-16 lg:py-6 dark:border-border/5 dark:bg-background/30"
+        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border/10 bg-background/60 px-6 py-4 backdrop-blur-2xl transition-colors duration-500 lg:px-16 lg:py-5 dark:border-border/5 dark:bg-background/30"
     >
-        <!-- Header glow line -->
-        <div
-            class="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"
-        ></div>
-
         <Motion
             :initial="{ x: -20, opacity: 0 }"
             :animate="isBooted ? { x: 0, opacity: 1 } : { x: -20, opacity: 0 }"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
-            class="nav-item group flex cursor-pointer items-center gap-3 lg:gap-4"
+            class="flex items-center gap-3"
         >
-            <div
-                class="relative flex h-10 w-10 items-center justify-center overflow-hidden text-foreground transition-all duration-700 group-hover:rotate-[180deg]"
-            >
+            <Link href="/" class="flex items-center gap-3">
                 <div
-                    class="absolute inset-0 rounded-xl bg-primary/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100 dark:bg-primary/10"
-                ></div>
-                <img
-                    v-if="branding?.logoUrl"
-                    :src="branding.logoUrl"
-                    :alt="`${brandName} logo`"
-                    class="relative z-10 h-full w-full rounded-xl object-cover"
-                />
-                <Command v-else class="relative z-10 h-6 w-6 lg:h-7 lg:w-7" />
-            </div>
-            <div class="flex flex-col leading-none">
+                    class="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground/5 text-foreground transition-all duration-500 hover:bg-primary/10 lg:h-10 lg:w-10"
+                >
+                    <Command class="h-5 w-5 lg:h-6 lg:w-6" />
+                </div>
                 <span
-                    class="max-w-[11rem] truncate text-[10px] font-black tracking-[0.24em] uppercase lg:text-xs"
+                    class="text-sm font-semibold text-foreground"
                     >{{ brandName }}</span
                 >
-                <span
-                    class="mt-1 max-w-[11rem] truncate text-[7px] font-bold tracking-widest text-primary/60 uppercase lg:text-[8px]"
-                    >{{ brandTagline }}</span
-                >
-            </div>
+            </Link>
         </Motion>
 
         <Motion
             :initial="{ y: -20, opacity: 0 }"
             :animate="isBooted ? { y: 0, opacity: 1 } : { y: -20, opacity: 0 }"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }"
-            class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-10 lg:flex"
+            class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex"
         >
             <a
                 v-for="item in navItems"
                 :key="item.label"
                 :href="`#${item.target}`"
                 @click="(e) => scrollToSection(e, item.target)"
-                @mousemove="handleMagnetic"
-                @mouseleave="resetMagnetic"
-                class="nav-item group relative text-[10px] font-black tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:text-foreground"
+                class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
                 {{ item.label }}
-                <span
-                    class="absolute -bottom-2 left-1/2 h-px w-0 -translate-x-1/2 bg-primary transition-all duration-300 group-hover:w-full"
-                ></span>
             </a>
             <Link
                 href="/about"
-                @mousemove="handleMagnetic"
-                @mouseleave="resetMagnetic"
-                class="nav-item group relative text-[10px] font-black tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:text-foreground"
+                class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
                 About
-                <span
-                    class="absolute -bottom-2 left-1/2 h-px w-0 -translate-x-1/2 bg-primary transition-all duration-300 group-hover:w-full"
-                ></span>
             </Link>
         </Motion>
 
@@ -132,57 +154,140 @@ const navItems = [
             :animate="isBooted ? { y: 0, opacity: 1 } : { y: -10, opacity: 0 }"
             :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
             as="nav"
-            class="flex items-center gap-4 lg:gap-8"
+            class="flex items-center gap-4 lg:gap-6"
         >
-            <!-- Theme Toggle Button - always visible -->
             <button
                 @click="toggleTheme"
-                class="relative rounded-xl p-2.5 text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground active:scale-90"
+                class="relative rounded-lg p-2 text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground"
                 aria-label="Toggle Theme"
             >
-                <Sun
-                    v-if="appearance === 'dark'"
-                    class="h-4 w-4 lg:h-5 lg:w-5"
-                />
-                <Moon v-else class="h-4 w-4 lg:h-5 lg:w-5" />
+                <Sun v-if="appearance === 'dark'" class="h-4 w-4" />
+                <Moon v-else class="h-4 w-4" />
             </button>
+
+            <Sheet v-model:open="isMobileMenuOpen">
+                <!-- Mobile menu trigger -->
+                <SheetTrigger as-child>
+                    <button
+                        class="lg:hidden rounded-lg p-2 text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground"
+                        aria-label="Open Menu"
+                    >
+                        <Menu class="h-5 w-5" />
+                    </button>
+                </SheetTrigger>
+
+                <!-- Mobile menu panel -->
+                <SheetContent side="right" class="w-[280px] p-0">
+                    <div class="flex flex-col h-full">
+                        <!-- Header with close -->
+                        <div class="flex items-center justify-between border-b border-border/10 px-5 py-4">
+                            <Link
+                                href="/"
+                                class="flex items-center gap-2.5"
+                                @click="closeMobileMenu"
+                            >
+                                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5">
+                                    <Command class="h-4 w-4" />
+                                </div>
+                                <span class="text-sm font-semibold">{{ brandName }}</span>
+                            </Link>
+                            <SheetClose as-child>
+                                <button
+                                    class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                                    aria-label="Close Menu"
+                                >
+                                    <X class="h-4 w-4" />
+                                </button>
+                            </SheetClose>
+                        </div>
+
+                        <!-- Nav links -->
+                        <div class="flex-1 space-y-1 px-3 py-5">
+                            <a
+                                v-for="item in navItems"
+                                :key="item.label"
+                                :href="`#${item.target}`"
+                                @click="(e) => handleNavClick(e, item.target)"
+                                class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                            >
+                                <span>{{ item.label }}</span>
+                                <span class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70">{{ item.preview }}</span>
+                            </a>
+                            <Link
+                                href="/about"
+                                @click="closeMobileMenu"
+                                class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                            >
+                                <span>About</span>
+                                <span class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70">Learn about the LSI platform and team</span>
+                            </Link>
+                        </div>
+
+                        <!-- Auth footer -->
+                        <div class="border-t border-border/10 px-3 py-4">
+                            <template v-if="auth.user">
+                                <Link
+                                    :href="dashboard()"
+                                    @click="closeMobileMenu"
+                                    class="flex items-center justify-center rounded-lg bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-primary"
+                                >
+                                    Dashboard
+                                </Link>
+                            </template>
+                            <template v-else>
+                                <div class="flex flex-col gap-2">
+                                    <Link
+                                        :href="login()"
+                                        @click="closeMobileMenu"
+                                        class="flex items-center justify-center rounded-lg border border-border/30 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/60"
+                                    >
+                                        Login
+                                    </Link>
+                                    <Link
+                                        v-if="canRegister"
+                                        :href="register()"
+                                        @click="closeMobileMenu"
+                                        class="flex items-center justify-center rounded-lg bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-primary"
+                                    >
+                                        Get Started
+                                    </Link>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
 
             <template v-if="auth.user">
                 <Link
                     :href="dashboard()"
-                    @mousemove="handleMagnetic"
-                    @mouseleave="resetMagnetic"
-                    class="nav-item flex items-center gap-2 text-[9px] font-black tracking-[0.2em] text-muted-foreground uppercase transition-all hover:text-primary lg:text-[10px] lg:tracking-[0.3em]"
+                    class="hidden lg:inline-flex items-center gap-2 rounded-lg bg-foreground/5 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                 >
-                    <div
-                        class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]"
-                    ></div>
-                    <span class="hidden sm:inline">Access Engine</span>
-                    <span class="sm:hidden">Engine</span>
+                    Dashboard
                 </Link>
             </template>
             <template v-else>
                 <Link
                     :href="login()"
-                    @mousemove="handleMagnetic"
-                    @mouseleave="resetMagnetic"
-                    class="nav-item text-[9px] font-black tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:text-foreground lg:text-[10px]"
+                    class="hidden lg:inline-flex text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 >
                     Login
                 </Link>
                 <Link
                     v-if="canRegister"
                     :href="register()"
-                    @mousemove="handleMagnetic"
-                    @mouseleave="resetMagnetic"
-                    class="nav-item group relative overflow-hidden bg-foreground px-5 py-2.5 text-[9px] font-black tracking-[0.2em] text-background uppercase shadow-2xl transition-all hover:bg-primary lg:px-8 lg:py-3 lg:text-[10px]"
+                    class="hidden lg:inline-flex rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-primary"
                 >
-                    <span class="relative z-10">Join</span>
-                    <div
-                        class="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    ></div>
+                    Get Started
                 </Link>
             </template>
         </Motion>
     </header>
 </template>
+
+<style scoped>
+/* Hide the built-in Sheet close button — we use our own in the menu header */
+:deep([data-slot="sheet-content"] [data-dialog-close]) {
+    display: none;
+}
+</style>

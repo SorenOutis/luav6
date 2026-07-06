@@ -1285,7 +1285,7 @@ const onDragEnd = () => {
                         <Link
                             v-if="!selectedPart"
                             href="/exams"
-                            class="group inline-flex items-center gap-2.5 rounded-xl border border-border/40 bg-muted/30 px-4 py-2 text-[10px] font-black tracking-widest text-muted-foreground uppercase backdrop-blur-md transition-all hover:border-primary/40 hover:text-primary"
+                            class="inline-flex items-center gap-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/40 hover:text-primary"
                         >
                             <ChevronLeft
                                 class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1"
@@ -1307,7 +1307,7 @@ const onDragEnd = () => {
                         <!-- Draft Status (Desktop Only) -->
                         <div
                             v-if="lastSavedAt"
-                            class="hidden items-center gap-2 border-r border-white/10 pr-6 font-mono text-[8px] font-black tracking-[0.2em] text-muted-foreground/60 uppercase lg:flex"
+                            class="hidden items-center gap-2 border-r border-white/10 pr-6 text-xs text-muted-foreground/60 lg:flex"
                         >
                             <div
                                 class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
@@ -1321,7 +1321,7 @@ const onDragEnd = () => {
                                 estimatedFinishMinutes !== null &&
                                 estimatedFinishMinutes > 0
                             "
-                            class="hidden items-center gap-2 font-mono text-[9px] font-black tracking-[0.2em] text-amber-400 uppercase md:flex"
+                            class="hidden items-center gap-2 text-xs text-amber-500 md:flex"
                         >
                             <Zap
                                 class="h-4 w-4 fill-amber-400/20 transition-transform group-hover/timer:scale-110"
@@ -1342,7 +1342,7 @@ const onDragEnd = () => {
                                 class="h-4 w-4 transition-transform group-hover/timer:rotate-12"
                             />
                             <span
-                                class="font-mono text-lg font-black tracking-[0.15em] tabular-nums"
+                                class="font-mono text-lg font-semibold tracking-tight tabular-nums"
                                 >{{ formattedTime }}</span
                             >
                         </div>
@@ -1359,11 +1359,11 @@ const onDragEnd = () => {
                             title="Toggle Dyslexia-Friendly Font"
                         >
                             <span
-                                class="text-[10px] font-black tracking-widest uppercase"
+                                class="text-xs font-medium"
                                 >Font_Accessibility</span
                             >
                             <div class="relative">
-                                <span class="text-xs font-black">Aa</span>
+                                <span class="text-sm font-medium">Aa</span>
                                 <div
                                     v-if="isDyslexiaFriendly"
                                     class="absolute -bottom-0.5 left-0 h-0.5 w-full bg-current"
@@ -1525,7 +1525,7 @@ const onDragEnd = () => {
                                 >
                                 <div class="flex items-center gap-2">
                                     <div
-                                        class="font-mono text-lg font-black tabular-nums transition-colors"
+                                        class="text-lg font-semibold tabular-nums transition-colors"
                                         :class="
                                             isDyslexiaFriendly
                                                 ? 'text-primary'
@@ -1752,19 +1752,19 @@ const onDragEnd = () => {
 
                                 <div
                                     v-if="!isPartSubmitted(part.id)"
-                                    class="exam-part-action flex -skew-x-12 transform items-center gap-2 bg-foreground px-4 py-2 text-[10px] font-black tracking-[0.2em] text-background uppercase transition-all hover:bg-primary hover:text-primary-foreground"
+                                    class="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-all hover:bg-primary hover:text-primary-foreground"
                                     :class="
                                         isPartLocked(index)
                                             ? 'opacity-20 grayscale'
                                             : ''
                                     "
                                 >
-                                    <span class="inline-block skew-x-12">{{
-                                        isPartLocked(index) ? 'LOCKED' : 'START'
+                                    <span>{{
+                                        isPartLocked(index) ? 'Locked' : 'Start'
                                     }}</span>
                                     <ArrowRight
                                         v-if="!isPartLocked(index)"
-                                        class="h-3.5 w-3.5 skew-x-12"
+                                        class="h-3.5 w-3.5"
                                     />
                                 </div>
                             </div>

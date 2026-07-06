@@ -53,11 +53,18 @@ Route::get('/', function () {
 
 Route::get('/about', function () {
     return inertia('About', [
+        'canRegister' => Features::enabled(Features::registration()) && (bool) Setting::get('registration_enabled', true),
         'totalUsers' => User::count(),
         'totalExams' => Exam::where('status', '!=', 'draft')->count(),
         'totalSubmissions' => ExamSubmission::count(),
     ]);
 })->name('about');
+
+Route::get('/how-it-works', function () {
+    return inertia('HowItWorks', [
+        'canRegister' => Features::enabled(Features::registration()) && (bool) Setting::get('registration_enabled', true),
+    ]);
+})->name('how-it-works');
 
 Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('grades', function () {
