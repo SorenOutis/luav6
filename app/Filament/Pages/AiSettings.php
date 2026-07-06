@@ -137,10 +137,10 @@ class AiSettings extends Page implements HasSchemas
                                 '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (recommended)',
                                 '@cf/meta/llama-3.1-8b-instruct-fast' => 'Llama 3.1 8B Fast (faster)',
                                 '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
-                                '@cf/meta/llama-3.1-1b-instruct' => 'Llama 3.1 1B (Ultra Fast)',
+                                '@cf/meta/llama-3.2-1b-instruct' => 'Llama 3.2 1B (Ultra Fast)',
                             ])
                             ->default('@cf/meta/llama-3.1-8b-instruct')
-                            ->helperText('Llama 3.1 models are stable and well-tested. Use 1B for ultra-fast responses.')
+                            ->helperText('Llama 3.1 models are stable and well-tested. Use Llama 3.2 1B for ultra-fast responses.')
                             ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
 
                         TextInput::make('groq_api_key')
