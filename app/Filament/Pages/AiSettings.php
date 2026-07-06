@@ -47,6 +47,9 @@ class AiSettings extends Page implements HasSchemas
             'cloudflare_model' => Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct'),
             'groq_api_key' => Setting::get('groq_api_key'),
             'groq_model' => Setting::get('groq_model', 'llama-3.1-8b-instant'),
+            'ollama_url' => Setting::get('ollama_url', 'http://localhost:11434'),
+            'ollama_model' => Setting::get('ollama_model', 'llama3.2:1b'),
+            'ollama_enabled' => (bool) Setting::get('ollama_enabled', false),
             'login_enabled' => (bool) Setting::get('login_enabled', true),
             'login_disabled_message' => Setting::get('login_disabled_message', 'Login is currently disabled. Please try again later.'),
             'registration_enabled' => (bool) Setting::get('registration_enabled', true),
@@ -134,9 +137,10 @@ class AiSettings extends Page implements HasSchemas
                                 '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (recommended)',
                                 '@cf/meta/llama-3.1-8b-instruct-fast' => 'Llama 3.1 8B Fast (faster)',
                                 '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
+                                '@cf/meta/llama-3.1-1b-instruct' => 'Llama 3.1 1B (Ultra Fast)',
                             ])
                             ->default('@cf/meta/llama-3.1-8b-instruct')
-                            ->helperText('Llama 3.1 models are stable and well-tested. Use Fast version for quicker responses.')
+                            ->helperText('Llama 3.1 models are stable and well-tested. Use 1B for ultra-fast responses.')
                             ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
 
                         TextInput::make('groq_api_key')
@@ -157,6 +161,28 @@ class AiSettings extends Page implements HasSchemas
                             ->default('llama-3.1-8b-instant')
                             ->helperText('Llama 3.1 8B Instant is ultra-fast. Use 70B for complex tasks.')
                             ->visible(fn ($get) => $get('ai_provider') === 'groq' && $get('ai_chat_enabled')),
+
+                        Section::make('Ollama Fallback Configuration')
+                            ->description('Configure local Ollama as a fallback when the primary provider fails.')
+                            ->schema([
+                                TextInput::make('ollama_url')
+                                    ->label('Ollama URL')
+                                    ->placeholder('http://localhost:11434')
+                                    ->default('http://localhost:11434')
+                                    ->helperText('URL of your local Ollama instance.'),
+
+                                TextInput::make('ollama_model')
+                                    ->label('Ollama Model')
+                                    ->placeholder('llama3.2:1b')
+                                    ->default('llama3.2:1b')
+                                    ->helperText('Model to use for Ollama fallback (e.g., llama3.2:1b, llama3.1:8b).'),
+
+                                Toggle::make('ollama_enabled')
+                                    ->label('Enable Ollama Fallback')
+                                    ->default(false)
+                                    ->helperText('When enabled, Ollama will be used if the primary provider fails.'),
+                            ])
+                            ->visible(fn ($get) => $get('ai_chat_enabled')),
 
                         Textarea::make('ai_chat_maintenance_message')
                             ->label('Maintenance Message')
@@ -230,6 +256,9 @@ class AiSettings extends Page implements HasSchemas
             Setting::set('cloudflare_model', $data['cloudflare_model'] ?? '@cf/meta/llama-3.1-8b-instruct');
             Setting::set('groq_api_key', $data['groq_api_key'] ?? null);
             Setting::set('groq_model', $data['groq_model'] ?? 'llama-3.1-8b-instant');
+            Setting::set('ollama_url', $data['ollama_url'] ?? 'http://localhost:11434');
+            Setting::set('ollama_model', $data['ollama_model'] ?? 'llama3.2:1b');
+            Setting::set('ollama_enabled', ($data['ollama_enabled'] ?? false) ? '1' : '0');
 
             Setting::set('login_enabled', ($data['login_enabled'] ?? true) ? '1' : '0');
             if (isset($data['login_disabled_message'])) {

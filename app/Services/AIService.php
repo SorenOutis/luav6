@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -11,10 +12,13 @@ class AIService
 
     protected string $model;
 
+    protected ?string $provider;
+
     public function __construct()
     {
-        $this->baseUrl = config('ai.providers.ollama.url', 'http://localhost:11434');
-        $this->model = config('ai.providers.ollama.model', 'llama3.2:1b');
+        $this->provider = Setting::get('ai_provider', 'gemini');
+        $this->baseUrl = Setting::get('ollama_url', 'http://localhost:11434');
+        $this->model = Setting::get('ollama_model', 'llama3.2:1b');
     }
 
     /**
@@ -60,6 +64,8 @@ class AIService
             return [];
         }
 
+        // Use Ollama for essay grading (current implementation)
+        // TODO: Add support for Cloudflare/Groq for essay grading
         $responses = Http::pool(function ($pool) use ($essays) {
             foreach ($essays as $index => $essay) {
                 $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);

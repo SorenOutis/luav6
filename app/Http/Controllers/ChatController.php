@@ -6,6 +6,7 @@ use App\Ai\Agents\AssistantAgent;
 use App\Models\Setting;
 use App\Services\CloudflareAIService;
 use App\Services\GroqAIService;
+use App\Services\OllamaAIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Messages\AssistantMessage;
@@ -42,18 +43,40 @@ class ChatController extends Controller
 
             // Select agent based on provider setting
             $provider = Setting::get('ai_provider', 'gemini');
+            $ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
+            $response = null;
+            $lastError = null;
 
-            if ($provider === 'cloudflare') {
-                $cloudflareService = new CloudflareAIService;
-                $response = $cloudflareService->prompt($request->message, $historyData);
-            } elseif ($provider === 'groq') {
-                $groqService = new GroqAIService;
-                $response = $groqService->prompt($request->message, $historyData);
-            } else {
-                $agent = new AssistantAgent;
-                $agent->setHistory($history);
-                $agentResponse = $agent->prompt($request->message);
-                $response = $agentResponse->text;
+            try {
+                if ($provider === 'cloudflare') {
+                    $cloudflareService = new CloudflareAIService;
+                    $response = $cloudflareService->prompt($request->message, $historyData);
+                } elseif ($provider === 'groq') {
+                    $groqService = new GroqAIService;
+                    $response = $groqService->prompt($request->message, $historyData);
+                } else {
+                    $agent = new AssistantAgent;
+                    $agent->setHistory($history);
+                    $agentResponse = $agent->prompt($request->message);
+                    $response = $agentResponse->text;
+                }
+            } catch (\Exception $e) {
+                $lastError = $e->getMessage();
+                Log::error('Primary AI provider failed: '.$lastError);
+
+                // Try Ollama fallback if enabled
+                if ($ollamaEnabled) {
+                    try {
+                        $ollamaService = new OllamaAIService;
+                        $response = $ollamaService->prompt($request->message, $historyData);
+                        Log::info('Successfully fell back to Ollama');
+                    } catch (\Exception $ollamaError) {
+                        Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
+                        throw $e; // Throw original error
+                    }
+                } else {
+                    throw $e; // No fallback enabled, throw original error
+                }
             }
 
             // Update history in session
