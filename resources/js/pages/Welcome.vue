@@ -83,7 +83,7 @@ const closeDemoVideo = () => {
     <Head title="Welcome | LUAV Learning Engine" />
 
     <div
-        class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
+        class="welcome-root relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
         :style="{ '--school-accent': brandAccentColor }"
     >
         <!-- Subtle background grid -->
@@ -234,5 +234,13 @@ const closeDemoVideo = () => {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* Force Inter on the welcome page regardless of dashboard font presets.
+   Uses higher specificity than :root[data-font-preset] .font-sans (0-3-1 vs 0-3-0).
+   The * selector ensures child elements with font-sans are also overridden. */
+html[data-font-preset] .welcome-root.font-sans,
+html[data-font-preset] .welcome-root.font-sans * {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
 }
 </style>

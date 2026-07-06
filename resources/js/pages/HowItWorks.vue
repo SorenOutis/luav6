@@ -90,7 +90,7 @@ const faqs = [
     <Head title="How It Works | LSI Learning Engine" />
 
     <div
-        class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
+        class="howitworks-root relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
     >
         <!-- Background grid -->
         <div
@@ -217,3 +217,13 @@ const faqs = [
         <WelcomeFooter />
     </div>
 </template>
+
+<style>
+/* Force Inter on the how-it-works page regardless of dashboard font presets.
+   Uses higher specificity than :root[data-font-preset] .font-sans (0-3-1 vs 0-3-0).
+   The * selector ensures child elements with font-sans are also overridden. */
+html[data-font-preset] .howitworks-root.font-sans,
+html[data-font-preset] .howitworks-root.font-sans * {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+}
+</style>

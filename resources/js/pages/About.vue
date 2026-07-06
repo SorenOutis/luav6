@@ -247,7 +247,7 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
     <div
         ref="root"
-        class="relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
+        class="about-root relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
     >
         <!-- Background grid -->
         <div
@@ -647,5 +647,15 @@ details > summary::-webkit-details-marker {
     .role-panel li {
         animation: none;
     }
+}
+</style>
+
+<style>
+/* Force Inter on the about page regardless of dashboard font presets.
+   Uses higher specificity than :root[data-font-preset] .font-sans (0-3-1 vs 0-3-0).
+   The * selector ensures child elements with font-sans are also overridden. */
+html[data-font-preset] .about-root.font-sans,
+html[data-font-preset] .about-root.font-sans * {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
 }
 </style>

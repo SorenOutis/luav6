@@ -186,7 +186,7 @@ watch(pendingHide, (isPending) => {
         aria-live="polite"
         aria-busy="true"
         :aria-label="`${message} — ${progress}%`"
-        class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background font-sans text-foreground"
+        class="global-loader fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background font-sans text-foreground"
         style="display: none"
     >
         <div ref="contentWrap" class="flex flex-col items-center gap-8 px-6">
@@ -260,6 +260,16 @@ watch(pendingHide, (isPending) => {
         </div>
     </div>
 </template>
+
+<style>
+/* Force Inter on the global loader regardless of dashboard font presets.
+   Uses higher specificity than :root[data-font-preset] .font-sans (0-3-1 vs 0-3-0).
+   The * selector ensures child elements with font-sans are also overridden. */
+html[data-font-preset] .global-loader.font-sans,
+html[data-font-preset] .global-loader.font-sans * {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+}
+</style>
 
 <style scoped>
 @media (prefers-reduced-motion: reduce) {
