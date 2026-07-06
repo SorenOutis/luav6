@@ -35,6 +35,7 @@ import {
 import { useAccessibility } from '@/composables/useAccessibility';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import type { BreadcrumbItem } from '@/types';
 
 const { isVisible: isLoaderVisible } = useLoader();
@@ -1225,6 +1226,32 @@ const onDragEnd = () => {
     <Head :title="`${exam.title} — Exam`" />
 
     <AppLayout :breadcrumbs="breadcrumbs" :hide-sidebar="hideSidebar">
+        <!-- Skeleton Loading State -->
+        <template v-if="!isBooted">
+            <div class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8">
+                <PageSkeleton
+                    :hero="true"
+                    :stats="5"
+                    :count="0"
+                    variant="minimal"
+                    wrapperClass="mb-6"
+                />
+                <div class="mb-4 flex items-center justify-between">
+                    <div class="h-6 w-24 animate-pulse rounded bg-primary/10"></div>
+                    <div class="h-6 w-28 animate-pulse rounded bg-primary/10"></div>
+                </div>
+                <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    <div
+                        v-for="i in 3"
+                        :key="i"
+                        class="h-64 animate-pulse rounded-lg border border-border/10 bg-card/30"
+                    ></div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Real Content -->
+        <template v-if="isBooted">
         <div
             ref="container"
             class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
@@ -3136,6 +3163,7 @@ const onDragEnd = () => {
                 </div>
             </transition>
         </div>
+        </template>
     </AppLayout>
 </template>
 

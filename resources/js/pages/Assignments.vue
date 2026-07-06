@@ -23,6 +23,7 @@ const isBooted = ref(false);
 gsap.registerPlugin(ScrollTrigger);
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -237,10 +238,38 @@ declare const route: any;
     <Head title="Assignments" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            ref="container"
-            class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
-        >
+        <!-- Skeleton Loading State -->
+        <template v-if="!isBooted">
+            <div class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10">
+                <PageSkeleton
+                    :hero="true"
+                    :subtitle="true"
+                    :actions="2"
+                    :stats="3"
+                    :count="0"
+                    variant="minimal"
+                    wrapperClass="z-10 mb-4"
+                />
+                <div class="z-10 mb-6 flex gap-6 border-b border-border/10 pb-3">
+                    <div class="h-6 w-24 animate-pulse rounded bg-primary/10"></div>
+                    <div class="h-6 w-28 animate-pulse rounded bg-primary/10"></div>
+                </div>
+                <div class="z-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div
+                        v-for="i in 4"
+                        :key="i"
+                        class="h-52 animate-pulse rounded-xl border border-border/10 bg-card/30"
+                    ></div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Real Content -->
+        <template v-if="isBooted">
+            <div
+                ref="container"
+                class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
+            >
             <!-- Decorative Orbs -->
             <div
                 class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
@@ -1136,6 +1165,7 @@ declare const route: any;
                 </div>
             </Transition>
         </div>
+        </template>
     </AppLayout>
 </template>
 

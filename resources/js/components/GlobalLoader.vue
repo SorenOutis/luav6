@@ -1,55 +1,52 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import gsap from 'gsap';
-import { Terminal, Command } from 'lucide-vue-next';
-import {
-    ref,
-    onMounted,
-    onBeforeUnmount,
-    watch,
-    computed
-    
-} from 'vue';
-import type {VNodeRef} from 'vue';
-import { useLoader, LOADER_MESSAGES } from '@/composables/useLoader';
+import { Command } from 'lucide-vue-next';
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import { useLoader } from '@/composables/useLoader';
 
 const props = withDefaults(
     defineProps<{
         show: boolean;
-        title?: string;
         minDisplayMs?: number;
     }>(),
     {
-        title: 'KOAMISHIN.COM',
         minDisplayMs: 600,
     },
 );
 
 const { pendingHide, hide, message } = useLoader();
 
-const DEV = import.meta.env.DEV;
-const log = (...args: unknown[]) => {
-    if (DEV) console.log(...args);
-};
+const page = usePage();
+const branding = computed(() => {
+    const b = (page.props as any).schoolBranding as
+        | {
+              name?: string;
+              tagline?: string;
+              logoUrl?: string | null;
+              accentColor?: string;
+          }
+        | undefined;
+    return b ?? {};
+});
+const brandName = computed(() => branding.value.name || 'LSI Engine');
+const brandLogoUrl = computed(() => branding.value.logoUrl || null);
 
 const loaderContainer = ref<HTMLElement | null>(null);
-const structuralLines = ref<HTMLElement[]>([]);
-const letterEls = ref<HTMLElement[]>([]);
+const contentWrap = ref<HTMLElement | null>(null);
 const progress = ref(0);
 
-const isTerminating = computed(
-    () => message.value === LOADER_MESSAGES.TERMINATING,
-);
-const titleChars = computed(() => Array.from(props.title));
+const isTerminating = computed(() => {
+    const m = message.value.toLowerCase();
+    return m.includes('signing out') || m.includes('terminating');
+});
 
-// Reduced-motion preference
 const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-// Gates
 let progressDone = false;
 let shownAt = 0;
-let entranceTl: gsap.core.Timeline | null = null;
 const progressProxy = { val: 0 };
 
 const setInertOnSiblings = (active: boolean) => {
@@ -67,35 +64,19 @@ const setInertOnSiblings = (active: boolean) => {
     }
 };
 
-const setStructuralLineRef: VNodeRef = (el) => {
-    if (el instanceof HTMLElement && !structuralLines.value.includes(el)) {
-        structuralLines.value.push(el);
-    }
-};
-
 const tryExit = () => {
-    log(
-        `[GlobalLoader] tryExit. progressDone: ${progressDone}, pendingHide: ${pendingHide.value}`,
-    );
     if (!(progressDone && pendingHide.value)) return;
-
     const elapsed = performance.now() - shownAt;
     const wait = Math.max(0, props.minDisplayMs - elapsed);
-    if (wait > 0) {
-        setTimeout(startExit, wait);
-    } else {
-        startExit();
-    }
+    setTimeout(startExit, wait > 0 ? wait : 0);
 };
 
 onMounted(() => {
-    letterEls.value = [];
-    gsap.set(loaderContainer.value, { y: '-100%', display: 'none' });
+    gsap.set(loaderContainer.value, { autoAlpha: 0, display: 'none' });
     if (props.show) startEntrance();
 });
 
 onBeforeUnmount(() => {
-    entranceTl?.kill();
     gsap.killTweensOf(progressProxy);
     gsap.killTweensOf(loaderContainer.value);
     setInertOnSiblings(false);
@@ -104,103 +85,42 @@ onBeforeUnmount(() => {
 watch(
     () => props.show,
     (newVal) => {
-        log('[GlobalLoader] show ->', newVal);
         if (newVal) {
             startEntrance();
         } else if (
             loaderContainer.value &&
-            loaderContainer.value.style.display !== 'none'
+            getComputedStyle(loaderContainer.value).display !== 'none'
         ) {
-            log('[GlobalLoader] forcing exit');
             startExit(true);
         }
     },
 );
 
 const startEntrance = () => {
-    log('[GlobalLoader] Entrance');
-
-    // Kill any previous tweens/timelines to avoid overlapping state
-    entranceTl?.kill();
     gsap.killTweensOf(progressProxy);
     gsap.killTweensOf(loaderContainer.value);
 
-    // Reset state (NOT the ref arrays — Vue only re-populates function refs on re-render)
     progressDone = false;
     progress.value = 0;
     progressProxy.val = 0;
     shownAt = performance.now();
 
-    const tl = gsap.timeline();
-    entranceTl = tl;
-
-    gsap.set(loaderContainer.value, { display: 'flex', y: '0%', opacity: 1 });
+    gsap.set(loaderContainer.value, { display: 'flex', autoAlpha: 1 });
     setInertOnSiblings(true);
 
-    if (prefersReducedMotion) {
-        gsap.set('.loader-reveal', { y: 0, opacity: 1 });
-        gsap.set(structuralLines.value, { scaleX: 1, scaleY: 1 });
-        gsap.set(letterEls.value, { y: '0%', opacity: 1 });
-    } else {
-        gsap.set('.loader-reveal', { y: 20, opacity: 0 });
-        gsap.set(structuralLines.value, { scaleX: 0, scaleY: 0 });
-        if (!isTerminating.value) {
-            gsap.set(letterEls.value, { y: '110%', opacity: 0 });
-        }
-
-        if (isTerminating.value) {
-            tl.to(structuralLines.value, {
-                scaleX: 1,
-                scaleY: 1,
-                stagger: 0.06,
-                duration: 0.35,
-                ease: 'power2.out',
-            }).to(
-                '.loader-reveal',
-                {
-                    y: 0,
-                    opacity: 1,
-                    stagger: 0.06,
-                    duration: 0.35,
-                    ease: 'power2.out',
-                },
-                '-=0.2',
-            );
-        } else {
-            tl.to(structuralLines.value, {
-                scaleX: 1,
-                scaleY: 1,
-                stagger: 0.1,
-                duration: 0.8,
-                ease: 'power4.inOut',
-            })
-                .to(
-                    letterEls.value,
-                    {
-                        y: '0%',
-                        opacity: 1,
-                        stagger: 0.06,
-                        duration: 0.9,
-                        ease: 'expo.out',
-                    },
-                    '-=0.3',
-                )
-                .to(
-                    '.loader-reveal',
-                    {
-                        y: 0,
-                        opacity: 1,
-                        stagger: 0.1,
-                        duration: 0.8,
-                        ease: 'expo.out',
-                    },
-                    '-=0.4',
-                );
-        }
+    // Entrance: fade + slight slide up
+    if (contentWrap.value) {
+        gsap.set(contentWrap.value, { y: 16, opacity: 0 });
+        gsap.to(contentWrap.value, {
+            y: 0,
+            opacity: 1,
+            duration: prefersReducedMotion ? 0.3 : 0.6,
+            ease: 'power2.out',
+        });
     }
 
-    // Realistic progress: fast to 70, slow to 95, jump to 100 on pendingHide.
-    const duration = prefersReducedMotion ? 0.6 : 2.2;
+    // Realistic progress: fast to 70, slow to 95, jump to 100 on pendingHide
+    const duration = prefersReducedMotion ? 0.6 : 2.0;
     gsap.to(progressProxy, {
         val: pendingHide.value ? 100 : 95,
         duration,
@@ -212,11 +132,9 @@ const startEntrance = () => {
             if (pendingHide.value) {
                 progress.value = 100;
                 progressProxy.val = 100;
-                log('[GlobalLoader] progress 100%');
                 progressDone = true;
                 tryExit();
             } else {
-                // Wait for pendingHide, then jump to 100
                 const stopWatch = watch(
                     pendingHide,
                     (v) => {
@@ -242,35 +160,22 @@ const startEntrance = () => {
     });
 };
 
-const startExit = (fast: boolean = false) => {
-    log(`[GlobalLoader] Exit (${fast ? 'FAST' : 'NORMAL'})`);
-
-    if (fast) {
-        gsap.killTweensOf(progressProxy);
-        progress.value = 100;
-        progressProxy.val = 100;
-    }
-
+const startExit = (fast = false) => {
     gsap.to(loaderContainer.value, {
-        y: '-100%',
-        duration: prefersReducedMotion ? 0.2 : fast ? 0.6 : 1.2,
-        ease: fast ? 'expo.in' : 'expo.inOut',
-        delay: fast || prefersReducedMotion ? 0 : 0.4,
+        autoAlpha: 0,
+        y: -8,
+        duration: prefersReducedMotion ? 0.15 : fast ? 0.3 : 0.5,
+        ease: 'power2.in',
         onComplete: () => {
-            log('[GlobalLoader] Exit complete');
-            gsap.set(loaderContainer.value, { display: 'none' });
+            gsap.set(loaderContainer.value, { display: 'none', y: 0 });
             setInertOnSiblings(false);
             hide();
         },
     });
 };
 
-// Gate 2: server signals done
 watch(pendingHide, (isPending) => {
-    if (isPending) {
-        log('[GlobalLoader] Server done');
-        tryExit();
-    }
+    if (isPending) tryExit();
 });
 </script>
 
@@ -281,138 +186,82 @@ watch(pendingHide, (isPending) => {
         aria-live="polite"
         aria-busy="true"
         :aria-label="`${message} — ${progress}%`"
-        class="global-loader fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
+        class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background font-sans text-foreground"
         style="display: none"
     >
-        <!-- Structural Grid Background -->
-        <div
-            class="pointer-events-none absolute inset-0 z-0 opacity-[0.03] dark:opacity-[0.06]"
-            aria-hidden="true"
-        >
-            <div
-                class="absolute inset-0"
-                style="
-                    background-image:
-                        linear-gradient(
-                            var(--color-border) 1px,
-                            transparent 1px
-                        ),
-                        linear-gradient(
-                            90deg,
-                            var(--color-border) 1px,
-                            transparent 1px
-                        );
-                    background-size: 80px 80px;
-                "
-            ></div>
-        </div>
-
-        <!-- Structural Frame Lines -->
-        <div
-            :ref="setStructuralLineRef"
-            aria-hidden="true"
-            class="fixed top-0 bottom-0 left-1/2 z-0 w-px origin-top -translate-x-1/2 bg-border/20"
-        ></div>
-        <div
-            :ref="setStructuralLineRef"
-            aria-hidden="true"
-            class="fixed top-1/2 right-0 left-0 z-0 h-px origin-left -translate-y-1/2 bg-border/20"
-        ></div>
-
-        <main class="relative z-10 flex flex-col items-center gap-12 px-6">
-            <!-- Monolithic Branding -->
-            <div class="flex flex-col items-center">
-                <h1
-                    v-if="!isTerminating"
-                    :aria-label="title"
-                    class="flex items-end overflow-hidden text-[12vw] leading-none font-black tracking-[-0.04em] uppercase select-none md:text-8xl lg:text-[10rem]"
-                >
-                    <span
-                        v-for="(char, i) in titleChars"
-                        :key="i"
-                        :ref="
-                            (el) => {
-                                if (el) letterEls[i] = el as HTMLElement;
-                            }
-                        "
-                        aria-hidden="true"
-                        class="loader-letter inline-block"
-                        >{{ char }}</span
-                    >
-                </h1>
+        <div ref="contentWrap" class="flex flex-col items-center gap-8 px-6">
+            <!-- Logo + Name -->
+            <div class="flex items-center gap-5">
                 <div
-                    v-else
-                    aria-hidden="true"
-                    class="h-[12vw] min-h-[72px] md:h-28 lg:h-32"
-                ></div>
+                    class="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-foreground/5"
+                >
+                    <img
+                        v-if="brandLogoUrl"
+                        :src="brandLogoUrl"
+                        :alt="`${brandName} logo`"
+                        class="h-full w-full rounded-2xl object-cover"
+                    />
+                    <Command v-else class="h-7 w-7" />
+                </div>
+                <div class="flex flex-col leading-none">
+                    <span
+                        class="max-w-[14rem] truncate text-xl font-black tracking-[-0.02em] text-foreground uppercase"
+                    >
+                        {{ brandName }}
+                    </span>
+                    <span
+                        v-if="branding.tagline"
+                        class="mt-1 max-w-[14rem] truncate text-[11px] font-bold tracking-widest text-muted-foreground/40 uppercase"
+                    >
+                        {{ branding.tagline }}
+                    </span>
+                </div>
             </div>
 
-            <!-- Initialization Status -->
-            <div class="flex w-full max-w-xs flex-col items-center gap-6">
+            <!-- Loading Status -->
+            <div class="flex w-64 flex-col items-center gap-4">
                 <div
-                    class="loader-reveal flex w-full items-center justify-between text-[9px] font-black tracking-[0.4em] text-muted-foreground/60 uppercase"
+                    class="flex w-full items-center justify-between text-xs font-medium text-muted-foreground/60"
                 >
                     <span>{{ message }}</span>
-                    <span aria-hidden="true">{{ progress }}%</span>
+                    <span class="tabular-nums">{{ progress }}%</span>
                 </div>
 
+                <!-- Progress bar -->
                 <div
-                    class="loader-reveal h-px w-full overflow-hidden bg-border/20"
+                    class="h-1 w-full overflow-hidden rounded-full bg-border/30"
                     role="progressbar"
                     :aria-valuenow="progress"
                     aria-valuemin="0"
                     aria-valuemax="100"
                 >
                     <div
-                        class="loader-bar h-full bg-primary"
+                        class="h-full rounded-full bg-primary transition-[width] duration-200"
                         :style="{ width: `${progress}%` }"
                     ></div>
                 </div>
 
-                <div
-                    class="loader-reveal flex items-center gap-3 opacity-30"
-                    aria-hidden="true"
-                >
+                <!-- Subtle pulse dot -->
+                <div class="flex items-center gap-2">
                     <div
-                        class="h-1 w-1 animate-pulse rounded-full bg-primary"
+                        class="h-1.5 w-1.5 animate-pulse rounded-full bg-primary/60"
                     ></div>
                     <span
-                        class="animate-pulse text-[8px] font-black tracking-[0.5em] uppercase"
+                        class="text-[10px] font-medium tracking-widest text-muted-foreground/30 uppercase"
                     >
                         {{
                             isTerminating
-                                ? 'Safely Disconnecting Active Node...'
-                                : 'Establishing Node Connectivity...'
+                                ? 'Cleaning up...'
+                                : 'Loading...'
                         }}
                     </span>
                 </div>
             </div>
-        </main>
-
-        <!-- Environment Metadata Footer -->
-        <div
-            class="loader-reveal fixed bottom-12 left-1/2 flex -translate-x-1/2 items-center gap-8 text-[9px] font-bold tracking-[0.3em] uppercase opacity-20"
-            aria-hidden="true"
-        >
-            <span class="flex items-center gap-2"
-                ><Terminal class="h-3 w-3" /> System_Root</span
-            >
-            <span class="flex items-center gap-2"
-                ><Command class="h-3 w-3" /> Core_v6.4</span
-            >
         </div>
     </div>
 </template>
 
 <style scoped>
-.global-loader,
-.loader-letter,
-.loader-reveal {
-    will-change: transform, opacity;
-}
-.loader-bar {
-    will-change: width;
-}
 @media (prefers-reduced-motion: reduce) {
     .animate-pulse {
         animation: none !important;

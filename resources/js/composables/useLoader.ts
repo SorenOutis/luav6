@@ -1,8 +1,8 @@
 import { reactive, toRefs } from 'vue';
 
 export const LOADER_MESSAGES = {
-    INITIALIZING: 'INITIALIZING',
-    TERMINATING: 'TERMINATING SESSION',
+    INITIALIZING: 'Signing in...',
+    TERMINATING: 'Signing out...',
 } as const;
 
 export type LoaderMessage =

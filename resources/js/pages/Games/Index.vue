@@ -14,6 +14,7 @@ import {
 import { onMounted, ref, watch } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 const { isVisible: isLoaderVisible } = useLoader();
@@ -114,10 +115,54 @@ onMounted(() => {
 <template>
     <Head title="Games" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            ref="container"
-            class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
-        >
+        <!-- Skeleton Loading State -->
+        <template v-if="!isBooted">
+            <div class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10">
+                <PageSkeleton
+                    :hero="true"
+                    :subtitle="true"
+                    :actions="1"
+                    :count="0"
+                    variant="minimal"
+                    wrapperClass="z-10 mb-4"
+                />
+                <div class="z-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:col-span-2">
+                        <div
+                            v-for="i in 4"
+                            :key="i"
+                            class="flex flex-col overflow-hidden rounded-xl border border-border/10 bg-card/30"
+                        >
+                            <div class="h-44 animate-pulse bg-primary/10"></div>
+                            <div class="flex flex-col gap-3 p-5">
+                                <div class="h-4 w-3/4 animate-pulse rounded bg-primary/10"></div>
+                                <div class="h-3 w-full animate-pulse rounded bg-primary/10"></div>
+                                <div class="h-3 w-2/3 animate-pulse rounded bg-primary/10"></div>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <div class="flex gap-4">
+                                        <div class="h-8 w-16 animate-pulse rounded bg-primary/10"></div>
+                                        <div class="h-8 w-16 animate-pulse rounded bg-primary/10"></div>
+                                    </div>
+                                    <div class="h-8 w-8 animate-pulse rounded-lg bg-primary/10"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="h-64 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
+                        <div class="h-52 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
+                        <div class="h-32 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Real Content -->
+        <template v-if="isBooted">
+            <div
+                ref="container"
+                class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
+            >
             <!-- Decorative Orbs -->
             <div
                 class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
@@ -652,5 +697,6 @@ onMounted(() => {
                 </aside>
             </div>
         </div>
+        </template>
     </AppLayout>
 </template>

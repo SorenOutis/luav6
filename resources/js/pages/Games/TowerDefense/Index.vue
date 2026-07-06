@@ -16,6 +16,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 
 const { isVisible: isLoaderVisible } = useLoader();
 const isBooted = ref(false);
@@ -161,10 +162,73 @@ const handleMouseMove = (e: MouseEvent) => {
 <template>
     <Head title="Tower Defense" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            ref="container"
-            class="relative mx-auto flex h-full max-w-[1400px] flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
-        >
+        <!-- Skeleton Loading State -->
+        <template v-if="!isBooted">
+            <div class="relative mx-auto flex h-full max-w-[1400px] flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10">
+                <PageSkeleton
+                    :hero="true"
+                    :subtitle="true"
+                    :actions="1"
+                    :count="0"
+                    variant="minimal"
+                    wrapperClass="z-10 mb-4"
+                />
+                <div class="z-10 grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <div
+                        v-for="i in 4"
+                        :key="i"
+                        class="flex flex-col gap-2 rounded-xl border border-border/10 bg-card/30 p-4"
+                    >
+                        <div class="h-3 w-16 animate-pulse rounded bg-primary/10"></div>
+                        <div class="h-7 w-20 animate-pulse rounded bg-primary/10"></div>
+                    </div>
+                </div>
+                <div class="z-10 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
+                        <div
+                            v-for="i in 4"
+                            :key="i"
+                            class="flex flex-col gap-4 rounded-xl border border-border/10 bg-card/30 p-5"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div class="h-11 w-11 animate-pulse rounded-xl bg-primary/10"></div>
+                                <div class="flex flex-1 flex-col gap-1.5">
+                                    <div class="h-4 w-32 animate-pulse rounded bg-primary/10"></div>
+                                    <div class="h-3 w-20 animate-pulse rounded bg-primary/10"></div>
+                                </div>
+                                <div class="flex gap-1">
+                                    <div
+                                        v-for="s in 3"
+                                        :key="s"
+                                        class="h-3 w-3 animate-pulse rounded-sm bg-primary/10"
+                                    ></div>
+                                </div>
+                            </div>
+                            <div class="h-8 w-full animate-pulse rounded bg-primary/10"></div>
+                            <div class="flex items-center justify-between border-t border-border/10 pt-4">
+                                <div class="flex gap-4">
+                                    <div class="h-6 w-16 animate-pulse rounded bg-primary/10"></div>
+                                    <div class="h-6 w-12 animate-pulse rounded bg-primary/10"></div>
+                                </div>
+                                <div class="h-8 w-8 animate-pulse rounded-lg bg-primary/10"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-6">
+                        <div class="h-64 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
+                        <div class="h-56 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
+                        <div class="h-32 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- Real Content -->
+        <template v-if="isBooted">
+            <div
+                ref="container"
+                class="relative mx-auto flex h-full max-w-[1400px] flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
+            >
             <!-- Decorative Orbs -->
             <div
                 class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
@@ -832,5 +896,6 @@ const handleMouseMove = (e: MouseEvent) => {
                 </aside>
             </div>
         </div>
+        </template>
     </AppLayout>
 </template>

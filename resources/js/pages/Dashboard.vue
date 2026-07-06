@@ -37,6 +37,7 @@ const handleGlobalMouseMove = (e: MouseEvent) => {
 import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';
+import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton.vue';
 import DashboardStats from '@/components/dashboard/DashboardStats.vue';
 import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
 import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
@@ -716,134 +717,140 @@ const handleLogout = () => {
                 aria-hidden="true"
             ></div>
 
-            <!-- Hero Banner Section -->
-            <Motion
-                :initial="{ opacity: 0, y: 30 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :transition="{
-                    duration: 1,
-                    ease: [0.16, 1, 0.3, 1],
-                    delay: 0.1,
-                }"
-                class="relative space-y-6"
-            >
-                <DashboardHero
-                    class="dashboard-hero"
-                    :user-name="userName"
-                    :user-avatar="userAvatar"
-                    :user-stats="userStats"
-                    :announcements="announcements"
-                    :total-x-p-progress="totalXPProgress"
-                    :time-based-greeting="personalizedGreeting"
-                    :greeting-theme="greetingTheme"
-                    :status-color="statusColor"
-                    :accent-badge="accentBadge"
-                    :smarter-status="smarterStatus"
-                    :is-refreshing="isRefreshing"
-                    :last-sync-time="lastSyncTime"
-                    @close-announcement="announcements = []"
-                    @refresh="manualRefresh"
-                />
-            </Motion>
+            <!-- Skeleton loader (shown while booting) -->
+            <DashboardSkeleton v-if="!isBooted" />
 
-            <!-- Header Section with User Stats -->
-            <Motion
-                :initial="{ opacity: 0, y: 20 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :transition="{
-                    duration: 1,
-                    ease: [0.16, 1, 0.3, 1],
-                    delay: 0.2,
-                }"
-            >
-                <DashboardStats
-                    class="dashboard-stats"
-                    :user-stats="userStats"
-                    :streak="streak"
-                    :progress-percentage="progressPercentage"
-                />
-            </Motion>
-
-            <!-- Main Content Grid -->
-            <Motion
-                :initial="{ opacity: 0, y: 40 }"
-                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
-                :in-view-options="{ once: true, margin: '-50px' }"
-                :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
-                class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
-            >
-                <!-- Main Section: Leaderboard + Mission Control -->
-                <div class="min-w-0 space-y-8 lg:col-span-2">
-                    <ImprovedLeaderboard
-                        class="dashboard-leaderboard"
-                        :section-leaderboards="sectionLeaderboards"
-                        :active-season-name="activeSeason?.name"
-                    />
-
-                    <CourseAssignmentList
-                        :courses="courses"
-                        :assignments="assignments"
-                        @course-click="(c) => console.log('Course:', c)"
-                        @assignment-click="(a) => console.log('Assignment:', a)"
-                    />
-                </div>
-
-                <!-- Sidebar - Season / Activity Pulse / Notifications & Achievements -->
-                <div
-                    class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
+            <!-- Real content (shown after booted) -->
+            <template v-if="isBooted">
+                <!-- Hero Banner Section -->
+                <Motion
+                    :initial="{ opacity: 0, y: 30 }"
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="{
+                        duration: 1,
+                        ease: [0.16, 1, 0.3, 1],
+                        delay: 0.1,
+                    }"
+                    class="relative space-y-6"
                 >
-                    <SeasonProgressBand
-                        :name="activeSeason?.name ?? null"
-                        :start-date="activeSeason?.startDate ?? null"
-                        :end-date="activeSeason?.endDate ?? null"
-                        :xp-earned="userStats.currentXP"
-                        :xp-target="seasonalXpTarget"
+                    <DashboardHero
+                        class="dashboard-hero"
+                        :user-name="userName"
+                        :user-avatar="userAvatar"
+                        :user-stats="userStats"
+                        :announcements="announcements"
+                        :total-x-p-progress="totalXPProgress"
+                        :time-based-greeting="personalizedGreeting"
+                        :greeting-theme="greetingTheme"
+                        :status-color="statusColor"
+                        :accent-badge="accentBadge"
+                        :smarter-status="smarterStatus"
+                        :is-refreshing="isRefreshing"
+                        :last-sync-time="lastSyncTime"
+                        @close-announcement="announcements = []"
+                        @refresh="manualRefresh"
                     />
+                </Motion>
 
-                    <!-- Streak Heatmap Card (compact) -->
-                    <SpotlightCard
-                        customSize
-                        glowColor="blue"
-                        className="surface-card p-0 w-full min-w-0"
+                <!-- Header Section with User Stats -->
+                <Motion
+                    :initial="{ opacity: 0, y: 20 }"
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="{
+                        duration: 1,
+                        ease: [0.16, 1, 0.3, 1],
+                        delay: 0.2,
+                    }"
+                >
+                    <DashboardStats
+                        class="dashboard-stats"
+                        :user-stats="userStats"
+                        :streak="streak"
+                        :progress-percentage="progressPercentage"
+                    />
+                </Motion>
+
+                <!-- Main Content Grid -->
+                <Motion
+                    :initial="{ opacity: 0, y: 40 }"
+                    :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :in-view-options="{ once: true, margin: '-50px' }"
+                    :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
+                    class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
+                >
+                    <!-- Main Section: Leaderboard + Mission Control -->
+                    <div class="min-w-0 space-y-8 lg:col-span-2">
+                        <ImprovedLeaderboard
+                            class="dashboard-leaderboard"
+                            :section-leaderboards="sectionLeaderboards"
+                            :active-season-name="activeSeason?.name"
+                        />
+
+                        <CourseAssignmentList
+                            :courses="courses"
+                            :assignments="assignments"
+                            @course-click="(c) => console.log('Course:', c)"
+                            @assignment-click="(a) => console.log('Assignment:', a)"
+                        />
+                    </div>
+
+                    <!-- Sidebar - Season / Activity Pulse / Notifications & Achievements -->
+                    <div
+                        class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
                     >
-                        <div
-                            class="relative flex h-full w-full flex-col p-4 sm:p-5"
+                        <SeasonProgressBand
+                            :name="activeSeason?.name ?? null"
+                            :start-date="activeSeason?.startDate ?? null"
+                            :end-date="activeSeason?.endDate ?? null"
+                            :xp-earned="userStats.currentXP"
+                            :xp-target="seasonalXpTarget"
+                        />
+
+                        <!-- Streak Heatmap Card (compact) -->
+                        <SpotlightCard
+                            customSize
+                            glowColor="blue"
+                            className="surface-card p-0 w-full min-w-0"
                         >
                             <div
-                                class="relative z-10 mb-4 flex items-center justify-between"
+                                class="relative flex h-full w-full flex-col p-4 sm:p-5"
                             >
-                                <div>
-                                    <h3
-                                        class="flex items-center gap-2 text-sm font-bold"
-                                    >
-                                        <Calendar
-                                            class="h-4 w-4 text-primary"
-                                        />
-                                        Activity Pulse
-                                    </h3>
-                                    <p
-                                        class="mt-0.5 text-[10px] text-muted-foreground"
-                                    >
-                                        Consistency builds momentum.
-                                    </p>
+                                <div
+                                    class="relative z-10 mb-4 flex items-center justify-between"
+                                >
+                                    <div>
+                                        <h3
+                                            class="flex items-center gap-2 text-sm font-bold"
+                                        >
+                                            <Calendar
+                                                class="h-4 w-4 text-primary"
+                                            />
+                                            Activity Pulse
+                                        </h3>
+                                        <p
+                                            class="mt-0.5 text-[10px] text-muted-foreground"
+                                        >
+                                            Consistency builds momentum.
+                                        </p>
+                                    </div>
                                 </div>
+                                <StreakHeatmap :login-dates="streak.loginDates" />
                             </div>
-                            <StreakHeatmap :login-dates="streak.loginDates" />
-                        </div>
-                    </SpotlightCard>
+                        </SpotlightCard>
 
-                    <DashboardSidebar
-                        :unread-notification-count="3"
-                        :badges="userBadges"
-                        :weekly-x-p="userStats.currentXP"
-                        :weekly-goal="1000"
-                        :upcoming-exams="upcomingExams"
-                        :next-up-item="nextUpItem"
-                        :profile-url="`/u/${page.props.auth.user?.id}`"
-                        @quick-action="handleQuickAction"
-                    />
-                </div>
-            </Motion>
+                        <DashboardSidebar
+                            :unread-notification-count="3"
+                            :badges="userBadges"
+                            :weekly-x-p="userStats.currentXP"
+                            :weekly-goal="1000"
+                            :upcoming-exams="upcomingExams"
+                            :next-up-item="nextUpItem"
+                            :profile-url="`/u/${page.props.auth.user?.id}`"
+                            @quick-action="handleQuickAction"
+                        />
+                    </div>
+                </Motion>
+            </template>
         </div>
 
         <SectionSelectionModal

@@ -65,9 +65,9 @@ router.on('start', (event) => {
     );
 
     if (isAuthFlow) {
-        showDeferred('AUTHENTICATING');
+        showDeferred('Signing in...');
     } else if (isLogout) {
-        showDeferred('TERMINATING SESSION');
+        showDeferred('Signing out...');
     }
 });
 
