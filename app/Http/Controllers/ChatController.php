@@ -14,13 +14,13 @@ use Laravel\Ai\Messages\UserMessage;
 
 class ChatController extends Controller
 {
-    protected string $sessionKey = 'koa_chat_history';
+    protected string $sessionKey = 'echo_chat_history';
 
     public function __invoke(Request $request)
     {
         if (! Setting::get('ai_chat_enabled', true)) {
             return response()->json([
-                'response' => Setting::get('ai_chat_maintenance_message', 'KOA is currently under maintenance.'),
+                'response' => Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.'),
             ], 503);
         }
 
@@ -93,7 +93,7 @@ class ChatController extends Controller
             Log::error('Chat Controller Error: '.$e->getMessage());
 
             return response()->json([
-                'response' => 'KOA is currently having technical difficulties. Please try again later.',
+                'response' => 'Echo is currently having technical difficulties. Please try again later.',
             ], 500);
         }
     }

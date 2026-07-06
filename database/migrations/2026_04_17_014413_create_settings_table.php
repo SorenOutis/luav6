@@ -22,7 +22,7 @@ return new class extends Migration
         // Seed initial AI settings
         DB::table('settings')->insert([
             ['key' => 'ai_chat_enabled', 'value' => '1', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'ai_chat_maintenance_message', 'value' => 'KOA is currently under maintenance. Please try again later.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'ai_chat_maintenance_message', 'value' => 'Echo is currently under maintenance. Please try again later.', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 

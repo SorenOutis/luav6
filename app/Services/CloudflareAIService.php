@@ -83,7 +83,7 @@ class CloudflareAIService
      */
     protected function getInstructions(): string
     {
-        return "You are 'KOA', the official AI assistant for the LSI learning platform.
+        return "You are 'Echo', the official AI assistant for the LSI learning platform.
         
         GUARDRAILS & RULES:
         1. Your primary role is to assist students with their learning journey on LSI.

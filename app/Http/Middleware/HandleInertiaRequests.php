@@ -68,7 +68,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'aiChat' => [
                 'enabled' => (bool) Setting::get('ai_chat_enabled', true),
-                'maintenanceMessage' => Setting::get('ai_chat_maintenance_message', 'KOA is currently under maintenance. Please try again later.'),
+                'maintenanceMessage' => Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance. Please try again later.'),
             ],
             'studentPageControls' => fn () => StudentPageRegistry::sharedForPath($request->path()),
             'schoolBranding' => fn () => [
