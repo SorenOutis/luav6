@@ -17,6 +17,12 @@ import {
     Lock,
     Flag,
     Zap,
+    Play,
+    Info,
+    AlertCircle,
+    Maximize,
+    Trophy,
+    HelpCircle,
 } from 'lucide-vue-next';
 import {
     onMounted,
@@ -1306,7 +1312,7 @@ const onDragEnd = () => {
                             <div
                                 class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
                             ></div>
-                            SYNCED_{{ lastSavedAt.replace(/:/g, '_') }}
+                            {{ lastSavedAt }}
                         </div>
 
                         <!-- Pace Indicator -->
@@ -1320,7 +1326,7 @@ const onDragEnd = () => {
                             <Zap
                                 class="h-4 w-4 fill-amber-400/20 transition-transform group-hover/timer:scale-110"
                             />
-                            <span class="hidden lg:inline">EST_FINISH:</span>
+                            <span class="hidden lg:inline"></span>
                             {{ estimatedFinishMinutes }}M
                         </div>
 
@@ -1376,36 +1382,21 @@ const onDragEnd = () => {
                         ease: [0.16, 1, 0.3, 1],
                         delay: 0.1,
                     }"
-                    class="exam-hero group/hero relative overflow-hidden border border-border bg-card p-6 shadow-2xl md:p-8"
-                    @mousemove="handleMouseMove"
+                    class="exam-hero relative rounded-lg border border-border bg-card p-6 shadow-sm md:p-8"
                 >
-                    <!-- Futuristic Corner Brackets -->
-                    <div
-                        class="exam-bracket pointer-events-none absolute top-0 left-0 h-6 w-6 border-t-2 border-l-2 border-foreground"
-                    ></div>
-                    <div
-                        class="exam-bracket pointer-events-none absolute right-0 bottom-0 h-6 w-6 border-r-2 border-b-2 border-foreground"
-                    ></div>
 
                     <div
                         class="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center"
                     >
                         <div class="max-w-3xl space-y-4">
                             <div class="flex items-center gap-4">
-                                <div
-                                    class="exam-tactical-mark exam-hero-mark flex h-12 w-12 shrink-0 rotate-45 items-center justify-center border-2 border-amber-500"
-                                >
-                                    <div
-                                        class="h-2 w-2 rotate-45 animate-pulse bg-amber-500"
-                                    ></div>
-                                </div>
-                                <div class="space-y-0.5">
+<div class="space-y-0.5">
                                     <span
-                                        class="exam-friendly-label font-mono text-[9px] font-black tracking-[0.4em] text-primary uppercase"
-                                        >Ready to begin</span
+                                        class="text-xs font-medium text-muted-foreground"
+                                        >Exam</span
                                     >
                                     <h1
-                                        class="text-3xl leading-[0.95] font-black tracking-tighter text-foreground uppercase italic md:text-5xl"
+                                        class="text-2xl font-bold tracking-tight text-foreground md:text-4xl"
                                     >
                                         {{
                                             selectedPart
@@ -1418,13 +1409,10 @@ const onDragEnd = () => {
 
                             <div
                                 v-if="!selectedPart"
-                                class="relative overflow-hidden border border-border/50 bg-muted/30 p-4 dark:bg-zinc-950/40"
+                                class="rounded-lg border border-border/40 bg-muted/20 p-4"
                             >
-                                <div
-                                    class="absolute top-0 left-0 h-full w-1 bg-amber-500/50"
-                                ></div>
-                                <p
-                                    class="text-[11px] leading-relaxed font-bold tracking-tight text-muted-foreground uppercase md:text-xs"
+<p
+                                    class="text-sm leading-relaxed text-muted-foreground"
                                 >
                                     {{
                                         exam.description ||
@@ -1432,7 +1420,7 @@ const onDragEnd = () => {
                                     }}
                                 </p>
                                 <div
-                                    class="mt-2 flex items-center gap-3 font-mono text-[9px] font-black tracking-widest text-foreground/40 uppercase"
+                                    class="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60"
                                 >
                                     <Calendar class="h-3.5 w-3.5" />
                                     {{ formatDateTime(exam.exam_date) }}
@@ -1447,8 +1435,8 @@ const onDragEnd = () => {
                                     class="h-4 w-4 text-emerald-500"
                                 />
                                 <span
-                                    class="font-mono text-[10px] font-black tracking-widest text-emerald-500 uppercase"
-                                    >ENCRYPTED_SYNC_{{
+                                    class="text-xs text-emerald-600"
+                                    >Auto-saved at {{
                                         lastSavedAt.replace(/:/g, '_')
                                     }}</span
                                 >
@@ -1457,26 +1445,19 @@ const onDragEnd = () => {
 
                         <!-- Stats Architecture -->
                         <div
-                            class="relative grid grid-cols-2 gap-4 border border-border/50 bg-muted/20 p-6 md:gap-6 lg:grid-cols-5 dark:bg-zinc-950/20"
+                            class="grid grid-cols-2 gap-4 rounded-lg border border-border/40 bg-muted/10 p-4 md:gap-6 lg:grid-cols-5"
                         >
-                            <!-- Stat Decoration -->
-                            <div
-                                class="absolute -top-1 -left-1 h-2 w-2 bg-primary"
-                            ></div>
-                            <div
-                                class="absolute -right-1 -bottom-1 h-2 w-2 bg-primary"
-                            ></div>
 
                             <div
                                 v-if="allPartsSubmitted"
                                 class="flex flex-col gap-1"
                             >
                                 <span
-                                    class="exam-friendly-label font-mono text-[8px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                    class="text-xs text-muted-foreground"
                                     >Score</span
                                 >
                                 <div
-                                    class="font-mono text-lg font-black text-primary tabular-nums"
+                                    class="text-lg font-semibold text-foreground tabular-nums"
                                 >
                                     {{ totalScore }}/{{ totalPossiblePoints }}
                                 </div>
@@ -1484,28 +1465,28 @@ const onDragEnd = () => {
 
                             <div class="flex flex-col gap-1">
                                 <span
-                                    class="exam-friendly-label font-mono text-[8px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                    class="text-xs text-muted-foreground"
                                     >Time Limit</span
                                 >
                                 <div class="flex items-baseline gap-1">
                                     <span
-                                        class="font-mono text-lg font-black text-foreground tabular-nums"
+                                        class="text-lg font-semibold text-foreground tabular-nums"
                                         >{{ exam.duration_minutes }}</span
                                     >
                                     <span
-                                        class="exam-friendly-label font-mono text-[8px] font-black text-primary uppercase"
-                                        >MIN</span
+                                        class="text-xs text-muted-foreground/60"
+                                        >min</span
                                     >
                                 </div>
                             </div>
 
                             <div class="flex flex-col gap-1">
                                 <span
-                                    class="exam-friendly-label font-mono text-[8px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                    class="text-xs text-muted-foreground"
                                     >Sections</span
                                 >
                                 <div
-                                    class="font-mono text-lg font-black text-foreground tabular-nums"
+                                    class="text-lg font-semibold text-foreground tabular-nums"
                                 >
                                     {{ exam.parts.length }}
                                 </div>
@@ -1513,11 +1494,11 @@ const onDragEnd = () => {
 
                             <div class="flex flex-col gap-1">
                                 <span
-                                    class="exam-friendly-label font-mono text-[8px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                    class="text-xs text-muted-foreground"
                                     >Questions</span
                                 >
                                 <div
-                                    class="font-mono text-lg font-black text-foreground tabular-nums"
+                                    class="text-lg font-semibold text-foreground tabular-nums"
                                 >
                                     {{ totalQuestions }}
                                 </div>
@@ -1534,7 +1515,7 @@ const onDragEnd = () => {
                                 "
                             >
                                 <span
-                                    class="font-mono text-[8px] font-black tracking-[0.3em] uppercase transition-colors"
+                                    class="text-[10px] font-medium transition-colors"
                                     :class="
                                         isDyslexiaFriendly
                                             ? 'text-primary'
@@ -1579,8 +1560,8 @@ const onDragEnd = () => {
                     <div class="space-y-2">
                         <div class="flex items-center justify-between px-1">
                             <span
-                                class="text-[9px] font-black tracking-[0.4em] text-primary/60 uppercase"
-                                >System Integrity</span
+                                class="text-xs text-muted-foreground/60"
+                                >Progress</span
                             >
                             <span class="text-[9px] font-black text-primary/60"
                                 >{{ Math.round(overallProgress) }}%
@@ -1591,7 +1572,7 @@ const onDragEnd = () => {
                             class="relative h-1 w-full overflow-hidden border border-primary/10 bg-muted/30"
                         >
                             <div
-                                class="h-full bg-primary/40 transition-all duration-1000 ease-out"
+                                class="h-full rounded-full bg-primary transition-all duration-1000 ease-out"
                                 :style="{ width: `${overallProgress}%` }"
                             ></div>
                         </div>
@@ -1613,15 +1594,15 @@ const onDragEnd = () => {
                         class="flex items-center justify-between"
                     >
                         <h2
-                            class="flex items-center gap-3 text-xl font-black tracking-tight uppercase italic"
+                            class="flex items-center gap-2 text-lg font-semibold"
                         >
-                            <Layers class="h-6 w-6 text-primary" />
-                            Exam Parts
+                            <Layers class="h-5 w-5 text-primary" />
+                            Parts
                         </h2>
                         <span
-                            class="rounded-none border border-border/50 bg-muted/50 px-4 py-1.5 font-mono text-xs font-black tracking-widest text-muted-foreground uppercase"
+                            class="rounded-lg border border-border/40 bg-muted/30 px-3 py-1 text-xs text-muted-foreground"
                         >
-                            {{ exam.parts.length }} Sections
+                            {{ exam.parts.length }} sections
                         </span>
                     </Motion>
 
@@ -1638,7 +1619,7 @@ const onDragEnd = () => {
                                 ease: [0.16, 1, 0.3, 1],
                                 delay: index * 0.05,
                             }"
-                            class="exam-part-card group/part relative flex flex-col justify-between overflow-hidden border border-border bg-card p-6 transition-all duration-500 dark:bg-zinc-900/40"
+                            class="exam-part-card group/part flex flex-col justify-between rounded-lg border border-border bg-card p-5 transition-all duration-500"
                             :class="[
                                 isPartSubmitted(part.id)
                                     ? 'opacity-80'
@@ -1649,9 +1630,8 @@ const onDragEnd = () => {
                                     ? 'border-primary/50 shadow-xl ring-2 shadow-primary/20 ring-primary'
                                     : '',
                             ]"
-                            @mousemove="handleMouseMove"
                         >
-                            <!-- Onboarding/Focus Highlight -->
+                            <!-- Onboarding -->
                             <div
                                 v-if="nextPartId === part.id"
                                 class="pointer-events-none absolute inset-0 z-0"
@@ -1660,35 +1640,20 @@ const onDragEnd = () => {
                                     class="absolute inset-0 animate-pulse bg-primary/5"
                                 ></div>
                                 <div
-                                    class="exam-recommended-tag absolute top-0 right-0 z-20 flex -skew-x-12 transform items-center gap-2 bg-primary px-4 py-1.5 text-[8px] font-black tracking-[0.3em] text-primary-foreground uppercase shadow-lg"
+                                    class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-[10px] font-medium text-primary-foreground shadow-sm"
                                 >
-                                    <div
-                                        class="h-1.5 w-1.5 animate-ping rounded-full bg-primary-foreground"
-                                    ></div>
-                                    <span
-                                        class="exam-friendly-label inline-block skew-x-12"
-                                        >Recommended</span
-                                    >
+                                    Recommended
                                 </div>
                             </div>
 
-                            <!-- Futuristic Corner Brackets -->
-                            <div
-                                class="pointer-events-none absolute top-0 left-0 h-4 w-4 border-t-2 border-l-2 border-foreground"
-                            ></div>
-                            <div
-                                class="pointer-events-none absolute right-0 bottom-0 h-4 w-4 border-r-2 border-b-2 border-foreground"
-                            ></div>
 
                             <!-- Top: Status & Metadata -->
                             <div class="relative z-10 flex flex-col gap-3">
                                 <div class="flex items-center justify-between">
                                     <div
-                                        class="exam-part-diamond flex h-10 w-10 rotate-45 items-center justify-center border border-amber-500/30 transition-colors group-hover/part:border-amber-500"
+                                        class="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/50 text-xs font-medium text-muted-foreground"
                                     >
-                                        <div
-                                            class="h-2 w-2 rotate-45 bg-amber-500"
-                                        ></div>
+                                        {{ index + 1 }}
                                     </div>
                                     <div
                                         v-if="isPartLocked(index)"
@@ -1700,9 +1665,8 @@ const onDragEnd = () => {
                                     </div>
                                     <div
                                         v-else-if="isPartSubmitted(part.id)"
-                                        class="exam-part-score-pill -skew-x-12 transform bg-emerald-500 px-3 py-2 font-mono text-xs font-black tracking-widest text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] dark:text-zinc-950"
+                                        class="rounded-md bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white"
                                     >
-                                        <span class="inline-block skew-x-12">
                                             {{
                                                 submissions[part.id]?.score ?? 0
                                             }}
@@ -1717,17 +1681,16 @@ const onDragEnd = () => {
                                                     0,
                                                 ) ?? 0
                                             }}
-                                        </span>
                                     </div>
                                 </div>
 
                                 <div class="space-y-1">
                                     <span
-                                        class="exam-friendly-label font-mono text-[10px] font-black tracking-[0.2em] text-primary uppercase"
+                                        class="text-xs font-medium text-primary"
                                         >Part {{ index + 1 }}</span
                                     >
                                     <h3
-                                        class="text-xl leading-none font-black tracking-tight text-foreground uppercase italic transition-colors group-hover/part:text-primary"
+                                        class="text-lg font-semibold text-foreground transition-colors group-hover/part:text-primary"
                                     >
                                         {{ part.title }}
                                     </h3>
@@ -1737,21 +1700,13 @@ const onDragEnd = () => {
                                 <div
                                     class="space-y-2 border border-border/50 bg-muted/30 p-4 dark:bg-zinc-950/40"
                                 >
-                                    <div
+                                    <span
                                         v-for="type in getQuestionTypes(part)"
                                         :key="type"
-                                        class="flex items-center gap-2.5"
+                                        class="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
                                     >
-                                        <span
-                                            class="text-[9px] font-black text-amber-500"
-                                            >[!]</span
-                                        >
-                                        <span
-                                            class="font-mono text-[9px] font-black tracking-widest text-muted-foreground uppercase"
-                                        >
-                                            {{ formatType(type) }}
-                                        </span>
-                                    </div>
+                                        {{ formatType(type) }}
+                                    </span>
                                 </div>
                             </div>
 
@@ -1759,17 +1714,17 @@ const onDragEnd = () => {
                             <div
                                 class="relative z-10 mt-6 flex items-center justify-between border-t border-border/10 pt-4"
                             >
-                                <div class="flex items-center gap-6 font-mono">
+                                <div class="flex items-center gap-6">
                                     <div class="flex items-center gap-2">
                                         <span
-                                            class="text-xs font-black text-primary"
+                                            class="text-sm font-semibold text-foreground"
                                             >{{
                                                 part.questions?.length ?? 0
                                             }}</span
                                         >
                                         <span
-                                            class="exam-friendly-label text-[9px] font-bold tracking-widest text-muted-foreground/40 uppercase"
-                                            >Questions</span
+                                            class="text-xs text-muted-foreground/60"
+                                            >questions</span
                                         >
                                     </div>
                                     <div class="flex items-center gap-2">
@@ -1789,8 +1744,8 @@ const onDragEnd = () => {
                                             }}</span
                                         >
                                         <span
-                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/40 uppercase"
-                                            >POINTS</span
+                                            class="text-xs text-muted-foreground/60"
+                                            >points</span
                                         >
                                     </div>
                                 </div>
@@ -1821,16 +1776,15 @@ const onDragEnd = () => {
                         :initial="{ opacity: 0, y: 10 }"
                         :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                         :transition="{ duration: 0.8, delay: 0.5 }"
-                        class="mt-2 flex items-start gap-3 rounded-xl border border-border/20 bg-muted/10 p-3"
+                        class="mt-2 flex items-start gap-2 rounded-lg border border-border/20 bg-muted/10 p-3"
                     >
                         <ListChecks
-                            class="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground/60"
+                            class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50"
                         />
                         <p
-                            class="text-[11px] leading-relaxed text-muted-foreground/70"
+                            class="text-xs leading-relaxed text-muted-foreground/70"
                         >
-                            Click <strong>START</strong> to begin. Sections
-                            unlock sequentially. Work is auto-saved locally.
+                            Parts unlock sequentially. Work is auto-saved locally.
                         </p>
                     </Motion>
                 </template>
@@ -1896,30 +1850,12 @@ const onDragEnd = () => {
                             <!-- Part Instructions -->
                             <div
                                 v-if="selectedPart!.instructions"
-                                class="exam-instruction-callout relative overflow-hidden rounded-none border-2 border-primary/30 bg-gradient-to-br from-amber-500/10 via-primary/10 to-primary/5 p-6 shadow-2xl shadow-primary/15"
+                                class="relative overflow-hidden rounded-lg border border-border/50 bg-muted/30 p-6"
                             >
-                                <!-- Animated gradient border effect -->
-                                <div
-                                    class="pointer-events-none absolute inset-0 animate-[shimmer_3s_linear_infinite] bg-[linear-gradient(90deg,transparent,var(--color-primary),transparent)] bg-[length:200%_100%] opacity-10"
-                                ></div>
-
-                                <!-- Corner decorations -->
-                                <div
-                                    class="absolute top-0 left-0 h-6 w-6 border-t-2 border-l-2 border-primary"
-                                ></div>
-                                <div
-                                    class="absolute top-0 right-0 h-6 w-6 border-t-2 border-r-2 border-primary"
-                                ></div>
-                                <div
-                                    class="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-primary"
-                                ></div>
-                                <div
-                                    class="absolute right-0 bottom-0 h-6 w-6 border-r-2 border-b-2 border-primary"
-                                ></div>
 
                                 <div class="relative flex items-start gap-5">
                                     <div
-                                        class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-none border-2 border-primary bg-primary shadow-lg shadow-primary/40"
+                                        class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10"
                                     >
                                         <FileText
                                             class="h-7 w-7 text-primary-foreground"
@@ -1927,18 +1863,12 @@ const onDragEnd = () => {
                                     </div>
                                     <div class="flex-1 space-y-2">
                                         <h4
-                                            class="flex items-center gap-3 text-[11px] font-black tracking-[0.4em] text-primary uppercase"
+                                            class="text-xs font-semibold tracking-wide text-foreground"
                                         >
-                                            <span
-                                                class="h-2 w-2 animate-pulse rounded-full bg-primary"
-                                            ></span>
-                                            Assessment Instructions
-                                            <span
-                                                class="h-2 w-2 animate-pulse rounded-full bg-primary"
-                                            ></span>
+                                            Instructions
                                         </h4>
                                         <p
-                                            class="text-base leading-relaxed font-black tracking-tight whitespace-pre-wrap text-foreground md:text-lg"
+                                            class="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap"
                                         >
                                             {{ selectedPart!.instructions }}
                                         </p>
@@ -1953,7 +1883,7 @@ const onDragEnd = () => {
                                     :key="qIndex"
                                     :id="`q-${qIndex}`"
                                     :class="[
-                                        'question-card relative flex flex-col gap-8 rounded-none border-t border-r border-b border-l-4 p-6 transition-all duration-500 md:p-8',
+                                        'question-card relative flex flex-col gap-6 rounded-lg border border-border/40 border-l-4 p-5 transition-all duration-500 md:p-6',
                                         getQuestionStatus(qIndex) === 'answered'
                                             ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
                                             : 'border-border/40 border-l-muted bg-card/40',
@@ -1962,10 +1892,6 @@ const onDragEnd = () => {
                                             : '',
                                     ]"
                                 >
-                                    <!-- Decorative elements -->
-                                    <div
-                                        class="absolute top-0 right-0 h-4 w-4 border-t-2 border-r-2 border-primary/20"
-                                    ></div>
 
                                     <!-- Question Content -->
                                     <div
@@ -1976,15 +1902,13 @@ const onDragEnd = () => {
                                             class="flex flex-shrink-0 items-center gap-4"
                                         >
                                             <div
-                                                class="exam-question-number flex h-14 w-14 rotate-45 items-center justify-center border-2 border-primary/40 bg-primary/5 text-xl font-black text-primary"
+                                                class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
                                             >
-                                                <span class="-rotate-45">{{
-                                                    qIndex + 1
-                                                }}</span>
+                                                {{ qIndex + 1 }}
                                             </div>
                                             <button
                                                 @click="toggleFlag(qIndex)"
-                                                class="exam-flag-btn flex h-10 w-10 items-center justify-center border border-border/40 transition-all duration-300 hover:border-amber-500/50 hover:bg-amber-500/10"
+                                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-border/40 transition-all hover:border-amber-500/50 hover:bg-amber-500/10"
                                                 :class="
                                                     flaggedQuestions.has(qIndex)
                                                         ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
@@ -2010,7 +1934,7 @@ const onDragEnd = () => {
                                                 class="flex items-center gap-3"
                                             >
                                                 <span
-                                                    class="border border-primary/20 bg-primary/10 px-2 py-0.5 text-[9px] font-black tracking-[0.3em] text-primary uppercase italic"
+                                                    class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
                                                 >
                                                     {{
                                                         formatType(
@@ -2019,7 +1943,7 @@ const onDragEnd = () => {
                                                     }}
                                                 </span>
                                                 <span
-                                                    class="exam-friendly-points text-[9px] font-black tracking-[0.3em] text-muted-foreground uppercase"
+                                                    class="text-xs text-muted-foreground"
                                                 >
                                                     {{
                                                         question.points ??
@@ -2037,7 +1961,7 @@ const onDragEnd = () => {
                                                 </span>
                                             </div>
                                             <p
-                                                class="text-lg leading-tight font-black tracking-tight whitespace-pre-wrap text-foreground/90 italic md:text-xl"
+                                                class="text-base leading-relaxed text-foreground whitespace-pre-wrap"
                                             >
                                                 {{ question.text }}
                                             </p>
@@ -2060,15 +1984,11 @@ const onDragEnd = () => {
                                                     option, oIndex
                                                 ) in question.options"
                                                 :key="option.text"
-                                                class="exam-answer-option group/option relative flex cursor-pointer items-center gap-4 overflow-hidden border border-border/60 bg-muted/20 px-6 py-4 transition-all duration-300 hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+                                                class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
                                             >
-                                                <!-- Background Decoration -->
-                                                <div
-                                                    class="absolute right-0 bottom-0 h-8 w-8 translate-x-4 translate-y-4 -rotate-45 bg-primary/5 transition-colors group-hover/option:bg-primary/10"
-                                                ></div>
 
                                                 <div
-                                                    class="exam-answer-radio relative flex h-5 w-5 items-center justify-center border-2 border-border/60 transition-colors group-hover/option:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary"
+                                                    class="relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-border/60 transition-colors group-hover/option:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary"
                                                 >
                                                     <input
                                                         type="radio"
@@ -2088,7 +2008,7 @@ const onDragEnd = () => {
                                                     />
                                                 </div>
                                                 <span
-                                                    class="exam-answer-text relative text-sm font-black tracking-wider whitespace-pre-wrap text-muted-foreground transition-colors group-hover/option:text-foreground has-[:checked]:text-primary"
+                                                    class="relative text-sm text-muted-foreground transition-colors group-hover/option:text-foreground has-[:checked]:text-primary"
                                                     >{{ option.text }}</span
                                                 >
                                             </label>
@@ -2107,15 +2027,9 @@ const onDragEnd = () => {
                                                     v-model="answers[qIndex]"
                                                     type="text"
                                                     placeholder="Type your answer here..."
-                                                    class="exam-text-input w-full rounded-none border border-border/60 bg-muted/20 px-6 py-4 text-sm font-black tracking-widest transition-all duration-300 outline-none placeholder:text-muted-foreground/30 focus:border-primary"
+                                                    class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
                                                 />
-                                                <div
-                                                    class="absolute top-1/2 right-4 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/input:opacity-100"
-                                                >
-                                                    <Zap
-                                                        class="h-4 w-4 animate-pulse text-primary"
-                                                    />
-                                                </div>
+
                                             </div>
                                         </div>
 
@@ -2133,14 +2047,9 @@ const onDragEnd = () => {
                                                     v-model="answers[qIndex]"
                                                     rows="10"
                                                     placeholder="Write your answer here..."
-                                                    class="exam-essay-input min-h-[300px] w-full resize-y rounded-none border border-border/60 bg-muted/20 px-8 py-6 text-base leading-relaxed font-bold transition-all duration-300 outline-none placeholder:text-muted-foreground/30 focus:border-primary"
+                                                    class="min-h-[200px] w-full resize-y rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm leading-relaxed transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
                                                 ></textarea>
-                                                <div
-                                                    class="absolute right-6 bottom-4 flex items-center gap-3 text-[9px] font-black tracking-[0.4em] text-primary uppercase opacity-40"
-                                                >
-                                                    <Terminal class="h-3 w-3" />
-                                                    SECURE DATA ENTRY
-                                                </div>
+
                                             </div>
                                         </div>
                                     </div>
@@ -2166,9 +2075,9 @@ const onDragEnd = () => {
                                         class="flex items-center justify-between"
                                     >
                                         <h3
-                                            class="text-[10px] font-black tracking-[0.4em] text-muted-foreground uppercase"
+                                            class="text-xs font-medium text-muted-foreground"
                                         >
-                                            Tactical Overlay
+                                            Progress
                                         </h3>
                                         <div
                                             class="border border-primary/20 bg-primary/10 px-2 py-1 text-[9px] font-black tracking-widest text-primary uppercase italic"
@@ -2402,546 +2311,646 @@ const onDragEnd = () => {
             </div>
 
             <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
             <!--  UNANSWERED WARNING MODAL                                -->
-            <!-- ═══════════════════════════════════════════════════════ -->
+
+            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
             <transition name="modal-fade">
+
                 <div
+
                     v-if="showUnansweredWarning"
-                    class="fixed inset-0 z-[150] flex items-center justify-center bg-amber-950/60 p-4 backdrop-blur-md"
+
+                    class="fixed inset-0 z-[150] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+
                 >
+
                     <div
+
                         ref="unansweredWarningRef"
-                        class="relative w-full max-w-md overflow-hidden rounded-none border-2 border-amber-500/50 bg-card p-6 shadow-[0_0_50px_rgba(245,158,11,0.3)] md:p-10"
-                    >
-                        <!-- Futuristic Corner Accents -->
-                        <div
-                            class="absolute top-0 left-0 h-6 w-6 border-t-2 border-l-2 border-amber-500"
-                        ></div>
-                        <div
-                            class="absolute top-0 right-0 h-6 w-6 border-t-2 border-r-2 border-amber-500"
-                        ></div>
-                        <div
-                            class="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-amber-500"
-                        ></div>
-                        <div
-                            class="absolute right-0 bottom-0 h-6 w-6 border-r-2 border-b-2 border-amber-500"
-                        ></div>
 
-                        <div
-                            class="relative z-10 flex flex-col items-center gap-6 text-center"
-                        >
+                        class="surface-card relative w-full max-w-md p-8 md:p-10"
+
+                    >
+
+                        <div class="flex flex-col items-center gap-6 text-center">
+
                             <div
-                                class="relative flex h-16 w-16 rotate-45 items-center justify-center border-2 border-amber-500/50"
+
+                                class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
+
                             >
-                                <AlertCircle
-                                    class="h-8 w-8 -rotate-45 text-amber-500"
-                                />
+
+                                <HelpCircle class="h-6 w-6 text-amber-500" />
+
                             </div>
 
-                            <div class="space-y-3">
-                                <h3
-                                    class="text-xl font-black tracking-tighter text-foreground uppercase italic md:text-3xl"
-                                >
+
+
+                            <div class="space-y-2">
+
+                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
+
                                     {{
+
                                         isTimeoutSubmission
-                                            ? 'Time is up!'
-                                            : 'Unanswered Questions'
+
+                                            ? "Time's Up!"
+
+                                            : 'Almost There!'
+
                                     }}
+
                                 </h3>
-                                <div
-                                    class="mx-auto h-0.5 w-16 bg-amber-500"
-                                ></div>
+
                                 <p
+
                                     v-if="isTimeoutSubmission"
-                                    class="mx-auto max-w-sm text-xs leading-relaxed font-bold tracking-wider text-muted-foreground uppercase md:text-sm"
+
+                                    class="mx-auto max-w-sm text-sm text-muted-foreground"
+
                                 >
-                                    The time for this section has expired. Your
-                                    progress will be saved automatically.
+
+                                    The time for this section has expired.
+
+                                    Your progress will be saved automatically.
+
                                 </p>
+
                                 <p
+
                                     v-else
-                                    class="mx-auto max-w-sm text-xs leading-relaxed font-bold tracking-wider text-muted-foreground uppercase md:text-sm"
+
+                                    class="mx-auto max-w-sm text-sm text-muted-foreground"
+
                                 >
+
                                     You have
+
                                     <span
-                                        class="text-lg font-black text-amber-500"
+
+                                        class="font-semibold text-amber-600"
+
                                         >{{ unansweredCount }}</span
+
                                     >
+
                                     unanswered question{{
+
                                         unansweredCount > 1 ? 's' : ''
-                                    }}
-                                    in this section.
+
+                                    }}.
+
                                 </p>
-                                <p
-                                    class="text-[10px] font-medium text-muted-foreground/70 italic"
-                                >
+
+                                <p class="text-sm text-muted-foreground">
+
                                     {{
+
                                         isTimeoutSubmission
-                                            ? 'Please click the button below to proceed to the next section or finalize your submission.'
-                                            : 'You may proceed, but these will be marked as incorrect.'
+
+                                            ? 'Click below to proceed to the next section.'
+
+                                            : 'You can go back to review them or submit as-is.'
+
                                     }}
+
                                 </p>
+
                             </div>
 
-                            <div class="mt-4 flex w-full flex-col gap-3">
-                                <button
-                                    @click="closeUnansweredWarning(true)"
-                                    class="group/btn flex w-full skew-x-[-12deg] items-center justify-center gap-4 bg-amber-500 px-6 py-4 text-xs font-black tracking-[0.2em] text-black uppercase transition-all hover:bg-amber-400"
-                                >
-                                    <span class="skew-x-[12deg]">{{
-                                        isTimeoutSubmission
-                                            ? 'Continue'
-                                            : 'Proceed Anyway'
-                                    }}</span>
-                                    <ArrowRight
-                                        class="h-5 w-5 skew-x-[12deg] transition-transform group-hover/btn:translate-x-2"
-                                    />
-                                </button>
-                                <button
-                                    v-if="!isTimeoutSubmission"
-                                    @click="closeUnansweredWarning(false)"
-                                    class="w-full py-3 text-[10px] font-black tracking-[0.3em] text-muted-foreground uppercase transition-colors hover:text-foreground"
-                                >
-                                    Return to Questions
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </transition>
 
-            <!-- ═══════════════════════════════════════════════════════ -->
-            <!--  START CONFIRMATION MODAL                               -->
-            <!-- ═══════════════════════════════════════════════════════ -->
-            <transition name="modal-fade">
-                <div
-                    v-if="showStartModal"
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
-                >
-                    <div
-                        ref="startModalRef"
-                        class="relative w-full max-w-md overflow-hidden rounded-none border-2 border-primary/20 bg-card p-6 shadow-2xl shadow-primary/10 md:p-10"
-                    >
-                        <!-- Futuristic Corner Accents -->
-                        <div
-                            class="absolute top-0 left-0 h-6 w-6 border-t-2 border-l-2 border-primary"
-                        ></div>
-                        <div
-                            class="absolute top-0 right-0 h-6 w-6 border-t-2 border-r-2 border-primary"
-                        ></div>
-                        <div
-                            class="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-primary"
-                        ></div>
-                        <div
-                            class="absolute right-0 bottom-0 h-6 w-6 border-r-2 border-b-2 border-primary"
-                        ></div>
-
-                        <div
-                            class="relative z-10 flex flex-col items-center gap-6 text-center"
-                        >
-                            <div
-                                class="relative flex h-16 w-16 rotate-45 items-center justify-center border-2 border-amber-500/50"
-                            >
-                                <AlertCircle
-                                    class="h-8 w-8 -rotate-45 text-amber-500"
-                                />
-                            </div>
-
-                            <div class="space-y-3">
-                                <h3
-                                    class="text-xl font-black tracking-tighter text-foreground uppercase italic md:text-3xl"
-                                >
-                                    Security Protocol
-                                </h3>
-                                <div
-                                    class="mx-auto h-0.5 w-16 bg-primary"
-                                ></div>
-                                <p
-                                    class="mx-auto max-w-sm text-xs leading-relaxed font-bold tracking-wider text-muted-foreground uppercase md:text-sm"
-                                >
-                                    Initiating
-                                    <span
-                                        class="font-black text-primary underline decoration-2"
-                                        >Part {{ (pendingIndex || 0) + 1 }}:
-                                        {{ pendingPart?.title }}</span
-                                    >.
-                                </p>
-                            </div>
-
-                            <div
-                                class="grid w-full gap-3 border border-border/50 bg-muted/50 p-4 text-left font-mono"
-                            >
-                                <div class="flex items-start gap-3">
-                                    <span
-                                        class="text-[10px] font-black text-amber-500"
-                                        >[!]</span
-                                    >
-                                    <p
-                                        class="text-[9px] leading-tight font-bold tracking-widest text-muted-foreground uppercase"
-                                    >
-                                        Persistence Required: No exit allowed
-                                        until completion.
-                                    </p>
-                                </div>
-                                <div class="flex items-start gap-3">
-                                    <span
-                                        class="text-[10px] font-black text-amber-500"
-                                        >[!]</span
-                                    >
-                                    <p
-                                        class="text-[9px] leading-tight font-bold tracking-widest text-muted-foreground uppercase"
-                                    >
-                                        Secure Environment: Auto-enabling Full
-                                        Screen mode.
-                                    </p>
-                                </div>
-                                <div class="flex items-start gap-3">
-                                    <span
-                                        class="text-[10px] font-black text-amber-500"
-                                        >[!]</span
-                                    >
-                                    <p
-                                        class="text-[9px] leading-tight font-bold tracking-widest text-muted-foreground uppercase"
-                                    >
-                                        Integrity Monitoring: Unauthorized exits
-                                        will be flagged.
-                                    </p>
-                                </div>
-                            </div>
 
                             <div class="flex w-full flex-col gap-3">
+
                                 <button
-                                    @click="confirmStart"
-                                    class="group/btn flex w-full skew-x-[-12deg] items-center justify-center gap-4 bg-primary px-6 py-4 text-xs font-black tracking-[0.2em] text-primary-foreground uppercase transition-all hover:bg-primary/90"
+
+                                    @click="closeUnansweredWarning(true)"
+
+                                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
+
                                 >
-                                    <span class="skew-x-[12deg]"
-                                        >Start Now</span
-                                    >
-                                    <ArrowRight
-                                        class="h-5 w-5 skew-x-[12deg] transition-transform group-hover/btn:translate-x-2"
-                                    />
+
+                                    <span>{{
+
+                                        isTimeoutSubmission
+
+                                            ? 'Continue'
+
+                                            : 'Submit Anyway'
+
+                                    }}</span>
+
+                                    <ArrowRight class="h-4 w-4" />
+
                                 </button>
+
                                 <button
-                                    @click="showStartModal = false"
-                                    class="w-full py-2 text-[9px] font-black tracking-[0.3em] text-muted-foreground uppercase transition-colors hover:text-foreground"
+
+                                    v-if="!isTimeoutSubmission"
+
+                                    @click="closeUnansweredWarning(false)"
+
+                                    class="w-full py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+
                                 >
-                                    Abort
+
+                                    Review Answers
+
                                 </button>
+
                             </div>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </transition>
 
+
             <!-- ═══════════════════════════════════════════════════════ -->
-            <!--  FULLSCREEN LOCKOUT MODAL                               -->
-            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+            <!--  START CONFIRMATION MODAL                               -->
+
+            <!-- ══════════════════════════════════════════════════════════════════════ -->
+
             <transition name="modal-fade">
+
                 <div
-                    v-if="showFullscreenLockout"
-                    class="fixed inset-0 z-[200] flex items-center justify-center bg-red-950/90 p-4 backdrop-blur-xl"
+
+                    v-if="showStartModal"
+
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+
                 >
+
                     <div
-                        ref="lockoutModalRef"
-                        class="relative w-full max-w-md overflow-hidden rounded-none border-2 border-red-600 bg-black p-6 shadow-[0_0_100px_rgba(220,38,38,0.5)] md:p-10"
+
+                        ref="startModalRef"
+
+                        class="surface-card relative w-full max-w-md p-8 md:p-10"
+
                     >
-                        <!-- Warning Scanline Effect -->
-                        <div
-                            class="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%]"
-                        ></div>
 
-                        <div
-                            class="relative z-10 flex flex-col items-center gap-8 text-center"
-                        >
+                        <div class="flex flex-col items-center gap-6 text-center">
+
                             <div
-                                class="relative flex h-20 w-20 animate-pulse items-center justify-center border-2 border-red-600"
+
+                                class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"
+
                             >
-                                <Lock class="h-10 w-10 text-red-600" />
-                                <div
-                                    class="absolute -top-1 -left-1 h-2 w-2 bg-red-600"
-                                ></div>
-                                <div
-                                    class="absolute -right-1 -bottom-1 h-2 w-2 bg-red-600"
-                                ></div>
+
+                                <Play class="h-6 w-6 text-primary" />
+
                             </div>
 
-                            <div class="space-y-3">
-                                <h3
-                                    class="animate-pulse text-3xl font-black tracking-tighter text-red-600 uppercase italic"
-                                >
-                                    Access Denied
+
+
+                            <div class="space-y-2">
+
+                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
+
+                                    Ready to Start?
+
                                 </h3>
-                                <div class="h-0.5 w-full bg-red-600/30">
-                                    <div
-                                        class="h-full w-1/3 animate-[shimmer_2s_infinite] bg-red-600"
-                                    ></div>
-                                </div>
-                                <p
-                                    class="text-base leading-relaxed font-black tracking-widest text-red-500 uppercase"
-                                >
-                                    Secure Mode Compromised
+
+                                <p class="mx-auto max-w-sm text-sm text-muted-foreground">
+
+                                    You're about to begin
+
+                                    <span class="font-medium text-foreground"
+
+                                        >Part {{ (pendingIndex || 0) + 1 }}:
+
+                                        {{ pendingPart?.title }}</span
+
+                                    >.
+
                                 </p>
-                                <p
-                                    class="mx-auto max-w-xs text-[9px] leading-relaxed font-black tracking-[0.1em] text-red-500/60 uppercase"
-                                >
-                                    Mandatory Full Screen Protocol Active. All
-                                    assessment activities suspended until
-                                    re-entry.
-                                </p>
+
                             </div>
+
+
+
+                            <div class="w-full space-y-3 rounded-lg bg-muted/50 p-4 text-left">
+
+                                <div class="flex items-start gap-3">
+
+                                    <Info class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+
+                                    <p class="text-sm leading-relaxed text-muted-foreground">
+
+                                        Full screen will be enabled for focus. Once started, this part
+
+                                        must be completed — please avoid exiting until you’re done.
+
+                                    </p>
+
+                                </div>
+
+                                <div class="flex items-start gap-3">
+
+                                    <Info class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+
+                                    <p class="text-sm leading-relaxed text-muted-foreground">
+
+                                        Take your time and answer each question carefully. You'll
+
+                                        be able to review your answers before submitting.
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+
+                            <div class="flex w-full flex-col gap-3">
+
+                                <button
+
+                                    @click="confirmStart"
+
+                                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
+
+                                >
+
+                                    Start Part
+
+                                    <ArrowRight class="h-4 w-4" />
+
+                                </button>
+
+                                <button
+
+                                    @click="showStartModal = false"
+
+                                    class="w-full py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+
+                                >
+
+                                    Cancel
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </transition>
+
+            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+            <!--  FULLSCREEN LOCKOUT MODAL                               -->
+
+            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+            <transition name="modal-fade">
+
+                <div
+
+                    v-if="showFullscreenLockout"
+
+                    class="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+
+                >
+
+                    <div
+
+                        ref="lockoutModalRef"
+
+                        class="surface-card relative w-full max-w-md p-8 md:p-10"
+
+                    >
+
+                        <div class="flex flex-col items-center gap-6 text-center">
+
+                            <div
+
+                                class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
+
+                            >
+
+                                <AlertCircle class="h-6 w-6 text-amber-500" />
+
+                            </div>
+
+
+
+                            <div class="space-y-2">
+
+                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
+
+                                    Focus Mode Required
+
+                                </h3>
+
+                                <p class="mx-auto max-w-sm text-sm text-muted-foreground">
+
+                                    Please return to full screen to continue your exam.
+
+                                    This helps maintain a fair testing environment.
+
+                                </p>
+
+                            </div>
+
+
 
                             <button
+
                                 @click="reEnterFullscreen"
-                                class="group/btn flex w-full items-center justify-center gap-4 bg-red-600 px-6 py-5 text-xs font-black tracking-[0.3em] text-white uppercase shadow-[0_0_30px_rgba(220,38,38,0.4)] transition-all hover:bg-red-700"
+
+                                class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
+
                             >
-                                <Zap class="h-5 w-5 animate-bounce" />
-                                <span>Restore Protocol</span>
+
+                                <Maximize class="h-4 w-4" />
+
+                                Return to Full Screen
+
                             </button>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </transition>
 
-            <!-- ═══════════════════════════════════════════════════════ -->
+            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
             <!--  SUCCESS MODAL OVERLAY                                  -->
-            <!-- ═══════════════════════════════════════════════════════ -->
+
+            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
             <transition name="modal-fade">
+
                 <div
+
                     v-if="showSuccessModal"
+
                     class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
+
                 >
+
                     <div
+
                         ref="successModalRef"
-                        class="relative w-full max-w-md overflow-hidden rounded-none border-2 border-primary/30 bg-card p-6 shadow-2xl shadow-primary/15 md:p-10"
+
+                        class="surface-card relative w-full max-w-md p-8 md:p-10"
+
                     >
-                        <!-- Futuristic Grid Background -->
-                        <div
-                            class="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#888_1px,transparent_1px),linear-gradient(to_bottom,#888_1px,transparent_1px)] bg-[length:40px_40px] opacity-[0.03]"
-                        ></div>
 
-                        <div
-                            class="relative z-10 flex flex-col items-center gap-8 text-center"
-                        >
-                            <!-- Animated Success Ring -->
+                        <div class="flex flex-col items-center gap-6 text-center">
+
                             <div
-                                class="success-checkmark relative flex h-24 w-24 items-center justify-center"
+
+                                class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10"
+
                             >
-                                <div
-                                    class="absolute inset-0 animate-[spin_10s_linear_infinite] rounded-full border border-dashed border-primary/40"
-                                ></div>
-                                <div
-                                    class="absolute inset-1 rounded-full border border-primary"
-                                ></div>
-                                <div
-                                    class="flex h-16 w-16 items-center justify-center bg-primary shadow-lg shadow-primary/50"
-                                >
-                                    <svg
-                                        class="h-8 w-8 text-primary-foreground"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="4"
-                                            d="M5 13l4 4L19 7"
-                                        />
-                                    </svg>
-                                </div>
+
+                                <CheckCircle2 class="h-8 w-8 text-emerald-500" />
+
                             </div>
 
-                            <div class="space-y-3">
-                                <h3
-                                    class="text-3xl font-black tracking-tighter text-foreground uppercase italic md:text-4xl"
-                                >
-                                    Exam Complete
+
+
+                            <div class="space-y-2">
+
+                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
+
+                                    Part Complete!
+
                                 </h3>
-                                <div
-                                    class="flex items-center justify-center gap-3"
-                                >
-                                    <div class="h-px w-8 bg-primary"></div>
-                                    <span
-                                        class="text-[9px] font-black tracking-[0.4em] text-primary uppercase"
-                                        >Data Synchronized</span
-                                    >
-                                    <div class="h-px w-8 bg-primary"></div>
-                                </div>
+
+                                <p class="mx-auto max-w-sm text-sm text-muted-foreground">
+
+                                    Great work! Your answers have been saved successfully.
+
+                                </p>
+
                             </div>
+
+
 
                             <!-- Progress / Score Info -->
+
                             <div
+
                                 v-if="partsPendingCount > 0"
-                                class="w-full border-t border-border pt-6"
+
+                                class="w-full space-y-3"
+
                             >
-                                <div class="flex flex-col items-center gap-4">
-                                    <div
-                                        class="flex skew-x-[-10deg] items-center gap-3 border-2 border-primary px-4 py-2 text-[10px] font-black tracking-[0.2em] text-primary uppercase"
-                                    >
-                                        <span class="skew-x-[10deg]"
-                                            >{{ partsPendingCount }} Part{{
-                                                partsPendingCount === 1
-                                                    ? ''
-                                                    : 's'
-                                            }}
-                                            Remaining</span
-                                        >
-                                    </div>
-                                    <p
-                                        class="animate-pulse text-[9px] font-black tracking-[0.3em] text-muted-foreground uppercase"
-                                    >
-                                        Preparing next deployment phase...
+
+                                <div class="rounded-lg bg-muted/50 p-4">
+
+                                    <p class="text-sm text-muted-foreground">
+
+                                        {{ partsPendingCount }} part{{
+
+                                            partsPendingCount === 1
+
+                                                ? ''
+
+                                                : 's'
+
+                                        }} remaining
+
                                     </p>
+
                                 </div>
+
                             </div>
+
+
 
                             <!-- Final Score Reveal -->
+
                             <div
+
                                 v-else
-                                class="flex w-full flex-col items-center gap-6 border-t border-border pt-6"
+
+                                class="w-full space-y-4"
+
                             >
+
                                 <div
+
                                     v-if="isCalculatingScore"
-                                    class="flex w-full flex-col items-center gap-6 p-8"
+
+                                    class="flex flex-col items-center gap-4 py-4"
+
                                 >
-                                    <div class="relative h-16 w-16">
-                                        <div
-                                            class="absolute inset-0 rounded-full border-4 border-primary/20"
-                                        ></div>
-                                        <div
-                                            class="absolute inset-0 animate-spin rounded-full border-4 border-primary border-t-transparent"
-                                        ></div>
-                                        <Zap
-                                            class="absolute inset-0 m-auto h-6 w-6 animate-pulse text-primary"
-                                        />
-                                    </div>
-                                    <div class="space-y-2 text-center">
-                                        <p
-                                            class="animate-pulse text-xs font-black tracking-[0.4em] text-primary uppercase"
-                                        >
-                                            {{
-                                                currentPartHasEssay
-                                                    ? 'Assessment Protocol Active'
-                                                    : 'Calculating your score'
-                                            }}
-                                        </p>
-                                        <p
-                                            class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase italic opacity-60"
-                                        >
-                                            {{
-                                                currentPartHasEssay
-                                                    ? 'LSI is analyzing your narrative response'
-                                                    : 'Excluding Manual Review Components'
-                                            }}
-                                        </p>
-                                        <!-- Countdown Timer -->
-                                        <div
-                                            class="mt-4 flex items-center justify-center gap-2"
-                                        >
-                                            <div
-                                                class="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1"
-                                            >
-                                                <span
-                                                    class="font-mono text-[10px] font-black text-primary"
-                                                    >T-MINUS:
-                                                    {{ calcCountdown }}S</span
-                                                >
-                                            </div>
-                                        </div>
-                                    </div>
+
+                                    <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+
+                                    <p class="text-sm text-muted-foreground">
+
+                                        {{
+
+                                            currentPartHasEssay
+
+                                                ? 'Reviewing your essay...'
+
+                                                : 'Calculating your score...'
+
+                                        }}
+
+                                    </p>
+
                                 </div>
 
+
+
                                 <div
+
                                     v-else
-                                    class="final-score-box group relative flex w-full flex-col items-center border border-border bg-muted/50 p-8 shadow-inner"
+
+                                    class="space-y-4"
+
                                 >
-                                    <span
-                                        class="mb-4 text-[9px] font-black tracking-[0.4em] text-muted-foreground/50 uppercase italic"
-                                        >Performance Analytics</span
+
+                                    <div class="rounded-lg bg-muted/50 p-6">
+
+                                        <div class="flex items-baseline justify-center gap-2">
+
+                                            <span
+
+                                                class="text-5xl font-bold tracking-tight text-primary tabular-nums"
+
+                                                >{{ displayedScore }}</span
+
+                                            >
+
+                                            <span
+
+                                                class="text-xl font-semibold text-muted-foreground/40"
+
+                                                >/ {{ totalPossiblePoints }}</span
+
+                                            >
+
+                                        </div>
+
+                                    </div>
+
+
+
+                                    <div
+
+                                        v-if="isExamPendingReview"
+
+                                        class="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2"
+
                                     >
 
-                                    <div class="flex items-baseline gap-3">
-                                        <span
-                                            class="text-6xl leading-none font-black tracking-tighter text-primary tabular-nums md:text-7xl"
-                                            >{{ displayedScore }}</span
-                                        >
-                                        <span
-                                            class="text-2xl font-black text-muted-foreground/30"
-                                            >/ {{ totalPossiblePoints }}</span
-                                        >
+                                        <Clock class="h-4 w-4 text-amber-500" />
+
+                                        <span class="text-sm font-medium text-amber-600">Awaiting review</span>
+
                                     </div>
 
                                     <div
-                                        class="mt-6 flex w-full flex-col items-center gap-3"
+
+                                        v-else
+
+                                        class="flex items-center justify-center gap-2 rounded-lg border px-4 py-2"
+
+                                        :class="[
+
+                                            feedbackContent.border,
+
+                                            feedbackContent.bg,
+
+                                        ]"
+
                                     >
-                                        <div
-                                            v-if="isExamPendingReview"
-                                            class="flex items-center gap-3 border border-amber-500/50 bg-amber-500/5 px-4 py-2"
+
+                                        <component
+
+                                            :is="feedbackContent.icon"
+
+                                            :class="['h-4 w-4', feedbackContent.color]"
+
+                                        />
+
+                                        <span
+
+                                            :class="['text-sm font-medium', feedbackContent.color]"
+
+                                            >{{ feedbackContent.text }}</span
+
                                         >
-                                            <Clock
-                                                class="h-4 w-4 text-amber-500"
-                                            />
-                                            <span
-                                                class="text-[10px] font-black tracking-[0.2em] text-amber-500 uppercase"
-                                                >Validation Pending</span
-                                            >
-                                        </div>
-                                        <div
-                                            v-else
-                                            :class="[
-                                                'animate-in fade-in zoom-in flex w-full items-center justify-center gap-3 border px-6 py-2 duration-500',
-                                                feedbackContent.border,
-                                                feedbackContent.bg,
-                                            ]"
-                                        >
-                                            <component
-                                                :is="feedbackContent.icon"
-                                                :class="[
-                                                    'h-4 w-4',
-                                                    feedbackContent.color,
-                                                ]"
-                                            />
-                                            <span
-                                                :class="[
-                                                    'text-[11px] font-black tracking-[0.3em] uppercase',
-                                                    feedbackContent.color,
-                                                ]"
-                                                >{{
-                                                    feedbackContent.text
-                                                }}</span
-                                            >
-                                        </div>
+
                                     </div>
+
                                 </div>
+
                             </div>
 
+
+
                             <button
+
                                 @click="closeSuccessModal"
+
                                 :disabled="isCalculatingScore"
-                                class="flex w-full skew-x-[-12deg] items-center justify-center gap-4 bg-primary px-8 py-5 text-xs font-black tracking-[0.3em] text-primary-foreground uppercase shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+
+                                class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+
                             >
-                                <span class="skew-x-[12deg]">{{
+
+                                <span>{{
+
                                     isCalculatingScore
+
                                         ? currentPartHasEssay
-                                            ? 'Assessing...'
+
+                                            ? 'Reviewing...'
+
                                             : 'Calculating...'
+
                                         : partsPendingCount > 0
-                                          ? 'Next Deployment'
-                                          : 'Return to Page'
+
+                                          ? 'Continue to Next Part'
+
+                                          : 'Back to Exams'
+
                                 }}</span>
-                                <ChevronRight
-                                    v-if="!isCalculatingScore"
-                                    class="h-5 w-5 skew-x-[12deg]"
-                                />
+
+                                <ArrowRight v-if="!isCalculatingScore" class="h-4 w-4" />
+
                                 <div
+
                                     v-else
-                                    class="h-5 w-5 skew-x-[12deg] animate-spin rounded-full border-2 border-primary-foreground/20 border-t-primary-foreground"
+
+                                    class="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/20 border-t-primary-foreground"
+
                                 ></div>
+
                             </button>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </transition>
+
             <!-- ─── STICKY EXAM FOOTER (shows when a part is being taken) ─── -->
             <transition name="modal-fade">
                 <div
@@ -3110,7 +3119,7 @@ const onDragEnd = () => {
                                 />
                                 <span
                                     class="font-mono text-[8px] font-black tracking-widest text-amber-500 uppercase"
-                                    >EST_FINISH:
+                                    >
                                     {{ estimatedFinishMinutes }}M</span
                                 >
                             </div>
