@@ -35,6 +35,7 @@ const props = defineProps<{
 
 const { appearance, toggleTheme } = useAppearance();
 const brandName = computed(() => props.branding?.name || 'LSI Engine');
+const brandLogoUrl = computed(() => props.branding?.logoUrl || null);
 
 const scrollToSection = (e: MouseEvent, targetId: string) => {
     e.preventDefault();
@@ -115,9 +116,15 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
         >
             <Link href="/" class="flex items-center gap-3">
                 <div
-                    class="flex h-9 w-9 items-center justify-center rounded-lg bg-foreground/5 text-foreground transition-all duration-500 hover:bg-primary/10 lg:h-10 lg:w-10"
+                    class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-foreground/5 text-foreground transition-all duration-500 hover:bg-primary/10 lg:h-10 lg:w-10"
                 >
-                    <Command class="h-5 w-5 lg:h-6 lg:w-6" />
+                    <img
+                        v-if="brandLogoUrl"
+                        :src="brandLogoUrl"
+                        :alt="`${brandName} logo`"
+                        class="h-full w-full rounded-lg object-cover"
+                    />
+                    <Command v-else class="h-5 w-5 lg:h-6 lg:w-6" />
                 </div>
                 <span
                     class="text-sm font-semibold text-foreground"
@@ -186,8 +193,14 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                 class="flex items-center gap-2.5"
                                 @click="closeMobileMenu"
                             >
-                                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground/5">
-                                    <Command class="h-4 w-4" />
+                                <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-foreground/5">
+                                    <img
+                                        v-if="brandLogoUrl"
+                                        :src="brandLogoUrl"
+                                        :alt="`${brandName} logo`"
+                                        class="h-full w-full rounded-lg object-cover"
+                                    />
+                                    <Command v-else class="h-4 w-4" />
                                 </div>
                                 <span class="text-sm font-semibold">{{ brandName }}</span>
                             </Link>
