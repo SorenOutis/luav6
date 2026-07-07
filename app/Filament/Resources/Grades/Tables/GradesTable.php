@@ -82,7 +82,14 @@ class GradesTable
             ->filters([
                 SelectFilter::make('section_id')
                     ->label('Section')
-                    ->options(fn () => Section::orderBy('name')->pluck('name', 'id'))
+                    ->options(fn () => Section::query()
+                        ->when(
+                            auth()->user()?->is_admin && ! auth()->user()?->isSuperAdmin(),
+                            fn ($q) => $q->where('admin_id', auth()->id())
+                        )
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                    )
                     ->searchable(),
                 SelectFilter::make('subject')
                     ->options(fn () => Grade::query()

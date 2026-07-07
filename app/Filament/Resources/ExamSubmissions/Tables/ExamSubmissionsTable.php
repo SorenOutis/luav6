@@ -29,7 +29,9 @@ class ExamSubmissionsTable
                 TextColumn::make('exam.section.name')
                     ->label('Section')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->badge()
+                    ->color('primary'),
                 TextColumn::make('exam.title')
                     ->label('Exam')
                     ->searchable()
