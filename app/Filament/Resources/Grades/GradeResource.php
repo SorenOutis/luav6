@@ -18,7 +18,6 @@ class GradeResource extends Resource
 {
     protected static ?string $model = Grade::class;
 
-
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-academic-cap';
 
     public static function getEloquentQuery(): Builder

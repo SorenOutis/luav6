@@ -17,7 +17,6 @@ class AssignmentResource extends Resource
 {
     protected static ?string $model = Assignment::class;
 
-
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Learning';

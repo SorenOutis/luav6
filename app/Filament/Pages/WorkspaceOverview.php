@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Resources\Admins\AdminResource;
+use App\Models\Exam;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -73,13 +74,12 @@ class WorkspaceOverview extends Page implements HasActions, HasTable
 
                 TextColumn::make('students_count')
                     ->label('Students')
-                    ->state(fn (User $admin): int => (int) User::whereHas('sections', fn ($q) =>
-                        $q->whereIn('sections.id', $admin->sections()->pluck('sections.id'))
+                    ->state(fn (User $admin): int => (int) User::whereHas('sections', fn ($q) => $q->whereIn('sections.id', $admin->sections()->pluck('sections.id'))
                     )->where('is_admin', false)->count()),
 
                 TextColumn::make('exams_count')
                     ->label('Exams')
-                    ->state(fn (User $admin): int => (int) \App\Models\Exam::whereIn('section_id', $admin->sections()->pluck('sections.id'))->count())
+                    ->state(fn (User $admin): int => (int) Exam::whereIn('section_id', $admin->sections()->pluck('sections.id'))->count())
                     ->sortable(false),
 
                 TextColumn::make('courses_count')

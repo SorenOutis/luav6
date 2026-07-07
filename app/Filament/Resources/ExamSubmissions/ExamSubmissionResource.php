@@ -20,7 +20,6 @@ class ExamSubmissionResource extends Resource
 {
     protected static ?string $model = ExamSubmission::class;
 
-
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-chart-bar';
 
     public static function getEloquentQuery(): Builder

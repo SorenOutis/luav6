@@ -28,9 +28,9 @@ class TdTowerResource extends Resource
     public static function canAccess(): bool
     {
         $user = Filament::auth()->user();
+
         return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
     }
-
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBolt;
 
