@@ -137,7 +137,7 @@ class ProfileController extends Controller
 
         $code = Section::normalizeJoinCode($data['code']);
 
-        $section = Section::where('join_code', $code)->first();
+        $section = Section::findByJoinCode($code);
 
         if (! $section) {
             return response()->json([

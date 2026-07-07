@@ -2,18 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class Section extends Model
 {
-    use HasFactory;
+    use BelongsToWorkspace, HasFactory;
 
     protected $fillable = [
         'name',
         'school_level',
         'join_code',
+        'admin_id',
     ];
 
     public const SCHOOL_LEVEL_COLLEGE = 'college';
@@ -34,6 +36,9 @@ class Section extends Model
     /**
      * Generate a unique 8-character join code (format: XXXXXXXX).
      * Uses uppercase alphanumeric characters, excluding ambiguous ones (O,0,I,1).
+     *
+     * Join codes must be globally unique across ALL admins' sections,
+     * so we bypass the workspace global scope here.
      */
     public static function generateUniqueJoinCode(): string
     {
@@ -47,7 +52,7 @@ class Section extends Model
                 $code .= $characters[random_int(0, strlen($characters) - 1)];
             }
             $attempts++;
-        } while (static::where('join_code', $code)->exists() && $attempts < $maxAttempts);
+        } while (static::withoutGlobalScope('workspace')->where('join_code', $code)->exists() && $attempts < $maxAttempts);
 
         return $code;
     }
@@ -66,6 +71,17 @@ class Section extends Model
     public static function normalizeJoinCode(string $code): string
     {
         return Str::upper(str_replace('-', '', $code));
+    }
+
+    /**
+     * Find a section by join code across ALL workspaces.
+     * Join codes are globally unique, so we bypass the workspace scope here.
+     */
+    public static function findByJoinCode(string $code): ?self
+    {
+        return static::withoutGlobalScope('workspace')
+            ->where('join_code', $code)
+            ->first();
     }
 
     /**

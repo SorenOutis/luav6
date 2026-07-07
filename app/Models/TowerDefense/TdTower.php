@@ -2,10 +2,13 @@
 
 namespace App\Models\TowerDefense;
 
+use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 class TdTower extends Model
 {
+    use BelongsToWorkspace;
+
     protected $table = 'td_towers';
 
     protected $fillable = [
@@ -20,6 +23,7 @@ class TdTower extends Model
         'projectile_speed',
         'color',
         'upgrades',
+        'admin_id',
     ];
 
     protected $casts = [

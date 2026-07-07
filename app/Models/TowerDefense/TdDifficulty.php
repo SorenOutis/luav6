@@ -2,10 +2,13 @@
 
 namespace App\Models\TowerDefense;
 
+use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 class TdDifficulty extends Model
 {
+    use BelongsToWorkspace;
+
     protected $table = 'td_difficulties';
 
     protected $fillable = [
@@ -18,6 +21,7 @@ class TdDifficulty extends Model
         'gold_mult',
         'score_mult',
         'order',
+        'admin_id',
     ];
 
     protected $casts = [

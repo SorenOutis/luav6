@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 
 class Exam extends Model
 {
+    use BelongsToWorkspace;
+
     protected $fillable = [
         'title',
         'description',
@@ -17,6 +20,7 @@ class Exam extends Model
         'ai_feedback_enabled_at',
         'url',
         'section_id',
+        'admin_id',
     ];
 
     protected $casts = [

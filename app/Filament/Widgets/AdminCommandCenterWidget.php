@@ -28,13 +28,13 @@ class AdminCommandCenterWidget extends Widget
             ->where('is_active', true)
             ->first();
 
-        $students = User::query()->where('is_admin', false);
+        $students = User::query()->where('is_admin', false)->forWorkspace();
         $assignmentTargets = DB::table('assignment_user');
         $submittedAssignments = (clone $assignmentTargets)->where('submitted', true)->count();
         $totalAssignmentTargets = $assignmentTargets->count();
 
         // Total XP across all students
-        $totalXpEarned = $students->sum('exp');
+        $totalXpEarned = (clone $students)->sum('exp');
 
         // Games played this week (tower defense runs)
         $gamesPlayedWeek = DB::table('td_runs')
@@ -50,12 +50,14 @@ class AdminCommandCenterWidget extends Widget
         // New students this week
         $newStudentsThisWeek = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
 
         // Streak leaders (students with 7+ day streaks)
         $streakLeaders = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->where('current_streak', '>=', 7)
             ->orderByDesc('current_streak')
             ->limit(3)

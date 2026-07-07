@@ -15,8 +15,10 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
 
@@ -317,6 +319,9 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
             File::delete($restoreTempPath);
             DB::purge();
 
+            // ── Post-restore: ensure workspace columns & assign to admin ──
+            $this->finishRestore();
+
             Notification::make()
                 ->title('Database restored successfully')
                 ->body('A pre-restore backup was created: '.$currentBackup)
@@ -414,5 +419,64 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
         $bytes /= pow(1024, $pow);
 
         return round($bytes, $precision).' '.$units[$pow];
+    }
+
+    /**
+     * Run after a database restore to ensure all workspace columns exist
+     * and assign all data to the admin@example.com super admin.
+     *
+     * This handles backups created before workspace migrations were added.
+     */
+    protected function finishRestore(): void
+    {
+        // Step 1: Run any pending migrations to ensure workspace columns exist
+        Artisan::call('migrate', ['--force' => true]);
+
+        // Step 2: Find or create the admin@example.com super admin
+        $admin = DB::table('users')->where('email', 'admin@example.com')->first();
+
+        if ($admin) {
+            $adminId = $admin->id;
+            // Ensure they have admin + super admin status
+            DB::table('users')->where('id', $adminId)->update([
+                'is_admin' => true,
+                'is_super_admin' => true,
+            ]);
+        } else {
+            // Create the admin user
+            $adminId = DB::table('users')->insertGetId([
+                'name' => 'Admin',
+                'email' => 'admin@example.com',
+                'password' => Hash::make('password'),
+                'is_admin' => true,
+                'is_super_admin' => true,
+                'email_verified_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Step 3: Assign admin_id on all workspace tables where it's null
+        $tables = [
+            'sections',
+            'exams',
+            'assignments',
+            'courses',
+            'seasons',
+            'badges',
+            'rewards',
+            'announcements',
+            'ai_question_drafts',
+            'anonymous_messages',
+            'map_worlds',
+            'td_maps',
+            'td_enemies',
+            'td_towers',
+            'td_difficulties',
+        ];
+
+        foreach ($tables as $table) {
+            DB::table($table)->whereNull('admin_id')->update(['admin_id' => $adminId]);
+        }
     }
 }

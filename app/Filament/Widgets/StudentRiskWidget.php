@@ -28,6 +28,7 @@ class StudentRiskWidget extends BaseWidget
                 fn (): Builder => User::query()
                     ->where('is_admin', false)
                     ->where('is_banned', false)
+                    ->forWorkspace()
                     ->where(function ($query) {
                         $query
                             ->where('last_login_at', '<=', now()->subDays(7))

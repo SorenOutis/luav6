@@ -18,7 +18,7 @@ class QuickActionsWidget extends Widget
 
     protected function getViewData(): array
     {
-        $totalStudents = User::query()->where('is_admin', false)->count();
+        $totalStudents = User::query()->where('is_admin', false)->forWorkspace()->count();
         $totalExams = Exam::query()->where('status', '!=', 'draft')->count();
         $totalAssignments = Assignment::query()->count();
         $pendingReview = Exam::query()->where('status', 'published')->sum(
@@ -27,6 +27,7 @@ class QuickActionsWidget extends Widget
 
         $recentlyBanned = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->where('is_banned', true)
             ->where('banned_at', '>=', now()->subDays(7))
             ->count();

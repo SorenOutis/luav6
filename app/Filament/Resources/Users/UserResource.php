@@ -45,7 +45,16 @@ class UserResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('email', '!=', 'admin123@gmail.com');
+        $query = parent::getEloquentQuery();
+
+        // Super admins see all non-admin users
+        if (auth()->user()?->isSuperAdmin()) {
+            return $query->where('is_admin', false);
+        }
+
+        // Regular admins see only students enrolled in their sections
+        return $query->where('is_admin', false)
+            ->whereHas('sections', fn ($q) => $q->where('admin_id', auth()->id()));
     }
 
     public static function getRelations(): array

@@ -197,23 +197,25 @@ const handleMouseMove = (e: MouseEvent) => {
     card.style.setProperty('--mouse-y', `${y}px`);
 };
 
+// Sync isBooted with global loader — run during setup (before mount)
+// so the content template is ready to render. The container element
+// lives inside `v-if="isBooted"`, so we cannot gate this on mount.
+if (!isLoaderVisible.value) {
+    isBooted.value = true;
+}
+
+watch(
+    isLoaderVisible,
+    (visible) => {
+        if (!visible) {
+            isBooted.value = true;
+        }
+    },
+    { immediate: true },
+);
+
 onMounted(() => {
     if (!container.value) return;
-
-    // Sync isBooted with global loader
-    if (!isLoaderVisible.value) {
-        isBooted.value = true;
-    }
-
-    watch(
-        isLoaderVisible,
-        (visible) => {
-            if (!visible) {
-                isBooted.value = true;
-            }
-        },
-        { immediate: true },
-    );
 
     const orbs = container.value.querySelectorAll('.orb');
     orbs.forEach((orb, i) => {

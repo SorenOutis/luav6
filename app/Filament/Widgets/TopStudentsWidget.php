@@ -25,6 +25,7 @@ class TopStudentsWidget extends BaseWidget
                 fn (): Builder => User::query()
                     ->where('is_admin', false)
                     ->where('is_banned', false)
+                    ->forWorkspace()
                     ->orderByDesc('exp')
                     ->orderByDesc('level')
             )

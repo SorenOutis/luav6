@@ -26,14 +26,16 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
      */
     protected function getStats(): array
     {
-        $totalStudents = User::query()->where('is_admin', false)->count();
+        $totalStudents = User::query()->where('is_admin', false)->forWorkspace()->count();
         $activeToday = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->whereNotNull('last_login_at')
             ->where('last_login_at', '>=', now()->startOfDay())
             ->count();
         $bannedStudents = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->where('is_banned', true)
             ->count();
         $examSubmissions7d = ExamSubmission::query()
@@ -48,15 +50,17 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
 
         $studentsLast7Days = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->where('created_at', '>=', now()->subDays(7)->startOfDay())
             ->count();
         $studentsPrev7Days = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->whereBetween('created_at', [now()->subDays(14)->startOfDay(), now()->subDays(7)->startOfDay()])
             ->count();
 
         // Total XP across all students
-        $totalXpAll = User::query()->where('is_admin', false)->sum('exp');
+        $totalXpAll = User::query()->where('is_admin', false)->forWorkspace()->sum('exp');
 
         // Games played this week (tower defense runs)
         $gamesPlayedWeek = DB::table('td_runs')
@@ -133,6 +137,7 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
     {
         $raw = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->whereDate('created_at', '>=', now()->subDays(6)->toDateString())
             ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
             ->groupBy('day')

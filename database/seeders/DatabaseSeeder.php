@@ -17,18 +17,29 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::updateOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'admin@example.com'],
             [
                 'name' => 'Admin User',
                 'password' => Hash::make('password'),
                 'is_admin' => true,
+                'is_super_admin' => true,
             ]
         );
 
-        Section::firstOrCreate(['name' => 'Section A']);
-        Section::firstOrCreate(['name' => 'Section B']);
-        Section::firstOrCreate(['name' => 'Section C']);
+        // Seed sections under this admin's workspace
+        Section::firstOrCreate(
+            ['name' => 'Section A'],
+            ['admin_id' => $admin->id]
+        );
+        Section::firstOrCreate(
+            ['name' => 'Section B'],
+            ['admin_id' => $admin->id]
+        );
+        Section::firstOrCreate(
+            ['name' => 'Section C'],
+            ['admin_id' => $admin->id]
+        );
 
         $this->call(BadgeSeeder::class);
         $this->call(TowerDefenseSeeder::class);

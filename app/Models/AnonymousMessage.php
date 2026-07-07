@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 class AnonymousMessage extends Model
 {
-    protected $fillable = ['user_id', 'content', 'likes_count', 'is_approved'];
+    use BelongsToWorkspace;
+
+    protected $fillable = ['user_id', 'content', 'likes_count', 'is_approved', 'admin_id'];
 
     public function user()
     {

@@ -25,6 +25,7 @@ class ActivityFeedWidget extends Widget
         // New registrations
         $registrations = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->where('created_at', '>=', $cutoff)
             ->orderByDesc('created_at')
             ->limit(15)

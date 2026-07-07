@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
 
 class Assignment extends Model
 {
-    protected $fillable = ['title', 'description', 'due_date', 'course_id'];
+    use BelongsToWorkspace;
+
+    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'admin_id'];
 
     public function course()
     {
