@@ -16,6 +16,7 @@ class AiQuestionDraftResource extends Resource
 {
     protected static ?string $model = AiQuestionDraft::class;
 
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-sparkles';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Learning';

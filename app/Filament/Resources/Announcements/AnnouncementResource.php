@@ -9,6 +9,7 @@ use App\Filament\Resources\Announcements\Schemas\AnnouncementForm;
 use App\Filament\Resources\Announcements\Tables\AnnouncementsTable;
 use App\Models\Announcement;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -17,6 +18,13 @@ use Filament\Tables\Table;
 class AnnouncementResource extends Resource
 {
     protected static ?string $model = Announcement::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMegaphone;
 

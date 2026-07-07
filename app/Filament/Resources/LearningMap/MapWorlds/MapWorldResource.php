@@ -7,6 +7,7 @@ use App\Filament\Resources\LearningMap\MapWorlds\Pages\EditMapWorld;
 use App\Filament\Resources\LearningMap\MapWorlds\Pages\ListMapWorlds;
 use App\Models\LearningMap\MapWorld;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -18,6 +19,13 @@ use Illuminate\Support\Str;
 class MapWorldResource extends Resource
 {
     protected static ?string $model = MapWorld::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-globe-alt';
 

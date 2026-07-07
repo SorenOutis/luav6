@@ -17,6 +17,7 @@ class RewardResource extends Resource
 {
     protected static ?string $model = Reward::class;
 
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-gift';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Gamification';

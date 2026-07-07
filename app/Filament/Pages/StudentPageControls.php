@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Support\StudentPageRegistry;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -16,6 +17,12 @@ use Filament\Schemas\Schema;
 class StudentPageControls extends Page implements HasSchemas
 {
     use InteractsWithSchemas;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-eye-slash';
 

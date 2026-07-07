@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Facades\Filament;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\FileUpload;
 use Filament\Notifications\Notification;
@@ -27,6 +28,12 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
     use InteractsWithActions;
     use InteractsWithSchemas;
     use InteractsWithTable;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrow-path';
 

@@ -9,6 +9,7 @@ use App\Filament\Resources\Posts\Schemas\PostForm;
 use App\Filament\Resources\Posts\Tables\PostsTable;
 use App\Models\Post;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -16,6 +17,13 @@ use Filament\Tables\Table;
 class PostResource extends Resource
 {
     protected static ?string $model = Post::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-newspaper';
 

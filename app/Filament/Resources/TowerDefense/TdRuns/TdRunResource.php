@@ -5,6 +5,7 @@ namespace App\Filament\Resources\TowerDefense\TdRuns;
 use App\Filament\Resources\TowerDefense\TdRuns\Pages\ListTdRuns;
 use App\Models\TowerDefense\TdRun;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -15,6 +16,13 @@ use Filament\Tables\Table;
 class TdRunResource extends Resource
 {
     protected static ?string $model = TdRun::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
 

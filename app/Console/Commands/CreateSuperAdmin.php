@@ -34,7 +34,7 @@ class CreateSuperAdmin extends Command
             $this->info("✓ Super admin '{$email}' updated successfully.");
             $this->line("  Name: {$name}");
             $this->line("  Password: {$password}");
-            $this->line("  Status: super_admin + admin");
+            $this->line('  Status: super_admin + admin');
         } else {
             User::create([
                 'name' => $name,

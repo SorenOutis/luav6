@@ -19,6 +19,7 @@ class SectionResource extends Resource
 {
     protected static ?string $model = Section::class;
 
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Administration';

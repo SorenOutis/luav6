@@ -7,6 +7,7 @@ use App\Filament\Resources\TowerDefense\TdDifficulties\Pages\EditTdDifficulty;
 use App\Filament\Resources\TowerDefense\TdDifficulties\Pages\ListTdDifficulties;
 use App\Models\TowerDefense\TdDifficulty;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -18,6 +19,13 @@ use Illuminate\Support\Str;
 class TdDifficultyResource extends Resource
 {
     protected static ?string $model = TdDifficulty::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFire;
 

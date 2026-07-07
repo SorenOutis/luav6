@@ -7,6 +7,7 @@ use App\Filament\Resources\TowerDefense\TdTowers\Pages\EditTdTower;
 use App\Filament\Resources\TowerDefense\TdTowers\Pages\ListTdTowers;
 use App\Models\TowerDefense\TdTower;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -23,6 +24,13 @@ use Illuminate\Support\Str;
 class TdTowerResource extends Resource
 {
     protected static ?string $model = TdTower::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBolt;
 

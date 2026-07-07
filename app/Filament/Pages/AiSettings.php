@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Setting;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -21,6 +22,12 @@ use Filament\Schemas\Schema;
 class AiSettings extends Page implements HasSchemas
 {
     use InteractsWithSchemas;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cpu-chip';
 

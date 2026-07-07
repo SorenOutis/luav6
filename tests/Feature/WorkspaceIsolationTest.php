@@ -347,7 +347,7 @@ test('generateUniqueJoinCode checks global uniqueness', function () {
 
 test('admin gets their per-workspace setting when it exists', function () {
     Setting::set('site_name', 'Global Name');
-    Setting::set('site_name', 'Admin1 Name'); // creates a workspace-level one... 
+    Setting::set('site_name', 'Admin1 Name'); // creates a workspace-level one...
     // Actually, when acting as admin1, set() creates workspace-level.
     // But we need to set up data carefully without scope getting in the way.
 

@@ -7,6 +7,7 @@ use App\Filament\Resources\TowerDefense\TdEnemies\Pages\EditTdEnemy;
 use App\Filament\Resources\TowerDefense\TdEnemies\Pages\ListTdEnemies;
 use App\Models\TowerDefense\TdEnemy;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\TextInput;
@@ -21,6 +22,13 @@ use Illuminate\Support\Str;
 class TdEnemyResource extends Resource
 {
     protected static ?string $model = TdEnemy::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBugAnt;
 

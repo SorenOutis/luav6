@@ -12,12 +12,27 @@ use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class GradeResource extends Resource
 {
     protected static ?string $model = Grade::class;
 
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-academic-cap';
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        // Regular admins only see grades for students enrolled in their sections
+        if ($user && $user->is_admin && ! $user->isSuperAdmin()) {
+            $query->whereHas('student.sections', fn (Builder $q) => $q->where('admin_id', $user->id));
+        }
+
+        return $query;
+    }
 
     protected static string|\UnitEnum|null $navigationGroup = 'Learning';
 

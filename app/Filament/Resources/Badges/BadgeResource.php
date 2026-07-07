@@ -17,6 +17,7 @@ class BadgeResource extends Resource
 {
     protected static ?string $model = Badge::class;
 
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Gamification';

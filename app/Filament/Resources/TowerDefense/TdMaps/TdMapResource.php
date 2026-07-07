@@ -7,6 +7,7 @@ use App\Filament\Resources\TowerDefense\TdMaps\Pages\EditTdMap;
 use App\Filament\Resources\TowerDefense\TdMaps\Pages\ListTdMaps;
 use App\Models\TowerDefense\TdMap;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -21,6 +22,13 @@ use Illuminate\Support\Str;
 class TdMapResource extends Resource
 {
     protected static ?string $model = TdMap::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMap;
 

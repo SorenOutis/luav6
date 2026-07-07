@@ -11,6 +11,7 @@ use App\Filament\Resources\AnonymousMessages\Schemas\AnonymousMessageInfolist;
 use App\Filament\Resources\AnonymousMessages\Tables\AnonymousMessagesTable;
 use App\Models\AnonymousMessage;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -19,6 +20,13 @@ use Filament\Tables\Table;
 class AnonymousMessageResource extends Resource
 {
     protected static ?string $model = AnonymousMessage::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleBottomCenterText;
 

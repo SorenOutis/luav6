@@ -9,6 +9,7 @@ use App\Models\TowerDefense\TdEnemy;
 use App\Models\TowerDefense\TdLevel;
 use App\Models\TowerDefense\TdTower;
 use BackedEnum;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -26,6 +27,13 @@ use Illuminate\Support\Str;
 class TdLevelResource extends Resource
 {
     protected static ?string $model = TdLevel::class;
+
+    public static function canAccess(): bool
+    {
+        $user = Filament::auth()->user();
+        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+    }
+
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
