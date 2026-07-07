@@ -6,8 +6,8 @@ use Filament\Actions\AssociateAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\DissociateAction;
-use Filament\Actions\DissociateBulkAction;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -50,12 +50,12 @@ class UsersRelationManager extends RelationManager
             ])
             ->actions([
                 EditAction::make(),
-                DissociateAction::make(),
+                DetachAction::make(),
                 DeleteAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DissociateBulkAction::make(),
+                    DetachBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);
