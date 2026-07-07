@@ -47,8 +47,8 @@ class ChatController extends Controller
             '/(fuck|fck)/i',
             // Insults
             '/\b(stupid|dumb|idiot|moron|retard|useless|trash|suck|kys|kill yourself|shut up|annoying|loser)\b/i',
-            // Harassment / toxicity
-            '/\b(bully|harass|threat|hate speech|racist|sexist|creep|weirdo)\b/i',
+            // Harassment / toxicity — match bully and inflected forms like bullying
+            '/\b(bully(?:ing)?|harass|threat|hate speech|racist|sexist|creep|weirdo)\b/i',
         ];
 
         foreach ($patterns as $pattern) {
