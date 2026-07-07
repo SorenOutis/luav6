@@ -109,6 +109,7 @@ class AiQuestionGeneratorService
             if ($ollamaEnabled && $this->provider !== 'ollama') {
                 try {
                     Log::info('Attempting Ollama fallback for question generation');
+
                     return $this->generateWithOllama($prompt);
                 } catch (\Throwable $ollamaError) {
                     Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
@@ -128,7 +129,7 @@ class AiQuestionGeneratorService
         $apiToken = Setting::get('cloudflare_api_token');
         $model = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
 
-        if (!$accountId || !$apiToken) {
+        if (! $accountId || ! $apiToken) {
             throw new \Exception('Cloudflare Workers AI is not configured.');
         }
 
@@ -141,7 +142,7 @@ class AiQuestionGeneratorService
                 'max_tokens' => 4096, // Increase max tokens to allow longer responses
             ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Cloudflare API Error: '.$response->body());
         }
 
@@ -150,7 +151,7 @@ class AiQuestionGeneratorService
         // Cloudflare returns content in result.choices[0].message.content
         $responseText = $data['result']['choices'][0]['message']['content'] ?? $data['result']['response'] ?? $data['response'] ?? '';
 
-        if (!is_string($responseText)) {
+        if (! is_string($responseText)) {
             Log::error('Cloudflare response is not a string: '.gettype($responseText));
             throw new \Exception('Cloudflare returned unexpected response format');
         }
@@ -169,7 +170,7 @@ class AiQuestionGeneratorService
         $apiKey = Setting::get('groq_api_key');
         $model = Setting::get('groq_model', 'llama-3.1-8b-instant');
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             throw new \Exception('Groq is not configured.');
         }
 
@@ -187,7 +188,7 @@ class AiQuestionGeneratorService
                 'max_tokens' => 2048,
             ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Groq API Error: '.$response->body());
         }
 
@@ -216,11 +217,12 @@ class AiQuestionGeneratorService
             ],
         ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Ollama API Error: '.$response->body());
         }
 
         $raw = (string) $response->json('response');
+
         return $this->parseResponse($raw);
     }
 
@@ -234,7 +236,7 @@ class AiQuestionGeneratorService
 
         $data = json_decode($raw, true);
 
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             Log::warning('Failed to decode JSON as array, trying to extract JSON from response');
             // Try to salvage a JSON object inside the payload.
             if (preg_match('/\{.*\}/s', $raw, $m)) {
@@ -243,8 +245,9 @@ class AiQuestionGeneratorService
             }
         }
 
-        if (!is_array($data)) {
+        if (! is_array($data)) {
             Log::error('Failed to decode JSON, data is not array');
+
             return [];
         }
 
@@ -358,6 +361,7 @@ PROMPT;
             if ($ollamaEnabled && $this->provider !== 'ollama') {
                 try {
                     Log::info('Attempting Ollama fallback for source generation');
+
                     return $this->generateSourceWithOllama($prompt, $length);
                 } catch (\Throwable $ollamaError) {
                     Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
@@ -377,7 +381,7 @@ PROMPT;
         $apiToken = Setting::get('cloudflare_api_token');
         $model = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
 
-        if (!$accountId || !$apiToken) {
+        if (! $accountId || ! $apiToken) {
             throw new \Exception('Cloudflare Workers AI is not configured.');
         }
 
@@ -389,11 +393,12 @@ PROMPT;
                 ],
             ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Cloudflare API Error: '.$response->body());
         }
 
         $data = $response->json();
+
         return trim($data['result']['response'] ?? $data['response'] ?? '');
     }
 
@@ -405,7 +410,7 @@ PROMPT;
         $apiKey = Setting::get('groq_api_key');
         $model = Setting::get('groq_model', 'llama-3.1-8b-instant');
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             throw new \Exception('Groq is not configured.');
         }
 
@@ -423,11 +428,12 @@ PROMPT;
                 'max_tokens' => min($length * 3, 32768),
             ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Groq API Error: '.$response->body());
         }
 
         $data = $response->json();
+
         return trim($data['choices'][0]['message']['content'] ?? '');
     }
 
@@ -449,7 +455,7 @@ PROMPT;
             ],
         ]);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             throw new \Exception('Ollama API Error: '.$response->body());
         }
 

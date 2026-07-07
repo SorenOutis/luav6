@@ -89,7 +89,7 @@ class ChatController extends Controller
             "Points: {$points}\n".
             "Current Streak: {$streak} day(s)\n".
             "Email: {$user->email}\n".
-            "====================================================================";
+            '====================================================================';
     }
 
     public function __invoke(Request $request)

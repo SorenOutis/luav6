@@ -7,6 +7,7 @@ use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\Section;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -128,7 +129,7 @@ class ProfileController extends Controller
     /**
      * Join a section by its unique join code.
      */
-    public function joinByCode(Request $request): \Illuminate\Http\JsonResponse
+    public function joinByCode(Request $request): JsonResponse
     {
         $data = $request->validate([
             'code' => ['required', 'string', 'max:9'],

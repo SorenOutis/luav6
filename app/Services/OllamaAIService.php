@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 class OllamaAIService
 {
     protected ?string $baseUrl;
+
     protected ?string $model;
 
     public function __construct()
@@ -53,7 +54,7 @@ class OllamaAIService
                 'stream' => false,
             ]);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 $errorMessage = 'Ollama API Error: Status '.$response->status().' - '.$response->body();
                 Log::error($errorMessage);
                 throw new \Exception($errorMessage);

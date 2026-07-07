@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Sections\Tables;
 
 use App\Models\Section;
-use Filament\Actions\BulkActionGroup;
 use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
