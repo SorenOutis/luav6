@@ -3,7 +3,7 @@ import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { MessageCircle, Send, X, Bot, User } from 'lucide-vue-next';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import { ref, computed, nextTick, watch, onMounted } from 'vue';
+import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -30,6 +30,10 @@ const isOpen = ref(false);
 const inputMessage = ref('');
 const messages = ref<{ role: string; content: string; typing?: boolean }[]>([]);
 const isLoading = ref(false);
+const showBlockedWarning = ref(false);
+const shaking = ref(false);
+let blockedWarningTimer: ReturnType<typeof setTimeout> | null = null;
+let shakeTimer: ReturnType<typeof setTimeout> | null = null;
 const scrollContainer = ref<HTMLElement | null>(null);
 const textareaRef = ref<any>(null);
 
@@ -54,6 +58,148 @@ const suggestions = [
     { label: '🏆 My Streak', message: "What's my current streak?" },
     { label: '📝 Upcoming Exams', message: 'What exams do I have coming up?' },
 ];
+
+/* ──────────────── Client-side guardrail ──────────────── */
+interface GuardrailPattern {
+    patterns: RegExp[];
+    response: string;
+}
+
+const guardrails: GuardrailPattern[] = [
+    {
+        // Personal / non-educational advice
+        patterns: [
+            /\b(relationship|dating|girlfriend|boyfriend|love|crush)\b/i,
+            /\b(invest|stock market|crypto|trading|buy stock)\b/i,
+            /\b(medical|diagnosis|symptom|prescription|doctor|hospital|treatment)\b/i,
+            /\b(legal|lawyer|sue|attorney|lawsuit)\b/i,
+        ],
+        response:
+            "I'm sorry, but I'm here to help with your learning journey on LSI. I can't provide personal advice on that topic. Is there something school-related I can help you with?",
+    },
+    {
+        // Entertainment / pop culture
+        patterns: [
+            /\b(movie|movies|film|celebrity|actor|actress|netflix|youtuber|influencer)\b/i,
+            /\b(video game|gaming|playstation|xbox|nintendo|valorant|cod|ml|mobile legends|roblox)\b/i,
+            /\b(music|song|singer|album|rap|pop|rock|spotify)\b/i,
+            /\b(sports team|nba|nfl|uefa|champions league|super bowl|world cup)\b.*(?:score|game|match|winner|champion)/i,
+        ],
+        response:
+            "I'm sorry, but I'm here to help with your learning journey on LSI. I can assist you with your exams, assignments, progress, and other academic needs. Is there something school-related I can help you with?",
+    },
+    {
+        // Politics / religion / controversial
+        patterns: [
+            /\b(politician|president|election|vote|democrat|republican|government|senator|congress)\b/i,
+            /\b(religion|god|bible|quran|church|mosque|pray|prayer|atheist)\b/i,
+            /\b(abortion|gun rights|climate change|controversial|offensive)\b/i,
+        ],
+        response:
+            "I'm sorry, but I'm here to help with your learning journey on LSI. I can assist you with your exams, assignments, progress, and other academic needs. Is there something school-related I can help you with?",
+    },
+    {
+        // Homework cheating (doing work FOR the student)
+        patterns: [
+            /\b(do my homework|do my assignment|write my essay|complete my|answer my|give me the answer|cheat|plagiarize)/i,
+            /\b(write (a|an|the|my) (essay|paper|report|story|poem|code|program|script))\b/i,
+            /\b(solve this|solve for|calculate this|do this math|write code|generate.*essay)/i,
+        ],
+        response:
+            "I can help guide you and explain concepts, but I can't do your assignments for you. Let me know what topic you're studying and I'll help you understand it better!",
+    },
+];
+
+/**
+ * Educational context keywords — if any of these appear in the message,
+ * the guardrail allows it through since it's likely a legitimate academic
+ * question that happens to mention a blocked keyword.
+ *
+ * E.g. "Can you explain the stock market for my economics class?" has "class"
+ * and "economics" so it passes, but "What should I invest in?" does not.
+ */
+const educationalKeywords = /\b(assignment|exam|course|lesson|study|learn|class|homework|grade|teacher|professor|school|university|subject|topic|chapter|review|practice|quiz|test|project|research|paper|essay|report|reading|lecture|tutor|academic|science|math|history|literature|english|filipino|physics|chemistry|biology|geography|economics|psychology|philosophy|art|music|drama|exercise|problem|solve|explain|understand|help|question|answer|feedback|score|level|x[pP]|streak|badge|achiev|progress|module|unit|curriculum|syllabus|lesson|discuss|analyze|analysis|evaluate|critique|summarize|define|describe|compare|contrast|outline|diagram|illustrate|interpret|justify|argument|thesis|concept|theory|principle|formula|equation|experiment|lab|observation|data|evidence|source|citation|reference|bibliography|vocabulary|grammar|sentence|paragraph|comprehension|essay|writing|prompt|rubric|score)\b/i;
+
+/**
+ * Harassment/toxicity patterns — these are ALWAYS blocked regardless of context.
+ */
+const toxicityPatterns = [
+    // Swear words and abbreviations (word-boundary)
+    /\b(fuck|fck|fkn|wtf|wth|stfu|shit|bullshit|shitty|ass|asshole|bitch|bastard|damn|goddamn|hell|crap|pissed|dick|dickhead|prick|cunt|whore|slut|hoe|motherfucker|mofo|douche|douchebag|jackass|arse|bloody)\b/i,
+    // Sloppy match — catches fuck/fck anywhere (inside compound words like "fucking", "motherfcker")
+    // These substrings are unambiguously profanity and never appear in legitimate academic English.
+    /(fuck|fck)/i,
+    // Insults
+    /\b(stupid|dumb|idiot|moron|retard|useless|trash|suck|kys|kill yourself|shut up|annoying|loser)\b/i,
+    // Harassment / toxicity
+    /\b(bully|harass|threat|hate speech|racist|sexist|creep|weirdo)\b/i,
+];
+
+/**
+ * Normalize a message to catch creative spellings and leetspeak.
+ * Replaces common character substitutions before the guardrail checks.
+ * E.g. "sh1t" → "shit", "b@stard" → "bastard"
+ */
+/**
+ * Normalize a message to catch creative spellings and leetspeak.
+ * Replaces common character substitutions before the guardrail checks.
+ * E.g. "sh1t" → "shit", "b@stard" → "bastard"
+ *
+ * NOTE: Underscores are NOT removed because `_` is a word character in
+ * JavaScript regex (`\w` includes `_`), so removing them doesn't help
+ * with word-boundary matching.
+ */
+const normalizeMessage = (message: string): string => {
+    return message
+        // Leetspeak character substitutions
+        .replace(/0/g, 'o')
+        .replace(/1/g, 'i')
+        .replace(/3/g, 'e')
+        .replace(/4/g, 'a')
+        .replace(/5/g, 's')
+        .replace(/7/g, 't')
+        .replace(/8/g, 'b')
+        .replace(/@/g, 'a')
+        .replace(/\$/g, 's')
+        .replace(/\!/g, 'i')
+        .replace(/\|/g, 'i');
+};
+
+/**
+ * Check if a message is blocked by the client-side guardrail.
+ * Returns the guardrail response if blocked, or null if allowed.
+ *
+ * Messages with educational context keywords are always allowed through
+ * (the server-side AI handles those). Only obviously off-topic or
+ * toxic messages are blocked here.
+ */
+const checkGuardrail = (message: string): string | null => {
+    // Normalize leetspeak/creative spellings before checking
+    const normalized = normalizeMessage(message);
+
+    // Always block toxicity/harassment first
+    for (const pattern of toxicityPatterns) {
+        if (pattern.test(message) || pattern.test(normalized)) {
+            return "I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?";
+        }
+    }
+
+    // If the message has educational context, let it through to the AI
+    if (educationalKeywords.test(message)) {
+        return null;
+    }
+
+    // Check topical guardrails for non-educational messages
+    for (const guardrail of guardrails) {
+        for (const pattern of guardrail.patterns) {
+            if (pattern.test(message)) {
+                return guardrail.response;
+            }
+        }
+    }
+
+    return null;
+};
 
 const useSuggestion = (suggestion: string) => {
     inputMessage.value = suggestion;
@@ -113,6 +259,11 @@ onMounted(() => {
     fetchHistory();
 });
 
+onBeforeUnmount(() => {
+    if (blockedWarningTimer) clearTimeout(blockedWarningTimer);
+    if (shakeTimer) clearTimeout(shakeTimer);
+});
+
 const toggleChat = () => {
     isOpen.value = !isOpen.value;
 };
@@ -144,6 +295,29 @@ const sendMessage = async () => {
     if (!inputMessage.value.trim() || isLoading.value) return;
 
     const userMessage = inputMessage.value.trim();
+
+    // ── Client-side guardrail check ──
+    const blockedResponse = checkGuardrail(userMessage);
+    if (blockedResponse) {
+        messages.value.push({ role: 'user', content: userMessage });
+        inputMessage.value = '';
+        // Show the blocked warning indicator and shake input
+        showBlockedWarning.value = true;
+        if (blockedWarningTimer) clearTimeout(blockedWarningTimer);
+        blockedWarningTimer = setTimeout(() => {
+            showBlockedWarning.value = false;
+        }, 3000);
+
+        shaking.value = true;
+        if (shakeTimer) clearTimeout(shakeTimer);
+        shakeTimer = setTimeout(() => {
+            shaking.value = false;
+        }, 500);
+        await scrollToBottom();
+        await typeMessage(blockedResponse);
+        return;
+    }
+
     messages.value.push({ role: 'user', content: userMessage });
     inputMessage.value = '';
     isLoading.value = true;
@@ -169,7 +343,7 @@ const sendMessage = async () => {
         console.error('Chat error:', error);
         const errorMessage =
             error.response?.data?.response ||
-            'Echo is having trouble connecting to the AI provider. Please try again in a moment.';
+            'Sorry, something went wrong. Please try again in a moment.';
         await typeMessage(errorMessage);
     } finally {
         isLoading.value = false;
@@ -354,6 +528,26 @@ watch(inputMessage, () => {
                     </div>
                 </CardContent>
 
+                <!-- Blocked Warning -->
+                <transition
+                    enter-active-class="transition duration-300 ease-out"
+                    enter-from-class="translate-y-2 opacity-0"
+                    enter-to-class="translate-y-0 opacity-100"
+                    leave-active-class="transition duration-200 ease-in"
+                    leave-from-class="translate-y-0 opacity-100"
+                    leave-to-class="translate-y-2 opacity-0"
+                >
+                    <div
+                        v-if="showBlockedWarning"
+                        class="flex items-center gap-1.5 border-b border-border/40 bg-amber-500/10 px-3 py-1.5"
+                    >
+                        <span class="text-[10px] font-medium text-amber-600 dark:text-amber-400">⚠</span>
+                        <span class="text-[10px] text-amber-700/80 dark:text-amber-300/70">
+                            Message flagged — please keep the conversation respectful and study-focused
+                        </span>
+                    </div>
+                </transition>
+
                 <!-- Input Footer -->
                 <CardFooter
                     class="border-t border-border/40 bg-muted/20 p-3 pt-2.5"
@@ -361,7 +555,10 @@ watch(inputMessage, () => {
                     <form
                         v-if="isEnabled"
                         @submit.prevent="sendMessage"
-                        class="flex w-full items-end gap-2"
+                        :class="[
+                            'flex w-full items-end gap-2',
+                            shaking ? 'animate-shake' : '',
+                        ]"
                     >
                         <Textarea
                             ref="textareaRef"
@@ -427,6 +624,16 @@ watch(inputMessage, () => {
 .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: var(--color-border);
     border-radius: 999px;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 50%, 90% { transform: translateX(-4px); }
+    30%, 70% { transform: translateX(4px); }
+}
+
+.animate-shake {
+    animation: shake 0.5s ease-in-out;
 }
 
 @keyframes fade-in {

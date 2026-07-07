@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Section extends Model
 {
@@ -12,7 +13,7 @@ class Section extends Model
     protected $fillable = [
         'name',
         'school_level',
-        'password',
+        'join_code',
     ];
 
     public const SCHOOL_LEVEL_COLLEGE = 'college';
@@ -28,6 +29,43 @@ class Section extends Model
         return [
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Generate a unique 8-character join code (format: XXXXXXXX).
+     * Uses uppercase alphanumeric characters, excluding ambiguous ones (O,0,I,1).
+     */
+    public static function generateUniqueJoinCode(): string
+    {
+        $characters = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+        $maxAttempts = 100;
+        $attempts = 0;
+
+        do {
+            $code = '';
+            for ($i = 0; $i < 8; $i++) {
+                $code .= $characters[random_int(0, strlen($characters) - 1)];
+            }
+            $attempts++;
+        } while (static::where('join_code', $code)->exists() && $attempts < $maxAttempts);
+
+        return $code;
+    }
+
+    /**
+     * Format a join code with a hyphen in the middle for display (e.g., 9H84K6B5 → 9H84-K6B5).
+     */
+    public static function formatJoinCode(string $code): string
+    {
+        return substr($code, 0, 4).'-'.substr($code, 4);
+    }
+
+    /**
+     * Normalize a join code by removing hyphens and uppercasing.
+     */
+    public static function normalizeJoinCode(string $code): string
+    {
+        return Str::upper(str_replace('-', '', $code));
     }
 
     /**

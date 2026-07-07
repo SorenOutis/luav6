@@ -34,10 +34,18 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function ($response, $e, $request) {
-            if ($response->getStatusCode() === 429 && $request->header('X-Inertia')) {
-                return back()->withErrors([
-                    'email' => 'Too many requests. Please try again later.',
-                ]);
+            if ($response->getStatusCode() === 429) {
+                if ($request->header('X-Inertia')) {
+                    return back()->withErrors([
+                        'email' => 'Too many requests. Please try again later.',
+                    ]);
+                }
+
+                if ($request->expectsJson() || $request->is('api/*')) {
+                    return response()->json([
+                        'response' => 'Sorry, something went wrong. Please try again in a moment.',
+                    ], 429);
+                }
             }
 
             return $response;

@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
 import axios from 'axios';
-import gsap from 'gsap';
-import { Check, Loader2, Lock, LockOpen, X } from 'lucide-vue-next';
-import { ref, computed, nextTick, watch } from 'vue';
+import { Check, Hash, Loader2, Sparkles, X } from 'lucide-vue-next';
+import { ref, nextTick, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,179 +13,102 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { update as updateSectionRoute } from '@/routes/profile/section';
 
-interface Section {
-    id: number;
-    name: string;
-    has_password?: boolean;
-}
-
-const props = defineProps<{
-    sections: Section[];
+defineProps<{
     show: boolean;
 }>();
 
-const selectedSections = ref<number[]>([]);
-const sectionPasswords = ref<Record<number, string>>({});
-const flippedId = ref<number | null>(null);
-const cardInnerRefs = ref<Record<number, HTMLElement | null>>({});
-const verifyingId = ref<number | null>(null);
-const passwordErrors = ref<Record<number, string>>({});
+// ── Code input state ───────────────────────────────────────────────
+const joinCode = ref('');
+const isVerifyingCode = ref(false);
+const codeError = ref('');
+const joinedSection = ref<{ id: number; name: string } | null>(null);
+const showSuccess = ref(false);
 
-const form = useForm({
-    section_ids: [] as number[],
-    section_passwords: {} as Record<number, string>,
-});
-
-const setCardRef = (el: unknown, id: number) => {
-    cardInnerRefs.value[id] = (el as HTMLElement) ?? null;
+const formatCodeInput = (value: string) => {
+    let cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (cleaned.length > 4) {
+        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4, 8);
+    }
+    if (cleaned.length > 9) {
+        cleaned = cleaned.slice(0, 9);
+    }
+    return cleaned;
 };
 
-const isSelected = (id: number) => selectedSections.value.includes(id);
+const handleCodeInput = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const cursorPos = target.selectionStart ?? 0;
+    const prevLength = joinCode.value.length;
 
-const flipTo = (id: number, toBack: boolean) => {
-    const el = cardInnerRefs.value[id];
-    if (!el) return;
-    gsap.to(el, {
-        rotationY: toBack ? 180 : 0,
-        duration: 0.65,
-        ease: 'power3.inOut',
-    });
-};
+    joinCode.value = formatCodeInput(joinCode.value);
+    codeError.value = '';
 
-const handleCardClick = (section: Section) => {
-    // If a different card is currently flipped, ignore to avoid mess
-    if (flippedId.value !== null && flippedId.value !== section.id) return;
-
-    if (!section.has_password) {
-        const idx = selectedSections.value.indexOf(section.id);
-        if (idx > -1) selectedSections.value.splice(idx, 1);
-        else selectedSections.value.push(section.id);
-        return;
-    }
-
-    if (isSelected(section.id)) {
-        // Unlocked → lock it (deselect, clear password)
-        selectedSections.value = selectedSections.value.filter(
-            (i) => i !== section.id,
-        );
-        delete sectionPasswords.value[section.id];
-        delete passwordErrors.value[section.id];
-        return;
-    }
-
-    // Flip to password prompt
-    flippedId.value = section.id;
-    delete passwordErrors.value[section.id];
-    flipTo(section.id, true);
     nextTick(() => {
-        const input = document.getElementById(
-            `section-password-input-${section.id}`,
-        );
-        (input as HTMLInputElement | null)?.focus();
+        const newLength = joinCode.value.length;
+        if (newLength > prevLength && cursorPos > 0) {
+            target.setSelectionRange(cursorPos + 1, cursorPos + 1);
+        } else {
+            target.setSelectionRange(cursorPos, cursorPos);
+        }
     });
 };
 
-const confirmPassword = async (section: Section) => {
-    const pwd = sectionPasswords.value[section.id];
-    if (!pwd) return;
-    if (verifyingId.value !== null) return;
+const submitCode = async () => {
+    const rawCode = joinCode.value.replace(/-/g, '');
+    if (rawCode.length !== 8) {
+        codeError.value = 'Please enter a complete 8-character code.';
+        return;
+    }
 
-    verifyingId.value = section.id;
-    delete passwordErrors.value[section.id];
+    isVerifyingCode.value = true;
+    codeError.value = '';
 
     try {
-        const { data } = await axios.post<{ valid: boolean }>(
-            `/sections/${section.id}/verify-password`,
-            { password: pwd },
-        );
+        const { data } = await axios.post<{
+            valid: boolean;
+            message?: string;
+            section?: { id: number; name: string; already_joined: boolean };
+        }>('/sections/join-by-code', { code: rawCode });
 
-        if (!data.valid) {
-            passwordErrors.value[section.id] = 'Incorrect password.';
-            sectionPasswords.value[section.id] = '';
-            nextTick(() => {
-                const input = document.getElementById(
-                    `section-password-input-${section.id}`,
-                );
-                (input as HTMLInputElement | null)?.focus();
-            });
+        if (!data.valid || !data.section) {
+            codeError.value =
+                data.message || 'Invalid section code. Please check and try again.';
             return;
         }
 
-        // Valid — mark selected and flip to front
-        if (!isSelected(section.id)) selectedSections.value.push(section.id);
-        flipTo(section.id, false);
-        flippedId.value = null;
-    } catch {
-        passwordErrors.value[section.id] =
-            'Unable to verify password. Please try again.';
+        joinedSection.value = data.section;
+        showSuccess.value = true;
+
+        // Auto-redirect after celebration
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response?.data?.message) {
+            codeError.value = err.response.data.message;
+        } else {
+            codeError.value = 'Unable to verify code. Please try again.';
+        }
     } finally {
-        verifyingId.value = null;
+        isVerifyingCode.value = false;
     }
 };
 
-const cancelPassword = (section: Section) => {
-    if (!isSelected(section.id)) {
-        delete sectionPasswords.value[section.id];
-    }
-    delete passwordErrors.value[section.id];
-    flipTo(section.id, false);
-    flippedId.value = null;
-};
+// ── Emits ───────────────────────────────────────────────────────────
+const emit = defineEmits<{
+    close: [];
+}>();
 
-const allPasswordsFilled = computed(() =>
-    props.sections
-        .filter((s) => isSelected(s.id) && s.has_password)
-        .every((s) => (sectionPasswords.value[s.id] || '').length > 0),
-);
-
-const submit = () => {
-    if (selectedSections.value.length === 0) return;
-    if (!allPasswordsFilled.value) return;
-    if (flippedId.value !== null) return;
-
-    form.section_ids = selectedSections.value;
-    form.section_passwords = { ...sectionPasswords.value };
-    form.patch(updateSectionRoute().url, {
-        preserveScroll: true,
-        onError: (errors) => {
-            // Collect failing section ids from keys like "section_passwords.12"
-            const failedIds = Object.keys(errors)
-                .map((k) => k.match(/^section_passwords\.(\d+)$/))
-                .filter((m): m is RegExpMatchArray => m !== null)
-                .map((m) => Number(m[1]));
-
-            if (failedIds.length === 0) return;
-
-            // Clear wrong passwords and deselect so user must re-enter
-            failedIds.forEach((id) => {
-                delete sectionPasswords.value[id];
-                selectedSections.value = selectedSections.value.filter(
-                    (i) => i !== id,
-                );
-            });
-
-            // Flip the first failing card to its back face to reveal the inline error
-            const firstId = failedIds[0];
-            flippedId.value = firstId;
-            nextTick(() => {
-                flipTo(firstId, true);
-                const input = document.getElementById(
-                    `section-password-input-${firstId}`,
-                );
-                (input as HTMLInputElement | null)?.focus();
-            });
-        },
-    });
-};
-
-// Reset state when modal re-opens
+// ── Reset state when modal re-opens ────────────────────────────────
 watch(
     () => props.show,
     (isShown) => {
         if (!isShown) {
-            flippedId.value = null;
+            joinCode.value = '';
+            codeError.value = '';
+            joinedSection.value = null;
+            showSuccess.value = false;
         }
     },
 );
@@ -196,282 +117,116 @@ watch(
 <template>
     <Dialog :open="show">
         <DialogContent
-            class="max-h-[94vh] w-[96vw] overflow-y-auto border-primary/20 bg-background p-5 shadow-2xl sm:max-w-[1040px] sm:p-8"
+            class="w-[96vw] max-w-[520px] border-primary/20 bg-background p-5 shadow-2xl sm:p-8"
             :show-close-button="false"
             @pointer-down-outside.prevent
             @escape-key-down.prevent
         >
-            <DialogHeader class="sm:text-center">
-                <DialogTitle
-                    class="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-xl font-black text-transparent sm:text-3xl"
-                >
-                    Welcome to the Academy
-                </DialogTitle>
-                <DialogDescription
-                    class="mx-auto max-w-2xl pt-2 text-xs leading-relaxed text-muted-foreground/80 sm:text-base"
-                >
-                    Select your assigned sections. Sections with a lock will ask
-                    for a password on click.
-                </DialogDescription>
-            </DialogHeader>
-
-            <div class="relative z-50 py-4 sm:py-6">
-                <label
-                    class="mb-4 block text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase sm:text-center sm:text-xs"
-                >
-                    Choose your sections
-                </label>
-
-                <div
-                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                    <div
-                        v-for="section in sections"
-                        :key="section.id"
-                        class="card-perspective"
+            <!-- ═══════════════ CODE INPUT ═══════════════ -->
+            <template v-if="!showSuccess">
+                <DialogHeader class="sm:text-center">
+                    <DialogTitle
+                        class="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-xl font-black text-transparent sm:text-3xl"
                     >
-                        <div
-                            :ref="(el) => setCardRef(el, section.id)"
-                            class="card-inner relative h-[150px] w-full sm:h-[160px]"
-                        >
-                            <!-- FRONT FACE -->
-                            <button
-                                type="button"
-                                @click="handleCardClick(section)"
-                                :class="[
-                                    'card-face group/card absolute inset-0 flex items-center justify-center overflow-hidden rounded-2xl border p-5 text-center transition-colors duration-300',
-                                    isSelected(section.id)
-                                        ? 'border-primary bg-primary shadow-[0_0_25px_rgba(var(--primary-rgb),0.3)]'
-                                        : 'border-border/50 bg-muted/30 hover:border-primary/40 hover:bg-muted/50',
-                                ]"
+                        Welcome to the Academy
+                    </DialogTitle>
+                    <DialogDescription
+                        class="mx-auto max-w-lg pt-2 text-xs leading-relaxed text-muted-foreground/80 sm:text-sm"
+                    >
+                        Enter your section code to join your class. Your
+                        instructor should have provided this code.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="py-6 sm:py-8">
+                    <div class="mx-auto max-w-sm space-y-4">
+                        <div class="space-y-2">
+                            <label
+                                class="block text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase sm:text-xs"
                             >
-                                <!-- Tech Grid Background -->
-                                <div
-                                    class="pointer-events-none absolute inset-0 opacity-[0.03] transition-opacity group-hover/card:opacity-[0.05]"
-                                >
-                                    <svg
-                                        class="h-full w-full"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                        <defs>
-                                            <pattern
-                                                :id="`modal-grid-${section.id}`"
-                                                width="10"
-                                                height="10"
-                                                patternUnits="userSpaceOnUse"
-                                            >
-                                                <path
-                                                    d="M 10 0 L 0 0 0 10"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="0.5"
-                                                />
-                                            </pattern>
-                                        </defs>
-                                        <rect
-                                            width="100%"
-                                            height="100%"
-                                            :fill="`url(#modal-grid-${section.id})`"
-                                        />
-                                    </svg>
-                                </div>
-
-                                <div
-                                    v-if="isSelected(section.id)"
-                                    class="pointer-events-none absolute inset-0 animate-pulse bg-white/10"
-                                ></div>
-
-                                <div class="relative z-10 space-y-1.5">
-                                    <p
-                                        class="font-mono text-[8px] font-black tracking-[0.3em] uppercase"
-                                        :class="
-                                            isSelected(section.id)
-                                                ? 'text-primary-foreground/60'
-                                                : 'text-muted-foreground/40 group-hover/card:text-primary/60'
-                                        "
-                                    >
-                                        &gt;_SECTION_NODE
-                                    </p>
-                                    <span
-                                        :class="[
-                                            'block text-sm font-black tracking-tight uppercase',
-                                            isSelected(section.id)
-                                                ? 'text-primary-foreground'
-                                                : 'text-foreground/70 group-hover/card:text-primary',
-                                        ]"
-                                    >
-                                        {{ section.name }}
-                                    </span>
-                                    <div
-                                        v-if="section.has_password"
-                                        class="flex items-center justify-center gap-1 pt-1"
-                                    >
-                                        <component
-                                            :is="
-                                                isSelected(section.id)
-                                                    ? LockOpen
-                                                    : Lock
-                                            "
-                                            class="h-3 w-3"
-                                            :class="
-                                                isSelected(section.id)
-                                                    ? 'text-primary-foreground/80'
-                                                    : 'text-muted-foreground/50'
-                                            "
-                                        />
-                                        <span
-                                            class="text-[9px] font-bold tracking-wider uppercase"
-                                            :class="
-                                                isSelected(section.id)
-                                                    ? 'text-primary-foreground/80'
-                                                    : 'text-muted-foreground/50'
-                                            "
-                                        >
-                                            {{
-                                                isSelected(section.id)
-                                                    ? 'Unlocked'
-                                                    : 'Locked — tap to enter password'
-                                            }}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div
-                                    v-if="isSelected(section.id)"
-                                    class="absolute top-2 right-3"
-                                >
-                                    <div
-                                        class="h-1.5 w-1.5 animate-ping rounded-full bg-primary-foreground opacity-75"
-                                    ></div>
-                                </div>
-                            </button>
-
-                            <!-- BACK FACE -->
-                            <div
-                                class="card-face card-back absolute inset-0 flex flex-col justify-center gap-2 overflow-hidden rounded-2xl border border-primary/50 bg-muted/50 p-4"
-                            >
-                                <div
-                                    class="flex items-center justify-center gap-1.5"
-                                >
-                                    <Lock class="h-3 w-3 text-primary/70" />
-                                    <p
-                                        class="truncate font-mono text-[9px] font-black tracking-[0.25em] text-primary/70 uppercase"
-                                    >
-                                        {{ section.name }}
-                                    </p>
-                                </div>
+                                Section code
+                            </label>
+                            <div class="relative">
+                                <Hash
+                                    class="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground/40"
+                                />
                                 <Input
-                                    :id="`section-password-input-${section.id}`"
-                                    v-model="sectionPasswords[section.id]"
-                                    :tabindex="
-                                        flippedId === section.id ? 0 : -1
-                                    "
-                                    type="password"
-                                    autocomplete="off"
-                                    placeholder="Section password"
-                                    class="h-9 text-sm"
-                                    @keyup.enter="confirmPassword(section)"
-                                    @keyup.esc="cancelPassword(section)"
+                                    v-model="joinCode"
+                                    placeholder="e.g. 9H84-K6B5"
+                                    class="h-12 pl-10 text-center font-mono text-lg font-bold tracking-[0.3em] uppercase sm:text-xl"
+                                    maxlength="9"
+                                    @input="handleCodeInput"
+                                    @keyup.enter="submitCode"
                                 />
-                                <InputError
-                                    :message="
-                                        passwordErrors[section.id] ||
-                                        (form.errors as Record<string, string>)[
-                                            `section_passwords.${section.id}`
-                                        ]
-                                    "
-                                />
-                                <div class="flex gap-2 pt-1">
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        class="h-8 flex-1 text-[11px]"
-                                        :tabindex="
-                                            flippedId === section.id ? 0 : -1
-                                        "
-                                        @click="cancelPassword(section)"
-                                    >
-                                        <X class="mr-1 h-3 w-3" /> Cancel
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        class="h-8 flex-1 text-[11px]"
-                                        :disabled="
-                                            !sectionPasswords[section.id] ||
-                                            verifyingId === section.id
-                                        "
-                                        :tabindex="
-                                            flippedId === section.id ? 0 : -1
-                                        "
-                                        @click="confirmPassword(section)"
-                                    >
-                                        <Loader2
-                                            v-if="verifyingId === section.id"
-                                            class="mr-1 h-3 w-3 animate-spin"
-                                        />
-                                        <Check v-else class="mr-1 h-3 w-3" />
-                                        {{
-                                            verifyingId === section.id
-                                                ? 'Checking'
-                                                : 'Unlock'
-                                        }}
-                                    </Button>
-                                </div>
                             </div>
+                            <InputError :message="codeError" />
                         </div>
+
+                        <Button
+                            @click="submitCode"
+                            class="h-12 w-full text-sm font-black tracking-wider uppercase shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50 sm:h-14 sm:text-base"
+                            :disabled="
+                                joinCode.replace(/-/g, '').length !== 8 ||
+                                isVerifyingCode
+                            "
+                        >
+                            <Loader2
+                                v-if="isVerifyingCode"
+                                class="mr-2 h-5 w-5 animate-spin"
+                            />
+                            <Sparkles v-else class="mr-2 h-5 w-5" />
+                            {{ isVerifyingCode ? 'Joining...' : 'Join Section' }}
+                        </Button>
                     </div>
                 </div>
 
-                <p
-                    v-if="sections.length === 0"
-                    class="mt-4 text-center text-xs font-medium text-destructive italic"
-                >
-                    No sections available. Please contact your admin.
-                </p>
-            </div>
+                <DialogFooter class="flex flex-col pt-2 sm:items-center">
+                    <Button
+                        @click="emit('close')"
+                        variant="ghost"
+                        class="h-10 text-xs font-medium text-muted-foreground/60 hover:text-muted-foreground/90"
+                    >
+                        Skip for now — I&apos;ll join later
+                    </Button>
+                </DialogFooter>
+            </template>
 
-            <DialogFooter
-                class="relative z-0 flex flex-col pt-2 sm:items-center"
-            >
-                <Button
-                    @click="submit"
-                    class="h-12 w-full text-sm font-black tracking-wider uppercase shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50 sm:h-14 sm:max-w-sm sm:text-base"
-                    :disabled="
-                        selectedSections.length === 0 ||
-                        !allPasswordsFilled ||
-                        flippedId !== null ||
-                        form.processing
-                    "
-                >
-                    <template v-if="form.processing">
-                        <Loader2 class="mr-2 h-5 w-5 animate-spin" />
-                        Initializing...
-                    </template>
-                    <template v-else>
+            <!-- ═══════════════ SUCCESS ═══════════════ -->
+            <template v-else-if="joinedSection">
+                <DialogHeader class="sm:text-center">
+                    <div
+                        class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 sm:h-20 sm:w-20"
+                    >
+                        <Check
+                            class="h-8 w-8 animate-bounce text-primary sm:h-10 sm:w-10"
+                        />
+                    </div>
+                    <DialogTitle
+                        class="text-xl font-black tracking-tight uppercase sm:text-3xl"
+                    >
+                        You&apos;re in!
+                    </DialogTitle>
+                    <DialogDescription
+                        class="mx-auto max-w-md pt-2 text-sm leading-relaxed"
+                    >
+                        You&apos;ve successfully joined
+                        <strong class="text-foreground">{{
+                            joinedSection.name
+                        }}</strong
+                        >. Redirecting to your dashboard...
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="flex justify-center py-6">
+                    <Button
+                        @click="window.location.reload()"
+                        class="h-12 w-full max-w-sm text-sm font-black tracking-wider uppercase shadow-lg sm:h-14 sm:text-base"
+                    >
                         <Check class="mr-2 h-5 w-5" />
-                        Confirm &amp; Enter Dashboard
-                    </template>
-                </Button>
-            </DialogFooter>
+                        Enter Dashboard
+                    </Button>
+                </div>
+            </template>
         </DialogContent>
     </Dialog>
 </template>
-
-<style scoped>
-.card-perspective {
-    perspective: 1200px;
-}
-.card-inner {
-    transform-style: preserve-3d;
-    will-change: transform;
-}
-.card-face {
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-}
-.card-back {
-    transform: rotateY(180deg);
-}
-</style>

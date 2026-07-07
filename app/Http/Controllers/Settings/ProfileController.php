@@ -23,9 +23,12 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
+        $user = $request->user();
+
         return Inertia::render('settings/Profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'userSections' => $user->sections()->orderBy('name')->get(['sections.id', 'name']),
         ]);
     }
 
@@ -120,6 +123,52 @@ class ProfileController extends Controller
         $request->user()->sections()->sync($sectionIds);
 
         return back();
+    }
+
+    /**
+     * Join a section by its unique join code.
+     */
+    public function joinByCode(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $data = $request->validate([
+            'code' => ['required', 'string', 'max:9'],
+        ]);
+
+        $code = Section::normalizeJoinCode($data['code']);
+
+        $section = Section::where('join_code', $code)->first();
+
+        if (! $section) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Invalid section code. Please check and try again.',
+            ], 422);
+        }
+
+        // Check if user is already in this section
+        $user = $request->user();
+        if ($user->sections()->where('section_id', $section->id)->exists()) {
+            return response()->json([
+                'valid' => true,
+                'section' => [
+                    'id' => $section->id,
+                    'name' => $section->name,
+                    'already_joined' => true,
+                ],
+            ]);
+        }
+
+        // Join the section
+        $user->sections()->syncWithoutDetaching([$section->id]);
+
+        return response()->json([
+            'valid' => true,
+            'section' => [
+                'id' => $section->id,
+                'name' => $section->name,
+                'already_joined' => false,
+            ],
+        ]);
     }
 
     /**

@@ -4,9 +4,11 @@ namespace App\Filament\Resources\Sections\Tables;
 
 use App\Models\Section;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -17,6 +19,13 @@ class SectionsTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('join_code')
+                    ->label('Join code')
+                    ->formatStateUsing(fn (?string $state): string => $state ? Section::formatJoinCode($state) : '—')
+                    ->badge()
+                    ->color('success')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('school_level')
@@ -35,6 +44,24 @@ class SectionsTable
                 //
             ])
             ->actions([
+                Action::make('regenerateCode')
+                    ->label('Regen code')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Regenerate section join code?')
+                    ->modalDescription('Current students using this code will need the new code to join. Their existing enrollments will not be affected.')
+                    ->modalSubmitActionLabel('Yes, regenerate')
+                    ->action(function (Section $record) {
+                        $newCode = Section::generateUniqueJoinCode();
+                        $record->update(['join_code' => $newCode]);
+
+                        Notification::make()
+                            ->title('Join code regenerated')
+                            ->body('New code: '.Section::formatJoinCode($newCode))
+                            ->success()
+                            ->send();
+                    }),
                 EditAction::make(),
                 DeleteAction::make(),
             ])

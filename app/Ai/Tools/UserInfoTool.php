@@ -14,7 +14,7 @@ class UserInfoTool implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'Get the current user\'s profile information, including their name, XP, level, and streak.';
+        return 'Get the current user\'s LSI profile info — name, XP, system progression level (NOT school grade), streak, points, and join date.';
     }
 
     /**
@@ -35,7 +35,7 @@ class UserInfoTool implements Tool
             'email' => $user->email,
             'current_streak' => $user->current_streak,
             'total_xp' => $progress?->exp ?? 0,
-            'level' => $progress?->level ?? 1,
+            'system_level' => $progress?->level ?? 1,
             'points' => $progress?->points ?? 0,
             'joined_at' => $user->created_at->format('M Y'),
         ]);

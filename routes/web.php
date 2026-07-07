@@ -442,11 +442,6 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 'endDate' => $currentSeason->end_date?->toIso8601String(),
             ] : null,
             'sectionName' => $user->sections->pluck('name')->join(', '),
-            'allSections' => Section::all(['id', 'name', 'password'])->map(fn ($s) => [
-                'id' => $s->id,
-                'name' => $s->name,
-                'has_password' => filled($s->getRawOriginal('password')),
-            ]),
         ]);
     })->middleware('student.page:dashboard')->name('dashboard');
 
@@ -471,6 +466,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             });
     })->name('users.xp-history');
     Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
+    Route::post('sections/join-by-code', [ProfileController::class, 'joinByCode'])->name('sections.join-by-code');
     Route::post('sections/{section}/verify-password', [ProfileController::class, 'verifySectionPassword'])->name('sections.verify-password');
 
     Route::get('assignments', [AssignmentController::class, 'index'])->middleware('student.page:assignments')->name('assignments.index');
@@ -486,8 +482,8 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('ngl', [AnonymousMessageController::class, 'store'])->middleware('student.page:ngl')->name('ngl.store');
     Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->middleware('student.page:ngl')->name('ngl.like');
 
-    Route::post('api/chat', ChatController::class)->name('chat');
-    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->name('chat.history');
+    Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
+    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
 
     // Games hub
     Route::get('games', [GamesController::class, 'index'])->middleware('student.page:games')->name('games.index');

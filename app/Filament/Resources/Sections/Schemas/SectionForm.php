@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Sections\Schemas;
 
 use App\Models\Section;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -21,13 +22,22 @@ class SectionForm
                     ->options(Section::schoolLevelOptions())
                     ->default(Section::SCHOOL_LEVEL_COLLEGE)
                     ->required(),
-                TextInput::make('password')
-                    ->password()
-                    ->revealable()
-                    ->helperText('Students will be required to enter this password when joining the section. Leave blank on edit to keep the current password.')
-                    ->required(fn (string $operation): bool => $operation === 'create')
-                    ->dehydrated(fn (?string $state): bool => filled($state))
-                    ->maxLength(255),
+                Placeholder::make('join_code')
+                    ->label('Section join code')
+                    ->content(fn ($record) => $record && $record->join_code
+                        ? Section::formatJoinCode($record->join_code)
+                        : 'Auto-generated on create'
+                    )
+                    ->helperText('Students enter this code after registration to join this section.')
+                    ->visible(fn (string $operation): bool => $operation === 'edit'),
+                TextInput::make('join_code_display')
+                    ->label('Section join code')
+                    ->default(fn () => Section::formatJoinCode(Section::generateUniqueJoinCode()))
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->helperText('This code will be assigned to this section. Students enter it after registration to join.')
+                    ->visible(fn (string $operation): bool => $operation === 'create'),
+
             ]);
     }
 }

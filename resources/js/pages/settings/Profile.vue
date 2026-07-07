@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { Form, Head, Link, usePage } from '@inertiajs/vue3';
-import { Camera } from 'lucide-vue-next';
-import { computed } from 'vue';
-import { ref } from 'vue';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Camera, Hash, LogOut, Plus } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
+import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,9 +21,10 @@ import type { BreadcrumbItem } from '@/types';
 type Props = {
     mustVerifyEmail: boolean;
     status?: string;
+    userSections: Array<{ id: number; name: string }>;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -62,6 +63,33 @@ const handleCoverChange = (e: Event) => {
 
 const triggerCoverInput = () => {
     coverInput.value?.click();
+};
+
+// ── Section join modal state ────────────────────────────────────────
+const showSectionModal = ref(false);
+
+const openSectionModal = () => {
+    showSectionModal.value = true;
+};
+
+const closeSectionModal = () => {
+    showSectionModal.value = false;
+};
+
+const leaveSection = (sectionId: number) => {
+    const remaining = props.userSections
+        .filter((s) => s.id !== sectionId)
+        .map((s) => s.id);
+
+    router.patch('/profile/section', {
+        section_ids: remaining,
+        section_passwords: {},
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            router.reload({ only: ['userSections'] });
+        },
+    });
 };
 </script>
 
@@ -276,7 +304,72 @@ const triggerCoverInput = () => {
                 </Form>
             </div>
 
+            <!-- ── Section Management ── -->
+            <div class="flex flex-col space-y-4">
+                <Heading
+                    variant="small"
+                    title="Your Sections"
+                    description="Manage which sections you belong to."
+                />
+
+                <div class="space-y-3">
+                    <div
+                        v-if="props.userSections.length === 0"
+                        class="rounded-xl border border-dashed border-border/50 bg-muted/30 p-6 text-center"
+                    >
+                        <p class="text-sm text-muted-foreground">
+                            You haven&apos;t joined any sections yet.
+                        </p>
+                    </div>
+
+                    <div
+                        v-for="section in props.userSections"
+                        :key="section.id"
+                        class="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 px-4 py-3 transition-colors hover:bg-muted/40"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                            >
+                                <Hash class="h-4 w-4" />
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold">
+                                    {{ section.name }}
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            class="h-8 text-xs text-muted-foreground hover:text-destructive"
+                            @click="leaveSection(section.id)"
+                        >
+                            <LogOut class="mr-1 h-3 w-3" />
+                            Leave
+                        </Button>
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        class="mt-2 w-full"
+                        @click="openSectionModal"
+                    >
+                        <Plus class="mr-2 h-4 w-4" />
+                        Join a Section
+                    </Button>
+                </div>
+            </div>
+
             <DeleteUser />
         </SettingsLayout>
+
+        <SectionSelectionModal
+            :show="showSectionModal"
+            @close="closeSectionModal"
+        />
     </AppLayout>
 </template>

@@ -46,7 +46,6 @@
 
     --radius-xl: 1rem;
     --radius-2xl: 1.5rem;
-    --ease-premium: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .theme-about {
@@ -1234,7 +1233,7 @@
     }
 
     .premium-hover {
-        @apply transition-all duration-500 ease-premium;
+        transition: all 500ms cubic-bezier(0.23, 1, 0.32, 1);
     }
 
     .premium-hover:hover {
