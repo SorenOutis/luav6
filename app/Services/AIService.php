@@ -8,29 +8,65 @@ use Illuminate\Support\Facades\Log;
 
 class AIService
 {
-    protected string $baseUrl;
-
-    protected string $model;
-
     protected ?string $provider;
+
+    protected ?string $ollamaUrl;
+
+    protected ?string $ollamaModel;
+
+    protected ?string $cloudflareAccountId;
+
+    protected ?string $cloudflareApiToken;
+
+    protected ?string $cloudflareModel;
+
+    protected ?string $groqApiKey;
+
+    protected ?string $groqModel;
+
+    protected ?string $geminiApiKey;
+
+    protected ?string $geminiModel;
+
+    protected bool $ollamaEnabled;
 
     public function __construct()
     {
         $this->provider = Setting::get('ai_provider', 'gemini');
-        $this->baseUrl = Setting::get('ollama_url', 'http://localhost:11434');
-        $this->model = Setting::get('ollama_model', 'llama3.2:1b');
+
+        // Ollama settings
+        $this->ollamaUrl = Setting::get('ollama_url', 'http://localhost:11434');
+        $this->ollamaModel = Setting::get('ollama_model', 'llama3.2:1b');
+        $this->ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
+
+        // Cloudflare settings
+        $this->cloudflareAccountId = Setting::get('cloudflare_account_id');
+        $this->cloudflareApiToken = Setting::get('cloudflare_api_token');
+        $this->cloudflareModel = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
+
+        // Groq settings
+        $this->groqApiKey = Setting::get('groq_api_key');
+        $this->groqModel = Setting::get('groq_model', 'llama-3.1-8b-instant');
+
+        // Gemini settings (from .env via config/ai.php)
+        $this->geminiApiKey = config('ai.providers.gemini.key') ?? env('GEMINI_API_KEY');
+        $this->geminiModel = 'gemini-1.5-flash';
     }
 
     /**
-     * Pre-warm the AI model by loading it into RAM and keeping it alive.
+     * Pre-warm the AI model — only relevant for Ollama (local models).
+     * Cloud providers don't need pre-warming.
      */
     public function preWarm(): bool
     {
+        if (! $this->ollamaEnabled) {
+            // No local Ollama model to pre-warm; cloud providers don't need it
+            return true;
+        }
+
         try {
-            // Increase timeout for pre-warm to ensure model is fully loaded
-            // We use keep_alive: -1 to keep the model in memory indefinitely
-            Http::timeout(60)->post("{$this->baseUrl}/api/generate", [
-                'model' => $this->model,
+            Http::timeout(60)->post("{$this->ollamaUrl}/api/generate", [
+                'model' => $this->ollamaModel,
                 'prompt' => '',
                 'stream' => false,
                 'keep_alive' => -1,
@@ -45,14 +81,6 @@ class AIService
     }
 
     /**
-     * Assess an essay and return a score and feedback.
-     *
-     * @param  string  $essayText  The student's essay answer.
-     * @param  string  $questionText  The essay prompt/question.
-     * @param  int  $maxPoints  The maximum points possible for this question.
-     * @return array{score: float, feedback: string}
-     */
-    /**
      * Assess multiple essays in parallel (score only or score + feedback).
      *
      * @param  array<int, array{essayText: string, questionText: string, maxPoints: int, feedbackOnly?: bool, includeFeedback?: bool}>  $essays
@@ -64,8 +92,58 @@ class AIService
             return [];
         }
 
-        // Use Ollama for essay grading (current implementation)
-        // TODO: Add support for Cloudflare/Groq for essay grading
+        // Dispatch to the configured AI provider
+        try {
+            return match ($this->provider) {
+                'cloudflare' => $this->batchAssessWithCloudflare($essays),
+                'groq' => $this->batchAssessWithGroq($essays),
+                default => $this->batchAssessWithGemini($essays),
+            };
+        } catch (\Exception $e) {
+            Log::warning("AI provider '{$this->provider}' failed for essay grading: ".$e->getMessage());
+
+            if ($this->ollamaEnabled) {
+                Log::info('Falling back to Ollama for essay grading');
+
+                try {
+                    return $this->batchAssessWithOllama($essays);
+                } catch (\Exception $ollamaError) {
+                    Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
+                }
+            }
+
+            // Return zero scores for all essays on total failure
+            return $this->zeroScores($essays);
+        }
+    }
+
+    /**
+     * Assess an essay and return a score (and feedback if requested).
+     *
+     * @param  string  $essayText  The student's essay answer.
+     * @param  string  $questionText  The essay prompt/question.
+     * @param  int  $maxPoints  The maximum points possible for this question.
+     * @param  bool  $includeFeedback  Whether to include feedback in the response.
+     * @return array{score: float, feedback?: string}
+     */
+    public function assessEssay(string $essayText, string $questionText, int $maxPoints, bool $includeFeedback = false): array
+    {
+        return $this->batchAssessEssays([
+            [
+                'essayText' => $essayText,
+                'questionText' => $questionText,
+                'maxPoints' => $maxPoints,
+                'includeFeedback' => $includeFeedback,
+            ],
+        ])[0] ?? ['score' => 0.0];
+    }
+
+    // ──────────────────────────────────────────────
+    //   Ollama (local) grading
+    // ──────────────────────────────────────────────
+
+    private function batchAssessWithOllama(array $essays): array
+    {
         $responses = Http::pool(function ($pool) use ($essays) {
             foreach ($essays as $index => $essay) {
                 $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
@@ -75,8 +153,8 @@ class AIService
                     : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
 
                 $numPredict = ($feedbackOnly || $includeFeedback) ? 200 : 35;
-                $pool->as((string) $index)->timeout(45)->post("{$this->baseUrl}/api/generate", [
-                    'model' => $this->model,
+                $pool->as((string) $index)->timeout(45)->post("{$this->ollamaUrl}/api/generate", [
+                    'model' => $this->ollamaModel,
                     'prompt' => $prompt,
                     'stream' => false,
                     'format' => 'json',
@@ -92,29 +170,23 @@ class AIService
             }
         });
 
+        return $this->parseOllamaResponses($essays, $responses);
+    }
+
+    private function parseOllamaResponses(array $essays, array $responses): array
+    {
         $results = [];
         foreach ($essays as $index => $essay) {
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
-            $maxPoints = (int) ($essay['maxPoints'] ?? 1);
-            $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
-            $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
 
             if ($response && $response->successful()) {
                 $data = json_decode($response->json('response'), true);
-                if (isset($data['score'])) {
-                    // AI provides a score from 0-100, we scale it to maxPoints
-                    $percentage = (float) $data['score'];
-                    $scaledScore = ($percentage / 100) * $maxPoints;
-                    $result['score'] = (float) round($scaledScore, 2);
-                }
-                if ($includeFeedback && isset($data['feedback'])) {
-                    $result['feedback'] = (string) $data['feedback'];
-                }
+                $result = $this->buildResultFromData($data, $essay);
             } elseif ($response) {
-                Log::error("AI Batch Assessment failed for index $index: ".$response->body());
+                Log::error("AI Ollama assessment failed for index $index: ".$response->body());
             } else {
-                Log::error("AI Batch Assessment missing response for index $index");
+                Log::error("AI Ollama assessment missing response for index $index");
             }
 
             $results[$index] = $result;
@@ -122,6 +194,251 @@ class AIService
 
         return $results;
     }
+
+    // ──────────────────────────────────────────────
+    //   Cloudflare Workers AI grading
+    // ──────────────────────────────────────────────
+
+    private function batchAssessWithCloudflare(array $essays): array
+    {
+        if (! $this->cloudflareAccountId || ! $this->cloudflareApiToken) {
+            throw new \Exception('Cloudflare Workers AI is not configured. Please set your Account ID and API Token in Platform Settings.');
+        }
+
+        $responses = Http::pool(function ($pool) use ($essays) {
+            foreach ($essays as $index => $essay) {
+                $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
+                $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
+                $prompt = $feedbackOnly
+                    ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'], $includeFeedback)
+                    : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
+
+                $messages = [
+                    ['role' => 'system', 'content' => 'You are a strict academic examiner. Always respond with valid JSON only.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ];
+
+                $pool->as((string) $index)
+                    ->withToken($this->cloudflareApiToken)
+                    ->timeout(45)
+                    ->post("https://api.cloudflare.com/client/v4/accounts/{$this->cloudflareAccountId}/ai/run/{$this->cloudflareModel}", [
+                        'messages' => $messages,
+                    ]);
+            }
+        });
+
+        return $this->parseCloudflareResponses($essays, $responses);
+    }
+
+    private function parseCloudflareResponses(array $essays, array $responses): array
+    {
+        $results = [];
+        foreach ($essays as $index => $essay) {
+            $response = $responses[(string) $index] ?? null;
+            $result = ['score' => 0.0];
+
+            if ($response && $response->successful()) {
+                $data = $response->json();
+                $rawText = $data['result']['response'] ?? $data['response'] ?? null;
+                if ($rawText) {
+                    $parsed = json_decode($rawText, true);
+                    $result = $this->buildResultFromData($parsed ?: [], $essay);
+                }
+            } elseif ($response) {
+                Log::error("AI Cloudflare assessment failed for index $index: ".$response->body());
+            } else {
+                Log::error("AI Cloudflare assessment missing response for index $index");
+            }
+
+            $results[$index] = $result;
+        }
+
+        return $results;
+    }
+
+    // ──────────────────────────────────────────────
+    //   Groq grading
+    // ──────────────────────────────────────────────
+
+    private function batchAssessWithGroq(array $essays): array
+    {
+        if (! $this->groqApiKey) {
+            throw new \Exception('Groq is not configured. Please set your API Key in Platform Settings.');
+        }
+
+        $responses = Http::pool(function ($pool) use ($essays) {
+            foreach ($essays as $index => $essay) {
+                $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
+                $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
+                $prompt = $feedbackOnly
+                    ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'], $includeFeedback)
+                    : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
+
+                $messages = [
+                    ['role' => 'system', 'content' => 'You are a strict academic examiner. Always respond with valid JSON only.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ];
+
+                $numTokens = ($feedbackOnly || $includeFeedback) ? 200 : 60;
+
+                $pool->as((string) $index)
+                    ->withHeaders([
+                        'Authorization' => 'Bearer '.$this->groqApiKey,
+                        'Content-Type' => 'application/json',
+                    ])
+                    ->timeout(45)
+                    ->post('https://api.groq.com/openai/v1/chat/completions', [
+                        'model' => $this->groqModel,
+                        'messages' => $messages,
+                        'temperature' => 0,
+                        'max_tokens' => $numTokens,
+                    ]);
+            }
+        });
+
+        return $this->parseGroqResponses($essays, $responses);
+    }
+
+    private function parseGroqResponses(array $essays, array $responses): array
+    {
+        $results = [];
+        foreach ($essays as $index => $essay) {
+            $response = $responses[(string) $index] ?? null;
+            $result = ['score' => 0.0];
+
+            if ($response && $response->successful()) {
+                $data = $response->json();
+                $rawText = $data['choices'][0]['message']['content'] ?? null;
+                if ($rawText) {
+                    $parsed = json_decode($rawText, true);
+                    $result = $this->buildResultFromData($parsed ?: [], $essay);
+                }
+            } elseif ($response) {
+                Log::error("AI Groq assessment failed for index $index: ".$response->body());
+            } else {
+                Log::error("AI Groq assessment missing response for index $index");
+            }
+
+            $results[$index] = $result;
+        }
+
+        return $results;
+    }
+
+    // ──────────────────────────────────────────────
+    //   Gemini (Google) grading
+    // ──────────────────────────────────────────────
+
+    private function batchAssessWithGemini(array $essays): array
+    {
+        if (! $this->geminiApiKey) {
+            // If no Gemini API key is configured, fall through to Ollama
+            throw new \Exception('Gemini API key is not configured. Set GEMINI_API_KEY in your .env file.');
+        }
+
+        $responses = Http::pool(function ($pool) use ($essays) {
+            foreach ($essays as $index => $essay) {
+                $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
+                $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
+                $prompt = $feedbackOnly
+                    ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'], $includeFeedback)
+                    : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
+
+                $maxTokens = ($feedbackOnly || $includeFeedback) ? 200 : 60;
+
+                $pool->as((string) $index)
+                    ->timeout(45)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->geminiModel}:generateContent?key={$this->geminiApiKey}", [
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    ['text' => $prompt],
+                                ],
+                            ],
+                        ],
+                        'generationConfig' => [
+                            'temperature' => 0,
+                            'maxOutputTokens' => $maxTokens,
+                            'topK' => 5,
+                            'topP' => 0.1,
+                        ],
+                    ]);
+            }
+        });
+
+        return $this->parseGeminiResponses($essays, $responses);
+    }
+
+    private function parseGeminiResponses(array $essays, array $responses): array
+    {
+        $results = [];
+        foreach ($essays as $index => $essay) {
+            $response = $responses[(string) $index] ?? null;
+            $result = ['score' => 0.0];
+
+            if ($response && $response->successful()) {
+                $data = $response->json();
+                $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                if ($rawText) {
+                    // Strip markdown code fences if present
+                    $rawText = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', trim($rawText));
+                    $parsed = json_decode($rawText, true);
+                    $result = $this->buildResultFromData($parsed ?: [], $essay);
+                }
+            } elseif ($response) {
+                Log::error("AI Gemini assessment failed for index $index: ".$response->body());
+            } else {
+                Log::error("AI Gemini assessment missing response for index $index");
+            }
+
+            $results[$index] = $result;
+        }
+
+        return $results;
+    }
+
+    // ──────────────────────────────────────────────
+    //   Shared helpers
+    // ──────────────────────────────────────────────
+
+    /**
+     * Build a result array from parsed JSON data and the essay config.
+     */
+    private function buildResultFromData(?array $data, array $essay): array
+    {
+        $result = ['score' => 0.0];
+        $maxPoints = (int) ($essay['maxPoints'] ?? 1);
+        $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
+
+        if ($data && isset($data['score'])) {
+            $percentage = (float) $data['score'];
+            $scaledScore = ($percentage / 100) * $maxPoints;
+            $result['score'] = (int) round($scaledScore);
+        }
+
+        if ($includeFeedback && isset($data['feedback'])) {
+            $result['feedback'] = (string) $data['feedback'];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Generate zero-score results for all essays (used on total failure).
+     */
+    private function zeroScores(array $essays): array
+    {
+        $results = [];
+        foreach ($essays as $index => $essay) {
+            $results[$index] = ['score' => 0];
+        }
+
+        return $results;
+    }
+
+    // ──────────────────────────────────────────────
+    //   Prompt builders (unchanged from original)
+    // ──────────────────────────────────────────────
 
     /**
      * Build the prompt for essay assessment.
@@ -210,60 +527,5 @@ PROMPT;
         }
 
         return $prompt;
-    }
-
-    /**
-     * Assess an essay and return a score (and feedback if requested).
-     *
-     * @param  string  $essayText  The student's essay answer.
-     * @param  string  $questionText  The essay prompt/question.
-     * @param  int  $maxPoints  The maximum points possible for this question.
-     * @param  bool  $includeFeedback  Whether to include feedback in the response.
-     * @return array{score: float, feedback?: string}
-     */
-    public function assessEssay(string $essayText, string $questionText, int $maxPoints, bool $includeFeedback = false): array
-    {
-        $prompt = $this->buildPrompt($essayText, $questionText, $includeFeedback);
-
-        try {
-            $numPredict = $includeFeedback ? 200 : 60;
-            $response = Http::timeout(90)->post("{$this->baseUrl}/api/generate", [
-                'model' => $this->model,
-                'prompt' => $prompt,
-                'stream' => false,
-                'format' => 'json',
-                'keep_alive' => -1,
-                'options' => [
-                    'temperature' => 0,
-                    'num_predict' => $numPredict,
-                    'num_ctx' => 1024,
-                    'top_k' => 5,
-                    'top_p' => 0.1,
-                ],
-            ]);
-
-            if ($response->successful()) {
-                $data = json_decode($response->json('response'), true);
-                $result = ['score' => 0.0];
-
-                if (isset($data['score'])) {
-                    $percentage = (float) $data['score'];
-                    $scaledScore = ($percentage / 100) * $maxPoints;
-                    $result['score'] = (float) round($scaledScore, 2);
-                }
-
-                if ($includeFeedback && isset($data['feedback'])) {
-                    $result['feedback'] = (string) $data['feedback'];
-                }
-
-                return $result;
-            }
-
-            Log::error('AI Assessment failed: '.$response->body());
-        } catch (\Exception $e) {
-            Log::error('AI Assessment error: '.$e->getMessage());
-        }
-
-        return ['score' => 0.0];
     }
 }

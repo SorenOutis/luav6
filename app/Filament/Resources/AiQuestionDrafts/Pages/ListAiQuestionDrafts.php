@@ -10,6 +10,7 @@ use App\Services\AiQuestionGeneratorService;
 use App\Support\AiQueueWorker;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -108,30 +109,52 @@ class ListAiQuestionDrafts extends ListRecords
                                 ->numeric()
                                 ->minValue(0)
                                 ->maxValue(30)
-                                ->default(5)
+                                ->helperText('Max: 30 · Total max: 100')
+                                ->live()
                                 ->required(),
                             TextInput::make('counts.true_false')
                                 ->label('True/False')
                                 ->numeric()
                                 ->minValue(0)
                                 ->maxValue(30)
-                                ->default(3)
+                                ->helperText('Max: 30 · Total max: 100')
+                                ->live()
                                 ->required(),
                             TextInput::make('counts.identification')
                                 ->label('Identification')
                                 ->numeric()
                                 ->minValue(0)
                                 ->maxValue(30)
-                                ->default(3)
+                                ->helperText('Max: 30 · Total max: 100')
+                                ->live()
                                 ->required(),
                             TextInput::make('counts.essay')
                                 ->label('Essay')
                                 ->numeric()
                                 ->minValue(0)
                                 ->maxValue(10)
-                                ->default(1)
+                                ->helperText('Max: 10 · Total max: 100')
+                                ->live()
                                 ->required(),
                         ]),
+                    Placeholder::make('total_display')
+                        ->label('Total questions')
+                        ->content(function (callable $get) {
+                            $total = (int) $get('counts.multiple_choice')
+                                + (int) $get('counts.true_false')
+                                + (int) $get('counts.identification')
+                                + (int) $get('counts.essay');
+
+                            if ($total > 100) {
+                                return "{$total} ⚠️ (exceeds max of 100)";
+                            }
+
+                            if ($total <= 0) {
+                                return '0 — set at least one question';
+                            }
+
+                            return "{$total} / 100";
+                        }),
                     Select::make('difficulty')
                         ->options([
                             'easy' => 'Easy',
@@ -142,10 +165,26 @@ class ListAiQuestionDrafts extends ListRecords
                         ->required(),
                 ])
                 ->action(function (array $data, AiQuestionGeneratorService $service): void {
-                    $counts = array_map('intval', (array) ($data['counts'] ?? []));
-                    if (array_sum($counts) <= 0) {
+                    // Merge user-submitted counts with defaults (handles form re-render edge cases)
+                    $counts = array_merge([
+                        'multiple_choice' => 5,
+                        'true_false' => 3,
+                        'identification' => 3,
+                        'essay' => 1,
+                    ], array_map('intval', (array) ($data['counts'] ?? [])));
+                    $total = array_sum($counts);
+                    if ($total <= 0) {
                         Notification::make()
                             ->title('Please request at least one question.')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+                    if ($total > 100) {
+                        Notification::make()
+                            ->title('Too many questions (max 100).')
+                            ->body("You requested {$total} total questions. Please reduce some counts.")
                             ->danger()
                             ->send();
 

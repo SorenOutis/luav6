@@ -92,15 +92,17 @@ class AiQuestionGeneratorService
         $prompt = $this->buildPrompt($sourceText, $typeCounts, $difficulty, $topic);
         $ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
 
+        $questions = [];
+
         try {
             // Try primary provider first
             if ($this->provider === 'cloudflare') {
-                return $this->generateWithCloudflare($prompt);
+                $questions = $this->generateWithCloudflare($prompt);
             } elseif ($this->provider === 'groq') {
-                return $this->generateWithGroq($prompt);
+                $questions = $this->generateWithGroq($prompt);
             } else {
                 // Default to Ollama
-                return $this->generateWithOllama($prompt);
+                $questions = $this->generateWithOllama($prompt);
             }
         } catch (\Throwable $e) {
             Log::error('Primary AI provider failed for question generation: '.$e->getMessage());
@@ -110,14 +112,15 @@ class AiQuestionGeneratorService
                 try {
                     Log::info('Attempting Ollama fallback for question generation');
 
-                    return $this->generateWithOllama($prompt);
+                    $questions = $this->generateWithOllama($prompt);
                 } catch (\Throwable $ollamaError) {
                     Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
                 }
             }
-
-            return [];
         }
+
+        // Enforce requested counts — slice AI output to at most the requested amount per type
+        return self::enforceCounts($questions, $typeCounts);
     }
 
     /**
@@ -139,7 +142,7 @@ class AiQuestionGeneratorService
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt],
                 ],
-                'max_tokens' => 4096, // Increase max tokens to allow longer responses
+                'max_tokens' => 8192,
             ]);
 
         if (! $response->successful()) {
@@ -185,7 +188,7 @@ class AiQuestionGeneratorService
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => 0.2,
-                'max_tokens' => 2048,
+                'max_tokens' => 8192,
             ]);
 
         if (! $response->successful()) {
@@ -211,7 +214,7 @@ class AiQuestionGeneratorService
             'keep_alive' => -1,
             'options' => [
                 'temperature' => 0.2,
-                'num_predict' => 2048,
+                'num_predict' => 8192,
                 'num_ctx' => 8192,
                 'top_p' => 0.9,
             ],
@@ -232,18 +235,8 @@ class AiQuestionGeneratorService
     protected function parseResponse(string $raw): array
     {
         Log::info('Parsing response, raw length: '.strlen($raw));
-        Log::info('Raw response: '.$raw);
 
-        $data = json_decode($raw, true);
-
-        if (! is_array($data)) {
-            Log::warning('Failed to decode JSON as array, trying to extract JSON from response');
-            // Try to salvage a JSON object inside the payload.
-            if (preg_match('/\{.*\}/s', $raw, $m)) {
-                $data = json_decode($m[0], true);
-                Log::info('Extracted JSON from response: '.json_encode($data));
-            }
-        }
+        $data = $this->decodeLenient($raw);
 
         if (! is_array($data)) {
             Log::error('Failed to decode JSON, data is not array');
@@ -260,6 +253,53 @@ class AiQuestionGeneratorService
         Log::info('Questions count after normalization: '.count($normalized));
 
         return $normalized;
+    }
+
+    /**
+     * Attempt to decode JSON with lenient handling for truncated responses.
+     * Tries: exact decode -> extract first valid JSON object -> extract partial array -> manual extraction.
+     */
+    private function decodeLenient(string $raw): ?array
+    {
+        // 1. Try exact decode
+        $data = json_decode($raw, true);
+        if (is_array($data)) {
+            return $data;
+        }
+
+        Log::warning('Failed exact JSON decode, attempting lenient extraction');
+
+        // 2. Try to find a complete JSON object ({...})
+        if (preg_match('/\{.*\}/s', $raw, $m)) {
+            $data = json_decode($m[0], true);
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+
+        // 3. Try to find a complete JSON array ([...])
+        if (preg_match('/\[.*\]/s', $raw, $m)) {
+            $data = json_decode($m[0], true);
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+
+        // 4. Try to fix truncated JSON — find the outermost {...} and repair it
+        if (preg_match('/^.*?(\{.*)$/s', $raw, $m)) {
+            $fragment = $m[1];
+            // Try adding closing braces step by step
+            for ($i = 0; $i <= 10; $i++) {
+                $candidate = $fragment.str_repeat('}', $i);
+                $data = json_decode($candidate, true);
+                if (is_array($data)) {
+                    Log::warning('Repaired truncated JSON by adding '.$i.' closing braces');
+                    return $data;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static function clampSource(string $text, int $maxChars): string
@@ -460,6 +500,46 @@ PROMPT;
         }
 
         return trim((string) $response->json('response'));
+    }
+
+    /**
+     * Enforce requested question counts — slice AI output to at most the requested
+     * amount per type. This ensures the user's count settings are always respected
+     * even when the AI model doesn't follow count instructions precisely.
+     *
+     * @param  array<int, array<string, mixed>>  $questions  AI-generated questions
+     * @param  array<string, int>  $typeCounts  requested counts per type
+     * @return array<int, array<string, mixed>>
+     */
+    public static function enforceCounts(array $questions, array $typeCounts): array
+    {
+        // Group questions by type, preserving order within each type
+        $grouped = [
+            'multiple_choice' => [],
+            'true_false' => [],
+            'identification' => [],
+            'essay' => [],
+        ];
+        foreach ($questions as $q) {
+            $type = $q['type'] ?? '';
+            if (isset($grouped[$type])) {
+                $grouped[$type][] = $q;
+            }
+        }
+
+        // Slice each type to the requested count and merge back in original order
+        $result = [];
+        foreach (['multiple_choice', 'true_false', 'identification', 'essay'] as $type) {
+            $requested = (int) ($typeCounts[$type] ?? 0);
+            $available = $grouped[$type];
+            if ($requested > 0) {
+                // Keep up to the requested count (trim excess)
+                $result = array_merge($result, array_slice($available, 0, $requested));
+            }
+            // If $requested === 0, questions of this type are dropped entirely
+        }
+
+        return $result;
     }
 
     public static function normalize(array $questions): array
