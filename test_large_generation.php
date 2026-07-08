@@ -3,15 +3,16 @@
 require __DIR__.'/vendor/autoload.php';
 
 $app = require __DIR__.'/bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
-use App\Services\AiQuestionGeneratorService;
 use App\Models\Setting;
+use App\Services\AiQuestionGeneratorService;
+use Illuminate\Contracts\Console\Kernel;
 
 echo "=== Current AI Provider ===\n";
-echo "Provider: " . Setting::get('ai_provider', 'not set') . "\n";
-echo "Cloudflare model: " . Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct') . "\n\n";
+echo 'Provider: '.Setting::get('ai_provider', 'not set')."\n";
+echo 'Cloudflare model: '.Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct')."\n\n";
 
 $service = app(AiQuestionGeneratorService::class);
 
@@ -31,7 +32,7 @@ echo "Essay:           {$counts['essay']}\n";
 echo "Total:           {$total}\n\n";
 
 // A decent chunk of source material to generate questions from
-$sourceText = <<<TEXT
+$sourceText = <<<'TEXT'
 The Water Cycle
 
 Water is constantly moving through the Earth's atmosphere, oceans, and land in a process called the water cycle (also known as the hydrologic cycle). This continuous movement is driven by energy from the sun and gravity.
@@ -67,8 +68,8 @@ Environmental Importance: The water cycle is essential for all life on Earth. It
 TEXT;
 
 echo "=== Source Material ===\n";
-echo "Length: " . strlen($sourceText) . " characters\n";
-echo str_repeat('-', 60) . "\n\n";
+echo 'Length: '.strlen($sourceText)." characters\n";
+echo str_repeat('-', 60)."\n\n";
 
 echo "Calling AI to generate {$total} questions...\n\n";
 $start = microtime(true);
@@ -80,7 +81,7 @@ try {
 
     echo "=== RESULTS ===\n";
     echo "Time elapsed: {$elapsed}s\n";
-    echo "Total questions returned: " . count($questions) . "\n\n";
+    echo 'Total questions returned: '.count($questions)."\n\n";
 
     // Count by type
     $typeCounts = ['multiple_choice' => 0, 'true_false' => 0, 'identification' => 0, 'essay' => 0];
@@ -104,20 +105,22 @@ try {
     $seenTypes = [];
     foreach ($questions as $i => $q) {
         $type = $q['type'] ?? '';
-        if (!isset($seenTypes[$type])) {
+        if (! isset($seenTypes[$type])) {
             $seenTypes[$type] = true;
-            echo "\n--- {$type} #" . ($i + 1) . " ---\n";
-            echo "Text: " . mb_substr($q['text'] ?? '', 0, 100) . "...\n";
-            if (!empty($q['options'])) {
+            echo "\n--- {$type} #".($i + 1)." ---\n";
+            echo 'Text: '.mb_substr($q['text'] ?? '', 0, 100)."...\n";
+            if (! empty($q['options'])) {
                 $correctCount = 0;
                 foreach ($q['options'] as $opt) {
-                    if (!empty($opt['is_correct'])) $correctCount++;
+                    if (! empty($opt['is_correct'])) {
+                        $correctCount++;
+                    }
                 }
-                echo "Options: " . count($q['options']) . " (correct: {$correctCount})\n";
-                echo "First option: " . mb_substr($q['options'][0]['text'] ?? '', 0, 60) . "...\n";
+                echo 'Options: '.count($q['options'])." (correct: {$correctCount})\n";
+                echo 'First option: '.mb_substr($q['options'][0]['text'] ?? '', 0, 60)."...\n";
             }
-            if (!empty($q['correct_answer'])) {
-                echo "Answer: " . mb_substr($q['correct_answer'] ?? '', 0, 60) . "\n";
+            if (! empty($q['correct_answer'])) {
+                echo 'Answer: '.mb_substr($q['correct_answer'] ?? '', 0, 60)."\n";
             }
         }
     }
@@ -126,33 +129,35 @@ try {
     foreach ($questions as $i => $q) {
         $type = $q['type'] ?? '';
         $text = trim($q['text'] ?? '');
-        if (empty($text) || !in_array($type, ['multiple_choice', 'true_false', 'identification', 'essay'])) {
-            echo "\nWARNING: Question #" . ($i + 1) . " has invalid data!\n";
+        if (empty($text) || ! in_array($type, ['multiple_choice', 'true_false', 'identification', 'essay'])) {
+            echo "\nWARNING: Question #".($i + 1)." has invalid data!\n";
             $allValid = false;
         }
         if (in_array($type, ['multiple_choice', 'true_false'])) {
             $opts = $q['options'] ?? [];
             if (count($opts) < 2) {
-                echo "\nWARNING: Question #" . ($i + 1) . " ({$type}) has fewer than 2 options!\n";
+                echo "\nWARNING: Question #".($i + 1)." ({$type}) has fewer than 2 options!\n";
                 $allValid = false;
             }
         }
         if ($type === 'identification' && empty($q['correct_answer'] ?? '')) {
-            echo "\nWARNING: Question #" . ($i + 1) . " (identification) has no correct answer!\n";
+            echo "\nWARNING: Question #".($i + 1)." (identification) has no correct answer!\n";
             $allValid = false;
         }
     }
 
     echo "\n=== VERDICT ===\n";
     if (count($questions) > 0) {
-        echo "✅ SUCCESS: Generated " . count($questions) . " questions\n";
-        if ($allValid) echo "✅ All questions have valid structure\n";
+        echo '✅ SUCCESS: Generated '.count($questions)." questions\n";
+        if ($allValid) {
+            echo "✅ All questions have valid structure\n";
+        }
     } else {
         echo "❌ FAILED: No questions returned\n";
     }
 
-} catch (\Throwable $e) {
+} catch (Throwable $e) {
     $elapsed = round(microtime(true) - $start, 2);
-    echo "❌ FAILED after {$elapsed}s: " . $e->getMessage() . "\n";
-    echo "File: " . $e->getFile() . ":" . $e->getLine() . "\n";
+    echo "❌ FAILED after {$elapsed}s: ".$e->getMessage()."\n";
+    echo 'File: '.$e->getFile().':'.$e->getLine()."\n";
 }

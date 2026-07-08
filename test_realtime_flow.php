@@ -3,23 +3,27 @@
 require __DIR__.'/vendor/autoload.php';
 
 $app = require __DIR__.'/bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 use App\Models\AiQuestionDraft;
 use App\Services\AiQuestionGeneratorService;
+use Illuminate\Contracts\Console\Kernel;
 
 $passed = 0;
 $failed = 0;
 
-function check(string $label, bool $condition, string $detail = '') {
+function check(string $label, bool $condition, string $detail = '')
+{
     global $passed, $failed;
     if ($condition) {
         echo "  ✅ {$label}\n";
         $passed++;
     } else {
         echo "  ❌ {$label}";
-        if ($detail) echo " — {$detail}";
+        if ($detail) {
+            echo " — {$detail}";
+        }
         echo "\n";
         $failed++;
     }
@@ -66,7 +70,7 @@ try {
     );
 
     if (! empty($questions)) {
-        echo "  ✅ Generation returned " . count($questions) . " questions\n";
+        echo '  ✅ Generation returned '.count($questions)." questions\n";
         $passed++;
 
         // Save questions to draft (like the job does)
@@ -81,7 +85,7 @@ try {
         // Simulate what pollGenerationStatus() does — refresh record
         $draft->refresh();
         check('Status changed to ready', $draft->status === 'ready', "Got: {$draft->status}");
-        check('Questions are now populated', is_array($draft->questions) && count($draft->questions) > 0, "Got: " . count($draft->questions ?? []));
+        check('Questions are now populated', is_array($draft->questions) && count($draft->questions) > 0, 'Got: '.count($draft->questions ?? []));
         check('Questions have valid structure', ! empty($draft->questions[0]['text'] ?? ''));
 
         // Show type breakdown
@@ -100,8 +104,8 @@ try {
         echo "  This is not necessarily a bug — it depends on the AI provider being reachable.\n";
         $failed++;
     }
-} catch (\Throwable $e) {
-    echo "  ⚠️ Generation threw: " . $e->getMessage() . "\n";
+} catch (Throwable $e) {
+    echo '  ⚠️ Generation threw: '.$e->getMessage()."\n";
     echo "  This may be expected if the AI provider is unavailable.\n";
 }
 
@@ -122,4 +126,4 @@ check('Test draft cleaned up', true);
 echo "\n=== RESULTS ===\n";
 echo "Passed: {$passed}\n";
 echo "Failed: {$failed}\n";
-echo ($failed === 0 ? "✅ ALL PASSED" : "❌ SOME FAILED") . "\n";
+echo ($failed === 0 ? '✅ ALL PASSED' : '❌ SOME FAILED')."\n";

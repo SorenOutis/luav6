@@ -1,19 +1,21 @@
 <?php
+
 /**
  * Test script to verify AIService essay grading works with the configured AI provider.
  * Run with: php test_essay_grading.php
  */
 
-require __DIR__ . '/vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 
-$app = require_once __DIR__ . '/bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$app = require_once __DIR__.'/bootstrap/app.php';
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 use App\Models\Setting;
 use App\Services\AIService;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 echo "═══════════════════════════════════════\n";
 echo "  AI Essay Grading Test (with debug)\n";
@@ -23,7 +25,7 @@ echo "════════════════════════�
 $provider = Setting::get('ai_provider', 'not set');
 $ollamaEnabled = Setting::get('ollama_enabled', false);
 echo "AI Provider: {$provider}\n";
-echo "Ollama Fallback: " . ($ollamaEnabled ? 'enabled' : 'disabled') . "\n";
+echo 'Ollama Fallback: '.($ollamaEnabled ? 'enabled' : 'disabled')."\n";
 
 // Log settings
 $cfAccountId = Setting::get('cloudflare_account_id');
@@ -35,7 +37,7 @@ echo "Cloudflare Model: {$cfModel}\n\n";
 echo "═══ Step 1: Direct Cloudflare API call (raw response test) ═══\n\n";
 
 $systemPrompt = 'You are a strict academic examiner. Always respond with valid JSON only.';
-$userPrompt = <<<PROMPT
+$userPrompt = <<<'PROMPT'
 Act as a STRICT academic examiner. Your task is to evaluate a student's essay response based on a specific question.
 
 Question: "Explain the water cycle and its importance to life on Earth."
@@ -77,7 +79,7 @@ if ($response->successful()) {
     $rawText = $rawData['result']['response'] ?? $rawData['response'] ?? '(no response field)';
     echo "Cloudflare raw response text:\n";
     echo "──────────────────────────────\n";
-    echo $rawText . "\n";
+    echo $rawText."\n";
     echo "──────────────────────────────\n\n";
 
     $parsed = json_decode($rawText, true);
@@ -87,7 +89,7 @@ if ($response->successful()) {
         echo "⚠ Could not parse as JSON\n\n";
     }
 } else {
-    echo "❌ Cloudflare API error: " . $response->status() . " - " . $response->body() . "\n\n";
+    echo '❌ Cloudflare API error: '.$response->status().' - '.$response->body()."\n\n";
 }
 
 echo "═══ Step 2: Full AIService batch test ═══\n\n";
@@ -120,9 +122,9 @@ try {
     echo "Completed in {$elapsed}s\n\n";
 
     foreach ($results as $index => $result) {
-        echo "── Essay #" . ($index + 1) . " ──────────────\n";
+        echo '── Essay #'.($index + 1)." ──────────────\n";
         echo "  Score:    {$result['score']} / {$essays[$index]['maxPoints']}\n";
-        echo "  Feedback: " . ($result['feedback'] ?? '(none)') . "\n\n";
+        echo '  Feedback: '.($result['feedback'] ?? '(none)')."\n\n";
     }
 
     // Validation
@@ -140,9 +142,9 @@ try {
         echo "✅ Essay 2 correctly scored near 0\n";
     }
 
-    echo "\n" . ($pass ? "✅ ALL CHECKS PASSED" : "⚠ Some checks failed") . "\n";
+    echo "\n".($pass ? '✅ ALL CHECKS PASSED' : '⚠ Some checks failed')."\n";
 
-} catch (\Exception $e) {
-    echo "❌ ERROR: " . $e->getMessage() . "\n";
+} catch (Exception $e) {
+    echo '❌ ERROR: '.$e->getMessage()."\n";
     exit(1);
 }

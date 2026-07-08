@@ -294,6 +294,7 @@ class AiQuestionGeneratorService
                 $data = json_decode($candidate, true);
                 if (is_array($data)) {
                     Log::warning('Repaired truncated JSON by adding '.$i.' closing braces');
+
                     return $data;
                 }
             }

@@ -40,7 +40,7 @@ class AiQuestionDraftForm
                             ->label('Requested counts')
                             ->content(fn ($record) => collect($record?->type_counts ?? [])
                                 ->filter(fn ($count) => $count > 0)
-                                ->map(fn ($count, $type) => "{$count} " . str_replace('_', ' ', $type))
+                                ->map(fn ($count, $type) => "{$count} ".str_replace('_', ' ', $type))
                                 ->implode(', '))
                             ->columnSpanFull(),
                     ]),

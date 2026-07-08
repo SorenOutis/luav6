@@ -3,22 +3,26 @@
 require __DIR__.'/vendor/autoload.php';
 
 $app = require __DIR__.'/bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 use App\Services\AiQuestionGeneratorService;
+use Illuminate\Contracts\Console\Kernel;
 
 $passed = 0;
 $failed = 0;
 
-function check(string $label, bool $condition, string $detail = '') {
+function check(string $label, bool $condition, string $detail = '')
+{
     global $passed, $failed;
     if ($condition) {
         echo "  ✅ {$label}\n";
         $passed++;
     } else {
         echo "  ❌ {$label}";
-        if ($detail) echo " — {$detail}";
+        if ($detail) {
+            echo " — {$detail}";
+        }
         echo "\n";
         $failed++;
     }
@@ -88,14 +92,14 @@ $result = AiQuestionGeneratorService::enforceCounts($questions, $counts);
 check(
     'enforceCounts trims 14 questions to 8 (2 per type)',
     count($result) === 8,
-    'Got ' . count($result) . ' questions'
+    'Got '.count($result).' questions'
 );
 
 // Verify types are correct
-$mc = count(array_filter($result, fn($q) => $q['type'] === 'multiple_choice'));
-$tf = count(array_filter($result, fn($q) => $q['type'] === 'true_false'));
-$id = count(array_filter($result, fn($q) => $q['type'] === 'identification'));
-$es = count(array_filter($result, fn($q) => $q['type'] === 'essay'));
+$mc = count(array_filter($result, fn ($q) => $q['type'] === 'multiple_choice'));
+$tf = count(array_filter($result, fn ($q) => $q['type'] === 'true_false'));
+$id = count(array_filter($result, fn ($q) => $q['type'] === 'identification'));
+$es = count(array_filter($result, fn ($q) => $q['type'] === 'essay'));
 check('MC trimmed to 2', $mc === 2, "Got {$mc}");
 check('TF trimmed to 2', $tf === 2, "Got {$tf}");
 check('ID trimmed to 2', $id === 2, "Got {$id}");
@@ -104,8 +108,8 @@ check('Essay trimmed to 2', $es === 2, "Got {$es}");
 // Test: type set to 0 drops all questions of that type
 $counts = ['multiple_choice' => 0, 'true_false' => 2, 'identification' => 2, 'essay' => 0];
 $result = AiQuestionGeneratorService::enforceCounts($questions, $counts);
-$mc = count(array_filter($result, fn($q) => $q['type'] === 'multiple_choice'));
-$es = count(array_filter($result, fn($q) => $q['type'] === 'essay'));
+$mc = count(array_filter($result, fn ($q) => $q['type'] === 'multiple_choice'));
+$es = count(array_filter($result, fn ($q) => $q['type'] === 'essay'));
 check('MC dropped when count=0', $mc === 0, "Got {$mc}");
 check('Essay dropped when count=0', $es === 0, "Got {$es}");
 
@@ -120,7 +124,7 @@ $questions = [
 ];
 $counts = ['multiple_choice' => 10, 'true_false' => 0, 'identification' => 0, 'essay' => 0];
 $result = AiQuestionGeneratorService::enforceCounts($questions, $counts);
-check('Fewer than requested keeps all', count($result) === 2, "Got " . count($result));
+check('Fewer than requested keeps all', count($result) === 2, 'Got '.count($result));
 
 // Test: unknown types are ignored
 $questions = [
@@ -130,9 +134,9 @@ $questions = [
 ];
 $counts = ['multiple_choice' => 1, 'true_false' => 0, 'identification' => 0, 'essay' => 1];
 $result = AiQuestionGeneratorService::enforceCounts($questions, $counts);
-check('Unknown types are filtered out', count($result) === 2, "Got " . count($result));
+check('Unknown types are filtered out', count($result) === 2, 'Got '.count($result));
 
 echo "\n=== RESULTS ===\n";
 echo "Passed: {$passed}\n";
 echo "Failed: {$failed}\n";
-echo ($failed === 0 ? "✅ ALL PASSED" : "❌ SOME FAILED") . "\n";
+echo ($failed === 0 ? '✅ ALL PASSED' : '❌ SOME FAILED')."\n";
