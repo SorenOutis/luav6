@@ -99,7 +99,7 @@ class AIService
                 'groq' => $this->batchAssessWithGroq($essays),
                 default => $this->batchAssessWithGemini($essays),
             };
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::warning("AI provider '{$this->provider}' failed for essay grading: ".$e->getMessage());
 
             if ($this->ollamaEnabled) {
@@ -107,7 +107,7 @@ class AIService
 
                 try {
                     return $this->batchAssessWithOllama($essays);
-                } catch (\Exception $ollamaError) {
+                } catch (\Throwable $ollamaError) {
                     Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
                 }
             }

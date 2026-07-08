@@ -32,6 +32,12 @@ class ExamSubmission extends Model
             self::syncLearningMapProgress($submission);
         });
 
+        static::deleted(function (ExamSubmission $submission): void {
+            // When a submission is deleted, subtract its score from the student's progress
+            $oldScore = self::scoreAsFloat($submission->score);
+            self::applyScoreDeltaToStudent($submission, $oldScore, 0.0);
+        });
+
         static::updated(function (ExamSubmission $submission): void {
             if (! $submission->wasChanged('score')) {
                 return;
