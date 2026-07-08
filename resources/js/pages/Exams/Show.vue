@@ -856,8 +856,12 @@ const submitPart = async () => {
             answers: detailedAnswers,
         },
         {
-            onSuccess: () => {
-                triggerSuccessModal();
+            onSuccess: (page) => {
+                // Use fresh page data directly to avoid stale computed props
+                triggerSuccessModal(
+                    props.exam.parts.length - Object.keys(page.props.submissions as Record<number, {status: string; score: number}>).length,
+                    page.props.submittedPartId as number | null,
+                );
             },
             onFinish: () => {
                 isFinalSubmitting.value = false;
@@ -902,12 +906,15 @@ const closeUnansweredWarning = (proceed: boolean) => {
 
 
 
-const triggerSuccessModal = () => {
+const triggerSuccessModal = (remainingCount?: number, newSubmittedPartId?: number | null) => {
+    const effectiveRemainingCount = remainingCount ?? remainingPartsCount.value;
+    const effectiveSubmittedPartId = newSubmittedPartId ?? props.submittedPartId;
+
     hasShownUnansweredWarning.value = false;
     clearDraft();
 
     // Exit full screen mode only if ALL parts are completed
-    if (remainingPartsCount.value === 0) {
+    if (effectiveRemainingCount === 0) {
         examStarted.value = false;
 
         if (document.fullscreenElement) {
@@ -925,7 +932,7 @@ const triggerSuccessModal = () => {
 
     // Show success modal
     showSuccessModal.value = true;
-    partsPendingCount.value = remainingPartsCount.value;
+    partsPendingCount.value = effectiveRemainingCount;
     isFinalSubmitting.value = false;
 
     // Animate modal
@@ -944,9 +951,9 @@ const triggerSuccessModal = () => {
             );
 
             // If all parts are done OR the submitted part has an essay, animate the total score/AI assessment
-            const hasEssayInSubmittedPart = props.submittedPartId
+            const hasEssayInSubmittedPart = effectiveSubmittedPartId
                 ? props.exam.parts
-                    .find(p => p.id === props.submittedPartId)
+                    .find(p => p.id === effectiveSubmittedPartId)
                     ?.questions?.some(q => q.type === 'essay')
                 : currentPartHasEssay.value;
 
@@ -1107,7 +1114,8 @@ onMounted(() => {
 
     // If we landed here after submitting a part (from redirect), show the success modal
     if (props.submittedPartId) {
-        triggerSuccessModal();
+        // Pass current computed values explicitly for consistency
+        triggerSuccessModal(remainingPartsCount.value, props.submittedPartId);
     }
 
     // Default to Dyslexia-Friendly mode for exams as requested
