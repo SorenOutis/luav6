@@ -18,12 +18,19 @@ defineProps<{
     show: boolean;
 }>();
 
+const enterDashboard = () => {
+    if (isEnteringDashboard.value) return;
+    isEnteringDashboard.value = true;
+    window.location.href = '/dashboard';
+};
+
 // ── Code input state ───────────────────────────────────────────────
 const joinCode = ref('');
 const isVerifyingCode = ref(false);
 const codeError = ref('');
-const joinedSection = ref<{ id: number; name: string } | null>(null);
+const joinedSection = ref<{ id: number; name: string; already_joined: boolean } | null>(null);
 const showSuccess = ref(false);
+const isEnteringDashboard = ref(false);
 
 const formatCodeInput = (value: string) => {
     let cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -80,10 +87,12 @@ const submitCode = async () => {
         joinedSection.value = data.section;
         showSuccess.value = true;
 
-        // Auto-redirect after celebration
+        // Auto-redirect after celebration (shorter for already-joined users)
         setTimeout(() => {
-            window.location.reload();
-        }, 2000);
+            if (!isEnteringDashboard.value) {
+                window.location.href = '/dashboard';
+            }
+        }, data.section.already_joined ? 1200 : 2000);
     } catch (err: unknown) {
         if (axios.isAxiosError(err) && err.response?.data?.message) {
             codeError.value = err.response.data.message;
@@ -195,35 +204,58 @@ watch(
             <template v-else-if="joinedSection">
                 <DialogHeader class="sm:text-center">
                     <div
-                        class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 sm:h-20 sm:w-20"
+                        class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full sm:h-20 sm:w-20"
+                        :class="joinedSection.already_joined ? 'bg-amber-500/10' : 'bg-primary/10'"
                     >
-                        <Check
-                            class="h-8 w-8 animate-bounce text-primary sm:h-10 sm:w-10"
-                        />
+                        <template v-if="joinedSection.already_joined">
+                            <Check
+                                class="h-8 w-8 text-amber-500 sm:h-10 sm:w-10"
+                                :class="isEnteringDashboard ? 'animate-none' : 'animate-bounce'"
+                            />
+                        </template>
+                        <template v-else>
+                            <Check
+                                class="h-8 w-8 animate-bounce text-primary sm:h-10 sm:w-10"
+                            />
+                        </template>
                     </div>
                     <DialogTitle
                         class="text-xl font-black tracking-tight uppercase sm:text-3xl"
                     >
-                        You&apos;re in!
+                        {{ joinedSection.already_joined ? 'Already Joined' : 'You\'re in!' }}
                     </DialogTitle>
                     <DialogDescription
                         class="mx-auto max-w-md pt-2 text-sm leading-relaxed"
                     >
-                        You&apos;ve successfully joined
-                        <strong class="text-foreground">{{
-                            joinedSection.name
-                        }}</strong
-                        >. Redirecting to your dashboard...
+                        <template v-if="joinedSection.already_joined">
+                            You&apos;re already a member of
+                            <strong class="text-foreground">{{
+                                joinedSection.name
+                            }}</strong
+                            >.
+                        </template>
+                        <template v-else>
+                            You&apos;ve successfully joined
+                            <strong class="text-foreground">{{
+                                joinedSection.name
+                            }}</strong
+                            >. Redirecting to your dashboard...
+                        </template>
                     </DialogDescription>
                 </DialogHeader>
 
                 <div class="flex justify-center py-6">
                     <Button
-                        @click="window.location.reload()"
-                        class="h-12 w-full max-w-sm text-sm font-black tracking-wider uppercase shadow-lg sm:h-14 sm:text-base"
+                        @click="enterDashboard"
+                        class="h-12 w-full max-w-sm text-sm font-black tracking-wider uppercase shadow-lg transition-all sm:h-14 sm:text-base"
+                        :disabled="isEnteringDashboard"
                     >
-                        <Check class="mr-2 h-5 w-5" />
-                        Enter Dashboard
+                        <Loader2
+                            v-if="isEnteringDashboard"
+                            class="mr-2 h-5 w-5 animate-spin"
+                        />
+                        <Check v-else class="mr-2 h-5 w-5" />
+                        {{ isEnteringDashboard ? 'Entering…' : 'Enter Dashboard' }}
                     </Button>
                 </div>
             </template>

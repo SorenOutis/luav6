@@ -92,9 +92,13 @@ class ExamController extends Controller
             })
             ->toArray();
 
+        // Check if we just submitted a part (from flash session)
+        $submittedPartId = session()->pull('submitted_part');
+
         return Inertia::render('Exams/Show', [
             'exam' => $exam,
             'submissions' => $submissions,
+            'submittedPartId' => $submittedPartId,
         ]);
     }
 
@@ -260,6 +264,6 @@ class ExamController extends Controller
             ]
         );
 
-        return redirect()->back();
+        return redirect('/exams/'.$exam->id)->with('submitted_part', $examPart->id);
     }
 }

@@ -2,10 +2,14 @@
 
 namespace App\Filament\Resources\AiQuestionDrafts\Tables;
 
+use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -63,6 +67,41 @@ class AiQuestionDraftsTable
             ->recordActions([
                 EditAction::make()
                     ->label('Review'),
+                Action::make('transfer')
+                    ->label('Transfer')
+                    ->icon('heroicon-o-arrow-right-start-on-rectangle')
+                    ->color('warning')
+                    ->modalHeading('Transfer Draft')
+                    ->modalDescription('Transfer this AI question draft to another admin.')
+                    ->modalSubmitActionLabel('Transfer')
+                    ->form([
+                        Select::make('target_admin_id')
+                            ->label('Transfer to')
+                            ->options(function () {
+                                $currentUserId = auth()->id();
+
+                                return User::query()
+                                    ->where('is_admin', true)
+                                    ->whereKeyNot($currentUserId)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all();
+                            })
+                            ->searchable()
+                            ->required()
+                            ->placeholder('Select an admin…'),
+                    ])
+                    ->action(function (array $data, $record) {
+                        $record->update(['admin_id' => $data['target_admin_id']]);
+
+                        $targetAdmin = User::find($data['target_admin_id']);
+
+                        Notification::make()
+                            ->title('Draft transferred')
+                            ->body("Transferred to {$targetAdmin?->name} successfully.")
+                            ->success()
+                            ->send();
+                    }),
                 DeleteAction::make(),
             ])
             ->toolbarActions([

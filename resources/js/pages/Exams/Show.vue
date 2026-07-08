@@ -75,6 +75,7 @@ interface Exam {
 const props = defineProps<{
     exam: Exam;
     submissions: Record<number, { status: string; score: number }>;
+    submittedPartId?: number | null;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -347,6 +348,17 @@ watch(selectedPart, (newVal) => {
         // We no longer need runEntranceAnimations here as we use Motion components
     }
 });
+
+// ─── AUTO-SAVE ON ANSWER CHANGE ─────────────────────────────
+let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
+watch(answers, () => {
+    if (saveDraftTimeout) {
+        clearTimeout(saveDraftTimeout);
+    }
+    saveDraftTimeout = setTimeout(() => {
+        saveDraft();
+    }, 500);
+}, { deep: true });
 
 // ─── INTEGRITY & ANTI-CHEATING ───────────────────────────────
 const integrityWarnings = ref(0);
@@ -845,108 +857,7 @@ const submitPart = async () => {
         },
         {
             onSuccess: () => {
-                hasShownUnansweredWarning.value = false; // Reset warning state after successful submission
-                clearDraft(); // Clean up successfully submitted draft
-
-                // Exit full screen mode only if ALL parts are completed
-                if (remainingPartsCount.value === 0) {
-                    // Set examStarted to false BEFORE exiting fullscreen
-                    // to prevent the handleFullscreenChange from triggering the lockout modal
-                    examStarted.value = false;
-
-                    if (document.fullscreenElement) {
-                        if (document.exitFullscreen) {
-                            document.exitFullscreen();
-                        } else if ((document as any).webkitExitFullscreen) {
-                            (document as any).webkitExitFullscreen();
-                        } else if ((document as any).msExitFullscreen) {
-                            (document as any).msExitFullscreen();
-                        }
-                    }
-                    isFullscreen.value = false;
-                    void sendMonitorProgress('finished');
-                }
-
-                // Show success modal
-                showSuccessModal.value = true;
-                partsPendingCount.value = remainingPartsCount.value;
-                isFinalSubmitting.value = false; // Reset early on success to allow modal interactions
-
-                // Animate modal
-                setTimeout(() => {
-                    if (successModalRef.value) {
-                        gsap.fromTo(
-                            successModalRef.value,
-                            { opacity: 0, scale: 0.85, y: 30 },
-                            {
-                                opacity: 1,
-                                scale: 1,
-                                y: 0,
-                                duration: 0.6,
-                                ease: 'back.out',
-                            },
-                        );
-
-                        // If all parts are done OR current part has essay, animate the total score/AI assessment
-                        if (
-                            partsPendingCount.value === 0 ||
-                            currentPartHasEssay.value
-                        ) {
-                            isCalculatingScore.value = true;
-                            displayedScore.value = 0;
-
-                            // Simulate calculation delay
-                            setTimeout(
-                                () => {
-                                    isCalculatingScore.value = false;
-                                    const targetScore =
-                                        Number(totalScore.value) || 0;
-
-                                    gsap.to(displayedScore, {
-                                        value: targetScore,
-                                        duration: 1.2,
-                                        ease: 'none',
-                                        onUpdate: () => {
-                                            displayedScore.value = Math.floor(
-                                                displayedScore.value,
-                                            );
-                                        },
-                                        onComplete: () => {
-                                            displayedScore.value = targetScore;
-                                        },
-                                    });
-
-                                    // Decorative pop for the score box
-                                    gsap.fromTo(
-                                        '.final-score-box',
-                                        { scale: 0.8, opacity: 0, y: 20 },
-                                        {
-                                            scale: 1,
-                                            opacity: 1,
-                                            y: 0,
-                                            duration: 1.2,
-                                            ease: 'elastic.out(1, 0.5)',
-                                        },
-                                    );
-                                },
-                                currentPartHasEssay.value ? 2000 : 1000,
-                            ); // Faster UI feedback
-                        }
-
-                        // Bounce animation for checkmark
-                        gsap.fromTo(
-                            '.success-checkmark',
-                            { scale: 0, rotate: -180 },
-                            {
-                                scale: 1,
-                                rotate: 0,
-                                duration: 0.8,
-                                delay: 0.2,
-                                ease: 'elastic.out(1.2, 0.4)',
-                            },
-                        );
-                    }
-                }, 10);
+                triggerSuccessModal();
             },
             onFinish: () => {
                 isFinalSubmitting.value = false;
@@ -990,6 +901,109 @@ const closeUnansweredWarning = (proceed: boolean) => {
 };
 
 
+
+const triggerSuccessModal = () => {
+    hasShownUnansweredWarning.value = false;
+    clearDraft();
+
+    // Exit full screen mode only if ALL parts are completed
+    if (remainingPartsCount.value === 0) {
+        examStarted.value = false;
+
+        if (document.fullscreenElement) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if ((document as any).webkitExitFullscreen) {
+                (document as any).webkitExitFullscreen();
+            } else if ((document as any).msExitFullscreen) {
+                (document as any).msExitFullscreen();
+            }
+        }
+        isFullscreen.value = false;
+        void sendMonitorProgress('finished');
+    }
+
+    // Show success modal
+    showSuccessModal.value = true;
+    partsPendingCount.value = remainingPartsCount.value;
+    isFinalSubmitting.value = false;
+
+    // Animate modal
+    setTimeout(() => {
+        if (successModalRef.value) {
+            gsap.fromTo(
+                successModalRef.value,
+                { opacity: 0, scale: 0.85, y: 30 },
+                {
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                    duration: 0.6,
+                    ease: 'back.out',
+                },
+            );
+
+            // If all parts are done OR the submitted part has an essay, animate the total score/AI assessment
+            const hasEssayInSubmittedPart = props.submittedPartId
+                ? props.exam.parts
+                    .find(p => p.id === props.submittedPartId)
+                    ?.questions?.some(q => q.type === 'essay')
+                : currentPartHasEssay.value;
+
+            if (partsPendingCount.value === 0 || hasEssayInSubmittedPart) {
+                isCalculatingScore.value = true;
+                displayedScore.value = 0;
+
+                setTimeout(
+                    () => {
+                        isCalculatingScore.value = false;
+                        const targetScore = Number(totalScore.value) || 0;
+
+                        gsap.to(displayedScore, {
+                            value: targetScore,
+                            duration: 1.2,
+                            ease: 'none',
+                            onUpdate: () => {
+                                displayedScore.value = Math.floor(
+                                    displayedScore.value,
+                                );
+                            },
+                            onComplete: () => {
+                                displayedScore.value = targetScore;
+                            },
+                        });
+
+                        gsap.fromTo(
+                            '.final-score-box',
+                            { scale: 0.8, opacity: 0, y: 20 },
+                            {
+                                scale: 1,
+                                opacity: 1,
+                                y: 0,
+                                duration: 1.2,
+                                ease: 'elastic.out(1, 0.5)',
+                            },
+                        );
+                    },
+                    hasEssayInSubmittedPart ? 2000 : 1000,
+                );
+            }
+
+            // Bounce animation for checkmark
+            gsap.fromTo(
+                '.success-checkmark',
+                { scale: 0, rotate: -180 },
+                {
+                    scale: 1,
+                    rotate: 0,
+                    duration: 0.8,
+                    delay: 0.2,
+                    ease: 'elastic.out(1.2, 0.4)',
+                },
+            );
+        }
+    }, 10);
+};
 
 const closeSuccessModal = () => {
     if (successModalRef.value) {
@@ -1091,6 +1105,11 @@ onMounted(() => {
         { immediate: true },
     );
 
+    // If we landed here after submitting a part (from redirect), show the success modal
+    if (props.submittedPartId) {
+        triggerSuccessModal();
+    }
+
     // Default to Dyslexia-Friendly mode for exams as requested
     updateDyslexiaMode(true);
 
@@ -1120,6 +1139,10 @@ onUnmounted(() => {
     if (monitorHeartbeatInterval.value) {
         clearInterval(monitorHeartbeatInterval.value);
         monitorHeartbeatInterval.value = null;
+    }
+    if (saveDraftTimeout) {
+        clearTimeout(saveDraftTimeout);
+        saveDraftTimeout = null;
     }
 });
 const isExamInProgress = computed(
@@ -3210,3 +3233,4 @@ const onDragEnd = () => {
     opacity: 1;
 }
 </style>
+

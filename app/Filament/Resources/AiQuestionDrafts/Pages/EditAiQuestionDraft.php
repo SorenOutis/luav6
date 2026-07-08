@@ -7,6 +7,7 @@ use App\Filament\Resources\Exams\ExamResource;
 use App\Jobs\GenerateAiQuestions;
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\User;
 use App\Support\AiQueueWorker;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -29,7 +30,7 @@ class EditAiQuestionDraft extends EditRecord
                 ->color('gray')
                 ->requiresConfirmation()
                 ->modalDescription('Re-run the AI over the same source material. This replaces the current questions.')
-                ->visible(fn (): bool => in_array($this->record->status, ['ready', 'failed'], true))
+                ->visible(fn ($record): bool => $record && in_array($record->status, ['ready', 'failed'], true))
                 ->action(function () {
                     $this->record->forceFill([
                         'status' => 'pending',
@@ -52,7 +53,7 @@ class EditAiQuestionDraft extends EditRecord
                 ->label('Attach to Exam')
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
-                ->visible(fn (): bool => $this->record->status === 'ready' && is_array($this->record->questions) && count($this->record->questions) > 0)
+                ->visible(fn ($record): bool => $record?->status === 'ready' && is_array($record->questions) && count($record->questions) > 0)
                 ->form([
                     Select::make('exam_id')
                         ->label('Target Exam')
@@ -147,6 +148,44 @@ class EditAiQuestionDraft extends EditRecord
                         ->send();
 
                     $this->redirect(ExamResource::getUrl('edit', ['record' => $exam->id]));
+                }),
+
+            Action::make('transfer')
+                ->label('Transfer')
+                ->icon('heroicon-o-arrow-right-start-on-rectangle')
+                ->color('warning')
+                ->modalHeading('Transfer Draft')
+                ->modalDescription('Transfer this AI question draft to another admin.')
+                ->modalSubmitActionLabel('Transfer')
+                ->form([
+                    Select::make('target_admin_id')
+                        ->label('Transfer to')
+                        ->options(function () {
+                            $currentUserId = auth()->id();
+
+                            return User::query()
+                                ->where('is_admin', true)
+                                ->whereKeyNot($currentUserId)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all();
+                        })
+                        ->searchable()
+                        ->required()
+                        ->placeholder('Select an admin…'),
+                ])
+                ->action(function (array $data) {
+                    $this->record->update(['admin_id' => $data['target_admin_id']]);
+
+                    $targetAdmin = User::find($data['target_admin_id']);
+
+                    Notification::make()
+                        ->title('Draft transferred')
+                        ->body("Transferred to {$targetAdmin?->name} successfully.")
+                        ->success()
+                        ->send();
+
+                    $this->redirect(static::getResource()::getUrl('index'));
                 }),
 
             DeleteAction::make(),
