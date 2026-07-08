@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -180,11 +181,11 @@ class AIService
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
-            if ($response instanceof \Illuminate\Http\Client\Response && $response->successful()) {
+            if ($response instanceof Response && $response->successful()) {
                 $data = json_decode($response->json('response'), true);
                 $result = $this->buildResultFromData($data, $essay);
             } elseif ($response) {
-                $errorMsg = $response instanceof \Illuminate\Http\Client\Response ? $response->body() : get_class($response);
+                $errorMsg = $response instanceof Response ? $response->body() : get_class($response);
                 Log::error("AI Ollama assessment failed for index $index: $errorMsg");
             } else {
                 Log::error("AI Ollama assessment missing response for index $index");
@@ -238,7 +239,7 @@ class AIService
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
-            if ($response instanceof \Illuminate\Http\Client\Response && $response->successful()) {
+            if ($response instanceof Response && $response->successful()) {
                 $data = $response->json();
                 $rawText = $data['result']['response'] ?? $data['response'] ?? null;
                 if ($rawText) {
@@ -246,7 +247,7 @@ class AIService
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
-                $errorMsg = $response instanceof \Illuminate\Http\Client\Response ? $response->body() : get_class($response);
+                $errorMsg = $response instanceof Response ? $response->body() : get_class($response);
                 Log::error("AI Cloudflare assessment failed for index $index: $errorMsg");
             } else {
                 Log::error("AI Cloudflare assessment missing response for index $index");
@@ -308,7 +309,7 @@ class AIService
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
-            if ($response instanceof \Illuminate\Http\Client\Response && $response->successful()) {
+            if ($response instanceof Response && $response->successful()) {
                 $data = $response->json();
                 $rawText = $data['choices'][0]['message']['content'] ?? null;
                 if ($rawText) {
@@ -316,7 +317,7 @@ class AIService
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
-                $errorMsg = $response instanceof \Illuminate\Http\Client\Response ? $response->body() : get_class($response);
+                $errorMsg = $response instanceof Response ? $response->body() : get_class($response);
                 Log::error("AI Groq assessment failed for index $index: $errorMsg");
             } else {
                 Log::error("AI Groq assessment missing response for index $index");
@@ -379,7 +380,7 @@ class AIService
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
-            if ($response instanceof \Illuminate\Http\Client\Response && $response->successful()) {
+            if ($response instanceof Response && $response->successful()) {
                 $data = $response->json();
                 $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
                 if ($rawText) {
@@ -389,7 +390,7 @@ class AIService
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
-                $errorMsg = $response instanceof \Illuminate\Http\Client\Response ? $response->body() : get_class($response);
+                $errorMsg = $response instanceof Response ? $response->body() : get_class($response);
                 Log::error("AI Gemini assessment failed for index $index: $errorMsg");
             } else {
                 Log::error("AI Gemini assessment missing response for index $index");
