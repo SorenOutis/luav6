@@ -18,6 +18,44 @@ class AiQuestionDraftForm
         return $schema
             ->columns(2)
             ->components([
+                // Generation Status banner — shown only while AI is working, with auto-polling
+                Section::make('Generation in Progress')
+                    ->columnSpanFull()
+                    ->extraAlpineAttributes(fn ($record) => in_array($record?->status ?? '', ['pending', 'running', 'generating_source']) ? [
+                        'x-data' => '{ pollInterval: null }',
+                        'x-init' => 'pollInterval = setInterval(() => $wire.pollGenerationStatus(), 3000)',
+                        'x-on:destroy' => 'if (pollInterval) clearInterval(pollInterval)',
+                    ] : [])
+                    ->visible(fn ($record) => in_array($record?->status ?? '', ['pending', 'running', 'generating_source']))
+                    ->schema([
+                        Placeholder::make('gen_status')
+                            ->label('')
+                            ->content(fn ($record) => match ($record?->status) {
+                                'pending' => '⏳ Queued — waiting for AI worker...',
+                                'running', 'generating_source' => '🔄 AI is generating your questions...',
+                                default => strtoupper((string) ($record?->status ?? '—')),
+                            })
+                            ->columnSpanFull(),
+                        Placeholder::make('gen_counts')
+                            ->label('Requested counts')
+                            ->content(fn ($record) => collect($record?->type_counts ?? [])
+                                ->filter(fn ($count) => $count > 0)
+                                ->map(fn ($count, $type) => "{$count} " . str_replace('_', ' ', $type))
+                                ->implode(', '))
+                            ->columnSpanFull(),
+                    ]),
+
+                // Generation Failed banner
+                Section::make('Generation Failed')
+                    ->columnSpanFull()
+                    ->visible(fn ($record) => $record?->status === 'failed')
+                    ->schema([
+                        Placeholder::make('last_error')
+                            ->label('Error details')
+                            ->content(fn ($record) => $record?->last_error ?: 'Unknown error')
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('Draft details')
                     ->columnSpanFull()
                     ->columns(2)
@@ -44,6 +82,7 @@ class AiQuestionDraftForm
                 Section::make('Generated Questions')
                     ->description('Review and edit the AI-generated questions. These will be attached to the exam as a new part when you click "Attach to Exam".')
                     ->columnSpanFull()
+                    ->visible(fn ($record) => $record?->status === 'ready' && ! empty($record?->questions))
                     ->schema([
                         Repeater::make('questions')
                             ->hiddenLabel()
@@ -94,6 +133,13 @@ class AiQuestionDraftForm
                             ->cloneable()
                             ->addActionLabel('Add Question'),
                     ]),
+
+                // Pending generation message
+                Placeholder::make('pending_questions_note')
+                    ->label('')
+                    ->content('Questions will appear here once the AI finishes generating.')
+                    ->columnSpanFull()
+                    ->visible(fn ($record) => in_array($record?->status ?? '', ['pending', 'running', 'generating_source'])),
 
                 Section::make('Source Text (read-only)')
                     ->collapsed()

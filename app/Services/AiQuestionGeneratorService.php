@@ -431,6 +431,7 @@ PROMPT;
                 'messages' => [
                     ['role' => 'user', 'content' => $prompt],
                 ],
+                'max_tokens' => min($length * 3, 8192),
             ]);
 
         if (! $response->successful()) {

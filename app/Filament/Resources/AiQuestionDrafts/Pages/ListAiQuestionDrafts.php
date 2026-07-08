@@ -265,11 +265,7 @@ class ListAiQuestionDrafts extends ListRecords
 
                     AiQueueWorker::ensureRunning();
 
-                    Notification::make()
-                        ->title('Generation queued')
-                        ->body('The AI is working. This page refreshes automatically.')
-                        ->success()
-                        ->send();
+                    $this->redirect(static::getResource()::getUrl('edit', ['record' => $draft->id]));
                 }),
         ];
     }

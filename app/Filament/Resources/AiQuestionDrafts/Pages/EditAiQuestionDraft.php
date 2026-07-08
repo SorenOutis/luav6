@@ -157,4 +157,16 @@ class EditAiQuestionDraft extends EditRecord
     {
         return 'Draft updated';
     }
+
+    /**
+     * Called by Alpine polling every 3s while the AI is generating.
+     * Refreshes the record from the database so the form schema
+     * callbacks (status, questions, etc.) reflect the latest state.
+     */
+    public function pollGenerationStatus(): void
+    {
+        if (in_array($this->record->status ?? '', ['pending', 'running', 'generating_source'])) {
+            $this->record->refresh();
+        }
+    }
 }
