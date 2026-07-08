@@ -98,6 +98,10 @@ const handleMouseMove = (e: MouseEvent) => {
 };
 
 const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
+// Track submitted part IDs locally to handle stale server data after redirect
+const locallySubmittedPartIds = ref(new Set<number>(
+    Object.keys(props.submissions).map(Number)
+));
 const isSubmitting = ref(false);
 const isFinalSubmitting = ref(false);
 const showSuccessModal = ref(false);
@@ -828,7 +832,9 @@ const submitPart = async () => {
         return; // Wait for user interaction with custom modal
     }
 
+    locallySubmittedPartIds.value.add(selectedPart.value.id);
     isSubmitting.value = true;
+    stopTimer(); // Stop countdown during submission to prevent auto-submit race condition
     isTimeoutSubmission.value = false; // Reset timeout flag if we are proceeding with submission
     void sendMonitorProgress('submitting');
 
@@ -857,12 +863,18 @@ const submitPart = async () => {
         },
         {
             onSuccess: (page) => {
-                // Use fresh page data directly to avoid stale computed props
-                triggerSuccessModal(
-                    props.exam.parts.length - Object.keys(page.props.submissions as Record<number, {status: string; score: number}>).length,
-                    page.props.submittedPartId as number | null,
-                );
-            },
+                // Use fresh page data directly, fall back to reactive props if page.props is stale
+                                // Use max of server-reported count and locally tracked count (handles stale data)
+                    const serverCount = Math.max(
+                        Object.keys(page.props.submissions ?? {}).length,
+                        Object.keys(props.submissions).length
+                    );
+                    const effectiveCount = Math.max(serverCount, locallySubmittedPartIds.value.size);
+                    const freshSubmittedPartId = (page.props.submittedPartId ?? props.submittedPartId) as number | null;
+                    triggerSuccessModal(
+                        props.exam.parts.length - effectiveCount,
+                        freshSubmittedPartId,
+                    );            },
             onFinish: () => {
                 isFinalSubmitting.value = false;
                 isSubmitting.value = false;
@@ -951,11 +963,7 @@ const triggerSuccessModal = (remainingCount?: number, newSubmittedPartId?: numbe
             );
 
             // If all parts are done OR the submitted part has an essay, animate the total score/AI assessment
-            const hasEssayInSubmittedPart = effectiveSubmittedPartId
-                ? props.exam.parts
-                    .find(p => p.id === effectiveSubmittedPartId)
-                    ?.questions?.some(q => q.type === 'essay')
-                : currentPartHasEssay.value;
+            const hasEssayInSubmittedPart = currentPartHasEssay.value;
 
             if (partsPendingCount.value === 0 || hasEssayInSubmittedPart) {
                 isCalculatingScore.value = true;
@@ -1025,7 +1033,8 @@ const closeSuccessModal = () => {
                 currentPartHasEssay.value = false;
 
                 // If all parts are completed, redirect to the exams list
-                if (allPartsSubmitted.value) {
+                // Use partsPendingCount (correctly tracks via local submitted IDs) instead of allPartsSubmitted (stale server data)
+                if (partsPendingCount.value === 0) {
                     router.visit('/exams');
                     return;
                 }
