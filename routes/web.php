@@ -634,8 +634,6 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         return response()->json(['exams' => $upcomingExams]);
     })->middleware(['auth', 'verified'])->name('api.dashboard-exams');
 
-
-
     Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
 
