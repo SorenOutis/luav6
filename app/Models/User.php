@@ -38,6 +38,7 @@ class User extends Authenticatable
         'last_login_at',
         'avatar',
         'cover_photo',
+        'blur_leaderboard',
     ];
 
     /**
@@ -131,6 +132,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'is_super_admin' => 'boolean',
             'is_banned' => 'boolean',
+            'blur_leaderboard' => 'boolean',
             'banned_at' => 'datetime',
         ];
     }

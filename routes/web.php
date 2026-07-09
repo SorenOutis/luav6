@@ -403,6 +403,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                         'weeklyXp' => $weeklyXp,
                         'trend' => 'stable',
                         'isCurrentUser' => $u->id === auth()->id(),
+                        'blurred' => $u->blur_leaderboard,
                     ];
                 })->sortByDesc('xp')->values();
 
@@ -491,6 +492,17 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('sections/join-by-code', [ProfileController::class, 'joinByCode'])->name('sections.join-by-code');
     Route::post('sections/{section}/verify-password', [ProfileController::class, 'verifySectionPassword'])->name('sections.verify-password');
 
+    Route::post('api/leaderboard/toggle-blur', function () {
+        $user = auth()->user();
+        $user->update([
+            'blur_leaderboard' => ! $user->blur_leaderboard,
+        ]);
+
+        return response()->json([
+            'blur_leaderboard' => $user->fresh()->blur_leaderboard,
+        ]);
+    })->middleware(['auth', 'verified'])->name('api.leaderboard.toggle-blur');
+
     Route::get('assignments', [AssignmentController::class, 'index'])->middleware('student.page:assignments')->name('assignments.index');
     Route::post('assignments/{assignment}/submit', [AssignmentController::class, 'store'])->middleware('student.page:assignments')->name('assignments.submit');
 
@@ -557,6 +569,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                     'weeklyXp' => (int) ($weeklyXpMap[$u->id] ?? 0),
                     'trend' => 'stable',
                     'isCurrentUser' => $u->id === auth()->id(),
+                    'blurred' => $u->blur_leaderboard,
                 ];
             })->sortByDesc('xp')->values();
 

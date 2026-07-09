@@ -14,6 +14,7 @@ import {
     Activity,
     History,
     Eye,
+    EyeOff,
     Loader2,
     ChevronDown,
     ChevronUp,
@@ -34,6 +35,7 @@ interface LeaderboardUser {
     weeklyXp: number;
     trend: 'up' | 'down' | 'stable';
     isCurrentUser?: boolean;
+    blurred?: boolean;
 }
 
 interface LeaderboardData {
@@ -66,6 +68,7 @@ const emit = defineEmits<{
 const activeTabIndex = ref(0);
 const searchQuery = ref('');
 const STORAGE_KEY = 'leaderboard_active_section_id';
+const BLUR_STORAGE_KEY = 'leaderboard_blurred';
 
 // Local state for season-switching via API
 const localLeaderboards = ref<LeaderboardData[]>(props.sectionLeaderboards);
@@ -88,6 +91,18 @@ onMounted(() => {
             (s) => s.sectionId === parseInt(saved),
         );
         if (idx !== -1) activeTabIndex.value = idx;
+    }
+
+    // Sync blur state from localStorage (optimistic UI persistence)
+    const savedBlurred = localStorage.getItem(BLUR_STORAGE_KEY);
+    if (savedBlurred !== null) {
+        const blurred = savedBlurred === 'true';
+        localLeaderboards.value = localLeaderboards.value.map((lb) => ({
+            ...lb,
+            users: lb.users.map((u) =>
+                u.isCurrentUser ? { ...u, blurred } : u,
+            ),
+        }));
     }
 });
 
@@ -204,6 +219,59 @@ const openHistory = async (user: LeaderboardUser) => {
         console.error('Failed to fetch XP history:', e);
     } finally {
         isLoadingHistory.value = false;
+    }
+};
+
+// Blur toggle
+const isTogglingBlur = ref(false);
+
+const currentUserBlurred = computed(() => {
+    const current = users.value.find((u) => u.isCurrentUser);
+    return current?.blurred ?? false;
+});
+
+const toggleBlur = async () => {
+    if (isTogglingBlur.value) return;
+
+    // Compute the new optimisitic state
+    const newBlurred = !currentUserBlurred.value;
+
+    // Optimistically update the UI immediately
+    isTogglingBlur.value = true;
+    localLeaderboards.value = localLeaderboards.value.map((lb) => ({
+        ...lb,
+        users: lb.users.map((u) =>
+            u.isCurrentUser ? { ...u, blurred: newBlurred } : u,
+        ),
+    }));
+    localStorage.setItem(BLUR_STORAGE_KEY, String(newBlurred));
+
+    try {
+        const r = await axios.post('/api/leaderboard/toggle-blur');
+        const serverBlurred = r.data.blur_leaderboard;
+
+        // Sync with server truth (should match, but double-check)
+        if (serverBlurred !== newBlurred) {
+            localLeaderboards.value = localLeaderboards.value.map((lb) => ({
+                ...lb,
+                users: lb.users.map((u) =>
+                    u.isCurrentUser ? { ...u, blurred: serverBlurred } : u,
+                ),
+            }));
+            localStorage.setItem(BLUR_STORAGE_KEY, String(serverBlurred));
+        }
+    } catch (e) {
+        console.error('Failed to toggle blur:', e);
+        // Revert on failure
+        localLeaderboards.value = localLeaderboards.value.map((lb) => ({
+            ...lb,
+            users: lb.users.map((u) =>
+                u.isCurrentUser ? { ...u, blurred: !newBlurred } : u,
+            ),
+        }));
+        localStorage.setItem(BLUR_STORAGE_KEY, String(!newBlurred));
+    } finally {
+        isTogglingBlur.value = false;
     }
 };
 
@@ -324,6 +392,25 @@ const changeSeason = async (seasonId: number) => {
                     <Terminal class="h-3 w-3 text-amber-400" />
                     <span>{{ currentSeasonName }}</span>
                 </div>
+
+                <!-- Blur toggle -->
+                <button
+                    @click="toggleBlur"
+                    :disabled="isTogglingBlur"
+                    class="lb-blur-toggle shrink-0"
+                    :title="
+                        currentUserBlurred
+                            ? 'You are hidden — click to appear'
+                            : 'You are visible — click to hide'
+                    "
+                >
+                    <EyeOff
+                        v-if="currentUserBlurred"
+                        class="h-3.5 w-3.5"
+                    />
+                    <Eye v-else class="h-3.5 w-3.5" />
+                    <span>{{ currentUserBlurred ? 'Hidden' : 'Visible' }}</span>
+                </button>
             </div>
         </div>
 
@@ -419,30 +506,61 @@ const changeSeason = async (seasonId: number) => {
                             </div>
 
                             <!-- Avatar -->
-                            <Link
-                                :href="`/u/${user.id}`"
-                                :class="[
-                                    'lb-avatar',
-                                    origIdx === 0
-                                        ? 'h-20 w-20 sm:h-24 sm:w-24'
-                                        : 'h-16 w-16 sm:h-20 sm:w-20',
-                                    'ring-2',
-                                    rankMeta[origIdx].ring,
-                                ]"
-                            >
-                                <img
-                                    v-if="user.avatar"
-                                    :src="user.avatar"
-                                    class="h-full w-full object-cover"
-                                />
-                                <User
+                            <div class="relative">
+                                <Link
+                                    v-if="!user.blurred"
+                                    :href="`/u/${user.id}`"
+                                    :class="[
+                                        'lb-avatar',
+                                        origIdx === 0
+                                            ? 'h-20 w-20 sm:h-24 sm:w-24'
+                                            : 'h-16 w-16 sm:h-20 sm:w-20',
+                                        'ring-2',
+                                        rankMeta[origIdx].ring,
+                                    ]"
+                                >
+                                    <img
+                                        v-if="user.avatar"
+                                        :src="user.avatar"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <User
+                                        v-else
+                                        class="h-8 w-8 text-muted-foreground/40"
+                                    />
+                                </Link>
+                                <div
                                     v-else
-                                    class="h-8 w-8 text-muted-foreground/40"
-                                />
-                            </Link>
+                                    :class="[
+                                        'lb-avatar',
+                                        'lb-blurred',
+                                        origIdx === 0
+                                            ? 'h-20 w-20 sm:h-24 sm:w-24'
+                                            : 'h-16 w-16 sm:h-20 sm:w-20',
+                                        'ring-2',
+                                        rankMeta[origIdx].ring,
+                                    ]"
+                                >
+                                    <img
+                                        v-if="user.avatar"
+                                        :src="user.avatar"
+                                        class="h-full w-full object-cover blur-sm"
+                                    />
+                                    <User
+                                        v-else
+                                        class="h-8 w-8 text-muted-foreground/40"
+                                    />
+                                    <div
+                                        class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/[0.03] backdrop-blur-[2px]"
+                                    >
+                                        <EyeOff class="h-5 w-5 text-muted-foreground/40" />
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Name -->
                             <Link
+                                v-if="!user.blurred"
                                 :href="`/u/${user.id}`"
                                 :class="[
                                     'mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words transition-colors hover:text-amber-400',
@@ -451,6 +569,15 @@ const changeSeason = async (seasonId: number) => {
                             >
                                 {{ user.name }}
                             </Link>
+                            <span
+                                v-else
+                                :class="[
+                                    'mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words lb-blurred',
+                                    getNameSize(user.name, origIdx === 0),
+                                ]"
+                            >
+                                <span class="blur-sm">{{ user.name }}</span>
+                            </span>
                             <span
                                 v-if="user.isCurrentUser"
                                 class="mt-1 rounded-full bg-amber-400 px-2 py-0.5 text-[8px] font-black text-black uppercase"
@@ -537,7 +664,10 @@ const changeSeason = async (seasonId: number) => {
                         v-for="(user, i) in restUsers"
                         :key="user.id"
                         class="lb-row group animate-fade-up"
-                        :class="{ 'lb-row--you': user.isCurrentUser }"
+                        :class="{
+                    'lb-row--you': user.isCurrentUser,
+                    'lb-row--blurred': user.blurred,
+                }"
                         :style="{ animationDelay: `${(i + 3) * 60}ms` }"
                     >
                         <!-- Rank -->
@@ -552,29 +682,53 @@ const changeSeason = async (seasonId: number) => {
                             </div>
 
                             <!-- Avatar -->
-                            <Link
-                                :href="`/u/${user.id}`"
-                                class="lb-row-avatar shrink-0"
-                            >
-                                <img
-                                    v-if="user.avatar"
-                                    :src="user.avatar"
-                                    class="h-full w-full object-cover"
-                                />
-                                <User
-                                    v-else
-                                    class="h-4 w-4 text-muted-foreground/40"
-                                />
-                            </Link>
-
-                            <!-- Info -->
-                            <div class="min-w-0 flex-1">
-                                <div
-                                    class="flex flex-wrap items-center gap-1.5"
+                            <div class="relative shrink-0">
+                                <Link
+                                    v-if="!user.blurred"
+                                    :href="`/u/${user.id}`"
+                                    class="lb-row-avatar"
                                 >
-                                    <span
-                                        class="text-xs font-bold tracking-tight break-words sm:text-sm"
-                                        >{{ user.name }}</span
+                                    <img
+                                        v-if="user.avatar"
+                                        :src="user.avatar"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <User
+                                        v-else
+                                        class="h-4 w-4 text-muted-foreground/40"
+                                    />
+                                </Link>
+                                <div
+                                    v-else
+                                    class="lb-row-avatar lb-blurred"
+                                >
+                                    <img
+                                        v-if="user.avatar"
+                                        :src="user.avatar"
+                                        class="h-full w-full object-cover blur-sm"
+                                    />
+                                    <User
+                                        v-else
+                                        class="h-4 w-4 text-muted-foreground/40"
+                                    />
+                                    <div
+                                        class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-primary/[0.03] backdrop-blur-[1px]"
+                                    >
+                                        <EyeOff class="h-3 w-3 text-muted-foreground/30" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Info -->                        <div
+                            class="min-w-0 flex-1"
+                        >
+                            <div
+                                class="flex flex-wrap items-center gap-1.5"
+                            >
+                                <span
+                                    class="text-xs font-bold tracking-tight break-words sm:text-sm"
+                                    :class="user.blurred && 'blur-sm'"
+                                    >{{ user.name }}</span
                                     >
                                     <span
                                         v-if="user.isCurrentUser"
@@ -629,6 +783,7 @@ const changeSeason = async (seasonId: number) => {
 
                             <!-- Actions (hover) -->
                             <div
+                                v-if="!user.blurred"
                                 class="hidden items-center gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:flex"
                             >
                                 <Link
@@ -867,5 +1022,18 @@ const changeSeason = async (seasonId: number) => {
 }
 .lb-show-more {
     @apply flex items-center gap-2 rounded-xl border border-border/30 bg-card/30 px-6 py-2.5 text-[10px] font-bold tracking-widest text-muted-foreground uppercase transition-all hover:border-amber-400/30 hover:text-amber-400;
+}
+
+/* ═══ Blur Toggle ═══ */
+.lb-blur-toggle {
+    @apply flex items-center gap-1.5 rounded-xl border border-border/30 bg-card/40 px-2.5 py-2 text-[10px] font-bold tracking-widest uppercase transition-all hover:border-amber-400/30 hover:text-amber-400 disabled:opacity-50;
+}
+
+/* ═══ Blurred user styling ═══ */
+.lb-blurred {
+    @apply overflow-hidden;
+}
+.lb-row--blurred {
+    @apply border-muted/20 bg-muted/[0.02];
 }
 </style>

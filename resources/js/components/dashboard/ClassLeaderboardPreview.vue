@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { Award, Crown, Medal, Sparkles, Trophy, User } from 'lucide-vue-next';
+import { Award, Crown, EyeOff, Medal, Sparkles, Trophy, User } from 'lucide-vue-next';
 import { computed, ref, watch, onMounted } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import EmptyState from './EmptyState.vue';
@@ -15,6 +15,7 @@ interface LeaderboardUser {
     streak: number;
     weeklyXp: number;
     isCurrentUser: boolean;
+    blurred?: boolean;
 }
 
 interface LeaderboardData {
@@ -134,7 +135,7 @@ const rankClass = (rank: number) => {
                 :href="`/u/${user.id}`"
                 customSize
                 glowColor="purple"
-                :className="`group relative overflow-hidden rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-center ${user.isCurrentUser ? 'border-primary/40 ring-1 ring-primary/25 !bg-primary/[0.05] hover:!bg-primary/[0.1]' : 'border-border/35 !bg-card/30 hover:border-primary/40 hover:!bg-card/50'}`"
+                :className="`group relative overflow-hidden rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-center ${user.isCurrentUser ? 'border-primary/40 ring-1 ring-primary/25 !bg-primary/[0.05] hover:!bg-primary/[0.1]' : user.blurred ? 'border-muted/30 !bg-muted/[0.02]' : 'border-border/35 !bg-card/30 hover:border-primary/40 hover:!bg-card/50'}`"
             >
                 <div
                     v-if="user.isCurrentUser"
@@ -152,16 +153,22 @@ const rankClass = (rank: number) => {
                         <component :is="rankIcon(index + 1)" class="h-4 w-4" />
                     </div>
 
-                    <div class="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/30 lg:h-14 lg:w-14">
-                        <img v-if="user.avatar" :src="user.avatar" :alt="user.name" class="h-full w-full object-cover" />
+                    <div class="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/30 lg:h-14 lg:w-14">
+                        <img v-if="user.avatar" :src="user.avatar" :alt="user.name" class="h-full w-full object-cover" :class="user.blurred && 'blur-sm'" />
                         <div v-else class="flex h-full w-full items-center justify-center">
                             <User class="h-5 w-5 text-muted-foreground/50" />
+                        </div>
+                        <div
+                            v-if="user.blurred"
+                            class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/[0.03] backdrop-blur-[1px]"
+                        >
+                            <EyeOff class="h-4 w-4 text-muted-foreground/40" />
                         </div>
                     </div>
 
                     <div class="min-w-0 flex-1 lg:w-full">
                         <div class="flex items-center gap-1.5 lg:justify-center">
-                            <p class="truncate text-sm font-black tracking-tight group-hover:text-primary">
+                            <p class="truncate text-sm font-black tracking-tight group-hover:text-primary" :class="user.blurred && 'blur-sm'">
                                 {{ user.name }}
                             </p>
                             <span
