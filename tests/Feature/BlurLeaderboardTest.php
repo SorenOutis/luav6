@@ -34,5 +34,3 @@ test('toggling blur again turns it off', function () {
 
     expect($this->user->fresh()->blur_leaderboard)->toBeFalse();
 });
-
-
