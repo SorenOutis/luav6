@@ -65,6 +65,10 @@ const auth = computed(() => page.props.auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 const { appearance, toggleTheme } = useAppearance();
 
+const sectionName = computed(() =>
+    (page.props.sectionName as string | undefined) || '',
+);
+
 interface HeaderNotification {
     id: string;
     type: string;
@@ -230,6 +234,19 @@ const rightNavItems: NavItem[] = [
                                         />
                                         {{ item.title }}
                                     </Link>
+                                    <div
+                                        v-if="sectionName"
+                                        class="mt-3 flex items-center gap-2 rounded-lg border border-border/30 bg-primary/[0.04] px-3 py-2"
+                                    >
+                                        <div
+                                            class="h-1.5 w-1.5 rounded-full bg-primary"
+                                        ></div>
+                                        <span
+                                            class="text-[10px] font-medium text-muted-foreground truncate"
+                                        >
+                                            {{ sectionName }}
+                                        </span>
+                                    </div>
                                 </nav>
                                 <div class="flex flex-col space-y-4">
                                     <a
@@ -259,6 +276,21 @@ const rightNavItems: NavItem[] = [
 
                 <!-- Desktop Menu -->
                 <div class="hidden h-full lg:flex lg:flex-1">
+                    <!-- Section indicator -->
+                    <div
+                        v-if="sectionName"
+                        class="ml-4 hidden items-center gap-1.5 rounded-lg border border-border/30 bg-primary/[0.03] px-2.5 py-1 lg:flex"
+                    >
+                        <div
+                            class="h-1.5 w-1.5 rounded-full bg-primary"
+                        ></div>
+                        <span
+                            class="text-[10px] font-medium text-muted-foreground max-w-[120px] truncate"
+                        >
+                            {{ sectionName }}
+                        </span>
+                    </div>
+
                     <NavigationMenu class="ml-10 flex h-full items-stretch">
                         <NavigationMenuList
                             class="flex h-full items-stretch space-x-2"

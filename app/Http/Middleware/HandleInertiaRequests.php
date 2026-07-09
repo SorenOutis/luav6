@@ -78,6 +78,7 @@ class HandleInertiaRequests extends Middleware
                 'accentColor' => Setting::get('school_accent_color', '#f59e0b'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sectionName' => fn () => $request->user()?->sections->pluck('name')->join(', '),
         ];
     }
 }

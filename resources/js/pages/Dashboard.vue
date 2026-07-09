@@ -3,7 +3,7 @@ import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Calendar, Plus } from 'lucide-vue-next';
+import { Calendar } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -749,6 +749,7 @@ const handleLogout = () => {
                         :last-sync-time="lastSyncTime"
                         @close-announcement="announcements = []"
                         @refresh="manualRefresh"
+                        @open-section-modal="showSectionModal = true"
                     />
                 </Motion>
 
@@ -838,18 +839,6 @@ const handleLogout = () => {
                                 <StreakHeatmap :login-dates="streak.loginDates" />
                             </div>
                         </SpotlightCard>
-
-                        <button
-                            @click="showSectionModal = true"
-                            class="flex w-full items-center gap-3 rounded-xl border border-dashed border-primary/30 bg-primary/[0.03] px-4 py-3 text-left text-sm font-semibold text-primary transition-all hover:border-primary/60 hover:bg-primary/[0.06]"
-                        >
-                            <div
-                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10"
-                            >
-                                <Plus class="h-4 w-4" />
-                            </div>
-                            <span>Join another section</span>
-                        </button>
 
                         <DashboardSidebar
                             :unread-notification-count="3"

@@ -2,11 +2,10 @@
 import { Link } from '@inertiajs/vue3';
 import {
     X,
-    Zap,
+    Plus,
     Megaphone,
     ArrowRight,
     RefreshCw,
-    Trophy,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -48,7 +47,7 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits(['close-announcement', 'refresh']);
+const emit = defineEmits(['close-announcement', 'refresh', 'open-section-modal']);
 
 const animatedLevel = useNumberAnimation(() => props.userStats.level);
 const animatedXP = useNumberAnimation(() => props.userStats.currentXP);
@@ -305,68 +304,47 @@ const xpPercentage = computed(() => {
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Mobile: Add Section CTA -->
+                        <div class="mt-2 lg:hidden">
+                            <button
+                                @click="emit('open-section-modal')"
+                                class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border-2 border-dashed border-primary/30 bg-primary/[0.03] px-4 py-2.5 backdrop-blur-xl transition-all duration-500 hover:border-primary/60 hover:bg-primary/[0.08]"
+                            >
+                                <div
+                                    class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                                ></div>
+                                <Plus class="h-4 w-4 shrink-0 text-primary transition-all duration-300 group-hover:scale-110" />
+                                <span
+                                    class="text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
+                                >
+                                    Add Section
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Right side: Performance Mini-Grid -->
+                <!-- Desktop: Add Section CTA -->
                 <div
-                    class="mb-1 hidden w-72 shrink-0 grid-cols-2 gap-3 self-end lg:grid"
+                    class="mb-1 hidden w-48 shrink-0 self-end lg:block"
                 >
-                    <div
-                        class="group relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-4 backdrop-blur-xl transition-all duration-500 hover:border-primary/30"
+                    <button
+                        @click="emit('open-section-modal')"
+                        class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border-2 border-dashed border-primary/30 bg-primary/[0.03] px-4 py-3 backdrop-blur-xl transition-all duration-500 hover:border-primary/60 hover:bg-primary/[0.08]"
                     >
+                        <!-- Shine effect -->
                         <div
-                            class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+                            class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"
                         ></div>
-                        <div class="relative flex flex-col gap-1">
-                            <div class="flex items-center gap-2">
-                                <Trophy class="h-3 w-3 text-primary/60" />
-                                <span
-                                    class="text-[9px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase"
-                                    >Global Rank</span
-                                >
-                            </div>
-                            <div class="flex items-baseline gap-1">
-                                <span
-                                    class="text-2xl font-black tracking-tighter tabular-nums"
-                                    >#{{ userStats.rankNumber || '--' }}</span
-                                >
-                                <span
-                                    class="text-[8px] font-bold text-muted-foreground/20"
-                                    >/{{ userStats.totalPlayers || '0' }}</span
-                                >
-                            </div>
-                        </div>
-                    </div>
 
-                    <div
-                        class="group relative overflow-hidden rounded-[2rem] border border-border/40 bg-card/40 p-4 backdrop-blur-xl transition-all duration-500 hover:border-primary/30"
-                    >
-                        <div
-                            class="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-0 transition-opacity group-hover:opacity-100"
-                        ></div>
-                        <div class="relative flex flex-col gap-1">
-                            <div class="flex items-center gap-2">
-                                <Zap class="h-3 w-3 text-primary/60" />
-                                <span
-                                    class="text-[9px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase"
-                                    >Points</span
-                                >
-                            </div>
-                            <div class="flex items-baseline gap-1">
-                                <span
-                                    class="text-2xl font-black tracking-tighter tabular-nums"
-                                    >{{
-                                        (userStats.points || 0).toLocaleString()
-                                    }}</span
-                                >
-                                <span
-                                    class="text-[8px] font-bold text-muted-foreground/20 italic"
-                                    >PTS</span
-                                >
-                            </div>
-                        </div>
-                    </div>
+                        <Plus class="h-4 w-4 shrink-0 text-primary transition-all duration-300 group-hover:scale-110" />
+                        <span
+                            class="text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
+                        >
+                            Add Section
+                        </span>
+                    </button>
                 </div>
             </div>
         </div>
