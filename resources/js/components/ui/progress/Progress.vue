@@ -6,6 +6,7 @@ interface Props {
   value?: number
   max?: number
   class?: HTMLAttributes['class']
+  indicatorClass?: HTMLAttributes['class']
 }
 
 withDefaults(defineProps<Props>(), {
@@ -17,7 +18,7 @@ withDefaults(defineProps<Props>(), {
 <template>
   <div :class="cn('relative h-2 w-full overflow-hidden rounded-full bg-primary/20', $props.class)">
     <div
-      :class="cn('h-full bg-primary transition-all')"
+      :class="cn('h-full bg-primary transition-all', indicatorClass)"
       :style="{ width: `${(value / max) * 100}%` }"
     />
   </div>

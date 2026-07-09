@@ -7,6 +7,10 @@ import {
     AlertCircle,
     FileText,
     Clock,
+    Search,
+    Printer,
+    BarChart3,
+    BookOpen,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
 import Card from '@/components/ui/card/Card.vue';
@@ -15,6 +19,11 @@ import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import Progress from '@/components/ui/progress/Progress.vue';
+import Input from '@/components/ui/input/Input.vue';
+import Button from '@/components/ui/button/Button.vue';
+import Badge from '@/components/ui/badge/Badge.vue';
+import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
 import type { BreadcrumbItem } from '@/types';
 
 interface GradePeriodScore {
@@ -65,16 +74,38 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Grades', href: '/grades' },
 ];
 
+// ── Search / Filter ──────────────────────────────────────────────
+const searchQuery = ref('');
+
+const filteredSubjectGrades = computed(() => {
+    if (!searchQuery.value) return props.subjectGrades;
+    const q = searchQuery.value.toLowerCase();
+    return props.subjectGrades.filter((sg) =>
+        sg.subject.toLowerCase().includes(q),
+    );
+});
+
+// ── Computed Values (from filtered data) ─────────────────────────
 const averageSemesterGrade = computed(() => {
-    const validGrades = props.subjectGrades
+    const validGrades = filteredSubjectGrades.value
         .map((sg) => sg.semesterGrade)
-        .filter((grade) => grade !== null);
+        .filter((grade): grade is number => grade !== null);
 
     if (validGrades.length === 0) return 0;
     return Math.round(
-        validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length,
+        validGrades.reduce((sum, grade) => sum + grade, 0) /
+            validGrades.length,
     );
 });
+
+const completedCount = computed(
+    () =>
+        filteredSubjectGrades.value.filter(
+            (sg) => sg.semesterGrade !== null,
+        ).length,
+);
+
+const totalFilteredCount = computed(() => filteredSubjectGrades.value.length);
 
 const gradeGroups = computed(() => {
     const groups = new Map<
@@ -89,7 +120,7 @@ const gradeGroups = computed(() => {
         }
     >();
 
-    for (const subjectGrade of props.subjectGrades) {
+    for (const subjectGrade of filteredSubjectGrades.value) {
         const key =
             subjectGrade.section?.schoolLevel ??
             subjectGrade.periods.map((period) => period.key).join('|');
@@ -116,11 +147,62 @@ const gradeGroups = computed(() => {
     return Array.from(groups.values());
 });
 
+// ── Grade Distribution ───────────────────────────────────────────
+const distributionData = computed(() => {
+    const grades = filteredSubjectGrades.value
+        .map((sg) => sg.semesterGrade)
+        .filter((g): g is number => g !== null);
+
+    const excellent = grades.filter((g) => g >= 85).length;
+    const good = grades.filter((g) => g >= 70 && g < 85).length;
+    const satisfactory = grades.filter((g) => g >= 60 && g < 70).length;
+    const needsImprovement = grades.filter((g) => g < 60).length;
+
+    return {
+        segments: [
+            {
+                label: 'Excellent (≥85)',
+                count: excellent,
+                color: '#10b981',
+                textColor: 'text-emerald-600',
+            },
+            {
+                label: 'Good (70-84)',
+                count: good,
+                color: '#f59e0b',
+                textColor: 'text-amber-600',
+            },
+            {
+                label: 'Satisfactory (60-69)',
+                count: satisfactory,
+                color: '#f97316',
+                textColor: 'text-orange-600',
+            },
+            {
+                label: 'Needs Improvement (<60)',
+                count: needsImprovement,
+                color: '#f43f5e',
+                textColor: 'text-rose-600',
+            },
+        ],
+        total: grades.length,
+    };
+});
+
+// ── Styling helpers ──────────────────────────────────────────────
 const gradeColor = (percentage: number | null) => {
     if (percentage === null) return 'text-muted-foreground';
     if (percentage >= 85) return 'text-emerald-500';
     if (percentage >= 70) return 'text-amber-500';
     return 'text-rose-500';
+};
+
+const progressColor = (percentage: number | null) => {
+    if (percentage === null) return 'bg-muted';
+    if (percentage >= 85) return 'bg-emerald-500';
+    if (percentage >= 70) return 'bg-amber-500';
+    if (percentage >= 60) return 'bg-orange-500';
+    return 'bg-rose-500';
 };
 
 const gradeLabel = (percentage: number | null) => {
@@ -137,8 +219,40 @@ const formatGrade = (grade: number | null) => {
     return Number.isInteger(grade) ? String(grade) : grade.toFixed(2);
 };
 
+// ── PDF Export ───────────────────────────────────────────────────
 const gradesContainer = ref<HTMLElement | null>(null);
+const isExporting = ref(false);
 
+const exportPdf = async () => {
+    if (!gradesContainer.value) return;
+    isExporting.value = true;
+
+    try {
+        const html2pdf = (await import('html2pdf.js')).default;
+        const element = gradesContainer.value;
+
+        await html2pdf()
+            .set({
+                margin: [0.4, 0.4, 0.4, 0.4],
+                filename: 'my-grades.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: {
+                    unit: 'in',
+                    format: 'letter',
+                    orientation: 'portrait',
+                },
+            })
+            .from(element)
+            .save();
+    } catch (err) {
+        console.error('PDF export failed:', err);
+    } finally {
+        isExporting.value = false;
+    }
+};
+
+// ── Animations ───────────────────────────────────────────────────
 onMounted(() => {
     if (!gradesContainer.value) return;
 
@@ -146,14 +260,12 @@ onMounted(() => {
         defaults: { ease: 'power3.out' },
     });
 
-    // 1. Title and Description entrance
     tl.fromTo(
         '.animate-section',
         { opacity: 0, y: 20 },
         { opacity: 1, y: 0, duration: 0.8, stagger: 0.1 },
     );
 
-    // 2. Overview Cards - Tactical slide-in
     tl.fromTo(
         '.animate-card',
         {
@@ -172,7 +284,6 @@ onMounted(() => {
         '-=0.4',
     );
 
-    // 3. Tables / Grade Groups
     tl.fromTo(
         '.animate-group',
         { opacity: 0, y: 30 },
@@ -196,15 +307,46 @@ onMounted(() => {
             ref="gradesContainer"
             class="container mx-auto px-4 py-6 perspective-[1000px] lg:px-8 lg:py-8"
         >
-            <div class="animate-section mb-8">
-                <h1 class="text-3xl font-bold tracking-tight">My Grades</h1>
-                <p class="mt-2 text-muted-foreground">
-                    View your academic performance across all Enrolled Subjects.
-                </p>
+            <!-- Header -->
+            <div
+                class="animate-section mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+            >
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight">
+                        My Grades
+                    </h1>
+                    <p class="mt-2 text-muted-foreground">
+                        View your academic performance across all Enrolled
+                        Subjects.
+                    </p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="relative w-full sm:w-56 lg:w-72">
+                        <Search
+                            class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                        />
+                        <Input
+                            v-model="searchQuery"
+                            placeholder="Search subjects..."
+                            class="pl-9"
+                        />
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="isExporting"
+                        @click="exportPdf"
+                    >
+                        <Printer class="h-4 w-4" />
+                        {{ isExporting ? 'Exporting...' : 'Export PDF' }}
+                    </Button>
+                </div>
             </div>
 
             <!-- Overview Cards -->
-            <div class="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div
+                class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            >
                 <Card class="animate-card">
                     <CardHeader
                         class="flex flex-row items-center justify-between space-y-0 pb-2"
@@ -234,11 +376,11 @@ onMounted(() => {
                         <CardTitle class="text-sm font-medium"
                             >Total Subjects</CardTitle
                         >
-                        <FileText class="h-4 w-4 text-muted-foreground" />
+                        <BookOpen class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div class="text-2xl font-bold">
-                            {{ subjectGrades.length }}
+                            {{ totalFilteredCount }}
                         </div>
                         <p class="mt-1 text-xs text-muted-foreground">
                             Enrolled subjects
@@ -257,22 +399,35 @@ onMounted(() => {
                     </CardHeader>
                     <CardContent>
                         <div class="text-2xl font-bold">
-                            {{
-                                subjectGrades.filter(
-                                    (sg) => sg.semesterGrade !== null,
-                                ).length
-                            }}
+                            {{ completedCount }}
                         </div>
                         <p class="mt-1 text-xs text-muted-foreground">
                             With semester grades
                         </p>
                     </CardContent>
                 </Card>
+
+                <Card class="animate-card">
+                    <CardHeader
+                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                    >
+                        <CardTitle class="text-sm font-medium"
+                            >Grade Distribution</CardTitle
+                        >
+                        <BarChart3 class="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <GradeDistributionChart
+                            :segments="distributionData.segments"
+                            :total="distributionData.total"
+                        />
+                    </CardContent>
+                </Card>
             </div>
 
             <!-- Empty State -->
             <Card
-                v-if="subjectGrades.length === 0"
+                v-if="filteredSubjectGrades.length === 0 && !searchQuery"
                 class="animate-section border-dashed"
             >
                 <CardContent
@@ -283,6 +438,23 @@ onMounted(() => {
                     <p class="mt-2 max-w-md text-center text-muted-foreground">
                         You are not enrolled in any sections yet. Contact your
                         instructor to get enrolled.
+                    </p>
+                </CardContent>
+            </Card>
+
+            <!-- No results state -->
+            <Card
+                v-else-if="filteredSubjectGrades.length === 0 && searchQuery"
+                class="animate-group border-dashed"
+            >
+                <CardContent
+                    class="flex flex-col items-center justify-center py-12"
+                >
+                    <Search class="mb-4 h-12 w-12 text-muted-foreground" />
+                    <h3 class="text-lg font-semibold">No subjects found</h3>
+                    <p class="mt-2 max-w-md text-center text-muted-foreground">
+                        No subjects match "{{ searchQuery }}". Try a different
+                        search term.
                     </p>
                 </CardContent>
             </Card>
@@ -304,77 +476,70 @@ onMounted(() => {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div class="overflow-x-auto">
-                            <table v-if="group.isSeniorHigh" class="w-full">
-                                <thead>
-                                    <tr class="border-b">
-                                        <th
-                                            class="p-4 text-left font-semibold"
-                                            rowspan="2"
-                                        >
-                                            Subject
-                                        </th>
-                                        <th
-                                            v-for="semester in group.subjects[0]
-                                                ?.semesterGrades ?? []"
-                                            :key="semester.key"
-                                            class="p-4 text-center font-semibold"
-                                            colspan="3"
-                                        >
-                                            {{ semester.label }}
-                                        </th>
-                                        <th
-                                            class="p-4 text-center font-semibold"
-                                            rowspan="2"
-                                        >
-                                            {{ group.finalGradeLabel }}
-                                        </th>
-                                    </tr>
-                                    <tr class="border-b">
-                                        <template
-                                            v-for="semester in group.subjects[0]
-                                                ?.semesterGrades ?? []"
-                                            :key="`${semester.key}-quarters`"
-                                        >
-                                            <th
-                                                v-for="quarter in semester.quarters"
-                                                :key="quarter.key"
-                                                class="p-4 text-center font-semibold"
-                                            >
-                                                {{ quarter.label }}
-                                            </th>
-                                            <th
-                                                class="p-4 text-center font-semibold"
-                                            >
-                                                Final Grade
-                                            </th>
-                                        </template>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="subjectGrade in group.subjects"
-                                        :key="subjectGrade.subject"
-                                        class="border-b last:border-b-0 hover:bg-muted/50"
+                        <!-- ===== MOBILE: Card Layout ===== -->
+                        <div class="space-y-3 md:hidden">
+                            <Card
+                                v-for="subjectGrade in group.subjects"
+                                :key="subjectGrade.subject"
+                                class="overflow-hidden border shadow-none"
+                            >
+                                <CardHeader
+                                    class="border-b bg-muted/30 px-4 py-3"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
                                     >
-                                        <td class="p-4 font-medium">
+                                        <CardTitle
+                                            class="text-sm font-semibold"
+                                        >
                                             {{ subjectGrade.subject }}
-                                        </td>
-                                        <template
+                                        </CardTitle>
+                                        <Badge variant="outline" class="text-[10px]">
+                                            {{ subjectGrade.section?.name }}
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent class="divide-y p-0">
+                                    <!-- Senior High: semesters with quarters -->
+                                    <template
+                                        v-if="group.isSeniorHigh"
+                                    >
+                                        <div
                                             v-for="semester in subjectGrade.semesterGrades"
                                             :key="semester.key"
+                                            class="px-4 py-3"
                                         >
-                                            <td
+                                            <div
+                                                class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                                            >
+                                                {{ semester.label }}
+                                            </div>
+                                            <div
                                                 v-for="quarter in semester.quarters"
                                                 :key="quarter.key"
-                                                class="p-4 text-center"
+                                                class="mb-2 flex items-center gap-3"
                                             >
+                                                <span
+                                                    class="w-28 shrink-0 text-xs text-muted-foreground"
+                                                >
+                                                    {{ quarter.label }}
+                                                </span>
                                                 <div
                                                     v-if="quarter.grade"
-                                                    class="flex flex-col items-center"
+                                                    class="flex flex-1 items-center gap-2"
                                                 >
-                                                    <div
-                                                        class="text-lg font-bold"
+                                                    <Progress
+                                                        :value="quarter.grade.percentage"
+                                                        class="h-1.5 flex-1"
+                                                        :indicator-class="
+                                                            progressColor(
+                                                                quarter.grade
+                                                                    .percentage,
+                                                            )
+                                                        "
+                                                    />
+                                                    <span
+                                                        class="w-10 text-right text-sm font-bold tabular-nums"
                                                         :class="
                                                             gradeColor(
                                                                 quarter.grade
@@ -386,83 +551,402 @@ onMounted(() => {
                                                             quarter.grade
                                                                 .percentage
                                                         }}
-                                                    </div>
-                                                    <div
-                                                        class="text-xs text-muted-foreground"
-                                                    >
-                                                        {{
-                                                            quarter.grade.score
-                                                        }}
-                                                        /
-                                                        {{
-                                                            quarter.grade
-                                                                .maxScore
-                                                        }}
-                                                    </div>
+                                                    </span>
                                                 </div>
                                                 <div
                                                     v-else
-                                                    class="flex items-center justify-center gap-1 text-muted-foreground"
+                                                    class="flex items-center gap-1 text-muted-foreground"
                                                 >
-                                                    <Clock class="h-4 w-4" />
-                                                    <span class="text-sm"
+                                                    <Clock
+                                                        class="h-3 w-3"
+                                                    />
+                                                    <span class="text-xs"
                                                         >Pending</span
                                                     >
                                                 </div>
-                                            </td>
-                                            <td class="p-4 text-center">
-                                                <div
+                                            </div>
+                                            <div
+                                                class="mt-1 flex items-center justify-between border-t pt-2 text-xs"
+                                            >
+                                                <span class="text-muted-foreground"
+                                                    >Semester Grade</span
+                                                >
+                                                <span
                                                     v-if="
                                                         semester.finalGrade !==
                                                         null
                                                     "
-                                                    class="flex flex-col items-center"
+                                                    class="font-bold"
+                                                    :class="
+                                                        gradeColor(
+                                                            semester.finalGrade,
+                                                        )
+                                                    "
                                                 >
-                                                    <div
-                                                        class="text-xl font-bold"
-                                                        :class="
-                                                            gradeColor(
-                                                                semester.finalGrade,
+                                                    {{
+                                                        formatGrade(
+                                                            semester.finalGrade,
+                                                        )
+                                                    }}
+                                                    ({{
+                                                        gradeLabel(
+                                                            semester.finalGrade,
+                                                        )
+                                                    }})
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="flex items-center gap-1 text-muted-foreground"
+                                                >
+                                                    <Clock class="h-3 w-3" />
+                                                    Pending
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- College: flat periods -->
+                                    <template v-else>
+                                        <div
+                                            v-for="periodGrade in subjectGrade.periodGrades"
+                                            :key="periodGrade.key"
+                                            class="flex items-center gap-3 px-4 py-3"
+                                        >
+                                            <span
+                                                class="w-20 shrink-0 text-xs text-muted-foreground"
+                                            >
+                                                {{ periodGrade.label }}
+                                            </span>
+                                            <div
+                                                v-if="periodGrade.grade"
+                                                class="flex flex-1 items-center gap-2"
+                                            >                                                    <Progress
+                                                        :value="periodGrade.grade.percentage"
+                                                        class="h-1.5 flex-1"
+                                                        :indicator-class="
+                                                            progressColor(
+                                                                periodGrade.grade
+                                                                    .percentage,
                                                             )
                                                         "
+                                                    />
+                                                <span
+                                                    class="w-10 text-right text-sm font-bold tabular-nums"
+                                                    :class="
+                                                        gradeColor(
+                                                            periodGrade.grade
+                                                                .percentage,
+                                                        )
+                                                    "
+                                                >
+                                                    {{
+                                                        periodGrade.grade
+                                                            .percentage
+                                                    }}
+                                                </span>
+                                                <span
+                                                    class="w-14 text-right text-[10px] text-muted-foreground"
+                                                >
+                                                    {{
+                                                        periodGrade.grade.score
+                                                    }}/{{
+                                                        periodGrade.grade
+                                                            .maxScore
+                                                    }}
+                                                </span>
+                                            </div>
+                                            <div
+                                                v-else
+                                                class="flex items-center gap-1 text-muted-foreground"
+                                            >
+                                                <Clock class="h-3 w-3" />
+                                                <span class="text-xs"
+                                                    >Pending</span
+                                                >
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Overall grade footer -->
+                                    <div
+                                        class="flex items-center justify-between bg-muted/20 px-4 py-3"
+                                    >
+                                        <span
+                                            class="text-xs font-semibold uppercase tracking-wider"
+                                        >
+                                            {{
+                                                group.isSeniorHigh
+                                                    ? 'Final Grade'
+                                                    : 'Semester Grade'
+                                            }}
+                                        </span>
+                                        <div
+                                            v-if="
+                                                subjectGrade.semesterGrade !==
+                                                null
+                                            "
+                                            class="flex items-center gap-2"
+                                        >
+                                            <Progress
+                                                :value="
+                                                    subjectGrade.semesterGrade
+                                                "
+                                                class="h-2 w-20"
+                                                :indicator-class="
+                                                    progressColor(
+                                                        subjectGrade.semesterGrade,
+                                                    )
+                                                "
+                                            />
+                                            <span
+                                                class="text-sm font-bold"
+                                                :class="
+                                                    gradeColor(
+                                                        subjectGrade.semesterGrade,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    formatGrade(
+                                                        subjectGrade.semesterGrade,
+                                                    )
+                                                }}
+                                            </span>
+                                        </div>
+                                        <div
+                                            v-else
+                                            class="flex items-center gap-1 text-muted-foreground"
+                                        >
+                                            <Clock class="h-3 w-3" />
+                                            <span class="text-xs"
+                                                >Pending</span
+                                            >
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <!-- ===== DESKTOP: Table Layout ===== -->
+                        <div class="hidden overflow-x-auto md:block">
+                            <!-- Senior High: Separate tables per semester -->
+                            <template v-if="group.isSeniorHigh">
+                                <div
+                                    v-for="semester in group.subjects[0]?.semesterGrades ?? []"
+                                    :key="semester.key"
+                                    class="mb-6 last:mb-0"
+                                >
+                                    <div
+                                        class="mb-3 flex items-center gap-2"
+                                    >
+                                        <span
+                                            class="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary"
+                                        >
+                                            {{ semester.label }}
+                                        </span>
+                                        <div
+                                            class="h-px flex-1 bg-border"
+                                        />
+                                    </div>
+                                    <table class="w-full">
+                                        <thead>
+                                            <tr class="border-b">
+                                                <th
+                                                    class="sticky left-0 z-10 bg-card p-3 text-left text-sm font-semibold"
+                                                >
+                                                    Subject
+                                                </th>
+                                                <th
+                                                    v-for="quarter in semester.quarters"
+                                                    :key="quarter.key"
+                                                    class="p-3 text-center text-sm font-semibold"
+                                                >
+                                                    {{ quarter.label }}
+                                                </th>
+                                                <th
+                                                    class="p-3 text-center text-sm font-semibold"
+                                                >
+                                                    Final Grade
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr
+                                                v-for="subjectGrade in group.subjects"
+                                                :key="subjectGrade.subject"
+                                                class="border-b last:border-b-0 hover:bg-muted/50"
+                                            >
+                                                <td
+                                                    class="sticky left-0 z-10 bg-card p-3 text-sm font-medium hover:bg-muted/50"
+                                                >
+                                                    {{
+                                                        subjectGrade.subject
+                                                    }}
+                                                </td>
+                                                <td
+                                                    v-for="quarter in semester.quarters"
+                                                    :key="quarter.key"
+                                                    class="p-3 text-center"
+                                                >
+                                                    <div
+                                                        v-if="
+                                                            quarter.grade
+                                                        "
+                                                        class="flex flex-col items-center gap-1"
                                                     >
-                                                        {{
-                                                            formatGrade(
-                                                                semester.finalGrade,
-                                                            )
-                                                        }}
+                                                        <div
+                                                            class="text-base font-bold"
+                                                            :class="
+                                                                gradeColor(
+                                                                    quarter
+                                                                        .grade
+                                                                        .percentage,
+                                                                )
+                                                            "
+                                                        >
+                                                            {{
+                                                                quarter.grade
+                                                                    .percentage
+                                                            }}
+                                                        </div>
+                                                        <Progress
+                                                            :value="
+                                                                quarter.grade
+                                                                    .percentage
+                                                            "
+                                                            class="h-1 w-14"
+                                                            :indicator-class="
+                                                                progressColor(
+                                                                    quarter
+                                                                        .grade
+                                                                        .percentage,
+                                                                )
+                                                            "
+                                                        />
+                                                        <div
+                                                            class="text-[10px] text-muted-foreground"
+                                                        >
+                                                            {{
+                                                                quarter.grade
+                                                                    .score
+                                                            }}
+                                                            /
+                                                            {{
+                                                                quarter.grade
+                                                                    .maxScore
+                                                            }}
+                                                        </div>
                                                     </div>
                                                     <div
-                                                        class="mt-1 text-xs text-muted-foreground"
+                                                        v-else
+                                                        class="flex items-center justify-center gap-1 text-muted-foreground"
                                                     >
-                                                        {{
-                                                            gradeLabel(
-                                                                semester.finalGrade,
-                                                            )
-                                                        }}
+                                                        <Clock
+                                                            class="h-4 w-4"
+                                                        />
+                                                        <span class="text-sm"
+                                                            >Pending</span
+                                                        >
                                                     </div>
-                                                </div>
-                                                <div
-                                                    v-else
-                                                    class="flex items-center justify-center gap-1 text-muted-foreground"
+                                                </td>
+                                                <td
+                                                    class="p-3 text-center"
                                                 >
-                                                    <Clock class="h-4 w-4" />
-                                                    <span class="text-sm"
-                                                        >Pending</span
+                                                    <div
+                                                        v-if="
+                                                            semester.finalGrade !==
+                                                            null
+                                                        "
+                                                        class="flex flex-col items-center"
                                                     >
-                                                </div>
-                                            </td>
-                                        </template>
-                                        <td class="p-4 text-center">
+                                                        <div
+                                                            class="text-lg font-bold"
+                                                            :class="
+                                                                gradeColor(
+                                                                    semester.finalGrade,
+                                                                )
+                                                            "
+                                                        >
+                                                            {{
+                                                                formatGrade(
+                                                                    semester.finalGrade,
+                                                                )
+                                                            }}
+                                                        </div>
+                                                        <Progress
+                                                            :value="
+                                                                semester.finalGrade
+                                                            "
+                                                            class="mt-1 h-1.5 w-14"
+                                                            :indicator-class="
+                                                                progressColor(
+                                                                    semester.finalGrade,
+                                                                )
+                                                            "
+                                                        />
+                                                        <div
+                                                            class="mt-1 text-[10px] text-muted-foreground"
+                                                        >
+                                                            {{
+                                                                gradeLabel(
+                                                                    semester.finalGrade,
+                                                                )
+                                                            }}
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        v-else
+                                                        class="flex items-center justify-center gap-1 text-muted-foreground"
+                                                    >
+                                                        <Clock
+                                                            class="h-4 w-4"
+                                                        />
+                                                        <span class="text-sm"
+                                                            >Pending</span
+                                                        >
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <!-- Overall Final Grade summary -->
+                                <div
+                                    class="mt-4 rounded-lg border bg-muted/20 p-4"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <span
+                                            class="text-sm font-semibold uppercase tracking-wider"
+                                        >
+                                            Overall {{ group.finalGradeLabel }}
+                                        </span>
+                                        <div
+                                            v-if="
+                                                group.subjects.length > 0
+                                            "
+                                            class="flex items-center gap-4"
+                                        >
                                             <div
-                                                v-if="
-                                                    subjectGrade.semesterGrade !==
-                                                    null
-                                                "
-                                                class="flex flex-col items-center"
+                                                v-for="subjectGrade in group.subjects"
+                                                :key="subjectGrade.subject"
+                                                class="flex items-center gap-2"
                                             >
-                                                <div
-                                                    class="text-2xl font-bold"
+                                                <span
+                                                    class="text-xs text-muted-foreground"
+                                                >
+                                                    {{
+                                                        subjectGrade.subject
+                                                    }}:
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        subjectGrade.semesterGrade !==
+                                                        null
+                                                    "
+                                                    class="text-sm font-bold"
                                                     :class="
                                                         gradeColor(
                                                             subjectGrade.semesterGrade,
@@ -474,35 +958,29 @@ onMounted(() => {
                                                             subjectGrade.semesterGrade,
                                                         )
                                                     }}
-                                                </div>
-                                                <div
-                                                    class="mt-1 text-xs text-muted-foreground"
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="flex items-center gap-1 text-xs text-muted-foreground"
                                                 >
-                                                    {{
-                                                        gradeLabel(
-                                                            subjectGrade.semesterGrade,
-                                                        )
-                                                    }}
-                                                </div>
+                                                    <Clock
+                                                        class="h-3 w-3"
+                                                    />
+                                                    Pending
+                                                </span>
                                             </div>
-                                            <div
-                                                v-else
-                                                class="flex items-center justify-center gap-1 text-muted-foreground"
-                                            >
-                                                <Clock class="h-4 w-4" />
-                                                <span class="text-sm"
-                                                    >Pending</span
-                                                >
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
 
+                            <!-- College Table -->
                             <table v-else class="w-full">
                                 <thead>
                                     <tr class="border-b">
-                                        <th class="p-4 text-left font-semibold">
+                                        <th
+                                            class="sticky left-0 z-10 bg-card p-4 text-left font-semibold"
+                                        >
                                             Subject
                                         </th>
                                         <th
@@ -525,7 +1003,9 @@ onMounted(() => {
                                         :key="subjectGrade.subject"
                                         class="border-b last:border-b-0 hover:bg-muted/50"
                                     >
-                                        <td class="p-4 font-medium">
+                                        <td
+                                            class="sticky left-0 z-10 bg-card p-4 font-medium hover:bg-muted/50"
+                                        >
                                             {{ subjectGrade.subject }}
                                         </td>
                                         <td
@@ -535,7 +1015,7 @@ onMounted(() => {
                                         >
                                             <div
                                                 v-if="periodGrade.grade"
-                                                class="flex flex-col items-center"
+                                                class="flex flex-col items-center gap-1"
                                             >
                                                 <div
                                                     class="text-lg font-bold"
@@ -551,8 +1031,21 @@ onMounted(() => {
                                                             .percentage
                                                     }}
                                                 </div>
+                                                <Progress
+                                                    :value="
+                                                        periodGrade.grade
+                                                            .percentage
+                                                    "
+                                                    class="h-1 w-16"
+                                                    :indicator-class="
+                                                        progressColor(
+                                                            periodGrade.grade
+                                                                .percentage,
+                                                        )
+                                                    "
+                                                />
                                                 <div
-                                                    class="text-xs text-muted-foreground"
+                                                    class="text-[10px] text-muted-foreground"
                                                 >
                                                     {{
                                                         periodGrade.grade.score
@@ -591,11 +1084,23 @@ onMounted(() => {
                                                     "
                                                 >
                                                     {{
-                                                        subjectGrade.semesterGrade
+                                                        formatGrade(
+                                                            subjectGrade.semesterGrade,
+                                                        )
                                                     }}
                                                 </div>
+                                                <Progress
+                                                    :value="                                                    subjectGrade.semesterGrade
+                                                "
+                                                class="mt-1 h-2 w-20"
+                                                :indicator-class="
+                                                    progressColor(
+                                                        subjectGrade.semesterGrade,
+                                                    )
+                                                "
+                                            />
                                                 <div
-                                                    class="mt-1 text-xs text-muted-foreground"
+                                                    class="mt-1 text-[10px] text-muted-foreground"
                                                 >
                                                     {{
                                                         gradeLabel(
