@@ -9,10 +9,11 @@ import {
     Clock,
     Search,
     Printer,
+    ChevronDown,
     BarChart3,
     BookOpen,
 } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
@@ -217,6 +218,189 @@ const formatGrade = (grade: number | null) => {
     if (grade === null) return '';
 
     return Number.isInteger(grade) ? String(grade) : grade.toFixed(2);
+};
+
+// ── Collapsible Periods (College) ────────────────────────────────
+const STORAGE_KEY = 'grades-expanded-periods';
+
+const expandedPeriods = ref<string[]>(
+    (() => {
+        try {
+            return JSON.parse(
+                sessionStorage.getItem(STORAGE_KEY) ?? '[]',
+            );
+        } catch {
+            return [];
+        }
+    })(),
+);
+
+// Persist state changes to sessionStorage across navigation
+watch(expandedPeriods, (keys) => {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+});
+
+// Track which periods are showing the "scroll for more" hint
+const scrollHints = ref<Record<string, boolean>>({});
+const scrollHintTimers = ref<Record<string, ReturnType<typeof setTimeout>>>({});
+
+const togglePeriod = (key: string) => {
+    const wasExpanded = expandedPeriods.value.includes(key);
+
+    if (wasExpanded) {
+        expandedPeriods.value = expandedPeriods.value.filter(
+            (k) => k !== key,
+        );
+        // Clear any pending hint timer for collapsed periods
+        if (scrollHintTimers.value[key]) {
+            clearTimeout(scrollHintTimers.value[key]);
+            delete scrollHintTimers.value[key];
+        }
+        scrollHints.value[key] = false;
+    } else {
+        expandedPeriods.value = [...expandedPeriods.value, key];
+        // Scroll period content to top on expand so user sees first subjects
+        nextTick(() => {
+            const el = document.querySelector(
+                `[data-period-key="${key}"]`,
+            );
+            if (el) el.scrollTop = 0;
+        });
+        // Clear any previous timer before setting a new one
+        if (scrollHintTimers.value[key]) {
+            clearTimeout(scrollHintTimers.value[key]);
+        }
+        scrollHints.value[key] = true;
+        scrollHintTimers.value[key] = setTimeout(() => {
+            scrollHints.value[key] = false;
+            delete scrollHintTimers.value[key];
+        }, 2500);
+    }
+};
+
+// Auto-expand all college periods when searching, collapse when cleared
+watch(searchQuery, (query) => {
+    if (query) {
+        const keys: string[] = [];
+        for (const group of gradeGroups.value) {
+            if (group.isSeniorHigh) continue;
+            // Desktop period keys
+            keys.push(...group.periods.map((p) => p.key));
+            // Mobile period keys (prefixed per subject)
+            for (const subject of group.subjects) {
+                for (const period of group.periods) {
+                    keys.push(
+                        'm-' + subject.subject + '-' + period.key,
+                    );
+                }
+            }
+        }
+        expandedPeriods.value = keys;
+        // Show scroll hints for desktop periods in groups with many subjects
+        for (const group of gradeGroups.value) {
+            if (
+                group.isSeniorHigh ||
+                group.subjects.length <= MAX_VISIBLE_ROWS
+            )
+                continue;
+            for (const period of group.periods) {
+                const key = period.key;
+                if (scrollHintTimers.value[key]) {
+                    clearTimeout(scrollHintTimers.value[key]);
+                }
+                scrollHints.value[key] = true;
+                scrollHintTimers.value[key] = setTimeout(() => {
+                    scrollHints.value[key] = false;
+                    delete scrollHintTimers.value[key];
+                }, 2500);
+            }
+        }
+    } else {
+        expandedPeriods.value = [];
+        // Clear any lingering scroll hints
+        for (const key of Object.keys(scrollHintTimers.value)) {
+            clearTimeout(scrollHintTimers.value[key]);
+        }
+        scrollHintTimers.value = {};
+        scrollHints.value = {};
+    }
+});
+
+const getPeriodGrade = (
+    subject: SubjectGrade,
+    periodKey: string,
+): GradePeriodScore | null => {
+    const found = subject.periodGrades.find((pg) => pg.key === periodKey);
+    return found?.grade ?? null;
+};
+
+const HEADER_H = 40;
+const ROW_H = 44;
+const MAX_VISIBLE_ROWS = 8;
+
+const periodDesktopHeight = (subjectsCount: number): number => {
+    const totalH = HEADER_H + subjectsCount * ROW_H;
+    const cappedH = HEADER_H + MAX_VISIBLE_ROWS * ROW_H;
+    return Math.min(totalH, cappedH);
+};
+
+const periodMobileHeight = (): number => {
+    return 280;
+};
+
+const gradedCount = (subjects: SubjectGrade[], periodKey: string): number => {
+    return subjects.filter((s) => {
+        const pg = s.periodGrades.find((p) => p.key === periodKey);
+        return pg?.grade !== null && pg?.grade !== undefined;
+    }).length;
+};
+
+const isGroupAllExpanded = (group: {
+    periods: Array<{ key: string }>;
+    subjects: SubjectGrade[];
+}): boolean => {
+    for (const period of group.periods) {
+        if (!expandedPeriods.value.includes(period.key)) return false;
+    }
+    for (const subject of group.subjects) {
+        for (const period of group.periods) {
+            if (
+                !expandedPeriods.value.includes(
+                    'm-' + subject.subject + '-' + period.key,
+                )
+            )
+                return false;
+        }
+    }
+    return true;
+};
+
+const toggleAllCollege = (group: {
+    periods: Array<{ key: string }>;
+    subjects: SubjectGrade[];
+}): void => {
+    const allKeys: string[] = [];
+    for (const period of group.periods) allKeys.push(period.key);
+    for (const subject of group.subjects) {
+        for (const period of group.periods) {
+            allKeys.push('m-' + subject.subject + '-' + period.key);
+        }
+    }
+
+    const allExpanded = allKeys.every((key) =>
+        expandedPeriods.value.includes(key),
+    );
+
+    if (allExpanded) {
+        expandedPeriods.value = expandedPeriods.value.filter(
+            (k) => !allKeys.includes(k),
+        );
+    } else {
+        const missing = allKeys.filter(
+            (k) => !expandedPeriods.value.includes(k),
+        );
+        expandedPeriods.value = [...expandedPeriods.value, ...missing];
+    }
 };
 
 // ── PDF Export ───────────────────────────────────────────────────
@@ -467,13 +651,59 @@ onMounted(() => {
                     class="animate-group mb-6"
                 >
                     <CardHeader>
-                        <CardTitle class="flex items-center gap-2">
-                            <GraduationCap class="h-5 w-5 text-primary" />
-                            {{ group.label }} Performance
-                        </CardTitle>
-                        <CardDescription>
-                            Grades by subject across all grading periods
-                        </CardDescription>
+                        <div
+                            class="flex items-start justify-between gap-4"
+                        >
+                            <div>
+                                <CardTitle
+                                    class="flex items-center gap-2"
+                                >
+                                    <GraduationCap
+                                        class="h-5 w-5 text-primary"
+                                    />
+                                    {{ group.label }} Performance
+                                </CardTitle>
+                                <CardDescription>
+                                    Grades by subject across all grading
+                                    periods
+                                </CardDescription>
+                            </div>
+                            <Button
+                                v-if="!group.isSeniorHigh"
+                                variant="outline"
+                                size="sm"
+                                class="shrink-0"
+                                @click="toggleAllCollege(group)"
+                            >
+                                <ChevronDown
+                                    class="h-3.5 w-3.5 transition-transform duration-200"
+                                    :class="
+                                        isGroupAllExpanded(group)
+                                            ? 'rotate-180'
+                                            : ''
+                                    "
+                                />
+                                <Transition
+                                    name="fade"
+                                    mode="out-in"
+                                >
+                                    <span
+                                        :key="
+                                            isGroupAllExpanded(group)
+                                                ? 'collapse'
+                                                : 'expand'
+                                        "
+                                        class="inline-block"
+                                    >
+                                        {{
+                                            isGroupAllExpanded(group)
+                                                ? 'Collapse All'
+                                                : 'Expand All'
+                                        }}
+                                    </span>
+                                </Transition>
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <!-- ===== MOBILE: Card Layout ===== -->
@@ -605,64 +835,244 @@ onMounted(() => {
                                         </div>
                                     </template>
 
-                                    <!-- College: flat periods -->
+                                    <!-- College: collapsible periods -->
                                     <template v-else>
-                                        <div
-                                            v-for="periodGrade in subjectGrade.periodGrades"
-                                            :key="periodGrade.key"
-                                            class="flex items-center gap-3 px-4 py-3"
-                                        >
-                                            <span
-                                                class="w-20 shrink-0 text-xs text-muted-foreground"
-                                            >
-                                                {{ periodGrade.label }}
-                                            </span>
+                                        <div class="divide-y">
                                             <div
-                                                v-if="periodGrade.grade"
-                                                class="flex flex-1 items-center gap-2"
-                                            >                                                    <Progress
-                                                        :value="periodGrade.grade.percentage"
-                                                        class="h-1.5 flex-1"
-                                                        :indicator-class="
-                                                            progressColor(
-                                                                periodGrade.grade
-                                                                    .percentage,
-                                                            )
-                                                        "
-                                                    />
-                                                <span
-                                                    class="w-10 text-right text-sm font-bold tabular-nums"
-                                                    :class="
-                                                        gradeColor(
-                                                            periodGrade.grade
-                                                                .percentage,
+                                                v-for="(
+                                                    period,
+                                                    pIdx,
+                                                ) in group.periods"
+                                                :key="period.key"
+                                            >
+                                                <button
+                                                    @click="
+                                                        togglePeriod(
+                                                            'm-' +
+                                                                subjectGrade
+                                                                    .subject +
+                                                                '-' +
+                                                                period.key,
                                                         )
                                                     "
+                                                    :aria-expanded="
+                                                        expandedPeriods.includes(
+                                                            'm-' +
+                                                                subjectGrade
+                                                                    .subject +
+                                                                '-' +
+                                                                period.key,
+                                                        )
+                                                    "
+                                                    class="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted/30"
                                                 >
-                                                    {{
-                                                        periodGrade.grade
-                                                            .percentage
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="w-14 text-right text-[10px] text-muted-foreground"
-                                                >
-                                                    {{
-                                                        periodGrade.grade.score
-                                                    }}/{{
-                                                        periodGrade.grade
-                                                            .maxScore
-                                                    }}
-                                                </span>
-                                            </div>
-                                            <div
-                                                v-else
-                                                class="flex items-center gap-1 text-muted-foreground"
-                                            >
-                                                <Clock class="h-3 w-3" />
-                                                <span class="text-xs"
-                                                    >Pending</span
-                                                >
+                                                    <div
+                                                        class="flex items-center gap-3"
+                                                    >
+                                                        <div
+                                                            class="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-xs font-bold text-primary"
+                                                        >
+                                                            {{ pIdx + 1 }}
+                                                        </div>
+                                                        <span
+                                                            class="text-sm font-medium"
+                                                        >
+                                                            {{
+                                                                period.label
+                                                            }}
+                                                        </span>
+                                                        <span
+                                                            v-if="
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )
+                                                            "
+                                                            class="text-[10px] text-emerald-500"
+                                                            >Graded</span
+                                                        >
+                                                        <span
+                                                            v-else
+                                                            class="text-[10px] text-muted-foreground"
+                                                            >Pending</span
+                                                        >
+                                                    </div>
+                                                    <ChevronDown
+                                                        class="h-4 w-4 text-muted-foreground transition-transform duration-200"
+                                                        :class="
+                                                            expandedPeriods.includes(
+                                                                'm-' +
+                                                                    subjectGrade
+                                                                        .subject +
+                                                                    '-' +
+                                                                    period.key,
+                                                            )
+                                                                ? 'rotate-180'
+                                                                : ''
+                                                        "
+                                                    />
+                                                </button>
+                                                <div
+                                                    :data-period-key="
+                                                        'm-' +
+                                                        subjectGrade
+                                                            .subject +
+                                                        '-' +
+                                                        period.key
+                                                    "
+                                                    :class="[
+                                                        'transition-all duration-300 ease-out',
+                                                        expandedPeriods.includes(
+                                                            'm-' +
+                                                                subjectGrade
+                                                                    .subject +
+                                                                '-' +
+                                                                period.key,
+                                                        )
+                                                ? 'border-t px-4 py-3 opacity-100 overflow-y-auto grades-period-scroll relative'
+                                                : 'border-t-0 px-0 py-0 opacity-0 overflow-hidden',
+                                        ]"
+                                        :style="{
+                                            maxHeight: expandedPeriods.includes(
+                                                'm-' +
+                                                    subjectGrade
+                                                        .subject +
+                                                    '-' +
+                                                    period.key,
+                                            )
+                                                ? periodMobileHeight() +
+                                                  'px'
+                                                : '0px',
+                                        }"
+                                    >
+                                        <div
+                                            v-if="
+                                                            getPeriodGrade(
+                                                                subjectGrade,
+                                                                period.key,
+                                                            )
+                                                        "
+                                                        class="flex flex-col gap-2"
+                                                    >
+                                                        <div
+                                                            class="flex items-center justify-between"
+                                                        >
+                                                            <span
+                                                                class="text-xs text-muted-foreground"
+                                                                >Score</span
+                                                            >
+                                                            <span
+                                                                class="text-sm font-medium tabular-nums"
+                                                            >
+                                                                {{
+                                                                    getPeriodGrade(
+                                                                        subjectGrade,
+                                                                        period.key,
+                                                                    )!
+                                                                        .score
+                                                                }}
+                                                                /
+                                                                {{
+                                                                    getPeriodGrade(
+                                                                        subjectGrade,
+                                                                        period.key,
+                                                                    )!
+                                                                        .maxScore
+                                                                }}
+                                                            </span>
+                                                        </div>
+                                                        <div
+                                                            class="flex items-center justify-between"
+                                                        >
+                                                            <span
+                                                                class="text-xs text-muted-foreground"
+                                                                >Percentage</span
+                                                            >
+                                                            <div
+                                                                class="flex items-center gap-2"
+                                                            >
+                                                                <Progress
+                                                                    :value="
+                                                                        getPeriodGrade(
+                                                                            subjectGrade,
+                                                                            period.key,
+                                                                        )!
+                                                                            .percentage
+                                                                    "
+                                                                    class="h-1.5 w-20"
+                                                                    :indicator-class="
+                                                                        progressColor(
+                                                                            getPeriodGrade(
+                                                                                subjectGrade,
+                                                                                period.key,
+                                                                            )!
+                                                                                .percentage,
+                                                                        )
+                                                                    "
+                                                                />
+                                                                <span
+                                                                    class="text-sm font-bold tabular-nums"
+                                                                    :class="
+                                                                        gradeColor(
+                                                                            getPeriodGrade(
+                                                                                subjectGrade,
+                                                                                period.key,
+                                                                            )!
+                                                                                .percentage,
+                                                                        )
+                                                                    "
+                                                                >
+                                                                    {{
+                                                                        getPeriodGrade(
+                                                                            subjectGrade,
+                                                                            period.key,
+                                                                        )!
+                                                                            .percentage
+                                                                    }}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <div
+                                                            v-if="
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )?.remarks
+                                                            "
+                                                            class="flex items-center justify-between"
+                                                        >
+                                                            <span
+                                                                class="text-xs text-muted-foreground"
+                                                                >Remarks</span
+                                                            >
+                                                            <span
+                                                                class="text-xs text-muted-foreground"
+                                                            >
+                                                                {{
+                                                                    getPeriodGrade(
+                                                                        subjectGrade,
+                                                                        period.key,
+                                                                    )!
+                                                                        .remarks
+                                                                }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        v-else
+                                                        class="flex items-center gap-1 text-muted-foreground"
+                                                    >
+                                                        <Clock
+                                                            class="h-3 w-3"
+                                                        />
+                                                        <span class="text-xs"
+                                                            >No grade yet</span
+                                                        >
+                                                    </div>
+                                                    <div
+                                                        class="sticky bottom-0 -mx-4 -mb-3 h-6 bg-gradient-to-t from-card to-transparent pointer-events-none"
+                                                    ></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </template>
@@ -974,109 +1384,335 @@ onMounted(() => {
                                 </div>
                             </template>
 
-                            <!-- College Table -->
-                            <table v-else class="w-full">
-                                <thead>
-                                    <tr class="border-b">
-                                        <th
-                                            class="sticky left-0 z-10 bg-card p-4 text-left font-semibold"
-                                        >
-                                            Subject
-                                        </th>
-                                        <th
-                                            v-for="period in group.periods"
-                                            :key="period.key"
-                                            class="p-4 text-center font-semibold"
-                                        >
-                                            {{ period.label }}
-                                        </th>
-                                        <th
-                                            class="p-4 text-center font-semibold"
-                                        >
-                                            {{ group.finalGradeLabel }}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr
-                                        v-for="subjectGrade in group.subjects"
-                                        :key="subjectGrade.subject"
-                                        class="border-b last:border-b-0 hover:bg-muted/50"
+                            <!-- College: Collapsible Period Sections -->
+                            <div v-else class="space-y-3">
+                                <div
+                                    v-for="(period, pIdx) in group.periods"
+                                    :key="period.key"
+                                    class="overflow-hidden rounded-lg border transition-shadow duration-200 hover:shadow-sm"
+                                >
+                                    <button
+                                        @click="togglePeriod(period.key)"
+                                        :aria-expanded="
+                                            expandedPeriods.includes(
+                                                period.key,
+                                            )
+                                        "
+                                        class="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30"
                                     >
-                                        <td
-                                            class="sticky left-0 z-10 bg-card p-4 font-medium hover:bg-muted/50"
-                                        >
-                                            {{ subjectGrade.subject }}
-                                        </td>
-                                        <td
-                                            v-for="periodGrade in subjectGrade.periodGrades"
-                                            :key="periodGrade.key"
-                                            class="p-4 text-center"
+                                        <div
+                                            class="flex items-center gap-3"
                                         >
                                             <div
-                                                v-if="periodGrade.grade"
-                                                class="flex flex-col items-center gap-1"
+                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary"
                                             >
+                                                {{ pIdx + 1 }}
+                                            </div>
+                                            <div>
                                                 <div
-                                                    class="text-lg font-bold"
-                                                    :class="
-                                                        gradeColor(
-                                                            periodGrade.grade
-                                                                .percentage,
-                                                        )
-                                                    "
+                                                    class="font-semibold"
                                                 >
-                                                    {{
-                                                        periodGrade.grade
-                                                            .percentage
-                                                    }}
+                                                    {{ period.label }}
                                                 </div>
-                                                <Progress
-                                                    :value="
-                                                        periodGrade.grade
-                                                            .percentage
-                                                    "
-                                                    class="h-1 w-16"
-                                                    :indicator-class="
-                                                        progressColor(
-                                                            periodGrade.grade
-                                                                .percentage,
-                                                        )
-                                                    "
-                                                />
                                                 <div
-                                                    class="text-[10px] text-muted-foreground"
+                                                    class="text-xs text-muted-foreground"
                                                 >
                                                     {{
-                                                        periodGrade.grade.score
+                                                        gradedCount(
+                                                            group.subjects,
+                                                            period.key,
+                                                        )
                                                     }}
                                                     /
                                                     {{
-                                                        periodGrade.grade
-                                                            .maxScore
+                                                        group.subjects.length
                                                     }}
+                                                    graded
+                                                    <span
+                                                        v-if="
+                                                            expandedPeriods.includes(
+                                                                period.key,
+                                                            ) &&
+                                                            group.subjects
+                                                                .length >
+                                                                MAX_VISIBLE_ROWS
+                                                        "
+                                                        class="ml-1.5 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                                                    >
+                                                        +{{
+                                                            group.subjects
+                                                                .length -
+                                                                MAX_VISIBLE_ROWS
+                                                        }}
+                                                        more
+                                                    </span>
+                                                    <Transition name="fade">
+                                                        <span
+                                                            v-if="
+                                                                scrollHints[
+                                                                    period.key
+                                                                ] &&
+                                                                group.subjects
+                                                                    .length >
+                                                                    MAX_VISIBLE_ROWS
+                                                            "
+                                                            class="ml-1.5 inline-flex animate-bounce items-center gap-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                                                        >
+                                                            <ChevronDown
+                                                                class="h-3 w-3"
+                                                            />
+                                                            Scroll
+                                                        </span>
+                                                    </Transition>
                                                 </div>
                                             </div>
-                                            <div
-                                                v-else
-                                                class="flex items-center justify-center gap-1 text-muted-foreground"
-                                            >
-                                                <Clock class="h-4 w-4" />
-                                                <span class="text-sm"
-                                                    >Pending</span
+                                        </div>
+                                        <ChevronDown
+                                            class="h-5 w-5 text-muted-foreground transition-transform duration-200"
+                                            :class="
+                                                expandedPeriods.includes(
+                                                    period.key,
+                                                )
+                                                    ? 'rotate-180'
+                                                    : ''
+                                            "
+                                        />
+                                    </button>
+                                    <div
+                                        :data-period-key="period.key"
+                                        :class="[
+                                            'transition-all duration-300 ease-out',
+                                            expandedPeriods.includes(
+                                                period.key,
+                                            )
+                                                ? 'border-t opacity-100 overflow-y-auto grades-period-scroll relative'
+                                                : 'border-t-0 opacity-0 overflow-hidden',
+                                        ]"
+                                        :style="{
+                                            maxHeight: expandedPeriods.includes(
+                                                period.key,
+                                            )
+                                                ? periodDesktopHeight(
+                                                      group.subjects
+                                                          .length,
+                                                  ) + 'px'
+                                                : '0px',
+                                        }"
+                                    >
+                                        <table class="w-full">
+                                            <thead>
+                                                <tr
+                                                    class="border-b bg-muted/30"
                                                 >
-                                            </div>
-                                        </td>
-                                        <td class="p-4 text-center">
+                                                    <th
+                                                        class="p-3 text-left text-sm font-semibold"
+                                                    >
+                                                        Subject
+                                                    </th>
+                                                    <th
+                                                        class="p-3 text-center text-sm font-semibold"
+                                                    >
+                                                        Score
+                                                    </th>
+                                                    <th
+                                                        class="p-3 text-center text-sm font-semibold"
+                                                    >
+                                                        Percentage
+                                                    </th>
+                                                    <th
+                                                        class="p-3 text-center text-sm font-semibold"
+                                                    >
+                                                        Remarks
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr
+                                                    v-for="subjectGrade in group.subjects"
+                                                    :key="subjectGrade.subject"
+                                                    class="border-b last:border-b-0 hover:bg-muted/50"
+                                                >
+                                                    <td
+                                                        class="p-3 text-sm font-medium"
+                                                    >
+                                                        {{
+                                                            subjectGrade.subject
+                                                        }}
+                                                    </td>
+                                                    <td
+                                                        class="p-3 text-center"
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )
+                                                            "
+                                                            class="font-medium tabular-nums"
+                                                        >
+                                                            {{
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )?.score
+                                                            }}
+                                                            /
+                                                            {{
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )?.maxScore
+                                                            }}
+                                                        </span>
+                                                        <span
+                                                            v-else
+                                                            class="flex items-center justify-center gap-1 text-muted-foreground"
+                                                        >
+                                                            <Clock
+                                                                class="h-3 w-3"
+                                                            />
+                                                            <span
+                                                                class="text-xs"
+                                                                >Pending</span
+                                                            >
+                                                        </span>
+                                                    </td>
+                                                    <td
+                                                        class="p-3 text-center"
+                                                    >
+                                                        <div
+                                                            v-if="
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )
+                                                            "
+                                                            class="flex flex-col items-center gap-1"
+                                                        >
+                                                            <span
+                                                                class="text-base font-bold tabular-nums"
+                                                                :class="
+                                                                    gradeColor(
+                                                                        getPeriodGrade(
+                                                                            subjectGrade,
+                                                                            period.key,
+                                                                        )!
+                                                                            .percentage,
+                                                                    )
+                                                                "
+                                                            >
+                                                                {{
+                                                                    getPeriodGrade(
+                                                                        subjectGrade,
+                                                                        period.key,
+                                                                    )!
+                                                                        .percentage
+                                                                }}
+                                                            </span>
+                                                            <Progress
+                                                                :value="
+                                                                    getPeriodGrade(
+                                                                        subjectGrade,
+                                                                        period.key,
+                                                                    )!
+                                                                        .percentage
+                                                                "
+                                                                class="h-1 w-14"
+                                                                :indicator-class="
+                                                                    progressColor(
+                                                                        getPeriodGrade(
+                                                                            subjectGrade,
+                                                                            period.key,
+                                                                        )!
+                                                                            .percentage,
+                                                                    )
+                                                                "
+                                                            />
+                                                        </div>
+                                                        <span
+                                                            v-else
+                                                            class="flex items-center justify-center gap-1 text-muted-foreground"
+                                                        >
+                                                            <Clock
+                                                                class="h-3 w-3"
+                                                            />
+                                                            <span
+                                                                class="text-xs"
+                                                                >Pending</span
+                                                            >
+                                                        </span>
+                                                    </td>
+                                                    <td
+                                                        class="p-3 text-center"
+                                                    >
+                                                        <span
+                                                            v-if="
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )?.remarks
+                                                            "
+                                                            class="text-xs text-muted-foreground"
+                                                        >
+                                                            {{
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )?.remarks
+                                                            }}
+                                                        </span>
+                                                        <span
+                                                            v-else
+                                                            class="text-xs text-muted-foreground"
+                                                            >—</span
+                                                        >
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                        <div
+                                            class="sticky bottom-0 h-6 bg-gradient-to-t from-card to-transparent pointer-events-none"
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                <!-- Overall Semester Grade summary -->
+                                <div
+                                    class="rounded-lg border bg-muted/20 p-4"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <span
+                                            class="text-sm font-semibold uppercase tracking-wider"
+                                        >
+                                            {{ group.finalGradeLabel }}
+                                        </span>
+                                        <div
+                                            v-if="
+                                                group.subjects.length > 0
+                                            "
+                                            class="flex flex-wrap items-center gap-x-4 gap-y-2"
+                                        >
                                             <div
-                                                v-if="
-                                                    subjectGrade.semesterGrade !==
-                                                    null
-                                                "
-                                                class="flex flex-col items-center"
+                                                v-for="subjectGrade in group.subjects"
+                                                :key="subjectGrade.subject"
+                                                class="flex items-center gap-2"
                                             >
-                                                <div
-                                                    class="text-2xl font-bold"
+                                                <span
+                                                    class="text-xs text-muted-foreground"
+                                                >
+                                                    {{
+                                                        subjectGrade.subject
+                                                    }}:
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        subjectGrade.semesterGrade !==
+                                                        null
+                                                    "
+                                                    class="text-sm font-bold tabular-nums"
                                                     :class="
                                                         gradeColor(
                                                             subjectGrade.semesterGrade,
@@ -1088,40 +1724,21 @@ onMounted(() => {
                                                             subjectGrade.semesterGrade,
                                                         )
                                                     }}
-                                                </div>
-                                                <Progress
-                                                    :value="                                                    subjectGrade.semesterGrade
-                                                "
-                                                class="mt-1 h-2 w-20"
-                                                :indicator-class="
-                                                    progressColor(
-                                                        subjectGrade.semesterGrade,
-                                                    )
-                                                "
-                                            />
-                                                <div
-                                                    class="mt-1 text-[10px] text-muted-foreground"
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="flex items-center gap-1 text-xs text-muted-foreground"
                                                 >
-                                                    {{
-                                                        gradeLabel(
-                                                            subjectGrade.semesterGrade,
-                                                        )
-                                                    }}
-                                                </div>
+                                                    <Clock
+                                                        class="h-3 w-3"
+                                                    />
+                                                    Pending
+                                                </span>
                                             </div>
-                                            <div
-                                                v-else
-                                                class="flex items-center justify-center gap-1 text-muted-foreground"
-                                            >
-                                                <Clock class="h-4 w-4" />
-                                                <span class="text-sm"
-                                                    >Pending</span
-                                                >
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
@@ -1129,3 +1746,33 @@ onMounted(() => {
         </div>
     </AppLayout>
 </template>
+
+<style>
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+/* Thin scroll indicator for expanded period tables */
+.grades-period-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+}
+.grades-period-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.grades-period-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.grades-period-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 4px;
+}
+.grades-period-scroll::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+}
+</style>
