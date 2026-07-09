@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import {
     BookOpen,
+    Calendar,
     Clock,
     RefreshCw,
     Trophy,
@@ -12,7 +13,7 @@ import {
     ChevronDown,
     Loader2,
 } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Button from '@/components/ui/button/Button.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
@@ -83,6 +84,14 @@ const isSwitchingExamSeason = ref(false);
 const selectedExamSeasonId = ref<number | null>(
     props.examSeasons.length > 0 ? props.examSeasons[0].id : null,
 );
+
+const selectedExamSeasonName = computed(() => {
+    if (!selectedExamSeasonId.value) return '';
+    const found = props.examSeasons.find(
+        (s) => s.id === selectedExamSeasonId.value,
+    );
+    return found?.name || '';
+});
 
 const changeExamSeason = async (seasonId: number) => {
     if (isSwitchingExamSeason.value) return;
@@ -400,13 +409,41 @@ const weeklyPercent = (xp: number, goal: number) => {
                     >
                         <Loader2 class="h-6 w-6 animate-spin text-primary" />
                     </div>
+                    <!-- Season Header (consistent with /exams page) -->
                     <div
                         v-else-if="localExams && localExams.length > 0"
-                        class="space-y-2"
+                        class="space-y-3"
                     >
-                        <Link
-                            v-for="exam in localExams.slice(0, 2)"
-                            :key="exam.id"
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1.5">
+                                <Calendar
+                                    class="h-3 w-3 text-primary"
+                                />
+                                <h3
+                                    class="text-[11px] font-black tracking-tight"
+                                >
+                                    {{ selectedExamSeasonName }}
+                                </h3>
+                            </div>
+                            <div
+                                class="h-px flex-1 bg-gradient-to-r from-border/60 to-transparent"
+                            />
+                            <span
+                                class="text-[9px] font-bold text-muted-foreground tabular-nums"
+                            >
+                                {{ localExams.length }}
+                                {{
+                                    localExams.length === 1
+                                        ? 'exam'
+                                        : 'exams'
+                                }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-2">
+                            <Link
+                                v-for="exam in localExams.slice(0, 2)"
+                                :key="exam.id"
                             :href="examsShow(exam.id).url"
                             class="group block cursor-pointer rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
                             as="div"
@@ -446,6 +483,7 @@ const weeklyPercent = (xp: number, goal: number) => {
                                 </div>
                             </div>
                         </Link>
+                        </div>
                     </div>
                     <EmptyState
                         v-else

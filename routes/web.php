@@ -277,7 +277,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         // so the initial render matches what the dropdown shows (instead of showing ALL sections).
         $initialSeason = $availableSeasonModels->first() ?? $currentSeason;
 
-        $sectionIds = $user->sections()->pluck('sections.id');
+        // Scope sectionIds to the user's initial season for exams and other scoped queries.
+        // Fall back to all sections if no season exists (edge case during testing/setup).
+        $sectionIds = $initialSeason
+            ? $user->sections()->wherePivot('season_id', $initialSeason->id)->pluck('sections.id')
+            : $user->sections()->pluck('sections.id');
 
         // 1. Announcements (Active)
         $announcements = Announcement::where('is_active', true)->get();
@@ -630,56 +634,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         return response()->json(['exams' => $upcomingExams]);
     })->middleware(['auth', 'verified'])->name('api.dashboard-exams');
 
-    // ─────────────────────────────────────────────
-    // Exams API (season-scoped)
-    // ─────────────────────────────────────────────
-    Route::get('api/exams', function () {
-        $user = auth()->user();
-        $seasonId = request()->integer('season_id');
-        $season = $seasonId ? Season::find($seasonId) : Season::current();
 
-        if (! $season) {
-            return response()->json(['exams' => []]);
-        }
-
-        $sectionIds = $user->sections()
-            ->wherePivot('season_id', $season->id)
-            ->pluck('sections.id');
-
-        $exams = Exam::with([
-            'section',
-            'parts' => fn ($q) => $q->orderBy('sort_order'),
-        ])
-            ->where('status', '!=', 'draft')
-            ->when(! $user->is_admin, function ($query) use ($sectionIds) {
-                $query->where(function ($q) use ($sectionIds) {
-                    $q->whereNull('section_id')
-                        ->orWhereIn('section_id', $sectionIds);
-                });
-            })
-            ->latest()
-            ->get();
-
-        $userId = $user->id;
-        $examsData = $exams->map(function (Exam $exam) use ($userId) {
-            $submissions = ExamSubmission::where('user_id', $userId)
-                ->where('exam_id', $exam->id)
-                ->get();
-
-            $submittedPartsCount = $submissions->unique('exam_part_id')->count();
-
-            return array_merge($exam->toArray(), [
-                'submitted_parts_count' => $submittedPartsCount,
-                'total_parts' => $exam->parts->count(),
-                'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
-                'submissions' => $submissions->toArray(),
-                'section_name' => $exam->section?->name,
-                'exam_date_iso' => $exam->exam_date?->toIso8601String(),
-            ]);
-        });
-
-        return response()->json(['exams' => $examsData]);
-    })->middleware(['auth', 'verified'])->name('api.exams');
 
     Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
