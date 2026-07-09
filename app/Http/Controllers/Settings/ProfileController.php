@@ -121,7 +121,8 @@ class ProfileController extends Controller
             throw ValidationException::withMessages($errors);
         }
 
-        $request->user()->sections()->sync($sectionIds);
+        $syncData = $sections->mapWithKeys(fn ($s) => [$s->id => ['season_id' => $s->season_id]])->all();
+        $request->user()->sections()->sync($syncData);
 
         return back();
     }
@@ -160,7 +161,7 @@ class ProfileController extends Controller
         }
 
         // Join the section
-        $user->sections()->syncWithoutDetaching([$section->id]);
+        $user->sections()->syncWithoutDetaching([$section->id => ['season_id' => $section->season_id]]);
 
         return response()->json([
             'valid' => true,

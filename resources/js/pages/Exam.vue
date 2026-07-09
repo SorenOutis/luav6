@@ -28,7 +28,7 @@ import { show as examsShow } from '@/routes/exams';
 import type { BreadcrumbItem } from '@/types';
 
 usePoll(10000, {
-    only: ['exams'],
+    only: ['examsBySeason'],
 });
 
 interface ExamSubmission {
@@ -62,11 +62,17 @@ interface Exam {
     is_locked?: boolean;
     submissions?: ExamSubmission[];
     section_name?: string;
+    season_name?: string;
     exam_date_iso?: string;
 }
 
-const props = defineProps<{
+interface SeasonGroup {
+    seasonName: string;
     exams: Exam[];
+}
+
+const props = defineProps<{
+    examsBySeason: SeasonGroup[];
 }>();
 
 const showReviewModal = ref(false);
@@ -81,12 +87,17 @@ const activeSection = ref('all');
 const getExamSectionName = (exam: Exam) =>
     exam.section_name?.trim() || 'General';
 
+// Flatten all exams across all seasons for top-level filtering
+const allExams = computed(() =>
+    props.examsBySeason.flatMap((sg) => sg.exams),
+);
+
 const statusFilteredExams = computed(() => {
     if (activeFilter.value === 'active')
-        return props.exams.filter((e) => !e.is_locked);
+        return allExams.value.filter((e) => !e.is_locked);
     if (activeFilter.value === 'completed')
-        return props.exams.filter((e) => e.is_locked);
-    return props.exams;
+        return allExams.value.filter((e) => e.is_locked);
+    return allExams.value;
 });
 
 const sectionTabs = computed(() => {
@@ -115,6 +126,19 @@ const filteredExams = computed(() => {
     return statusFilteredExams.value.filter(
         (exam) => getExamSectionName(exam) === activeSection.value,
     );
+});
+
+// Group filtered exams back by season for display
+const filteredExamsBySeason = computed(() => {
+    const filtered = filteredExams.value;
+    const examIds = new Set(filtered.map((e) => e.id));
+
+    return props.examsBySeason
+        .map((sg) => ({
+            seasonName: sg.seasonName,
+            exams: sg.exams.filter((e) => examIds.has(e.id)),
+        }))
+        .filter((sg) => sg.exams.length > 0);
 });
 
 // --- Exam Time Info (countdown/overdue) ---
@@ -306,25 +330,19 @@ onMounted(() => {
             ref="examContainer"
             class="exam-theme-page relative flex h-full flex-1 flex-col gap-4 overflow-hidden bg-background p-3 perspective-[1000px] md:p-8"
         >
-
-
             <!-- Header Section -->
             <div
                 class="animate-section exam-hero group/hero relative space-y-1"
             >
-                <div class="flex items-center gap-3">
+                <div>
                     <h1 class="text-xl font-bold tracking-tight">
                         Upcoming Exams
                     </h1>
+                    <p class="text-sm text-muted-foreground">
+                        View and take your assessments.
+                    </p>
                 </div>
-                <p
-                    class="text-sm text-muted-foreground"
-                >
-                    View and take your assessments.
-                </p>
             </div>
-
-
 
             <!-- Section Tabs -->
             <div
@@ -371,143 +389,172 @@ onMounted(() => {
                 </button>
             </div>
 
-            <!-- Exam Grid -->
-            <div
-                v-if="filteredExams.length > 0"
-                class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
-            >
+            <!-- Season-Grouped Exam Grids -->
+            <template v-if="filteredExamsBySeason.length > 0">
                 <div
-                    v-for="exam in filteredExams"
-                    :key="exam.id"
-                    class="animate-section exam-card surface-card flex min-w-0 flex-col justify-between p-4 transition-all duration-300"
-                    :class="
-                        exam.is_locked
-                            ? 'cursor-not-allowed opacity-60'
-                            : 'hover:-translate-y-0.5 hover:shadow-md'
-                    "
+                    v-for="(seasonGroup, sIdx) in filteredExamsBySeason"
+                    :key="sIdx"
+                    class="space-y-3"
                 >
-                    <!-- Status Badge -->
-                    <div class="mb-2 flex items-start justify-between gap-2">
-                        <div
-                            class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white"
-                            :class="getStatusBadgeInfo(exam).color"
-                        >
-                            {{ getStatusBadgeInfo(exam).label }}
+                    <!-- Season Header -->
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <Calendar class="h-4 w-4 text-primary" />
+                            <h2
+                                class="text-base font-black tracking-tight"
+                            >
+                                {{ seasonGroup.seasonName }}
+                            </h2>
                         </div>
                         <div
-                            v-if="exam.is_locked"
-                            class="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary tabular-nums"
+                            class="h-px flex-1 bg-gradient-to-r from-border/60 to-transparent"
+                        />
+                        <span
+                            class="text-[10px] font-bold text-muted-foreground tabular-nums"
                         >
-                            {{
-                                exam.submissions
-                                    ?.reduce(
-                                        (acc, s) =>
-                                            acc + parseFloat(s.score),
-                                        0,
-                                    )
-                                    .toFixed(1)
-                            }}
-                        </div>
+                            {{ seasonGroup.exams.length }}
+                            {{ seasonGroup.exams.length === 1 ? 'exam' : 'exams' }}
+                        </span>
                     </div>
 
-                    <div class="flex-1 space-y-2">
-                        <!-- Section Label -->
+                    <!-- Exam Grid for this season -->
+                    <div
+                        class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
+                    >
                         <div
-                            v-if="exam.section_name"
-                            class="text-[10px] font-medium text-muted-foreground/60"
+                            v-for="exam in seasonGroup.exams"
+                            :key="exam.id"
+                            class="animate-section exam-card surface-card flex min-w-0 flex-col justify-between p-4 transition-all duration-300"
+                            :class="
+                                exam.is_locked
+                                    ? 'cursor-not-allowed opacity-60'
+                                    : 'hover:-translate-y-0.5 hover:shadow-md'
+                            "
                         >
-                            {{ exam.section_name }}
-                        </div>
-
-                        <!-- Title -->
-                        <h2
-                            class="text-sm leading-tight font-semibold text-foreground"
-                        >
-                            {{ exam.title }}
-                        </h2>
-
-                        <p class="line-clamp-2 text-xs text-muted-foreground">
-                            {{ exam.description }}
-                        </p>
-
-                        <!-- Progress Bar -->
-                        <div
-                            v-if="exam.total_parts && exam.total_parts > 0"
-                            class="space-y-1 pt-1"
-                        >
-                            <div class="flex items-center justify-between text-[10px] font-medium">
-                                <span
-                                    :class="
-                                        exam.is_locked
-                                            ? 'text-emerald-600'
-                                            : 'text-muted-foreground'
-                                    "
-                                >
-                                    {{ exam.submitted_parts_count }} / {{ exam.total_parts }} parts
-                                </span>
-                                <span v-if="!exam.is_locked" class="text-muted-foreground">
-                                    {{ Math.round(getProgressPercent(exam)) }}%
-                                </span>
-                            </div>
-                            <div class="h-1.5 overflow-hidden rounded-full bg-muted">
+                            <!-- Status Badge -->
+                            <div class="mb-2 flex items-start justify-between gap-2">
                                 <div
-                                    class="h-full rounded-full transition-all duration-700"
-                                    :class="
-                                        exam.is_locked
-                                            ? 'bg-emerald-500'
-                                            : 'bg-primary'
-                                    "
-                                    :style="{
-                                        width: `${getProgressPercent(exam)}%`,
-                                    }"
-                                ></div>
+                                    class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white"
+                                    :class="getStatusBadgeInfo(exam).color"
+                                >
+                                    {{ getStatusBadgeInfo(exam).label }}
+                                </div>
+                                <div
+                                    v-if="exam.is_locked"
+                                    class="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary tabular-nums"
+                                >
+                                    {{
+                                        exam.submissions
+                                            ?.reduce(
+                                                (acc, s) =>
+                                                    acc + parseFloat(s.score),
+                                                0,
+                                            )
+                                            .toFixed(1)
+                                    }}
+                                </div>
+                            </div>
+
+                            <div class="flex-1 space-y-2">
+                                <!-- Section Label -->
+                                <div
+                                    v-if="exam.section_name"
+                                    class="text-[10px] font-medium text-muted-foreground/60"
+                                >
+                                    {{ exam.section_name }}
+                                </div>
+
+                                <!-- Title -->
+                                <h2
+                                    class="text-sm leading-tight font-semibold text-foreground"
+                                >
+                                    {{ exam.title }}
+                                </h2>
+
+                                <p class="line-clamp-2 text-xs text-muted-foreground">
+                                    {{ exam.description }}
+                                </p>
+
+                                <!-- Progress Bar -->
+                                <div
+                                    v-if="exam.total_parts && exam.total_parts > 0"
+                                    class="space-y-1 pt-1"
+                                >
+                                    <div class="flex items-center justify-between text-[10px] font-medium">
+                                        <span
+                                            :class="
+                                                exam.is_locked
+                                                    ? 'text-emerald-600'
+                                                    : 'text-muted-foreground'
+                                            "
+                                        >
+                                            {{ exam.submitted_parts_count }} / {{ exam.total_parts }} parts
+                                        </span>
+                                        <span v-if="!exam.is_locked" class="text-muted-foreground">
+                                            {{ Math.round(getProgressPercent(exam)) }}%
+                                        </span>
+                                    </div>
+                                    <div class="h-1.5 overflow-hidden rounded-full bg-muted">
+                                        <div
+                                            class="h-full rounded-full transition-all duration-700"
+                                            :class="
+                                                exam.is_locked
+                                                    ? 'bg-emerald-500'
+                                                    : 'bg-primary'
+                                            "
+                                            :style="{
+                                                width: `${getProgressPercent(exam)}%`,
+                                            }"
+                                        ></div>
+                                    </div>
+                                </div>
+
+                                <!-- Meta Info -->
+                                <div class="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
+                                    <div class="flex items-center gap-1">
+                                        <Clock class="h-3 w-3" />
+                                        <span>{{ exam.duration_minutes }} min</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <Timer class="h-3 w-3" :class="getExamTimeInfo(exam).color" />
+                                        <span :class="getExamTimeInfo(exam).color" class="text-[10px] font-medium">
+                                            {{ getExamTimeInfo(exam).label }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Button -->
+                            <div class="mt-3">
+                                <button
+                                    v-if="exam.is_locked"
+                                    @click="openReview(exam)"
+                                    class="w-full rounded-xl bg-primary/10 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                                >
+                                    Review Results
+                                </button>
+                                <a
+                                    v-else-if="exam.url"
+                                    :href="exam.url"
+                                    target="_blank"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                                >
+                                    Start
+                                    <ArrowRight class="h-3.5 w-3.5" />
+                                </a>
+                                <Link
+                                    v-else
+                                    :href="examsShow(exam.id).url"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                                >
+                                    Start
+                                    <ArrowRight class="h-3.5 w-3.5" />
+                                </Link>
                             </div>
                         </div>
-
-                        <!-- Meta Info -->
-                        <div class="flex items-center gap-3 pt-1 text-xs text-muted-foreground">
-                            <div class="flex items-center gap-1">
-                                <Clock class="h-3 w-3" />
-                                <span>{{ exam.duration_minutes }} min</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <Timer class="h-3 w-3" :class="getExamTimeInfo(exam).color" />
-                                <span :class="getExamTimeInfo(exam).color" class="text-[10px] font-medium">
-                                    {{ getExamTimeInfo(exam).label }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Action Button -->
-                    <div class="mt-3">
-                        <button
-                            v-if="exam.is_locked"
-                            @click="openReview(exam)"
-                            class="w-full rounded-xl bg-primary/10 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
-                        >
-                            Review Results
-                        </button>
-                        <a
-                            v-else-if="exam.url"
-                            :href="exam.url"
-                            target="_blank"
-                            class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                        >
-                            Start
-                            <ArrowRight class="h-3.5 w-3.5" />
-                        </a>
-                        <Link
-                            v-else
-                            :href="examsShow(exam.id).url"
-                            class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
-                        >
-                            Start
-                            <ArrowRight class="h-3.5 w-3.5" />
-                        </Link>
                     </div>
                 </div>
-            </div>
+            </template>
 
             <!-- Empty State -->
             <div

@@ -267,7 +267,7 @@ test('scopeForWorkspace scopes regular admin to students in their sections', fun
     $section = createSectionForAdmin($this->admin1, 'A1 Section', 'A1CODEX1');
 
     // Enroll student in admin1's section
-    $this->student->sections()->attach($section->id);
+    $this->student->sections()->attach($section->id, ['season_id' => $section->season_id]);
 
     $this->actingAs($this->admin1);
 
@@ -281,7 +281,7 @@ test('scopeForWorkspace excludes students not enrolled in admins sections', func
     $section = createSectionForAdmin($this->admin1, 'A1 Section', 'A1CODEX1');
 
     // Enroll student in admin1's section (so they appear)
-    $this->student->sections()->attach($section->id);
+    $this->student->sections()->attach($section->id, ['season_id' => $section->season_id]);
 
     // Create another student enrolled nowhere
     $otherStudent = User::factory()->create(['is_admin' => false]);
@@ -296,9 +296,8 @@ test('scopeForWorkspace excludes students not enrolled in admins sections', func
 
 test('scopeForWorkspace does not apply to student users', function () {
     createSectionForAdmin($this->admin1, 'A1 Section', 'A1CODEX1');
-    $this->student->sections()->attach(
-        Section::withoutGlobalScope('workspace')->first()->id
-    );
+    $section = Section::withoutGlobalScope('workspace')->first();
+    $this->student->sections()->attach($section->id, ['season_id' => $section->season_id]);
 
     $this->actingAs($this->student);
 

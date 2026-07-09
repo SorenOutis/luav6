@@ -6,9 +6,11 @@ use App\Models\Exam;
 use App\Models\ExamLiveSession;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Models\Season;
 use App\Services\AIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -20,7 +22,7 @@ class ExamController extends Controller
     {
         $user = auth()->user();
         $exams = Exam::with([
-            'section',
+            'section.season',
             'parts' => function ($query) {
                 $query->orderBy('sort_order');
             },
@@ -45,18 +47,37 @@ class ExamController extends Controller
 
             $submittedPartsCount = $submissions->unique('exam_part_id')->count();
 
+            $seasonName = $exam->section?->season?->name;
+
             return array_merge($exam->toArray(), [
                 'submitted_parts_count' => $submittedPartsCount,
                 'total_parts' => $exam->parts->count(),
                 'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
                 'submissions' => $submissions->toArray(),
                 'section_name' => $exam->section?->name,
+                'season_name' => $seasonName,
                 'exam_date_iso' => $exam->exam_date?->toIso8601String(),
             ]);
         });
 
+        // Group exams by season name, ordered by most recent season first
+        $seasonRank = Season::query()
+            ->whereIn('id', $exams->pluck('section.season_id')->filter()->unique())
+            ->orderBy('start_date', 'desc')
+            ->pluck('id', 'name');
+
+        $examsBySeason = collect($examsData)
+            ->groupBy(fn ($e) => $e['season_name'] ?? 'Other')
+            ->map(fn ($exams, $seasonName) => [
+                'seasonName' => $seasonName,
+                'exams' => $exams->values()->all(),
+            ])
+            ->sortBy(fn ($group) => $seasonRank->keys()->search(fn ($name) => $name === $group['seasonName']) ?? 999)
+            ->values()
+            ->all();
+
         return Inertia::render('Exam', [
-            'exams' => $examsData,
+            'examsBySeason' => $examsBySeason,
         ]);
     }
 

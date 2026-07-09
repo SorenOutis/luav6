@@ -13,6 +13,7 @@ class Section extends Model
 
     protected $fillable = [
         'name',
+        'season_id',
         'school_level',
         'join_code',
         'admin_id',
@@ -89,7 +90,7 @@ class Section extends Model
      */
     public function users()
     {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(User::class)->withPivot('season_id');
     }
 
     /**
@@ -103,6 +104,11 @@ class Section extends Model
     public function progress()
     {
         return $this->hasMany(SectionProgress::class);
+    }
+
+    public function season()
+    {
+        return $this->belongsTo(Season::class);
     }
 
     public function grades()

@@ -43,7 +43,7 @@ test('user can join a section with a valid code', function () {
 
 test('user gets already_joined when re-joining a section', function () {
     $section = createSection();
-    $this->user->sections()->syncWithoutDetaching([$section->id]);
+    $this->user->sections()->syncWithoutDetaching([$section->id => ['season_id' => $section->season_id]]);
 
     $this->actingAs($this->user)
         ->postJson('/sections/join-by-code', ['code' => 'ABCD1234'])

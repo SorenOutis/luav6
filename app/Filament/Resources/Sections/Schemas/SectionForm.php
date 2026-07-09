@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Sections\Schemas;
 
+use App\Models\Season;
 use App\Models\Section;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -17,6 +18,11 @@ class SectionForm
                 TextInput::make('name')
                     ->required()
                     ->unique(ignoreRecord: true),
+                Select::make('season_id')
+                    ->label('School Year / Season')
+                    ->relationship('season', 'name')
+                    ->default(fn () => Season::current()?->id)
+                    ->required(),
                 Select::make('school_level')
                     ->label('School level')
                     ->options(Section::schoolLevelOptions())

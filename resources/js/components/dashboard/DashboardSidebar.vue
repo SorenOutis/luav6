@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     BookOpen,
     Clock,
@@ -8,7 +9,10 @@ import {
     Sparkles,
     CalendarX,
     Shield,
+    ChevronDown,
+    Loader2,
 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import Button from '@/components/ui/button/Button.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
@@ -43,6 +47,11 @@ interface Badge {
     earnedAt?: string | null;
 }
 
+interface Season {
+    id: number;
+    name: string;
+}
+
 interface Props {
     unreadNotificationCount: number;
     badges?: Badge[];
@@ -51,17 +60,46 @@ interface Props {
     upcomingExams?: Exam[];
     nextUpItem?: NextUpItem | null;
     profileUrl?: string;
+    examSeasons?: Season[];
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
     badges: () => [],
     weeklyXP: 0,
     weeklyGoal: 0,
     upcomingExams: () => [],
     nextUpItem: null,
     profileUrl: '/dashboard',
+    examSeasons: () => [],
 });
+
 const emit = defineEmits(['quick-action']);
+
+// Local state for season-switched exams
+const localExams = ref<Exam[]>(props.upcomingExams);
+const isSwitchingExamSeason = ref(false);
+
+// Determine initial season from the first available season or null
+const selectedExamSeasonId = ref<number | null>(
+    props.examSeasons.length > 0 ? props.examSeasons[0].id : null,
+);
+
+const changeExamSeason = async (seasonId: number) => {
+    if (isSwitchingExamSeason.value) return;
+    isSwitchingExamSeason.value = true;
+
+    try {
+        const r = await axios.get('/api/dashboard-exams', {
+            params: { season_id: seasonId },
+        });
+        localExams.value = r.data.exams;
+        selectedExamSeasonId.value = seasonId;
+    } catch (e) {
+        console.error('Failed to fetch exams:', e);
+    } finally {
+        isSwitchingExamSeason.value = false;
+    }
+};
 
 const weeklyPercent = (xp: number, goal: number) => {
     if (!goal) return 0;
@@ -315,20 +353,59 @@ const weeklyPercent = (xp: number, goal: number) => {
                         <BookOpen class="h-4 w-4 text-primary" />
                         Upcoming Activities
                     </CardTitle>
-                    <Link
-                        :href="examsIndex().url"
-                        class="text-[10px] font-semibold text-primary transition-colors hover:text-primary/80"
-                    >
-                        All →
-                    </Link>
+                    <div class="flex items-center gap-2">
+                        <!-- Season dropdown for exams -->
+                        <div
+                            v-if="examSeasons.length > 1"
+                            class="relative"
+                        >
+                            <select
+                                :value="selectedExamSeasonId"
+                                @change="
+                                    changeExamSeason(
+                                        Number(
+                                            ($event.target as HTMLSelectElement)
+                                                .value,
+                                        ),
+                                    )
+                                "
+                                :disabled="isSwitchingExamSeason"
+                                class="lb-exam-season-select cursor-pointer appearance-none pr-6 text-[8px]"
+                            >
+                                <option
+                                    v-for="s in examSeasons"
+                                    :key="s.id"
+                                    :value="s.id"
+                                >
+                                    {{ s.name }}
+                                </option>
+                            </select>
+                            <ChevronDown
+                                class="pointer-events-none absolute top-1/2 right-1.5 h-2.5 w-2.5 -translate-y-1/2 text-muted-foreground"
+                            />
+                        </div>
+                        <Link
+                            :href="examsIndex().url"
+                            class="text-[10px] font-semibold text-primary transition-colors hover:text-primary/80"
+                        >
+                            All →
+                        </Link>
+                    </div>
                 </CardHeader>
                 <CardContent class="relative z-10">
+                    <!-- Loading state -->
                     <div
-                        v-if="upcomingExams && upcomingExams.length > 0"
+                        v-if="isSwitchingExamSeason"
+                        class="flex items-center justify-center py-8"
+                    >
+                        <Loader2 class="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                    <div
+                        v-else-if="localExams && localExams.length > 0"
                         class="space-y-2"
                     >
                         <Link
-                            v-for="exam in upcomingExams.slice(0, 2)"
+                            v-for="exam in localExams.slice(0, 2)"
                             :key="exam.id"
                             :href="examsShow(exam.id).url"
                             class="group block cursor-pointer rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
@@ -382,3 +459,10 @@ const weeklyPercent = (xp: number, goal: number) => {
         </SpotlightCard>
     </div>
 </template>
+
+<style scoped>
+@reference "../../../css/app.css";
+.lb-exam-season-select {
+    @apply rounded-lg border border-border/20 bg-card/30 px-2 py-1 font-bold tracking-widest text-muted-foreground uppercase transition-all focus:border-primary/40 focus:ring-2 focus:ring-primary/30 focus:outline-none;
+}
+</style>

@@ -191,7 +191,7 @@ class User extends Authenticatable
      */
     public function sections()
     {
-        return $this->belongsToMany(Section::class);
+        return $this->belongsToMany(Section::class)->withPivot('season_id');
     }
 
     /**

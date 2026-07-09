@@ -258,6 +258,25 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             ->whereIn('id', $earnedBadges->pluck('pivot.season_id')->filter()->unique())
             ->pluck('name', 'id');
 
+        $availableSeasonModels = Season::query()
+            ->whereIn('id', DB::table('section_user')
+                ->where('user_id', $user->id)
+                ->whereNotNull('season_id')
+                ->distinct()
+                ->pluck('season_id')
+            )
+            ->orderBy('start_date', 'desc')
+            ->get();
+
+        $availableSeasons = $availableSeasonModels
+            ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])
+            ->values()
+            ->all();
+
+        // Use the user's first available season as the initial season for leaderboard data,
+        // so the initial render matches what the dropdown shows (instead of showing ALL sections).
+        $initialSeason = $availableSeasonModels->first() ?? $currentSeason;
+
         $sectionIds = $user->sections()->pluck('sections.id');
 
         // 1. Announcements (Active)
@@ -265,8 +284,8 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
         // 2. Courses (Enrolled by user, scoped to season if id exists)
         $coursesResource = $user->courses();
-        if ($currentSeason) {
-            $coursesResource->wherePivot('season_id', $currentSeason->id);
+        if ($initialSeason) {
+            $coursesResource->wherePivot('season_id', $initialSeason->id);
         }
         $courses = $coursesResource->get()->map(function ($course) {
             return [
@@ -331,10 +350,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 ];
             });
 
-        // 4. Leaderboard (Scoped to Current Season and Section)
+        // 4. Leaderboard (Scoped to initial season)
         $sectionLeaderboards = [];
-        if ($currentSeason) {
-            $userSections = $user->sections()->get();
+        if ($initialSeason) {
+            // Scope sections to the user's initial season via pivot — same as the API does
+            $userSections = $user->sections()->wherePivot('season_id', $initialSeason->id)->get();
 
             foreach ($userSections as $section) {
                 // Get all students in this section with their section-specific progress
@@ -401,9 +421,6 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
             }
         }
 
-        // If no sections, we can provide a default empty state or global if desired
-        // For now, if no sections, the list will just be empty.
-
         return inertia('Dashboard', [
             'userStats' => [
                 'totalXP' => $seasonalExp,
@@ -442,6 +459,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
                 'endDate' => $currentSeason->end_date?->toIso8601String(),
             ] : null,
             'sectionName' => $user->sections->pluck('name')->join(', '),
+            'availableSeasons' => $availableSeasons,
         ]);
     })->middleware('student.page:dashboard')->name('dashboard');
 
@@ -481,6 +499,187 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('ngl', [AnonymousMessageController::class, 'index'])->middleware('student.page:ngl')->name('ngl.index');
     Route::post('ngl', [AnonymousMessageController::class, 'store'])->middleware('student.page:ngl')->name('ngl.store');
     Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->middleware('student.page:ngl')->name('ngl.like');
+
+    // ─────────────────────────────────────────────
+    // Leaderboard API (season-scoped)
+    // ─────────────────────────────────────────────
+    Route::get('api/leaderboard', function () {
+        $user = auth()->user();
+        $seasonId = request()->integer('season_id');
+        $season = $seasonId ? Season::find($seasonId) : Season::current();
+
+        if (! $season) {
+            return response()->json(['leaderboards' => [], 'selectedSeason' => null]);
+        }
+
+        // Get user's sections scoped to this season via pivot season_id
+        $userSections = $user->sections()->wherePivot('season_id', $season->id)->get();
+
+        $sectionLeaderboards = [];
+        foreach ($userSections as $section) {
+            $usersInSection = $section->users()
+                ->where('is_admin', false)
+                ->with(['sectionProgress' => function ($q) use ($section) {
+                    $q->where('section_id', $section->id);
+                }])
+                ->get();
+
+            $userIds = $usersInSection->pluck('id')->unique();
+
+            $currentUserSectionProgress = $user->activeSectionProgress($section->id);
+            $sectionExp = $currentUserSectionProgress?->exp ?? 0;
+
+            $weeklyXpMap = DB::table('course_user')
+                ->whereIn('user_id', $userIds)
+                ->where('updated_at', '>=', now()->subDays(7))
+                ->select('user_id', DB::raw('SUM(xp_earned) as total'))
+                ->groupBy('user_id')
+                ->pluck('total', 'user_id');
+
+            $leaderboardUsers = $usersInSection->map(function ($u) use ($weeklyXpMap) {
+                $progress = $u->sectionProgress->first();
+                $xp = $progress?->exp ?? 0;
+                $level = $progress?->level ?? 1;
+
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'avatar' => $u->avatar,
+                    'xp' => (float) $xp,
+                    'level' => (int) $level,
+                    'xpProgress' => (int) ($xp % 100),
+                    'streak' => $u->current_streak,
+                    'joinedAt' => $u->created_at->format('M Y'),
+                    'weeklyXp' => (int) ($weeklyXpMap[$u->id] ?? 0),
+                    'trend' => 'stable',
+                    'isCurrentUser' => $u->id === auth()->id(),
+                ];
+            })->sortByDesc('xp')->values();
+
+            $userRank = SectionProgress::where('section_id', $section->id)
+                ->whereHas('user', fn ($q) => $q->where('is_admin', false))
+                ->where('exp', '>', $sectionExp)
+                ->count() + 1;
+
+            $sectionLeaderboards[] = [
+                'sectionId' => $section->id,
+                'sectionName' => $section->name,
+                'users' => $leaderboardUsers,
+                'userRank' => $userRank,
+                'totalPlayers' => $usersInSection->count(),
+            ];
+        }
+
+        return response()->json([
+            'leaderboards' => $sectionLeaderboards,
+            'selectedSeason' => [
+                'id' => $season->id,
+                'name' => $season->name,
+            ],
+        ]);
+    })->middleware(['auth', 'verified'])->name('api.leaderboard');
+
+    // ─────────────────────────────────────────────
+    // Dashboard Exams API (season-scoped)
+    // ─────────────────────────────────────────────
+    Route::get('api/dashboard-exams', function () {
+        $user = auth()->user();
+        $seasonId = request()->integer('season_id');
+        $season = $seasonId ? Season::find($seasonId) : Season::current();
+
+        if (! $season) {
+            return response()->json(['exams' => []]);
+        }
+
+        $sectionIds = $user->sections()
+            ->wherePivot('season_id', $season->id)
+            ->pluck('sections.id');
+
+        $upcomingExams = Exam::where('status', '!=', 'draft')
+            ->when(! $user->is_admin, function ($query) use ($sectionIds) {
+                $query->where(function ($q) use ($sectionIds) {
+                    $q->whereNull('section_id')
+                        ->orWhereIn('section_id', $sectionIds);
+                });
+            })
+            ->orderBy('exam_date', 'asc')
+            ->limit(3)
+            ->get()
+            ->map(function ($exam) use ($user) {
+                $submittedPartsCount = ExamSubmission::where('user_id', $user->id)
+                    ->where('exam_id', $exam->id)
+                    ->distinct('exam_part_id')
+                    ->count();
+
+                $totalParts = $exam->parts()->count();
+
+                return [
+                    'id' => $exam->id,
+                    'title' => $exam->title,
+                    'description' => $exam->description,
+                    'exam_date' => $exam->exam_date->format('M d, Y'),
+                    'exam_date_iso' => $exam->exam_date->toIso8601String(),
+                    'duration_minutes' => $exam->duration_minutes,
+                    'status' => $exam->status,
+                    'parts_count' => $totalParts,
+                    'submitted_parts' => $submittedPartsCount,
+                    'is_completed' => $submittedPartsCount === $totalParts && $totalParts > 0,
+                ];
+            });
+
+        return response()->json(['exams' => $upcomingExams]);
+    })->middleware(['auth', 'verified'])->name('api.dashboard-exams');
+
+    // ─────────────────────────────────────────────
+    // Exams API (season-scoped)
+    // ─────────────────────────────────────────────
+    Route::get('api/exams', function () {
+        $user = auth()->user();
+        $seasonId = request()->integer('season_id');
+        $season = $seasonId ? Season::find($seasonId) : Season::current();
+
+        if (! $season) {
+            return response()->json(['exams' => []]);
+        }
+
+        $sectionIds = $user->sections()
+            ->wherePivot('season_id', $season->id)
+            ->pluck('sections.id');
+
+        $exams = Exam::with([
+            'section',
+            'parts' => fn ($q) => $q->orderBy('sort_order'),
+        ])
+            ->where('status', '!=', 'draft')
+            ->when(! $user->is_admin, function ($query) use ($sectionIds) {
+                $query->where(function ($q) use ($sectionIds) {
+                    $q->whereNull('section_id')
+                        ->orWhereIn('section_id', $sectionIds);
+                });
+            })
+            ->latest()
+            ->get();
+
+        $userId = $user->id;
+        $examsData = $exams->map(function (Exam $exam) use ($userId) {
+            $submissions = ExamSubmission::where('user_id', $userId)
+                ->where('exam_id', $exam->id)
+                ->get();
+
+            $submittedPartsCount = $submissions->unique('exam_part_id')->count();
+
+            return array_merge($exam->toArray(), [
+                'submitted_parts_count' => $submittedPartsCount,
+                'total_parts' => $exam->parts->count(),
+                'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
+                'submissions' => $submissions->toArray(),
+                'section_name' => $exam->section?->name,
+                'exam_date_iso' => $exam->exam_date?->toIso8601String(),
+            ]);
+        });
+
+        return response()->json(['exams' => $examsData]);
+    })->middleware(['auth', 'verified'])->name('api.exams');
 
     Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');

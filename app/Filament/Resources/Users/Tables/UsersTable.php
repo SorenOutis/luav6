@@ -140,8 +140,12 @@ class UsersTable
                                 ->required(),
                         ])
                         ->action(function (Collection $records, array $data) {
-                            $records->each(function ($record) use ($data) {
-                                $record->sections()->sync($data['sections']);
+                            $sectionIds = $data['sections'];
+                            $sections = Section::whereIn('id', $sectionIds)->get();
+                            $syncData = $sections->mapWithKeys(fn ($s) => [$s->id => ['season_id' => $s->season_id]])->all();
+
+                            $records->each(function ($record) use ($syncData) {
+                                $record->sections()->sync($syncData);
                             });
                         })
                         ->deselectRecordsAfterCompletion(),

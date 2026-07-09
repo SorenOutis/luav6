@@ -33,6 +33,11 @@ class Season extends Model
         return $this->hasMany(SeasonProgress::class);
     }
 
+    public function sections()
+    {
+        return $this->hasMany(Section::class);
+    }
+
     public static function current()
     {
         return self::where('is_active', true)->first();

@@ -21,6 +21,12 @@ class SectionsTable
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('season.name')
+                    ->label('School Year')
+                    ->badge()
+                    ->color('info')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('join_code')
                     ->label('Join code')
                     ->formatStateUsing(fn (?string $state): string => $state ? Section::formatJoinCode($state) : '—')

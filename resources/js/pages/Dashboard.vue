@@ -385,6 +385,7 @@ const props = defineProps<{
     sectionLeaderboards: LeaderboardData[];
     activeSeason: Season | null;
     sectionName?: string | null;
+    availableSeasons?: Season[];
 }>();
 
 const userStats = computed(() => props.userStats);
@@ -783,6 +784,7 @@ const handleLogout = () => {
                             class="dashboard-leaderboard"
                             :section-leaderboards="sectionLeaderboards"
                             :active-season-name="activeSeason?.name"
+                            :available-seasons="props.availableSeasons ?? []"
                         />
 
                         <CourseAssignmentList
@@ -854,7 +856,8 @@ const handleLogout = () => {
                             :badges="userBadges"
                             :weekly-x-p="userStats.currentXP"
                             :weekly-goal="1000"
-                            :upcoming-exams="upcomingExams"
+                            :upcoming-exams="props.upcomingExams"
+                            :exam-seasons="props.availableSeasons ?? []"
                             :next-up-item="nextUpItem"
                             :profile-url="`/u/${page.props.auth.user?.id}`"
                             @quick-action="handleQuickAction"

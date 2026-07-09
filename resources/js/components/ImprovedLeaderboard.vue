@@ -44,15 +44,42 @@ interface LeaderboardData {
     totalPlayers: number;
 }
 
+interface Season {
+    id: number;
+    name: string;
+}
+
 interface Props {
     sectionLeaderboards: LeaderboardData[];
     activeSeasonName?: string;
+    availableSeasons?: Season[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    availableSeasons: () => [],
+});
+
+const emit = defineEmits<{
+    'update:activeSeasonName': [name: string];
+}>();
+
 const activeTabIndex = ref(0);
 const searchQuery = ref('');
 const STORAGE_KEY = 'leaderboard_active_section_id';
+
+// Local state for season-switching via API
+const localLeaderboards = ref<LeaderboardData[]>(props.sectionLeaderboards);
+
+// Find the best season match: first try the globally active season,
+// then fall back to the first season the user is actually enrolled in.
+// This prevents showing "2026-2027" for users who only have sections in 2025-2026.
+const initialSeason =
+    props.availableSeasons.find(
+        (s) => s.name === (props.activeSeasonName || ''),
+    ) || props.availableSeasons[0];
+
+const selectedSeasonId = ref<number | null>(initialSeason?.id ?? null);
+const selectedSeasonName = ref(initialSeason?.name || '');
 
 onMounted(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -65,12 +92,12 @@ onMounted(() => {
 });
 
 watch(activeTabIndex, (i) => {
-    const s = props.sectionLeaderboards[i];
+    const s = localLeaderboards.value[i];
     if (s) localStorage.setItem(STORAGE_KEY, s.sectionId.toString());
 });
 
 const activeLeaderboard = computed(
-    () => props.sectionLeaderboards[activeTabIndex.value] || null,
+    () => localLeaderboards.value[activeTabIndex.value] || null,
 );
 const users = computed(() => activeLeaderboard.value?.users || []);
 const filteredUsers = computed(() => {
@@ -81,6 +108,11 @@ const filteredUsers = computed(() => {
 const userRank = computed(() => activeLeaderboard.value?.userRank || 0);
 const totalPlayers = computed(() => activeLeaderboard.value?.totalPlayers || 0);
 const sectionName = computed(() => activeLeaderboard.value?.sectionName || '');
+
+const currentSeasonName = computed(() => {
+    if (selectedSeasonName.value) return selectedSeasonName.value;
+    return props.activeSeasonName || 'Season 1';
+});
 
 const top3 = computed(() => filteredUsers.value.slice(0, 3));
 const showAllRankings = ref(false);
@@ -174,17 +206,46 @@ const openHistory = async (user: LeaderboardUser) => {
         isLoadingHistory.value = false;
     }
 };
+
+// Season switching
+const isSwitchingSeason = ref(false);
+
+const changeSeason = async (seasonId: number) => {
+    if (isSwitchingSeason.value) return;
+    isSwitchingSeason.value = true;
+
+    try {
+        const r = await axios.get(`/api/leaderboard`, {
+            params: { season_id: seasonId },
+        });
+
+        if (r.data.leaderboards) {
+            localLeaderboards.value = r.data.leaderboards;
+            activeTabIndex.value = 0;
+        }
+
+        if (r.data.selectedSeason) {
+            selectedSeasonName.value = r.data.selectedSeason.name;
+            selectedSeasonId.value = r.data.selectedSeason.id;
+            emit('update:activeSeasonName', r.data.selectedSeason.name);
+        }
+    } catch (e) {
+        console.error('Failed to fetch leaderboard:', e);
+    } finally {
+        isSwitchingSeason.value = false;
+    }
+};
 </script>
 
 <template>
     <div class="lb-root space-y-6">
         <!-- Section Tabs -->
         <div
-            v-if="sectionLeaderboards.length > 1"
+            v-if="localLeaderboards.length > 1"
             class="flex scrollbar-none gap-2 overflow-x-auto pb-2"
         >
             <button
-                v-for="(section, idx) in sectionLeaderboards"
+                v-for="(section, idx) in localLeaderboards"
                 :key="section.sectionId"
                 @click="activeTabIndex = idx"
                 :class="['lb-tab', activeTabIndex === idx && 'lb-tab--active']"
@@ -234,15 +295,51 @@ const openHistory = async (user: LeaderboardUser) => {
                         class="lb-search w-full py-2 pr-4 pl-9 sm:w-52"
                     />
                 </div>
-                <div class="lb-season-pill">
+                <!-- Season Dropdown -->
+                <div v-if="availableSeasons.length > 1" class="relative">
+                    <select
+                        :value="selectedSeasonId || availableSeasons[0]?.id"
+                        @change="
+                            (e) =>
+                                changeSeason(
+                                    Number((e.target as HTMLSelectElement).value),
+                                )
+                        "
+                        :disabled="isSwitchingSeason"
+                        class="lb-season-select cursor-pointer appearance-none pr-8"
+                    >
+                        <option
+                            v-for="s in availableSeasons"
+                            :key="s.id"
+                            :value="s.id"
+                        >
+                            {{ s.name }}
+                        </option>
+                    </select>
+                    <ChevronDown
+                        class="pointer-events-none absolute top-1/2 right-3 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+                    />
+                </div>
+                <div v-else class="lb-season-pill">
                     <Terminal class="h-3 w-3 text-amber-400" />
-                    <span>{{ activeSeasonName || 'Season 1' }}</span>
+                    <span>{{ currentSeasonName }}</span>
                 </div>
             </div>
         </div>
 
+        <!-- Loading indicator -->
+        <div
+            v-if="isSwitchingSeason"
+            class="flex items-center justify-center py-12"
+        >
+            <Loader2 class="h-8 w-8 animate-spin text-amber-400" />
+        </div>
+
         <!-- Empty State -->
-        <div v-if="users.length === 0" class="lb-empty">
+        <div
+            v-else-if="users.length === 0"
+            class="lb-empty"
+        >
             <Trophy class="mb-4 h-10 w-10 text-muted-foreground/30" />
             <h3 class="mb-1 text-xl font-black">No Rankings Yet</h3>
             <p class="text-xs text-muted-foreground">
@@ -705,6 +802,9 @@ const openHistory = async (user: LeaderboardUser) => {
 }
 .lb-season-pill {
     @apply flex shrink-0 items-center gap-1.5 rounded-xl border border-border/30 bg-card/40 px-3 py-2 text-[10px] font-bold tracking-widest text-muted-foreground uppercase;
+}
+.lb-season-select {
+    @apply rounded-xl border border-border/30 bg-card/40 px-3 py-2 text-[10px] font-bold tracking-widest text-muted-foreground uppercase transition-all focus:border-amber-400/40 focus:ring-2 focus:ring-amber-400/30 focus:outline-none;
 }
 .lb-empty {
     @apply flex flex-col items-center justify-center rounded-2xl border border-border/30 bg-card/20 px-6 py-16 text-center;
