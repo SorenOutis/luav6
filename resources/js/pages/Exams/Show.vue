@@ -144,6 +144,8 @@ const totalQuestions = computed(() =>
 );
 
 const visibleQuestionIndex = ref(0);
+const progressBoxRef = ref<HTMLElement | null>(null);
+
 
 // ─── LIVE TIMER LOGIC ───────────────────────────────────────
 const timeLeftSeconds = ref(props.exam.duration_minutes * 60);
@@ -254,6 +256,157 @@ const stopTimer = () => {
     }
 };
 
+
+// ─── CONFETTI CELEBRATION ──────────────────────────────────
+// Creates a burst of confetti particles when all questions are answered
+const burstConfetti = () => {
+  const colors = [
+    'var(--color-primary)',
+    '#22c55e', // emerald-500
+    '#f59e0b', // amber-500
+    '#a78bfa', // violet-400
+    '#f472b6', // pink-400
+    '#60a5fa', // blue-400
+    '#34d399', // emerald-400
+    '#fb923c', // orange-400
+  ];
+  
+  const container = progressBoxRef.value;
+  if (!container) return;
+  
+  const rect = container.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  // Create 50 confetti pieces
+  for (let i = 0; i < 50; i++) {
+    const el = document.createElement('div');
+    const size = 6 + Math.random() * 6;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const isCircle = Math.random() > 0.5;
+    
+    el.style.cssText = `
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+      width: ${isCircle ? size : size * 0.6}px;
+      height: ${size}px;
+      background: ${color};
+      border-radius: ${isCircle ? '50%' : '2px'};
+      left: ${centerX}px;
+      top: ${centerY}px;
+      opacity: 1;
+    `;
+    document.body.appendChild(el);
+    
+    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
+    const velocity = 300 + Math.random() * 500;
+    const vx = Math.cos(angle) * velocity;
+    const vy = Math.sin(angle) * velocity;
+    const rotation = Math.random() * 720 - 360;
+    const gravity = 800;
+    const duration = 1.2 + Math.random() * 0.8;
+    
+    gsap.to(el, {
+      x: vx * 0.5,
+      y: vy * 0.5 + 0.5 * gravity * 0.25,
+      rotation: rotation,
+      opacity: 0,
+      scale: 0.3,
+      duration: duration,
+      ease: 'power2.out',
+      onComplete: () => el.remove(),
+    });
+  }
+};
+
+// ─── ALL-ANSWERED CELEBRATION ──────────────────────────────────
+// Watches for when all questions are answered and animates the progress box
+watch(unansweredCount, (newCount, oldCount) => {
+  if (oldCount > 0 && newCount === 0 && progressBoxRef.value) {
+    burstConfetti();
+    gsap.killTweensOf(progressBoxRef.value);
+    gsap.fromTo(
+      progressBoxRef.value,
+      {
+        scale: 1,
+        borderColor: 'var(--color-border)',
+        boxShadow: '0 0 0px rgba(var(--color-primary), 0)',
+      },
+      {
+        scale: 1.02,
+        borderColor: 'var(--color-primary)',
+        boxShadow: '0 0 30px var(--color-primary)',
+        duration: 1.2,
+        ease: 'elastic.out(1, 0.4)',
+        yoyo: true,
+        repeat: 2,
+        clearProps: 'borderColor,boxShadow,transform',
+      },
+    );
+
+    // Also pulse the progress percentage
+    const pctEl = progressBoxRef.value.querySelector('.progress-pct');
+    if (pctEl) {
+      gsap.fromTo(
+        pctEl,
+        { scale: 1, color: '' },
+        {
+          scale: 1.3,
+          color: 'var(--color-primary)',
+          duration: 0.4,
+          ease: 'power2.out',
+          yoyo: true,
+          repeat: 5,
+        },
+      );
+    }
+
+    // Pulse the submit buttons to encourage submission
+    const submitBtns = document.querySelectorAll('.submit-celebration-btn');
+    submitBtns.forEach((btn) => {
+      gsap.killTweensOf(btn);
+      gsap.fromTo(
+        btn,
+        { scale: 1, boxShadow: '0 0 0px transparent' },
+        {
+          scale: 1.05,
+          boxShadow: '0 0 25px var(--color-primary)',
+          duration: 0.8,
+          ease: 'power1.inOut',
+          yoyo: true,
+          repeat: -1,
+        },
+      );
+    });
+  }
+});
+
+// Stop the submit button pulse when user starts submitting
+watch(isSubmitting, (submitting) => {
+  if (submitting) {
+    document.querySelectorAll('.submit-celebration-btn').forEach((btn) => {
+      gsap.killTweensOf(btn);
+      gsap.set(btn, { clearProps: 'transform,boxShadow' });
+    });
+  }
+});
+
+// Find the first unanswered question index (for the jump-to-unanswered button)
+const firstUnansweredIndex = computed(() => {
+    if (!selectedPart.value?.questions) return -1;
+    return selectedPart.value.questions.findIndex((_, i) => {
+        const a = answers[i];
+        return a === undefined || a === null || (typeof a === 'string' && a.trim() === '');
+    });
+});
+
+// Find the first flagged question index (for the review-flagged button)
+const firstFlaggedIndex = computed(() => {
+    if (flaggedQuestions.value.size === 0) return -1;
+    return Math.min(...Array.from(flaggedQuestions.value));
+});
+
 // ─── PROGRESS NAVIGATOR LOGIC ──────────────────────────────────
 const getQuestionStatus = (index: number) => {
     if (flaggedQuestions.value.has(index)) return 'flagged';
@@ -309,6 +462,17 @@ const saveDraft = () => {
             ease: 'power2.out',
         },
     );
+};
+
+// Cycle to the next flagged question. If at the last flagged question, wrap to the first.
+const jumpToNextFlagged = () => {
+    const flagged = Array.from(flaggedQuestions.value).sort((a, b) => a - b);
+    if (flagged.length === 0) return;
+
+    // Find the current position among flagged questions, or start from the first
+    const currentIdx = flagged.indexOf(visibleQuestionIndex.value);
+    const nextIdx = currentIdx >= 0 && currentIdx < flagged.length - 1 ? currentIdx + 1 : 0;
+    scrollToQuestion(flagged[nextIdx]);
 };
 
 const loadDraft = () => {
@@ -1200,6 +1364,11 @@ onUnmounted(() => {
         saveDraftTimeout = null;
     }
 
+    // Kill any lingering submit button pulse animations
+    document.querySelectorAll('.submit-celebration-btn').forEach((btn) => {
+        gsap.killTweensOf(btn);
+    });
+
 
 });
 const isExamInProgress = computed(
@@ -2050,9 +2219,10 @@ const feedbackContent = computed(() => {
                         <!-- Progress Navigator (Mini-Map) - Question status overview -->
                         <div
                             v-if="selectedPart && examStarted"
-                            class="fixed top-24 right-8 z-50 hidden w-80 space-y-6 max-h-[calc(100vh-10rem)] overflow-y-auto lg:block"
+                            class="fixed top-24 right-8 z-50 hidden w-80 space-y-6 lg:block"
                         >
                             <div
+                                ref="progressBoxRef"
                                 class="group relative overflow-hidden rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
                             >
                                 <!-- Background Glow -->
@@ -2120,6 +2290,13 @@ const feedbackContent = computed(() => {
                                                     class="text-[8px] font-black tracking-[0.4em] text-muted-foreground uppercase italic opacity-60"
                                                     >Current Progress</span
                                                 >
+                                                <span
+                                                    v-if="unansweredCount === 0"
+                                                    class="progress-pct mb-1 inline-flex items-center gap-1.5 text-[10px] font-black tracking-widest text-emerald-500 uppercase"
+                                                >
+                                                    <CheckCircle2 class="h-3 w-3" />
+                                                    All Answered
+                                                </span>
                                                 <span
                                                     class="text-xl font-black text-foreground italic"
                                                     >{{
@@ -2191,37 +2368,142 @@ const feedbackContent = computed(() => {
                                 </div>
                             </div>
 
-                            <!-- Tips/Shortcuts card -->
+                            <!-- Exam Summary card -->
                             <div
                                 class="rounded-none border border-border/20 bg-muted/20 p-6"
                             >
                                 <h4
                                     class="mb-4 text-[9px] font-black tracking-[0.4em] text-muted-foreground uppercase italic"
                                 >
-                                    Protocol Shortcuts
+                                    Question Status
                                 </h4>
-                                <ul class="space-y-3">
-                                    <li
-                                        class="flex items-center gap-3 text-[9px] font-bold tracking-widest text-muted-foreground/80 uppercase"
+                                <div class="space-y-3">
+                                    <!-- Answered count -->
+                                    <div
+                                        class="flex items-center justify-between border-b border-border/10 pb-2"
                                     >
-                                        <div
-                                            class="flex h-6 w-6 items-center justify-center rounded-none border border-primary/20 bg-primary/10 font-black text-primary"
+                                        <span
+                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
+                                            >Answered</span
                                         >
-                                            1-9
-                                        </div>
-                                        Selection Input
-                                    </li>
-                                    <li
-                                        class="flex items-center gap-3 text-[9px] font-bold tracking-widest text-muted-foreground/80 uppercase"
+                                        <span
+                                            class="font-mono text-xs font-black text-emerald-500"
+                                            >{{ getAnsweredCount() }}
+                                            /
+                                            {{
+                                                selectedPart?.questions
+                                                    ?.length ?? 0
+                                            }}</span
+                                        >
+                                    </div>
+
+                                    <!-- Unanswered count -->
+                                    <div
+                                        class="flex items-center justify-between border-b border-border/10 pb-2"
                                     >
-                                        <div
-                                            class="flex h-6 w-6 items-center justify-center rounded-none border border-primary/20 bg-primary/10 font-black text-primary"
+                                        <span
+                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
+                                            >Unanswered</span
                                         >
-                                            F
-                                        </div>
-                                        Integrity Flag
-                                    </li>
-                                </ul>
+                                        <span
+                                            class="font-mono text-xs font-black"
+                                            :class="
+                                                unansweredCount > 0
+                                                    ? 'text-rose-500'
+                                                    : 'text-emerald-500'
+                                            "
+                                            >{{
+                                                unansweredCount > 0
+                                                    ? unansweredCount
+                                                    : 'None'
+                                            }}</span
+                                        >
+                                    </div>
+
+                                    <!-- Flagged count -->
+                                    <div
+                                        class="flex items-center justify-between border-b border-border/10 pb-2"
+                                    >
+                                        <span
+                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
+                                            >Flagged</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs font-black text-amber-500"
+                                            >{{
+                                                flaggedQuestions.size > 0
+                                                    ? flaggedQuestions.size
+                                                    : 'None'
+                                            }}</span
+                                        >
+                                    </div>
+
+                                    <!-- Time remaining -->
+                                    <div
+                                        class="flex items-center justify-between pt-1"
+                                    >
+                                        <span
+                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
+                                            >Time Left</span
+                                        >
+                                        <span
+                                            class="font-mono text-xs font-black"
+                                            :class="
+                                                timeLeftSeconds < 300
+                                                    ? 'text-rose-500'
+                                                    : 'text-primary'
+                                            "
+                                            >{{ formattedTime }}</span
+                                        >
+                                    </div>
+                                </div>
+
+                                <!-- Action buttons -->
+                                <div class="mt-4 space-y-2">
+                                    <button
+                                        v-if="firstUnansweredIndex >= 0"
+                                        @click.prevent="scrollToQuestion(firstUnansweredIndex)"
+                                        class="flex w-full items-center justify-center gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-rose-500 uppercase transition-all hover:bg-rose-500/20"
+                                    >
+                                        <ArrowRight
+                                            class="h-3 w-3"
+                                        />
+                                        Jump to Unanswered
+                                    </button>
+
+                                    <!-- Submit part -->
+                                    <button
+                                        @click="submitPart"
+                                        :disabled="isSubmitting"
+                                        class="submit-celebration-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden bg-primary px-4 py-3 text-[11px] font-black tracking-[0.15em] text-primary-foreground uppercase transition-all shadow-lg shadow-primary/40 hover:shadow-xl hover:shadow-primary/50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <!-- Shine effect on hover -->
+                                        <div
+                                            class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
+                                        ></div>
+                                        <ArrowRight
+                                            class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                                        />
+                                        {{
+                                            isSubmitting
+                                                ? currentPartHasEssay
+                                                    ? 'Checking your answers...'
+                                                    : 'Submitting...'
+                                                : 'Submit this part'
+                                        }}
+                                    </button>
+
+                                    <button
+                                        v-if="firstFlaggedIndex >= 0"
+                                        @click.prevent="jumpToNextFlagged"
+                                        class="flex w-full items-center justify-center gap-2 border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-amber-500 uppercase transition-all hover:bg-amber-500/20"
+                                    >
+                                        <Flag
+                                            class="h-3 w-3 fill-amber-500/20"
+                                        />
+                                        Jump to Next Flagged
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2261,43 +2543,7 @@ const feedbackContent = computed(() => {
                         </div>
                     </div>
 
-                    <!-- Submit bar -->
-                    <div class="sticky bottom-6 flex justify-end pt-8">
-                        <button
-                            @click="submitPart"
-                            :disabled="isSubmitting"
-                            class="group relative flex skew-x-[-12deg] items-center gap-6 bg-primary px-10 py-5 font-black text-primary-foreground shadow-xl shadow-primary/40 transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            <span
-                                class="skew-x-[12deg] text-base tracking-[0.2em] uppercase"
-                                >{{
-                                    isSubmitting
-                                        ? currentPartHasEssay
-                                            ? 'Checking your answers...'
-                                            : 'Submitting...'
-                                        : 'Submit this part'
-                                }}</span
-                            >
 
-                            <div
-                                class="skew-x-[12deg] bg-primary-foreground/20 p-1.5 transition-colors group-hover:bg-primary-foreground/30"
-                            >
-                                <ArrowRight
-                                    v-if="!isSubmitting"
-                                    class="h-5 w-5 transition-transform group-hover:translate-x-1"
-                                />
-                                <div
-                                    v-else
-                                    class="h-5 w-5 animate-spin rounded-full border-3 border-primary-foreground/20 border-t-primary-foreground"
-                                ></div>
-                            </div>
-
-                            <!-- Decorative Button Edge -->
-                            <div
-                                class="absolute -top-1 -right-1 h-2 w-2 bg-primary transition-transform group-hover:scale-150"
-                            ></div>
-                        </button>
-                    </div>
                 </template>
             </div>
 
@@ -3009,6 +3255,30 @@ const feedbackContent = computed(() => {
                                 >{{ formattedTime }}</span
                             >
                         </div>
+                    </div>
+
+                    <!-- Mobile submit button -->
+                    <div
+                        class="fixed right-4 bottom-20 z-40 lg:hidden"
+                    >
+                        <button
+                            @click="submitPart"
+                            :disabled="isSubmitting"
+                            class="submit-celebration-btn group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-xs font-black tracking-[0.15em] text-primary-foreground uppercase shadow-2xl shadow-primary/50 transition-all hover:shadow-2xl hover:shadow-primary/70 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <!-- Shine effect on hover -->
+                            <div
+                                class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
+                            ></div>
+                            {{
+                                isSubmitting
+                                    ? currentPartHasEssay
+                                        ? 'Checking...'
+                                        : 'Submitting...'
+                                    : 'Submit this part'
+                            }}
+                            <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                        </button>
                     </div>
                 </div>
             </transition>
