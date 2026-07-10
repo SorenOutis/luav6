@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, usePoll } from '@inertiajs/vue3';
-import gsap from 'gsap';
+import { Motion } from '@motionone/vue';
 import {
     Calendar,
     Clock,
@@ -12,8 +12,10 @@ import {
     ArrowRight,
     Zap,
     Timer,
+    TrendingUp,
+    Search,
 } from 'lucide-vue-next';
-import { onMounted, ref, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -83,6 +85,7 @@ const privacyMode = ref(true);
 // --- Filter State ---
 const activeFilter = ref<'all' | 'active' | 'completed'>('all');
 const activeSection = ref('all');
+const searchQuery = ref('');
 
 const getExamSectionName = (exam: Exam) =>
     exam.section_name?.trim() || 'General';
@@ -121,11 +124,26 @@ const sectionTabs = computed(() => {
 });
 
 const filteredExams = computed(() => {
-    if (activeSection.value === 'all') return statusFilteredExams.value;
+    let exams = statusFilteredExams.value;
 
-    return statusFilteredExams.value.filter(
-        (exam) => getExamSectionName(exam) === activeSection.value,
-    );
+    // Filter by section
+    if (activeSection.value !== 'all') {
+        exams = exams.filter(
+            (exam) => getExamSectionName(exam) === activeSection.value,
+        );
+    }
+
+    // Filter by search query
+    const query = searchQuery.value.trim().toLowerCase();
+    if (query) {
+        exams = exams.filter(
+            (exam) =>
+                exam.title.toLowerCase().includes(query) ||
+                exam.description?.toLowerCase().includes(query),
+        );
+    }
+
+    return exams;
 });
 
 // Group filtered exams back by season for display
@@ -206,15 +224,36 @@ const getStatusBadgeInfo = (exam: Exam) => {
         exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
     const allPartsDone = totalParts > 0 && submittedParts >= totalParts;
 
-    if (allPartsDone) return { label: 'COMPLETED', color: 'bg-emerald-500' };
+    if (allPartsDone) return { label: 'Completed', color: 'bg-emerald-500' };
     if (exam.is_locked && exam.status === 'closed')
-        return { label: 'CLOSED', color: 'bg-red-500' };
-    if (exam.is_locked) return { label: 'IN PROGRESS', color: 'bg-amber-500' };
+        return { label: 'Closed', color: 'bg-red-500' };
+    if (exam.is_locked) return { label: 'In Progress', color: 'bg-amber-500' };
     if (exam.status === 'published')
-        return { label: 'PUBLISHED', color: 'bg-blue-500' };
+        return { label: 'Published', color: 'bg-blue-500' };
     if (exam.status === 'closed')
-        return { label: 'CLOSED', color: 'bg-red-500' };
-    return { label: 'DRAFT', color: 'bg-muted text-muted-foreground' };
+        return { label: 'Closed', color: 'bg-red-500' };
+    return { label: 'Draft', color: 'bg-muted text-muted-foreground' };
+};
+
+// Status-based card border styling
+const getCardStatusClass = (exam: Exam) => {
+    const totalParts = exam.total_parts ?? exam.parts?.length ?? 0;
+    const submittedParts =
+        exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
+    const allPartsDone = totalParts > 0 && submittedParts >= totalParts;
+
+    // Check if overdue
+    const dateStr = exam.exam_date_iso || exam.exam_date;
+    if (dateStr && !exam.is_locked) {
+        const examDate = new Date(dateStr);
+        if (!Number.isNaN(examDate.getTime()) && examDate.getTime() < Date.now()) {
+            return 'border-l-red-400/40 hover:border-l-red-400/60';
+        }
+    }
+
+    if (allPartsDone) return 'border-l-emerald-400/40 hover:border-l-emerald-400/60';
+    if (exam.is_locked) return '';
+    return 'border-l-primary/20 hover:border-l-primary/40';
 };
 
 // --- Progress Percentage ---
@@ -287,38 +326,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Exams', href: '/exams' },
 ];
 
-const examContainer = ref<HTMLElement | null>(null);
-
-// --- GSAP Animation ---
-const animateCards = () => {
-    if (!examContainer.value) return;
-
-    gsap.killTweensOf('.exam-card');
-    gsap.set('.exam-card', { opacity: 0, y: 20 });
-    gsap.set('.exam-hero', { opacity: 1, y: 0 });
-
-    gsap.to('.exam-card', {
-        opacity: 1,
-        y: 0,
-        stagger: 0.06,
-        duration: 0.5,
-        ease: 'power2.out',
-    });
-};
-
-// Re-animate when filter changes
-watch([activeFilter, activeSection], () => {
-    setTimeout(animateCards, 50);
-});
-
 watch(sectionTabs, (tabs) => {
     if (!tabs.some((tab) => tab.key === activeSection.value)) {
         activeSection.value = 'all';
     }
-});
-
-onMounted(() => {
-    setTimeout(animateCards, 100);
 });
 </script>
 
@@ -331,53 +342,66 @@ onMounted(() => {
             class="exam-theme-page relative flex h-full flex-1 flex-col gap-4 overflow-hidden bg-background p-3 perspective-[1000px] md:p-8"
         >
             <!-- Header Section -->
-            <div
-                class="animate-section exam-hero group/hero relative space-y-1"
+            <Motion
+                :initial="{ opacity: 0, y: 20 }"
+                :animate="{ opacity: 1, y: 0 }"
+                :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                class="space-y-1"
             >
-                <div>
-                    <h1 class="text-xl font-bold tracking-tight">
-                        Upcoming Exams
-                    </h1>
-                    <p class="text-sm text-muted-foreground">
-                        View and take your assessments.
-                    </p>
+                <div class="flex items-center gap-3">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
+                        <TrendingUp class="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight">
+                            Exams
+                        </h1>
+                        <p class="text-sm text-muted-foreground">
+                            View and take your assessments.
+                        </p>
+                    </div>
                 </div>
+            </Motion>
+
+            <!-- Search Input -->
+            <div class="relative">
+                <Search class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+                <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Search exams by title or description..."
+                    class="w-full rounded-xl border border-border/50 bg-card py-2.5 pl-10 pr-4 text-sm transition-all outline-none placeholder:text-muted-foreground/40 focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+                />
             </div>
 
-            <!-- Section Tabs -->
+            <!-- Section Tabs (Sticky) -->
             <div
                 v-if="sectionTabs.length > 1"
-                class="no-scrollbar flex items-center gap-2 overflow-x-auto pb-3"
+                class="no-scrollbar sticky top-0 z-20 -mx-3 flex items-center gap-2 overflow-x-auto border-b border-transparent bg-background/80 px-3 pb-3 pt-2 backdrop-blur-md md:-mx-8 md:px-8"
             >
                 <button
                     v-for="section in sectionTabs"
                     :key="section.key"
                     @click="activeSection = section.key"
-                    class="flex shrink-0 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200"
+                    class="flex shrink-0 items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-all duration-200"
                     :class="
                         activeSection === section.key
-                            ? 'border-primary/40 bg-primary/5'
+                            ? 'border-primary/30 bg-primary/5 shadow-sm'
                             : 'border-border/40 bg-card hover:border-primary/20 hover:bg-muted/30'
                     "
                 >
-                    <div class="min-w-0">
-                        <span
-                            class="block text-xs font-medium"
-                            :class="
-                                activeSection === section.key
-                                    ? 'text-primary'
-                                    : 'text-muted-foreground'
-                            "
-                        >
-                            {{ section.label }}
-                        </span>
-                        <span class="text-[10px] text-muted-foreground/60">
-                            {{ section.count }}
-                            {{ section.count === 1 ? 'exam' : 'exams' }}
-                        </span>
-                    </div>
-                    <div
-                        class="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold"
+                    <span
+                        class="text-xs font-medium"
+                        :class="
+                            activeSection === section.key
+                                ? 'text-primary'
+                                : 'text-muted-foreground'
+                        "
+                    >
+                        {{ section.label }}
+                    </span>
+                    <span
+                        class="flex h-5 min-w-5 items-center justify-center rounded-md px-1.5 text-[10px] font-semibold"
                         :class="
                             activeSection === section.key
                                 ? 'bg-primary text-primary-foreground'
@@ -385,15 +409,19 @@ onMounted(() => {
                         "
                     >
                         {{ section.count }}
-                    </div>
+                    </span>
                 </button>
             </div>
 
             <!-- Season-Grouped Exam Grids -->
             <template v-if="filteredExamsBySeason.length > 0">
-                <div
+                <Motion
                     v-for="(seasonGroup, sIdx) in filteredExamsBySeason"
                     :key="sIdx"
+                    :initial="{ opacity: 0, y: 30 }"
+                    :in-view="{ opacity: 1, y: 0 }"
+                    :in-view-options="{ once: true, margin: '-40px' }"
+                    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: sIdx * 0.1 }"
                     class="space-y-3"
                 >
                     <!-- Season Header -->
@@ -401,7 +429,7 @@ onMounted(() => {
                         <div class="flex items-center gap-2">
                             <Calendar class="h-4 w-4 text-primary" />
                             <h2
-                                class="text-base font-black tracking-tight"
+                                class="text-base font-semibold tracking-tight"
                             >
                                 {{ seasonGroup.seasonName }}
                             </h2>
@@ -410,7 +438,7 @@ onMounted(() => {
                             class="h-px flex-1 bg-gradient-to-r from-border/60 to-transparent"
                         />
                         <span
-                            class="text-[10px] font-bold text-muted-foreground tabular-nums"
+                            class="text-[10px] font-medium text-muted-foreground tabular-nums"
                         >
                             {{ seasonGroup.exams.length }}
                             {{ seasonGroup.exams.length === 1 ? 'exam' : 'exams' }}
@@ -421,27 +449,32 @@ onMounted(() => {
                     <div
                         class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
                     >
-                        <div
-                            v-for="exam in seasonGroup.exams"
+                        <Motion
+                            v-for="(exam, eIdx) in seasonGroup.exams"
                             :key="exam.id"
-                            class="animate-section exam-card surface-card flex min-w-0 flex-col justify-between p-4 transition-all duration-300"
-                            :class="
+                            :initial="{ opacity: 0, y: 20 }"
+                            :in-view="{ opacity: 1, y: 0 }"
+                            :in-view-options="{ once: true, margin: '-30px' }"
+                            :transition="{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: eIdx * 0.05 }"
+                            class="exam-card flex min-w-0 flex-col justify-between border-l-[3px] p-4 transition-all duration-300"
+                            :class="[
                                 exam.is_locked
                                     ? 'cursor-not-allowed opacity-60'
-                                    : 'hover:-translate-y-0.5 hover:shadow-md'
-                            "
+                                    : 'hover:-translate-y-0.5 hover:shadow-md cursor-pointer',
+                                getCardStatusClass(exam),
+                            ]"
                         >
-                            <!-- Status Badge -->
+                            <!-- Status Badge + Score -->
                             <div class="mb-2 flex items-start justify-between gap-2">
-                                <div
-                                    class="rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white"
+                                <span
+                                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
                                     :class="getStatusBadgeInfo(exam).color"
                                 >
                                     {{ getStatusBadgeInfo(exam).label }}
-                                </div>
-                                <div
+                                </span>
+                                <span
                                     v-if="exam.is_locked"
-                                    class="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary tabular-nums"
+                                    class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary tabular-nums"
                                 >
                                     {{
                                         exam.submissions
@@ -452,7 +485,7 @@ onMounted(() => {
                                             )
                                             .toFixed(1)
                                     }}
-                                </div>
+                                </span>
                             </div>
 
                             <div class="flex-1 space-y-2">
@@ -471,7 +504,7 @@ onMounted(() => {
                                     {{ exam.title }}
                                 </h2>
 
-                                <p class="line-clamp-2 text-xs text-muted-foreground">
+                                <p class="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
                                     {{ exam.description }}
                                 </p>
 
@@ -529,7 +562,7 @@ onMounted(() => {
                                 <button
                                     v-if="exam.is_locked"
                                     @click="openReview(exam)"
-                                    class="w-full rounded-xl bg-primary/10 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                                    class="w-full rounded-xl bg-primary/10 py-2 text-xs font-semibold text-primary transition-all hover:bg-primary/20 active:scale-[0.98]"
                                 >
                                     Review Results
                                 </button>
@@ -537,7 +570,7 @@ onMounted(() => {
                                     v-else-if="exam.url"
                                     :href="exam.url"
                                     target="_blank"
-                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
                                 >
                                     Start
                                     <ArrowRight class="h-3.5 w-3.5" />
@@ -545,82 +578,82 @@ onMounted(() => {
                                 <Link
                                     v-else
                                     :href="examsShow(exam.id).url"
-                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                                    class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-xs font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
                                 >
                                     Start
                                     <ArrowRight class="h-3.5 w-3.5" />
                                 </Link>
                             </div>
-                        </div>
+                        </Motion>
                     </div>
-                </div>
+                </Motion>
             </template>
 
             <!-- Empty State -->
-            <div
+            <Motion
                 v-else
-                class="animate-section surface-card flex flex-col items-center justify-center space-y-4 border-dashed py-20 text-center"
+                :initial="{ opacity: 0, scale: 0.95 }"
+                :animate="{ opacity: 1, scale: 1 }"
+                :transition="{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }"
+                class="surface-card flex flex-col items-center justify-center space-y-4 border-dashed py-20 text-center"
             >
                 <div class="rounded-full bg-muted/30 p-4">
-                    <AlertCircle class="h-12 w-12 text-muted-foreground/50" />
+                    <Calendar class="h-12 w-12 text-muted-foreground/40" />
                 </div>
                 <div class="space-y-1">
-                    <h3 class="text-xl font-semibold">No exams found</h3>
+                    <h3 class="text-xl font-semibold text-foreground">No exams found</h3>
                     <p
-                        v-if="activeFilter !== 'all'"
-                        class="text-muted-foreground"
+                        v-if="activeSection !== 'all'"
+                        class="text-sm text-muted-foreground"
                     >
-                        Try changing the filter to see more exams.
+                        Try selecting a different section to see more exams.
                     </p>
-                    <p v-else class="text-muted-foreground">
+                    <p v-else-if="searchQuery" class="text-sm text-muted-foreground">
+                        No exams match your search. Try a different keyword.
+                    </p>
+                    <p v-else class="text-sm text-muted-foreground">
                         Keep an eye out! Your instructor will post new exams
                         here.
                     </p>
                 </div>
-            </div>
+            </Motion>
         </div>
     </AppLayout>
 
     <!-- Review Modal -->
     <Dialog v-model:open="showReviewModal">
         <DialogContent
-            class="fixed top-1/2 left-1/2 flex max-h-[85vh] w-[95vw] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-card p-0 shadow-2xl sm:max-w-[1000px]"
+            class="exam-review-modal fixed top-1/2 left-1/2 flex max-h-[85vh] w-[95vw] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden border border-border bg-card p-0 shadow-2xl sm:max-w-[1000px]"
         >
-            <DialogHeader class="border-b border-border p-6">
+            <DialogHeader class="border-b border-border px-6 py-5">
                 <div class="flex items-center justify-between gap-4">
-                    <div class="space-y-1">
+                    <div class="min-w-0 space-y-0.5">
                         <span class="text-xs font-medium text-primary">Your Results</span>
-                        <DialogTitle class="text-xl font-bold text-foreground">
+                        <DialogTitle class="text-lg font-bold text-foreground">
                             {{ selectedExamForReview?.title }}
                         </DialogTitle>
-                        <DialogDescription class="text-sm text-muted-foreground">
+                        <DialogDescription class="text-xs text-muted-foreground">
                             Review your answers and feedback.
                         </DialogDescription>
                     </div>
 
-                    <div class="flex items-center gap-3">
+                    <div class="flex shrink-0 items-center gap-3">
                         <!-- Privacy Toggle -->
                         <button
                             @click="privacyMode = !privacyMode"
-                            class="rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs font-medium transition-colors hover:border-primary/30"
+                            class="flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/20 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:border-primary/30"
                         >
-                            <div class="flex items-center gap-2">
-                                <component
-                                    :is="privacyMode ? Shield : ShieldOff"
-                                    class="h-3.5 w-3.5"
-                                    :class="
-                                        privacyMode
-                                            ? 'text-primary'
-                                            : 'text-muted-foreground'
-                                    "
-                                />
-                                <span>{{ privacyMode ? 'Hide answers' : 'Show answers' }}</span>
-                            </div>
+                            <component
+                                :is="privacyMode ? Shield : ShieldOff"
+                                class="h-3.5 w-3.5"
+                                :class="privacyMode ? 'text-primary' : 'text-muted-foreground'"
+                            />
+                            <span>{{ privacyMode ? 'Hide' : 'Show' }}</span>
                         </button>
 
-                        <div class="rounded-xl bg-primary/5 px-4 py-2">
-                            <span class="text-[10px] font-medium text-muted-foreground">Score</span>
-                            <span class="ml-2 text-lg font-bold text-foreground tabular-nums">
+                        <div class="rounded-lg bg-primary/5 px-3 py-1.5 text-right">
+                            <span class="text-[9px] font-medium text-muted-foreground">Score</span>
+                            <span class="ml-1.5 text-base font-bold text-foreground tabular-nums">
                                 {{
                                     selectedExamForReview?.submissions
                                         ?.reduce(
@@ -636,63 +669,63 @@ onMounted(() => {
                 </div>
             </DialogHeader>
 
-            <!-- Navigation Tabs for Parts -->
+            <!-- Part Navigation Tabs -->
             <div
-                v-if="
-                    selectedExamForReview &&
-                    selectedExamForReview.parts.length > 1
-                "
-                class="no-scrollbar flex items-center gap-2 overflow-x-auto border-b border-border/50 bg-muted/5 px-6 py-3"
+                v-if="selectedExamForReview && selectedExamForReview.parts.length > 1"
+                class="no-scrollbar flex items-center gap-1.5 overflow-x-auto border-b border-border/50 bg-muted/5 px-6 py-2.5"
             >
                 <button
                     v-for="part in selectedExamForReview.parts"
                     :key="part.id"
                     @click="selectedPartId = part.id"
-                    class="shrink-0 rounded-lg px-4 py-2 text-xs font-medium transition-all"
+                    class="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all"
                     :class="
                         selectedPartId === part.id
-                            ? 'bg-primary text-primary-foreground'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                     "
                 >
-                    <div class="flex items-center gap-2">
-                        <span class="opacity-60">Part {{ selectedExamForReview.parts.indexOf(part) + 1 }}</span>
-                        <span>{{ part.title }}</span>
-                        <div
-                            v-if="getSubmissionForPart(selectedExamForReview, part.id)"
-                            class="h-1.5 w-1.5 rounded-full bg-emerald-500"
-                        ></div>
-                    </div>
+                    <span>{{ part.title }}</span>
+                    <span
+                        v-if="getSubmissionForPart(selectedExamForReview, part.id)"
+                        class="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                    />
                 </button>
             </div>
 
             <div class="custom-scrollbar flex-1 overflow-y-auto p-6">
-                <div v-if="selectedExamForReview" class="space-y-12">
-                    <div
+                <div v-if="selectedExamForReview" class="space-y-8">
+                    <Motion
                         v-for="part in selectedExamForReview.parts"
                         :key="part.id"
                         v-show="selectedPartId === part.id"
-                        class="space-y-6"
+                        :initial="{ opacity: 0, y: 10 }"
+                        :animate="{ opacity: 1, y: 0 }"
+                        :transition="{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }"
+                        class="space-y-4"
                     >
-                        <div class="flex items-center justify-between border-b border-border/30 pb-4">
-                            <h3 class="text-lg font-bold text-foreground">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-semibold text-foreground">
                                 {{ part.title }}
                             </h3>
-                            <div
+                            <span
                                 v-if="getSubmissionForPart(selectedExamForReview, part.id)"
-                                class="rounded-lg bg-foreground/10 px-4 py-1.5 text-xs font-bold text-foreground"
+                                class="rounded-lg bg-muted/50 px-3 py-1 text-[11px] font-semibold text-foreground tabular-nums"
                             >
                                 Score: {{ getSubmissionForPart(selectedExamForReview, part.id)?.score }}
                                 /
                                 {{ part.questions?.reduce((acc, q) => acc + (parseInt(q.points) || 1), 0) }}
-                            </div>
+                            </span>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <div
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <Motion
                                 v-for="(question, qIndex) in part.questions"
                                 :key="qIndex"
-                                class="group/question relative overflow-hidden rounded-xl border p-6 transition-all"
+                                :initial="{ opacity: 0, y: 15 }"
+                                :animate="{ opacity: 1, y: 0 }"
+                                :transition="{ duration: 0.4, delay: qIndex * 0.05, ease: [0.16, 1, 0.3, 1] }"
+                                class="group/question relative overflow-hidden rounded-xl border p-5 transition-all"
                                 :class="
                                     isAnswerCorrect(
                                         question,
@@ -716,31 +749,31 @@ onMounted(() => {
                                 >
                                     <div class="flex items-center gap-2 rounded-xl border border-primary/20 bg-background/90 px-4 py-2 shadow-lg backdrop-blur-sm">
                                         <Shield class="h-4 w-4 text-primary" />
-                                        <span class="text-xs font-medium text-primary">Hover to reveal</span>
+                                        <span class="text-[11px] font-medium text-primary">Hover to reveal</span>
                                     </div>
                                 </div>
 
                                 <div
-                                    class="space-y-4 transition-all duration-500"
+                                    class="space-y-3 transition-all duration-500"
                                     :class="privacyMode ? 'group-hover/question:blur-0 blur-sm select-none' : ''"
                                 >
-                                    <div class="flex items-start justify-between gap-4">
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-xs font-medium text-muted-foreground">
-                                                Question {{ qIndex + 1 }}
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[11px] font-medium text-muted-foreground">
+                                                #{{ qIndex + 1 }}
                                             </span>
-                                            <span class="rounded-md border border-primary/20 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                            <span class="rounded-md bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                                                 {{ question.type.replace('_', ' ') }}
                                             </span>
                                         </div>
-                                        <div class="flex items-center gap-1.5 text-xs font-semibold">
+                                        <div class="flex items-center gap-1.5 text-[11px] font-medium">
                                             <CheckCircle2
                                                 v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))"
-                                                class="h-4 w-4 text-emerald-500"
+                                                class="h-3.5 w-3.5 text-emerald-500"
                                             />
                                             <XCircle
                                                 v-else
-                                                class="h-4 w-4 text-red-500"
+                                                class="h-3.5 w-3.5 text-red-500"
                                             />
                                             <span :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-red-600'">
                                                 {{ question.type === 'essay'
@@ -753,16 +786,16 @@ onMounted(() => {
                                         </div>
                                     </div>
 
-                                    <p class="text-base leading-relaxed font-medium text-foreground">
+                                    <p class="text-sm leading-relaxed font-medium text-foreground">
                                         {{ question.text }}
                                     </p>
 
                                     <!-- Multiple Choice / True False -->
-                                    <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'" class="space-y-2">
+                                    <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'" class="space-y-1.5">
                                         <div
                                             v-for="(option, oIndex) in question.options"
                                             :key="oIndex"
-                                            class="flex items-center justify-between rounded-lg border p-3 text-sm transition-all"
+                                            class="flex items-center justify-between rounded-lg border p-2.5 text-sm transition-all"
                                             :class="[
                                                 option.is_correct
                                                     ? 'border-emerald-500/50 bg-emerald-500/10'
@@ -771,90 +804,90 @@ onMounted(() => {
                                                         : 'border-border/50 bg-muted/20 opacity-60',
                                             ]"
                                         >
-                                            <span>{{ option.text }}</span>
-                                            <div
+                                            <span class="text-sm">{{ option.text }}</span>
+                                            <span
                                                 v-if="parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex"
                                                 class="ml-2 rounded-md bg-foreground/10 px-2 py-0.5 text-[10px] font-semibold text-foreground"
                                             >
                                                 Your answer
-                                            </div>
+                                            </span>
                                         </div>
                                     </div>
 
                                     <!-- Identification -->
-                                    <div v-else-if="question.type === 'identification'" class="space-y-3">
-                                        <div class="rounded-lg border border-border/50 bg-muted/20 p-4">
+                                    <div v-else-if="question.type === 'identification'" class="space-y-2">
+                                        <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
                                             <span class="text-[10px] font-medium text-muted-foreground">Your answer</span>
                                             <p class="mt-1 text-sm font-semibold" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-red-600'">
                                                 {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No answer' }}
                                             </p>
                                         </div>
-                                        <div class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
+                                        <div class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
                                             <span class="text-[10px] font-medium text-emerald-600">Correct answer</span>
                                             <p class="mt-1 text-sm font-semibold text-emerald-600">{{ question.correct_answer }}</p>
                                         </div>
                                     </div>
 
                                     <!-- Essay -->
-                                    <div v-else-if="question.type === 'essay'" class="space-y-4">
-                                        <div class="rounded-lg border border-border/50 bg-muted/20 p-4">
+                                    <div v-else-if="question.type === 'essay'" class="space-y-3">
+                                        <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
                                             <span class="text-[10px] font-medium text-muted-foreground">Your response</span>
-                                            <p class="mt-1 text-sm leading-relaxed text-foreground">
+                                            <p class="mt-1 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                                                 {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No response submitted' }}
                                             </p>
                                         </div>
 
                                         <!-- AI Feedback -->
-                                        <div v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score !== undefined" class="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center gap-2">
-                                                    <Zap class="h-4 w-4 text-primary" />
-                                                    <span class="text-xs font-medium text-primary">AI Feedback</span>
+                                        <div v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score !== undefined" class="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <div class="flex items-center gap-1.5">
+                                                    <Zap class="h-3.5 w-3.5 text-primary" />
+                                                    <span class="text-[11px] font-medium text-primary">AI Feedback</span>
                                                 </div>
-                                                <div class="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+                                                <span class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary tabular-nums">
                                                     Score: {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score }} / {{ question.points }}
-                                                </div>
+                                                </span>
                                             </div>
-                                            <p v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback" class="mt-3 text-sm leading-relaxed text-foreground/80">
+                                            <p v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback" class="mt-2 text-sm leading-relaxed text-foreground/80">
                                                 {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback }}
                                             </p>
                                         </div>
 
-                                        <div v-else-if="getSubmissionForPart(selectedExamForReview, part.id)?.status === 'pending_ai'" class="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/20 p-4">
-                                            <Timer class="h-4 w-4 text-amber-500" />
+                                        <div v-else-if="getSubmissionForPart(selectedExamForReview, part.id)?.status === 'pending_ai'" class="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/20 p-3">
+                                            <Timer class="h-3.5 w-3.5 text-amber-500" />
                                             <span class="text-xs font-medium text-amber-600">Feedback pending</span>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </Motion>
                         </div>
-                    </div>
+                    </Motion>
                 </div>
             </div>
 
-            <DialogFooter class="flex items-center justify-between gap-3 border-t border-border bg-muted/5 p-4">
+            <DialogFooter class="flex items-center justify-between gap-3 border-t border-border bg-muted/5 px-5 py-3">
                 <Button
                     variant="secondary"
                     @click="showReviewModal = false"
-                    class="rounded-xl px-5 py-2.5 text-xs font-medium"
+                    class="rounded-lg px-4 py-2 text-xs font-medium"
                 >
                     Close
                 </Button>
 
-                <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="flex items-center gap-3">
+                <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="flex items-center gap-2">
                     <button
                         v-if="selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) > 0"
                         @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) - 1].id"
-                        class="rounded-xl border border-border/50 bg-muted/30 px-5 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                        class="rounded-lg border border-border/50 bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                     >
-                        Previous part
+                        Previous
                     </button>
                     <button
                         v-if="selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) < selectedExamForReview.parts.length - 1"
                         @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) + 1].id"
-                        class="rounded-xl bg-primary px-6 py-2.5 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+                        class="rounded-lg bg-primary px-5 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                     >
-                        Next part
+                        Next
                     </button>
                 </div>
             </DialogFooter>
@@ -865,14 +898,6 @@ onMounted(() => {
 <style scoped>
 @reference "../../css/app.css";
 
-.animate-section {
-    will-change: transform, opacity;
-}
-
-.exam-card {
-    opacity: 0;
-}
-
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
 }
@@ -880,13 +905,8 @@ onMounted(() => {
     background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--color-primary);
-    opacity: 0.1;
+    background: color-mix(in srgb, var(--color-primary) 40%, transparent);
     border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar:hover {
-    background: var(--color-primary);
-    opacity: 0.2;
 }
 
 .no-scrollbar::-webkit-scrollbar {

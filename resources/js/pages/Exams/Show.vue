@@ -1718,7 +1718,7 @@ const onDragEnd = () => {
                             <div class="relative z-10 flex flex-col gap-3">
                                 <div class="flex items-center justify-between">
                                     <div
-                                        class="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-muted/50 text-xs font-medium text-muted-foreground"
+                                        class="flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-xs font-medium text-muted-foreground"
                                     >
                                         {{ index + 1 }}
                                     </div>
@@ -1950,7 +1950,7 @@ const onDragEnd = () => {
                                     :key="qIndex"
                                     :id="`q-${qIndex}`"
                                     :class="[
-                                        'question-card relative flex flex-col gap-6 rounded-lg border border-border/40 border-l-4 p-5 transition-all duration-500 md:p-6',
+                                        'question-card relative flex flex-col gap-4 rounded-xl border border-border/40 border-l-[3px] p-4 transition-all duration-500 md:p-5',
                                         getQuestionStatus(qIndex) === 'answered'
                                             ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
                                             : 'border-border/40 border-l-muted bg-card/40',
@@ -1969,13 +1969,13 @@ const onDragEnd = () => {
                                             class="flex flex-shrink-0 items-center gap-4"
                                         >
                                             <div
-                                                class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary"
+                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
                                             >
                                                 {{ qIndex + 1 }}
                                             </div>
                                             <button
                                                 @click="toggleFlag(qIndex)"
-                                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-border/40 transition-all hover:border-amber-500/50 hover:bg-amber-500/10"
+                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-border/40 transition-all hover:border-amber-500/50 hover:bg-amber-500/10"
                                                 :class="
                                                     flaggedQuestions.has(qIndex)
                                                         ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
@@ -2036,7 +2036,7 @@ const onDragEnd = () => {
                                     </div>
 
                                     <!-- Answer Area -->
-                                    <div class="w-full pl-0 md:pl-20">
+                                    <div class="w-full pl-0 md:pl-16">
                                         <!-- Multiple Choice / True-False -->
                                         <div
                                             v-if="
