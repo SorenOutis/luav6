@@ -26,7 +26,6 @@ import {
     computed,
     reactive,
     watch,
-    nextTick,
 } from 'vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useAccessibility } from '@/composables/useAccessibility';
@@ -145,36 +144,6 @@ const totalQuestions = computed(() =>
 );
 
 const visibleQuestionIndex = ref(0);
-let questionObserver: IntersectionObserver | null = null;
-
-const setupQuestionObserver = () => {
-    if (questionObserver) questionObserver.disconnect();
-
-    questionObserver = new IntersectionObserver(
-        (entries) => {
-            for (const entry of entries) {
-                if (entry.isIntersecting) {
-                    const id = entry.target.id;
-                    const match = id.match(/^q-(\d+)$/);
-                    if (match) {
-                        visibleQuestionIndex.value = parseInt(match[1]);
-                        break;
-                    }
-                }
-            }
-        },
-        {
-            rootMargin: '-80px 0px -60% 0px',
-            threshold: 0,
-        },
-    );
-
-    nextTick(() => {
-        document.querySelectorAll('.question-card').forEach((el) => {
-            questionObserver?.observe(el);
-        });
-    });
-};
 
 // ─── LIVE TIMER LOGIC ───────────────────────────────────────
 const timeLeftSeconds = ref(props.exam.duration_minutes * 60);
@@ -366,13 +335,7 @@ const clearDraft = () => {
     localStorage.removeItem(getDraftKey());
 };
 
-watch(selectedPart, (newVal) => {
-    if (newVal === null) {
-        // We no longer need runEntranceAnimations here as we use Motion components
-    } else {
-        nextTick(() => setupQuestionObserver());
-    }
-});
+
 
 // ─── AUTO-SAVE ON ANSWER CHANGE ─────────────────────────────
 let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -833,6 +796,32 @@ const goBackToList = () => {
     examStarted.value = false;
 };
 
+const scrollToQuestion = (index: number) => {
+    const el = document.getElementById(`q-${index}`);
+    if (!el) return;
+
+    // Force reactivity: set to -1 first so clicking an already-highlighted
+    // number still triggers a re-render (Vue batches, no visual flash)
+    visibleQuestionIndex.value = -1;
+    visibleQuestionIndex.value = index;
+
+    // Smooth scroll to the question card
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // GSAP highlight pulse animation
+    gsap.fromTo(
+        el,
+        { scale: 1.03, outline: '3px solid var(--color-primary)', outlineOffset: '2px' },
+        {
+            scale: 1,
+            outline: '3px solid transparent',
+            outlineOffset: '2px',
+            duration: 0.8,
+            ease: 'power2.out',
+        },
+    );
+};
+
 const submitPart = async () => {
     if (!selectedPart.value) return;
 
@@ -1169,8 +1158,6 @@ onMounted(() => {
             void sendMonitorProgress('in_progress');
         }
     }, 5000);
-
-    setupQuestionObserver();
 });
 
 onUnmounted(() => {
@@ -1198,10 +1185,7 @@ onUnmounted(() => {
         saveDraftTimeout = null;
     }
 
-    if (questionObserver) {
-        questionObserver.disconnect();
-        questionObserver = null;
-    }
+
 });
 const isExamInProgress = computed(
     () =>
@@ -2143,12 +2127,12 @@ const onDragEnd = () => {
                                     </div>
 
                                     <div class="grid grid-cols-5 gap-3">
-                                        <a
+                                        <button
                                             v-for="(_, qIndex) in selectedPart!
                                                 .questions"
                                             :key="qIndex"
-                                            :href="`#q-${qIndex}`"
-                                            class="group/nav-item relative flex aspect-square items-center justify-center rounded-none border border-border/40 text-xs font-black transition-all duration-300"
+                                            @click.prevent="scrollToQuestion(qIndex)"
+                                            class="group/nav-item relative flex aspect-square items-center justify-center rounded-none border border-border/40 text-xs font-black transition-all duration-300 cursor-pointer"
                                             :class="[                                        qIndex === visibleQuestionIndex
                                             ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-2 ring-primary/30'
                                             : getQuestionStatus(qIndex) ===
@@ -2170,7 +2154,7 @@ const onDragEnd = () => {
                                                 "
                                                 class="absolute -top-1 -right-1 h-2.5 w-2.5 border border-card bg-red-600 shadow-sm"
                                             ></div>
-                                        </a>
+                                        </button>
                                     </div>
 
                                     <div
