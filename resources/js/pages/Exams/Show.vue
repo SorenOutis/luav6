@@ -26,6 +26,7 @@ import {
     computed,
     reactive,
     watch,
+    nextTick,
 } from 'vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useAccessibility } from '@/composables/useAccessibility';
@@ -142,6 +143,38 @@ const unansweredCount = computed(() => {
 const totalQuestions = computed(() =>
     props.exam.parts.reduce((sum, p) => sum + (p.questions?.length ?? 0), 0),
 );
+
+const visibleQuestionIndex = ref(0);
+let questionObserver: IntersectionObserver | null = null;
+
+const setupQuestionObserver = () => {
+    if (questionObserver) questionObserver.disconnect();
+
+    questionObserver = new IntersectionObserver(
+        (entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    const id = entry.target.id;
+                    const match = id.match(/^q-(\d+)$/);
+                    if (match) {
+                        visibleQuestionIndex.value = parseInt(match[1]);
+                        break;
+                    }
+                }
+            }
+        },
+        {
+            rootMargin: '-80px 0px -60% 0px',
+            threshold: 0,
+        },
+    );
+
+    nextTick(() => {
+        document.querySelectorAll('.question-card').forEach((el) => {
+            questionObserver?.observe(el);
+        });
+    });
+};
 
 // ─── LIVE TIMER LOGIC ───────────────────────────────────────
 const timeLeftSeconds = ref(props.exam.duration_minutes * 60);
@@ -336,6 +369,8 @@ const clearDraft = () => {
 watch(selectedPart, (newVal) => {
     if (newVal === null) {
         // We no longer need runEntranceAnimations here as we use Motion components
+    } else {
+        nextTick(() => setupQuestionObserver());
     }
 });
 
@@ -1134,6 +1169,8 @@ onMounted(() => {
             void sendMonitorProgress('in_progress');
         }
     }, 5000);
+
+    setupQuestionObserver();
 });
 
 onUnmounted(() => {
@@ -1159,6 +1196,11 @@ onUnmounted(() => {
     if (saveDraftTimeout) {
         clearTimeout(saveDraftTimeout);
         saveDraftTimeout = null;
+    }
+
+    if (questionObserver) {
+        questionObserver.disconnect();
+        questionObserver = null;
     }
 });
 const isExamInProgress = computed(
@@ -1441,6 +1483,7 @@ const onDragEnd = () => {
 
                 <!-- ─── HERO BANNER ─────────────────────────────────────── -->
                 <Motion
+                    v-if="!selectedPart"
                     :initial="{ opacity: 0, y: 30 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{
@@ -1464,11 +1507,7 @@ const onDragEnd = () => {
                                     <h1
                                         class="text-2xl font-bold tracking-tight text-foreground md:text-4xl"
                                     >
-                                        {{
-                                            selectedPart
-                                                ? selectedPart.title
-                                                : exam.title
-                                        }}
+                                        {{ exam.title }}
                                     </h1>
                                 </div>
                             </div>
@@ -1859,60 +1898,9 @@ const onDragEnd = () => {
                 <!--  QUESTIONS STATE (after start)                          -->
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <template v-else>
-                    <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-start relative">
                         <!-- Main Question List -->
-                        <div class="flex-1 space-y-6">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-3">
-                                    <h2
-                                        class="flex items-center gap-2 text-base font-bold"
-                                    >
-                                        <Layers class="h-4 w-4 text-primary" />
-                                        {{ selectedPart!.title }}
-                                    </h2>
-                                    <div
-                                        v-if="lastSavedAt"
-                                        class="sync-heartbeat flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5"
-                                    >
-                                        <CheckCircle2
-                                            class="h-2.5 w-2.5 text-emerald-500"
-                                        />
-                                        <span
-                                            class="text-[8px] font-black tracking-widest text-emerald-500 uppercase"
-                                            >Synced {{ lastSavedAt }}</span
-                                        >
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="rounded-lg border border-border/40 bg-muted/30 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-                                    >
-                                        {{
-                                            selectedPart!.questions?.length ?? 0
-                                        }}
-                                        Questions
-                                    </span>
-                                    <span
-                                        class="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2.5 py-0.5 text-[10px] font-medium text-amber-600 tabular-nums"
-                                    >
-                                        {{
-                                            selectedPart!.questions?.reduce(
-                                                (sum, q) =>
-                                                    sum +
-                                                    (parseInt(q.points) ||
-                                                        parseInt(
-                                                            selectedPart!
-                                                                .points,
-                                                        ) ||
-                                                        1),
-                                                0,
-                                            ) ?? 0
-                                        }}
-                                        Points
-                                    </span>
-                                </div>
-                            </div>
-
+                        <div class="flex-1 space-y-6 lg:pr-[22rem]">
                             <!-- Part Instructions -->
                             <div
                                 v-if="selectedPart!.instructions"
@@ -1949,7 +1937,7 @@ const onDragEnd = () => {
                                     :key="qIndex"
                                     :id="`q-${qIndex}`"
                                     :class="[
-                                        'question-card relative flex flex-col gap-4 rounded-xl border border-border/40 border-l-[3px] p-4 transition-all duration-500 md:p-5',
+                                        'question-card relative flex flex-col gap-4 rounded-xl border border-border/40 border-l-[3px] p-4 transition-all duration-500 md:p-5 scroll-mt-24',
                                         getQuestionStatus(qIndex) === 'answered'
                                             ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
                                             : 'border-border/40 border-l-muted bg-card/40',
@@ -2126,7 +2114,7 @@ const onDragEnd = () => {
                         <!-- Progress Navigator (Mini-Map) - Question status overview -->
                         <div
                             v-if="selectedPart && examStarted"
-                            class="sticky top-8 hidden w-80 space-y-6 lg:block"
+                            class="fixed top-24 right-8 z-50 hidden w-80 space-y-6 max-h-[calc(100vh-10rem)] overflow-y-auto lg:block"
                         >
                             <div
                                 class="group relative overflow-hidden rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
@@ -2161,15 +2149,16 @@ const onDragEnd = () => {
                                             :key="qIndex"
                                             :href="`#q-${qIndex}`"
                                             class="group/nav-item relative flex aspect-square items-center justify-center rounded-none border border-border/40 text-xs font-black transition-all duration-300"
-                                            :class="[
-                                                getQuestionStatus(qIndex) ===
-                                                'answered'
-                                                    ? 'scale-105 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/30'
-                                                    : getQuestionStatus(
-                                                            qIndex,
-                                                        ) === 'flagged'
-                                                      ? 'border-amber-500 bg-amber-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                                                      : 'bg-muted/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50',
+                                            :class="[                                        qIndex === visibleQuestionIndex
+                                            ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-2 ring-primary/30'
+                                            : getQuestionStatus(qIndex) ===
+                                                  'answered'
+                                                ? 'scale-105 border-primary/70 bg-primary/10 text-primary shadow-lg shadow-primary/20'
+                                                : getQuestionStatus(
+                                                        qIndex,
+                                                    ) === 'flagged'
+                                                  ? 'border-amber-500 bg-amber-500/20 text-amber-600 shadow-sm'
+                                                  : 'bg-muted/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50',
                                             ]"
                                         >
                                             {{ qIndex + 1 }}

@@ -30,6 +30,32 @@ const cancelPendingShow = () => {
 };
 
 /**
+ * Clear user-specific localStorage/sessionStorage on logout
+ * to prevent the next user on the same machine from seeing previous data.
+ */
+const clearUserStorage = () => {
+    // Clear exam auto-save drafts (sensitive — contains answers)
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('exam_draft_')) {
+            keysToRemove.push(key);
+        }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+    // Clear leaderboard preferences
+    localStorage.removeItem('leaderboard-selected-section-id');
+    localStorage.removeItem('leaderboard-blurred-sections');
+
+    // Clear section selection
+    localStorage.removeItem('selectedSectionId');
+
+    // Clear session flags
+    sessionStorage.removeItem('logged_out');
+};
+
+/**
  * Handle Global Navigation Transitions for the Boot Loader
  */
 router.on('start', (event) => {
@@ -67,6 +93,7 @@ router.on('start', (event) => {
     if (isAuthFlow) {
         showDeferred('Signing in...');
     } else if (isLogout) {
+        clearUserStorage();
         showDeferred('Signing out...');
     }
 });
