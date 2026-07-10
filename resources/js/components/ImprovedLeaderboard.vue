@@ -65,6 +65,10 @@ const emit = defineEmits<{
     'update:activeSeasonName': [name: string];
 }>();
 
+/** Fixed-length obscured string for blurred users — prevents
+ *  guessing the name by length, copying, or inspecting the DOM. */
+const BLURRED_NAME = '████████████████████';
+
 const activeTabIndex = ref(0);
 const searchQuery = ref('');
 const STORAGE_KEY = 'leaderboard_active_section_id';
@@ -572,11 +576,12 @@ const changeSeason = async (seasonId: number) => {
                             <span
                                 v-else
                                 :class="[
-                                    'mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words lb-blurred',
+                                    'mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words lb-blurred lb-blurred-text',
                                     getNameSize(user.name, origIdx === 0),
                                 ]"
+                                @contextmenu.prevent
                             >
-                                <span class="blur-sm">{{ user.name }}</span>
+                                <span>{{ BLURRED_NAME }}</span>
                             </span>
                             <span
                                 v-if="user.isCurrentUser"
@@ -726,10 +731,9 @@ const changeSeason = async (seasonId: number) => {
                                 class="flex flex-wrap items-center gap-1.5"
                             >
                                 <span
-                                    class="text-xs font-bold tracking-tight break-words sm:text-sm"
-                                    :class="user.blurred && 'blur-sm'"
-                                    >{{ user.name }}</span
-                                    >
+                                    class="text-xs font-bold tracking-tight break-words sm:text-sm lb-blurred-text"
+                                    @contextmenu.prevent
+                                >{{ user.blurred ? BLURRED_NAME : user.name }}</span>
                                     <span
                                         v-if="user.isCurrentUser"
                                         class="shrink-0 rounded-full bg-amber-400 px-1.5 py-0.5 text-[7px] font-black text-black uppercase"
@@ -840,11 +844,10 @@ const changeSeason = async (seasonId: number) => {
                         >
                             <History class="h-5 w-5 text-amber-400" />
                         </div>
-                        <div>
-                            <DialogTitle
-                                class="text-lg font-black tracking-tight"
-                                >{{ selectedUser?.name }}</DialogTitle
-                            >
+                        <div>                                <DialogTitle
+                                    class="text-lg font-black tracking-tight"
+                                    >{{ selectedUser?.blurred ? BLURRED_NAME : selectedUser?.name }}</DialogTitle
+                                >
                             <span
                                 class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
                                 >XP History</span
@@ -1033,7 +1036,19 @@ const changeSeason = async (seasonId: number) => {
 .lb-blurred {
     @apply overflow-hidden;
 }
+.lb-blurred-text {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
 .lb-row--blurred {
     @apply border-muted/20 bg-muted/[0.02];
+}
+.lb-blurred-text::selection {
+    background: transparent;
+}
+.lb-blurred-text::-moz-selection {
+    background: transparent;
 }
 </style>

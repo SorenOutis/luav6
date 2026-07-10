@@ -68,6 +68,10 @@ const rankIcon = (rank: number) => {
     return Trophy;
 };
 
+/** Fixed-length obscured string for blurred users — prevents
+ *  guessing the name by length, copying, or inspecting the DOM. */
+const BLURRED_NAME = '████████████████████';
+
 const rankClass = (rank: number) => {
     if (rank === 1) return 'text-amber-400 bg-amber-400/10 border-amber-400/25';
     if (rank === 2) return 'text-slate-300 bg-slate-300/10 border-slate-300/20';
@@ -154,7 +158,7 @@ const rankClass = (rank: number) => {
                     </div>
 
                     <div class="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/30 lg:h-14 lg:w-14">
-                        <img v-if="user.avatar" :src="user.avatar" :alt="user.name" class="h-full w-full object-cover" :class="user.blurred && 'blur-sm'" />
+                        <img v-if="user.avatar" :src="user.avatar" :alt="user.blurred ? 'Hidden user' : user.name" class="h-full w-full object-cover" :class="user.blurred && 'blur-sm'" />
                         <div v-else class="flex h-full w-full items-center justify-center">
                             <User class="h-5 w-5 text-muted-foreground/50" />
                         </div>
@@ -168,8 +172,8 @@ const rankClass = (rank: number) => {
 
                     <div class="min-w-0 flex-1 lg:w-full">
                         <div class="flex items-center gap-1.5 lg:justify-center">
-                            <p class="truncate text-sm font-black tracking-tight group-hover:text-primary" :class="user.blurred && 'blur-sm'">
-                                {{ user.name }}
+                            <p class="truncate text-sm font-black tracking-tight group-hover:text-primary lb-blurred-text">
+                                {{ user.blurred ? BLURRED_NAME : user.name }}
                             </p>
                             <span
                                 v-if="user.isCurrentUser"
@@ -204,3 +208,18 @@ const rankClass = (rank: number) => {
         </div>
     </SpotlightCard>
 </template>
+
+<style scoped>
+.lb-blurred-text {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+.lb-blurred-text::selection {
+    background: transparent;
+}
+.lb-blurred-text::-moz-selection {
+    background: transparent;
+}
+</style>
