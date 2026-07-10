@@ -51,6 +51,27 @@ const clearUserStorage = () => {
     // Clear section selection
     localStorage.removeItem('selectedSectionId');
 
+    // Clear appearance/font settings so they don't carry over to the welcome page
+    localStorage.removeItem('appearance');
+    localStorage.removeItem('themePreset');
+    localStorage.removeItem('fontPreset');
+    localStorage.removeItem('cardStylePreset');
+    localStorage.removeItem('dyslexia-friendly');
+
+    // Clear corresponding cookies
+    const cookieKeys = ['appearance', 'themePreset', 'fontPreset', 'cardStylePreset'];
+    cookieKeys.forEach((key) => {
+        document.cookie = `${key}=;path=/;max-age=0;SameSite=Lax`;
+    });
+
+    // Reset HTML data attributes to defaults
+    document.documentElement.dataset.themePreset = 'default';
+    document.documentElement.dataset.fontPreset = 'system';
+    document.documentElement.dataset.cardStyle = 'current';
+
+    // Remove dyslexia-friendly class
+    document.documentElement.classList.remove('dyslexia-friendly');
+
     // Clear session flags
     sessionStorage.removeItem('logged_out');
 };
