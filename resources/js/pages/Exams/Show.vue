@@ -808,16 +808,31 @@ const scrollToQuestion = (index: number) => {
     // Smooth scroll to the question card
     el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+    // Kill any existing GSAP tweens on this element to ensure a clean replay
+    gsap.killTweensOf(el);
+
     // GSAP highlight pulse animation
+    // Use individual outline properties instead of the shorthand to avoid
+    // stale inline-style interference on repeated clicks
     gsap.fromTo(
         el,
-        { scale: 1.03, outline: '3px solid var(--color-primary)', outlineOffset: '2px' },
+        {
+            scale: 1.03,
+            outlineWidth: '3px',
+            outlineStyle: 'solid',
+            outlineColor: 'var(--color-primary)',
+            outlineOffset: '2px',
+        },
         {
             scale: 1,
-            outline: '3px solid transparent',
+            outlineWidth: '3px',
+            outlineStyle: 'solid',
+            outlineColor: 'transparent',
             outlineOffset: '2px',
             duration: 0.8,
             ease: 'power2.out',
+            // Clear leftover inline styles after animation so next click starts clean
+            clearProps: 'outline,outlineWidth,outlineStyle,outlineColor,outlineOffset,transform',
         },
     );
 };
@@ -1221,70 +1236,7 @@ const feedbackContent = computed(() => {
     };
 });
 
-// ─── DRAGGABLE WIDGET LOGIC ────────────────────────────────
-const widgetPos = reactive({ x: 0, y: 0 });
-const isDragging = ref(false);
-const widgetRef = ref<HTMLElement | null>(null);
-const startPos = { x: 0, y: 0 };
-const dragBounds = reactive({
-    minX: -Infinity,
-    maxX: Infinity,
-    minY: -Infinity,
-    maxY: Infinity,
-});
-let rafId: number | null = null;
 
-const onDragStart = (e: MouseEvent) => {
-    // Only drag if left click
-    if (e.button !== 0 || !widgetRef.value) return;
-
-    const rect = widgetRef.value.getBoundingClientRect();
-
-    // Calculate bounds so widget stays within viewport
-    // Current translation (widgetPos.x/y) + distance to screen edges
-    dragBounds.minX = widgetPos.x - rect.left;
-    dragBounds.maxX = widgetPos.x + (window.innerWidth - rect.right);
-    dragBounds.minY = widgetPos.y - rect.top;
-    dragBounds.maxY = widgetPos.y + (window.innerHeight - rect.bottom);
-
-    isDragging.value = true;
-    startPos.x = e.clientX - widgetPos.x;
-    startPos.y = e.clientY - widgetPos.y;
-
-    window.addEventListener('mousemove', onDragMove);
-    window.addEventListener('mouseup', onDragEnd);
-
-    // Prevent text selection while dragging
-    e.preventDefault();
-};
-
-const onDragMove = (e: MouseEvent) => {
-    if (!isDragging.value) return;
-
-    if (rafId) cancelAnimationFrame(rafId);
-
-    rafId = requestAnimationFrame(() => {
-        const rawX = e.clientX - startPos.x;
-        const rawY = e.clientY - startPos.y;
-
-        // Clamp position within calculated bounds
-        widgetPos.x = Math.max(
-            dragBounds.minX,
-            Math.min(dragBounds.maxX, rawX),
-        );
-        widgetPos.y = Math.max(
-            dragBounds.minY,
-            Math.min(dragBounds.maxY, rawY),
-        );
-    });
-};
-
-const onDragEnd = () => {
-    isDragging.value = false;
-    if (rafId) cancelAnimationFrame(rafId);
-    window.removeEventListener('mousemove', onDragMove);
-    window.removeEventListener('mouseup', onDragEnd);
-};
 </script>
 
 <template>
@@ -3061,119 +3013,6 @@ const onDragEnd = () => {
                 </div>
             </transition>
 
-            <!-- ─── DRAGGABLE EXAM WIDGET ────────────────────────────── -->
-            <transition name="modal-fade">
-                <div
-                    ref="widgetRef"
-                    v-if="examStarted && selectedPart && !showSuccessModal"
-                    class="group/widget fixed right-8 bottom-8 z-[100] transition-transform duration-75"
-                    :style="{
-                        transform: `translate(${widgetPos.x}px, ${widgetPos.y}px)`,
-                    }"
-                >
-                    <div
-                        class="relative w-56 overflow-hidden rounded-2xl border border-border bg-card/90 p-4 shadow-2xl backdrop-blur-2xl select-none md:w-64 dark:border-white/10 dark:bg-black/80"
-                        :class="{
-                            'cursor-grabbing': isDragging,
-                            'cursor-grab': !isDragging,
-                            'ring-2 ring-primary/20': isDragging,
-                        }"
-                        @mousedown="onDragStart"
-                    >
-                        <!-- Drag Indicator (Visual Only) -->
-                        <div
-                            class="pointer-events-none absolute top-0 right-0 left-0 flex h-6 items-center justify-center opacity-40 transition-opacity group-hover/widget:opacity-100"
-                        >
-                            <div
-                                class="h-1 w-12 rounded-full bg-foreground/10"
-                            ></div>
-                        </div>
-
-                        <!-- Widget Content -->
-                        <div class="mt-2 space-y-3">
-                            <!-- Timer Row -->
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <div
-                                        class="h-2 w-2 animate-pulse rounded-full bg-primary"
-                                    ></div>
-                                    <span
-                                        class="font-mono text-[9px] font-black tracking-widest text-primary uppercase"
-                                        >PART_ACTIVE</span
-                                    >
-                                </div>
-                                <div
-                                    class="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-1 dark:bg-primary/10"
-                                    :class="
-                                        timeLeftSeconds < 300
-                                            ? 'animate-pulse border-red-500/50 bg-red-500/5 text-red-500 dark:bg-red-500/10'
-                                            : 'text-primary'
-                                    "
-                                >
-                                    <Clock class="h-3 w-3" />
-                                    <span
-                                        class="font-mono text-sm font-black tracking-widest"
-                                        >{{ formattedTime }}</span
-                                    >
-                                </div>
-                            </div>
-
-                            <!-- Progress Section -->
-                            <div class="space-y-1.5">
-                                <div class="flex items-center justify-between">
-                                    <span
-                                        class="max-w-[120px] truncate text-[8px] font-bold tracking-widest text-muted-foreground uppercase"
-                                    >
-                                        {{ selectedPart.title }}
-                                    </span>
-                                    <span
-                                        class="font-mono text-[8px] font-black text-primary"
-                                        >{{ Math.round(partProgress) }}%</span
-                                    >
-                                </div>
-                                <div
-                                    class="relative h-1.5 w-full overflow-hidden rounded-full border border-border bg-foreground/5 dark:border-white/5"
-                                >
-                                    <div
-                                        class="h-full bg-primary shadow-lg shadow-primary/40 transition-all duration-500 ease-out"
-                                        :style="{ width: `${partProgress}%` }"
-                                    >
-                                        <div
-                                            class="absolute inset-0 animate-pulse bg-white/20"
-                                        ></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Stats Row -->
-                            <div
-                                v-if="
-                                    estimatedFinishMinutes !== null &&
-                                    estimatedFinishMinutes > 0
-                                "
-                                class="flex items-center gap-2 pt-1"
-                            >
-                                <Zap
-                                    class="h-3 w-3 fill-amber-500/20 text-amber-500"
-                                />
-                                <span
-                                    class="font-mono text-[8px] font-black tracking-widest text-amber-500 uppercase"
-                                    >
-                                    {{ estimatedFinishMinutes }}M</span
-                                >
-                            </div>
-                        </div>
-
-                        <!-- Tech Decoration -->
-                        <div
-                            class="pointer-events-none absolute -right-4 -bottom-4 h-12 w-12 rotate-45 border border-primary/5 dark:border-primary/10"
-                        ></div>
-                        <div
-                            class="pointer-events-none absolute top-1/2 -left-2 h-8 w-0.5 -translate-y-1/2 rounded-full bg-primary/20 dark:bg-primary/30"
-                        ></div>
-                    </div>
-                </div>
-            </transition>
         </div>
         </template>
     </AppLayout>
