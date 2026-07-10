@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { Command, BookOpen, PenLine, CheckCircle2, BarChart3, Trophy, ArrowRight } from 'lucide-vue-next';
-import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
+import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 
 const props = defineProps<{
     canRegister: boolean;

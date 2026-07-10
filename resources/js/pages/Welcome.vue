@@ -5,13 +5,13 @@ import { ArrowRight } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 
 // Only the essential sub-components
+import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
+import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
 import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
-import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
-import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
 
 // Composables & Routes
 import { useAppearance } from '@/composables/useAppearance';

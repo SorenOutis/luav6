@@ -13,10 +13,10 @@ import {
     ChevronRight,
 } from 'lucide-vue-next';
 import { computed, onMounted, ref, watch } from 'vue';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
-import PageSkeleton from '@/components/PageSkeleton.vue';
 
 const { isVisible: isLoaderVisible } = useLoader();
 const isBooted = ref(false);

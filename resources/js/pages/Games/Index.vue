@@ -12,9 +12,9 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import { onMounted, ref, watch } from 'vue';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
-import PageSkeleton from '@/components/PageSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
 const { isVisible: isLoaderVisible } = useLoader();

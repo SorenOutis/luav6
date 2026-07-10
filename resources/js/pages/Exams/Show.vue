@@ -32,10 +32,10 @@ import {
     reactive,
     watch,
 } from 'vue';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useAccessibility } from '@/composables/useAccessibility';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
-import PageSkeleton from '@/components/PageSkeleton.vue';
 import type { BreadcrumbItem } from '@/types';
 
 const { isVisible: isLoaderVisible } = useLoader();

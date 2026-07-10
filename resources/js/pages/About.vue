@@ -22,8 +22,8 @@ import {
     ArrowRight,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
-import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
+import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 gsap.registerPlugin(ScrollTrigger);
 
 defineProps<{

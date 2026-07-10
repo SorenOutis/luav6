@@ -15,6 +15,7 @@ import {
     Sparkles,
 } from 'lucide-vue-next';
 import { onMounted, ref, computed, watch } from 'vue';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import { Button } from '@/components/ui/button';
 
 const { isVisible: isLoaderVisible } = useLoader();
@@ -23,7 +24,6 @@ const isBooted = ref(false);
 gsap.registerPlugin(ScrollTrigger);
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
-import PageSkeleton from '@/components/PageSkeleton.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';

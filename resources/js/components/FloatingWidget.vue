@@ -2,8 +2,8 @@
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { MessageCircle, Send, X, Bot, User } from 'lucide-vue-next';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue';
+import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Button } from '@/components/ui/button';
 import {
     Card,

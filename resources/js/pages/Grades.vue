@@ -14,17 +14,17 @@ import {
     BookOpen,
 } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
+import Badge from '@/components/ui/badge/Badge.vue';
+import Button from '@/components/ui/button/Button.vue';
 import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
 import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import Progress from '@/components/ui/progress/Progress.vue';
 import Input from '@/components/ui/input/Input.vue';
-import Button from '@/components/ui/button/Button.vue';
-import Badge from '@/components/ui/badge/Badge.vue';
-import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
+import Progress from '@/components/ui/progress/Progress.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 
 interface GradePeriodScore {
