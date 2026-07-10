@@ -3,12 +3,11 @@ import { Head, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import axios from 'axios';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
     Calendar,
     Clock,
     ChevronLeft,
-    ChevronRight,
+    Check,
     CheckCircle2,
     FileText,
     ArrowRight,
@@ -17,12 +16,8 @@ import {
     Lock,
     Flag,
     Zap,
-    Play,
-    Info,
     AlertCircle,
-    Maximize,
     Trophy,
-    HelpCircle,
 } from 'lucide-vue-next';
 import {
     onMounted,
@@ -43,7 +38,7 @@ const { isDyslexiaFriendly, toggleDyslexiaMode, updateDyslexiaMode } =
     useAccessibility();
 const isBooted = ref(false);
 
-gsap.registerPlugin(ScrollTrigger);
+
 
 interface Question {
     text: string;
@@ -88,14 +83,6 @@ const selectedPart = ref<ExamPart | null>(null);
 const examStarted = ref(false);
 const container = ref<HTMLElement | null>(null);
 
-const handleMouseMove = (e: MouseEvent) => {
-    const card = e.currentTarget as HTMLElement;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    card.style.setProperty('--mouse-x', `${x}px`);
-    card.style.setProperty('--mouse-y', `${y}px`);
-};
 
 const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
 // Track submitted part IDs locally to handle stale server data after redirect
@@ -133,7 +120,6 @@ const unansweredWarningRef = ref<HTMLElement | null>(null);
 const hasShownUnansweredWarning = ref(false);
 const isTimeoutSubmission = ref(false);
 const currentPartHasEssay = ref(false);
-const calcCountdown = ref(0);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
@@ -485,6 +471,19 @@ const getQuestionTypes = (part: ExamPart) => [
 ];
 
 const formatType = (type: string) => type.replace(/_/g, ' ');
+
+const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
 
 const selectPart = (part: ExamPart, index: number) => {
     // Prevent selecting if exam is closed, part is already submitted, or part is locked
@@ -1860,7 +1859,7 @@ const onDragEnd = () => {
                 <!--  QUESTIONS STATE (after start)                          -->
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <template v-else>
-                    <div class="flex flex-col gap-8 lg:flex-row lg:items-start">
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
                         <!-- Main Question List -->
                         <div class="flex-1 space-y-6">
                             <div class="flex items-center justify-between">
@@ -1886,7 +1885,7 @@ const onDragEnd = () => {
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="exam-friendly-label rounded-lg border border-border/40 bg-muted/30 px-3 py-1 text-[9px] font-black tracking-widest text-muted-foreground uppercase"
+                                        class="rounded-lg border border-border/40 bg-muted/30 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground"
                                     >
                                         {{
                                             selectedPart!.questions?.length ?? 0
@@ -1894,7 +1893,7 @@ const onDragEnd = () => {
                                         Questions
                                     </span>
                                     <span
-                                        class="exam-friendly-label rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-1 font-mono text-[9px] font-black tracking-widest text-amber-500 uppercase"
+                                        class="rounded-lg border border-amber-500/20 bg-amber-500/5 px-2.5 py-0.5 text-[10px] font-medium text-amber-600 tabular-nums"
                                     >
                                         {{
                                             selectedPart!.questions?.reduce(
@@ -1922,10 +1921,10 @@ const onDragEnd = () => {
 
                                 <div class="relative flex items-start gap-5">
                                     <div
-                                        class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10"
+                                        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10"
                                     >
                                         <FileText
-                                            class="h-7 w-7 text-primary-foreground"
+                                            class="h-5 w-5 text-primary-foreground"
                                         />
                                     </div>
                                     <div class="flex-1 space-y-2">
@@ -2051,7 +2050,7 @@ const onDragEnd = () => {
                                                     option, oIndex
                                                 ) in question.options"
                                                 :key="option.text"
-                                                class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+                                                class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
                                             >
 
                                                 <div
@@ -2124,9 +2123,9 @@ const onDragEnd = () => {
                             </div>
                         </div>
 
-                        <!-- Progress Navigator (Mini-Map) - Only show when all parts are completed -->
+                        <!-- Progress Navigator (Mini-Map) - Question status overview -->
                         <div
-                            v-if="allPartsSubmitted"
+                            v-if="selectedPart && examStarted"
                             class="sticky top-8 hidden w-80 space-y-6 lg:block"
                         >
                             <div
@@ -2304,7 +2303,7 @@ const onDragEnd = () => {
 
                     <!-- Mobile Bottom Bar Navigator (Small) - Only show when all parts are completed -->
                     <div
-                        v-if="allPartsSubmitted"
+                        v-if="selectedPart && examStarted"
                         class="fixed right-0 bottom-0 left-0 z-40 p-4 lg:hidden"
                     >
                         <div
