@@ -1003,6 +1003,8 @@ const scrollToQuestion = (index: number) => {
 
 const submitPart = async () => {
     if (!selectedPart.value) return;
+    // Guard against re-entry while already submitting
+    if (isSubmitting.value) return;
 
     // Smart Review Nudge - using custom modal to prevent fullscreen exit
     // Use computed unansweredCount which dynamically updates
@@ -1033,6 +1035,9 @@ const submitPart = async () => {
 
         return; // Wait for user interaction with custom modal
     }
+
+    // If the warning modal is already visible, ignore the click
+    if (showUnansweredWarning.value) return;
 
     locallySubmittedPartIds.value.add(selectedPart.value.id);
     isSubmitting.value = true;
