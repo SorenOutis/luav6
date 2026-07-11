@@ -3,24 +3,30 @@ import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Calendar } from 'lucide-vue-next';
+import { Calendar, ChevronDown, ChevronUp, Trophy } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const mouseGlow = ref<HTMLElement | null>(null);
 const prefersReducedMotion = ref(false);
+const isMobile = ref(false);
+const isTouchDevice = ref(false);
 
 const syncInteractionModes = () => {
     prefersReducedMotion.value = window.matchMedia(
         '(prefers-reduced-motion: reduce)',
     ).matches;
+    isMobile.value = window.innerWidth < 768;
+    isTouchDevice.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 };
 
 const handleGlobalMouseMove = (e: MouseEvent) => {
     if (
         !mouseGlow.value ||
-        prefersReducedMotion.value
+        prefersReducedMotion.value ||
+        isMobile.value ||
+        isTouchDevice.value
     )
         return;
 
@@ -509,6 +515,8 @@ const seasonalXpTarget = computed(() => {
 });
 
 const showSectionModal = ref(false);
+const isLeaderboardExpanded = ref(false);
+const isSidebarExpanded = ref(false);
 
 watch(
     () => props.sectionName,
@@ -572,7 +580,7 @@ onMounted(() => {
     if (!dashboardContainer.value) return;
 
     gsapCtx = gsap.context(() => {
-        if (prefersReducedMotion.value) {
+        if (prefersReducedMotion.value || isMobile.value) {
             gsap.set(
                 [
                     '.dashboard-hero',
@@ -668,7 +676,7 @@ const handleLogout = () => {
         <div
             ref="dashboardContainer"
             @mousemove="handleGlobalMouseMove"
-            class="relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-5 overflow-hidden bg-background p-4 sm:p-5 md:gap-6 md:p-8"
+            class="relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden bg-background p-3 sm:p-5 md:gap-6 md:p-8"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
@@ -781,12 +789,45 @@ const handleLogout = () => {
                 >
                     <!-- Main Section: Leaderboard + Mission Control -->
                     <div class="min-w-0 space-y-8 lg:col-span-2">
-                        <ImprovedLeaderboard
-                            class="dashboard-leaderboard"
-                            :section-leaderboards="sectionLeaderboards"
-                            :active-season-name="activeSeason?.name"
-                            :available-seasons="props.availableSeasons ?? []"
-                        />
+                        <!-- Mobile: Collapsible Leaderboard -->
+                        <div class="lg:hidden">
+                            <button
+                                @click="isLeaderboardExpanded = !isLeaderboardExpanded"
+                                class="flex w-full items-center justify-between rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-amber-400/30"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <Trophy class="h-4 w-4 text-amber-400" />
+                                    <div>
+                                        <span class="text-xs font-bold text-foreground">Leaderboard</span>
+                                        <p v-if="sectionLeaderboards.length > 0" class="text-[9px] text-muted-foreground">
+                                            {{ sectionLeaderboards[0]?.sectionName }} · {{ sectionLeaderboards[0]?.totalPlayers }} players
+                                        </p>
+                                    </div>
+                                </div>
+                                <component :is="isLeaderboardExpanded ? ChevronUp : ChevronDown" class="h-4 w-4 text-muted-foreground transition-transform duration-300" />
+                            </button>
+                            <div
+                                v-show="isLeaderboardExpanded"
+                                class="mt-3"
+                            >
+                                <ImprovedLeaderboard
+                                    class="dashboard-leaderboard"
+                                    :section-leaderboards="sectionLeaderboards"
+                                    :active-season-name="activeSeason?.name"
+                                    :available-seasons="props.availableSeasons ?? []"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Desktop: Full Leaderboard -->
+                        <div class="hidden lg:block">
+                            <ImprovedLeaderboard
+                                class="dashboard-leaderboard"
+                                :section-leaderboards="sectionLeaderboards"
+                                :active-season-name="activeSeason?.name"
+                                :available-seasons="props.availableSeasons ?? []"
+                            />
+                        </div>
 
                         <CourseAssignmentList
                             :courses="courses"
@@ -800,57 +841,132 @@ const handleLogout = () => {
                     <div
                         class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
                     >
-                        <SeasonProgressBand
-                            :name="activeSeason?.name ?? null"
-                            :start-date="activeSeason?.startDate ?? null"
-                            :end-date="activeSeason?.endDate ?? null"
-                            :xp-earned="userStats.currentXP"
-                            :xp-target="seasonalXpTarget"
-                        />
-
-                        <!-- Streak Heatmap Card (compact) -->
-                        <SpotlightCard
-                            customSize
-                            glowColor="blue"
-                            className="surface-card p-0 w-full min-w-0"
-                        >
-                            <div
-                                class="relative flex h-full w-full flex-col p-4 sm:p-5"
+                        <!-- Mobile: Collapsible Sidebar -->
+                        <div class="lg:hidden">
+                            <button
+                                @click="isSidebarExpanded = !isSidebarExpanded"
+                                class="flex w-full items-center justify-between rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-primary/30"
                             >
-                                <div
-                                    class="relative z-10 mb-4 flex items-center justify-between"
-                                >
+                                <div class="flex items-center gap-3">
+                                    <Calendar class="h-4 w-4 text-primary" />
                                     <div>
-                                        <h3
-                                            class="flex items-center gap-2 text-sm font-bold"
-                                        >
-                                            <Calendar
-                                                class="h-4 w-4 text-primary"
-                                            />
-                                            Activity Pulse
-                                        </h3>
-                                        <p
-                                            class="mt-0.5 text-[10px] text-muted-foreground"
-                                        >
-                                            Consistency builds momentum.
-                                        </p>
+                                        <span class="text-xs font-bold text-foreground">Insights &amp; Progress</span>
+                                        <p class="text-[9px] text-muted-foreground">Season, activity, and quick actions</p>
                                     </div>
                                 </div>
-                                <StreakHeatmap :login-dates="streak.loginDates" />
-                            </div>
-                        </SpotlightCard>
+                                <component :is="isSidebarExpanded ? ChevronUp : ChevronDown" class="h-4 w-4 text-muted-foreground transition-transform duration-300" />
+                            </button>
+                            <div
+                                v-show="isSidebarExpanded"
+                                class="mt-3 space-y-6"
+                            >
+                                <SeasonProgressBand
+                                    :name="activeSeason?.name ?? null"
+                                    :start-date="activeSeason?.startDate ?? null"
+                                    :end-date="activeSeason?.endDate ?? null"
+                                    :xp-earned="userStats.currentXP"
+                                    :xp-target="seasonalXpTarget"
+                                />
 
-                        <DashboardSidebar
-                            :unread-notification-count="3"
-                            :badges="userBadges"
-                            :weekly-x-p="userStats.currentXP"
-                            :weekly-goal="1000"
-                            :upcoming-exams="props.upcomingExams"
-                            :exam-seasons="props.availableSeasons ?? []"
-                            :next-up-item="nextUpItem"
-                            :profile-url="`/u/${page.props.auth.user?.id}`"
-                            @quick-action="handleQuickAction"
-                        />
+                                <SpotlightCard
+                                    customSize
+                                    glowColor="blue"
+                                    className="surface-card p-0 w-full min-w-0"
+                                >
+                                    <div
+                                        class="relative flex h-full w-full flex-col p-4 sm:p-5"
+                                    >
+                                        <div
+                                            class="relative z-10 mb-4 flex items-center justify-between"
+                                        >
+                                            <div>
+                                                <h3
+                                                    class="flex items-center gap-2 text-sm font-bold"
+                                                >
+                                                    <Calendar
+                                                        class="h-4 w-4 text-primary"
+                                                    />
+                                                    Activity Pulse
+                                                </h3>
+                                                <p
+                                                    class="mt-0.5 text-[10px] text-muted-foreground"
+                                                >
+                                                    Consistency builds momentum.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <StreakHeatmap :login-dates="streak.loginDates" />
+                                    </div>
+                                </SpotlightCard>
+
+                                <DashboardSidebar
+                                    :unread-notification-count="3"
+                                    :badges="userBadges"
+                                    :weekly-x-p="userStats.currentXP"
+                                    :weekly-goal="1000"
+                                    :upcoming-exams="props.upcomingExams"
+                                    :exam-seasons="props.availableSeasons ?? []"
+                                    :next-up-item="nextUpItem"
+                                    :profile-url="`/u/${page.props.auth.user?.id}`"
+                                    @quick-action="handleQuickAction"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Desktop: Full Sidebar -->
+                        <div class="hidden lg:block space-y-6">
+                            <SeasonProgressBand
+                                :name="activeSeason?.name ?? null"
+                                :start-date="activeSeason?.startDate ?? null"
+                                :end-date="activeSeason?.endDate ?? null"
+                                :xp-earned="userStats.currentXP"
+                                :xp-target="seasonalXpTarget"
+                            />
+
+                            <!-- Streak Heatmap Card (compact) -->
+                            <SpotlightCard
+                                customSize
+                                glowColor="blue"
+                                className="surface-card p-0 w-full min-w-0"
+                            >
+                                <div
+                                    class="relative flex h-full w-full flex-col p-4 sm:p-5"
+                                >
+                                    <div
+                                        class="relative z-10 mb-4 flex items-center justify-between"
+                                    >
+                                        <div>
+                                            <h3
+                                                class="flex items-center gap-2 text-sm font-bold"
+                                            >
+                                                <Calendar
+                                                    class="h-4 w-4 text-primary"
+                                                />
+                                                Activity Pulse
+                                            </h3>
+                                            <p
+                                                class="mt-0.5 text-[10px] text-muted-foreground"
+                                            >
+                                                Consistency builds momentum.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <StreakHeatmap :login-dates="streak.loginDates" />
+                                </div>
+                            </SpotlightCard>
+
+                            <DashboardSidebar
+                                :unread-notification-count="3"
+                                :badges="userBadges"
+                                :weekly-x-p="userStats.currentXP"
+                                :weekly-goal="1000"
+                                :upcoming-exams="props.upcomingExams"
+                                :exam-seasons="props.availableSeasons ?? []"
+                                :next-up-item="nextUpItem"
+                                :profile-url="`/u/${page.props.auth.user?.id}`"
+                                @quick-action="handleQuickAction"
+                            />
+                        </div>
                     </div>
                 </Motion>
             </template>
@@ -937,4 +1053,6 @@ const handleLogout = () => {
     /* Handled by GSAP onMounted */
     will-change: transform, opacity;
 }
+
+
 </style>

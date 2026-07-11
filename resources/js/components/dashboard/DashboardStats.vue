@@ -97,14 +97,14 @@ const displayStats = computed(() => [
 </script>
 
 <template>
-    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+    <div class="flex gap-3 overflow-x-auto scrollbar-none md:grid md:grid-cols-4 md:gap-4">
         <SpotlightCard
             v-for="(stat, idx) in displayStats"
             :key="stat.label"
             customSize
             :glowColor="stat.glowColor"
             :class="`stagger-${idx + 1}`"
-            className="p-4 sm:p-5 group animate-fade-up bg-card/40 flex flex-col justify-between"
+            className="min-w-[155px] shrink-0 p-3 sm:p-5 group animate-fade-up bg-card/40 flex flex-col justify-between md:min-w-0 md:shrink"
         >
             <!-- Inner container to clip overflowing background icons without clipping the outer glow -->
             <div

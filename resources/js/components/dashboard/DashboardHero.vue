@@ -140,20 +140,20 @@ const xpPercentage = computed(() => {
         </TransitionGroup>
 
         <!-- Bespoke Hero Section - Open Layout -->
-        <div class="relative flex flex-col justify-center px-1 sm:px-2 lg:px-4">
+        <div class="relative flex flex-col justify-center sm:px-2 lg:px-4">
             <div
-                class="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-end lg:gap-10"
+                class="relative flex flex-col justify-between gap-3 lg:flex-row lg:items-end lg:gap-10"
             >
                 <!-- Left side: Profile Picture + Greetings + Integrated Progress -->
                 <div
-                    class="flex w-full flex-row items-center gap-3 sm:gap-6 lg:w-auto lg:items-center lg:gap-10"
+                    class="flex w-full flex-row items-center gap-2.5 sm:gap-6 lg:w-auto lg:items-center lg:gap-10"
                 >
                     <!-- Profile Picture with Integrated Level Badge -->
                     <div class="group/avatar relative shrink-0">
                         <div class="relative">
                             <!-- Level Badge integrated into Avatar -->
                             <div
-                                class="absolute -top-1 -right-1 z-30 rounded-md border border-background bg-gradient-to-br px-1.5 py-0.5 text-[7px] font-black tracking-tighter text-primary-foreground uppercase tabular-nums shadow-lg sm:text-[8px]"
+                                class="absolute -top-0.5 -right-0.5 z-30 rounded-md border border-background bg-gradient-to-br px-1 py-0.5 text-[6px] font-black tracking-tighter text-primary-foreground uppercase tabular-nums shadow-lg sm:-top-1 sm:-right-1 sm:px-1.5 sm:py-0.5 sm:text-[8px] lg:text-[9px]"
                                 :class="
                                     greetingTheme || 'from-primary to-primary'
                                 "
@@ -162,10 +162,10 @@ const xpPercentage = computed(() => {
                             </div>
 
                             <div
-                                class="absolute -right-0.5 -bottom-0.5 z-20 flex h-3 w-3 items-center justify-center rounded-full border-2 border-background bg-background shadow-lg sm:h-5 sm:w-5"
+                                class="absolute -right-0.5 -bottom-0.5 z-20 flex h-2.5 w-2.5 items-center justify-center rounded-full border-2 border-background bg-background shadow-lg sm:h-5 sm:w-5"
                             >
                                 <span
-                                    class="h-1.5 w-1.5 rounded-full sm:h-2.5 sm:w-2.5"
+                                    class="h-1 w-1 rounded-full sm:h-2.5 sm:w-2.5"
                                     :class="
                                         statusColor ||
                                         'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'
@@ -174,7 +174,7 @@ const xpPercentage = computed(() => {
                             </div>
 
                             <Avatar
-                                class="relative size-12 overflow-hidden rounded-xl border border-primary/20 bg-card/40 shadow-xl backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-20 sm:rounded-2xl lg:size-28 lg:rounded-3xl"
+                                class="relative size-10 overflow-hidden rounded-lg border border-primary/20 bg-card/40 shadow-lg backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-16 sm:rounded-xl lg:size-24 lg:rounded-2xl"
                             >
                                 <AvatarImage
                                     v-if="userAvatar"
@@ -183,7 +183,7 @@ const xpPercentage = computed(() => {
                                     class="object-cover"
                                 />
                                 <AvatarFallback
-                                    class="bg-primary/5 text-lg font-black text-primary sm:text-2xl lg:text-3xl"
+                                    class="bg-primary/5 text-sm font-black text-primary sm:text-xl lg:text-2xl"
                                 >
                                     {{ getInitials(userName) }}
                                 </AvatarFallback>
@@ -191,7 +191,7 @@ const xpPercentage = computed(() => {
                         </div>
                     </div>
 
-                    <div class="min-w-0 flex-1 space-y-1 sm:space-y-3">
+                    <div class="min-w-0 flex-1">
                         <div
                             class="flex flex-wrap items-center gap-2 text-[7px] font-black tracking-[0.1em] text-muted-foreground/40 uppercase sm:text-[10px] sm:tracking-[0.2em] lg:text-xs lg:tracking-[0.3em]"
                         >
@@ -229,20 +229,18 @@ const xpPercentage = computed(() => {
 
                         <div class="space-y-0.5 sm:space-y-1">
                             <h1
-                                class="truncate text-base leading-tight font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl"
+                                class="truncate text-base leading-tight font-bold tracking-tight text-foreground sm:text-2xl lg:text-4xl"
                             >
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
                             <p
-                                class="line-clamp-1 text-[9px] leading-relaxed font-medium text-muted-foreground/60 sm:text-sm lg:mt-1 lg:text-lg"
+                                class="line-clamp-1 text-[8px] leading-relaxed font-medium text-muted-foreground/60 sm:text-sm lg:mt-1 lg:text-lg"
                                 v-html="smarterStatus"
                             ></p>
                         </div>
 
                         <!-- Integrated XP Bar & Mini Stats -->
-                        <div
-                            class="w-full max-w-sm space-y-1 sm:space-y-1.5 lg:max-w-lg lg:space-y-3"
-                        >
+                        <div class="mt-2 w-full max-w-sm space-y-1 sm:mt-3 sm:space-y-1.5 lg:max-w-lg lg:space-y-3">
                             <div
                                 class="flex items-center justify-between text-[7px] font-black tracking-widest text-muted-foreground/40 uppercase sm:text-[8px] lg:text-xs"
                             >
@@ -288,7 +286,7 @@ const xpPercentage = computed(() => {
                                 </div>
                             </div>
                             <div
-                                class="relative h-1 w-full overflow-hidden rounded-full border border-white/10 bg-muted/30 shadow-inner backdrop-blur-sm lg:h-6 dark:bg-black/20"
+                                class="relative h-1.5 w-full overflow-hidden rounded-full border border-white/10 bg-muted/30 shadow-inner backdrop-blur-sm sm:h-2 lg:h-6 dark:bg-black/20"
                             >
                                 <div
                                     class="relative h-full rounded-full bg-gradient-to-r shadow-lg shadow-primary/50 transition-all duration-1000 ease-out"
@@ -305,21 +303,14 @@ const xpPercentage = computed(() => {
                             </div>
                         </div>
 
-                        <!-- Mobile: Add Section CTA -->
-                        <div class="mt-2 lg:hidden">
+                        <!-- Mobile: Add Section CTA (compact pill) -->
+                        <div class="mt-1.5 lg:hidden">
                             <button
                                 @click="emit('open-section-modal')"
-                                class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border-2 border-dashed border-primary/30 bg-primary/[0.03] px-4 py-2.5 backdrop-blur-xl transition-all duration-500 hover:border-primary/60 hover:bg-primary/[0.08]"
+                                class="group inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[8px] font-black tracking-widest text-primary uppercase backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm active:scale-95"
                             >
-                                <div
-                                    class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"
-                                ></div>
-                                <Plus class="h-4 w-4 shrink-0 text-primary transition-all duration-300 group-hover:scale-110" />
-                                <span
-                                    class="text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
-                                >
-                                    Add Section
-                                </span>
+                                <Plus class="h-3 w-3 shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+                                Join Section
                             </button>
                         </div>
                     </div>
@@ -327,23 +318,19 @@ const xpPercentage = computed(() => {
 
                 <!-- Desktop: Add Section CTA -->
                 <div
-                    class="mb-1 hidden w-48 shrink-0 self-end lg:block"
+                    class="mb-1 hidden shrink-0 self-end lg:block"
                 >
                     <button
                         @click="emit('open-section-modal')"
-                        class="group relative flex w-full items-center gap-3 overflow-hidden rounded-xl border-2 border-dashed border-primary/30 bg-primary/[0.03] px-4 py-3 backdrop-blur-xl transition-all duration-500 hover:border-primary/60 hover:bg-primary/[0.08]"
+                        class="group relative flex items-center gap-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5 px-4 py-2 text-[10px] font-black tracking-widest text-primary uppercase backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm active:scale-95"
                     >
                         <!-- Shine effect -->
                         <div
                             class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"
                         ></div>
 
-                        <Plus class="h-4 w-4 shrink-0 text-primary transition-all duration-300 group-hover:scale-110" />
-                        <span
-                            class="text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
-                        >
-                            Add Section
-                        </span>
+                        <Plus class="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+                        Join Section
                     </button>
                 </div>
             </div>
