@@ -46,6 +46,12 @@ class UsersTable
                     ->placeholder('None')
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('exam_submissions_count')
+                    ->label('Exam Submissions')
+                    ->counts('examSubmissions')
+                    ->sortable()
+                    ->badge()
+                    ->color('primary'),
                 TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable(),

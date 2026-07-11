@@ -166,6 +166,11 @@ class User extends Authenticatable
         return $this->hasMany(Submission::class);
     }
 
+    public function examSubmissions()
+    {
+        return $this->hasMany(ExamSubmission::class);
+    }
+
     /**
      * Get the rewards associated with the user.
      */
