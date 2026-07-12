@@ -144,16 +144,16 @@ const xpPercentage = computed(() => {
             <div
                 class="relative flex flex-col justify-between gap-3 lg:flex-row lg:items-end lg:gap-10"
             >
-                <!-- Left side: Profile Picture + Greetings + Integrated Progress -->
+                <!-- Left side: Greetings + Integrated Progress | Right: Profile Picture (mobile) -->
                 <div
                     class="flex w-full flex-row items-center gap-2.5 sm:gap-6 lg:w-auto lg:items-center lg:gap-10"
                 >
                     <!-- Profile Picture with Integrated Level Badge -->
-                    <div class="group/avatar relative shrink-0">
+                    <div class="group/avatar relative shrink-0 order-2 lg:order-1">
                         <div class="relative">
                             <!-- Level Badge integrated into Avatar -->
                             <div
-                                class="absolute -top-0.5 -right-0.5 z-30 rounded-md border border-background bg-gradient-to-br px-1 py-0.5 text-[6px] font-black tracking-tighter text-primary-foreground uppercase tabular-nums shadow-lg sm:-top-1 sm:-right-1 sm:px-1.5 sm:py-0.5 sm:text-[8px] lg:text-[9px]"
+                                class="absolute -top-2 -right-2 z-30 rounded-md border border-background bg-gradient-to-br px-2 py-1 text-[10px] font-black tracking-tighter text-primary-foreground uppercase tabular-nums shadow-lg sm:-top-1 sm:-right-1 sm:px-1.5 sm:py-0.5 sm:text-[8px] lg:-top-1 lg:-right-1 lg:px-1.5 lg:py-0.5 lg:text-[9px]"
                                 :class="
                                     greetingTheme || 'from-primary to-primary'
                                 "
@@ -162,10 +162,10 @@ const xpPercentage = computed(() => {
                             </div>
 
                             <div
-                                class="absolute -right-0.5 -bottom-0.5 z-20 flex h-2.5 w-2.5 items-center justify-center rounded-full border-2 border-background bg-background shadow-lg sm:h-5 sm:w-5"
+                                class="absolute -right-2 -bottom-2 z-20 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-background shadow-lg sm:h-4 sm:w-4 lg:h-5 lg:w-5"
                             >
                                 <span
-                                    class="h-1 w-1 rounded-full sm:h-2.5 sm:w-2.5"
+                                    class="h-3 w-3 rounded-full sm:h-2 sm:w-2 lg:h-2.5 lg:w-2.5"
                                     :class="
                                         statusColor ||
                                         'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'
@@ -174,7 +174,7 @@ const xpPercentage = computed(() => {
                             </div>
 
                             <Avatar
-                                class="relative size-10 overflow-hidden rounded-lg border border-primary/20 bg-card/40 shadow-lg backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-16 sm:rounded-xl lg:size-24 lg:rounded-2xl"
+                                class="relative size-20 overflow-hidden rounded-lg border border-primary/20 bg-card/40 shadow-lg backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-16 sm:rounded-xl lg:size-24 lg:rounded-2xl"
                             >
                                 <AvatarImage
                                     v-if="userAvatar"
@@ -191,7 +191,7 @@ const xpPercentage = computed(() => {
                         </div>
                     </div>
 
-                    <div class="min-w-0 flex-1">
+                    <div class="min-w-0 flex-1 order-1 lg:order-2">
                         <div
                             class="flex flex-wrap items-center gap-2 text-[7px] font-black tracking-[0.1em] text-muted-foreground/40 uppercase sm:text-[10px] sm:tracking-[0.2em] lg:text-xs lg:tracking-[0.3em]"
                         >
@@ -240,11 +240,11 @@ const xpPercentage = computed(() => {
                         </div>
 
                         <!-- Integrated XP Bar & Mini Stats -->
-                        <div class="mt-2 w-full max-w-sm space-y-1 sm:mt-3 sm:space-y-1.5 lg:max-w-lg lg:space-y-3">
+                        <div class="mt-1.5 w-full max-w-sm space-y-0.5 sm:mt-3 sm:space-y-1.5 lg:max-w-lg lg:space-y-3">
                             <div
-                                class="flex items-center justify-between text-[7px] font-black tracking-widest text-muted-foreground/40 uppercase sm:text-[8px] lg:text-xs"
+                                class="flex items-center justify-between text-[6px] font-black tracking-widest text-muted-foreground/40 uppercase sm:text-[8px] lg:text-xs"
                             >
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1">
                                     <span class="text-primary/60"
                                         >{{
                                             animatedXP.toLocaleString()
@@ -264,10 +264,9 @@ const xpPercentage = computed(() => {
                                         to Level {{ userStats.level + 1 }}</span
                                     >
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1">
                                     <span class="text-primary"
-                                        >{{ Math.round(xpPercentage) }}%
-                                        Efficiency</span
+                                        >{{ Math.round(xpPercentage) }}%</span
                                     >
                                     <div
                                         class="flex gap-0.5 sm:gap-1 lg:gap-1.5"
@@ -286,7 +285,7 @@ const xpPercentage = computed(() => {
                                 </div>
                             </div>
                             <div
-                                class="relative h-1.5 w-full overflow-hidden rounded-full border border-white/10 bg-muted/30 shadow-inner backdrop-blur-sm sm:h-2 lg:h-6 dark:bg-black/20"
+                                class="relative h-1 w-full overflow-hidden rounded-full border border-white/10 bg-muted/30 shadow-inner backdrop-blur-sm sm:h-2 lg:h-6 dark:bg-black/20"
                             >
                                 <div
                                     class="relative h-full rounded-full bg-gradient-to-r shadow-lg shadow-primary/50 transition-all duration-1000 ease-out"
