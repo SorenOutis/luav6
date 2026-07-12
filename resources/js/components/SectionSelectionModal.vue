@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
-defineProps<{
+const props = defineProps<{
     show: boolean;
 }>();
 

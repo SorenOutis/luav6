@@ -155,7 +155,8 @@ function animateIndicator() {
         activeIndex.value !== -1 &&
         activeIndex.value < navItems.value.length &&
         itemRefs.value[activeIndex.value] &&
-        indicatorRef.value
+        indicatorRef.value &&
+        typeof (itemRefs.value[activeIndex.value] as any).getBoundingClientRect === 'function'
     ) {
         const target = itemRefs.value[activeIndex.value]!;
         const targetRect = target.getBoundingClientRect();

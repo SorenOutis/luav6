@@ -4,11 +4,13 @@ import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Calendar, ChevronDown, ChevronUp, Trophy } from 'lucide-vue-next';
-import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import { onMounted, onBeforeUnmount, reactive, ref, computed, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const mouseGlow = ref<HTMLElement | null>(null);
+const dashboardContainer = ref<HTMLElement | null>(null);
+const backgroundGrid = ref<HTMLElement | null>(null);
 const prefersReducedMotion = ref(false);
 const isMobile = ref(false);
 const isTouchDevice = ref(false);
@@ -405,7 +407,10 @@ const totalXPProgress = computed(() => {
     return Math.min(100, Math.max(0, percent));
 });
 
-const announcements = computed(() => props.announcements);
+const dismissedAnnouncementIds = reactive(new Set<number>());
+const announcements = computed(() =>
+    props.announcements.filter((a) => !dismissedAnnouncementIds.has(a.id)),
+);
 const userBadges = computed(() => props.userBadges);
 const courses = computed(() => props.courses);
 const assignments = computed(() => props.assignments);
@@ -513,6 +518,8 @@ const seasonalXpTarget = computed(() => {
     // Rough target: fill the currently reached level's XP band; can be tuned later
     return props.userStats?.maxXPForLevel ?? 100;
 });
+
+let gsapCtx: gsap.Context | null = null;
 
 const showSectionModal = ref(false);
 const isLeaderboardExpanded = ref(false);
@@ -755,7 +762,7 @@ const handleLogout = () => {
                         :smarter-status="smarterStatus"
                         :is-refreshing="isRefreshing"
                         :last-sync-time="lastSyncTime"
-                        @close-announcement="announcements = []"
+                        @close-announcement="(id: number) => dismissedAnnouncementIds.add(id)"
                         @refresh="manualRefresh"
                         @open-section-modal="showSectionModal = true"
                     />
