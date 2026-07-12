@@ -485,7 +485,7 @@ const rightNavItems: NavItem[] = [
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <div class="flex flex-col items-end justify-center">
+                            <div class="hidden sm:flex flex-col items-end justify-center">
                                 <span
                                     class="font-mono text-[10px] font-bold tracking-tight text-foreground sm:text-xs"
                                     >{{ currentTime }}</span

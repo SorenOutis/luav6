@@ -123,7 +123,9 @@ const markAllNotificationsAsRead = () => {
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />
             <template v-if="breadcrumbs && breadcrumbs.length > 0">
-                <Breadcrumbs :breadcrumbs="breadcrumbs" />
+                <div class="hidden sm:inline-flex">
+                    <Breadcrumbs :breadcrumbs="breadcrumbs" />
+                </div>
             </template>
         </div>
 
@@ -250,7 +252,7 @@ const markAllNotificationsAsRead = () => {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <div class="flex flex-col items-end justify-center leading-none">
+            <div class="hidden sm:flex flex-col items-end justify-center leading-none">
                 <span
                     class="text-[11px] font-black tracking-tighter text-foreground uppercase sm:text-xs"
                     >{{ currentTime }}</span
