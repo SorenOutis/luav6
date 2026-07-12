@@ -9,6 +9,7 @@ use App\Models\ExamAiFeedbackRun;
 use App\Models\Section;
 use App\Support\AiQueueWorker;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
@@ -34,7 +35,7 @@ class ListExamSubmissions extends ListRecords
     }
 
     /**
-     * @return array<int|string, Action|\Filament\Actions\ActionGroup>
+     * @return array<int|string, Action|ActionGroup>
      */
     protected function getToolsActions(): array
     {
@@ -164,6 +165,4 @@ class ListExamSubmissions extends ListRecords
                 RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_AFTER),
             ]);
     }
-
-
 }
