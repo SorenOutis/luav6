@@ -7,6 +7,7 @@ import {
     Calendar,
     Clock,
     ChevronLeft,
+    ChevronRight,
     Check,
     CheckCircle2,
     FileText,
@@ -18,6 +19,8 @@ import {
     Zap,
     AlertCircle,
     Trophy,
+    Grid3x3,
+    X,
 } from 'lucide-vue-next';
 import {
     onMounted,
@@ -145,6 +148,59 @@ const totalQuestions = computed(() =>
 
 const visibleQuestionIndex = ref(0);
 const progressBoxRef = ref<HTMLElement | null>(null);
+
+// ─── MOBILE: Swipe & Bottom Sheet ───────────────────────────
+const mobileQuestionIndex = ref(0);
+const showMobileProgress = ref(false);
+const touchStartX = ref(0);
+const touchEndX = ref(0);
+
+function goToNextQuestion() {
+    if (!selectedPart.value?.questions) return;
+    const maxIndex = selectedPart.value.questions.length - 1;
+    if (mobileQuestionIndex.value < maxIndex) {
+        mobileQuestionIndex.value++;
+        visibleQuestionIndex.value = mobileQuestionIndex.value;
+        scrollToQuestion(mobileQuestionIndex.value);
+    }
+}
+
+function goToPrevQuestion() {
+    if (mobileQuestionIndex.value > 0) {
+        mobileQuestionIndex.value--;
+        visibleQuestionIndex.value = mobileQuestionIndex.value;
+        scrollToQuestion(mobileQuestionIndex.value);
+    }
+}
+
+function handleTouchStart(e: TouchEvent) {
+    const target = e.target as HTMLElement;
+    if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+    touchStartX.value = e.changedTouches[0].screenX;
+}
+
+function handleTouchEnd(e: TouchEvent) {
+    if (touchStartX.value === 0) return;
+    touchEndX.value = e.changedTouches[0].screenX;
+    const threshold = 50;
+    const diff = touchStartX.value - touchEndX.value;
+    if (Math.abs(diff) > threshold) {
+        if (diff > 0) goToNextQuestion();
+        else goToPrevQuestion();
+    }
+    touchStartX.value = 0;
+}
+
+const submitFromSheet = () => {
+    showMobileProgress.value = false;
+    submitPart();
+};
+
+// Reset mobile question index when starting a new part
+watch(selectedPart, () => {
+    mobileQuestionIndex.value = 0;
+    showMobileProgress.value = false;
+});
 
 
 // ─── LIVE TIMER LOGIC ───────────────────────────────────────
@@ -2040,7 +2096,136 @@ const feedbackContent = computed(() => {
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <!-- ═══ MOBILE: Single question carousel (swipeable) ═══ -->
+                            <div class="block md:hidden">
+                                <!-- Current question card -->
+                                <div
+                                    v-if="selectedPart!.questions![mobileQuestionIndex]"
+                                    :id="`q-${mobileQuestionIndex}`"
+                                    @touchstart="handleTouchStart"
+                                    @touchend="handleTouchEnd"
+                                    :class="[
+                                        'question-card relative flex flex-col gap-4 rounded-xl border border-border/40 border-l-[3px] p-4 transition-all duration-500',
+                                        getQuestionStatus(mobileQuestionIndex) === 'answered'
+                                            ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
+                                            : 'border-border/40 border-l-muted bg-card/40',
+                                    ]"
+                                >
+                                    <!-- Question Content -->
+                                    <div class="flex flex-col items-start gap-4">
+                                        <!-- ID & Flag row -->
+                                        <div class="flex w-full items-center justify-between">
+                                            <div class="flex items-center gap-3">
+                                                <div class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                                                    {{ mobileQuestionIndex + 1 }}
+                                                </div>
+                                                <span class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                                                    {{ formatType(selectedPart!.questions![mobileQuestionIndex].type) }}
+                                                </span>
+                                                <span class="text-[10px] text-muted-foreground">
+                                                    {{ selectedPart!.questions![mobileQuestionIndex].points ?? selectedPart!.points ?? 1 }} pt
+                                                </span>
+                                            </div>
+                                            <button
+                                                @click="toggleFlag(mobileQuestionIndex)"
+                                                class="flex h-7 w-7 items-center justify-center rounded-lg border border-border/40 transition-all"
+                                                :class="
+                                                    flaggedQuestions.has(mobileQuestionIndex)
+                                                        ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
+                                                        : 'text-muted-foreground/30'
+                                                "
+                                            >
+                                                <Flag
+                                                    class="h-3.5 w-3.5"
+                                                    :class="flaggedQuestions.has(mobileQuestionIndex) ? 'fill-amber-500' : ''"
+                                                />
+                                            </button>
+                                        </div>
+
+                                        <p class="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                                            {{ selectedPart!.questions![mobileQuestionIndex].text }}
+                                        </p>
+                                    </div>
+
+                                    <!-- Answer Area -->
+                                    <div class="w-full">
+                                        <!-- Multiple Choice / True-False -->
+                                        <div
+                                            v-if="selectedPart!.questions![mobileQuestionIndex].type === 'multiple_choice' || selectedPart!.questions![mobileQuestionIndex].type === 'true_false'"
+                                            class="flex flex-col gap-3"
+                                        >
+                                            <label
+                                                v-for="(option, oIndex) in selectedPart!.questions![mobileQuestionIndex].options"
+                                                :key="option.text"
+                                                class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+                                            >
+                                                <div class="relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-border/60 transition-colors group-hover/option:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary">
+                                                    <input
+                                                        type="radio"
+                                                        :name="`q-mobile-${mobileQuestionIndex}`"
+                                                        :value="oIndex"
+                                                        v-model.number="answers[mobileQuestionIndex]"
+                                                        class="sr-only"
+                                                    />
+                                                    <Check
+                                                        v-if="answers[mobileQuestionIndex] === oIndex"
+                                                        class="h-3 w-3 text-primary-foreground"
+                                                    />
+                                                </div>
+                                                <span class="relative text-sm text-muted-foreground transition-colors group-hover/option:text-foreground has-[:checked]:text-primary">{{ option.text }}</span>
+                                            </label>
+                                        </div>
+
+                                        <!-- Identification -->
+                                        <div v-else-if="selectedPart!.questions![mobileQuestionIndex].type === 'identification'" class="max-w-full">
+                                            <input
+                                                v-model="answers[mobileQuestionIndex]"
+                                                type="text"
+                                                placeholder="Type your answer here..."
+                                                class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                            />
+                                        </div>
+
+                                        <!-- Essay -->
+                                        <div v-else-if="selectedPart!.questions![mobileQuestionIndex].type === 'essay'" class="w-full">
+                                            <textarea
+                                                v-model="answers[mobileQuestionIndex]"
+                                                rows="6"
+                                                placeholder="Write your answer here..."
+                                                class="min-h-[150px] w-full resize-y rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm leading-relaxed transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                            ></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mobile: Prev / Next Navigation -->
+                                <div class="mt-4 flex items-center justify-between gap-2">
+                                    <button
+                                        @click="goToPrevQuestion"
+                                        :disabled="mobileQuestionIndex === 0"
+                                        class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[10px] font-bold text-muted-foreground transition-all disabled:opacity-30 enabled:hover:border-primary/40 enabled:hover:text-primary"
+                                    >
+                                        <ChevronLeft class="h-3.5 w-3.5" />
+                                        Prev
+                                    </button>
+
+                                    <span class="text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase">
+                                        {{ mobileQuestionIndex + 1 }} / {{ selectedPart!.questions!.length }}
+                                    </span>
+
+                                    <button
+                                        @click="goToNextQuestion"
+                                        :disabled="mobileQuestionIndex >= selectedPart!.questions!.length - 1"
+                                        class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[10px] font-bold text-muted-foreground transition-all disabled:opacity-30 enabled:hover:border-primary/40 enabled:hover:text-primary"
+                                    >
+                                        Next
+                                        <ChevronRight class="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- ═══ DESKTOP: Full question grid ═══ -->
+                            <div class="hidden md:grid md:grid-cols-2 gap-6">
                                 <div
                                     v-for="(question, qIndex) in selectedPart!
                                         .questions"
@@ -2554,6 +2739,106 @@ const feedbackContent = computed(() => {
 
             <!-- ═══════════════════════════════════════════════════════ -->
             <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+
+                        <!-- ═══ MOBILE: Progress Bottom Sheet Overlay ═══ -->
+                        <div v-if="selectedPart && examStarted" class="md:hidden">
+                            <!-- Floating progress button -->
+                            <button
+                                @click="showMobileProgress = !showMobileProgress"
+                                class="fixed right-4 z-[60] flex items-center gap-2 rounded-full border border-primary/20 bg-primary/90 px-3.5 py-2.5 text-[10px] font-black tracking-widest text-primary-foreground uppercase shadow-2xl shadow-primary/30 backdrop-blur-xl transition-all duration-300 hover:bg-primary active:scale-95"
+                                :style="{
+                                    bottom: `calc(5rem + env(safe-area-inset-bottom, 0px))`,
+                                }"
+                            >
+                                <Grid3x3 class="h-3.5 w-3.5" />
+                                {{ Object.keys(answers).length }}/{{ selectedPart!.questions!.length }}
+                            </button>
+
+                            <!-- Overlay backdrop -->
+                            <transition name="modal-fade">
+                                <div
+                                    v-if="showMobileProgress"
+                                    class="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+                                    @click="showMobileProgress = false"
+                                />
+                            </transition>
+
+                            <!-- Bottom sheet -->
+                            <transition name="slide-up">
+                                <div
+                                    v-if="showMobileProgress"
+                                    class="fixed right-0 bottom-0 left-0 z-[80] max-h-[70vh] overflow-y-auto rounded-t-2xl border border-border/50 bg-background/95 p-5 pb-8 shadow-2xl backdrop-blur-2xl"
+                                    style="padding-bottom: max(2rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))"
+                                >
+                                    <!-- Sheet grab handle -->
+                                    <div class="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/20" />
+
+                                    <!-- Header -->
+                                    <div class="mb-5 flex items-center justify-between">
+                                        <div>
+                                            <h3 class="text-sm font-bold text-foreground">Progress</h3>
+                                            <p class="text-[10px] text-muted-foreground">
+                                                {{ Object.keys(answers).length }} of {{ selectedPart!.questions!.length }} answered
+                                            </p>
+                                        </div>
+                                        <button
+                                            @click="showMobileProgress = false"
+                                            class="rounded-lg border border-border/40 p-1.5 text-muted-foreground transition-all hover:bg-muted/30"
+                                        >
+                                            <X class="h-4 w-4" />
+                                        </button>
+                                    </div>
+
+                                    <!-- Question grid -->
+                                    <div class="mb-5 grid grid-cols-5 gap-2.5">
+                                        <button
+                                            v-for="(_, qIndex) in selectedPart!.questions"
+                                            :key="qIndex"
+                                            @click="mobileQuestionIndex = qIndex; visibleQuestionIndex = qIndex; showMobileProgress = false; scrollToQuestion(qIndex);"
+                                            class="group/nav-item relative flex aspect-square items-center justify-center rounded-lg border text-xs font-black transition-all duration-200"
+                                            :class="[
+                                                qIndex === mobileQuestionIndex
+                                                    ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/30'
+                                                    : getQuestionStatus(qIndex) === 'answered'
+                                                        ? 'border-primary/60 bg-primary/10 text-primary'
+                                                        : getQuestionStatus(qIndex) === 'flagged'
+                                                            ? 'border-amber-500 bg-amber-500/20 text-amber-600'
+                                                            : 'border-border/40 bg-muted/20 text-muted-foreground hover:border-primary/40 hover:bg-muted/40',
+                                            ]"
+                                        >
+                                            {{ qIndex + 1 }}
+                                            <div
+                                                v-if="flaggedQuestions.has(qIndex)"
+                                                class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 shadow-sm"
+                                            />
+                                        </button>
+                                    </div>
+
+                                    <!-- Quick stats -->
+                                    <div class="mb-4 flex items-center justify-between rounded-lg border border-border/30 bg-muted/20 px-3.5 py-2.5">
+                                        <div class="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                            <Flag class="h-3 w-3 text-amber-500" />
+                                            Flagged: {{ flaggedQuestions.size }}
+                                        </div>
+                                        <div class="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                            <Zap class="h-3 w-3 text-primary" />
+                                            Est: {{ estimatedFinishMinutes || '--' }} min
+                                        </div>
+                                    </div>
+
+                                    <!-- Submit button -->
+                                    <button
+                                        @click="submitFromSheet"
+                                        :disabled="isSubmitting"
+                                        class="w-full rounded-xl bg-primary py-3 text-xs font-black tracking-widest text-primary-foreground uppercase shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
+                                    >
+                                        <template v-if="isSubmitting">Submitting...</template>
+                                        <template v-else>Submit Answers</template>
+                                    </button>
+                                </div>
+                            </transition>
+                        </div>
 
             <!--  UNANSWERED WARNING MODAL                                -->
 
