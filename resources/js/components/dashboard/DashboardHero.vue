@@ -174,16 +174,16 @@ const xpPercentage = computed(() => {
                             </div>
 
                             <Avatar
-                                class="relative size-20 overflow-hidden rounded-lg border border-primary/20 bg-card/40 shadow-lg backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-16 sm:rounded-xl lg:size-24 lg:rounded-2xl"
+                                class="relative size-20 overflow-hidden rounded-xl border border-primary/20 bg-card/40 shadow-lg backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-16 sm:rounded-xl lg:size-24 lg:rounded-2xl"
                             >
                                 <AvatarImage
                                     v-if="userAvatar"
                                     :src="userAvatar"
                                     :alt="userName"
-                                    class="object-cover"
+                                    class="object-cover aspect-square"
                                 />
                                 <AvatarFallback
-                                    class="bg-primary/5 text-sm font-black text-primary sm:text-xl lg:text-2xl"
+                                    class="bg-primary/5 text-sm font-black text-primary sm:text-xl lg:text-2xl flex items-center justify-center"
                                 >
                                     {{ getInitials(userName) }}
                                 </AvatarFallback>
