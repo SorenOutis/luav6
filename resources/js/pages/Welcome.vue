@@ -15,6 +15,7 @@ import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
 
 // Composables & Routes
 import { useAppearance } from '@/composables/useAppearance';
+import { useMobile } from '@/composables/useMobile';
 import { dashboard, login, register } from '@/routes';
 
 interface ActiveSeason {
@@ -62,7 +63,7 @@ const props = withDefaults(
 const isBooted = ref(true);
 const isDemoVideoOpen = ref(false);
 const isCoarsePointer = ref(false);
-const prefersReducedMotion = ref(false);
+const { prefersReducedMotion } = useMobile();
 
 const { isTransitioningTheme } = useAppearance();
 

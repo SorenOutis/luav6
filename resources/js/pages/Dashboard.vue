@@ -11,17 +11,7 @@ gsap.registerPlugin(ScrollTrigger);
 const mouseGlow = ref<HTMLElement | null>(null);
 const dashboardContainer = ref<HTMLElement | null>(null);
 const backgroundGrid = ref<HTMLElement | null>(null);
-const prefersReducedMotion = ref(false);
-const isMobile = ref(false);
-const isTouchDevice = ref(false);
-
-const syncInteractionModes = () => {
-    prefersReducedMotion.value = window.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-    ).matches;
-    isMobile.value = window.innerWidth < 768;
-    isTouchDevice.value = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-};
+const { isMobile, isTouchDevice, prefersReducedMotion } = useMobile();
 
 const handleGlobalMouseMove = (e: MouseEvent) => {
     if (
@@ -54,6 +44,7 @@ import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
+import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { logout } from '@/routes';
 import { index as assignmentsIndex } from '@/routes/assignments';
@@ -546,8 +537,6 @@ const handleVisibilityChange = () => {
 };
 
 onMounted(() => {
-    syncInteractionModes();
-    window.addEventListener('resize', syncInteractionModes);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Sync isBooted with global loader
@@ -638,7 +627,6 @@ watch(showBanModal, (open) => {
 });
 
 onBeforeUnmount(() => {
-    window.removeEventListener('resize', syncInteractionModes);
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     pausePolling();
     if (gsapCtx) {
@@ -688,16 +676,18 @@ const handleLogout = () => {
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
         >
-            <!-- Global Mouse Glow -->
+            <!-- Global Mouse Glow (hidden on mobile for performance) -->
             <div
+                v-if="!isMobile"
                 ref="mouseGlow"
                 class="pointer-events-none fixed -top-[200px] -left-[200px] z-0 h-[400px] w-[400px] rounded-full blur-[120px] transition-colors duration-1000 will-change-transform"
                 :class="ambientColor"
                 aria-hidden="true"
             ></div>
 
-            <!-- Monolithic Grid Overlay -->
+            <!-- Monolithic Grid Overlay (hidden on mobile for performance) -->
             <div
+                v-if="!isMobile"
                 ref="backgroundGrid"
                 class="pointer-events-none fixed inset-[-100px] z-0 opacity-[0.03] will-change-transform dark:opacity-[0.06]"
                 aria-hidden="true"
@@ -720,13 +710,15 @@ const handleLogout = () => {
                 ></div>
             </div>
 
-            <!-- Ambient orbs -->
+            <!-- Ambient orbs (hidden on mobile for performance) -->
             <div
+                v-if="!isMobile"
                 class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full blur-[120px] transition-colors duration-1000"
                 :class="ambientColor"
                 aria-hidden="true"
             ></div>
             <div
+                v-if="!isMobile"
                 class="orb pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full blur-[120px] transition-colors duration-1000"
                 :class="ambientColor"
                 aria-hidden="true"

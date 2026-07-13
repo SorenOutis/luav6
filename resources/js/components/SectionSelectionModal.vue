@@ -3,15 +3,8 @@ import axios from 'axios';
 import { Check, Hash, Loader2, Sparkles, X } from 'lucide-vue-next';
 import { ref, nextTick, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 
 const props = defineProps<{
@@ -124,141 +117,138 @@ watch(
 </script>
 
 <template>
-    <Dialog :open="show">
-        <DialogContent
-            class="w-[96vw] max-w-[520px] border-primary/20 bg-background p-5 shadow-2xl sm:p-8"
-            :show-close-button="false"
-            @pointer-down-outside.prevent
-            @escape-key-down.prevent
-        >
-            <!-- ═══════════════ CODE INPUT ═══════════════ -->
-            <template v-if="!showSuccess">
-                <DialogHeader class="sm:text-center">
-                    <DialogTitle
-                        class="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-xl font-black text-transparent sm:text-3xl"
-                    >
-                        Welcome to the Academy
-                    </DialogTitle>
-                    <DialogDescription
-                        class="mx-auto max-w-lg pt-2 text-xs leading-relaxed text-muted-foreground/80 sm:text-sm"
-                    >
-                        Enter your section code to join your class. Your
-                        instructor should have provided this code.
-                    </DialogDescription>
-                </DialogHeader>
+    <ResponsiveModal
+        :open="show"
+        prevent-close
+        :show-sheet-close="false"
+        content-class="w-[96vw] max-w-[520px] border-primary/20 bg-background p-5 shadow-2xl sm:p-8"
+        @close="emit('close')"
+    >
+        <!-- ═══════════════ CODE INPUT ═══════════════ -->
+        <template v-if="!showSuccess">
+            <div class="sm:text-center">
+                <h2
+                    class="bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-xl font-black text-transparent sm:text-3xl"
+                >
+                    Welcome to the Academy
+                </h2>
+                <p
+                    class="mx-auto max-w-lg pt-2 text-xs leading-relaxed text-muted-foreground/80 sm:text-sm"
+                >
+                    Enter your section code to join your class. Your
+                    instructor should have provided this code.
+                </p>
+            </div>
 
-                <div class="py-6 sm:py-8">
-                    <div class="mx-auto max-w-sm space-y-4">
-                        <div class="space-y-2">
-                            <label
-                                class="block text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase sm:text-xs"
-                            >
-                                Section code
-                            </label>
-                            <div class="relative">
-                                <Hash
-                                    class="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground/40"
-                                />
-                                <Input
-                                    v-model="joinCode"
-                                    placeholder="e.g. 9H84-K6B5"
-                                    class="h-12 pl-10 text-center font-mono text-lg font-bold tracking-[0.3em] uppercase sm:text-xl"
-                                    maxlength="9"
-                                    @input="handleCodeInput"
-                                    @keyup.enter="submitCode"
-                                />
-                            </div>
-                            <InputError :message="codeError" />
-                        </div>
-
-                        <Button
-                            @click="submitCode"
-                            class="h-12 w-full text-sm font-black tracking-wider uppercase shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50 sm:h-14 sm:text-base"
-                            :disabled="
-                                joinCode.replace(/-/g, '').length !== 8 ||
-                                isVerifyingCode
-                            "
+            <div class="py-6 sm:py-8">
+                <div class="mx-auto max-w-sm space-y-4">
+                    <div class="space-y-2">
+                        <label
+                            class="block text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase sm:text-xs"
                         >
-                            <Loader2
-                                v-if="isVerifyingCode"
-                                class="mr-2 h-5 w-5 animate-spin"
+                            Section code
+                        </label>
+                        <div class="relative">
+                            <Hash
+                                class="pointer-events-none absolute top-1/2 left-3 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground/40"
                             />
-                            <Sparkles v-else class="mr-2 h-5 w-5" />
-                            {{ isVerifyingCode ? 'Joining...' : 'Join Section' }}
-                        </Button>
+                            <Input
+                                v-model="joinCode"
+                                placeholder="e.g. 9H84-K6B5"
+                                class="h-12 pl-10 text-center font-mono text-lg font-bold tracking-[0.3em] uppercase sm:text-xl"
+                                maxlength="9"
+                                @input="handleCodeInput"
+                                @keyup.enter="submitCode"
+                            />
+                        </div>
+                        <InputError :message="codeError" />
                     </div>
-                </div>
 
-                <DialogFooter class="flex flex-col pt-2 sm:items-center">
                     <Button
-                        @click="emit('close')"
-                        variant="ghost"
-                        class="h-10 text-xs font-medium text-muted-foreground/60 hover:text-muted-foreground/90"
-                    >
-                        Skip for now — I&apos;ll join later
-                    </Button>
-                </DialogFooter>
-            </template>
-
-            <!-- ═══════════════ SUCCESS ═══════════════ -->
-            <template v-else-if="joinedSection">
-                <DialogHeader class="sm:text-center">
-                    <div
-                        class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full sm:h-20 sm:w-20"
-                        :class="joinedSection.already_joined ? 'bg-amber-500/10' : 'bg-primary/10'"
-                    >
-                        <template v-if="joinedSection.already_joined">
-                            <Check
-                                class="h-8 w-8 text-amber-500 sm:h-10 sm:w-10"
-                                :class="isEnteringDashboard ? 'animate-none' : 'animate-bounce'"
-                            />
-                        </template>
-                        <template v-else>
-                            <Check
-                                class="h-8 w-8 animate-bounce text-primary sm:h-10 sm:w-10"
-                            />
-                        </template>
-                    </div>
-                    <DialogTitle
-                        class="text-xl font-black tracking-tight uppercase sm:text-3xl"
-                    >
-                        {{ joinedSection.already_joined ? 'Already Joined' : 'You\'re in!' }}
-                    </DialogTitle>
-                    <DialogDescription
-                        class="mx-auto max-w-md pt-2 text-sm leading-relaxed"
-                    >
-                        <template v-if="joinedSection.already_joined">
-                            You&apos;re already a member of
-                            <strong class="text-foreground">{{
-                                joinedSection.name
-                            }}</strong
-                            >.
-                        </template>
-                        <template v-else>
-                            You&apos;ve successfully joined
-                            <strong class="text-foreground">{{
-                                joinedSection.name
-                            }}</strong
-                            >. Redirecting to your dashboard...
-                        </template>
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div class="flex justify-center py-6">
-                    <Button
-                        @click="enterDashboard"
-                        class="h-12 w-full max-w-sm text-sm font-black tracking-wider uppercase shadow-lg transition-all sm:h-14 sm:text-base"
-                        :disabled="isEnteringDashboard"
+                        @click="submitCode"
+                        class="h-12 w-full text-sm font-black tracking-wider uppercase shadow-lg shadow-primary/20 transition-all hover:translate-y-[-2px] active:translate-y-[0] disabled:opacity-50 sm:h-14 sm:text-base"
+                        :disabled="
+                            joinCode.replace(/-/g, '').length !== 8 ||
+                            isVerifyingCode
+                        "
                     >
                         <Loader2
-                            v-if="isEnteringDashboard"
+                            v-if="isVerifyingCode"
                             class="mr-2 h-5 w-5 animate-spin"
                         />
-                        <Check v-else class="mr-2 h-5 w-5" />
-                        {{ isEnteringDashboard ? 'Entering…' : 'Enter Dashboard' }}
+                        <Sparkles v-else class="mr-2 h-5 w-5" />
+                        {{ isVerifyingCode ? 'Joining...' : 'Join Section' }}
                     </Button>
                 </div>
-            </template>
-        </DialogContent>
-    </Dialog>
+            </div>
+
+            <div class="flex flex-col pt-2 sm:items-center">
+                <Button
+                    @click="emit('close')"
+                    variant="ghost"
+                    class="h-10 text-xs font-medium text-muted-foreground/60 hover:text-muted-foreground/90"
+                >
+                    Skip for now — I&apos;ll join later
+                </Button>
+            </div>
+        </template>
+
+        <!-- ═══════════════ SUCCESS ═══════════════ -->
+        <template v-else-if="joinedSection">
+            <div class="sm:text-center">
+                <div
+                    class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full sm:h-20 sm:w-20"
+                    :class="joinedSection.already_joined ? 'bg-amber-500/10' : 'bg-primary/10'"
+                >
+                    <template v-if="joinedSection.already_joined">
+                        <Check
+                            class="h-8 w-8 text-amber-500 sm:h-10 sm:w-10"
+                            :class="isEnteringDashboard ? 'animate-none' : 'animate-bounce'"
+                        />
+                    </template>
+                    <template v-else>
+                        <Check
+                            class="h-8 w-8 animate-bounce text-primary sm:h-10 sm:w-10"
+                        />
+                    </template>
+                </div>
+                <h2
+                    class="text-xl font-black tracking-tight uppercase sm:text-3xl"
+                >
+                    {{ joinedSection.already_joined ? 'Already Joined' : 'You\'re in!' }}
+                </h2>
+                <p
+                    class="mx-auto max-w-md pt-2 text-sm leading-relaxed"
+                >
+                    <template v-if="joinedSection.already_joined">
+                        You&apos;re already a member of
+                        <strong class="text-foreground">{{
+                            joinedSection.name
+                        }}</strong>.
+                    </template>
+                    <template v-else>
+                        You&apos;ve successfully joined
+                        <strong class="text-foreground">{{
+                            joinedSection.name
+                        }}</strong>. Redirecting to your dashboard...
+                    </template>
+                </p>
+            </div>
+
+            <div class="flex justify-center py-6">
+                <Button
+                    @click="enterDashboard"
+                    class="h-12 w-full max-w-sm text-sm font-black tracking-wider uppercase shadow-lg transition-all sm:h-14 sm:text-base"
+                    :disabled="isEnteringDashboard"
+                >
+                    <Loader2
+                        v-if="isEnteringDashboard"
+                        class="mr-2 h-5 w-5 animate-spin"
+                    />
+                    <Check v-else class="mr-2 h-5 w-5" />
+                    {{ isEnteringDashboard ? 'Entering…' : 'Enter Dashboard' }}
+                </Button>
+            </div>
+        </template>
+    </ResponsiveModal>
 </template>

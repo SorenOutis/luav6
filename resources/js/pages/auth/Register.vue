@@ -2,15 +2,12 @@
 import { Form, Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
     DialogDescription,
-    DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from '@/components/ui/dialog';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
@@ -27,6 +24,8 @@ defineProps<{
 defineOptions({ layout: AuthBase });
 
 const submitting = ref(false);
+const showTermsModal = ref(false);
+
 const onSubmit = () => {
     submitting.value = true;
 };
@@ -175,115 +174,13 @@ const onSubmit = () => {
                         >
                             I accept the
                         </Label>
-                        <Dialog>
-                            <DialogTrigger as-child>
-                                <button
-                                    type="button"
-                                    class="ml-1 inline underline decoration-border underline-offset-4 transition-colors hover:text-foreground"
-                                >
-                                    Terms and Conditions
-                                </button>
-                            </DialogTrigger>
-                            <DialogContent
-                                class="w-[95vw] max-w-2xl border-border/40 bg-background/95 p-0 backdrop-blur-xl"
-                            >
-                                <DialogHeader
-                                    class="border-b border-border/40 px-5 py-4 sm:px-6"
-                                >
-                                    <DialogTitle
-                                        class="text-left text-lg font-black tracking-tight uppercase sm:text-2xl"
-                                    >
-                                        Terms and Conditions
-                                    </DialogTitle>
-                                    <DialogDescription
-                                        class="text-left text-xs sm:text-sm"
-                                    >
-                                        Effective date: April 17, 2026.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div
-                                    class="max-h-[70vh] space-y-5 overflow-y-auto px-5 py-4 text-sm leading-6 text-muted-foreground sm:px-6"
-                                >
-                                    <section>
-                                        <h3
-                                            class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
-                                        >
-                                            1. Account Responsibility
-                                        </h3>
-                                        <p class="mt-1">
-                                            You are responsible for maintaining
-                                            the confidentiality of your account
-                                            credentials and for activity under
-                                            your account.
-                                        </p>
-                                    </section>
-                                    <section>
-                                        <h3
-                                            class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
-                                        >
-                                            2. Acceptable Use
-                                        </h3>
-                                        <p class="mt-1">
-                                            You agree not to abuse, disrupt,
-                                            scrape, reverse engineer, or attempt
-                                            unauthorized access to platform
-                                            services, data, or accounts.
-                                        </p>
-                                    </section>
-                                    <section>
-                                        <h3
-                                            class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
-                                        >
-                                            3. Content and Conduct
-                                        </h3>
-                                        <p class="mt-1">
-                                            You retain ownership of your
-                                            submitted content, but grant LUA V6
-                                            permission to process and display it
-                                            to provide core features.
-                                        </p>
-                                    </section>
-                                    <section>
-                                        <h3
-                                            class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
-                                        >
-                                            4. Availability
-                                        </h3>
-                                        <p class="mt-1">
-                                            We may update, suspend, or
-                                            discontinue parts of the service
-                                            without notice, and uninterrupted
-                                            uptime is not guaranteed.
-                                        </p>
-                                    </section>
-                                    <section>
-                                        <h3
-                                            class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
-                                        >
-                                            5. Limitation of Liability
-                                        </h3>
-                                        <p class="mt-1">
-                                            The platform is provided on an "as
-                                            is" basis and is not liable for
-                                            indirect, incidental, or
-                                            consequential damages.
-                                        </p>
-                                    </section>
-                                    <section>
-                                        <h3
-                                            class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
-                                        >
-                                            6. Changes to Terms
-                                        </h3>
-                                        <p class="mt-1">
-                                            These terms may be revised from time
-                                            to time. Continued use after updates
-                                            means you accept the revised terms.
-                                        </p>
-                                    </section>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
+                        <button
+                            type="button"
+                            @click="showTermsModal = true"
+                            class="ml-1 inline underline decoration-border underline-offset-4 transition-colors hover:text-foreground"
+                        >
+                            Terms and Conditions
+                        </button>
                     </div>
                 </div>
                 <InputError :message="errors.terms" />
@@ -315,4 +212,94 @@ const onSubmit = () => {
             >
         </div>
     </Form>
+
+    <!-- Terms and Conditions Modal -->
+    <ResponsiveModal
+        :open="showTermsModal"
+        custom-header
+        title="Terms and Conditions"
+        description="Effective date: April 17, 2026."
+        content-class="w-[95vw] max-w-2xl border-border/40 bg-background/95 backdrop-blur-xl"
+        @close="showTermsModal = false"
+    >
+        <template #header>
+            <DialogTitle
+                class="text-left text-lg font-black tracking-tight uppercase sm:text-2xl"
+            >
+                Terms and Conditions
+            </DialogTitle>
+            <DialogDescription class="text-left text-xs sm:text-sm">
+                Effective date: April 17, 2026.
+            </DialogDescription>
+        </template>
+
+        <div class="max-h-[70vh] space-y-5 overflow-y-auto py-4 text-sm leading-6 text-muted-foreground">
+            <section>
+                <h3
+                    class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
+                >
+                    1. Account Responsibility
+                </h3>
+                <p class="mt-1">
+                    You are responsible for maintaining the confidentiality of your account
+                    credentials and for activity under your account.
+                </p>
+            </section>
+            <section>
+                <h3
+                    class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
+                >
+                    2. Acceptable Use
+                </h3>
+                <p class="mt-1">
+                    You agree not to abuse, disrupt, scrape, reverse engineer, or attempt
+                    unauthorized access to platform services, data, or accounts.
+                </p>
+            </section>
+            <section>
+                <h3
+                    class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
+                >
+                    3. Content and Conduct
+                </h3>
+                <p class="mt-1">
+                    You retain ownership of your submitted content, but grant LUA V6
+                    permission to process and display it to provide core features.
+                </p>
+            </section>
+            <section>
+                <h3
+                    class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
+                >
+                    4. Availability
+                </h3>
+                <p class="mt-1">
+                    We may update, suspend, or discontinue parts of the service
+                    without notice, and uninterrupted uptime is not guaranteed.
+                </p>
+            </section>
+            <section>
+                <h3
+                    class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
+                >
+                    5. Limitation of Liability
+                </h3>
+                <p class="mt-1">
+                    The platform is provided on an &quot;as is&quot; basis and is not liable for
+                    indirect, incidental, or consequential damages.
+                </p>
+            </section>
+            <section>
+                <h3
+                    class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
+                >
+                    6. Changes to Terms
+                </h3>
+                <p class="mt-1">
+                    These terms may be revised from time to time. Continued use after updates
+                    means you accept the revised terms.
+                </p>
+            </section>
+        </div>
+    </ResponsiveModal>
 </template>

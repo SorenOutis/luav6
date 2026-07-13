@@ -11,11 +11,9 @@ import {
 } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 import { Button } from '@/components/ui/button';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import {
-    Dialog,
-    DialogContent,
     DialogDescription,
-    DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -392,121 +390,110 @@ onMounted(() => {
             </div>
         </div>
 
-        <!-- Submission Modal - Revamped -->
-        <Dialog
+        <!-- Submission Modal -->
+        <ResponsiveModal
             :open="showSubmissionModal"
-            @update:open="showSubmissionModal = $event"
+            custom-header
+            content-class="overflow-hidden rounded-[2rem] border-primary/30 bg-background/95 p-0 shadow-2xl shadow-primary/20 backdrop-blur-3xl sm:rounded-[2.5rem] sm:max-w-[600px]"
+            @close="showSubmissionModal = false"
         >
-            <DialogContent
-                class="max-w-[95vw] overflow-hidden rounded-[2rem] border-primary/30 bg-background/95 p-0 shadow-2xl shadow-primary/20 backdrop-blur-3xl sm:max-w-[600px] sm:rounded-[2.5rem]"
-            >
-                <div
-                    class="absolute top-0 left-0 h-2 w-full bg-gradient-to-r from-transparent via-primary to-transparent"
-                ></div>
-
-                <div class="space-y-6 p-6 sm:space-y-8 sm:p-12">
-                    <DialogHeader class="text-center sm:text-left">
+            <div class="absolute top-0 left-0 h-2 w-full bg-gradient-to-r from-transparent via-primary to-transparent pointer-events-none"></div>
+            <template #header>
+                <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+                    <div
+                        class="group relative flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 shadow-2xl sm:h-20 sm:w-20 sm:rounded-3xl"
+                    >
                         <div
-                            class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6"
-                        >
-                            <div
-                                class="group relative flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 shadow-2xl sm:h-20 sm:w-20 sm:rounded-3xl"
-                            >
-                                <div
-                                    class="absolute inset-0 bg-primary opacity-20 blur-xl transition-opacity group-hover:opacity-40"
-                                ></div>
-                                <MessageSquare
-                                    class="relative z-10 h-6 w-6 text-primary sm:h-10 sm:w-10"
-                                />
-                            </div>
-                            <div class="space-y-1 sm:space-y-2">
-                                <DialogTitle
-                                    class="text-2xl leading-tight font-black tracking-tighter sm:text-4xl"
-                                    >Post Anonymously</DialogTitle
-                                >
-                                <DialogDescription
-                                    class="text-xs leading-tight font-medium text-muted-foreground sm:text-lg"
-                                >
-                                    Your message will be encrypted and shielded.
-                                    No one will know it's you.
-                                </DialogDescription>
-                            </div>
-                        </div>
-                    </DialogHeader>
-
-                    <div class="space-y-4 sm:space-y-6">
-                        <div class="group relative">
-                            <div
-                                class="absolute -inset-1 rounded-[1.5rem] bg-gradient-to-r from-primary/20 to-transparent opacity-0 blur transition-opacity group-focus-within:opacity-100 sm:rounded-[2rem]"
-                            ></div>
-                            <Textarea
-                                v-model="form.content"
-                                placeholder="What's on your mind? Be bold, be real..."
-                                class="relative min-h-[140px] resize-none rounded-[1.25rem] border-border/40 bg-muted/40 p-5 text-base font-bold tracking-tight shadow-inner transition-all placeholder:text-muted-foreground/30 focus:border-primary/50 focus:ring-primary/20 sm:min-h-[220px] sm:rounded-[1.5rem] sm:p-8 sm:text-xl"
-                                :disabled="isSubmitting"
-                            />
-                            <div
-                                v-if="form.errors.content"
-                                class="px-2 pt-2 text-[9px] font-black tracking-[0.2em] text-destructive uppercase sm:text-[10px]"
-                            >
-                                {{ form.errors.content }}
-                            </div>
-                        </div>
-
-                        <div
-                            class="group flex items-center gap-3 rounded-[1.25rem] border border-primary/10 bg-primary/5 p-4 sm:gap-4 sm:rounded-[1.5rem] sm:p-5"
-                        >
-                            <div
-                                class="rounded-lg bg-primary/10 p-1.5 transition-transform group-hover:rotate-12"
-                            >
-                                <Shield
-                                    class="h-4 w-4 text-primary sm:h-6 sm:w-6"
-                                />
-                            </div>
-                            <div class="space-y-0.5">
-                                <div
-                                    class="text-[9px] font-black tracking-[0.1em] text-primary uppercase sm:text-[11px]"
-                                >
-                                    Identity Shield Active
-                                </div>
-                                <div
-                                    class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase opacity-60 sm:text-[10px]"
-                                >
-                                    100% Anonymous Routing
-                                </div>
-                            </div>
-                        </div>
+                            class="absolute inset-0 bg-primary opacity-20 blur-xl transition-opacity group-hover:opacity-40"
+                        ></div>
+                        <MessageSquare
+                            class="relative z-10 h-6 w-6 text-primary sm:h-10 sm:w-10"
+                        />
                     </div>
-
-                    <div class="flex flex-col gap-2 sm:flex-row sm:gap-4">
-                        <Button
-                            @click="submit"
-                            class="group/submit order-1 h-12 flex-1 gap-3 rounded-xl px-8 font-black tracking-[0.15em] uppercase shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98] sm:h-14 sm:gap-4 sm:rounded-2xl sm:px-10"
-                            :disabled="isSubmitting || !form.content.trim()"
+                    <div class="space-y-1 sm:space-y-2">
+                        <DialogTitle
+                            class="text-2xl leading-tight font-black tracking-tighter sm:text-4xl"
+                            >Post Anonymously</DialogTitle
                         >
-                            <div
-                                v-if="!isSubmitting"
-                                class="rounded-lg bg-primary-foreground/10 p-1.5 transition-transform group-hover/submit:translate-x-1"
-                            >
-                                <Send class="h-4 w-4" />
-                            </div>
-                            <Sparkles v-else class="h-5 w-5 animate-spin" />
-                            {{
-                                isSubmitting ? 'Encrypting...' : 'Post Shoutout'
-                            }}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            @click="showSubmissionModal = false"
-                            class="order-2 h-10 rounded-xl px-6 text-[9px] font-black tracking-widest uppercase hover:bg-muted/50 sm:h-14 sm:rounded-2xl sm:px-8 sm:text-[10px]"
-                            :disabled="isSubmitting"
+                        <DialogDescription
+                            class="text-xs leading-tight font-medium text-muted-foreground sm:text-lg"
                         >
-                            Cancel
-                        </Button>
+                            Your message will be encrypted and shielded.
+                            No one will know it's you.
+                        </DialogDescription>
                     </div>
                 </div>
-            </DialogContent>
-        </Dialog>
+            </template>
+
+            <div class="space-y-4 sm:space-y-6">
+                <div class="group relative">
+                    <div
+                        class="absolute -inset-1 rounded-[1.5rem] bg-gradient-to-r from-primary/20 to-transparent opacity-0 blur transition-opacity group-focus-within:opacity-100 sm:rounded-[2rem]"
+                    ></div>
+                    <Textarea
+                        v-model="form.content"
+                        placeholder="What's on your mind? Be bold, be real..."
+                        class="relative min-h-[140px] resize-none rounded-[1.25rem] border-border/40 bg-muted/40 p-5 text-base font-bold tracking-tight shadow-inner transition-all placeholder:text-muted-foreground/30 focus:border-primary/50 focus:ring-primary/20 sm:min-h-[220px] sm:rounded-[1.5rem] sm:p-8 sm:text-xl"
+                        :disabled="isSubmitting"
+                    />
+                    <div
+                        v-if="form.errors.content"
+                        class="px-2 pt-2 text-[9px] font-black tracking-[0.2em] text-destructive uppercase sm:text-[10px]"
+                    >
+                        {{ form.errors.content }}
+                    </div>
+                </div>
+
+                <div
+                    class="group flex items-center gap-3 rounded-[1.25rem] border border-primary/10 bg-primary/5 p-4 sm:gap-4 sm:rounded-[1.5rem] sm:p-5"
+                >
+                    <div
+                        class="rounded-lg bg-primary/10 p-1.5 transition-transform group-hover:rotate-12"
+                    >
+                        <Shield
+                            class="h-4 w-4 text-primary sm:h-6 sm:w-6"
+                        />
+                    </div>
+                    <div class="space-y-0.5">
+                        <div
+                            class="text-[9px] font-black tracking-[0.1em] text-primary uppercase sm:text-[11px]"
+                        >
+                            Identity Shield Active
+                        </div>
+                        <div
+                            class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase opacity-60 sm:text-[10px]"
+                        >
+                            100% Anonymous Routing
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template #footer>
+                <Button
+                    @click="submit"
+                    class="group/submit order-1 h-12 flex-1 gap-3 rounded-xl px-8 font-black tracking-[0.15em] uppercase shadow-2xl shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98] sm:h-14 sm:gap-4 sm:rounded-2xl sm:px-10"
+                    :disabled="isSubmitting || !form.content.trim()"
+                >
+                    <div
+                        v-if="!isSubmitting"
+                        class="rounded-lg bg-primary-foreground/10 p-1.5 transition-transform group-hover/submit:translate-x-1"
+                    >
+                        <Send class="h-4 w-4" />
+                    </div>
+                    <Sparkles v-else class="h-5 w-5 animate-spin" />
+                    {{ isSubmitting ? 'Encrypting...' : 'Post Shoutout' }}
+                </Button>
+                <Button
+                    variant="ghost"
+                    @click="showSubmissionModal = false"
+                    class="order-2 h-10 rounded-xl px-6 text-[9px] font-black tracking-widest uppercase hover:bg-muted/50 sm:h-14 sm:rounded-2xl sm:px-8 sm:text-[10px]"
+                    :disabled="isSubmitting"
+                >
+                    Cancel
+                </Button>
+            </template>
+        </ResponsiveModal>
     </AppLayout>
 </template>
 

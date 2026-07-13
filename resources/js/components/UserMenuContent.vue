@@ -4,19 +4,12 @@ import { LogOut, Settings } from 'lucide-vue-next';
 import { ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
     DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import UserInfo from '@/components/UserInfo.vue';
 import { logout } from '@/routes';
 import { edit } from '@/routes/profile';
@@ -78,33 +71,29 @@ const confirmLogout = () => {
         </button>
     </DropdownMenuItem>
 
-    <Dialog v-model:open="showLogoutDialog">
-        <DialogContent class="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>Log out of your account?</DialogTitle>
-                <DialogDescription>
-                    You'll need to sign in again to access your dashboard,
-                    progress, and learning map.
-                </DialogDescription>
-            </DialogHeader>
-            <DialogFooter class="gap-2 sm:gap-2">
-                <Button
-                    variant="outline"
-                    :disabled="loggingOut"
-                    @click="showLogoutDialog = false"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    variant="destructive"
-                    :disabled="loggingOut"
-                    @click="confirmLogout"
-                    data-test="logout-confirm-button"
-                >
-                    <LogOut class="mr-2 h-4 w-4" />
-                    {{ loggingOut ? 'Logging out...' : 'Log out' }}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
+    <ResponsiveModal
+        :open="showLogoutDialog"
+        title="Log out of your account?"
+        description="You'll need to sign in again to access your dashboard, progress, and learning map."
+        @close="showLogoutDialog = false"
+    >
+        <template #footer>
+            <Button
+                variant="outline"
+                :disabled="loggingOut"
+                @click="showLogoutDialog = false"
+            >
+                Cancel
+            </Button>
+            <Button
+                variant="destructive"
+                :disabled="loggingOut"
+                @click="confirmLogout"
+                data-test="logout-confirm-button"
+            >
+                <LogOut class="mr-2 h-4 w-4" />
+                {{ loggingOut ? 'Logging out...' : 'Log out' }}
+            </Button>
+        </template>
+    </ResponsiveModal>
 </template>

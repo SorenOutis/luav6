@@ -19,11 +19,13 @@ import PageSkeleton from '@/components/PageSkeleton.vue';
 import { Button } from '@/components/ui/button';
 
 const { isVisible: isLoaderVisible } = useLoader();
+const { isMobile: isMobileDevice } = useMobile();
 const isBooted = ref(false);
 
 gsap.registerPlugin(ScrollTrigger);
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
+import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -272,11 +274,13 @@ declare const route: any;
                 ref="container"
                 class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
             >
-            <!-- Decorative Orbs -->
+            <!-- Decorative Orbs (hidden on mobile for performance) -->
             <div
+                v-if="!isMobileDevice"
                 class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
             ></div>
             <div
+                v-if="!isMobileDevice"
                 class="orb pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
             ></div>
 
