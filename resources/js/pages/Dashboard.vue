@@ -786,7 +786,7 @@ const handleLogout = () => {
                     :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
                     class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
                 >
-                    <!-- Main Section: Leaderboard + Mission Control -->
+                    <!-- Main Section: Leaderboard + Learning Hub -->
                     <div class="min-w-0 space-y-8 lg:col-span-2">
                         <!-- Mobile: Collapsible Leaderboard -->
                         <div class="lg:hidden">

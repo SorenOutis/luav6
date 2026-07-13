@@ -122,75 +122,81 @@ const rankClass = (rank: number) => {
             </div>
         </div>
 
-        <EmptyState
-            v-if="!activeLeaderboard || topUsers.length === 0"
-            class="mt-5 relative z-10"
-            compact
-            :icon="Trophy"
-            title="No rankings yet"
-            message="Earn XP from exams, assignments, and activities to start the class leaderboard."
-        />
-
-        <div v-else class="mt-5 grid gap-3 lg:grid-cols-5 relative z-10">
-            <SpotlightCard
-                v-for="(user, index) in topUsers"
-                :key="user.id"
-                :as="Link"
-                :href="`/u/${user.id}`"
-                customSize
-                glowColor="purple"
-                :className="`group relative overflow-hidden rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-center ${user.isCurrentUser ? 'border-primary/40 ring-1 ring-primary/25 !bg-primary/[0.05] hover:!bg-primary/[0.1]' : user.blurred ? 'border-muted/30 !bg-muted/[0.02]' : 'border-border/35 !bg-card/30 hover:border-primary/40 hover:!bg-card/50'}`"
+        <Transition name="hub-fade" mode="out-in">
+            <div
+                :key="activeLeaderboard && topUsers.length > 0 ? 'content' : 'empty'"
+                class="mt-5 relative z-10"
             >
-                <div
-                    v-if="user.isCurrentUser"
-                    class="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-primary/15 blur-2xl"
-                    aria-hidden="true"
+                <EmptyState
+                    v-if="!activeLeaderboard || topUsers.length === 0"
+                    compact
+                    :icon="Trophy"
+                    title="No rankings yet"
+                    message="Earn XP from exams, assignments, and activities to start the class leaderboard."
                 />
 
-                <div class="relative flex items-center gap-3 lg:flex-col lg:text-center z-10">
-                    <div
-                        :class="[
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-xs font-black lg:h-9 lg:w-9',
-                            rankClass(index + 1),
-                        ]"
+                <div v-else class="grid gap-3 lg:grid-cols-5">
+                    <SpotlightCard
+                        v-for="(user, index) in topUsers"
+                        :key="user.id"
+                        :as="Link"
+                        :href="`/u/${user.id}`"
+                        customSize
+                        glowColor="purple"
+                        :className="`group relative overflow-hidden rounded-2xl border p-3 transition-all duration-300 hover:-translate-y-0.5 flex flex-col justify-center ${user.isCurrentUser ? 'border-primary/40 ring-1 ring-primary/25 !bg-primary/[0.05] hover:!bg-primary/[0.1]' : user.blurred ? 'border-muted/30 !bg-muted/[0.02]' : 'border-border/35 !bg-card/30 hover:border-primary/40 hover:!bg-card/50'}`"
                     >
-                        <component :is="rankIcon(index + 1)" class="h-4 w-4" />
-                    </div>
-
-                    <div class="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/30 lg:h-14 lg:w-14">
-                        <img v-if="user.avatar" :src="user.avatar" :alt="user.blurred ? 'Hidden user' : user.name" class="h-full w-full object-cover" :class="user.blurred && 'blur-sm'" />
-                        <div v-else class="flex h-full w-full items-center justify-center">
-                            <User class="h-5 w-5 text-muted-foreground/50" />
-                        </div>
                         <div
-                            v-if="user.blurred"
-                            class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/[0.03] backdrop-blur-[1px]"
-                        >
-                            <EyeOff class="h-4 w-4 text-muted-foreground/40" />
-                        </div>
-                    </div>
+                            v-if="user.isCurrentUser"
+                            class="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-primary/15 blur-2xl"
+                            aria-hidden="true"
+                        />
 
-                    <div class="min-w-0 flex-1 lg:w-full">
-                        <div class="flex items-center gap-1.5 lg:justify-center">
-                            <p class="truncate text-sm font-black tracking-tight group-hover:text-primary lb-blurred-text">
-                                {{ user.blurred ? BLURRED_NAME : user.name }}
-                            </p>
-                            <span
-                                v-if="user.isCurrentUser"
-                                class="rounded-full bg-primary px-1.5 py-0.5 text-[7px] font-black uppercase text-primary-foreground"
+                        <div class="relative flex items-center gap-3 lg:flex-col lg:text-center z-10">
+                            <div
+                                :class="[
+                                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border text-xs font-black lg:h-9 lg:w-9',
+                                    rankClass(index + 1),
+                                ]"
                             >
-                                You
-                            </span>
+                                <component :is="rankIcon(index + 1)" class="h-4 w-4" />
+                            </div>
+
+                            <div class="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/30 lg:h-14 lg:w-14">
+                                <img v-if="user.avatar" :src="user.avatar" :alt="user.blurred ? 'Hidden user' : user.name" class="h-full w-full object-cover" :class="user.blurred && 'blur-sm'" />
+                                <div v-else class="flex h-full w-full items-center justify-center">
+                                    <User class="h-5 w-5 text-muted-foreground/50" />
+                                </div>
+                                <div
+                                    v-if="user.blurred"
+                                    class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/[0.03] backdrop-blur-[1px]"
+                                >
+                                    <EyeOff class="h-4 w-4 text-muted-foreground/40" />
+                                </div>
+                            </div>
+
+                            <div class="min-w-0 flex-1 lg:w-full">
+                                <div class="flex items-center gap-1.5 lg:justify-center">
+                                    <p class="truncate text-sm font-black tracking-tight group-hover:text-primary lb-blurred-text">
+                                        {{ user.blurred ? BLURRED_NAME : user.name }}
+                                    </p>
+                                    <span
+                                        v-if="user.isCurrentUser"
+                                        class="rounded-full bg-primary px-1.5 py-0.5 text-[7px] font-black uppercase text-primary-foreground"
+                                    >
+                                        You
+                                    </span>
+                                </div>
+                                <div class="mt-1 flex items-center gap-2 text-[10px] font-bold text-muted-foreground lg:justify-center">
+                                    <span>{{ user.xp.toLocaleString() }} XP</span>
+                                    <span class="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                                    <span>Lv {{ user.level }}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mt-1 flex items-center gap-2 text-[10px] font-bold text-muted-foreground lg:justify-center">
-                            <span>{{ user.xp.toLocaleString() }} XP</span>
-                            <span class="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                            <span>Lv {{ user.level }}</span>
-                        </div>
-                    </div>
+                    </SpotlightCard>
                 </div>
-            </SpotlightCard>
-        </div>
+            </div>
+        </Transition>
 
         <div
             v-if="shouldShowCurrentUserFooter && currentUser"
@@ -221,5 +227,20 @@ const rankClass = (rank: number) => {
 }
 .lb-blurred-text::-moz-selection {
     background: transparent;
+}
+
+.hub-fade-enter-active,
+.hub-fade-leave-active {
+    transition:
+        opacity 0.35s cubic-bezier(0.23, 1, 0.32, 1),
+        transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.hub-fade-enter-from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+}
+.hub-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
 }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Clock } from 'lucide-vue-next';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
@@ -28,8 +29,10 @@ interface Props {
     assignments: Assignment[];
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 const emit = defineEmits(['course-click', 'assignment-click']);
+
+const hasContent = computed(() => props.courses.length > 0 || props.assignments.length > 0);
 
 const handleCourseClick = (course: Course) => {
     emit('course-click', course);
@@ -73,12 +76,12 @@ const handleAssignmentClick = (assignment: Assignment) => {
                                 d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
                             />
                         </svg>
-                        Mission Control
+                        Learning Hub
                     </h3>
                     <p
                         class="mt-1 text-[9px] font-bold tracking-widest text-muted-foreground/60 uppercase sm:text-[10px]"
                     >
-                        Your learning trajectory and active assignments
+                        Your active courses and upcoming assignments
                     </p>
                 </div>
                 <div class="hidden -space-x-2 sm:flex">
@@ -101,10 +104,14 @@ const handleAssignmentClick = (assignment: Assignment) => {
                 </div>
             </div>
 
-            <div class="relative z-10 space-y-6 sm:space-y-8">
+            <Transition name="hub-fade" mode="out-in">
                 <div
-                    v-if="courses.length === 0 && assignments.length === 0"
-                    class="animate-fade-in group/empty rounded-2xl border border-dashed border-primary/20 bg-primary/5 px-4 py-10 text-center backdrop-blur-sm sm:rounded-3xl sm:py-20"
+                    :key="hasContent ? 'content' : 'empty'"
+                    class="relative z-10 space-y-6 sm:space-y-8"
+                >
+                <div
+                    v-if="!hasContent"
+                    class="group/empty rounded-2xl border border-dashed border-primary/20 bg-primary/5 px-4 py-10 text-center backdrop-blur-sm sm:rounded-3xl sm:py-20"
                 >
                     <div
                         class="relative mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-primary/20 bg-primary/10 sm:mb-6 sm:h-20 sm:w-20"
@@ -127,23 +134,22 @@ const handleAssignmentClick = (assignment: Assignment) => {
                             <circle cx="12" cy="12" r="10" />
                             <path d="m9 12 2 2 4-4" />
                         </svg>
-                    </div>
-                    <h3
-                        class="premium-gradient-text mb-2 text-xs font-black tracking-widest uppercase sm:text-base"
-                    >
-                        Objectives Secured
-                    </h3>
-                    <p
-                        class="mx-auto max-w-[240px] text-[8px] leading-relaxed font-bold tracking-wider text-muted-foreground/80 uppercase sm:max-w-[280px] sm:text-[11px]"
-                    >
-                        All sectors clear. You've completed all current modules
-                        and transmissions.
-                    </p>
-                    <button
-                        class="mt-6 rounded-lg border border-primary/20 bg-primary/10 px-5 py-2 text-[8px] font-black tracking-widest text-primary uppercase transition-all duration-300 hover:bg-primary hover:text-primary-foreground sm:mt-8 sm:rounded-xl sm:px-6 sm:text-[10px]"
-                    >
-                        Browse Archives
-                    </button>
+                    </div>                        <h3
+                            class="premium-gradient-text mb-2 text-xs font-black tracking-widest uppercase sm:text-base"
+                        >
+                            All Caught Up
+                        </h3>
+                        <p
+                            class="mx-auto max-w-[240px] text-[8px] leading-relaxed font-bold tracking-wider text-muted-foreground/80 uppercase sm:max-w-[280px] sm:text-[11px]"
+                        >
+                            Nothing pending — you've completed all current courses
+                            and assignments.
+                        </p>
+                        <button
+                            class="mt-6 rounded-lg border border-primary/20 bg-primary/10 px-5 py-2 text-[8px] font-black tracking-widest text-primary uppercase transition-all duration-300 hover:bg-primary hover:text-primary-foreground sm:mt-8 sm:rounded-xl sm:px-6 sm:text-[10px]"
+                        >
+                            Explore Courses
+                        </button>
                 </div>
 
                 <!-- Courses Section -->
@@ -152,7 +158,7 @@ const handleAssignmentClick = (assignment: Assignment) => {
                         <h4
                             class="border-l-2 border-primary pl-2 text-[9px] font-black tracking-[0.2em] text-foreground/80 uppercase sm:text-[10px]"
                         >
-                            Active Modules
+                            In Progress
                         </h4>
                         <span
                             class="text-[8px] font-bold tracking-widest text-primary/60 uppercase sm:text-[9px]"
@@ -218,7 +224,7 @@ const handleAssignmentClick = (assignment: Assignment) => {
                                                 {{ course.completedLessons }}/{{
                                                     course.totalLessons
                                                 }}
-                                                Units
+                                                Lessons
                                             </p>
                                             <span
                                                 class="h-1 w-1 rounded-full bg-border/40"
@@ -244,7 +250,7 @@ const handleAssignmentClick = (assignment: Assignment) => {
                                     class="flex items-center justify-between text-[7px] font-black tracking-widest text-muted-foreground/50 uppercase sm:text-[9px]"
                                 >
                                     <span class="text-foreground/70"
-                                        >{{ course.progress }}% Synced</span
+                                        >{{ course.progress }}% Complete</span
                                     >
                                     <span class="flex items-center gap-1"
                                         ><Clock
@@ -277,7 +283,7 @@ const handleAssignmentClick = (assignment: Assignment) => {
                     <h4
                         class="mb-3 border-l-2 border-destructive/80 pl-2 text-[10px] font-black tracking-[0.2em] text-foreground/80 uppercase"
                     >
-                        Pending Transmissions
+                        Pending Assignments
                     </h4>
                     <SpotlightCard
                         v-for="(assignment, idx) in assignments"
@@ -318,12 +324,10 @@ const handleAssignmentClick = (assignment: Assignment) => {
                                             assignment.isOverdue
                                                 ? 'border-red-500/20 bg-red-500/10 text-red-500'
                                                 : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-500',
-                                        ]"
-                                    >
-                                        {{
+                                        ]"                                >{{
                                             assignment.isOverdue
-                                                ? 'Critical'
-                                                : 'Pending'
+                                                ? 'Overdue'
+                                                : 'Due Soon'
                                         }}
                                     </p>
                                     <p
@@ -336,7 +340,25 @@ const handleAssignmentClick = (assignment: Assignment) => {
                         </div>
                     </SpotlightCard>
                 </div>
-            </div>
+                </div>
+            </Transition>
         </div>
     </SpotlightCard>
 </template>
+
+<style scoped>
+.hub-fade-enter-active,
+.hub-fade-leave-active {
+    transition:
+        opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1),
+        transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.hub-fade-enter-from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+}
+.hub-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.97);
+}
+</style>

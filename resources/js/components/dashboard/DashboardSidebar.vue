@@ -237,48 +237,55 @@ const weeklyPercent = (xp: number, goal: number) => {
                     </Link>
                 </CardHeader>
                 <CardContent class="relative z-10 pt-0">
-                    <div v-if="badges.length > 0" class="space-y-2">
+                    <Transition name="hub-fade" mode="out-in">
                         <div
-                            v-for="badge in badges.slice(0, 4)"
-                            :key="badge.id"
-                            class="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/20 p-2.5 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
+                            :key="badges.length > 0 ? 'badges' : 'empty'"
+                            class="relative z-10"
                         >
-                            <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10"
-                            >
-                                <img
-                                    v-if="badge.image"
-                                    :src="badge.image"
-                                    :alt="badge.name"
-                                    class="h-full w-full object-cover"
-                                />
-                                <span
-                                    v-else
-                                    class="text-[9px] font-black tracking-widest text-primary uppercase"
-                                    >Lvl {{ badge.requiredLevel ?? '--' }}</span
+                            <div v-if="badges.length > 0" class="space-y-2">
+                                <div
+                                    v-for="badge in badges.slice(0, 4)"
+                                    :key="badge.id"
+                                    class="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/20 p-2.5 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
                                 >
+                                    <div
+                                        class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary/10"
+                                    >
+                                        <img
+                                            v-if="badge.image"
+                                            :src="badge.image"
+                                            :alt="badge.name"
+                                            class="h-full w-full object-cover"
+                                        />
+                                        <span
+                                            v-else
+                                            class="text-[9px] font-black tracking-widest text-primary uppercase"
+                                            >Lvl {{ badge.requiredLevel ?? '--' }}</span
+                                        >
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p
+                                            class="truncate text-xs font-bold text-foreground"
+                                        >
+                                            {{ badge.name }}
+                                        </p>
+                                        <p
+                                            class="mt-0.5 truncate text-[10px] text-muted-foreground"
+                                        >
+                                            {{ badge.earnedSeason ?? 'Unlocked badge' }}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="min-w-0 flex-1">
-                                <p
-                                    class="truncate text-xs font-bold text-foreground"
-                                >
-                                    {{ badge.name }}
-                                </p>
-                                <p
-                                    class="mt-0.5 truncate text-[10px] text-muted-foreground"
-                                >
-                                    {{ badge.earnedSeason ?? 'Unlocked badge' }}
-                                </p>
-                            </div>
+                            <EmptyState
+                                v-else
+                                compact
+                                :icon="Shield"
+                                title="No badges yet"
+                                message="Reach higher levels to unlock lifetime badges and show where you earned them."
+                            />
                         </div>
-                    </div>
-                    <EmptyState
-                        v-else
-                        compact
-                        :icon="Shield"
-                        title="No badges yet"
-                        message="Reach higher levels to unlock lifetime badges and show where you earned them."
-                    />
+                    </Transition>
                 </CardContent>
             </div>
         </SpotlightCard>
@@ -409,89 +416,97 @@ const weeklyPercent = (xp: number, goal: number) => {
                     >
                         <Loader2 class="h-6 w-6 animate-spin text-primary" />
                     </div>
-                    <!-- Season Header (consistent with /exams page) -->
-                    <div
-                        v-else-if="localExams && localExams.length > 0"
-                        class="space-y-3"
-                    >
-                        <div class="flex items-center gap-2">
-                            <div class="flex items-center gap-1.5">
-                                <Calendar
-                                    class="h-3 w-3 text-primary"
-                                />
-                                <h3
-                                    class="text-[11px] font-black tracking-tight"
-                                >
-                                    {{ selectedExamSeasonName }}
-                                </h3>
-                            </div>
-                            <div
-                                class="h-px flex-1 bg-gradient-to-r from-border/60 to-transparent"
-                            />
-                            <span
-                                class="text-[9px] font-bold text-muted-foreground tabular-nums"
-                            >
-                                {{ localExams.length }}
-                                {{
-                                    localExams.length === 1
-                                        ? 'exam'
-                                        : 'exams'
-                                }}
-                            </span>
-                        </div>
-
-                        <div class="space-y-2">
-                            <Link
-                                v-for="exam in localExams.slice(0, 2)"
-                                :key="exam.id"
-                            :href="examsShow(exam.id).url"
-                            class="group block cursor-pointer rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
-                            as="div"
+                    <!-- Content / Empty with transition -->
+                    <Transition v-else name="hub-fade" mode="out-in">
+                        <div
+                            :key="localExams && localExams.length > 0 ? 'exams' : 'empty'"
+                            class="relative z-10"
                         >
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="min-w-0 flex-1">
-                                    <h4
-                                        class="truncate text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
-                                    >
-                                        {{ exam.title }}
-                                    </h4>
-                                    <div
-                                        class="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums"
-                                    >
-                                        <Clock class="h-2.5 w-2.5" />
-                                        {{ exam.duration_minutes }}m
+                            <!-- Season Header (consistent with /exams page) -->
+                            <div
+                                v-if="localExams && localExams.length > 0"
+                                class="space-y-3"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <Calendar
+                                            class="h-3 w-3 text-primary"
+                                        />
+                                        <h3
+                                            class="text-[11px] font-black tracking-tight"
+                                        >
+                                            {{ selectedExamSeasonName }}
+                                        </h3>
                                     </div>
-                                </div>
-                                <div
-                                    v-if="!exam.is_completed"
-                                    class="flex-shrink-0 text-right"
-                                >
                                     <div
-                                        class="text-xs font-bold text-primary tabular-nums"
-                                    >
-                                        {{ exam.submitted_parts }}/{{
-                                            exam.parts_count
-                                        }}
-                                    </div>
-                                </div>
-                                <div v-else class="flex-shrink-0">
+                                        class="h-px flex-1 bg-gradient-to-r from-border/60 to-transparent"
+                                    />
                                     <span
-                                        class="rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[8px] font-semibold text-primary uppercase"
+                                        class="text-[9px] font-bold text-muted-foreground tabular-nums"
                                     >
-                                        Done
+                                        {{ localExams.length }}
+                                        {{
+                                            localExams.length === 1
+                                                ? 'exam'
+                                                : 'exams'
+                                        }}
                                     </span>
                                 </div>
+
+                                <div class="space-y-2">
+                                    <Link
+                                        v-for="exam in localExams.slice(0, 2)"
+                                        :key="exam.id"
+                                        :href="examsShow(exam.id).url"
+                                        class="group block cursor-pointer rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
+                                        as="div"
+                                    >
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div class="min-w-0 flex-1">
+                                                <h4
+                                                    class="truncate text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
+                                                >
+                                                    {{ exam.title }}
+                                                </h4>
+                                                <div
+                                                    class="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums"
+                                                >
+                                                    <Clock class="h-2.5 w-2.5" />
+                                                    {{ exam.duration_minutes }}m
+                                                </div>
+                                            </div>
+                                            <div
+                                                v-if="!exam.is_completed"
+                                                class="flex-shrink-0 text-right"
+                                            >
+                                                <div
+                                                    class="text-xs font-bold text-primary tabular-nums"
+                                                >
+                                                    {{ exam.submitted_parts }}/{{
+                                                        exam.parts_count
+                                                    }}
+                                                </div>
+                                            </div>
+                                            <div v-else class="flex-shrink-0">
+                                                <span
+                                                    class="rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[8px] font-semibold text-primary uppercase"
+                                                >
+                                                    Done
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
                             </div>
-                        </Link>
+                            <EmptyState
+                                v-else
+                                compact
+                                :icon="CalendarX"
+                                title="All caught up"
+                                message="No scheduled activities right now. New exams will appear here the moment they're published."
+                            />
                         </div>
-                    </div>
-                    <EmptyState
-                        v-else
-                        compact
-                        :icon="CalendarX"
-                        title="All caught up"
-                        message="No scheduled activities right now. New exams will appear here the moment they're published."
-                    />
+                    </Transition>
                 </CardContent>
             </div>
         </SpotlightCard>
@@ -502,5 +517,20 @@ const weeklyPercent = (xp: number, goal: number) => {
 @reference "../../../css/app.css";
 .lb-exam-season-select {
     @apply rounded-lg border border-border/20 bg-card/30 px-2 py-1 font-bold tracking-widest text-muted-foreground uppercase transition-all focus:border-primary/40 focus:ring-2 focus:ring-primary/30 focus:outline-none;
+}
+
+.hub-fade-enter-active,
+.hub-fade-leave-active {
+    transition:
+        opacity 0.35s cubic-bezier(0.23, 1, 0.32, 1),
+        transform 0.35s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.hub-fade-enter-from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+}
+.hub-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
 }
 </style>
