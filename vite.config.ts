@@ -1,58 +1,15 @@
+import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import laravel from 'laravel-vite-plugin';
-import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import { defineConfig } from 'vite';
-import { fileURLToPath, URL } from 'node:url';
-import { execSync } from 'node:child_process';
-
-/**
- * Resolve the PHP binary path.
- * Tries `php` first (works when in PATH, e.g. via Laravel Herd),
- * then falls back to common install locations.
- */
-function resolvePhpBinary(): string {
-    try {
-        execSync('php -v', { stdio: 'ignore' });
-        return 'php';
-    } catch {
-        // Windows — Laravel Herd
-        const herdPath = `${process.env.USERPROFILE || ''}\\.config\\herd\\bin\\php.bat`;
-        try {
-            execSync(`"${herdPath}" -v`, { stdio: 'ignore' });
-            return herdPath;
-        } catch {
-            // macOS — Homebrew
-            const brewPaths = [
-                '/opt/homebrew/bin/php',
-                '/usr/local/bin/php',
-            ];
-            for (const p of brewPaths) {
-                try {
-                    execSync(`${p} -v`, { stdio: 'ignore' });
-                    return p;
-                } catch { /* skip */ }
-            }
-            // Fallback — hope it's in PATH
-            return 'php';
-        }
-    }
-}
-
-const phpBinary = resolvePhpBinary();
-const wayfinderCommand = `${phpBinary} artisan wayfinder:generate`;
 
 export default defineConfig({
     plugins: [
-        wayfinder({
-            command: wayfinderCommand,
-        }),
         laravel({
             input: [
                 'resources/js/app.ts',
                 'resources/css/filament/admin/theme.css',
-                // Pages with their own dynamic imports (e.g. pixi.js) need explicit
-                // entries so Vite's manifest keeps their source path for @vite() lookups.
                 'resources/js/pages/Games/TowerDefense/Playfield.vue',
             ],
             ssr: 'resources/js/ssr.ts',
@@ -69,8 +26,14 @@ export default defineConfig({
         }),
     ],
     resolve: {
-        alias: {
-            '@': fileURLToPath(new URL('./resources/js', import.meta.url))
-        }
-    }
+        alias: [
+            // These 3 route files are locked on Windows (EPERM on realpath).
+            // Redirect imports to fresh copies in routes_temp.
+            // IMPORTANT: specific aliases must come BEFORE the catch-all @ alias.
+            { find: '@/routes/assignments', replacement: fileURLToPath(new URL('./resources/js/routes_temp/routes/assignments', import.meta.url)) },
+            { find: '@/routes/exams', replacement: fileURLToPath(new URL('./resources/js/routes_temp/routes/exams', import.meta.url)) },
+            { find: '@/routes/profile', replacement: fileURLToPath(new URL('./resources/js/routes_temp/routes/profile', import.meta.url)) },
+            { find: '@', replacement: fileURLToPath(new URL('./resources/js', import.meta.url)) },
+        ]
+    },
 });
