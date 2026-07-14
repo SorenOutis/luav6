@@ -73,6 +73,7 @@ class GradeForm
 
                         return Section::find($sectionId)?->gradePeriods() ?? Section::collegeGradePeriods();
                     })
+                    ->required()
                     ->placeholder('Select a period')
                     ->helperText('Select the grading period.'),
 

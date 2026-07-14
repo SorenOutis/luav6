@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import {
@@ -12,8 +13,11 @@ import {
     ChevronDown,
     BarChart3,
     BookOpen,
+    Loader2,
+    RefreshCw,
 } from 'lucide-vue-next';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useStaleWhileRevalidate } from '@/composables/useStaleWhileRevalidate';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
@@ -67,7 +71,7 @@ interface SubjectGrade {
 }
 
 const props = defineProps<{
-    subjectGrades: SubjectGrade[];
+    subjectGrades?: SubjectGrade[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -75,13 +79,38 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Grades', href: '/grades' },
 ];
 
+// ── API fetch with stale-while-revalidate caching ────────────────
+const {
+    data: subjectGrades,
+    isLoading,
+    error: fetchError,
+    isFromCache,
+    revalidate: fetchGrades,
+} = useStaleWhileRevalidate<SubjectGrade[]>(
+    'grades-data',
+    async () => {
+        const { data } = await axios.get<{ subjectGrades: SubjectGrade[] }>('/api/grades');
+        return data.subjectGrades;
+    },
+    30 * 1000, // 30-second TTL — grades are admin-entered and should reflect quickly
+    props.subjectGrades, // Use SSR data as initial value if no cache exists
+);
+
+// Revalidate whenever the page becomes visible (e.g., after admin enters grades)
+// This ensures changes made in the admin panel show up immediately.
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        fetchGrades();
+    }
+});
+
 // ── Search / Filter ──────────────────────────────────────────────
 const searchQuery = ref('');
 
 const filteredSubjectGrades = computed(() => {
-    if (!searchQuery.value) return props.subjectGrades;
+    if (!searchQuery.value) return subjectGrades.value;
     const q = searchQuery.value.toLowerCase();
-    return props.subjectGrades.filter((sg) =>
+    return subjectGrades.value.filter((sg) =>
         sg.subject.toLowerCase().includes(q),
     );
 });
@@ -334,6 +363,32 @@ const getPeriodGrade = (
     return found?.grade ?? null;
 };
 
+/**
+ * Look up a quarter grade from the specific subject's own semesterGrades,
+ * rather than from the first subject in the group.
+ */
+const getSubjectQuarterGrade = (
+    subject: SubjectGrade,
+    semesterKey: string,
+    quarterKey: string,
+): GradePeriodScore | null => {
+    const semester = subject.semesterGrades.find((s) => s.key === semesterKey);
+    if (!semester) return null;
+    const quarter = semester.quarters.find((q) => q.key === quarterKey);
+    return quarter?.grade ?? null;
+};
+
+/**
+ * Look up the final grade for a semester from the specific subject's own semesterGrades.
+ */
+const getSubjectFinalGrade = (
+    subject: SubjectGrade,
+    semesterKey: string,
+): number | null => {
+    const semester = subject.semesterGrades.find((s) => s.key === semesterKey);
+    return semester?.finalGrade ?? null;
+};
+
 const HEADER_H = 40;
 const ROW_H = 44;
 const MAX_VISIBLE_ROWS = 8;
@@ -438,6 +493,8 @@ const exportPdf = async () => {
 
 // ── Animations ───────────────────────────────────────────────────
 onMounted(() => {
+    // Animations start immediately because the composable already
+    // resolved data from cache or SSR on init.
     if (!gradesContainer.value) return;
 
     const tl = gsap.timeline({
@@ -527,8 +584,45 @@ onMounted(() => {
                 </div>
             </div>
 
+            <!-- Loading state -->
+            <div
+                v-if="isLoading"
+                class="animate-section mb-8 flex flex-col items-center justify-center py-16"
+            >
+                <Loader2 class="mb-4 h-10 w-10 animate-spin text-muted-foreground" />
+                <p class="text-muted-foreground">Loading your grades...</p>
+            </div>
+
+            <!-- Error state -->
+            <div
+                v-else-if="fetchError"
+                class="animate-section mb-8"
+            >
+                <Card class="border-destructive/30">
+                    <CardContent
+                        class="flex flex-col items-center justify-center py-12"
+                    >
+                        <AlertCircle class="mb-4 h-12 w-12 text-destructive" />
+                        <h3 class="text-lg font-semibold">Something went wrong</h3>
+                        <p class="mt-2 max-w-md text-center text-muted-foreground">
+                            {{ fetchError }}
+                        </p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            class="mt-4"
+                            @click="fetchGrades"
+                        >
+                            <RefreshCw class="h-4 w-4" />
+                            Try Again
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+
             <!-- Overview Cards -->
             <div
+                v-show="!isLoading && !fetchError"
                 class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             >
                 <Card class="animate-card">
@@ -611,7 +705,7 @@ onMounted(() => {
 
             <!-- Empty State -->
             <Card
-                v-if="filteredSubjectGrades.length === 0 && !searchQuery"
+                v-if="!isLoading && filteredSubjectGrades.length === 0 && !searchQuery"
                 class="animate-section border-dashed"
             >
                 <CardContent
@@ -1200,7 +1294,11 @@ onMounted(() => {
                                                 >
                                                     <div
                                                         v-if="
-                                                            quarter.grade
+                                                            getSubjectQuarterGrade(
+                                                                subjectGrade,
+                                                                semester.key,
+                                                                quarter.key,
+                                                            )
                                                         "
                                                         class="flex flex-col items-center gap-1"
                                                     >
@@ -1208,27 +1306,40 @@ onMounted(() => {
                                                             class="text-base font-bold"
                                                             :class="
                                                                 gradeColor(
-                                                                    quarter
-                                                                        .grade
+                                                                    getSubjectQuarterGrade(
+                                                                        subjectGrade,
+                                                                        semester.key,
+                                                                        quarter.key,
+                                                                    )!
                                                                         .percentage,
                                                                 )
                                                             "
                                                         >
                                                             {{
-                                                                quarter.grade
-                                                                    .percentage
+                                                                getSubjectQuarterGrade(
+                                                                    subjectGrade,
+                                                                    semester.key,
+                                                                    quarter.key,
+                                                                )!.percentage
                                                             }}
                                                         </div>
                                                         <Progress
                                                             :value="
-                                                                quarter.grade
+                                                                getSubjectQuarterGrade(
+                                                                    subjectGrade,
+                                                                    semester.key,
+                                                                    quarter.key,
+                                                                )!
                                                                     .percentage
                                                             "
                                                             class="h-1 w-14"
                                                             :indicator-class="
                                                                 progressColor(
-                                                                    quarter
-                                                                        .grade
+                                                                    getSubjectQuarterGrade(
+                                                                        subjectGrade,
+                                                                        semester.key,
+                                                                        quarter.key,
+                                                                    )!
                                                                         .percentage,
                                                                 )
                                                             "
@@ -1237,12 +1348,19 @@ onMounted(() => {
                                                             class="text-[10px] text-muted-foreground"
                                                         >
                                                             {{
-                                                                quarter.grade
-                                                                    .score
+                                                                getSubjectQuarterGrade(
+                                                                    subjectGrade,
+                                                                    semester.key,
+                                                                    quarter.key,
+                                                                )!.score
                                                             }}
                                                             /
                                                             {{
-                                                                quarter.grade
+                                                                getSubjectQuarterGrade(
+                                                                    subjectGrade,
+                                                                    semester.key,
+                                                                    quarter.key,
+                                                                )!
                                                                     .maxScore
                                                             }}
                                                         </div>
@@ -1264,8 +1382,10 @@ onMounted(() => {
                                                 >
                                                     <div
                                                         v-if="
-                                                            semester.finalGrade !==
-                                                            null
+                                                            getSubjectFinalGrade(
+                                                                subjectGrade,
+                                                                semester.key,
+                                                            ) !== null
                                                         "
                                                         class="flex flex-col items-center"
                                                     >
@@ -1273,24 +1393,36 @@ onMounted(() => {
                                                             class="text-lg font-bold"
                                                             :class="
                                                                 gradeColor(
-                                                                    semester.finalGrade,
+                                                                    getSubjectFinalGrade(
+                                                                        subjectGrade,
+                                                                        semester.key,
+                                                                    ),
                                                                 )
                                                             "
                                                         >
                                                             {{
                                                                 formatGrade(
-                                                                    semester.finalGrade,
+                                                                    getSubjectFinalGrade(
+                                                                        subjectGrade,
+                                                                        semester.key,
+                                                                    ),
                                                                 )
                                                             }}
                                                         </div>
                                                         <Progress
                                                             :value="
-                                                                semester.finalGrade
+                                                                getSubjectFinalGrade(
+                                                                    subjectGrade,
+                                                                    semester.key,
+                                                                )
                                                             "
                                                             class="mt-1 h-1.5 w-14"
                                                             :indicator-class="
                                                                 progressColor(
-                                                                    semester.finalGrade,
+                                                                    getSubjectFinalGrade(
+                                                                        subjectGrade,
+                                                                        semester.key,
+                                                                    ),
                                                                 )
                                                             "
                                                         />
@@ -1299,7 +1431,10 @@ onMounted(() => {
                                                         >
                                                             {{
                                                                 gradeLabel(
-                                                                    semester.finalGrade,
+                                                                    getSubjectFinalGrade(
+                                                                        subjectGrade,
+                                                                        semester.key,
+                                                                    ),
                                                                 )
                                                             }}
                                                         </div>
