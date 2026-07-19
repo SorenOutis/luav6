@@ -13,7 +13,7 @@ import {
     Clock,
     Trophy,
 } from 'lucide-vue-next';
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
@@ -224,6 +224,31 @@ const sanitizedContent = computed(() => {
         || '<p class="text-muted-foreground">No content available for this lesson yet.</p>';
 });
 
+// ─── Page Transition Animation ───
+const TRANSITION_DURATION = 280; // ms
+const isExiting = ref(false);
+const exitDir = ref<'left' | 'right' | null>(null);
+const entranceAnimClass = ref('');
+
+// True during any page transition (exit or entrance) so we can adjust parent overflow
+const isAnimating = computed(() => isExiting.value || !!entranceAnimClass.value);
+
+const navigateToLesson = (lessonId: number, direction?: 'left' | 'right') => {
+    if (direction) {
+        if (isExiting.value) return; // prevent double-navigation
+        isExiting.value = true;
+        exitDir.value = direction;
+        // Store direction so the next page knows which way to slide in
+        sessionStorage.setItem('swipe_entrance_dir', direction);
+
+        setTimeout(() => {
+            router.get(`/courses/${props.course.id}/lessons/${lessonId}`);
+        }, TRANSITION_DURATION);
+    } else {
+        router.get(`/courses/${props.course.id}/lessons/${lessonId}`);
+    }
+};
+
 // ─── Keyboard Shortcuts ───
 const handleKeydown = (e: KeyboardEvent) => {
     // Don't trigger if user is typing in an input
@@ -231,30 +256,93 @@ const handleKeydown = (e: KeyboardEvent) => {
 
     if (e.key === 'ArrowLeft' && props.prevLessonId) {
         e.preventDefault();
-        router.get(`/courses/${props.course.id}/lessons/${props.prevLessonId}`);
+        navigateToLesson(props.prevLessonId, 'right'); // exit right, enter from left
     } else if (e.key === 'ArrowRight' && props.nextLessonId) {
         e.preventDefault();
-        router.get(`/courses/${props.course.id}/lessons/${props.nextLessonId}`);
+        navigateToLesson(props.nextLessonId, 'left'); // exit left, enter from right
     }
 };
 
-onMounted(() => {
+// ─── Swipe Gesture (Mobile) ───
+const SWIPE_THRESHOLD = 50; // minimum px to trigger swipe
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+
+const handleTouchStart = (e: TouchEvent) => {
+    // Ignore swipes starting on interactive elements (quiz buttons, inputs, etc.)
+    const target = e.target as HTMLElement;
+    if (target.closest('button, input, textarea, label, select, a')) return;
+
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+};
+
+const handleTouchEnd = (e: TouchEvent) => {
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    const elapsed = Date.now() - touchStartTime;
+
+    // Must be a quick gesture (under 400ms) and more horizontal than vertical
+    if (elapsed > 400) return;
+    if (Math.abs(dy) > Math.abs(dx) * 1.5) return; // vertical scroll detected
+    if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+
+    // Prevent default to avoid pull-to-refresh etc
+    e.preventDefault();
+
+    if (dx > 0 && props.prevLessonId) {
+        // Swipe right → previous lesson
+        navigateToLesson(props.prevLessonId, 'right');
+    } else if (dx < 0 && props.nextLessonId) {
+        // Swipe left → next lesson
+        navigateToLesson(props.nextLessonId, 'left');
+    }
+};
+
+onMounted(async () => {
+    // ─── Entrance Animation ───
+    const dir = sessionStorage.getItem('swipe_entrance_dir');
+    if (dir === 'left') {
+        // Came from right — exit was left, so this page slides in from right
+        entranceAnimClass.value = 'animate-slide-in-right';
+    } else if (dir === 'right') {
+        // Came from left — exit was right, so this page slides in from left
+        entranceAnimClass.value = 'animate-slide-in-left';
+    }
+    sessionStorage.removeItem('swipe_entrance_dir');
+
+    if (entranceAnimClass.value) {
+        await nextTick();
+        // Remove animation class after it completes to reset transform
+        setTimeout(() => {
+            entranceAnimClass.value = '';
+        }, TRANSITION_DURATION + 40);
+    }
+
     window.addEventListener('keydown', handleKeydown);
 
     // Attach scroll listener to the content container
     const el = scrollContainer.value;
     if (el) {
         el.addEventListener('scroll', handleScroll);
+        el.addEventListener('touchstart', handleTouchStart, { passive: true });
+        el.addEventListener('touchend', handleTouchEnd, { passive: false });
     }
 });
 
 onUnmounted(() => {
     window.removeEventListener('keydown', handleKeydown);
 
-    // Clean up scroll listener
+    // Clean up scroll listener and swipe listeners
     const el = scrollContainer.value;
     if (el) {
         el.removeEventListener('scroll', handleScroll);
+        el.removeEventListener('touchstart', handleTouchStart);
+        el.removeEventListener('touchend', handleTouchEnd);
     }
 });
 
@@ -272,7 +360,10 @@ watch(showResult, (val) => {
     <Head :title="`${lesson.title} — ${course.name}`" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="relative flex h-full flex-1 flex-col overflow-hidden bg-background">
+        <div
+            class="relative flex h-full flex-1 flex-col bg-background"
+            :class="{ 'overflow-hidden': !isAnimating }"
+        >
             <!-- Scroll Progress Bar (fixed top) -->
             <div class="pointer-events-none fixed top-0 left-0 right-0 z-50 h-1">
                 <div
@@ -281,6 +372,18 @@ watch(showResult, (val) => {
                 ></div>
             </div>
 
+            <!-- ─── Animated Page Content ─── -->
+            <div
+                class="flex flex-1 flex-col"
+                :class="[
+                    entranceAnimClass,
+                    isExiting
+                        ? exitDir === 'left'
+                            ? 'animate-slide-out-left'
+                            : 'animate-slide-out-right'
+                        : ''
+                ]"
+            >
             <!-- ─── Horizontal Module Strip ─── -->
             <div class="scrollbar-none flex shrink-0 gap-0.5 overflow-x-auto border-b border-border/10 bg-muted/10 px-2 py-1.5 md:gap-1 md:px-6 md:py-2">
                 <template v-for="(mod, mIdx) in modules" :key="mod.id">
@@ -362,27 +465,29 @@ watch(showResult, (val) => {
             <!-- ─── Main Content + Floating Navigation ─── -->
             <div class="relative flex flex-1 overflow-hidden">
                 <!-- Floating Prev Button -->
-                <Link
+                <button
                     v-if="prevLessonId"
-                    :href="`/courses/${course.id}/lessons/${prevLessonId}`"
+                    @click="navigateToLesson(prevLessonId, 'right')"
                     class="group absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border/30 bg-background/80 p-2.5 shadow-lg backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-xl active:scale-95 md:left-4"
-                    :title="'Previous lesson'"
+                    title="Previous lesson"
+                    type="button"
                 >
                     <ChevronLeft class="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
-                </Link>
+                </button>
 
                 <!-- Floating Next Button -->
-                <Link
+                <button
                     v-if="nextLessonId"
-                    :href="`/courses/${course.id}/lessons/${nextLessonId}`"
+                    @click="navigateToLesson(nextLessonId, 'left')"
                     class="group absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full border border-border/30 bg-background/80 p-2.5 shadow-lg backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-background hover:shadow-xl active:scale-95 md:right-4"
-                    :title="'Next lesson'"
+                    title="Next lesson"
+                    type="button"
                 >
                     <ChevronRight class="h-5 w-5 text-muted-foreground transition-colors group-hover:text-primary" />
-                </Link>
+                </button>
 
                 <!-- Scrollable Lesson Content -->
-                <div ref="scrollContainer" class="flex-1 overflow-y-auto">
+                <div ref="scrollContainer" class="flex-1 overflow-y-auto" style="touch-action: pan-y">
                     <div class="mx-auto max-w-4xl px-5 py-8 md:px-10 md:py-12">
                         <!-- Video Embed -->
                         <Motion
@@ -609,24 +714,26 @@ watch(showResult, (val) => {
 
                         <!-- Bottom Navigation (for keyboard / mobile) -->
                         <div class="mt-12 flex items-center justify-between border-t border-border/10 pt-6 md:hidden">
-                            <Link
+                            <button
                                 v-if="prevLessonId"
-                                :href="`/courses/${course.id}/lessons/${prevLessonId}`"
+                                @click="navigateToLesson(prevLessonId, 'right')"
                                 class="flex items-center gap-2 rounded-xl border border-border/40 px-5 py-3 text-sm font-medium transition-colors hover:border-primary/30 hover:text-primary"
+                                type="button"
                             >
                                 <ChevronLeft class="h-4 w-4" />
                                 Previous
-                            </Link>
+                            </button>
                             <div v-else></div>
 
-                            <Link
+                            <button
                                 v-if="nextLessonId"
-                                :href="`/courses/${course.id}/lessons/${nextLessonId}`"
+                                @click="navigateToLesson(nextLessonId, 'left')"
                                 class="flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                type="button"
                             >
                                 Next
                                 <ChevronRight class="h-4 w-4" />
-                            </Link>
+                            </button>
                             <Link
                                 v-else
                                 :href="`/courses/${course.id}`"
@@ -652,11 +759,88 @@ watch(showResult, (val) => {
                 </div>
             </div>
         </div>
+    </div>
     </AppLayout>
 </template>
 
+
 <style scoped>
 @reference "../../../css/app.css";
+
+/* ─── Page Transition Animations ─── */
+/* Exit: slide out — shadow grows on the trailing/leading edge for depth */
+@keyframes slide-out-left {
+    to {
+        transform: translateX(-100%);
+        opacity: 0;
+        box-shadow: 8px 0 40px -8px rgba(0, 0, 0, 0.25);
+    }
+}
+@keyframes slide-out-right {
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+        box-shadow: -8px 0 40px -8px rgba(0, 0, 0, 0.25);
+    }
+}
+/* Entrance: slide in — starts elevated, settles flat */
+@keyframes slide-in-left {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+        box-shadow: 8px 0 40px -8px rgba(0, 0, 0, 0.25);
+    }
+    40% {
+        box-shadow: 4px 0 24px -6px rgba(0, 0, 0, 0.18);
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+}
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+        box-shadow: -8px 0 40px -8px rgba(0, 0, 0, 0.25);
+    }
+    40% {
+        box-shadow: -4px 0 24px -6px rgba(0, 0, 0, 0.18);
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
+}
+
+.animate-slide-out-left {
+    animation: slide-out-left var(--slide-duration, 280ms) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    will-change: transform, opacity, box-shadow;
+}
+.animate-slide-out-right {
+    animation: slide-out-right var(--slide-duration, 280ms) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    will-change: transform, opacity, box-shadow;
+}
+.animate-slide-in-left {
+    animation: slide-in-left var(--slide-duration, 280ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity, box-shadow;
+}
+.animate-slide-in-right {
+    animation: slide-in-right var(--slide-duration, 280ms) cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, opacity, box-shadow;
+}
+
+/* Subtle z-layer behind the animated wrapper so shadow is visible */
+.animate-slide-out-left,
+.animate-slide-out-right,
+.animate-slide-in-left,
+.animate-slide-in-right {
+    position: relative;
+    z-index: 10;
+}
+
 .slide-enter-active {
     transition: all 0.3s ease-out;
 }
