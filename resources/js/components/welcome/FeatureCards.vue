@@ -4,7 +4,7 @@ import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ChevronDown, Sparkles, ArrowRight } from 'lucide-vue-next';
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,6 +15,9 @@ const props = defineProps<{
     dashboard: () => string;
     login: () => string;
 }>();
+
+const featureCardsRef = ref<HTMLElement | null>(null);
+let gsapCtx: gsap.Context | null = null;
 
 const coreFeatures = [
     {
@@ -112,52 +115,80 @@ const resetFeatureMouse = (e: MouseEvent) => {
 
 onMounted(() => {
     nextTick(() => {
-        // Continuous bar wave animation
-        gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
-            gsap.fromTo(
-                bar,
-                {
-                    scaleY: 0.7,
-                    opacity: 0.4,
-                    transformOrigin: 'bottom',
-                },
-                {
-                    scaleY: 1.1,
-                    opacity: 1,
-                    duration: 1.5 + Math.random() * 1.5,
-                    repeat: -1,
-                    yoyo: true,
-                    ease: 'sine.inOut',
-                    delay: (i % 24) * 0.08,
-                },
-            );
-        });
+        // ─── Scroll-triggered stagger entrance for feature cards ───
+        gsapCtx = gsap.context(() => {
+            const cards = featureCardsRef.value?.querySelectorAll('.feature-card');
+            if (cards?.length) {
+                gsap.fromTo(cards,
+                    { y: 80, opacity: 0, scale: 0.95 },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        scale: 1,
+                        duration: 1,
+                        stagger: 0.2,
+                        ease: 'expo.out',
+                        scrollTrigger: {
+                            trigger: featureCardsRef.value,
+                            start: 'top 80%',
+                            toggleActions: 'play none none none',
+                        },
+                    },
+                );
+            }
 
-        // Continuous bit flicker animation
-        gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
-            gsap.fromTo(
-                bit,
-                {
-                    opacity: 0.1,
-                },
-                {
-                    opacity: 0.9,
-                    duration: 0.8 + Math.random() * 1.2,
-                    repeat: -1,
-                    yoyo: true,
-                    ease: 'power1.inOut',
-                    delay: (i % 12) * 0.15,
-                },
-            );
-        });
+            // Continuous bar wave animation
+            gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
+                gsap.fromTo(
+                    bar,
+                    {
+                        scaleY: 0.7,
+                        opacity: 0.4,
+                        transformOrigin: 'bottom',
+                    },
+                    {
+                        scaleY: 1.1,
+                        opacity: 1,
+                        duration: 1.5 + Math.random() * 1.5,
+                        repeat: -1,
+                        yoyo: true,
+                        ease: 'sine.inOut',
+                        delay: (i % 24) * 0.08,
+                    },
+                );
+            });
+
+            // Continuous bit flicker animation
+            gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
+                gsap.fromTo(
+                    bit,
+                    {
+                        opacity: 0.1,
+                    },
+                    {
+                        opacity: 0.9,
+                        duration: 0.8 + Math.random() * 1.2,
+                        repeat: -1,
+                        yoyo: true,
+                        ease: 'power1.inOut',
+                        delay: (i % 12) * 0.15,
+                    },
+                );
+            });
+        }, featureCardsRef.value);
 
         ScrollTrigger.refresh();
     });
+});
+
+onUnmounted(() => {
+    gsapCtx?.revert();
 });
 </script>
 
 <template>
     <div
+        ref="featureCardsRef"
         class="mt-12 grid w-full gap-0 border-b border-border/20 lg:mt-24 lg:grid-cols-3 dark:border-border/10"
     >
         <Motion

@@ -3,10 +3,11 @@ import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { SplitText } from 'gsap/SplitText';
 import { ArrowRight, CalendarCheck, LayoutDashboard } from 'lucide-vue-next';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, onUnmounted, watch } from 'vue';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const props = defineProps<{
     canRegister: boolean;
@@ -37,6 +38,9 @@ const currentCharIndex = ref(words[0].length);
 const isTyping = ref(false);
 const typedText = ref(words[0]);
 let typingTimeout: ReturnType<typeof setTimeout> | null = null;
+let gsapCtx: gsap.Context | null = null;
+
+const heroRef = ref<HTMLElement | null>(null);
 
 const type = () => {
     const currentWord = words[currentWordIndex.value];
@@ -74,31 +78,117 @@ const handleMagnetic = (e: MouseEvent) => emit('magnetic', e);
 const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
 const watchDemo = () => emit('watchDemo');
 
-// Scroll Parallax and Premium Reveals
-const titleLetters = 'LEARNING'.split('');
-const systemsLetters = 'SYSTEMS'.split('');
-const subtitleLetters = 'INTELLIGENCE'.split('');
-const heroRef = ref<HTMLElement | null>(null);
-
-import { watch } from 'vue';
-
 const initAnimations = () => {
     if (!props.isBooted || !heroRef.value) return;
 
-    // Premium Scroll Parallax for Hero
-    gsap.to('.hero-parallax', {
-        y: (i, target) => {
-            const speed = target.dataset.speed || 0.2;
-            return -window.innerHeight * speed;
-        },
-        ease: 'none',
-        scrollTrigger: {
-            trigger: heroRef.value,
-            start: 'top top',
-            end: 'bottom top',
-            scrub: true,
-        },
-    });
+    gsapCtx = gsap.context(() => {
+        // ─── SplitText: Hero Heading ───
+        const headingLines = heroRef.value?.querySelectorAll('.hero-heading-line');
+        let allChars: Element[] = [];
+        let splitInstances: SplitText[] = [];
+
+        if (headingLines?.length) {
+            headingLines.forEach((line, idx) => {
+                const split = SplitText.create(line as HTMLElement, {
+                    type: 'chars',
+                    charsClass: 'hero-char',
+                });
+                splitInstances.push(split);
+                if (split.chars) {
+                    allChars = allChars.concat(Array.from(split.chars));
+                }
+            });
+
+            // Apply gradient styling to INTELLIGENCE chars BEFORE animation so they look correct while animating in
+            const lastLineChars = heroRef.value?.querySelectorAll('.hero-heading-line-last .hero-char');
+            if (lastLineChars?.length) {
+                gsap.set(lastLineChars, {
+                    backgroundImage: 'linear-gradient(to right, var(--color-foreground), color-mix(in srgb, var(--color-foreground) 30%, transparent), color-mix(in srgb, var(--color-foreground) 10%, transparent))',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                    WebkitTextFillColor: 'transparent',
+                });
+            }
+
+            // Animate all chars with a continuous stagger
+            if (allChars.length) {
+                gsap.fromTo(allChars,
+                    { y: 120, opacity: 0, rotateX: -90 },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        rotateX: 0,
+                        duration: 1.2,
+                        stagger: { each: 0.04, from: 'start' },
+                        ease: 'expo.out',
+                        delay: 0.15,
+                    },
+                );
+            }
+        }
+
+        // ─── Subtitle blur reveal (handled by Motion component in template) ───
+
+        // ─── CTA Buttons ───
+        const ctaBtns = heroRef.value?.querySelectorAll('.hero-cta');
+        if (ctaBtns?.length) {
+            gsap.fromTo(ctaBtns,
+                { y: 40, opacity: 0 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 1,
+                    stagger: 0.12,
+                    ease: 'expo.out',
+                    delay: 1.0,
+                },
+            );
+        }
+
+        // ─── Developed By credit ───
+        const creditEl = heroRef.value?.querySelector('.hero-credit');
+        if (creditEl) {
+            gsap.fromTo(creditEl,
+                { y: 15, opacity: 0 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 0.8,
+                    ease: 'power2.out',
+                    delay: 1.6,
+                },
+            );
+        }
+
+        // ─── Scroll Parallax ───
+        gsap.to('.hero-parallax', {
+            y: (_, target) => {
+                const speed = parseFloat((target as HTMLElement).dataset.speed || '0.2');
+                return -window.innerHeight * speed;
+            },
+            ease: 'none',
+            scrollTrigger: {
+                trigger: heroRef.value,
+                start: 'top top',
+                end: 'bottom top',
+                scrub: true,
+            },
+        });
+
+        // ─── Hero Scroll Fade ───
+        gsap.to(heroRef.value, {
+            opacity: 0,
+            y: -80,
+            ease: 'none',
+            scrollTrigger: {
+                trigger: heroRef.value,
+                start: 'top 15%',
+                end: 'bottom top',
+                scrub: 1.2,
+            },
+        });
+    }, heroRef.value);
 };
 
 onMounted(() => {
@@ -122,6 +212,10 @@ onBeforeUnmount(() => {
         clearTimeout(typingTimeout);
     }
 });
+
+onUnmounted(() => {
+    gsapCtx?.revert();
+});
 </script>
 
 <template>
@@ -134,65 +228,10 @@ onBeforeUnmount(() => {
             <h1
                 class="flex flex-col text-5xl leading-[0.9] font-black tracking-[-0.04em] uppercase sm:text-7xl sm:leading-[0.8] lg:text-[8rem]"
             >
-                <span class="flex overflow-hidden">
-                    <Motion
-                        v-for="(letter, i) in titleLetters"
-                        :key="i"
-                        :initial="{ y: 100, opacity: 0, rotateX: -90 }"
-                        :animate="
-                            isBooted
-                                ? { y: 0, opacity: 1, rotateX: 0 }
-                                : { y: 100, opacity: 0, rotateX: -90 }
-                        "
-                        :transition="{
-                            duration: 1.2,
-                            delay: i * 0.04,
-                            ease: [0.16, 1, 0.3, 1],
-                        }"
-                        class="title-letter inline-block transform-gpu"
-                    >
-                        {{ letter }}
-                    </Motion>
-                </span>
-                <span class="flex overflow-hidden">
-                    <Motion
-                        v-for="(letter, i) in systemsLetters"
-                        :key="i"
-                        :initial="{ y: 100, opacity: 0, rotateX: -90 }"
-                        :animate="
-                            isBooted
-                                ? { y: 0, opacity: 1, rotateX: 0 }
-                                : { y: 100, opacity: 0, rotateX: -90 }
-                        "
-                        :transition="{
-                            duration: 1.2,
-                            delay: 0.2 + i * 0.04,
-                            ease: [0.16, 1, 0.3, 1],
-                        }"
-                        class="systems-letter inline-block transform-gpu"
-                    >
-                        {{ letter }}
-                    </Motion>
-                </span>
-                <span class="flex overflow-hidden">
-                    <Motion
-                        v-for="(letter, i) in subtitleLetters"
-                        :key="i"
-                        :initial="{ x: -20, opacity: 0, filter: 'blur(10px)' }"
-                        :animate="
-                            isBooted
-                                ? { x: 0, opacity: 1, filter: 'blur(0px)' }
-                                : { x: -20, opacity: 0, filter: 'blur(10px)' }
-                        "
-                        :transition="{
-                            duration: 1,
-                            delay: 0.4 + i * 0.03,
-                            ease: 'ease-out',
-                        }"
-                        class="subtitle-letter inline-block transform-gpu bg-gradient-to-r from-foreground/50 via-foreground/30 to-foreground/10 bg-clip-text text-transparent italic"
-                    >
-                        {{ letter === ' ' ? '\u00A0' : letter }}
-                    </Motion>
+                <span class="hero-heading-line flex overflow-hidden">LEARNING</span>
+                <span class="hero-heading-line flex overflow-hidden">SYSTEMS</span>
+                <span class="hero-heading-line hero-heading-line-last flex overflow-hidden italic">
+                    INTELLIGENCE
                 </span>
             </h1>
         </div>
@@ -247,7 +286,7 @@ onBeforeUnmount(() => {
                     ease: [0.16, 1, 0.3, 1],
                     delay: 0.4,
                 }"
-                class="flex flex-col gap-3 sm:flex-row sm:gap-4 lg:gap-5"
+                class="hero-cta flex flex-col gap-3 sm:flex-row sm:gap-4 lg:gap-5"
             >
                 <Link
                     v-if="auth.user"
@@ -318,6 +357,15 @@ onBeforeUnmount(() => {
                     </Link>
                 </template>
             </Motion>
+        </div>
+
+        <!-- Developed by credit -->
+        <div class="hero-credit mt-10 flex justify-end lg:mt-14">
+            <span class="inline-flex items-center gap-2 text-[9px] font-semibold tracking-[0.25em] text-muted-foreground/40 uppercase lg:text-[10px]">
+                <span class="h-px w-6 bg-border/40"></span>
+                Developed by
+                <span class="font-black tracking-[0.35em] text-muted-foreground/70">KOAMISHIN</span>
+            </span>
         </div>
     </div>
 </template>

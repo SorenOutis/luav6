@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
     Command,
     Zap,
@@ -14,7 +15,9 @@ import {
     Boxes,
     Cpu,
 } from 'lucide-vue-next';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
+
+gsap.registerPlugin(ScrollTrigger);
 
 defineProps<{
     isCoarsePointer: boolean;
@@ -23,6 +26,8 @@ defineProps<{
 const rowTop = ref<HTMLElement | null>(null);
 const rowBottom = ref<HTMLElement | null>(null);
 const wrapper = ref<HTMLElement | null>(null);
+const techStackRef = ref<HTMLElement | null>(null);
+let gsapCtx: gsap.Context | null = null;
 
 const techStackTop = [
     {
@@ -105,45 +110,70 @@ const techStackBottom = [
 let tweens: gsap.core.Tween[] = [];
 
 onMounted(() => {
-    const buildMarquee = (
-        el: HTMLElement | null,
-        direction: 1 | -1,
-        duration: number,
-    ) => {
-        if (!el) return null;
-        const start = direction === -1 ? 0 : -50;
-        const end = direction === -1 ? -50 : 0;
-        gsap.set(el, { xPercent: start });
-        return gsap.to(el, {
-            xPercent: end,
-            duration,
-            ease: 'none',
-            repeat: -1,
-        });
-    };
+    gsapCtx = gsap.context(() => {
+        // ─── Scroll-triggered entrance: fade + scale in before marquee starts ───
+        gsap.fromTo(techStackRef.value,
+            { opacity: 0, y: 40, scale: 0.97 },
+            {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: 1.2,
+                ease: 'expo.out',
+                scrollTrigger: {
+                    trigger: techStackRef.value,
+                    start: 'top 85%',
+                    toggleActions: 'play none none none',
+                },
+                onComplete: () => {
+                    // ─── Start marquee after entrance animation ───
+                    const buildMarquee = (
+                        el: HTMLElement | null,
+                        direction: 1 | -1,
+                        duration: number,
+                    ) => {
+                        if (!el) return null;
+                        const start = direction === -1 ? 0 : -50;
+                        const end = direction === -1 ? -50 : 0;
+                        gsap.set(el, { xPercent: start });
+                        return gsap.to(el, {
+                            xPercent: end,
+                            duration,
+                            ease: 'none',
+                            repeat: -1,
+                        });
+                    };
 
-    const t1 = buildMarquee(rowTop.value, -1, 38);
-    const t2 = buildMarquee(rowBottom.value, 1, 46);
-    tweens = [t1, t2].filter(Boolean) as gsap.core.Tween[];
+                    const t1 = buildMarquee(rowTop.value, -1, 38);
+                    const t2 = buildMarquee(rowBottom.value, 1, 46);
+                    tweens = [t1, t2].filter(Boolean) as gsap.core.Tween[];
 
-    if (wrapper.value) {
-        const onEnter = () => tweens.forEach((t) => t.timeScale(0.25));
-        const onLeave = () => tweens.forEach((t) => t.timeScale(1));
-        wrapper.value.addEventListener('mouseenter', onEnter);
-        wrapper.value.addEventListener('mouseleave', onLeave);
-    }
+                    if (wrapper.value) {
+                        const onEnter = () => tweens.forEach((t) => t.timeScale(0.25));
+                        const onLeave = () => tweens.forEach((t) => t.timeScale(1));
+                        wrapper.value.addEventListener('mouseenter', onEnter);
+                        wrapper.value.addEventListener('mouseleave', onLeave);
+                    }
+                },
+            },
+        );
+    }, techStackRef.value);
 });
 
 onBeforeUnmount(() => {
     tweens.forEach((t) => t.kill());
     tweens = [];
 });
+
+onUnmounted(() => {
+    gsapCtx?.revert();
+});
 </script>
 
 <template>
     <div
-        ref="wrapper"
-        class="reveal-section relative -mx-6 mt-24 overflow-hidden border-y border-border/10 bg-gradient-to-b from-background via-muted/[0.02] to-background py-14 sm:mx-0 lg:mt-48 lg:py-20"
+        ref="techStackRef"
+        class="relative -mx-6 mt-24 overflow-hidden border-y border-border/10 bg-gradient-to-b from-background via-muted/[0.02] to-background py-14 sm:mx-0 lg:mt-48 lg:py-20"
     >
         <!-- Subtle grid backdrop -->
         <div

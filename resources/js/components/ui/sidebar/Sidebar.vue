@@ -84,6 +84,7 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
         props.class,
       )"
       v-bind="$attrs"
+      data-lenis-prevent
     >
       <div
         data-sidebar="sidebar"

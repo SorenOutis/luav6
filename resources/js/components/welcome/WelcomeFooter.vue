@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
     ArrowUp,
     Github,
@@ -10,11 +11,14 @@ import {
     Globe,
     Cpu,
 } from 'lucide-vue-next';
-import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import { onMounted, onBeforeUnmount, onUnmounted, ref, computed } from 'vue';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const footerRef = ref<HTMLElement | null>(null);
 const time = ref('--:--:--');
 let timer: number | null = null;
+let gsapCtx: gsap.Context | null = null;
 
 const year = new Date().getFullYear();
 
@@ -85,31 +89,92 @@ onMounted(() => {
     timer = window.setInterval(updateTime, 1000);
 
     if (footerRef.value) {
-        gsap.from(footerRef.value.querySelectorAll('.footer-stagger'), {
-            scrollTrigger: { trigger: footerRef.value, start: 'top 85%' },
-            y: 30,
-            opacity: 0,
-            filter: 'blur(8px)',
-            stagger: 0.08,
-            duration: 0.9,
-            ease: 'expo.out',
-        });
+        gsapCtx = gsap.context(() => {
+            // ─── Dramatic stagger reveal for all footer sections ───
+            const staggerEls = footerRef.value?.querySelectorAll('.footer-stagger');
+            if (staggerEls?.length) {
+                gsap.fromTo(staggerEls,
+                    { y: 40, opacity: 0, scale: 0.95, filter: 'blur(6px)' },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        scale: 1,
+                        filter: 'blur(0px)',
+                        duration: 1,
+                        stagger: 0.1,
+                        ease: 'expo.out',
+                        scrollTrigger: {
+                            trigger: footerRef.value,
+                            start: 'top 85%',
+                            toggleActions: 'play none none none',
+                        },
+                    },
+                );
+            }
 
-        gsap.fromTo(
-            footerRef.value.querySelector('.footer-wordmark'),
-            { backgroundPositionX: '100%' },
-            {
-                backgroundPositionX: '0%',
-                duration: 1.4,
-                ease: 'expo.out',
-                scrollTrigger: { trigger: footerRef.value, start: 'top 80%' },
-            },
-        );
+            // ─── Wordmark gradient sweep + parallax ───
+            const wordmark = footerRef.value?.querySelector('.footer-wordmark');
+            if (wordmark) {
+                gsap.fromTo(wordmark,
+                    {
+                        backgroundPositionX: '100%',
+                        opacity: 0.6,
+                    },
+                    {
+                        backgroundPositionX: '0%',
+                        opacity: 1,
+                        duration: 1.4,
+                        ease: 'expo.out',
+                        scrollTrigger: {
+                            trigger: footerRef.value,
+                            start: 'top 80%',
+                            toggleActions: 'play none none none',
+                        },
+                    },
+                );
+
+                // ─── Wordmark slow parallax on scroll ───
+                gsap.to(wordmark, {
+                    y: -40,
+                    ease: 'none',
+                    scrollTrigger: {
+                        trigger: footerRef.value,
+                        start: 'top bottom',
+                        end: 'bottom top',
+                        scrub: 1.5,
+                    },
+                });
+            }
+
+            // ─── Status bar staggered reveal ───
+            const statusItems = footerRef.value?.querySelectorAll('.status-item');
+            if (statusItems?.length) {
+                gsap.fromTo(statusItems,
+                    { y: 20, opacity: 0 },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        duration: 0.7,
+                        stagger: 0.08,
+                        ease: 'power3.out',
+                        scrollTrigger: {
+                            trigger: footerRef.value,
+                            start: 'top 90%',
+                            toggleActions: 'play none none none',
+                        },
+                    },
+                );
+            }
+        }, footerRef.value);
     }
 });
 
 onBeforeUnmount(() => {
     if (timer) window.clearInterval(timer);
+});
+
+onUnmounted(() => {
+    gsapCtx?.revert();
 });
 </script>
 
@@ -145,7 +210,7 @@ onBeforeUnmount(() => {
                 <div
                     v-for="stat in stats"
                     :key="stat.label"
-                    class="footer-stagger flex flex-1 items-center gap-3 px-6 py-5 lg:px-10"
+                    class="footer-stagger status-item flex flex-1 items-center gap-3 px-6 py-5 lg:px-10"
                 >
                     <component :is="stat.icon" class="h-4 w-4 text-primary" />
                     <div class="flex flex-col leading-tight">
@@ -160,7 +225,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
                 <div
-                    class="footer-stagger flex items-center gap-3 border-border/10 px-6 py-5 md:border-l lg:px-10"
+                    class="footer-stagger status-item flex items-center gap-3 border-border/10 px-6 py-5 md:border-l lg:px-10"
                 >
                     <span class="relative flex h-2 w-2">
                         <span

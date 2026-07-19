@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { Motion } from '@motionone/vue';
 import { ArrowRight } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { syncLenisWithGsap } from '@/composables/useLenis';
+
+gsap.registerPlugin(ScrollTrigger);
 
 // Only the essential sub-components
 import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
@@ -71,6 +75,117 @@ const brandAccentColor = computed(
     () => props.schoolBranding?.accentColor || '#f59e0b',
 );
 
+// ─── Refs for GSAP targets ───
+const pageRoot = ref<HTMLElement | null>(null);
+const howItWorksSteps = ref<HTMLElement | null>(null);
+let gsapCtx: gsap.Context | null = null;
+let lenisCleanup: (() => void) | null = null;
+
+// ─── Animated Counter Animation ───
+const animatedStats = ref({ users: 0, exams: 0, assignments: 0, submissions: 0 });
+const statsRef = ref<HTMLElement | null>(null);
+
+const animateCounter = (obj: { users: number; exams: number; assignments: number; submissions: number }, target: { users: number; exams: number; assignments: number; submissions: number }, duration: number) => {
+    const start = performance.now();
+    const update = (now: number) => {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        obj.users = Math.round(target.users * eased);
+        obj.exams = Math.round(target.exams * eased);
+        obj.assignments = Math.round(target.assignments * eased);
+        obj.submissions = Math.round(target.submissions * eased);
+        animatedStats.value = { ...obj };
+        if (progress < 1) requestAnimationFrame(update);
+    };
+    requestAnimationFrame(update);
+};
+
+const initPageAnimations = () => {
+    if (!pageRoot.value) return;
+
+    gsapCtx = gsap.context(() => {
+        // ─── Section Reveals ───
+        const sections = pageRoot.value?.querySelectorAll('.reveal-section');
+        if (sections?.length) {
+            gsap.fromTo(sections,
+                { y: 60, opacity: 0 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 1.2,
+                    stagger: 0.2,
+                    ease: 'expo.out',
+                    scrollTrigger: {
+                        trigger: sections,
+                        start: 'top 85%',
+                        toggleActions: 'play none none none',
+                    },
+                },
+            );
+        }
+
+        // ─── How It Works Step Cards ───
+        const stepCards = howItWorksSteps.value?.querySelectorAll('.step-card');
+        if (stepCards?.length) {
+            gsap.fromTo(stepCards,
+                { y: 50, opacity: 0, scale: 0.95 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    duration: 0.9,
+                    stagger: 0.15,
+                    ease: 'expo.out',
+                    scrollTrigger: {
+                        trigger: howItWorksSteps.value,
+                        start: 'top 80%',
+                        toggleActions: 'play none none none',
+                    },
+                },
+            );
+
+            // Animate step numbers
+            const stepNums = howItWorksSteps.value?.querySelectorAll('.step-number');
+            if (stepNums?.length) {
+                gsap.fromTo(stepNums,
+                    { scale: 0, rotation: -180 },
+                    {
+                        scale: 1,
+                        rotation: 0,
+                        duration: 0.6,
+                        stagger: 0.15,
+                        ease: 'back.out(2)',
+                        scrollTrigger: {
+                            trigger: howItWorksSteps.value,
+                            start: 'top 80%',
+                            toggleActions: 'play none none none',
+                        },
+                    },
+                );
+            }
+        }
+
+        // ─── Stats Counter ───
+        if (statsRef.value && (props.totalUsers || props.totalExams)) {
+            ScrollTrigger.create({
+                trigger: statsRef.value,
+                start: 'top 85%',
+                onEnter: () => {
+                    animateCounter({ users: 0, exams: 0, assignments: 0, submissions: 0 }, {
+                        users: props.totalUsers,
+                        exams: props.totalExams,
+                        assignments: props.totalAssignments,
+                        submissions: props.totalSubmissions,
+                    }, 2000);
+                },
+                once: true,
+            });
+        }
+    }, pageRoot.value);
+};
+
 const openDemoVideo = () => {
     isDemoVideoOpen.value = true;
 };
@@ -78,13 +193,24 @@ const openDemoVideo = () => {
 const closeDemoVideo = () => {
     isDemoVideoOpen.value = false;
 };
+
+onMounted(() => {
+    initPageAnimations();
+    lenisCleanup = syncLenisWithGsap(ScrollTrigger);
+});
+
+onUnmounted(() => {
+    gsapCtx?.revert();
+    lenisCleanup?.();
+});
 </script>
 
 <template>
     <Head title="Welcome | LUAV Learning Engine" />
 
     <div
-        class="welcome-root relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
+        ref="pageRoot"
+        class="welcome-root relative min-h-screen w-full bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
         :style="{ '--school-accent': brandAccentColor }"
     >
         <!-- Subtle background grid -->
@@ -142,8 +268,9 @@ const closeDemoVideo = () => {
             </WelcomeHero>
 
             <FeatureCards
+                ref="featureCardsSection"
                 id="features"
-                class="scroll-mt-32 mt-24"
+                class="reveal-section scroll-mt-32 mt-24"
                 :is-coarse-pointer="isCoarsePointer"
                 :prefers-reduced-motion="prefersReducedMotion"
                 :auth="$page.props.auth"
@@ -151,10 +278,33 @@ const closeDemoVideo = () => {
                 :login="login"
             />
 
+            <!-- Stats Counter Bar -->
+            <div
+                ref="statsRef"
+                class="reveal-section mt-24 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/10 bg-border/10 lg:grid-cols-4"
+            >
+                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
+                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.users.toLocaleString() }}</span>
+                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Students</span>
+                </div>
+                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
+                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.exams.toLocaleString() }}</span>
+                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Exams Created</span>
+                </div>
+                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
+                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.assignments.toLocaleString() }}</span>
+                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Assignments</span>
+                </div>
+                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
+                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.submissions.toLocaleString() }}</span>
+                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Submissions</span>
+                </div>
+            </div>
+
             <!-- How It Works -->
             <section
                 id="architecture"
-                class="scroll-mt-32 mt-32"
+                class="reveal-section scroll-mt-32 mt-32"
             >
                 <div class="flex flex-col gap-2 mb-10">
                     <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 self-start">
@@ -171,6 +321,7 @@ const closeDemoVideo = () => {
 
                 <!-- Horizontal step cards: scrollable on mobile, grid on desktop -->
                 <div
+                    ref="howItWorksSteps"
                     class="-mx-6 flex gap-4 overflow-x-auto px-6 pb-4 snap-x snap-mandatory scrollbar-none lg:mx-0 lg:grid lg:grid-cols-5 lg:gap-px lg:overflow-visible lg:rounded-xl lg:border lg:border-border/10 lg:bg-border/10 lg:p-0 lg:snap-none"
                 >
                     <div
@@ -182,9 +333,9 @@ const closeDemoVideo = () => {
                             { title: 'Earn Rewards', description: 'Unlock badges, seasonal achievements, and new nodes on your learning map.' },
                         ]"
                         :key="step.title"
-                        class="flex min-w-[260px] shrink-0 snap-start flex-col gap-3 rounded-xl border border-border/15 bg-background p-5 lg:min-w-0 lg:flex-1 lg:rounded-none lg:border-0 lg:border-r lg:border-border/10 lg:p-6 lg:last:border-r-0"
+                        class="step-card flex min-w-[260px] shrink-0 snap-start flex-col gap-3 rounded-xl border border-border/15 bg-background p-5 lg:min-w-0 lg:flex-1 lg:rounded-none lg:border-0 lg:border-r lg:border-border/10 lg:p-6 lg:last:border-r-0"
                     >
-                        <span class="text-[11px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                        <span class="step-number text-[11px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
                             Step {{ String(i + 1).padStart(2, '0') }}
                         </span>
                         <h3 class="text-sm font-semibold lg:text-base">
@@ -207,15 +358,9 @@ const closeDemoVideo = () => {
                 </div>
             </section>
 
-            <Motion
-                :initial="{ opacity: 0 }"
-                :animate="isBooted ? { opacity: 1 } : {}"
-                :in-view="isBooted ? { opacity: 1 } : {}"
-                :in-view-options="{ once: true }"
-                :transition="{ duration: 2 }"
-            >
+            <div class="reveal-section">
                 <TechStackCarousel :is-coarse-pointer="isCoarsePointer" />
-            </Motion>
+            </div>
         </main>
 
         <WelcomeFooter />
