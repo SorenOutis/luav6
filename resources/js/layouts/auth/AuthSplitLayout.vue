@@ -470,6 +470,15 @@ onBeforeUnmount(() => {
                         class="h-px flex-1 bg-gradient-to-l from-transparent to-border"
                     ></div>
                 </div>
+
+                <!-- Developed by credit -->
+                <div class="form-reveal flex justify-center">
+                    <span class="inline-flex items-center gap-2 text-[9px] font-semibold tracking-[0.25em] text-muted-foreground/40 uppercase">
+                        <span class="h-px w-6 bg-border/40"></span>
+                        Developed by
+                        <span class="font-black tracking-[0.35em] text-muted-foreground/70">KOAMISHIN</span>
+                    </span>
+                </div>
             </div>
 
             <!-- Back to home link -->
