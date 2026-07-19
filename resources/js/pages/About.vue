@@ -22,6 +22,7 @@ import {
     ArrowRight,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
+import { syncLenisWithGsap } from '@/composables/useLenis';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 gsap.registerPlugin(ScrollTrigger);
@@ -35,6 +36,7 @@ defineProps<{
 
 const root = ref<HTMLElement | null>(null);
 let ctx: gsap.Context | null = null;
+let lenisCleanup: (() => void) | null = null;
 
 const principles = [
     {
@@ -150,6 +152,8 @@ const resetDemo = () => {
 };
 
 onMounted(() => {
+    lenisCleanup = syncLenisWithGsap(ScrollTrigger);
+
     ctx = gsap.context(() => {
         gsap.from('.about-hero > *', {
             y: 40,
@@ -170,6 +174,23 @@ onMounted(() => {
                 scrollTrigger: { trigger: el, start: 'top 85%' },
             });
         });
+
+        // ─── About credit fade in ───
+        const creditEl = root.value?.querySelector('.about-credit');
+        if (creditEl) {
+            gsap.from(creditEl, {
+                y: 20,
+                opacity: 0,
+                filter: 'blur(4px)',
+                duration: 0.8,
+                ease: 'expo.out',
+                scrollTrigger: {
+                    trigger: creditEl,
+                    start: 'top 90%',
+                    toggleActions: 'play none none none',
+                },
+            });
+        }
 
         nextTick(() => {
             const sections = Array.from(
@@ -237,6 +258,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
     ctx?.revert();
     ctx = null;
+    lenisCleanup?.();
+    lenisCleanup = null;
 });
 
 const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -247,7 +270,7 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
     <div
         ref="root"
-        class="about-root relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
+        class="about-root relative min-h-screen w-full bg-background font-sans text-foreground selection:bg-primary/20"
     >
         <!-- Background grid -->
         <div
@@ -604,6 +627,15 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                 </div>
             </section>
         </main>
+
+        <!-- Developed by credit -->
+        <div class="about-credit pb-8 flex justify-center">
+            <span class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase">
+                <span class="h-px w-6 bg-border/40"></span>
+                Developed by
+                <span class="font-black tracking-[0.3em] text-muted-foreground/80">KOAMISHIN</span>
+            </span>
+        </div>
 
         <WelcomeFooter />
     </div>
