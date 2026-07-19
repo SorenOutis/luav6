@@ -47,6 +47,11 @@ class StudentPageRegistry
                 'path' => '/maps',
                 'description' => 'Interactive learning map and node completion.',
             ],
+            'courses' => [
+                'label' => 'Courses',
+                'path' => '/courses',
+                'description' => 'Course catalog, lesson viewer, and learning content.',
+            ],
             'ngl' => [
                 'label' => 'Anonymous Messages',
                 'path' => '/ngl',

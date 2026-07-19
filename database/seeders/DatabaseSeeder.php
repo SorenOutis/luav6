@@ -43,5 +43,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call(BadgeSeeder::class);
         $this->call(TowerDefenseSeeder::class);
+        $this->call(CourseSeeder::class);
+        $this->call(CourseUserPivotSeeder::class);
+        $this->call(LessonProgressSeeder::class);
     }
 }

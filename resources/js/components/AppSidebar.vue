@@ -2,6 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     LayoutGrid,
+    BookOpen,
     ClipboardList,
     GraduationCap,
     Gamepad2,
@@ -38,6 +39,12 @@ const mainNavItems = computed<NavItem[]>(() =>
             href: dashboard(),
             icon: LayoutGrid,
             studentPageKey: 'dashboard',
+        },
+        {
+            title: 'My Courses',
+            href: '/courses',
+            icon: BookOpen,
+            studentPageKey: 'courses',
         },
         {
             title: 'Assignments',

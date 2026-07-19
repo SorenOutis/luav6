@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { gsap } from 'gsap';
 import {
     LayoutGrid,
+    BookOpen,
     ClipboardList,
     GraduationCap,
     Gamepad2,
@@ -25,6 +26,7 @@ import { index as gamesIndex } from '@/routes/games';
 import { index as examsIndex } from '@/routes/exams';
 import { index as assignmentsIndex } from '@/routes/assignments';
 import { index as mapsIndex } from '@/routes/maps';
+import { index as coursesIndex } from '@/routes/courses';
 import { grades, logout } from '@/routes';
 
 const page = usePage();
@@ -61,6 +63,12 @@ const navItems = computed(() =>
             href: dashboard.url(),
             icon: LayoutGrid,
             studentPageKey: 'dashboard',
+        },
+        {
+            label: 'Courses',
+            href: coursesIndex().url,
+            icon: BookOpen,
+            studentPageKey: 'courses',
         },
         {
             label: 'Exams',

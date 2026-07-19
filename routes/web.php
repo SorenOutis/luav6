@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ExamSubmissionController;
 use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CourseController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\Games\GamesController;
 use App\Http\Controllers\Games\TowerDefenseController;
@@ -544,6 +545,22 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->name('maps.nodes.complete');
 
     // Tower Defense game routes
+    // ─────────────────────────────────────────────
+    // Courses (LMS Learning Portal)
+    // ─────────────────────────────────────────────
+    Route::get('courses', [CourseController::class, 'index'])
+        ->middleware('student.page:courses')
+        ->name('courses.index');
+    Route::get('courses/{course}', [CourseController::class, 'show'])
+        ->middleware('student.page:courses')
+        ->name('courses.show');
+    Route::get('courses/{course}/lessons/{lesson}', [CourseController::class, 'lesson'])
+        ->middleware('student.page:courses')
+        ->name('courses.lesson');
+    Route::post('courses/{course}/lessons/{lesson}/quiz', [CourseController::class, 'submitQuiz'])
+        ->middleware(['student.page:courses', 'throttle:10,1'])
+        ->name('courses.lesson.quiz');
+
     Route::prefix('games/tower-defense')->name('games.tower-defense.')->group(function () {
         Route::get('/', [TowerDefenseController::class, 'index'])->middleware('student.page:games')->name('index');
         Route::get('/play/{level}', [TowerDefenseController::class, 'play'])->middleware('student.page:games')->name('play');
