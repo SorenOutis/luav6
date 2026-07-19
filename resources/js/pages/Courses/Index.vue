@@ -171,9 +171,9 @@ const stats = computed(() => [
                         :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                         :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 + idx * 0.1 }"
                     >
-                        <div class="surface-card flex items-center gap-3 rounded-xl border border-border/40 p-4">
+                        <div class="surface-card flex items-center gap-2 rounded-xl border border-border/40 p-3 md:gap-3 md:p-4">
                             <div
-                                class="flex h-10 w-10 items-center justify-center rounded-xl"
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl md:h-10 md:w-10"
                                 :class="{
                                     'bg-primary/10 text-primary': stat.color === 'primary',
                                     'bg-emerald-500/10 text-emerald-500': stat.color === 'green',
@@ -181,12 +181,12 @@ const stats = computed(() => [
                                     'bg-blue-500/10 text-blue-500': stat.color === 'blue',
                                 }"
                             >
-                                <component :is="stat.icon" class="h-5 w-5" />
+                                <component :is="stat.icon" class="h-4 w-4 md:h-5 md:w-5" />
                             </div>
                             <div class="min-w-0">
-                                <p class="text-2xl font-black tabular-nums">{{ stat.value }}</p>
-                                <p class="text-[10px] font-medium text-muted-foreground/60">{{ stat.label }}</p>
-                                <p v-if="stat.sub" class="text-[9px] text-muted-foreground/40">{{ stat.sub }}</p>
+                                <p class="text-xl font-black tabular-nums md:text-2xl">{{ stat.value }}</p>
+                                <p class="text-[9px] font-medium text-muted-foreground/60 md:text-[10px]">{{ stat.label }}</p>
+                                <p v-if="stat.sub" class="text-[8px] text-muted-foreground/40 md:text-[9px]">{{ stat.sub }}</p>
                             </div>
                         </div>
                     </Motion>
@@ -220,7 +220,7 @@ const stats = computed(() => [
 
                         <div class="flex items-center gap-2">
                             <!-- Status Filter -->
-                            <div class="flex overflow-hidden rounded-xl border border-border/40 bg-background/60 p-0.5">
+                            <div class="scrollbar-none flex overflow-x-auto rounded-xl border border-border/40 bg-background/60 p-0.5">
                                 <button
                                     v-for="tab in [{ key: 'all', label: 'All' }, { key: 'in-progress', label: 'Active' }, { key: 'completed', label: 'Done' }]"
                                     :key="tab.key"

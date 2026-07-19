@@ -374,42 +374,42 @@ const burstConfetti = () => {
                                     : ''"
                             >
                                 <!-- Module Header -->
-                                <div class="border-b border-border/10 p-5">
-                                    <div class="flex items-start justify-between gap-3">
+                                <div class="border-b border-border/10 p-4 md:p-5">
+                                    <div class="flex items-start justify-between gap-2 md:gap-3">
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-[10px] font-bold text-muted-foreground/40">MODULE {{ mIdx + 1 }}</span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="text-[8px] font-bold text-muted-foreground/40 md:text-[10px]">MODULE {{ mIdx + 1 }}</span>
                                                 <span
                                                     v-if="mp(mod.id).done === mp(mod.id).total && mp(mod.id).total > 0"
-                                                    class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-500"
+                                                    class="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-bold text-emerald-500 md:px-2 md:text-[9px]"
                                                 >
-                                                    ✓ Complete
+                                                    ✓ Done
                                                 </span>
                                             </div>
-                                            <h3 class="mt-1 text-base font-bold truncate">{{ mod.title }}</h3>
-                                            <p v-if="mod.description" class="mt-1 text-[11px] leading-relaxed text-muted-foreground/60 line-clamp-2">
+                                            <h3 class="mt-1 text-sm font-bold truncate md:text-base">{{ mod.title }}</h3>
+                                            <p v-if="mod.description" class="mt-1 text-[10px] leading-relaxed text-muted-foreground/60 line-clamp-1 md:text-[11px] md:line-clamp-2">
                                                 {{ mod.description }}
                                             </p>
                                         </div>
                                         <div
-                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl md:h-10 md:w-10"
                                             :class="mp(mod.id).done === mp(mod.id).total && mp(mod.id).total > 0
                                                 ? 'bg-emerald-500/10 text-emerald-500'
                                                 : 'bg-primary/10 text-primary'"
                                         >
-                                            <GraduationCap class="h-5 w-5" />
+                                            <GraduationCap class="h-4 w-4 md:h-5 md:w-5" />
                                         </div>
                                     </div>
 
                                     <!-- Module progress bar -->
-                                    <div class="mt-4 space-y-1.5">
-                                        <div class="flex items-center justify-between text-[10px]">
+                                    <div class="mt-3 space-y-1 md:mt-4">
+                                        <div class="flex items-center justify-between text-[9px] md:text-[10px]">
                                             <span class="font-medium text-muted-foreground/50">{{ mp(mod.id).done }}/{{ mp(mod.id).total }} lessons</span>
                                             <span class="font-bold" :class="mp(mod.id).done === mp(mod.id).total ? 'text-emerald-500' : 'text-primary'">
                                                 {{ mp(mod.id).pct }}%
                                             </span>
                                         </div>
-                                        <div class="h-1.5 overflow-hidden rounded-full bg-muted">
+                                        <div class="h-1 overflow-hidden rounded-full bg-muted md:h-1.5">
                                             <div
                                                 class="h-full rounded-full transition-all duration-700"
                                                 :class="mp(mod.id).done === mp(mod.id).total ? 'bg-emerald-500' : 'bg-primary/60'"

@@ -282,17 +282,18 @@ watch(showResult, (val) => {
             </div>
 
             <!-- ─── Horizontal Module Strip ─── -->
-            <div class="scrollbar-none flex shrink-0 gap-0.5 overflow-x-auto border-b border-border/10 bg-muted/10 px-3 py-2 md:px-6">
+            <div class="scrollbar-none flex shrink-0 gap-0.5 overflow-x-auto border-b border-border/10 bg-muted/10 px-2 py-1.5 md:gap-1 md:px-6 md:py-2">
                 <template v-for="(mod, mIdx) in modules" :key="mod.id">
                     <!-- Module divider (not first) -->
                     <div
                         v-if="mIdx > 0"
-                        class="mx-1 mt-2.5 h-5 w-px shrink-0 bg-border/30"
+                        class="mx-0.5 mt-3 h-6 w-px shrink-0 bg-border/30 md:mx-1 md:mt-2.5 md:h-5"
                     ></div>
 
                     <!-- Module Group -->
                     <div class="shrink-0">
-                        <div class="flex items-center gap-1 px-1">
+                        <!-- Module name label: hidden on mobile, visible on md+ -->
+                        <div class="hidden items-center gap-1 px-1 md:flex">
                             <span class="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-wider">
                                 {{ mod.title }}
                             </span>
@@ -301,12 +302,14 @@ watch(showResult, (val) => {
                                 class="text-[9px] text-emerald-500"
                             >✓</span>
                         </div>
-                        <div class="mt-1 flex gap-1">
+                        <!-- Lesson buttons: bigger touch targets on mobile -->
+                        <div class="flex gap-1 md:mt-1">
                             <Link
                                 v-for="l in mod.lessons"
                                 :key="l.id"
                                 :href="`/courses/${course.id}/lessons/${l.id}`"
-                                class="group relative flex h-8 w-8 items-center justify-center rounded-lg text-[10px] font-bold transition-all"
+                                :aria-label="`Lesson ${moduleLessonOffsets[mIdx].start + mod.lessons.indexOf(l)}: ${l.title}`"
+                                class="group relative flex h-9 w-9 items-center justify-center rounded-lg text-xs font-bold transition-all active:scale-95 md:h-8 md:w-8 md:text-[10px] md:active:scale-100"
                                 :class="l.id === lesson.id
                                     ? 'bg-primary text-primary-foreground shadow-sm'
                                     : l.completed
@@ -314,7 +317,7 @@ watch(showResult, (val) => {
                                         : 'bg-muted text-muted-foreground/50 hover:bg-muted/80 hover:text-foreground/70'"
                                 :title="l.title"
                             >
-                                <span>{{ moduleLessonOffsets[mIdx].start + mod.lessons.indexOf(l) }}</span>
+                                <span class="md:inline">{{ moduleLessonOffsets[mIdx].start + mod.lessons.indexOf(l) }}</span>
                                 <span
                                     v-if="l.hasQuiz && l.id !== lesson.id"
                                     class="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-primary/40"
