@@ -6,13 +6,11 @@ import {
     BookMarked,
     ChevronRight,
     BarChart3,
-    Zap,
     ArrowUpDown,
     Search,
     X,
-    Filter,
 } from 'lucide-vue-next';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
@@ -56,6 +54,41 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Courses', href: '/courses' },
 ];
 
+// ─── Daily Tips ───
+const tips = [
+    'Consistency beats intensity — study a little every day rather than cramming.',
+    'Teaching someone else is one of the best ways to solidify what you\'ve learned.',
+    'Take a 5-minute break every 25 minutes — your brain needs time to consolidate.',
+    'Active recall (testing yourself) is far more effective than re-reading notes.',
+    'Sleep is when your brain processes new information — don\'t skip it.',
+    'Explaining a concept in simple terms reveals whether you truly understand it.',
+    'Small daily progress adds up to extraordinary results over time.',
+    'Take handwritten notes — the physical act of writing improves retention.',
+    'Mix different subjects in a study session to build stronger mental connections.',
+    'Review material within 24 hours of learning it to move it into long-term memory.',
+    'Set specific goals for each study session — vague intentions lead to vague results.',
+    'Your brain remembers what it thinks about — stay curious and ask questions.',
+    'Errors are not failures — they\'re data. Adjust and move forward.',
+    'Reading aloud engages more senses and improves recall.',
+    'The best time to start was yesterday. The next best time is now.',
+];
+const currentTipIndex = ref(-1);
+const tipKey = ref(0);
+
+onMounted(() => {
+    pickRandomTip();
+});
+
+const pickRandomTip = () => {
+    const newIndex = Math.floor(Math.random() * tips.length);
+    currentTipIndex.value = newIndex;
+    tipKey.value++;
+};
+
+const currentTip = computed(() =>
+    currentTipIndex.value >= 0 ? tips[currentTipIndex.value] : tips[0],
+);
+
 // ─── Search & Filter State ───
 const searchQuery = ref('');
 const sortBy = ref<'progress' | 'name' | 'lessons'>('progress');
@@ -89,36 +122,6 @@ const filteredCourses = computed(() => {
     return list;
 });
 
-const stats = computed(() => [
-    {
-        label: 'Enrolled Courses',
-        value: props.courses.length,
-        icon: BookMarked,
-        color: 'primary' as const,
-        sub: `${props.courses.filter(c => c.progress >= 100).length} completed`,
-    },
-    {
-        label: 'Total Lessons',
-        value: props.courses.reduce((acc, c) => acc + c.totalLessons, 0),
-        icon: BarChart3,
-        color: 'primary' as const,
-        sub: `${props.courses.reduce((acc, c) => acc + c.completedLessons, 0)} done`,
-    },
-    {
-        label: 'In Progress',
-        value: props.courses.filter(c => c.progress > 0 && c.progress < 100).length,
-        icon: BookOpen,
-        color: 'blue' as const,
-        sub: 'actively learning',
-    },
-    {
-        label: 'XP Earned',
-        value: props.courses.reduce((acc, c) => acc + c.xpEarned, 0),
-        icon: Zap,
-        color: 'amber' as const,
-        sub: 'total experience',
-    },
-]);
 </script>
 
 <template>
@@ -142,55 +145,38 @@ const stats = computed(() => [
                 <div v-if="!isMobileDevice" class="pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"></div>
                 <div v-if="!isMobileDevice" class="pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"></div>
 
-                <!-- Header -->
+                <!-- Daily Tip -->
                 <Motion
+                    :key="'tip-' + tipKey"
                     :initial="{ opacity: 0, y: 30 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }"
+                    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
                     class="relative z-10"
                 >
-                    <div class="flex items-center gap-4">
-                        <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 shadow-lg shadow-primary/5">
-                            <BookOpen class="h-7 w-7 text-primary" />
-                        </div>
-                        <div>
-                            <h1 class="text-3xl font-black tracking-tight">My Courses</h1>
-                            <p class="mt-1 text-sm text-muted-foreground">
-                                Continue your learning journey
+                    <div class="relative overflow-hidden rounded-2xl border border-border/20 bg-gradient-to-br from-primary/[0.04] via-muted/[0.02] to-transparent p-6 md:p-8">
+                        <!-- Decorative glow -->
+                        <div class="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-primary/5 blur-[60px]"></div>
+                        <div class="relative flex flex-col gap-4">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm">✨</span>
+                                <span class="text-[10px] font-black tracking-[0.3em] text-primary/60 uppercase">Daily Insight</span>
+                            </div>
+                            <p class="text-lg leading-relaxed font-medium tracking-tight text-foreground/90 md:text-2xl md:leading-snug">
+                                &ldquo;{{ currentTip }}&rdquo;
                             </p>
+                            <div class="flex items-center justify-between">
+                                <div class="h-px flex-1 bg-gradient-to-r from-primary/20 via-border/20 to-transparent"></div>
+                                <button
+                                    @click="pickRandomTip"
+                                    class="shrink-0 rounded-lg border border-border/30 px-4 py-2 text-[10px] font-black tracking-[0.2em] text-muted-foreground/50 uppercase transition-all hover:border-primary/40 hover:text-primary/70"
+                                    title="New tip"
+                                >
+                                    Shuffle
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </Motion>
-
-                <!-- Stats -->
-                <div class="relative z-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-                    <Motion
-                        v-for="(stat, idx) in stats"
-                        :key="stat.label"
-                        :initial="{ opacity: 0, y: 20 }"
-                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                        :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 + idx * 0.1 }"
-                    >
-                        <div class="surface-card flex items-center gap-2 rounded-xl border border-border/40 p-3 md:gap-3 md:p-4">
-                            <div
-                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl md:h-10 md:w-10"
-                                :class="{
-                                    'bg-primary/10 text-primary': stat.color === 'primary',
-                                    'bg-emerald-500/10 text-emerald-500': stat.color === 'green',
-                                    'bg-amber-500/10 text-amber-500': stat.color === 'amber',
-                                    'bg-blue-500/10 text-blue-500': stat.color === 'blue',
-                                }"
-                            >
-                                <component :is="stat.icon" class="h-4 w-4 md:h-5 md:w-5" />
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xl font-black tabular-nums md:text-2xl">{{ stat.value }}</p>
-                                <p class="text-[9px] font-medium text-muted-foreground/60 md:text-[10px]">{{ stat.label }}</p>
-                                <p v-if="stat.sub" class="text-[8px] text-muted-foreground/40 md:text-[9px]">{{ stat.sub }}</p>
-                            </div>
-                        </div>
-                    </Motion>
-                </div>
 
                 <!-- Search, Filter & Sort Bar -->
                 <Motion

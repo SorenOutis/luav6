@@ -119,7 +119,7 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
-            <div class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10">
+            <div data-lenis-prevent class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10">
                 <PageSkeleton
                     :hero="true"
                     :subtitle="true"
@@ -163,7 +163,7 @@ onMounted(() => {
         <template v-if="isBooted">
             <div
                 ref="container"
-                class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
+                data-lenis-prevent class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
             >
             <!-- Decorative Orbs (hidden on mobile for performance) -->
             <div
