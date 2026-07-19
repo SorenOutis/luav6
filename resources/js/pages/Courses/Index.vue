@@ -55,7 +55,12 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 // ─── Daily Tips ───
-const tips = [
+interface ContextAwareTip {
+    condition: (courses: Course[]) => boolean;
+    generate: (courses: Course[]) => string;
+}
+
+const generalTips: string[] = [
     'Consistency beats intensity — study a little every day rather than cramming.',
     'Teaching someone else is one of the best ways to solidify what you\'ve learned.',
     'Take a 5-minute break every 25 minutes — your brain needs time to consolidate.',
@@ -71,23 +76,186 @@ const tips = [
     'Errors are not failures — they\'re data. Adjust and move forward.',
     'Reading aloud engages more senses and improves recall.',
     'The best time to start was yesterday. The next best time is now.',
+    // New general tips
+    'Spaced repetition is the most efficient way to move knowledge into long-term memory — review at increasing intervals.',
+    'The Pomodoro Technique: 25 minutes of focused work, 5 minutes break. Repeat for laser focus.',
+    'Don\'t just highlight text — rephrase key ideas in your own words to truly understand them.',
+    'Studying in a quiet, distraction-free environment boosts retention by up to 40%.',
+    'Interleaving — mixing different topics — helps your brain build stronger pattern recognition.',
+    'Use the Feynman Technique: explain a concept like you\'re teaching it to a child.',
+    'A tidy study space leads to a tidy mind — organise your environment before you begin.',
+    'Practice testing is one of the highest-impact study strategies known to learning science.',
+    'Your brain is a muscle — the more you challenge it, the stronger it becomes.',
+    'Perfectionism is the enemy of progress. Focus on completing, not perfecting.',
+    'Memory palaces (method of loci) help you recall complex sequences using spatial memory.',
+    'Study right before sleep — your brain consolidates memories and learnings during rest.',
+    'A 20-minute walk can reset your focus and spark creative breakthroughs.',
+    'The first 5 minutes of any study session are the hardest — just start and momentum will carry you.',
+    'Curiosity is a superpower — follow your questions down rabbit holes to deepen understanding.',
+    'Dual coding: pair words with diagrams or visuals for double the memory pathways.',
+    'Put your phone on airplane mode — a distraction-free 30 minutes beats two hours of fractured attention.',
+    'Write down intrusive thoughts as they come, then deal with them after your session ends.',
+    'Mnemonics turn boring facts into memorable stories your brain can\'t forget.',
+    'Every expert was once a beginner who refused to give up — keep going.',
 ];
-const currentTipIndex = ref(-1);
+
+const contextTips: ContextAwareTip[] = [
+    {
+        condition: (courses) => courses.some((c) => c.progress >= 75 && c.progress < 100),
+        generate: (courses) => {
+            const near = courses.filter((c) => c.progress >= 75 && c.progress < 100);
+            if (near.length === 1) {
+                return `You're ${near[0].progress}% through "${near[0].name}" — that last stretch is where champions are made. Keep pushing!`;
+            }
+            return `You have ${near.length} courses over 75% complete — the finish line is in sight for all of them!`;
+        },
+    },
+    {
+        condition: (courses) => {
+            const active = courses.filter((c) => c.progress > 0 && c.progress < 100);
+            return active.length >= 2;
+        },
+        generate: (courses) => {
+            const active = courses.filter((c) => c.progress > 0 && c.progress < 100);
+            return `You're juggling ${active.length} courses at once. Try the Pomodoro Technique — 25 minutes per course in rotation keeps things fresh.`;
+        },
+    },
+    {
+        condition: (courses) => courses.length > 0 && courses.every((c) => c.progress >= 100),
+        generate: (courses) => {
+            return `You've completed all ${courses.length} courses! 🎉 That's an achievement — take a moment to celebrate before your next enrollment.`;
+        },
+    },
+    {
+        condition: (courses) => courses.length === 0,
+        generate: () => {
+            return 'You\'re not enrolled in any courses yet — your next learning adventure is just one enrollment away.';
+        },
+    },
+    {
+        condition: (courses) => {
+            const count = courses.filter((c) => c.progress > 0 && c.progress < 25).length;
+            return count === courses.length && courses.length > 0;
+        },
+        generate: () => {
+            return 'Every course starts slow. The secret? Consistent 10-minute daily sessions build unstoppable momentum over time.';
+        },
+    },
+    {
+        condition: (courses) => {
+            const totalDone = courses.reduce((sum, c) => sum + c.completedLessons, 0);
+            return totalDone > 0 && totalDone < 5;
+        },
+        generate: () => {
+            return 'You\'ve started making progress! The first few lessons are always the hardest — keep showing up and the habit will carry you.';
+        },
+    },
+    {
+        condition: (courses) => courses.some((c) => c.completedLessons > 0 && c.progress < 100),
+        generate: (courses) => {
+            const best = courses.reduce((a, b) => (a.completedLessons > b.completedLessons ? a : b));
+            return `You've done ${best.completedLessons} of ${best.totalLessons} lessons in "${best.name}" — consistency is building momentum!`;
+        },
+    },
+    {
+        condition: (courses) => courses.length > 0,
+        generate: (courses) => {
+            const totalLessons = courses.reduce((sum, c) => sum + c.totalLessons, 0);
+            const totalDone = courses.reduce((sum, c) => sum + c.completedLessons, 0);
+            const totalXp = courses.reduce((sum, c) => sum + c.xpEarned, 0);
+            return `Across ${courses.length} course${courses.length > 1 ? 's' : ''}, you've completed ${totalDone} of ${totalLessons} lessons and earned ${totalXp} XP. Every bit counts!`;
+        },
+    },
+    {
+        condition: (courses) => {
+            const near = courses.filter((c) => c.progress >= 75 && c.progress < 100);
+            const others = courses.filter((c) => c.progress < 75 && c.progress > 0);
+            return near.length > 0 && others.length > 0;
+        },
+        generate: (courses) => {
+            const near = courses.filter((c) => c.progress >= 75 && c.progress < 100);
+            const name = near.length === 1 ? `"${near[0].name}"` : `${near.length} courses`;
+            return `You're close to finishing ${name}. A final push now saves you from starting over later!`;
+        },
+    },
+];
+
+const STORAGE_KEY_TIP = 'luav6-course-tip';
+const STORAGE_KEY_DISMISS = 'luav6-course-tip-dismissed';
+
+const currentTipText = ref('');
+const tipType = ref<'general' | 'context'>('general');
 const tipKey = ref(0);
+
+function isDismissedToday(): boolean {
+    try {
+        return localStorage.getItem(STORAGE_KEY_DISMISS) === getTodayDate();
+    } catch {
+        return false;
+    }
+}
+
+function getTodayDate(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const showTip = ref(!isDismissedToday());
+
+function dismissTip() {
+    showTip.value = false;
+    try {
+        localStorage.setItem(STORAGE_KEY_DISMISS, getTodayDate());
+    } catch {
+        // localStorage unavailable
+    }
+}
+
+function getSavedTip(): string | null {
+    try {
+        return localStorage.getItem(STORAGE_KEY_TIP);
+    } catch {
+        return null;
+    }
+}
+
+function saveTip(tip: string) {
+    try {
+        localStorage.setItem(STORAGE_KEY_TIP, tip);
+    } catch {
+        // localStorage unavailable (private browsing, etc.)
+    }
+}
 
 onMounted(() => {
     pickRandomTip();
 });
 
 const pickRandomTip = () => {
-    const newIndex = Math.floor(Math.random() * tips.length);
-    currentTipIndex.value = newIndex;
+    const lastTip = getSavedTip();
+    const contextEligible = contextTips.filter((t) => t.condition(props.courses));
+    const tryContext = Math.random() < 0.3 && contextEligible.length > 0;
+
+    let picked = '';
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    do {
+        if (tryContext) {
+            const pickedContext = contextEligible[Math.floor(Math.random() * contextEligible.length)];
+            picked = pickedContext.generate(props.courses);
+            tipType.value = 'context';
+        } else {
+            picked = generalTips[Math.floor(Math.random() * generalTips.length)];
+            tipType.value = 'general';
+        }
+        attempts++;
+    } while (picked === lastTip && attempts < maxAttempts);
+
+    currentTipText.value = picked;
+    saveTip(picked);
     tipKey.value++;
 };
-
-const currentTip = computed(() =>
-    currentTipIndex.value >= 0 ? tips[currentTipIndex.value] : tips[0],
-);
 
 // ─── Search & Filter State ───
 const searchQuery = ref('');
@@ -147,6 +315,7 @@ const filteredCourses = computed(() => {
 
                 <!-- Daily Tip -->
                 <Motion
+                    v-if="showTip"
                     :key="'tip-' + tipKey"
                     :initial="{ opacity: 0, y: 30 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
@@ -158,13 +327,34 @@ const filteredCourses = computed(() => {
                         <div class="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-primary/5 blur-[60px]"></div>
                         <div class="relative flex flex-col gap-4">
                             <div class="flex items-center gap-3">
-                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-sm">✨</span>
-                                <span class="text-[10px] font-black tracking-[0.3em] text-primary/60 uppercase">Daily Insight</span>
+                                <span
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors duration-500"
+                                    :class="tipType === 'context'
+                                        ? 'bg-amber-500/15 text-amber-500/80'
+                                        : 'bg-primary/10 text-primary/70'"
+                                >
+                                    {{ tipType === 'context' ? '🎯' : '✨' }}
+                                </span>
+                                <span
+                                    class="text-[10px] font-black tracking-[0.3em] uppercase transition-colors duration-500"
+                                    :class="tipType === 'context'
+                                        ? 'text-amber-500/70'
+                                        : 'text-primary/60'"
+                                >
+                                    {{ tipType === 'context' ? 'Your Progress' : 'Daily Insight' }}
+                                </span>
                             </div>
                             <p class="text-lg leading-relaxed font-medium tracking-tight text-foreground/90 md:text-2xl md:leading-snug">
-                                &ldquo;{{ currentTip }}&rdquo;
+                                &ldquo;{{ currentTipText }}&rdquo;
                             </p>
-                            <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <button
+                                    @click="dismissTip"
+                                    class="shrink-0 rounded-lg border border-border/30 px-3 py-2 text-[10px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase transition-all hover:border-foreground/20 hover:text-foreground/60"
+                                    title="Dismiss"
+                                >
+                                    Got it
+                                </button>
                                 <div class="h-px flex-1 bg-gradient-to-r from-primary/20 via-border/20 to-transparent"></div>
                                 <button
                                     @click="pickRandomTip"
