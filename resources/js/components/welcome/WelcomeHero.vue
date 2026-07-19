@@ -361,10 +361,10 @@ onUnmounted(() => {
 
         <!-- Developed by credit -->
         <div class="hero-credit mt-10 flex justify-end lg:mt-14">
-            <span class="inline-flex items-center gap-2 text-[9px] font-semibold tracking-[0.25em] text-muted-foreground/40 uppercase lg:text-[10px]">
+            <span class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase lg:text-[10px]">
                 <span class="h-px w-6 bg-border/40"></span>
                 Developed by
-                <span class="font-black tracking-[0.35em] text-muted-foreground/70">KOAMISHIN</span>
+                <span class="font-black tracking-[0.3em] text-muted-foreground/80">KOAMISHIN</span>
             </span>
         </div>
     </div>
