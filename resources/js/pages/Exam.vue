@@ -15,7 +15,7 @@ import {
     TrendingUp,
     Search,
 } from 'lucide-vue-next';
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { Button } from '@/components/ui/button';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import {
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { show as examsShow } from '@/routes/exams';
+import { getLenis } from '@/composables/useLenis';
 import type { BreadcrumbItem } from '@/types';
 
 usePoll(10000, {
@@ -328,12 +329,18 @@ watch(sectionTabs, (tabs) => {
     }
 });
 
-// Lock body scroll when review modal is open
-watch(showReviewModal, (isOpen) => {
+// Lock body scroll, stop Lenis, & reset scroll position when review modal opens
+watch(showReviewModal, async (isOpen) => {
     if (isOpen) {
         document.body.style.overflow = 'hidden';
+        getLenis()?.stop();
+        await nextTick();
+        if (scrollRef.value) {
+            scrollRef.value.scrollTop = 0;
+        }
     } else {
         document.body.style.overflow = '';
+        getLenis()?.start();
     }
 });
 
@@ -649,7 +656,7 @@ function showScrollbar() {
     <ResponsiveModal
         :open="showReviewModal"
         custom-header
-        content-class="exam-review-modal flex flex-col sm:max-h-[85vh] sm:max-w-[1000px]"
+        content-class="exam-review-modal flex flex-col overflow-hidden sm:max-h-[85vh] sm:max-w-[1000px]"
         @close="showReviewModal = false"
     >
         <template #header>
@@ -711,6 +718,7 @@ function showScrollbar() {
         <div
             ref="scrollRef"
             @scroll="showScrollbar"
+            data-lenis-prevent
             class="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
         >
             <div v-if="selectedExamForReview" class="space-y-8">
