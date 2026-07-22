@@ -328,6 +328,28 @@ watch(sectionTabs, (tabs) => {
         activeSection.value = 'all';
     }
 });
+
+// Lock body scroll when review modal is open
+watch(showReviewModal, (isOpen) => {
+    if (isOpen) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+});
+
+// --- Scrollbar auto-hide: visible while scrolling, fades out after 1.5s idle ---
+const scrollRef = ref<HTMLElement | null>(null);
+let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+
+function showScrollbar() {
+    if (!scrollRef.value) return;
+    scrollRef.value.classList.add('scrolling');
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+        scrollRef.value?.classList.remove('scrolling');
+    }, 1500);
+}
 </script>
 
 <template>
@@ -628,7 +650,7 @@ watch(sectionTabs, (tabs) => {
     <ResponsiveModal
         :open="showReviewModal"
         custom-header
-        content-class="exam-review-modal sm:max-h-[85vh] sm:max-w-[1000px]"
+        content-class="exam-review-modal flex flex-col overflow-hidden sm:max-h-[85vh] sm:max-w-[1000px]"
         @close="showReviewModal = false"
     >
         <template #header>
@@ -700,7 +722,11 @@ watch(sectionTabs, (tabs) => {
         </div>
 
         <!-- Scrollable Content -->
-        <div class="custom-scrollbar overflow-y-auto p-6">
+        <div
+            ref="scrollRef"
+            @scroll="showScrollbar"
+            class="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        >
             <div v-if="selectedExamForReview" class="space-y-8">
                 <Motion
                     v-for="part in selectedExamForReview.parts"
@@ -905,15 +931,45 @@ watch(sectionTabs, (tabs) => {
 <style scoped>
 @reference "../../css/app.css";
 
-.custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 30%, transparent) transparent;
+    scroll-behavior: smooth;
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
 .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--color-primary) 40%, transparent);
-    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 0.6s ease;
+}
+
+.custom-scrollbar.scrolling::-webkit-scrollbar-thumb,
+.custom-scrollbar:hover::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.custom-scrollbar.scrolling::-webkit-scrollbar-thumb:active,
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+    background: color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+.custom-scrollbar::-webkit-scrollbar-button {
+    display: none;
+}
+
+.overscroll-contain {
+    overscroll-behavior: contain;
 }
 
 .no-scrollbar::-webkit-scrollbar {

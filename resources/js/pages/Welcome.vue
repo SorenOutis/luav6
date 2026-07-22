@@ -12,6 +12,7 @@ gsap.registerPlugin(ScrollTrigger);
 import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
+import PricingSection from '@/components/welcome/PricingSection.vue';
 import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
@@ -361,6 +362,13 @@ onUnmounted(() => {
             <div class="reveal-section">
                 <TechStackCarousel :is-coarse-pointer="isCoarsePointer" />
             </div>
+
+            <PricingSection
+                :auth="$page.props.auth"
+                :dashboard="dashboard"
+                :login="login"
+                :register="register"
+            />
         </main>
 
         <WelcomeFooter />
