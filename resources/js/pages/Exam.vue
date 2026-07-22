@@ -8,7 +8,7 @@ import {
     CheckCircle2,
     XCircle,
     Shield,
-    ShieldOff,
+
     ArrowRight,
     Zap,
     Timer,
@@ -77,7 +77,6 @@ const props = defineProps<{
 const showReviewModal = ref(false);
 const selectedExamForReview = ref<Exam | null>(null);
 const selectedPartId = ref<number | null>(null);
-const privacyMode = ref(true);
 
 // --- Filter State ---
 const activeFilter = ref<'all' | 'active' | 'completed'>('all');
@@ -650,7 +649,7 @@ function showScrollbar() {
     <ResponsiveModal
         :open="showReviewModal"
         custom-header
-        content-class="exam-review-modal flex flex-col overflow-hidden sm:max-h-[85vh] sm:max-w-[1000px]"
+        content-class="exam-review-modal flex flex-col sm:max-h-[85vh] sm:max-w-[1000px]"
         @close="showReviewModal = false"
     >
         <template #header>
@@ -666,19 +665,6 @@ function showScrollbar() {
                 </div>
 
                 <div class="flex shrink-0 items-center gap-3">
-                    <!-- Privacy Toggle -->
-                    <button
-                        @click="privacyMode = !privacyMode"
-                        class="flex items-center gap-1.5 rounded-lg border border-border/50 bg-muted/20 px-2.5 py-1.5 text-[11px] font-medium transition-colors hover:border-primary/30"
-                    >
-                        <component
-                            :is="privacyMode ? Shield : ShieldOff"
-                            class="h-3.5 w-3.5"
-                            :class="privacyMode ? 'text-primary' : 'text-muted-foreground'"
-                        />
-                        <span>{{ privacyMode ? 'Hide' : 'Show' }}</span>
-                    </button>
-
                     <div class="rounded-lg bg-primary/5 px-3 py-1.5 text-right">
                         <span class="text-[9px] font-medium text-muted-foreground">Score</span>
                         <span class="ml-1.5 text-base font-bold text-foreground tabular-nums">
@@ -758,7 +744,7 @@ function showScrollbar() {
                             :initial="{ opacity: 0, y: 15 }"
                             :animate="{ opacity: 1, y: 0 }"
                             :transition="{ duration: 0.4, delay: qIndex * 0.05, ease: [0.16, 1, 0.3, 1] }"
-                            class="group/question relative overflow-hidden rounded-xl border p-5 transition-all"
+                            class="question-card relative overflow-hidden rounded-xl border p-5 transition-all"
                             :class="
                                 isAnswerCorrect(
                                     question,
@@ -775,10 +761,9 @@ function showScrollbar() {
                                     : 'border-red-500/30 bg-red-500/[0.02]'
                             "
                         >
-                            <!-- Privacy Overlay -->
+                            <!-- Privacy Overlay: visible by default, fades on hover to reveal content -->
                             <div
-                                v-if="privacyMode"
-                                class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-100 transition-opacity duration-300 group-hover/question:opacity-0"
+                                class="question-reveal-overlay pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-100 transition-opacity duration-300"
                             >
                                 <div class="flex items-center gap-2 rounded-xl border border-primary/20 bg-background/90 px-4 py-2 shadow-lg backdrop-blur-sm">
                                     <Shield class="h-4 w-4 text-primary" />
@@ -787,8 +772,7 @@ function showScrollbar() {
                             </div>
 
                             <div
-                                class="space-y-3 transition-all duration-500"
-                                :class="privacyMode ? 'group-hover/question:blur-0 blur-sm select-none' : ''"
+                                class="question-reveal-content space-y-3 transition-all duration-500 blur-sm select-none"
                             >
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-center gap-2">
@@ -970,6 +954,14 @@ function showScrollbar() {
 
 .overscroll-contain {
     overscroll-behavior: contain;
+}
+
+.question-card:hover .question-reveal-overlay {
+    opacity: 0 !important;
+}
+
+.question-card:hover .question-reveal-content {
+    filter: none !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
