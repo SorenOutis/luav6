@@ -335,8 +335,10 @@ watch(showReviewModal, async (isOpen) => {
         document.body.style.overflow = 'hidden';
         getLenis()?.stop();
         await nextTick();
+        // Wait one frame for modal entrance animation to settle
+        await new Promise((r) => requestAnimationFrame(r));
         if (scrollRef.value) {
-            scrollRef.value.scrollTop = 0;
+            scrollRef.value.scrollTo({ top: 0, behavior: 'smooth' });
         }
     } else {
         document.body.style.overflow = '';
