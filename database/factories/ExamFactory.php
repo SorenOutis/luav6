@@ -1,0 +1,63 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Exam;
+use App\Models\Section;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<Exam>
+ */
+class ExamFactory extends Factory
+{
+    protected $model = Exam::class;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'title' => fake()->sentence(3),
+            'description' => fake()->sentence(),
+            'exam_date' => now()->addDay(),
+            'duration_minutes' => 60,
+            'status' => 'published',
+            'section_id' => null,
+            'admin_id' => null,
+        ];
+    }
+
+    public function draft(): static
+    {
+        return $this->state(fn (array $attributes) => ['status' => 'draft']);
+    }
+
+    public function published(): static
+    {
+        return $this->state(fn (array $attributes) => ['status' => 'published']);
+    }
+
+    /**
+     * A closed exam. Students may review answer keys once an exam is closed.
+     */
+    public function closed(): static
+    {
+        return $this->state(fn (array $attributes) => ['status' => 'closed']);
+    }
+
+    public function forSection(Section $section): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'section_id' => $section->id,
+        ]);
+    }
+
+    public function withDuration(int $minutes): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'duration_minutes' => $minutes,
+        ]);
+    }
+}
