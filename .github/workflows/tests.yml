@@ -6,13 +6,11 @@ on:
       - develop
       - main
       - master
-      - workos
   pull_request:
     branches:
       - develop
       - main
       - master
-      - workos
 
 jobs:
   ci:
@@ -52,5 +50,8 @@ jobs:
       - name: Build Assets
         run: npm run build
 
-      - name: Tests
-        run: ./vendor/bin/pest
+      # composer ci:check runs lint + format:check + types:check + tests.
+      # Previously only pest ran, so vue-tsc (the TypeScript safety net) and
+      # the formatting check never executed in CI despite being defined.
+      - name: CI checks
+        run: composer ci:check

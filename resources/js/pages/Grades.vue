@@ -16,7 +16,8 @@ import {
     Loader2,
     RefreshCw,
 } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { useEventListener } from '@vueuse/core';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useStaleWhileRevalidate } from '@/composables/useStaleWhileRevalidate';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
@@ -98,7 +99,12 @@ const {
 
 // Revalidate whenever the page becomes visible (e.g., after admin enters grades)
 // This ensures changes made in the admin panel show up immediately.
-document.addEventListener('visibilitychange', () => {
+//
+// useEventListener unbinds on unmount. The previous version registered this at
+// module scope with no teardown, so in an Inertia SPA every visit to this page
+// added another listener that stayed for the rest of the session and called
+// fetchGrades() on behalf of a component that no longer existed.
+useEventListener(document, 'visibilitychange', () => {
     if (!document.hidden) {
         fetchGrades();
     }
@@ -492,6 +498,12 @@ const exportPdf = async () => {
 };
 
 // ── Animations ───────────────────────────────────────────────────
+// Pending scroll-hint timers would otherwise fire into a destroyed component.
+onBeforeUnmount(() => {
+    Object.values(scrollHintTimers.value).forEach((timer) => clearTimeout(timer));
+    scrollHintTimers.value = {};
+});
+
 onMounted(() => {
     // Animations start immediately because the composable already
     // resolved data from cache or SSR on init.

@@ -16,6 +16,7 @@ import {
     Flame,
     ChevronRight,
 } from 'lucide-vue-next';
+import { useTimeoutFn } from '@vueuse/core';
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -192,8 +193,9 @@ function setItemRef(el: any, index: number) {
 }
 
 onMounted(() => {
-    // Small delay to let DOM paint
-    setTimeout(animateIndicator, 150);
+    // Small delay to let DOM paint. useTimeoutFn cancels on unmount — a bare
+    // setTimeout would fire into a destroyed component after navigation.
+    useTimeoutFn(animateIndicator, 150);
 });
 
 watch(activeIndex, () => {

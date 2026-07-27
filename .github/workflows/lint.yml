@@ -6,13 +6,11 @@ on:
       - develop
       - main
       - master
-      - workos
   pull_request:
     branches:
       - develop
       - main
       - master
-      - workos
 
 permissions:
   contents: write
@@ -33,14 +31,17 @@ jobs:
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
           npm install
 
+      # :check variants — the previous write-mode commands computed fixes and
+      # discarded them (the auto-commit step below is disabled), so CI passed
+      # on unformatted code.
       - name: Run Pint
-        run: composer lint
+        run: composer lint:check
 
       - name: Format Frontend
-        run: npm run format
+        run: npm run format:check
 
       - name: Lint Frontend
-        run: npm run lint
+        run: npm run lint:check
 
       # - name: Commit Changes
       #   uses: stefanzweifel/git-auto-commit-action@v7

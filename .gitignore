@@ -40,3 +40,9 @@ resources/js/routes_temp/
 # Local patch exports (session artifacts)
 /.patches
 *.patch
+
+# Build artefacts
+*.log
+.rnd
+build_error.txt
+build_output.txt

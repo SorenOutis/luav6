@@ -9,6 +9,7 @@ import {
     Heart,
     Sparkles,
 } from 'lucide-vue-next';
+import { useTimeoutFn } from '@vueuse/core';
 import { ref, onMounted } from 'vue';
 import { Button } from '@/components/ui/button';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
@@ -56,7 +57,8 @@ const localLikedMessageIds = ref<number[]>([]);
 onMounted(() => {
     localLikedMessageIds.value = [...props.userLikedMessageIds];
 
-    setTimeout(() => {
+    // useTimeoutFn auto-cancels on unmount.
+    useTimeoutFn(() => {
         gsap.from('.ngl-card', {
             y: 20,
             opacity: 0,
@@ -110,7 +112,8 @@ const submit = () => {
             showSuccess.value = true;
             isSubmitting.value = false;
             showSubmissionModal.value = false;
-            setTimeout(() => {
+            // Auto-cancelled if the student navigates away before it fires.
+            useTimeoutFn(() => {
                 showSuccess.value = false;
             }, 5000);
         },

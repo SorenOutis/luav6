@@ -96,9 +96,12 @@ const formatDelta = (value: number) => {
                 <div
                     class="relative h-48 w-full overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/10 via-primary/5 to-background md:h-64 md:rounded-[2rem]"
                 >
+                    <!-- Decorative banner: alt="" so screen readers skip it rather than
+                         announcing a filename. -->
                     <img
                         v-if="profileUser.cover_photo"
                         :src="profileUser.cover_photo"
+                        alt=""
                         class="absolute inset-0 z-0 h-full w-full object-cover"
                     />
 

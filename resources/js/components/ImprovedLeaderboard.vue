@@ -526,6 +526,7 @@ const changeSeason = async (seasonId: number) => {
                                     <img
                                         v-if="user.avatar"
                                         :src="user.avatar"
+                                        :alt="`${user.name} avatar`"
                                         class="h-full w-full object-cover"
                                     />
                                     <User
@@ -548,6 +549,7 @@ const changeSeason = async (seasonId: number) => {
                                     <img
                                         v-if="user.avatar"
                                         :src="user.avatar"
+                                        :alt="`${user.name} avatar`"
                                         class="h-full w-full object-cover blur-sm"
                                     />
                                     <User
@@ -696,6 +698,7 @@ const changeSeason = async (seasonId: number) => {
                                     <img
                                         v-if="user.avatar"
                                         :src="user.avatar"
+                                        :alt="`${user.name} avatar`"
                                         class="h-full w-full object-cover"
                                     />
                                     <User
@@ -710,6 +713,7 @@ const changeSeason = async (seasonId: number) => {
                                     <img
                                         v-if="user.avatar"
                                         :src="user.avatar"
+                                        :alt="`${user.name} avatar`"
                                         class="h-full w-full object-cover blur-sm"
                                     />
                                     <User

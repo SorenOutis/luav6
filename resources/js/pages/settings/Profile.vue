@@ -212,9 +212,11 @@ const leaveSection = (sectionId: number) => {
                             class="group relative flex h-32 w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border/50 bg-muted sm:h-48"
                             @click="triggerCoverInput"
                         >
+                            <!-- Decorative: the surrounding button carries the accessible label. -->
                             <img
                                 v-if="coverPreviewUrl || user.cover_photo"
                                 :src="coverPreviewUrl || user.cover_photo"
+                                alt=""
                                 class="h-full w-full cursor-pointer object-cover transition-opacity group-hover:opacity-80"
                             />
                             <div
