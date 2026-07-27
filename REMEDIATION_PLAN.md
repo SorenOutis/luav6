@@ -627,17 +627,31 @@ Everything after those is engineering debt.
 
 ---
 
-## Open questions (need your call before I implement)
+## Decisions (confirmed by the user — encoded in tests)
 
-1. **Exam review visibility** — should students see correct answers immediately after submitting a
-   part, or only once the exam is `closed`? Affects 1.1. Immediate reveal lets students in the same
-   room share answers mid-exam.
-2. **Late submissions** — hard-reject past the deadline, or accept and flag for the teacher?
-   I recommend accept-and-flag. Affects 1.4.
-3. **Per-exam vs per-part timer** — `exam_live_sessions` is uniquely keyed on `(user_id, exam_id)`,
-   so today the clock is per-exam. Is that intended, or should each part have its own limit?
-4. **Retakes** — is a single attempt per part correct, or do you want `max_attempts`? Affects 1.3.
-5. **Accessibility obligations** — any WCAG/Section 508 requirement from the school? Would promote
-   5.7 significantly.
+| # | Question | Decision | Encoded in |
+|---|---|---|---|
+| 1 | When may students see correct answers? | **Only once the exam is `closed`** | `AnswerKeyLeakTest` |
+| 2 | Late submissions | **Accept and flag** (`is_late`), never reject | `SubmissionIntegrityTest` |
+| 3 | Timer granularity | **Per part** | `SubmissionIntegrityTest` |
+| 4 | Retakes | **Single attempt per part** | `SubmissionIntegrityTest` |
+| 5 | Accessibility obligations | **None** — Section 508 is US federal procurement law and does not bind a private school in the Philippines. WCAG remains good practice, so a11y stays in Phase 5 at normal priority. Revisit if selling to government or US institutions. | — |
 
-Tell me the answers (or say "your judgement") and I'll start on Phase 0.
+Consequences of #3: `exam_live_sessions` is currently uniquely keyed on `(user_id, exam_id)`, so it
+can only track one clock per exam. **A migration is required** to change the constraint to
+`(user_id, exam_id, exam_part_id)` and add `started_at`. Covered in Task 1.4.
+
+Consequence of #2: `exam_submissions` needs an `is_late` boolean column.
+
+---
+
+## Open questions (remaining)
+
+1. **Queue worker supervision** — do you want a `systemd` unit, a `supervisord` config, or just a
+   `start-classroom.sh` that launches Octane + `queue:work` together? The script is simplest for a
+   laptop you start manually; systemd survives reboots. Affects Task 1.0.3.
+2. **XP timing under async grading** — with essays graded in a job, a student's XP currently lands in
+   two steps (auto-gradable score on submit, essay score when the job finishes). Acceptable, or
+   should XP be withheld until the submission is fully `graded`? Affects Task 1.0.2.
+
+Everything else is decided.
