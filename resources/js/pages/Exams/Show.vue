@@ -48,8 +48,11 @@ const isBooted = ref(false);
 interface Question {
     text: string;
     type: string;
-    options: { text: string; is_correct: boolean }[] | null;
-    correct_answer: string | null;
+    // The answer key is stripped server-side while an exam is in progress and
+    // is only present once the exam is closed (review mode). Never rely on it
+    // here — this screen is used for *taking* the exam.
+    options: { text: string; is_correct?: boolean }[] | null;
+    correct_answer?: string | null;
     points: number;
 }
 

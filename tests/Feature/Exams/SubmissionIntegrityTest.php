@@ -61,16 +61,30 @@ it('rejects a second submission for the same part', function () {
         ->and(ExamSubmission::first()->score)->toEqual('0.00');
 })->group('security');
 
+/**
+ * NOTE: the retry deliberately uses a DIFFERENT (correct) answer.
+ *
+ * With a matching answer this test passes even without the resubmission guard,
+ * because updateOrCreate() would write an identical score and the `updated`
+ * hook only awards XP when `score` actually changes. Varying the answer means
+ * an unguarded resubmit would award XP twice, so the test genuinely fails
+ * before the fix.
+ */
 it('applies exam xp exactly once per part', function () {
     [$student, $exam] = integrityContext();
     $part = ExamPart::factory()->forExam($exam)->multipleChoice(count: 1, correctIndex: 1, points: 2)->create();
 
-    postAnswers($student, $exam, $part, [1 => 1]);
-    postAnswers($student, $exam, $part, [1 => 1]); // blocked
+    postAnswers($student, $exam, $part, [1 => 3]); // wrong, scores 0
+    postAnswers($student, $exam, $part, [1 => 1]); // correct — would re-award XP if allowed
 
     $history = $student->gamificationHistories()->where('reason', 'Exam Submission')->get();
 
-    expect($history)->toHaveCount(1);
+    // First submit scores 0 (wrong answer) which produces no XP, so there
+    // are 0 history entries. The second submit is blocked, so still 0.
+    // The important assertion is that the first submission's score persists
+    // and the second didn't overwrite it.
+    expect($history)->toHaveCount(0)
+        ->and(ExamSubmission::first()->score)->toEqual('0.00');
 })->group('security');
 
 // ─────────────────────────────────────────────

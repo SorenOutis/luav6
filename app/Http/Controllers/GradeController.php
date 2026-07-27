@@ -32,43 +32,6 @@ class GradeController extends Controller
     }
 
     /**
-     * Debug endpoint to inspect raw grade data.
-     */
-    public function debug(Request $request): JsonResponse
-    {
-        $user = $request->user();
-
-        $sections = $user->sections()->orderBy('name')->get()->map(fn ($s) => [
-            'id' => $s->id,
-            'name' => $s->name,
-            'school_level' => $s->school_level,
-        ]);
-
-        $grades = $user->grades()->with('section')->get()->map(fn ($g) => [
-            'id' => $g->id,
-            'user_id' => $g->user_id,
-            'section_id' => $g->section_id,
-            'subject' => $g->subject,
-            'period' => $g->period,
-            'score' => $g->score,
-            'max_score' => $g->max_score,
-        ]);
-
-        $built = $this->buildGradesData($user);
-
-        return response()->json([
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'user_is_admin' => $user->is_admin,
-            'sections_count' => $sections->count(),
-            'sections' => $sections,
-            'grades_count' => $grades->count(),
-            'grades' => $grades,
-            'built_data_ict12a' => collect($built)->firstWhere('subject', 'ICT 12-A (2026)'),
-        ]);
-    }
-
-    /**
      * Build the subject grades data structure for a given user.
      */
     private function buildGradesData(User $user): array

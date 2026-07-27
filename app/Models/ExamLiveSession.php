@@ -11,6 +11,7 @@ class ExamLiveSession extends Model
         'exam_id',
         'exam_part_id',
         'status',
+        'started_at',
         'submitted_parts_count',
         'current_part_answered_count',
         'current_part_total_questions',
@@ -19,6 +20,7 @@ class ExamLiveSession extends Model
 
     protected $casts = [
         'last_seen_at' => 'datetime',
+        'started_at' => 'datetime',
     ];
 
     public function user()

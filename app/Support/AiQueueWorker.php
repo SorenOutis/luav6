@@ -22,6 +22,11 @@ class AiQueueWorker
      */
     public static function ensureRunning(string $queue = 'ai'): void
     {
+        // Never spawn real OS processes from the test suite.
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
         try {
             $phpBinary = (new PhpExecutableFinder)->find(false) ?: 'php';
             $artisan = base_path('artisan');

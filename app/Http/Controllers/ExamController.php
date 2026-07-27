@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SubmitExamPartRequest;
+use App\Jobs\GradeExamSubmissionEssays;
 use App\Models\Exam;
 use App\Models\ExamLiveSession;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Services\AIService;
+use App\Support\AiQueueWorker;
+use App\Support\ExamPartSerializer;
+use Carbon\CarbonInterface as Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
@@ -48,7 +53,11 @@ class ExamController extends Controller
 
             $seasonName = $exam->section?->season?->name;
 
-            return array_merge($exam->toArray(), [
+            // ⚠️ Answer keys are only serialized once the exam is closed.
+            $reveal = ExamPartSerializer::mayRevealAnswers($exam);
+
+            return array_merge($exam->withoutRelations()->toArray(), [
+                'parts' => ExamPartSerializer::many($exam->parts, $reveal),
                 'submitted_parts_count' => $submittedPartsCount,
                 'total_parts' => $exam->parts->count(),
                 'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
@@ -82,27 +91,18 @@ class ExamController extends Controller
 
     public function show(Exam $exam)
     {
-        $user = auth()->user();
-
-        // Check section access
-        if (! $user->is_admin && $exam->section_id && ! $user->sections()->where('sections.id', $exam->section_id)->exists()) {
-            abort(403, 'You do not have access to this exam.');
-        }
-
-        // Cache the exam structure for 1 hour to optimize LAN traffic
-        $exam = Cache::remember("exam_structure_{$exam->id}", 3600, function () use ($exam) {
-            return $exam->load([
-                'parts' => function ($query) {
-                    $query->orderBy('sort_order');
-                },
-            ]);
-        });
+        $this->assertCanAccess($exam);
 
         if ($exam->status === 'draft') {
             abort(404);
         }
 
-        // Get submissions for the current user (don't cache this as it's user-specific)
+        // Cache only the raw structure. The serialized payload is per-user
+        // (answer visibility depends on the viewer), so it must never be cached.
+        $parts = Cache::remember("exam_structure_{$exam->id}", 3600, function () use ($exam) {
+            return $exam->parts()->orderBy('sort_order')->get();
+        });
+
         $userId = auth()->id();
         $submissions = ExamSubmission::where('user_id', $userId)
             ->where('exam_id', $exam->id)
@@ -115,14 +115,56 @@ class ExamController extends Controller
         // Check if we just submitted a part (from flash session)
         $submittedPartId = session()->pull('submitted_part');
 
+        $reveal = ExamPartSerializer::mayRevealAnswers($exam);
+
         return Inertia::render('Exams/Show', [
-            'exam' => $exam,
+            'exam' => array_merge($exam->withoutRelations()->toArray(), [
+                'parts' => ExamPartSerializer::many($parts, $reveal),
+            ]),
             'submissions' => $submissions,
             'submittedPartId' => $submittedPartId,
         ]);
     }
 
+    /**
+     * Start (or resume) the server-side clock for a part.
+     *
+     * `started_at` is written once and never overwritten, so a student cannot
+     * reset their own timer by reloading the page.
+     */
+    public function startPart(Request $request, Exam $exam, ExamPart $examPart)
+    {
+        abort_if($examPart->exam_id !== $exam->id, 404);
+
+        $this->assertCanAccess($exam);
+
+        abort_if($exam->status === 'closed', 403, 'This exam is currently closed.');
+
+        $session = ExamLiveSession::firstOrCreate(
+            [
+                'user_id' => $request->user()->id,
+                'exam_id' => $exam->id,
+                'exam_part_id' => $examPart->id,
+            ],
+            [
+                'status' => 'in_progress',
+                'started_at' => now(),
+                'last_seen_at' => now(),
+            ],
+        );
+
+        if (! $session->started_at) {
+            $session->forceFill(['started_at' => now()])->save();
+        }
+
+        return response()->json([
+            'started_at' => $session->started_at?->toIso8601String(),
+            'deadline' => $this->deadlineFor($exam, $session)?->toIso8601String(),
+        ]);
+    }
+
     public function preWarmAI()
+
     {
         $this->aiService->preWarm();
 
@@ -151,13 +193,16 @@ class ExamController extends Controller
             return response()->json(['ok' => true]);
         }
 
+        // The unique key is now (user_id, exam_id, exam_part_id) so the clock is
+        // per part. `started_at` is intentionally NOT written here — only
+        // startPart() may set it, otherwise a ping would reset the countdown.
         ExamLiveSession::updateOrCreate(
             [
                 'user_id' => $request->user()->id,
                 'exam_id' => $exam->id,
+                'exam_part_id' => $validated['exam_part_id'] ?? null,
             ],
             [
-                'exam_part_id' => $validated['exam_part_id'] ?? null,
                 'status' => $validated['status'],
                 'submitted_parts_count' => $validated['submitted_parts_count'],
                 'current_part_answered_count' => $validated['current_part_answered_count'],
@@ -169,17 +214,30 @@ class ExamController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    public function submitPart(Request $request, Exam $exam, ExamPart $examPart)
+    public function submitPart(SubmitExamPartRequest $request, Exam $exam, ExamPart $examPart)
     {
+        abort_if($examPart->exam_id !== $exam->id, 404);
+
         // Prevent submissions if exam is closed
         if ($exam->status === 'closed') {
             abort(403, 'This exam is currently closed.');
         }
 
-        // Validate the request
-        $validated = $request->validate([
-            'answers' => 'required|array',
-        ]);
+        // Phase 1.5 — the student must actually have access to this exam.
+        $this->assertCanAccess($exam);
+
+        // Phase 1.3 — single attempt per part.
+        $alreadySubmitted = ExamSubmission::where('user_id', $request->user()->id)
+            ->where('exam_id', $exam->id)
+            ->where('exam_part_id', $examPart->id)
+            ->exists();
+
+        abort_if($alreadySubmitted, 409, 'You have already submitted this part.');
+
+        // Phase 1.4 — late submissions are accepted, then flagged for the teacher.
+        $isLate = $this->isLate($request->user()->id, $exam, $examPart);
+
+        $validated = $request->validated();
 
         // Calculate score
         $score = 0;
@@ -191,35 +249,49 @@ class ExamController extends Controller
         // Create a lookup for submitted answers by question number
         $submittedAnswers = collect($answers)->keyBy('question_number');
 
-        // Collect essays for batch processing
-        $essaysToProcess = [];
+        // ⚠️ Phase 1.0.2 — essays are NOT graded here.
+        //
+        // The AI provider is a ≤45s network call per essay, fired concurrently
+        // via Http::pool. Doing that inline held a RoadRunner worker for the
+        // whole duration and, because the save happened afterwards, a request
+        // that died mid-call lost the student's answers entirely.
+        //
+        // We only detect that essays exist; GradeExamSubmissionEssays scores
+        // them after the submission is safely persisted.
         foreach ($questions as $index => $question) {
             $questionNumber = $index + 1;
-            $submittedAnswerData = $submittedAnswers->get($questionNumber);
-            $submittedAnswer = $submittedAnswerData['answer'] ?? null;
+            $submittedAnswer = $submittedAnswers->get($questionNumber)['answer'] ?? null;
 
-            if ($submittedAnswer !== null && $question['type'] === 'essay') {
+            if ($submittedAnswer !== null && $submittedAnswer !== '' && $question['type'] === 'essay') {
                 $hasEssay = true;
-                $essaysToProcess[$questionNumber] = [
-                    'essayText' => (string) $submittedAnswer,
-                    'questionText' => (string) $question['text'],
-                    'maxPoints' => (int) ($question['points'] ?? $examPart->points ?? 1),
-                ];
+                break;
             }
         }
 
-        // Batch process essays (always score and feedback)
-        $essayAssessments = [];
-        if (! empty($essaysToProcess)) {
-            $essayAssessments = $this->aiService->batchAssessEssays($essaysToProcess);
-        }
+        $enrichedAnswers = collect($answers)->map(function ($answer) use ($questions) {
+            $questionNumber = $answer['question_number'] ?? null;
+
+            if ($questionNumber === null) {
+                return $answer;
+            }
+
+            $question = $questions[$questionNumber - 1] ?? null;
+
+            if ($question) {
+                $answer['question_type'] = $question['type'] ?? '';
+                $answer['question_text'] = $question['text'] ?? '';
+                $answer['points'] = (int) ($question['points'] ?? 1);
+            }
+
+            return $answer;
+        })->keyBy('question_number');
 
         foreach ($questions as $index => $question) {
             $questionNumber = $index + 1;
             $questionPoints = (int) ($question['points'] ?? $examPart->points ?? 1);
             $totalPossible += $questionPoints;
 
-            $submittedAnswerData = $submittedAnswers->get($questionNumber);
+            $submittedAnswerData = $enrichedAnswers->get($questionNumber);
             $submittedAnswer = $submittedAnswerData['answer'] ?? null;
 
             if ($submittedAnswer === null) {
@@ -227,17 +299,8 @@ class ExamController extends Controller
             }
 
             if ($question['type'] === 'essay') {
-                $assessment = $essayAssessments[$questionNumber] ?? ['score' => 0.0];
-
-                // Always add AI score
-                $score += $assessment['score'];
-
-                if ($submittedAnswerData) {
-                    $submittedAnswers[$questionNumber] = array_merge($submittedAnswerData, [
-                        'ai_score' => $assessment['score'],
-                    ]);
-                }
-
+                // Scored asynchronously by GradeExamSubmissionEssays, which adds
+                // its marks to $score once the provider responds.
                 continue;
             }
 
@@ -270,20 +333,119 @@ class ExamController extends Controller
             }
         }
 
-        // Create or update submission
-        $submission = ExamSubmission::updateOrCreate(
-            [
-                'user_id' => $request->user()->id,
-                'exam_id' => $exam->id,
-                'exam_part_id' => $examPart->id,
-            ],
-            [
-                'answers' => json_encode($submittedAnswers->values()->toArray()),
-                'status' => $hasEssay ? 'pending_review' : 'submitted',
-                'score' => $score,
-            ]
-        );
+        // Single attempt per part, so this is always a create.
+        $submission = ExamSubmission::create([
+            'user_id' => $request->user()->id,
+            'exam_id' => $exam->id,
+            'exam_part_id' => $examPart->id,
+            'answers' => json_encode($enrichedAnswers->values()->toArray()),
+            'status' => $hasEssay ? 'pending_review' : 'submitted',
+            'is_late' => $isLate,
+            'score' => $score,
+        ]);
+
+        // The clock for this part is done.
+        ExamLiveSession::where('user_id', $request->user()->id)
+            ->where('exam_id', $exam->id)
+            ->where('exam_part_id', $examPart->id)
+            ->delete();
+
+        // Answers are now durable. Grade the essays off-request.
+        if ($hasEssay) {
+            GradeExamSubmissionEssays::dispatch($submission->id);
+
+            // Spawns a detached `queue:work --stop-when-empty` if none is
+            // running, so the teacher doesn't have to remember to start one
+            // alongside `octane:start`.
+            AiQueueWorker::ensureRunning();
+        }
 
         return redirect('/exams/'.$exam->id)->with('submitted_part', $examPart->id);
+    }
+
+    /**
+     * Poll the grading state of a submitted part.
+     *
+     * Lets the frontend show an honest "grading your essays" indicator instead
+     * of holding the HTTP request open while the AI provider works.
+     */
+    public function partStatus(Request $request, Exam $exam, ExamPart $examPart)
+    {
+        abort_if($examPart->exam_id !== $exam->id, 404);
+
+        $this->assertCanAccess($exam);
+
+        $submission = ExamSubmission::where('user_id', $request->user()->id)
+            ->where('exam_id', $exam->id)
+            ->where('exam_part_id', $examPart->id)
+            ->first(['id', 'status', 'score', 'is_late', 'grading_failed', 'answers']);
+
+        if (! $submission) {
+            return response()->json(['status' => 'not_submitted']);
+        }
+
+        // `scored` means the AI has finished marking; `graded` only happens once
+        // the teacher runs the manual feedback pass from the admin panel. The
+        // student's progress indicator should stop at `scored`.
+        $essaysScored = collect($submission->answers ?? [])
+            ->where('question_type', 'essay')
+            ->every(fn ($answer) => array_key_exists('ai_score', $answer));
+
+        return response()->json([
+            'status' => $submission->status,
+            'scored' => $essaysScored,
+            'score' => $essaysScored ? (float) $submission->score : null,
+            'is_late' => (bool) $submission->is_late,
+            'grading_failed' => (bool) $submission->grading_failed,
+        ]);
+    }
+
+    /**
+     * A student may only touch exams that are unassigned or in one of their sections.
+     */
+    private function assertCanAccess(Exam $exam): void
+    {
+        $user = auth()->user();
+
+        if ($user->is_admin || ! $exam->section_id) {
+            return;
+        }
+
+        abort_unless(
+            $user->sections()->where('sections.id', $exam->section_id)->exists(),
+            403,
+            'You do not have access to this exam.',
+        );
+    }
+
+    /**
+     * Whether the student is past the per-part deadline.
+     *
+     * Returns false when no clock was ever started, so a missing session can
+     * never cost a student their marks.
+     */
+    private function isLate(int $userId, Exam $exam, ExamPart $examPart): bool
+    {
+        $session = ExamLiveSession::where('user_id', $userId)
+            ->where('exam_id', $exam->id)
+            ->where('exam_part_id', $examPart->id)
+            ->first();
+
+        $deadline = $this->deadlineFor($exam, $session);
+
+        return $deadline !== null && now()->greaterThan($deadline);
+    }
+
+    private function deadlineFor(Exam $exam, ?ExamLiveSession $session): ?Carbon
+    {
+        if (! $session?->started_at || ! $exam->duration_minutes) {
+            return null;
+        }
+
+        // 30s grace absorbs clock skew and slow uploads on a LAN.
+        return $session->started_at
+            ->copy()
+            ->addMinutes($exam->duration_minutes)
+            ->addSeconds(30);
     }
 }

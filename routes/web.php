@@ -75,9 +75,6 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('api/grades', [GradeController::class, 'apiIndex'])
         ->middleware('student.page:grades')
         ->name('api.grades');
-    Route::get('api/grades/debug', [GradeController::class, 'debug'])
-        ->middleware('student.page:grades')
-        ->name('api.grades.debug');
 
     Route::get('dashboard', function () {
         $user = auth()->user();
@@ -395,7 +392,19 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('exams/{exam}', [ExamController::class, 'show'])->middleware('student.page:exams')->name('exams.show');
     Route::post('exams/pre-warm-ai', [ExamController::class, 'preWarmAI'])->middleware('student.page:exams')->name('exams.preWarmAI');
     Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->middleware(['student.page:exams', 'throttle:60,1'])->name('exams.monitorProgress');
-    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])->middleware(['student.page:exams', 'throttle:10,1'])->name('exams.submitPart');
+    // ℹ️ Scope binding via explicit controller check rather than
+    // ->scopeBindings(), because the route parameter `{examPart}` does not
+    // match the relationship name (`parts`) and Laravel's automatic scoping
+    // would call the non-existent method Exam::examParts().
+    Route::post('exams/{exam}/parts/{examPart}/start', [ExamController::class, 'startPart'])
+        ->middleware(['student.page:exams', 'throttle:60,1'])
+        ->name('exams.startPart');
+    Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])
+        ->middleware(['student.page:exams', 'throttle:10,1'])
+        ->name('exams.submitPart');
+    Route::get('exams/{exam}/parts/{examPart}/status', [ExamController::class, 'partStatus'])
+        ->middleware(['student.page:exams', 'throttle:120,1'])
+        ->name('exams.partStatus');
 
     Route::get('ngl', [AnonymousMessageController::class, 'index'])->middleware('student.page:ngl')->name('ngl.index');
     Route::post('ngl', [AnonymousMessageController::class, 'store'])->middleware('student.page:ngl')->name('ngl.store');

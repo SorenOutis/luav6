@@ -19,6 +19,8 @@ class ExamSubmission extends Model
         'exam_part_id',
         'answers',
         'status',
+        'is_late',
+        'grading_failed',
         'score',
         'feedback',
     ];
@@ -26,6 +28,8 @@ class ExamSubmission extends Model
     protected $casts = [
         'answers' => ExamSubmissionAnswersCast::class,
         'score' => 'decimal:2',
+        'is_late' => 'boolean',
+        'grading_failed' => 'boolean',
     ];
 
     protected static function booted(): void

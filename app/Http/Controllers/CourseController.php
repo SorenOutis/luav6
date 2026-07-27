@@ -209,9 +209,14 @@ class CourseController extends Controller
                 'videoUrl' => $lesson->video_url,
                 'mediaAttachments' => $lesson->media_attachments,
             ],
+            // ⚠️ Quiz questions hold the answer key (options[].is_correct).
+            // Only reveal it once the student has completed the lesson.
             'quiz' => $lesson->quiz ? [
                 'id' => $lesson->quiz->id,
-                'questions' => $lesson->quiz->questions,
+                'questions' => $this->serializeQuizQuestions(
+                    $lesson->quiz->questions,
+                    (bool) ($userProgress?->completed ?? false),
+                ),
                 'passScore' => $lesson->quiz->pass_score,
                 'allowedAttempts' => $lesson->quiz->allowed_attempts,
             ] : null,
@@ -238,6 +243,46 @@ class CourseController extends Controller
                 'progress' => $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0,
             ],
         ]);
+    }
+
+    /**
+     * Strip the answer key from quiz questions unless the student has finished
+     * the lesson (review mode).
+     *
+     * @param  mixed  $questions
+     * @return array<int, array<string, mixed>>
+     */
+    private function serializeQuizQuestions($questions, bool $revealAnswers): array
+    {
+        if (! is_array($questions)) {
+            return [];
+        }
+
+        return collect($questions)->map(function ($question) use ($revealAnswers) {
+            $safe = [
+                'text' => $question['text'] ?? '',
+                'type' => $question['type'] ?? 'multiple_choice',
+                'points' => $question['points'] ?? null,
+            ];
+
+            if (isset($question['options']) && is_array($question['options'])) {
+                $safe['options'] = collect($question['options'])->map(function ($option) use ($revealAnswers) {
+                    $opt = ['text' => $option['text'] ?? ''];
+
+                    if ($revealAnswers) {
+                        $opt['is_correct'] = (bool) ($option['is_correct'] ?? false);
+                    }
+
+                    return $opt;
+                })->values()->all();
+            }
+
+            if ($revealAnswers && array_key_exists('correct_answer', $question)) {
+                $safe['correct_answer'] = $question['correct_answer'];
+            }
+
+            return $safe;
+        })->values()->all();
     }
 
     /**
