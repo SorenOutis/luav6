@@ -6,10 +6,13 @@ use App\Casts\ExamSubmissionAnswersCast;
 use App\Models\LearningMap\MapNode;
 use App\Services\LearningMapService;
 use App\Support\LevelCurve;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ExamSubmission extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'user_id',
         'exam_id',

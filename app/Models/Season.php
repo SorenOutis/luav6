@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkspace;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Season extends Model
 {
-    use BelongsToWorkspace;
+    use BelongsToWorkspace, HasFactory;
 
     protected $fillable = ['name', 'start_date', 'end_date', 'is_active', 'show_countdown_on_welcome', 'admin_id'];
 

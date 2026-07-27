@@ -40,6 +40,28 @@ class UserFactory extends Factory
     }
 
     /**
+     * A workspace admin (not a super admin).
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => true,
+            'is_super_admin' => false,
+        ]);
+    }
+
+    /**
+     * A super admin — bypasses workspace scoping.
+     */
+    public function superAdmin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_admin' => true,
+            'is_super_admin' => true,
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static
