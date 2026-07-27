@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Course;
 use App\Models\Lesson;
-use App\Models\LessonQuiz;
 use App\Models\LessonUserProgress;
 use App\Models\User;
 use Illuminate\Database\Seeder;

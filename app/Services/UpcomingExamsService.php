@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Exam;
-use App\Models\ExamSubmission;
 use App\Models\User;
 use Illuminate\Support\Collection;
 

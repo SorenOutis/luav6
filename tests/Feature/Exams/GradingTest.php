@@ -10,10 +10,10 @@
  * marked with a NOTE — do not "fix" these without updating the plan.
  */
 
+use App\Jobs\GradeExamSubmissionEssays;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
-use App\Jobs\GradeExamSubmissionEssays;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;

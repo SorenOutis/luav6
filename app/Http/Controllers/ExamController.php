@@ -171,7 +171,6 @@ class ExamController extends Controller
     }
 
     public function preWarmAI()
-
     {
         $this->aiService->preWarm();
 

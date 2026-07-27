@@ -39,6 +39,7 @@ class StreakService
                 'longest_streak' => max(1, (int) ($user->longest_streak ?? 0)),
                 'last_login_at' => $now,
             ]);
+
             return;
         }
 

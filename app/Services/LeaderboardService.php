@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Section;
 use App\Models\Season;
-use App\Models\SectionProgress;
+use App\Models\Section;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;

@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
-use App\Models\ExamSubmission;
 use App\Models\Season;
-use App\Models\Setting;
 use App\Services\BadgeAwardService;
 use App\Services\LeaderboardService;
 use App\Services\StreakService;

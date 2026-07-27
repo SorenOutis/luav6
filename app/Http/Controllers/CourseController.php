@@ -40,7 +40,7 @@ class CourseController extends Controller
             })
             ->withCount('modules')
             ->get()
-            ->map(function ($course) use ($user) {
+            ->map(function ($course) {
                 return [
                     'id' => $course->id,
                     'name' => $course->name,
@@ -90,13 +90,13 @@ class CourseController extends Controller
             ->keyBy('lesson_id');
 
         // Build progress for each lesson
-        $modules = $course->modules->map(function ($module) use ($user, $allProgress) {
+        $modules = $course->modules->map(function ($module) use ($allProgress) {
             return [
                 'id' => $module->id,
                 'title' => $module->title,
                 'description' => $module->description,
                 'sortOrder' => $module->sort_order,
-                'lessons' => $module->lessons->map(function ($lesson) use ($user, $allProgress) {
+                'lessons' => $module->lessons->map(function ($lesson) use ($allProgress) {
                     $progress = $allProgress->get($lesson->id);
 
                     return [
@@ -163,13 +163,13 @@ class CourseController extends Controller
             ->keyBy('lesson_id');
 
         // Build modules for sidebar
-        $modules = $course->modules->map(function ($module) use ($user, $allProgress) {
+        $modules = $course->modules->map(function ($module) use ($allProgress) {
             return [
                 'id' => $module->id,
                 'title' => $module->title,
                 'description' => $module->description,
                 'sortOrder' => $module->sort_order,
-                'lessons' => $module->lessons->map(function ($l) use ($user, $allProgress) {
+                'lessons' => $module->lessons->map(function ($l) use ($allProgress) {
                     $progress = $allProgress->get($l->id);
 
                     return [
