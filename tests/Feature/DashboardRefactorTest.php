@@ -8,6 +8,7 @@
  * behaviour is unchanged, and that route caching is now possible.
  */
 
+use App\Enums\ExamStatus;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\Season;
@@ -206,13 +207,13 @@ it('hides draft exams', function () {
 // ─────────────────────────────────────────────
 
 it('reveals answers only for closed exams', function () {
-    expect(App\Enums\ExamStatus::Draft->allowsAnswerReview())->toBeFalse()
-        ->and(App\Enums\ExamStatus::Published->allowsAnswerReview())->toBeFalse()
-        ->and(App\Enums\ExamStatus::Closed->allowsAnswerReview())->toBeTrue();
+    expect(ExamStatus::Draft->allowsAnswerReview())->toBeFalse()
+        ->and(ExamStatus::Published->allowsAnswerReview())->toBeFalse()
+        ->and(ExamStatus::Closed->allowsAnswerReview())->toBeTrue();
 });
 
 it('accepts submissions only for published exams', function () {
-    expect(App\Enums\ExamStatus::Draft->acceptsSubmissions())->toBeFalse()
-        ->and(App\Enums\ExamStatus::Published->acceptsSubmissions())->toBeTrue()
-        ->and(App\Enums\ExamStatus::Closed->acceptsSubmissions())->toBeFalse();
+    expect(ExamStatus::Draft->acceptsSubmissions())->toBeFalse()
+        ->and(ExamStatus::Published->acceptsSubmissions())->toBeTrue()
+        ->and(ExamStatus::Closed->acceptsSubmissions())->toBeFalse();
 });
