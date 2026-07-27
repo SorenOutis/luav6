@@ -22,6 +22,10 @@ class ExamController extends Controller
 {
     public function __construct(protected AIService $aiService) {}
 
+    /**
+     * Phase 3.6 — Fixed N+1: batch-load all user submissions for all visible
+     * exams in a single query instead of one per exam inside the map.
+     */
     public function index()
     {
         $user = auth()->user();
@@ -42,12 +46,15 @@ class ExamController extends Controller
             ->latest()
             ->get();
 
-        // Get submission counts and details for the current user
-        $userId = $user->id;
-        $examsData = $exams->map(function (Exam $exam) use ($userId) {
-            $submissions = ExamSubmission::where('user_id', $userId)
-                ->where('exam_id', $exam->id)
-                ->get();
+        // Phase 3.6 — batch-load all user submissions in one query
+        $examIds = $exams->pluck('id');
+        $allSubmissions = ExamSubmission::where('user_id', $user->id)
+            ->whereIn('exam_id', $examIds)
+            ->get()
+            ->groupBy('exam_id');
+
+        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions) {
+            $submissions = $allSubmissions->get($exam->id, collect());
 
             $submittedPartsCount = $submissions->unique('exam_part_id')->count();
 

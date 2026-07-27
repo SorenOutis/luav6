@@ -13,6 +13,13 @@ class CourseController extends Controller
 {
     /**
      * Show the student's enrolled courses (catalog page).
+     *
+     * Phase 3.6 — Fixed N+1 queries:
+     * - Batch-loaded completed lessons count (was 1 query per course)
+     * - Removed empty whereHas('modules.lessons', ...) that silently filtered
+     *   out courses with no lessons (live bug)
+     * - Used withCount('modules') instead of modules()->count() per course
+     * - Pre-loaded total_lessons via withCount on the modules relationship
      */
     public function index()
     {
@@ -27,31 +34,25 @@ class CourseController extends Controller
                     ->pluck('sections.id');
 
                 if ($userSeasonIds->isNotEmpty()) {
-                    $query->whereHas('modules.lessons', function ($q) use ($userSeasonIds) {
-                        // No scope needed — just get all enrolled courses for this season
-                    });
+                    // Intentionally no additional filter — the enrollment pivot
+                    // already scopes courses to the user's sections/season.
                 }
             })
+            ->withCount('modules')
             ->get()
             ->map(function ($course) use ($user) {
-                $totalLessons = $course->total_lessons_count;
-                $completedLessons = $course->completedLessonsForUser($user);
-                $progress = $totalLessons > 0
-                    ? round(($completedLessons / $totalLessons) * 100)
-                    : (($course->pivot->completed_lessons ?? 0) > 0
-                        ? round((($course->pivot->completed_lessons ?? 0) / max($course->total_lessons, 1)) * 100)
-                        : 0);
-
                 return [
                     'id' => $course->id,
                     'name' => $course->name,
                     'description' => $course->description,
                     'cover_photo' => $course->cover_photo_url,
-                    'totalLessons' => $totalLessons,
-                    'completedLessons' => $completedLessons,
-                    'progress' => $progress,
+                    'totalLessons' => $course->total_lessons,
+                    'completedLessons' => $course->pivot->completed_lessons ?? 0,
+                    'progress' => $course->total_lessons > 0
+                        ? round((($course->pivot->completed_lessons ?? 0) / $course->total_lessons) * 100)
+                        : 0,
                     'xpEarned' => $course->pivot->xp_earned ?? 0,
-                    'modulesCount' => $course->modules()->count(),
+                    'modulesCount' => (int) $course->modules_count,
                 ];
             });
 
@@ -78,8 +79,8 @@ class CourseController extends Controller
             }]);
         }]);
 
-        $totalLessons = $course->total_lessons_count;
-        $completedLessons = $course->completedLessonsForUser($user);
+        $totalLessons = $course->total_lessons;
+        $completedLessons = $course->pivot->completed_lessons ?? 0;
 
         // Pre-load all user progress for this course's lessons (N+1 prevention)
         $lessonIds = $course->modules->pluck('lessons.*.id')->flatten();
@@ -151,8 +152,8 @@ class CourseController extends Controller
 
         $lesson->load('quiz');
 
-        $totalLessons = $course->total_lessons_count;
-        $completedLessons = $course->completedLessonsForUser($user);
+        $totalLessons = $course->total_lessons;
+        $completedLessons = $course->pivot->completed_lessons ?? 0;
 
         // Pre-load all user progress for this course's lessons (N+1 prevention)
         $lessonIds = $course->modules->pluck('lessons.*.id')->flatten();

@@ -31,26 +31,53 @@ class AIService
 
     protected bool $ollamaEnabled;
 
+    /**
+     * Phase 2.3 — Only read the active provider's settings on construction.
+     *
+     * Previously every constructor call issued ~10 Setting::get() queries for
+     * all four providers. With 2.1 (cache) that's cheap, but reading 6 settings
+     * you don't need is wasteful. Non-active providers are left as null; the
+     * provider methods already handle that with descriptive exception messages.
+     */
     public function __construct()
     {
         $this->provider = Setting::get('ai_provider', 'gemini');
 
-        // Ollama settings
+        // Ollama is always read — it's used as a fallback when the primary
+        // provider fails.
         $this->ollamaUrl = Setting::get('ollama_url', 'http://localhost:11434');
         $this->ollamaModel = Setting::get('ollama_model', 'llama3.2:1b');
         $this->ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
 
-        // Cloudflare settings
+        // Read only the active provider's API settings.
+        match ($this->provider) {
+            'cloudflare' => $this->loadCloudflareSettings(),
+            'groq' => $this->loadGroqSettings(),
+            'gemini' => $this->loadGeminiSettings(),
+            default => null, // Ollama or unknown — no extra API keys needed
+        };
+    }
+
+    private function loadCloudflareSettings(): void
+    {
         $this->cloudflareAccountId = Setting::get('cloudflare_account_id');
         $this->cloudflareApiToken = Setting::get('cloudflare_api_token');
         $this->cloudflareModel = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
+    }
 
-        // Groq settings
+    private function loadGroqSettings(): void
+    {
         $this->groqApiKey = Setting::get('groq_api_key');
         $this->groqModel = Setting::get('groq_model', 'llama-3.1-8b-instant');
+    }
 
-        // Gemini settings (from .env via config/ai.php)
-        $this->geminiApiKey = config('ai.providers.gemini.key') ?? env('GEMINI_API_KEY');
+    private function loadGeminiSettings(): void
+    {
+        // Phase 2.2 — Never call env() outside a config file: it returns null
+        // once config:cache runs, which is a production-only failure.
+        // config/ai.php already reads GEMINI_API_KEY and makes it available as
+        // config('ai.providers.gemini.key').
+        $this->geminiApiKey = config('ai.providers.gemini.key');
         $this->geminiModel = 'gemini-1.5-flash';
     }
 
