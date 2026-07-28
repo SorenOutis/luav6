@@ -1326,6 +1326,300 @@
     display: none !important;
 }
 
+/* ════════════════════════════════════════════════════
+   TEST PAPER LAYOUT
+   ════════════════════════════════════════════════════ */
+
+.exam-theme-page.paper-layout {
+    background: #fafaf8 !important;
+}
+
+.dark .exam-theme-page.paper-layout {
+    background: #0c0c0a !important;
+}
+
+/* Strip card styling from exam hero */
+.exam-theme-page.paper-layout .exam-hero {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 0 1.25rem 0 !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid var(--color-border) !important;
+}
+
+/* Remove background decorations in paper mode */
+.exam-theme-page.paper-layout .pointer-events-none.fixed.animate-pulse,
+.exam-theme-page.paper-layout .pointer-events-none.fixed.rounded-full {
+    display: none !important;
+}
+
+/* Question cards become plain numbered items */
+.exam-theme-page.paper-layout .question-card {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 1rem 0 !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    border-left: none !important;
+    margin: 0 !important;
+}
+
+.exam-theme-page.paper-layout .question-card:last-child {
+    border-bottom: none !important;
+}
+
+/* Question number — simple bold number */
+.exam-theme-page.paper-layout .exam-question-number {
+    background: none !important;
+    box-shadow: none !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    color: var(--color-foreground) !important;
+}
+
+/* Question text — serif font like printed exam */
+.exam-theme-page.paper-layout .question-card p.italic,
+.exam-theme-page.paper-layout .question-card p.font-medium {
+    font-family: Georgia, 'Times New Roman', Times, serif !important;
+    font-style: normal !important;
+    font-weight: 500 !important;
+    font-size: 1.05rem !important;
+    line-height: 1.6 !important;
+    color: var(--color-foreground) !important;
+}
+
+/* Question type label */
+.exam-theme-page.paper-layout span.bg-primary\/10 {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    color: var(--color-muted-foreground) !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+}
+
+/* Points label */
+.exam-theme-page.paper-layout .exam-friendly-points {
+    font-size: 0.7rem !important;
+    color: var(--color-muted-foreground) !important;
+}
+
+/* Answer options — lettered radio rows like test booklet */
+.exam-theme-page.paper-layout .exam-answer-option {
+    background: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0.5rem 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    cursor: pointer !important;
+    transition: none !important;
+}
+
+.exam-theme-page.paper-layout .exam-answer-option:hover {
+    background: none !important;
+    transform: none !important;
+    border-color: transparent !important;
+}
+
+.exam-theme-page.paper-layout .exam-answer-option:has(:checked) {
+    background: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-text {
+    font-weight: 700 !important;
+    color: var(--color-primary) !important;
+}
+
+/* Radio button — clean circle */
+.exam-theme-page.paper-layout .exam-answer-radio {
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    border: 2px solid var(--color-border) !important;
+    border-radius: 50% !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: transparent !important;
+}
+
+.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-radio {
+    border-color: var(--color-primary) !important;
+    background: var(--color-primary) !important;
+    box-shadow: none !important;
+}
+
+.exam-theme-page.paper-layout .exam-answer-radio::after {
+    content: '';
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+}
+
+.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-radio::after {
+    opacity: 1;
+}
+
+/* Answer text */
+.exam-theme-page.paper-layout .exam-answer-text {
+    font-size: 0.95rem !important;
+    font-weight: 450 !important;
+    font-family: Georgia, 'Times New Roman', Times, serif !important;
+}
+
+/* Letter prefix for options */
+.exam-theme-page.paper-layout .exam-answer-letter {
+    display: inline-flex !important;
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1.5px solid var(--color-border) !important;
+    border-radius: 0.25rem !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    font-family: 'Courier New', monospace !important;
+    color: var(--color-muted-foreground) !important;
+    flex-shrink: 0 !important;
+}
+
+.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-letter {
+    border-color: var(--color-primary) !important;
+    color: var(--color-primary) !important;
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent) !important;
+}
+
+/* Hide old radio indicator in paper mode */
+.exam-theme-page.paper-layout .exam-answer-radio {
+    display: none !important;
+}
+
+/* Text input — underlined blank for identification */
+.exam-theme-page.paper-layout .exam-text-input {
+    background: none !important;
+    border: none !important;
+    border-bottom: 2px solid var(--color-border) !important;
+    border-radius: 0 !important;
+    padding: 0.25rem 0 !important;
+    font-family: 'Courier New', monospace !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.15em !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transition: border-color 0.15s ease !important;
+}
+
+.exam-theme-page.paper-layout .exam-text-input:focus {
+    border-bottom-color: var(--color-primary) !important;
+    box-shadow: 0 2px 0 -1px var(--color-primary) !important;
+}
+
+/* Essay textarea — ruled lines background */
+.exam-theme-page.paper-layout .exam-essay-input {
+    background:
+        repeating-linear-gradient(
+            transparent,
+            transparent 1.75rem,
+            var(--color-border) 1.75rem,
+            var(--color-border) 1.8rem
+        ) !important;
+    border: none !important;
+    border-bottom: 2px solid var(--color-border) !important;
+    border-radius: 0 !important;
+    padding: 0.25rem 0.5rem !important;
+    font-family: Georgia, 'Times New Roman', Times, serif !important;
+    font-size: 1rem !important;
+    line-height: 1.8rem !important;
+    resize: vertical !important;
+    outline: none !important;
+    box-shadow: none !important;
+    min-height: 7rem !important;
+}
+
+.exam-theme-page.paper-layout .exam-essay-input:focus {
+    border-bottom-color: var(--color-primary) !important;
+}
+
+/* Instructions callout */
+.exam-theme-page.paper-layout .exam-instruction-callout,
+.exam-theme-page.paper-layout [class*='bg-muted/30'].rounded-lg {
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 0 0.75rem 0 !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Flag button — smaller, margin-style */
+.exam-theme-page.paper-layout .exam-flag-btn {
+    background: none !important;
+    border: none !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0.25rem !important;
+    opacity: 0.5 !important;
+}
+
+/* Progress navigator — simpler */
+.exam-theme-page.paper-layout [class*='grid-cols-'].gap-1\\.5 {
+    gap: 0.25rem !important;
+}
+
+.exam-theme-page.paper-layout [class*='rounded-lg'].border {
+    border-color: var(--color-border) !important;
+    background: transparent !important;
+}
+
+/* Submit button cleaner */
+.exam-theme-page.paper-layout .submit-celebration-btn {
+    border-radius: 0.375rem !important;
+    box-shadow: none !important;
+}
+
+/* Decorative overlays */
+.exam-theme-page.paper-layout .pointer-events-none.fixed {
+    display: none !important;
+}
+
+/* Text area general - no rounded corners */
+.exam-theme-page.paper-layout textarea,
+.exam-theme-page.paper-layout input[type="text"] {
+    border-radius: 0 !important;
+}
+
+/* Sync heartbeat badge */
+.exam-theme-page.paper-layout .sync-heartbeat {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+.paper-layout .exam-friendly-label {
+    font-family: Georgia, 'Times New Roman', Times, serif !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+}
+
+/* Progress bar */
+.exam-theme-page.paper-layout .h-1.w-full.overflow-hidden {
+    background: var(--color-muted) !important;
+}
+
 /* Dyslexia-Friendly UI Overrides */
 .dyslexia-friendly {
     font-family: 'Inter', sans-serif !important;

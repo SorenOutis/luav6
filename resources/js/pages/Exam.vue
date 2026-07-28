@@ -259,6 +259,8 @@ const getProgressPercent = (exam: Exam) => {
     return ((exam.submitted_parts_count ?? 0) / exam.total_parts) * 100;
 };
 
+const answersRevealed = computed(() => selectedExamForReview.value?.status === 'closed');
+
 const openReview = (exam: Exam) => {
     selectedExamForReview.value = exam;
     selectedPartId.value = exam.parts.length > 0 ? exam.parts[0].id : null;
@@ -756,19 +758,21 @@ function showScrollbar() {
                             :transition="{ duration: 0.4, delay: qIndex * 0.05, ease: [0.16, 1, 0.3, 1] }"
                             class="question-card relative overflow-hidden rounded-xl border p-5 transition-all"
                             :class="
-                                isAnswerCorrect(
-                                    question,
-                                    getAnswerForQuestion(
-                                        getSubmissionForPart(selectedExamForReview, part.id)?.answers,
-                                        qIndex + 1,
-                                    ),
-                                    getAnswerObjectForQuestion(
-                                        getSubmissionForPart(selectedExamForReview, part.id)?.answers,
-                                        qIndex + 1,
-                                    ),
-                                )
-                                    ? 'border-emerald-500/30 bg-emerald-500/[0.02]'
-                                    : 'border-red-500/30 bg-red-500/[0.02]'
+                                !answersRevealed
+                                    ? 'border-border/50 bg-card/40'
+                                    : isAnswerCorrect(
+                                        question,
+                                        getAnswerForQuestion(
+                                            getSubmissionForPart(selectedExamForReview, part.id)?.answers,
+                                            qIndex + 1,
+                                        ),
+                                        getAnswerObjectForQuestion(
+                                            getSubmissionForPart(selectedExamForReview, part.id)?.answers,
+                                            qIndex + 1,
+                                        ),
+                                    )
+                                        ? 'border-emerald-500/30 bg-emerald-500/[0.02]'
+                                        : 'border-red-500/30 bg-red-500/[0.02]'
                             "
                         >
                             <!-- Privacy Overlay: visible by default, fades on hover to reveal content -->
@@ -794,22 +798,28 @@ function showScrollbar() {
                                         </span>
                                     </div>
                                     <div class="flex items-center gap-1.5 text-[11px] font-medium">
-                                        <CheckCircle2
-                                            v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))"
-                                            class="h-3.5 w-3.5 text-emerald-500"
-                                        />
-                                        <XCircle
-                                            v-else
-                                            class="h-3.5 w-3.5 text-red-500"
-                                        />
-                                        <span :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-red-600'">
-                                            {{ question.type === 'essay'
-                                                ? 'Reviewed'
-                                                : isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))
-                                                    ? 'Correct'
-                                                    : 'Incorrect'
-                                            }}
-                                        </span>
+                                        <template v-if="answersRevealed">
+                                            <CheckCircle2
+                                                v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))"
+                                                class="h-3.5 w-3.5 text-emerald-500"
+                                            />
+                                            <XCircle
+                                                v-else
+                                                class="h-3.5 w-3.5 text-red-500"
+                                            />
+                                            <span :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-red-600'">
+                                                {{ question.type === 'essay'
+                                                    ? 'Reviewed'
+                                                    : isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))
+                                                        ? 'Correct'
+                                                        : 'Incorrect'
+                                                }}
+                                            </span>
+                                        </template>
+                                        <template v-else>
+                                            <CheckCircle2 class="h-3.5 w-3.5 text-muted-foreground/40" />
+                                            <span class="text-muted-foreground/60">Submitted</span>
+                                        </template>
                                     </div>
                                 </div>
 
@@ -823,13 +833,17 @@ function showScrollbar() {
                                         v-for="(option, oIndex) in question.options"
                                         :key="oIndex"
                                         class="flex items-center justify-between rounded-lg border p-2.5 text-sm transition-all"
-                                        :class="[
-                                            option.is_correct
-                                                ? 'border-emerald-500/50 bg-emerald-500/10'
-                                                : parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex
-                                                    ? 'border-red-500/50 bg-red-500/10'
-                                                    : 'border-border/50 bg-muted/20 opacity-60',
-                                        ]"
+                                        :class="
+                                            !answersRevealed
+                                                ? parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex
+                                                    ? 'border-border/60 bg-muted/40'
+                                                    : 'border-border/40 bg-muted/10 opacity-50'
+                                                : option.is_correct
+                                                    ? 'border-emerald-500/50 bg-emerald-500/10'
+                                                    : parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex
+                                                        ? 'border-red-500/50 bg-red-500/10'
+                                                        : 'border-border/50 bg-muted/20 opacity-60'
+                                        "
                                     >
                                         <span class="text-sm">{{ option.text }}</span>
                                         <span
@@ -845,11 +859,14 @@ function showScrollbar() {
                                 <div v-else-if="question.type === 'identification'" class="space-y-2">
                                     <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
                                         <span class="text-[10px] font-medium text-muted-foreground">Your answer</span>
-                                        <p class="mt-1 text-sm font-semibold" :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-red-600'">
+                                        <p class="mt-1 text-sm font-semibold" :class="answersRevealed && isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-foreground'">
                                             {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No answer' }}
                                         </p>
                                     </div>
-                                    <div class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                                    <div
+                                        v-if="answersRevealed && question.correct_answer"
+                                        class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3"
+                                    >
                                         <span class="text-[10px] font-medium text-emerald-600">Correct answer</span>
                                         <p class="mt-1 text-sm font-semibold text-emerald-600">{{ question.correct_answer }}</p>
                                     </div>
