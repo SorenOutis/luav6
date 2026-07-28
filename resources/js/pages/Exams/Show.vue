@@ -1480,7 +1480,7 @@ const feedbackContent = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs" :hide-sidebar="hideSidebar">
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
-            <div data-lenis-prevent class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8">
+            <div class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8">
                 <PageSkeleton
                     :hero="true"
                     :stats="5"
@@ -1506,7 +1506,7 @@ const feedbackContent = computed(() => {
         <template v-if="isBooted">
         <div
             ref="container"
-            data-lenis-prevent class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
+            class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
         >
             <!-- Ambient background decorations (hidden on mobile for performance) -->
             <div
