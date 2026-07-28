@@ -6,6 +6,7 @@ use App\Http\Controllers\AnonymousMessageController;
 use App\Http\Controllers\Api\DashboardExamsController;
 use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\LeaderboardToggleBlurController;
+use App\Http\Controllers\Api\ClaimXpController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ChatController;
@@ -89,6 +90,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('api/dashboard-exams', DashboardExamsController::class)
         ->middleware(['auth', 'verified'])
         ->name('api.dashboard-exams');
+
+    // Daily XP Claim
+    Route::post('api/claim-xp', ClaimXpController::class)
+        ->middleware(['auth', 'verified', 'throttle:10,1'])
+        ->name('api.claim-xp');
 
     Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');

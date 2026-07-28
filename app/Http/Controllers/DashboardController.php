@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Announcement;
 use App\Models\Season;
 use App\Services\BadgeAwardService;
+use App\Services\ClaimXpService;
 use App\Services\LeaderboardService;
 use App\Services\StreakService;
 use App\Services\UpcomingExamsService;
@@ -25,6 +26,7 @@ class DashboardController extends Controller
         protected LeaderboardService $leaderboardService,
         protected UpcomingExamsService $upcomingExamsService,
         protected BadgeAwardService $badgeAwardService,
+        protected ClaimXpService $claimXpService,
     ) {}
 
     public function __invoke(Request $request)
@@ -138,7 +140,17 @@ class DashboardController extends Controller
         // ── Leaderboard ────────────────────────────────────────────
         $sectionLeaderboards = $this->leaderboardService->forUserSections($user, $initialSeason);
 
+        // ── Daily Claim ────────────────────────────────────────────
+        $canClaim = $this->claimXpService->canClaim($user);
+        $claimAmount = $this->claimXpService->claimAmount($user);
+        $nextClaimAt = $this->claimXpService->nextClaimAt($user);
+
         return inertia('Dashboard', [
+            'claimXp' => [
+                'canClaim' => $canClaim,
+                'amount' => $claimAmount,
+                'nextClaimAt' => $nextClaimAt?->toIso8601String(),
+            ],
             'userStats' => [
                 'totalXP' => $seasonalExp,
                 'level' => $seasonalLevel,

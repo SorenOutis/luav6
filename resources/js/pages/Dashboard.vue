@@ -361,6 +361,11 @@ interface UserBadge {
 }
 
 const props = defineProps<{
+    claimXp: {
+        canClaim: boolean;
+        amount: number;
+        nextClaimAt: string | null;
+    };
     userStats: {
         totalXP: number;
         level: number;
@@ -775,6 +780,7 @@ const handleLogout = () => {
                         :user-stats="userStats"
                         :streak="streak"
                         :progress-percentage="progressPercentage"
+                        :claim-xp="props.claimXp"
                     />
                 </Motion>
 

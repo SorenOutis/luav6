@@ -1,0 +1,129 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\GamificationHistory;
+use App\Models\SectionProgress;
+use App\Models\User;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Daily Claim XP — Streak-scaled rewards for checking in each day.
+ *
+ * Formula: 1 + floor(current_streak / 5)
+ *   Streak 1–4  → 1 XP
+ *   Streak 5–9  → 2 XP
+ *   Streak 10–14 → 3 XP
+ *   Streak 15–19 → 4 XP
+ *   Streak 20+   → 5 XP
+ */
+class ClaimXpService
+{
+    /**
+     * Can the user claim today?
+     */
+    public function canClaim(User $user): bool
+    {
+        if (! $user->last_claimed_at) {
+            return true;
+        }
+
+        return ! $user->last_claimed_at->isToday();
+    }
+
+    /**
+     * How much XP would the user get right now?
+     */
+    public function claimAmount(User $user): int
+    {
+        $streak = max(0, (int) ($user->current_streak ?? 0));
+
+        return min(5, 1 + (int) floor($streak / 5));
+    }
+
+    /**
+     * When can the user claim next? (Midnight of the day after last claim)
+     */
+    public function nextClaimAt(User $user): ?CarbonInterface
+    {
+        if (! $user->last_claimed_at) {
+            return null;
+        }
+
+        // Next claim available at midnight (start of next day)
+        // Use CarbonInterface so both Carbon and CarbonImmutable are accepted.
+        return $user->last_claimed_at->copy()->addDay()->startOfDay();
+    }
+
+    /**
+     * Execute the claim — awards XP to the user's section progress
+     * and records a GamificationHistory entry.
+     *
+     * @return array{claimed: bool, amount: int, total_xp: float, streak: int}
+     */
+    public function claim(User $user): array
+    {
+        if (! $this->canClaim($user)) {
+            return [
+                'claimed' => false,
+                'amount' => 0,
+                'total_xp' => (float) ($user->exp ?? 0),
+                'streak' => (int) ($user->current_streak ?? 0),
+            ];
+        }
+
+        $amount = $this->claimAmount($user);
+        $streak = (int) ($user->current_streak ?? 0);
+
+        DB::transaction(function () use ($user, $amount) {
+            // Record gamification history
+            $user->recordGamificationHistory(
+                $amount,
+                0,
+                'Daily Claim',
+                'Daily login claim bonus',
+                null, // section_id — will be inferred from active sections
+                null, // season_id — will use current season
+            );
+
+            // Update XP in section progress. The SectionProgress::booted()
+            // updated hook syncs to $user->exp and $seasonProgress->exp, which
+            // we want, but it also calls recordGamificationHistory() with reason
+            // 'Admin Adjustment' — creating a duplicate entry since we already
+            // record history ourselves above.
+            //
+            // Setting $isSyncing = true suppresses the duplicate history while
+            // preserving the user/season exp sync.
+            $sections = $user->sections;
+            foreach ($sections as $section) {
+                $progress = $user->activeSectionProgress($section->id);
+                if ($progress) {
+                    $wasAlreadySyncing = SectionProgress::$isSyncing;
+                    SectionProgress::$isSyncing = true;
+                    $progress->increment('exp', $amount);
+                    $progress->save();
+                    SectionProgress::$isSyncing = $wasAlreadySyncing;
+                }
+            }
+
+            // No sections — update user exp directly
+            if ($sections->isEmpty()) {
+                $user->increment('exp', $amount);
+            }
+
+            // Mark as claimed
+            $user->update(['last_claimed_at' => now()]);
+        });
+
+        /** @var User $fresh */
+        $fresh = $user->fresh();
+
+        return [
+            'claimed' => true,
+            'amount' => $amount,
+            'total_xp' => (float) ($fresh->exp ?? 0),
+            'streak' => $streak,
+        ];
+    }
+}
