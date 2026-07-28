@@ -2,35 +2,11 @@
 import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Calendar, ChevronDown, ChevronUp, Trophy } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, reactive, ref, computed, watch } from 'vue';
 
-gsap.registerPlugin(ScrollTrigger);
-
-const mouseGlow = ref<HTMLElement | null>(null);
 const dashboardContainer = ref<HTMLElement | null>(null);
-const backgroundGrid = ref<HTMLElement | null>(null);
-const { isMobile, isTouchDevice, prefersReducedMotion } = useMobile();
-
-const handleGlobalMouseMove = (e: MouseEvent) => {
-    if (
-        !mouseGlow.value ||
-        prefersReducedMotion.value ||
-        isMobile.value ||
-        isTouchDevice.value
-    )
-        return;
-
-    const { clientX, clientY } = e;
-
-    gsap.to(mouseGlow.value, {
-        x: clientX,
-        y: clientY,
-        duration: 1.2,
-        ease: 'power3.out',
-    });
-};
+const { isMobile, prefersReducedMotion } = useMobile();
 
 import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
@@ -183,25 +159,6 @@ const statusColor = computed(() => {
         return 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]';
 
     return 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.4)]';
-});
-
-const ambientColor = computed(() => {
-    const hour = new Date().getHours();
-    const streak = props.userStats.streak;
-    const overdue = todaySummary.value.overdueCount;
-
-    if (overdue > 0) return 'bg-rose-500/10 dark:bg-rose-500/20';
-    if (streak >= 7) return 'bg-amber-500/10 dark:bg-amber-500/20';
-    if (streak > 0) return 'bg-emerald-500/10 dark:bg-emerald-500/20';
-
-    if (hour >= 0 && hour < 4) return 'bg-purple-500/10 dark:bg-purple-500/20';
-    if (hour >= 4 && hour < 7) return 'bg-sky-500/10 dark:bg-sky-500/20';
-    if (hour >= 7 && hour < 12) return 'bg-amber-400/10 dark:bg-amber-400/20';
-    if (hour >= 12 && hour < 17)
-        return 'bg-orange-500/10 dark:bg-orange-500/20';
-    if (hour >= 17 && hour < 21)
-        return 'bg-fuchsia-500/10 dark:bg-fuchsia-500/20';
-    return 'bg-indigo-500/10 dark:bg-indigo-500/20';
 });
 
 const accentBadge = computed(() => {
@@ -593,30 +550,6 @@ onMounted(() => {
             );
             return;
         }
-
-        gsap.to(backgroundGrid.value, {
-            y: -100,
-            ease: 'none',
-            scrollTrigger: {
-                trigger: dashboardContainer.value,
-                start: 'top top',
-                end: 'bottom bottom',
-                scrub: true,
-            },
-        });
-
-        const orbs = dashboardContainer.value?.querySelectorAll('.orb');
-        orbs?.forEach((orb, i) => {
-            gsap.to(orb, {
-                x: 'random(-100, 100)',
-                y: 'random(-100, 100)',
-                duration: 12 + i * 4,
-                repeat: -1,
-                repeatRefresh: true,
-                yoyo: true,
-                ease: 'sine.inOut',
-            });
-        });
     }, dashboardContainer.value);
 });
 
@@ -675,59 +608,12 @@ const handleLogout = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="dashboardContainer"
-            @mousemove="handleGlobalMouseMove"
             class="relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden bg-background p-3 sm:p-5 md:gap-6 md:p-8"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
         >
-            <!-- Global Mouse Glow (hidden on mobile for performance) -->
-            <div
-                v-if="!isMobile"
-                ref="mouseGlow"
-                class="pointer-events-none fixed -top-[200px] -left-[200px] z-0 h-[400px] w-[400px] rounded-full blur-[120px] transition-colors duration-1000 will-change-transform"
-                :class="ambientColor"
-                aria-hidden="true"
-            ></div>
 
-            <!-- Monolithic Grid Overlay (hidden on mobile for performance) -->
-            <div
-                v-if="!isMobile"
-                ref="backgroundGrid"
-                class="pointer-events-none fixed inset-[-100px] z-0 opacity-[0.03] will-change-transform dark:opacity-[0.06]"
-                aria-hidden="true"
-            >
-                <div
-                    class="absolute inset-0"
-                    style="
-                        background-image:
-                            linear-gradient(
-                                var(--color-border) 1px,
-                                transparent 1px
-                            ),
-                            linear-gradient(
-                                90deg,
-                                var(--color-border) 1px,
-                                transparent 1px
-                            );
-                        background-size: 60px 60px;
-                    "
-                ></div>
-            </div>
-
-            <!-- Ambient orbs (hidden on mobile for performance) -->
-            <div
-                v-if="!isMobile"
-                class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full blur-[120px] transition-colors duration-1000"
-                :class="ambientColor"
-                aria-hidden="true"
-            ></div>
-            <div
-                v-if="!isMobile"
-                class="orb pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full blur-[120px] transition-colors duration-1000"
-                :class="ambientColor"
-                aria-hidden="true"
-            ></div>
 
             <!-- Skeleton loader (shown while booting) -->
             <DashboardSkeleton v-if="!isBooted" />

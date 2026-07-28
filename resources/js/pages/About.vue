@@ -272,20 +272,6 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
         ref="root"
         class="about-root relative min-h-screen w-full bg-background font-sans text-foreground selection:bg-primary/20"
     >
-        <!-- Background grid -->
-        <div
-            class="pointer-events-none fixed inset-0 z-0 opacity-[0.025] dark:opacity-[0.05]"
-            style="
-                background-image:
-                    linear-gradient(var(--color-border) 1px, transparent 1px),
-                    linear-gradient(
-                        90deg,
-                        var(--color-border) 1px,
-                        transparent 1px
-                    );
-                background-size: 60px 60px;
-            "
-        ></div>
 
         <WelcomeHeader
             :can-register="canRegister"

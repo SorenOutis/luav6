@@ -274,15 +274,7 @@ declare const route: any;
                 ref="container"
                 class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
             >
-            <!-- Decorative Orbs (hidden on mobile for performance) -->
-            <div
-                v-if="!isMobileDevice"
-                class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
-            ></div>
-            <div
-                v-if="!isMobileDevice"
-                class="orb pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
-            ></div>
+
 
             <Motion
                 :initial="{ opacity: 0, y: 30 }"

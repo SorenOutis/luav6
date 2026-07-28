@@ -309,9 +309,7 @@ const filteredCourses = computed(() => {
         <!-- Real Content -->
         <template v-if="isBooted">
             <div class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10">
-                <!-- Decorative Orbs -->
-                <div v-if="!isMobileDevice" class="pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"></div>
-                <div v-if="!isMobileDevice" class="pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"></div>
+
 
                 <!-- Daily Tip -->
                 <Motion

@@ -1508,21 +1508,7 @@ const feedbackContent = computed(() => {
             ref="container"
             class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
         >
-            <!-- Ambient background decorations (hidden on mobile for performance) -->
-            <div
-                v-if="!isMobileDevice"
-                class="pointer-events-none fixed -top-64 -right-64 h-[800px] w-[800px] animate-pulse rounded-full bg-primary/10 opacity-50 blur-[180px] dark:opacity-40"
-                style="animation-duration: 8s"
-            ></div>
-            <div
-                v-if="!isMobileDevice"
-                class="pointer-events-none fixed top-1/4 -left-64 h-[600px] w-[600px] animate-pulse rounded-full bg-violet-500/10 opacity-30 blur-[160px] dark:opacity-20"
-                style="animation-duration: 12s"
-            ></div>
-            <div
-                v-if="!isMobileDevice"
-                class="pointer-events-none fixed right-1/4 -bottom-64 h-[700px] w-[700px] rounded-full bg-blue-500/5 opacity-20 blur-[150px] dark:opacity-10"
-            ></div>
+
 
             <div class="relative z-10 flex flex-1 flex-col gap-6 p-4 md:p-8">
                 <!-- Integrity Alert Overlay -->

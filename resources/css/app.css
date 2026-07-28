@@ -95,39 +95,39 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ════════════════════════════════════════════════════
-   Default Theme — Dark Mode (Black)
+   Default Theme — Dark Mode (Warm Brown — Claude-inspired)
    ════════════════════════════════════════════════════ */
 .dark {
-    --color-background: #000000;
-    --color-foreground: #fafafa;
+    --color-background: #1a1410;
+    --color-foreground: #f5f0eb;
 
-    --color-card: #0a0a0a;
-    --color-card-foreground: #fafafa;
+    --color-card: #221c18;
+    --color-card-foreground: #f5f0eb;
 
-    --color-primary: #fafafa;
-    --color-primary-foreground: #000000;
+    --color-primary: #f5f0eb;
+    --color-primary-foreground: #1a1410;
 
-    --color-secondary: #141414;
-    --color-secondary-foreground: #fafafa;
+    --color-secondary: #2a2420;
+    --color-secondary-foreground: #f5f0eb;
 
-    --color-muted: #141414;
-    --color-muted-foreground: #a1a1aa;
+    --color-muted: #2a2420;
+    --color-muted-foreground: #a09890;
 
-    --color-accent: #141414;
-    --color-accent-foreground: #fafafa;
+    --color-accent: #2a2420;
+    --color-accent-foreground: #f5f0eb;
 
-    --color-border: #1f1f1f;
-    --color-input: #1f1f1f;
-    --color-ring: #d4d4d8;
+    --color-border: #3a322c;
+    --color-input: #3a322c;
+    --color-ring: #d4c8c0;
 
-    --color-sidebar: #000000;
-    --color-sidebar-foreground: #fafafa;
-    --color-sidebar-primary: #fafafa;
-    --color-sidebar-primary-foreground: #000000;
-    --color-sidebar-accent: #141414;
-    --color-sidebar-accent-foreground: #fafafa;
-    --color-sidebar-border: #1f1f1f;
-    --color-sidebar-ring: #d4d4d8;
+    --color-sidebar: #1a1410;
+    --color-sidebar-foreground: #f5f0eb;
+    --color-sidebar-primary: #f5f0eb;
+    --color-sidebar-primary-foreground: #1a1410;
+    --color-sidebar-accent: #2a2420;
+    --color-sidebar-accent-foreground: #f5f0eb;
+    --color-sidebar-border: #3a322c;
+    --color-sidebar-ring: #d4c8c0;
 }
 
 /* ════════════════════════════════════════════════════
@@ -163,29 +163,29 @@
 }
 
 .dark:root[data-theme-preset='default'] {
-    --color-background: #000000;
-    --color-foreground: #fafafa;
-    --color-card: #0a0a0a;
-    --color-card-foreground: #fafafa;
-    --color-primary: #fafafa;
-    --color-primary-foreground: #000000;
-    --color-secondary: #141414;
-    --color-secondary-foreground: #fafafa;
-    --color-muted: #141414;
-    --color-muted-foreground: #a1a1aa;
-    --color-accent: #141414;
-    --color-accent-foreground: #fafafa;
-    --color-border: #1f1f1f;
-    --color-input: #1f1f1f;
-    --color-ring: #d4d4d8;
-    --color-sidebar: #000000;
-    --color-sidebar-foreground: #fafafa;
-    --color-sidebar-primary: #fafafa;
-    --color-sidebar-primary-foreground: #000000;
-    --color-sidebar-accent: #141414;
-    --color-sidebar-accent-foreground: #fafafa;
-    --color-sidebar-border: #1f1f1f;
-    --color-sidebar-ring: #d4d4d8;
+    --color-background: #1a1410;
+    --color-foreground: #f5f0eb;
+    --color-card: #221c18;
+    --color-card-foreground: #f5f0eb;
+    --color-primary: #f5f0eb;
+    --color-primary-foreground: #1a1410;
+    --color-secondary: #2a2420;
+    --color-secondary-foreground: #f5f0eb;
+    --color-muted: #2a2420;
+    --color-muted-foreground: #a09890;
+    --color-accent: #2a2420;
+    --color-accent-foreground: #f5f0eb;
+    --color-border: #3a322c;
+    --color-input: #3a322c;
+    --color-ring: #d4c8c0;
+    --color-sidebar: #1a1410;
+    --color-sidebar-foreground: #f5f0eb;
+    --color-sidebar-primary: #f5f0eb;
+    --color-sidebar-primary-foreground: #1a1410;
+    --color-sidebar-accent: #2a2420;
+    --color-sidebar-accent-foreground: #f5f0eb;
+    --color-sidebar-border: #3a322c;
+    --color-sidebar-ring: #d4c8c0;
 }
 
 /* ════════════════════════════════════════════════════
@@ -283,29 +283,29 @@
 
 .dark .theme-neutral-page,
 .dark .global-loader {
-    --color-background: #000000;
-    --color-foreground: #fafafa;
-    --color-card: #0a0a0a;
-    --color-card-foreground: #fafafa;
-    --color-primary: #fafafa;
-    --color-primary-foreground: #000000;
-    --color-secondary: #141414;
-    --color-secondary-foreground: #fafafa;
-    --color-muted: #141414;
-    --color-muted-foreground: #a1a1aa;
-    --color-accent: #141414;
-    --color-accent-foreground: #fafafa;
-    --color-border: #1f1f1f;
-    --color-input: #1f1f1f;
-    --color-ring: #d4d4d8;
-    --color-sidebar: #000000;
-    --color-sidebar-foreground: #fafafa;
-    --color-sidebar-primary: #fafafa;
-    --color-sidebar-primary-foreground: #000000;
-    --color-sidebar-accent: #141414;
-    --color-sidebar-accent-foreground: #fafafa;
-    --color-sidebar-border: #1f1f1f;
-    --color-sidebar-ring: #d4d4d8;
+    --color-background: #1a1410;
+    --color-foreground: #f5f0eb;
+    --color-card: #221c18;
+    --color-card-foreground: #f5f0eb;
+    --color-primary: #f5f0eb;
+    --color-primary-foreground: #1a1410;
+    --color-secondary: #2a2420;
+    --color-secondary-foreground: #f5f0eb;
+    --color-muted: #2a2420;
+    --color-muted-foreground: #a09890;
+    --color-accent: #2a2420;
+    --color-accent-foreground: #f5f0eb;
+    --color-border: #3a322c;
+    --color-input: #3a322c;
+    --color-ring: #d4c8c0;
+    --color-sidebar: #1a1410;
+    --color-sidebar-foreground: #f5f0eb;
+    --color-sidebar-primary: #f5f0eb;
+    --color-sidebar-primary-foreground: #1a1410;
+    --color-sidebar-accent: #2a2420;
+    --color-sidebar-accent-foreground: #f5f0eb;
+    --color-sidebar-border: #3a322c;
+    --color-sidebar-ring: #d4c8c0;
 }
 
 .theme-neutral-page .rounded-md,
@@ -453,18 +453,7 @@
    ════════════════════════════════════════════════════ */
 
 .exam-theme-page {
-    background:
-        radial-gradient(
-            circle at 85% 8%,
-            color-mix(in srgb, var(--color-primary) 8%, transparent),
-            transparent 34%
-        ),
-        radial-gradient(
-            circle at 0% 100%,
-            color-mix(in srgb, var(--color-primary) 6%, transparent),
-            transparent 32%
-        ),
-        var(--color-background);
+    background: var(--color-background);
 }
 
 .exam-theme-page .exam-stat,
@@ -475,13 +464,7 @@
 }
 
 .exam-theme-page .exam-card {
-    background:
-        linear-gradient(
-            135deg,
-            color-mix(in srgb, var(--color-card) 92%, transparent),
-            color-mix(in srgb, var(--color-muted) 34%, transparent)
-        ),
-        var(--color-card);
+    background: var(--color-card);
     border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
     box-shadow: 0 18px 55px -42px
         color-mix(in srgb, var(--color-primary) 45%, #000000);
@@ -489,13 +472,7 @@
 
 .exam-theme-page .exam-hero,
 .exam-theme-page .question-card {
-    background:
-        linear-gradient(
-            135deg,
-            color-mix(in srgb, var(--color-card) 94%, transparent),
-            color-mix(in srgb, var(--color-muted) 28%, transparent)
-        ),
-        var(--color-card);
+    background: var(--color-card);
     border-color: color-mix(in srgb, var(--color-border) 76%, transparent);
     box-shadow: 0 20px 60px -44px
         color-mix(in srgb, var(--color-primary) 45%, #000000);
@@ -533,7 +510,7 @@
 }
 
 :root[data-theme-preset='forest'] .exam-theme-page .exam-card {
-    background: linear-gradient(180deg, #fffdf7, #eef4e7);
+    background: #fffdf7;
     border-color: #cbd9c2;
 }
 
@@ -643,13 +620,9 @@
             color-mix(in srgb, var(--color-primary) 45%, transparent) !important;
 }
 
-/* — Hero: cleaner gradient panel — */
+/* — Hero: flat solid panel — */
 .exam-theme-page .exam-hero {
-    background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--color-primary) 6%, var(--color-card)),
-        var(--color-card) 55%
-    ) !important;
+    background: var(--color-card) !important;
     border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent) !important;
     box-shadow: 0 12px 40px -24px
         color-mix(in srgb, var(--color-primary) 35%, transparent) !important;
@@ -776,11 +749,7 @@
 .exam-theme-page .exam-instruction-callout {
     border-radius: var(--radius-2xl) !important;
     border-width: 1px !important;
-    background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--color-primary) 8%, var(--color-card)),
-        var(--color-card)
-    ) !important;
+    background: var(--color-card) !important;
     border-color: color-mix(
         in srgb,
         var(--color-primary) 35%,
@@ -816,10 +785,7 @@
     display: none !important;
 }
 
-/* Soften the noisy background orbs slightly */
-.exam-theme-page .orb {
-    opacity: 0.55 !important;
-}
+
 
 /* ════════════════════════════════════════════════════
    STUDENT-FRIENDLY QUESTION + ANSWER UI
@@ -830,11 +796,7 @@
     transform: none !important;
     border-radius: 1rem !important;
     border-width: 0 !important;
-    background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--color-primary) 14%, var(--color-card)),
-        color-mix(in srgb, var(--color-primary) 6%, var(--color-card))
-    ) !important;
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-card)) !important;
     color: var(--color-primary) !important;
     box-shadow: 0 4px 12px -6px
         color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
@@ -1195,25 +1157,7 @@
         @apply relative min-h-screen bg-background text-foreground antialiased;
     }
 
-    body::before {
-        content: '';
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 0;
-        pointer-events: none;
-        opacity: 0.02;
-        background-image:
-            linear-gradient(var(--color-border) 1px, transparent 1px),
-            linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
-        background-size: 60px 60px;
-    }
 
-    html.dark body::before {
-        opacity: 0.04;
-    }
 
     * {
         @apply border-border;
@@ -1335,7 +1279,7 @@
 }
 
 .dark .exam-theme-page.paper-layout {
-    background: #0c0c0a !important;
+    background: #1a1410 !important;
 }
 
 /* Strip card styling from exam hero */
