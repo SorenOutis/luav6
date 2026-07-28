@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Services\ClaimXpService;
 
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\postJson;
 
 function claimContext(): array
 {

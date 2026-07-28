@@ -3,10 +3,10 @@
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\Admin\ExamSubmissionController;
 use App\Http\Controllers\AnonymousMessageController;
+use App\Http\Controllers\Api\ClaimXpController;
 use App\Http\Controllers\Api\DashboardExamsController;
 use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\LeaderboardToggleBlurController;
-use App\Http\Controllers\Api\ClaimXpController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ChatController;
