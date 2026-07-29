@@ -665,6 +665,7 @@ const handleLogout = () => {
                         class="dashboard-stats"
                         :user-stats="userStats"
                         :streak="streak"
+                        :login-dates="props.loginDates ?? []"
                         :progress-percentage="progressPercentage"
                         :claim-xp="props.claimXp"
                     />
