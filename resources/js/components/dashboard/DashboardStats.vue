@@ -11,6 +11,7 @@ import { computed, ref, watch } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
+import StreakCalendarModal from '@/components/dashboard/StreakCalendarModal.vue';
 
 interface UserStats {
     totalXP: number;
@@ -38,6 +39,7 @@ interface ClaimXp {
 interface Props {
     userStats: UserStats;
     streak?: StreakData;
+    loginDates?: string[];
     progressPercentage: number;
     claimXp?: ClaimXp;
 }
@@ -45,6 +47,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const hideClaimCard = ref(false);
+const showStreakModal = ref(false);
 
 // Track current XP values for animation on claim
 const animLevel = useNumberAnimation(() => props.userStats.level);
@@ -68,6 +71,30 @@ watch(
         if (canClaim) hideClaimCard.value = false;
     }
 );
+
+// Last 7 days mini preview for the streak card
+function localDateStr(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+const last7Days = computed(() => {
+    const now = new Date();
+    const today = localDateStr(now);
+    const loginSet = new Set(props.loginDates ?? []);
+    const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() - (6 - i));
+        const dateStr = localDateStr(d);
+        return {
+            label: dayNames[d.getDay()],
+            isActive: loginSet.has(dateStr),
+            isToday: dateStr === today,
+        };
+    });
+});
 
 async function onClaimed(amount: number, _totalXp: number) {
     // Animate the XP counter up
@@ -154,8 +181,17 @@ const displayStats = computed(() => [
                 :key="stat.label"
                 customSize
                 :glowColor="stat.glowColor"
-                :class="`stagger-${idx + 1}`"
+                :class="[
+                    `stagger-${idx + 1}`,
+                    stat.label === 'Day Streak' ? 'cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:bg-card/70' : '',
+                ]"
                 className="min-w-[155px] shrink-0 p-3 sm:p-5 group animate-fade-up bg-card/40 flex flex-col justify-between md:min-w-0 md:shrink"
+                :tabindex="stat.label === 'Day Streak' ? 0 : undefined"
+                :role="stat.label === 'Day Streak' ? 'button' : undefined"
+                :aria-label="stat.label === 'Day Streak' ? 'Open streak calendar' : undefined"
+                @click="stat.label === 'Day Streak' ? showStreakModal = true : undefined"
+                @keydown.enter.prevent="stat.label === 'Day Streak' ? showStreakModal = true : undefined"
+                @keydown.space.prevent="stat.label === 'Day Streak' ? showStreakModal = true : undefined"
             >
                 <!-- Inner container to clip overflowing background icons without clipping the outer glow -->
                 <div
@@ -219,8 +255,37 @@ const displayStats = computed(() => [
                         </div>
                     </div>
 
+                    <!-- Mini flame row for Day Streak card -->
+                    <div
+                        v-if="stat.label === 'Day Streak'"
+                        class="mt-2.5 flex items-center gap-1 border-t border-border/5 pt-2.5 sm:mt-3 sm:pt-3"
+                    >
+                        <div
+                            v-for="(day, di) in last7Days"
+                            :key="di"
+                            class="flex h-5 w-5 flex-col items-center gap-0.5"
+                        >
+                            <Flame
+                                v-if="day.isActive"
+                                class="h-2.5 w-2.5"
+                                :class="day.isToday ? 'text-orange-400' : 'text-orange-400/60'"
+                            />
+                            <div
+                                v-else
+                                class="h-2.5 w-2.5 rounded-full border border-muted-foreground/15"
+                            ></div>
+                            <span
+                                class="text-[6px] font-bold leading-none"
+                                :class="day.isToday ? 'text-foreground/60' : 'text-muted-foreground/25'"
+                            >
+                                {{ day.label }}
+                            </span>
+                        </div>
+                    </div>
+
                     <!-- Subtle Detail Bar -->
                     <div
+                        v-else
                         class="mt-3 flex items-center justify-between border-t border-border/5 pt-2.5 sm:mt-4 sm:pt-3"
                     >
                         <span
@@ -232,10 +297,19 @@ const displayStats = computed(() => [
                         />
                     </div>
                 </div>
-            </SpotlightCard>
-        </div>
+        </SpotlightCard>
+    </div>
 
-        <!-- Claim XP Card -->
+    <!-- Streak Calendar Modal -->
+    <StreakCalendarModal
+        :open="showStreakModal"
+        :login-dates="props.loginDates ?? []"
+        :current-streak="props.userStats.streak"
+        :longest-streak="props.userStats.longestStreak"
+        @close="showStreakModal = false"
+    />
+
+    <!-- Claim XP Card -->
         <SpotlightCard
             v-if="claimXp && !hideClaimCard"
             customSize
