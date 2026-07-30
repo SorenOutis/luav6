@@ -55,10 +55,12 @@ interface Props {
     sectionLeaderboards: LeaderboardData[];
     activeSeasonName?: string;
     availableSeasons?: Season[];
+    showViewButton?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     availableSeasons: () => [],
+    showViewButton: false,
 });
 
 const emit = defineEmits<{
@@ -355,7 +357,15 @@ const changeSeason = async (seasonId: number) => {
                     of {{ totalPlayers }}
                 </p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center justify-end gap-2">
+                <Link
+                    v-if="showViewButton"
+                    href="/leaderboard"
+                    class="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[10px] font-black tracking-[0.08em] text-amber-300 uppercase transition hover:border-amber-400/50 hover:bg-amber-400/20"
+                >
+                    <Trophy class="h-3.5 w-3.5" />
+                    View Leaderboard
+                </Link>
                 <div class="relative flex-1 sm:flex-none">
                     <Search
                         class="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
