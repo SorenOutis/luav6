@@ -18,7 +18,6 @@ use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
-use App\Http\Controllers\LearningMapController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -106,12 +105,6 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
     // Games hub
     Route::get('games', [GamesController::class, 'index'])->middleware('student.page:games')->name('games.index');
-
-    // Interactive Maps
-    Route::get('maps', [LearningMapController::class, 'index'])->middleware('student.page:maps')->name('maps.index');
-    Route::post('maps/nodes/{slug}/complete', [LearningMapController::class, 'complete'])
-        ->middleware('student.page:maps')
-        ->name('maps.nodes.complete');
 
     // Tower Defense game routes
     // ─────────────────────────────────────────────

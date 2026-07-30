@@ -9,7 +9,6 @@ import {
     Gamepad2,
     MoreHorizontal,
     Award,
-    Map,
     Settings,
     LogOut,
     Zap,
@@ -26,7 +25,6 @@ import { edit } from '@/routes/profile';
 import { index as gamesIndex } from '@/routes/games';
 import { index as examsIndex } from '@/routes/exams';
 import { index as assignmentsIndex } from '@/routes/assignments';
-import { index as mapsIndex } from '@/routes/maps';
 import { index as coursesIndex } from '@/routes/courses';
 import { grades, logout } from '@/routes';
 
@@ -112,13 +110,6 @@ const moreMenuItems = computed(() =>
             icon: Award,
             description: 'View your grades and scores',
             studentPageKey: 'grades',
-        },
-        {
-            label: 'Learning Maps',
-            href: mapsIndex().url,
-            icon: Map,
-            description: 'Track your learning journey',
-            studentPageKey: 'maps',
         },
         {
             label: 'Profile',

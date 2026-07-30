@@ -91,7 +91,6 @@ ALLOWED TOPICS — You can discuss:
 - Courses, lessons, and learning progress
 - Streaks, badges, achievements, and rewards
 - Season progress and leaderboard standings
-- Learning maps and node completion
 - Study tips, time management, and academic motivation
 - Essay feedback and constructive academic critique
 

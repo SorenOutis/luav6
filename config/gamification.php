@@ -40,19 +40,12 @@ return [
     | Per-level Rewards
     |--------------------------------------------------------------------------
     |
-    | Optional. Keyed by level number. Currently consumed by the
-    | StudentNotificationService/LearningMapService only if referenced.
+    | Optional. Keyed by level number.
     |
     */
     'level_rewards' => [
         // 5 => ['badge_id' => 1],
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Map Node Defaults
-    |--------------------------------------------------------------------------
-    */
-    'map_node_default_pass_score' => 70,
 
 ];

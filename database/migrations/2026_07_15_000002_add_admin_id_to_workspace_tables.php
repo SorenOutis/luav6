@@ -107,17 +107,6 @@ return new class extends Migration
             $table->index('admin_id');
         });
 
-        // --- Learning Map tables ---
-
-        Schema::table('map_worlds', function (Blueprint $table) {
-            $table->foreignId('admin_id')
-                ->nullable()
-                ->constrained('users')
-                ->cascadeOnDelete()
-                ->after('id');
-            $table->index('admin_id');
-        });
-
         // --- Tower Defense tables ---
 
         Schema::table('td_maps', function (Blueprint $table) {
@@ -189,7 +178,6 @@ return new class extends Migration
 
         $tables = [
             'td_difficulties', 'td_towers', 'td_enemies', 'td_maps',
-            'map_worlds',
             'anonymous_messages', 'ai_question_drafts', 'announcements',
             'rewards', 'badges', 'seasons',
             'courses', 'assignments', 'exams', 'sections',

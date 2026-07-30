@@ -47,11 +47,6 @@ class StudentPageRegistry
                 'path' => '/grades',
                 'description' => 'Student grade viewing page.',
             ],
-            'maps' => [
-                'label' => 'Learning Maps',
-                'path' => '/maps',
-                'description' => 'Interactive learning map and node completion.',
-            ],
             'courses' => [
                 'label' => 'Courses',
                 'path' => '/courses',

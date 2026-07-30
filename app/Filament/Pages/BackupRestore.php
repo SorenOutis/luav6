@@ -476,7 +476,6 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
             'announcements',
             'ai_question_drafts',
             'anonymous_messages',
-            'map_worlds',
             'td_maps',
             'td_enemies',
             'td_towers',
