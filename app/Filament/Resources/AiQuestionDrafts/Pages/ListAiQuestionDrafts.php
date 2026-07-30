@@ -28,7 +28,7 @@ class ListAiQuestionDrafts extends ListRecords
     {
         return [
             Action::make('generate')
-                ->label('Generate from file or text')
+                ->label('New AI draft')
                 ->icon('heroicon-o-sparkles')
                 ->color('primary')
                 ->modalHeading('AI Question Generator')
@@ -268,5 +268,10 @@ class ListAiQuestionDrafts extends ListRecords
                     $this->redirect(static::getResource()::getUrl('edit', ['record' => $draft->id]));
                 }),
         ];
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Generate, review, and organize question drafts before adding them to an exam.';
     }
 }

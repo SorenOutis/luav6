@@ -99,7 +99,7 @@ class ExamSubmissionsTable
                     ->relationship('user', 'name'),
             ])
             ->actions([
-                EditAction::make(),
+                EditAction::make()->label('Review submission'),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

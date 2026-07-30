@@ -6,16 +6,12 @@ use App\Filament\Resources\ExamSubmissions\ExamSubmissionResource;
 use App\Models\Exam;
 use App\Models\Section;
 use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Select;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Schemas\Components\Actions as ActionsComponent;
 use Filament\Schemas\Components\EmbeddedTable;
-use Filament\Schemas\Components\RenderHook;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
-use Filament\View\PanelsRenderHook;
 use Illuminate\Database\Eloquent\Builder;
 
 class ListExamSubmissions extends ListRecords
@@ -26,17 +22,8 @@ class ListExamSubmissions extends ListRecords
     {
         return [
             CreateAction::make(),
-        ];
-    }
-
-    /**
-     * @return array<int|string, Action|ActionGroup>
-     */
-    protected function getToolsActions(): array
-    {
-        return [
             Action::make('monitorExam')
-                ->label('Monitor Exam')
+                ->label('Monitor live exam')
                 ->icon('heroicon-o-signal')
                 ->color('gray')
                 ->form([
@@ -85,12 +72,12 @@ class ListExamSubmissions extends ListRecords
         return $schema
             ->components([
                 $this->getTabsContentComponent(),
-                ActionsComponent::make($this->getToolsActions())
-                    ->label('Tools')
-                    ->columnSpanFull(),
-                RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_BEFORE),
                 EmbeddedTable::make(),
-                RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_AFTER),
             ]);
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Review grading progress, scores, and live exam activity from one workspace.';
     }
 }
