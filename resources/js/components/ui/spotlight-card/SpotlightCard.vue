@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 
 interface Props {
   className?: string;
@@ -41,77 +41,35 @@ const sizeMap = {
   lg: 'w-80 h-96'
 };
 
-const isHovered = ref(false);
-const targetX = ref(0);
-const targetY = ref(0);
-const currentX = ref(0);
-const currentY = ref(0);
-let animationFrameId: number;
+// The old implementation ran a requestAnimationFrame loop for every card,
+// including cards the user was not interacting with. Update CSS variables
+// only for the card receiving pointer input instead.
+const updatePointerPosition = (e: PointerEvent) => {
+  const el = cardRef.value?.$el ?? cardRef.value;
+  if (!el) return;
 
-const animate = () => {
-  // 0.12 gives a smooth trailing delay when following the cursor, 0.08 gives a slower return
-  const ease = isHovered.value ? 0.12 : 0.08; 
-  
-  if (Math.abs(targetX.value - currentX.value) > 0.1 || Math.abs(targetY.value - currentY.value) > 0.1) {
-    currentX.value += (targetX.value - currentX.value) * ease;
-    currentY.value += (targetY.value - currentY.value) * ease;
-    
-    const el = cardRef.value?.$el ?? cardRef.value;
-    if (el) {
-      el.style.setProperty('--x', currentX.value.toFixed(2));
-      el.style.setProperty('--y', currentY.value.toFixed(2));
-      
-      const rect = el.getBoundingClientRect();
-      const fakeClientX = rect.left + currentX.value;
-      const fakeClientY = rect.top + currentY.value;
-      
-      el.style.setProperty('--xp', (fakeClientX / window.innerWidth).toFixed(2));
-      el.style.setProperty('--yp', (fakeClientY / window.innerHeight).toFixed(2));
-    }
-  }
-  
-  animationFrameId = requestAnimationFrame(animate);
+  const rect = el.getBoundingClientRect();
+  el.style.setProperty('--x', (e.clientX - rect.left).toFixed(2));
+  el.style.setProperty('--y', (e.clientY - rect.top).toFixed(2));
+  el.style.setProperty('--xp', (e.clientX / window.innerWidth).toFixed(2));
+  el.style.setProperty('--yp', (e.clientY / window.innerHeight).toFixed(2));
 };
 
 const handlePointerMove = (e: PointerEvent) => {
-  const el = cardRef.value?.$el ?? cardRef.value;
-  if (!el) return;
-  
-  const rect = el.getBoundingClientRect();
-  targetX.value = e.clientX - rect.left;
-  targetY.value = e.clientY - rect.top;
+  updatePointerPosition(e);
 };
 
 const handlePointerEnter = (e: PointerEvent) => {
-  isHovered.value = true;
-  
-  const el = cardRef.value?.$el ?? cardRef.value;
-  if (el) {
-    const rect = el.getBoundingClientRect();
-    targetX.value = e.clientX - rect.left;
-    targetY.value = e.clientY - rect.top;
-  }
+  updatePointerPosition(e);
 };
 
 const handlePointerLeave = () => {
-  isHovered.value = false;
-  targetX.value = 0;
-  targetY.value = 0;
-};
-
-onMounted(() => {
-  // Initialize with default 0,0 position
   const el = cardRef.value?.$el ?? cardRef.value;
   if (el) {
     el.style.setProperty('--x', '0');
     el.style.setProperty('--y', '0');
   }
-  animationFrameId = requestAnimationFrame(animate);
-});
-
-onUnmounted(() => {
-  cancelAnimationFrame(animationFrameId);
-});
+};
 
 const sizeClasses = computed(() => {
   if (props.customSize) return '';
@@ -218,7 +176,6 @@ const inlineStyles = computed(() => {
 [data-glow] > [data-glow] {
   position: absolute;
   inset: 0;
-  will-change: filter;
   opacity: var(--outer, 1);
   border-radius: calc(var(--radius) * 1px);
   border-width: calc(var(--border-size) * 20);

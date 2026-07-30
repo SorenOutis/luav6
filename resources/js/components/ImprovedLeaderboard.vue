@@ -537,6 +537,8 @@ const changeSeason = async (seasonId: number) => {
                                         v-if="user.avatar"
                                         :src="user.avatar"
                                         :alt="`${user.name} avatar`"
+                                        loading="lazy"
+                                        decoding="async"
                                         class="h-full w-full object-cover"
                                     />
                                     <User
@@ -709,6 +711,8 @@ const changeSeason = async (seasonId: number) => {
                                         v-if="user.avatar"
                                         :src="user.avatar"
                                         :alt="`${user.name} avatar`"
+                                        loading="lazy"
+                                        decoding="async"
                                         class="h-full w-full object-cover"
                                     />
                                     <User
