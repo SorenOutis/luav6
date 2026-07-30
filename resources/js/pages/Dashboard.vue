@@ -46,7 +46,10 @@ const POLL_PROPS = [
     'sectionLeaderboards',
     'activeSeason',
 ];
-const POLL_INTERVAL_MS = 15000;
+// Dashboard data is intentionally refreshed less often than interaction-heavy
+// pages. This avoids repeatedly rebuilding the leaderboard and sidebar on
+// lower-end devices while keeping progress reasonably current.
+const POLL_INTERVAL_MS = 30000;
 
 const { stop: stopPoll, start: startPoll } = usePoll(
     POLL_INTERVAL_MS,
@@ -627,12 +630,12 @@ const handleLogout = () => {
             <template v-if="isBooted">
                 <!-- Hero Banner Section -->
                 <Motion
-                    :initial="{ opacity: 0, y: 30 }"
+                    :initial="isMobile || prefersReducedMotion ? false : { opacity: 0, y: 30 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="{
-                        duration: 1,
+                    :transition="isMobile || prefersReducedMotion ? { duration: 0 } : {
+                        duration: 0.7,
                         ease: [0.16, 1, 0.3, 1],
-                        delay: 0.1,
+                        delay: 0.05,
                     }"
                     class="relative space-y-6"
                 >
@@ -658,12 +661,12 @@ const handleLogout = () => {
 
                 <!-- Header Section with User Stats -->
                 <Motion
-                    :initial="{ opacity: 0, y: 20 }"
+                    :initial="isMobile || prefersReducedMotion ? false : { opacity: 0, y: 20 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="{
-                        duration: 1,
+                    :transition="isMobile || prefersReducedMotion ? { duration: 0 } : {
+                        duration: 0.7,
                         ease: [0.16, 1, 0.3, 1],
-                        delay: 0.2,
+                        delay: 0.1,
                     }"
                 >
                     <DashboardStats
@@ -679,16 +682,16 @@ const handleLogout = () => {
 
                 <!-- Main Content Grid -->
                 <Motion
-                    :initial="{ opacity: 0, y: 40 }"
-                    :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :initial="isMobile || prefersReducedMotion ? false : { opacity: 0, y: 40 }"
+                    :in-view="isMobile || prefersReducedMotion ? false : (isBooted ? { opacity: 1, y: 0 } : {})"
                     :in-view-options="{ once: true, margin: '-50px' }"
-                    :transition="{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }"
+                    :transition="isMobile || prefersReducedMotion ? { duration: 0 } : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
                     class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
                 >
                     <!-- Main Section: Leaderboard + Learning Hub -->
                     <div class="min-w-0 space-y-8 lg:col-span-2">
                         <!-- Mobile: Collapsible Leaderboard -->
-                        <div class="lg:hidden">
+                        <div v-if="isMobile" class="lg:hidden">
                             <button
                                 @click="isLeaderboardExpanded = !isLeaderboardExpanded"
                                 class="flex w-full items-center justify-between rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-amber-400/30"
@@ -719,7 +722,7 @@ const handleLogout = () => {
                         </div>
 
                         <!-- Desktop: Full Leaderboard -->
-                        <div class="hidden lg:block">
+                        <div v-else class="hidden lg:block">
                             <ImprovedLeaderboard
                                 class="dashboard-leaderboard"
                                 :section-leaderboards="sectionLeaderboards"
@@ -742,7 +745,7 @@ const handleLogout = () => {
                         class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
                     >
                         <!-- Mobile: Collapsible Sidebar -->
-                        <div class="lg:hidden">
+                        <div v-if="isMobile" class="lg:hidden">
                             <button
                                 @click="isSidebarExpanded = !isSidebarExpanded"
                                 class="flex w-full items-center justify-between rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-primary/30"
@@ -814,7 +817,7 @@ const handleLogout = () => {
                         </div>
 
                         <!-- Desktop: Full Sidebar -->
-                        <div class="hidden lg:block space-y-6">
+                        <div v-else class="hidden lg:block space-y-6">
                             <SeasonProgressBand
                                 :name="activeSeason?.name ?? null"
                                 :start-date="activeSeason?.startDate ?? null"
