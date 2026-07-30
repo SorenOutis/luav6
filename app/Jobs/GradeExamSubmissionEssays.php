@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Log;
  * requests died *before* the answers were written. Students lost completed work.
  *
  * Now the submission is saved first with its auto-gradable score, and this job
- * adds the essay marks afterwards.
+ * adds the essay marks and AI feedback afterwards.
  */
 class GradeExamSubmissionEssays implements ShouldQueue
 {
@@ -80,10 +80,10 @@ class GradeExamSubmissionEssays implements ShouldQueue
             }
 
             // Idempotency: a retry (or a duplicate dispatch) must not score the
-            // same essay twice. Status can't be used as the guard because this
-            // job deliberately leaves it at 'pending_review' for the teacher's
-            // feedback pass, so key off ai_score already being present.
-            if (array_key_exists('ai_score', $answer)) {
+            // same essay twice. Existing scores without feedback are still sent
+            // as feedback-only work so legacy submissions can finish.
+            $hasFeedback = trim((string) ($answer['ai_feedback'] ?? '')) !== '';
+            if (array_key_exists('ai_score', $answer) && $hasFeedback) {
                 continue;
             }
 
@@ -91,12 +91,14 @@ class GradeExamSubmissionEssays implements ShouldQueue
                 'essayText' => (string) $text,
                 'questionText' => (string) ($question['text'] ?? ''),
                 'maxPoints' => (int) ($question['points'] ?? $part->points ?? 1),
+                'feedbackOnly' => array_key_exists('ai_score', $answer),
+                'includeFeedback' => true,
             ];
         }
 
         if ($essays === []) {
             // Nothing to score (e.g. every essay left blank).
-            $submission->forceFill(['status' => 'pending_review'])->save();
+            $submission->forceFill(['status' => 'graded'])->save();
 
             return;
         }
@@ -123,30 +125,42 @@ class GradeExamSubmissionEssays implements ShouldQueue
             }
 
             $score = (float) ($assessments[$number]['score'] ?? 0.0);
-            $essayScore += $score;
+            $hasExistingScore = array_key_exists('ai_score', $answer);
+            if (! $hasExistingScore) {
+                $essayScore += $score;
+            }
 
             if (! isset($assessments[$number]['score'])) {
                 $gradingFailed = true;
             }
 
-            // array_merge preserves question_text / question_type / points,
-            // which GenerateExamEssayFeedback reads when the teacher later runs
-            // the feedback pass. Do not rebuild this array from scratch.
-            return array_merge($answer, ['ai_score' => $score]);
+            $assessment = $assessments[$number];
+            $updatedAnswer = array_merge($answer, ['ai_score' => $score]);
+            $feedback = trim((string) ($assessment['feedback'] ?? ''));
+
+            if ($feedback !== '') {
+                $updatedAnswer['ai_feedback'] = $feedback;
+                $updatedAnswer['ai_feedback_source'] = 'automatic';
+            } else {
+                $gradingFailed = true;
+            }
+
+            return $updatedAnswer;
         })->values()->all();
 
-        // The stored score already holds the auto-gradable marks; add the essays.
-        // ⚠️ Status stays 'pending_review', NOT 'graded'.
-        //
-        // This job only produces scores. Written feedback is a separate,
-        // teacher-triggered pass (GenerateExamEssayFeedback) run from the admin
-        // panel, and that flow owns the transition to 'graded'. Marking the
-        // submission graded here would tell the teacher it is finished when no
-        // feedback exists yet.
+        // The stored score already holds the auto-gradable marks; add the essays
+        // and automatic written feedback. Any missing AI result remains visible
+        // as pending_ai instead of being silently treated as graded.
+        $allEssayFeedbackComplete = collect($updatedAnswers)
+            ->filter(fn ($answer) => ($answer['question_type'] ?? null) === 'essay')
+            ->every(fn ($answer) => array_key_exists('ai_score', $answer)
+                && trim((string) ($answer['ai_feedback'] ?? '')) !== '');
+
         $submission->forceFill([
             'answers' => $updatedAnswers,
             'score' => round((float) $submission->score + $essayScore, 2),
             'grading_failed' => $gradingFailed,
+            'status' => $allEssayFeedbackComplete ? 'graded' : 'pending_ai',
         ])->save();
     }
 
@@ -160,7 +174,10 @@ class GradeExamSubmissionEssays implements ShouldQueue
 
         ExamSubmission::query()
             ->where('id', $this->submissionId)
-            ->where('status', 'pending_review')
-            ->update(['grading_failed' => true]);
+            ->whereIn('status', ['pending_review', 'pending_ai'])
+            ->update([
+                'status' => 'pending_ai',
+                'grading_failed' => true,
+            ]);
     }
 }

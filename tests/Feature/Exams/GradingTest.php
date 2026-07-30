@@ -68,7 +68,10 @@ function fakeEssayScores(array $scoresByQuestionNumber): void
                 // explicitly defined — an empty mapping simulates a provider
                 // that returned nothing for this question (Phase 1.0.7).
                 if (array_key_exists($questionNumber, $scoresByQuestionNumber)) {
-                    $out[$questionNumber] = ['score' => $scoresByQuestionNumber[$questionNumber]];
+                    $out[$questionNumber] = [
+                        'score' => $scoresByQuestionNumber[$questionNumber],
+                        'feedback' => 'Automatic AI feedback for this essay.',
+                    ];
                 }
             }
 
@@ -185,7 +188,7 @@ it('persists the submission before contacting the AI provider', function () {
     Queue::assertPushed(GradeExamSubmissionEssays::class);
 });
 
-it('leaves an essay submission pending_review for the teachers feedback pass', function () {
+it('automatically stores essay feedback and marks the submission graded', function () {
     [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
@@ -195,9 +198,8 @@ it('leaves an essay submission pending_review for the teachers feedback pass', f
     $submission = ExamSubmission::first();
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
 
-    // Scoring is automatic; written feedback is triggered manually from the
-    // admin panel, and that pass owns the move to 'graded'.
-    expect($submission->fresh()->status)->toBe('pending_review');
+    expect($submission->fresh()->status)->toBe('graded')
+        ->and($submission->fresh()->answers[0]['ai_feedback'])->toBe('Automatic AI feedback for this essay.');
 });
 
 it('does not double-score essays when the grading job runs twice', function () {
@@ -215,7 +217,7 @@ it('does not double-score essays when the grading job runs twice', function () {
     expect($submission->fresh()->score)->toEqual('6.00');
 });
 
-it('preserves the answer fields the manual feedback pass depends on', function () {
+it('preserves the answer fields used by automatic feedback', function () {
     [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
@@ -225,10 +227,9 @@ it('preserves the answer fields the manual feedback pass depends on', function (
     $submission = ExamSubmission::first();
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
 
-    // GenerateExamEssayFeedback reads question_type / question_text / points.
     $answer = $submission->fresh()->answers[0];
 
-    expect($answer)->toHaveKeys(['question_number', 'question_type', 'question_text', 'points', 'ai_score']);
+    expect($answer)->toHaveKeys(['question_number', 'question_type', 'question_text', 'points', 'ai_score', 'ai_feedback']);
 });
 
 it('does not queue a grading job when the part has no essays', function () {
@@ -242,7 +243,7 @@ it('does not queue a grading job when the part has no essays', function () {
     Queue::assertNothingPushed();
 });
 
-it('marks a submission containing an essay as pending_review', function () {
+it('marks a submission containing an essay as graded after automatic feedback', function () {
     [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
@@ -250,7 +251,11 @@ it('marks a submission containing an essay as pending_review', function () {
 
     submitAnswers($student, $exam, $part, [1 => 'Essay text.']);
 
-    expect(ExamSubmission::first()->status)->toBe('pending_review');
+    // The HTTP response remains non-blocking; the queued job completes the grading.
+    $submission = ExamSubmission::first();
+    (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
+
+    expect($submission->fresh()->status)->toBe('graded');
 });
 
 it('marks an auto-gradable submission as submitted', function () {

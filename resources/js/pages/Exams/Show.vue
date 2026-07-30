@@ -75,9 +75,14 @@ interface Exam {
     parts: ExamPart[];
 }
 
+interface ExamSubmissionSummary {
+    status: string;
+    score: number;
+}
+
 const props = defineProps<{
     exam: Exam;
-    submissions: Record<number, { status: string; score: number }>;
+    submissions: Record<number, ExamSubmissionSummary>;
     submittedPartId?: number | null;
 }>();
 
@@ -97,6 +102,17 @@ const answers = reactive<Record<number, string | number>>({}); // Store answers 
 const locallySubmittedPartIds = ref(new Set<number>(
     Object.keys(props.submissions).map(Number)
 ));
+// Keep a client-side copy because the submit request can complete before an
+// Inertia visit refreshes the page props. This prevents a saved part from
+// briefly appearing as available again.
+const localSubmissions = ref<Record<number, ExamSubmissionSummary>>(
+    Object.fromEntries(
+        Object.entries(props.submissions).map(([id, submission]) => [
+            Number(id),
+            { ...submission },
+        ]),
+    ),
+);
 const isSubmitting = ref(false);
 const isFinalSubmitting = ref(false);
 const showSuccessModal = ref(false);
@@ -128,6 +144,7 @@ const unansweredWarningRef = ref<HTMLElement | null>(null);
 const hasShownUnansweredWarning = ref(false);
 const isTimeoutSubmission = ref(false);
 const currentPartHasEssay = ref(false);
+const gradingPollTimer = ref<ReturnType<typeof setInterval> | null>(null);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
@@ -627,7 +644,7 @@ const preventCheatingActions = (e: Event) => {
 };
 
 const submittedPartsCount = computed(
-    () => Object.keys(props.submissions).length,
+    () => Object.keys(localSubmissions.value).length,
 );
 
 const allPartsSubmitted = computed(
@@ -645,14 +662,14 @@ watch(submittedPartsCount, (newCount, oldCount) => {
 });
 
 const totalScore = computed(() =>
-    Object.values(props.submissions).reduce(
+    Object.values(localSubmissions.value).reduce(
         (sum, s) => sum + (Number(s.score) || 0),
         0,
     ),
 );
 
 const isExamPendingReview = computed(() =>
-    Object.values(props.submissions).some((s) => s.status === 'pending_review'),
+    Object.values(localSubmissions.value).some((s) => s.status === 'pending_review'),
 );
 
 const totalPossiblePoints = computed(() =>
@@ -680,8 +697,20 @@ const nextPartId = computed(() => {
 });
 
 const isPartSubmitted = (partId: number) => {
-    return !!props.submissions[String(partId)];
+    return locallySubmittedPartIds.value.has(partId) || !!localSubmissions.value[partId];
 };
+
+watch(
+    () => props.submissions,
+    (submissions) => {
+        Object.entries(submissions).forEach(([id, submission]) => {
+            const partId = Number(id);
+            localSubmissions.value[partId] = { ...submission };
+            locallySubmittedPartIds.value.add(partId);
+        });
+    },
+    { deep: true },
+);
 
 const isPartLocked = (index: number) => {
     if (index === 0) return false;
@@ -1131,18 +1160,25 @@ const submitPart = async () => {
         },
         {
             onSuccess: (page) => {
-                // Use fresh page data directly, fall back to reactive props if page.props is stale
-                                // Use max of server-reported count and locally tracked count (handles stale data)
-                    const serverCount = Math.max(
-                        Object.keys(page.props.submissions ?? {}).length,
-                        Object.keys(props.submissions).length
-                    );
-                    const effectiveCount = Math.max(serverCount, locallySubmittedPartIds.value.size);
-                    const freshSubmittedPartId = (page.props.submittedPartId ?? props.submittedPartId) as number | null;
-                    triggerSuccessModal(
-                        props.exam.parts.length - effectiveCount,
-                        freshSubmittedPartId,
-                    );            },
+                const submittedPartId = Number(selectedPart.value?.id);
+                locallySubmittedPartIds.value.add(submittedPartId);
+                localSubmissions.value[submittedPartId] = {
+                    status: currentPartHasEssay.value ? 'pending_review' : 'submitted',
+                    score: 0,
+                };
+
+                Object.entries(page.props.submissions ?? {}).forEach(([id, submission]) => {
+                    localSubmissions.value[Number(id)] = { ...submission };
+                    locallySubmittedPartIds.value.add(Number(id));
+                });
+
+                const effectiveCount = Object.keys(localSubmissions.value).length;
+                const freshSubmittedPartId = (page.props.submittedPartId ?? props.submittedPartId) as number | null;
+                triggerSuccessModal(
+                    props.exam.parts.length - effectiveCount,
+                    freshSubmittedPartId ?? submittedPartId,
+                );
+            },
             onFinish: () => {
                 isFinalSubmitting.value = false;
                 isSubmitting.value = false;
@@ -1185,6 +1221,59 @@ const closeUnansweredWarning = (proceed: boolean) => {
 };
 
 
+
+const animateDisplayedScore = (score: number) => {
+    gsap.killTweensOf(displayedScore);
+    gsap.to(displayedScore, {
+        value: score,
+        duration: 1.2,
+        ease: 'none',
+        onUpdate: () => {
+            displayedScore.value = Math.floor(displayedScore.value);
+        },
+        onComplete: () => {
+            displayedScore.value = score;
+        },
+    });
+};
+
+const startEssayGradingPoll = (partId: number) => {
+    if (gradingPollTimer.value) clearInterval(gradingPollTimer.value);
+
+    const checkStatus = async () => {
+        try {
+            const { data } = await axios.get(
+                `/exams/${props.exam.id}/parts/${partId}/status`,
+            );
+            if (data.status === 'not_submitted') return;
+
+            const submission = localSubmissions.value[partId] ?? {
+                status: 'pending_review',
+                score: 0,
+            };
+            submission.status = data.status;
+
+            if (data.scored && data.score !== null) {
+                submission.score = Number(data.score);
+                localSubmissions.value[partId] = submission;
+                isCalculatingScore.value = false;
+                animateDisplayedScore(submission.score);
+                if (gradingPollTimer.value) clearInterval(gradingPollTimer.value);
+                gradingPollTimer.value = null;
+            } else if (data.grading_failed) {
+                localSubmissions.value[partId] = submission;
+                isCalculatingScore.value = false;
+                if (gradingPollTimer.value) clearInterval(gradingPollTimer.value);
+                gradingPollTimer.value = null;
+            }
+        } catch {
+            // Keep polling through transient network failures.
+        }
+    };
+
+    void checkStatus();
+    gradingPollTimer.value = setInterval(checkStatus, 2000);
+};
 
 const triggerSuccessModal = (remainingCount?: number, newSubmittedPartId?: number | null) => {
     const effectiveRemainingCount = remainingCount ?? remainingPartsCount.value;
@@ -1237,38 +1326,23 @@ const triggerSuccessModal = (remainingCount?: number, newSubmittedPartId?: numbe
                 isCalculatingScore.value = true;
                 displayedScore.value = 0;
 
-                setTimeout(
-                    () => {
-                        isCalculatingScore.value = false;
-                        const targetScore = Number(totalScore.value) || 0;
+                if (hasEssayInSubmittedPart && effectiveSubmittedPartId) {
+                    startEssayGradingPoll(effectiveSubmittedPartId);
+                } else {
+                    isCalculatingScore.value = false;
+                    animateDisplayedScore(Number(totalScore.value) || 0);
+                }
 
-                        gsap.to(displayedScore, {
-                            value: targetScore,
-                            duration: 1.2,
-                            ease: 'none',
-                            onUpdate: () => {
-                                displayedScore.value = Math.floor(
-                                    displayedScore.value,
-                                );
-                            },
-                            onComplete: () => {
-                                displayedScore.value = targetScore;
-                            },
-                        });
-
-                        gsap.fromTo(
-                            '.final-score-box',
-                            { scale: 0.8, opacity: 0, y: 20 },
-                            {
-                                scale: 1,
-                                opacity: 1,
-                                y: 0,
-                                duration: 1.2,
-                                ease: 'elastic.out(1, 0.5)',
-                            },
-                        );
+                gsap.fromTo(
+                    '.final-score-box',
+                    { scale: 0.8, opacity: 0, y: 20 },
+                    {
+                        scale: 1,
+                        opacity: 1,
+                        y: 0,
+                        duration: 1.2,
+                        ease: 'elastic.out(1, 0.5)',
                     },
-                    hasEssayInSubmittedPart ? 2000 : 1000,
                 );
             }
 
@@ -1391,6 +1465,11 @@ onMounted(() => {
 
     // If we landed here after submitting a part (from redirect), show the success modal
     if (props.submittedPartId) {
+        currentPartHasEssay.value = Boolean(
+            props.exam.parts
+                .find((part) => part.id === props.submittedPartId)
+                ?.questions?.some((question) => question.type === 'essay'),
+        );
         // Pass current computed values explicitly for consistency
         triggerSuccessModal(remainingPartsCount.value, props.submittedPartId);
     }
@@ -1424,6 +1503,10 @@ onUnmounted(() => {
     if (monitorHeartbeatInterval.value) {
         clearInterval(monitorHeartbeatInterval.value);
         monitorHeartbeatInterval.value = null;
+    }
+    if (gradingPollTimer.value) {
+        clearInterval(gradingPollTimer.value);
+        gradingPollTimer.value = null;
     }
     if (saveDraftTimeout) {
         clearTimeout(saveDraftTimeout);
@@ -1933,7 +2016,7 @@ const feedbackContent = computed(() => {
                                         class="rounded-md bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white"
                                     >
                                             {{
-                                                submissions[part.id]?.score ?? 0
+                                                localSubmissions[part.id]?.score ?? 0
                                             }}
                                             /
                                             {{
@@ -3615,4 +3698,3 @@ const feedbackContent = computed(() => {
     opacity: 1;
 }
 </style>
-
