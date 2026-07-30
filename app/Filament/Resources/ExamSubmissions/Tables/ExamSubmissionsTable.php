@@ -11,6 +11,7 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
 
@@ -29,7 +30,11 @@ class ExamSubmissionsTable
                     ->label('Exam')
                     ->searchable()
                     ->sortable()
-                    ->description(fn (ExamSubmission $record): string => $record->exam?->section?->name ?? 'No section'),
+                    ->weight('medium'),
+                TextColumn::make('exam.section.name')
+                    ->label('Section')
+                    ->placeholder('No section')
+                    ->sortable(),
                 TextColumn::make('examPart.title')
                     ->label('Part')
                     ->searchable()
@@ -46,6 +51,7 @@ class ExamSubmissionsTable
                     ->color(fn (string $state): string => match ($state) {
                         'graded' => 'success',
                         'pending_ai', 'pending_review' => 'warning',
+                        'grading_failed' => 'danger',
                         'submitted' => 'info',
                         default => 'gray',
                     }),
@@ -55,6 +61,13 @@ class ExamSubmissionsTable
                     ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
+            ->groups([
+                Group::make('user.name')
+                    ->label('Student'),
+                Group::make('exam.title')
+                    ->label('Exam'),
+            ])
+            ->defaultGroup('user.name')
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
@@ -62,6 +75,7 @@ class ExamSubmissionsTable
                         'submitted' => 'Submitted',
                         'pending_ai' => 'Pending AI',
                         'pending_review' => 'Pending Review',
+                        'grading_failed' => 'Grading failed',
                         'graded' => 'Graded',
                     ]),
                 SelectFilter::make('exam_id')
