@@ -322,6 +322,7 @@ const props = defineProps<{
         canClaim: boolean;
         amount: number;
         nextClaimAt: string | null;
+        showPrompt?: boolean;
     };
     userStats: {
         totalXP: number;
@@ -336,6 +337,10 @@ const props = defineProps<{
         streak: number;
         longestStreak: number;
         joinedAt: string;
+    };
+    statsBreakdown?: {
+        xp: { label: string; amount: number; count: number }[];
+        points: { label: string; amount: number; count: number }[];
     };
     loginDates?: string[];
     announcements: Announcement[];
@@ -668,6 +673,7 @@ const handleLogout = () => {
                         :login-dates="props.loginDates ?? []"
                         :progress-percentage="progressPercentage"
                         :claim-xp="props.claimXp"
+                        :stats-breakdown="props.statsBreakdown"
                     />
                 </Motion>
 

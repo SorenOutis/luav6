@@ -144,12 +144,39 @@ class DashboardController extends Controller
         $canClaim = $this->claimXpService->canClaim($user);
         $claimAmount = $this->claimXpService->claimAmount($user);
         $nextClaimAt = $this->claimXpService->nextClaimAt($user);
+        $showClaimPrompt = $canClaim && ! $request->session()->has('daily_claim_prompt_shown');
+        $request->session()->put('daily_claim_prompt_shown', true);
+
+        $history = $user->gamificationHistories()
+            ->when($currentSeason, fn ($query) => $query->where('season_id', $currentSeason->id))
+            ->get(['amount_xp', 'amount_points', 'reason', 'description', 'created_at']);
+
+        $xpBreakdown = $history->filter(fn ($entry) => (float) $entry->amount_xp !== 0.0)
+            ->groupBy(fn ($entry) => $entry->reason ?: 'Other activity')
+            ->map(fn ($entries, $reason) => [
+                'label' => $reason,
+                'amount' => (float) $entries->sum('amount_xp'),
+                'count' => $entries->count(),
+            ])->values();
+
+        $pointsBreakdown = $history->filter(fn ($entry) => (float) $entry->amount_points !== 0.0)
+            ->groupBy(fn ($entry) => $entry->reason ?: 'Other activity')
+            ->map(fn ($entries, $reason) => [
+                'label' => $reason,
+                'amount' => (float) $entries->sum('amount_points'),
+                'count' => $entries->count(),
+            ])->values();
 
         return inertia('Dashboard', [
             'claimXp' => [
                 'canClaim' => $canClaim,
                 'amount' => $claimAmount,
                 'nextClaimAt' => $nextClaimAt?->toIso8601String(),
+                'showPrompt' => $showClaimPrompt,
+            ],
+            'statsBreakdown' => [
+                'xp' => $xpBreakdown,
+                'points' => $pointsBreakdown,
             ],
             'userStats' => [
                 'totalXP' => $seasonalExp,

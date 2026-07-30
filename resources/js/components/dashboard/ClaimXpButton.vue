@@ -3,13 +3,18 @@ import { Gift, Sparkles, Check, Clock, Zap } from 'lucide-vue-next';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import gsap from 'gsap';
 import axios from 'axios';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 
 const props = defineProps<{
     canClaim: boolean;
     amount: number;
     nextClaimAt: string | null;
     streak: number;
-    onClaimed: (amount: number, totalXp: number) => void;
+    showPrompt?: boolean;
+}>();
+
+const emit = defineEmits<{
+    claimed: [amount: number, totalXp: number];
 }>();
 
 const claimState = ref<'idle' | 'claiming' | 'claimed' | 'waiting'>(
@@ -20,6 +25,7 @@ const showParticles = ref(false);
 const buttonRef = ref<HTMLElement | null>(null);
 const particlesRef = ref<HTMLElement | null>(null);
 const countdownText = ref('');
+const showClaimModal = ref(Boolean(props.showPrompt && props.canClaim));
 let glowAnim: gsap.core.Tween | null = null;
 
 // Countdown timer for next claim
@@ -111,9 +117,10 @@ async function handleClaim() {
             await new Promise((r) => setTimeout(r, 150));
 
             claimState.value = 'claimed';
+            showClaimModal.value = false;
 
             // Notify parent to animate XP counter
-            props.onClaimed(data.amount, data.total_xp);
+            emit('claimed', data.amount, data.total_xp);
         } else {
             claimState.value = 'claimed'; // Already claimed
         }
@@ -155,6 +162,45 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="relative">
+        <ResponsiveModal
+            v-model="showClaimModal"
+            title="Your daily XP reward is ready"
+            description="Keep your streak going with today’s login reward."
+            content-class="sm:max-w-md"
+        >
+            <div class="space-y-5 py-2">
+                <div class="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-5 text-center">
+                    <p class="text-xs font-black tracking-[0.18em] text-amber-400/70 uppercase">You can claim</p>
+                    <p class="mt-2 text-4xl font-black text-amber-300">+{{ amount }} XP</p>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        1 base XP
+                        <span v-if="amount > 1"> + {{ amount - 1 }} streak bonus</span>
+                        <span class="text-amber-400"> · Streak {{ streak }}</span>
+                    </p>
+                </div>
+                <p class="text-sm leading-relaxed text-muted-foreground">
+                    Claim now to add this reward to your XP total, or choose Later and come back anytime today.
+                </p>
+                <div class="flex justify-end gap-2">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted"
+                        @click="showClaimModal = false"
+                    >
+                        Later
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black transition hover:bg-amber-400 disabled:opacity-60"
+                        :disabled="claimState === 'claiming'"
+                        @click="handleClaim"
+                    >
+                        Claim {{ amount }} XP
+                    </button>
+                </div>
+            </div>
+        </ResponsiveModal>
+
         <!-- Particle burst container -->
         <div
             v-if="showParticles"

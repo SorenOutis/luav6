@@ -12,6 +12,7 @@ import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import StreakCalendarModal from '@/components/dashboard/StreakCalendarModal.vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 
 interface UserStats {
     totalXP: number;
@@ -19,6 +20,8 @@ interface UserStats {
     currentXP: number;
     maxXPForLevel: number;
     rank: string;
+    rankNumber: number;
+    totalPlayers: number;
     achievements: number;
     points: number;
     streak: number;
@@ -34,6 +37,13 @@ interface ClaimXp {
     canClaim: boolean;
     amount: number;
     nextClaimAt: string | null;
+    showPrompt?: boolean;
+}
+
+interface BreakdownEntry {
+    label: string;
+    amount: number;
+    count: number;
 }
 
 interface Props {
@@ -42,12 +52,33 @@ interface Props {
     loginDates?: string[];
     progressPercentage: number;
     claimXp?: ClaimXp;
+    statsBreakdown?: {
+        xp: BreakdownEntry[];
+        points: BreakdownEntry[];
+    };
 }
 
 const props = defineProps<Props>();
 
 const hideClaimCard = ref(false);
 const showStreakModal = ref(false);
+const showBreakdownModal = ref(false);
+const selectedBreakdown = ref<'rank' | 'xp' | 'points'>('xp');
+
+const breakdownTitle = computed(() => ({
+    rank: 'How your rank is calculated',
+    xp: 'How you accumulated XP',
+    points: 'How you accumulated points',
+}[selectedBreakdown.value]));
+
+const breakdownEntries = computed(() => selectedBreakdown.value === 'xp'
+    ? props.statsBreakdown?.xp ?? []
+    : props.statsBreakdown?.points ?? []);
+
+function openBreakdown(type: 'rank' | 'xp' | 'points') {
+    selectedBreakdown.value = type;
+    showBreakdownModal.value = true;
+}
 
 // Track current XP values for animation on claim
 const animLevel = useNumberAnimation(() => props.userStats.level);
@@ -97,6 +128,10 @@ const last7Days = computed(() => {
 });
 
 async function onClaimed(amount: number, _totalXp: number) {
+    // The reward has been consumed; remove the action card immediately so it
+    // does not remain below the stats as a persistent "Claimed" status.
+    hideClaimCard.value = true;
+
     // Animate the XP counter up
     const startXp = localTotalXp.value;
     const endXp = startXp + amount;
@@ -110,10 +145,6 @@ async function onClaimed(amount: number, _totalXp: number) {
     }
     localTotalXp.value = endXp;
 
-    // Hide the claim card after the particle burst animation finishes
-    setTimeout(() => {
-        hideClaimCard.value = true;
-    }, 1500);
 }
 
 const displayStats = computed(() => [
@@ -183,15 +214,15 @@ const displayStats = computed(() => [
                 :glowColor="stat.glowColor"
                 :class="[
                     `stagger-${idx + 1}`,
-                    stat.label === 'Day Streak' ? 'cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:bg-card/70' : '',
+                    ['Day Streak', 'Current Rank', 'Total Exp', 'Total Points'].includes(stat.label) ? 'cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:bg-card/70' : '',
                 ]"
                 className="min-w-[155px] shrink-0 p-3 sm:p-5 group animate-fade-up bg-card/40 flex flex-col justify-between md:min-w-0 md:shrink"
-                :tabindex="stat.label === 'Day Streak' ? 0 : undefined"
-                :role="stat.label === 'Day Streak' ? 'button' : undefined"
-                :aria-label="stat.label === 'Day Streak' ? 'Open streak calendar' : undefined"
-                @click="stat.label === 'Day Streak' ? showStreakModal = true : undefined"
-                @keydown.enter.prevent="stat.label === 'Day Streak' ? showStreakModal = true : undefined"
-                @keydown.space.prevent="stat.label === 'Day Streak' ? showStreakModal = true : undefined"
+                :tabindex="['Day Streak', 'Current Rank', 'Total Exp', 'Total Points'].includes(stat.label) ? 0 : undefined"
+                :role="['Day Streak', 'Current Rank', 'Total Exp', 'Total Points'].includes(stat.label) ? 'button' : undefined"
+                :aria-label="stat.label === 'Day Streak' ? 'Open streak calendar' : `Open ${stat.label} breakdown`"
+                @click="stat.label === 'Day Streak' ? showStreakModal = true : stat.label === 'Current Rank' ? openBreakdown('rank') : stat.label === 'Total Exp' ? openBreakdown('xp') : openBreakdown('points')"
+                @keydown.enter.prevent="stat.label === 'Day Streak' ? showStreakModal = true : stat.label === 'Current Rank' ? openBreakdown('rank') : stat.label === 'Total Exp' ? openBreakdown('xp') : openBreakdown('points')"
+                @keydown.space.prevent="stat.label === 'Day Streak' ? showStreakModal = true : stat.label === 'Current Rank' ? openBreakdown('rank') : stat.label === 'Total Exp' ? openBreakdown('xp') : openBreakdown('points')"
             >
                 <!-- Inner container to clip overflowing background icons without clipping the outer glow -->
                 <div
@@ -311,7 +342,7 @@ const displayStats = computed(() => [
 
     <!-- Claim XP Card -->
         <SpotlightCard
-            v-if="claimXp && !hideClaimCard"
+            v-if="claimXp?.canClaim && !hideClaimCard"
             customSize
             glowColor="yellow"
             className="p-3 sm:p-4 bg-card/40"
@@ -321,8 +352,31 @@ const displayStats = computed(() => [
                 :amount="claimXp.amount"
                 :next-claim-at="claimXp.nextClaimAt"
                 :streak="userStats.streak"
+                :show-prompt="claimXp.showPrompt"
                 @claimed="onClaimed"
             />
         </SpotlightCard>
+
+        <ResponsiveModal v-model="showBreakdownModal" :title="breakdownTitle" content-class="sm:max-w-lg">
+            <div v-if="selectedBreakdown === 'rank'" class="space-y-4 py-2">
+                <div class="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5 text-center">
+                    <p class="text-xs font-black tracking-[0.18em] text-blue-400/70 uppercase">Current position</p>
+                    <p class="mt-2 text-4xl font-black text-foreground">#{{ userStats.rankNumber || '—' }}</p>
+                    <p class="mt-2 text-sm text-muted-foreground">out of {{ userStats.totalPlayers || '—' }} players</p>
+                </div>
+                <p class="text-sm leading-relaxed text-muted-foreground">Your rank is based on your position on the active season leaderboard. Earn XP and points through lessons, assignments, exams, and other learning activities to move up.</p>
+            </div>
+            <div v-else class="space-y-3 py-2">
+                <div v-if="breakdownEntries.length === 0" class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No activity has contributed to this total yet.</div>
+                <div v-for="entry in breakdownEntries" :key="entry.label" class="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+                    <div>
+                        <p class="text-sm font-semibold text-foreground">{{ entry.label }}</p>
+                        <p class="text-xs text-muted-foreground">{{ entry.count }} {{ entry.count === 1 ? 'entry' : 'entries' }}</p>
+                    </div>
+                    <span class="font-black tabular-nums" :class="selectedBreakdown === 'xp' ? 'text-purple-400' : 'text-emerald-400'">+{{ entry.amount.toLocaleString() }} {{ selectedBreakdown === 'xp' ? 'XP' : 'pts' }}</span>
+                </div>
+                <p class="pt-1 text-xs text-muted-foreground">Showing activity from the active season.</p>
+            </div>
+        </ResponsiveModal>
     </div>
 </template>
