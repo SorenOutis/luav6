@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
+import { Head, Link, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { Calendar, ChevronDown, ChevronUp, Trophy } from 'lucide-vue-next';
@@ -687,6 +687,15 @@ const handleLogout = () => {
                 >
                     <!-- Main Section: Leaderboard + Learning Hub -->
                     <div class="min-w-0 space-y-8 lg:col-span-2">
+                        <div class="flex justify-end">
+                            <Link
+                                href="/leaderboard"
+                                class="inline-flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-4 py-2.5 text-xs font-black tracking-[0.08em] text-amber-300 uppercase transition hover:border-amber-400/50 hover:bg-amber-400/20"
+                            >
+                                <Trophy class="h-4 w-4" />
+                                View Leaderboard
+                            </Link>
+                        </div>
                         <!-- Mobile: Collapsible Leaderboard -->
                         <div class="lg:hidden">
                             <button

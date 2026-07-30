@@ -18,6 +18,7 @@ use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LearningMapController;
+use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\Settings\ProfileController;
@@ -43,6 +44,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', DashboardController::class)
         ->middleware('student.page:dashboard')
         ->name('dashboard');
+
+    Route::get('leaderboard', LeaderboardPageController::class)
+        ->middleware('student.page:leaderboard')
+        ->name('leaderboard');
 
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');

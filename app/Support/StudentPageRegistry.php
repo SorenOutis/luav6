@@ -22,6 +22,11 @@ class StudentPageRegistry
                 'path' => '/dashboard',
                 'description' => 'Student home, announcements, progress, leaderboard, and upcoming activities.',
             ],
+            'leaderboard' => [
+                'label' => 'Leaderboard',
+                'path' => '/leaderboard',
+                'description' => 'Section rankings, XP progress, and student leaderboard history.',
+            ],
             'assignments' => [
                 'label' => 'Assignments',
                 'path' => '/assignments',
