@@ -119,62 +119,69 @@ onMounted(() => {
         gsapCtx = gsap.context(() => {
             const cards = featureCardsRef.value?.querySelectorAll('.feature-card');
             if (cards?.length) {
-                gsap.fromTo(cards,
-                    { y: 80, opacity: 0, scale: 0.95 },
-                    {
-                        y: 0,
-                        opacity: 1,
-                        scale: 1,
-                        duration: 1,
-                        stagger: 0.2,
-                        ease: 'expo.out',
-                        scrollTrigger: {
-                            trigger: featureCardsRef.value,
-                            start: 'top 80%',
-                            toggleActions: 'play none none none',
+                // On low-end devices, skip the entrance animation — cards already visible
+                if (props.prefersReducedMotion) {
+                    gsap.set(cards, { opacity: 1, y: 0, scale: 1 });
+                } else {
+                    gsap.fromTo(cards,
+                        { y: 80, opacity: 0, scale: 0.95 },
+                        {
+                            y: 0,
+                            opacity: 1,
+                            scale: 1,
+                            duration: 1,
+                            stagger: 0.2,
+                            ease: 'expo.out',
+                            scrollTrigger: {
+                                trigger: featureCardsRef.value,
+                                start: 'top 80%',
+                                toggleActions: 'play none none none',
+                            },
                         },
-                    },
-                );
+                    );
+                }
             }
 
-            // Continuous bar wave animation
-            gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
-                gsap.fromTo(
-                    bar,
-                    {
-                        scaleY: 0.7,
-                        opacity: 0.4,
-                        transformOrigin: 'bottom',
-                    },
-                    {
-                        scaleY: 1.1,
-                        opacity: 1,
-                        duration: 1.5 + Math.random() * 1.5,
-                        repeat: -1,
-                        yoyo: true,
-                        ease: 'sine.inOut',
-                        delay: (i % 24) * 0.08,
-                    },
-                );
-            });
+            // ─── Continuous bar wave animation (skip on low-end) ───
+            if (!props.prefersReducedMotion) {
+                gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
+                    gsap.fromTo(
+                        bar,
+                        {
+                            scaleY: 0.7,
+                            opacity: 0.4,
+                            transformOrigin: 'bottom',
+                        },
+                        {
+                            scaleY: 1.1,
+                            opacity: 1,
+                            duration: 1.5 + Math.random() * 1.5,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: 'sine.inOut',
+                            delay: (i % 24) * 0.08,
+                        },
+                    );
+                });
 
-            // Continuous bit flicker animation
-            gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
-                gsap.fromTo(
-                    bit,
-                    {
-                        opacity: 0.1,
-                    },
-                    {
-                        opacity: 0.9,
-                        duration: 0.8 + Math.random() * 1.2,
-                        repeat: -1,
-                        yoyo: true,
-                        ease: 'power1.inOut',
-                        delay: (i % 12) * 0.15,
-                    },
-                );
-            });
+                // Continuous bit flicker animation
+                gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
+                    gsap.fromTo(
+                        bit,
+                        {
+                            opacity: 0.1,
+                        },
+                        {
+                            opacity: 0.9,
+                            duration: 0.8 + Math.random() * 1.2,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: 'power1.inOut',
+                            delay: (i % 12) * 0.15,
+                        },
+                    );
+                });
+            }
         }, featureCardsRef.value);
 
         ScrollTrigger.refresh();
@@ -261,7 +268,8 @@ onUnmounted(() => {
                         isCoarsePointer ? 12 : 24,
                     )"
                     :key="bar.id"
-                    class="fragment-bar flex-1 origin-bottom rounded-t-sm bg-muted-foreground/10 will-change-transform transition-all duration-500 group-hover:bg-primary/30 dark:bg-foreground/5"
+                    class="fragment-bar flex-1 origin-bottom rounded-t-sm bg-muted-foreground/10 transition-all duration-500 group-hover:bg-primary/30 dark:bg-foreground/5"
+                    :class="{ 'will-change-transform': !isCoarsePointer }"
                     :style="{
                         height: bar.height + '%',
                     }"
@@ -275,7 +283,8 @@ onUnmounted(() => {
 
                 <!-- Fragment active badge -->
                 <div
-                    class="absolute top-0 right-0 flex items-center gap-2 rounded border border-border/20 bg-background/50 px-2 py-1 backdrop-blur-sm transition-all duration-300 group-hover:border-primary/40 group-hover:bg-primary/[0.04] group-hover:shadow-lg group-hover:shadow-primary/5"
+                    class="absolute top-0 right-0 flex items-center gap-2 rounded border border-border/20 bg-background/50 px-2 py-1 transition-all duration-300 group-hover:border-primary/40 group-hover:bg-primary/[0.04] group-hover:shadow-lg group-hover:shadow-primary/5"
+                    :class="{ 'backdrop-blur-sm': !isCoarsePointer }"
                 >
                     <div
                         class="h-1 w-1 animate-ping rounded-full bg-primary"
@@ -347,7 +356,8 @@ onUnmounted(() => {
                         <div
                             v-for="(stat, sIdx) in feature.stats"
                             :key="stat.label"
-                            class="stat-card rounded-lg border border-border/40 bg-card p-3 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/30 sm:p-4 dark:border-border/20 dark:bg-background/50"
+                            class="stat-card rounded-lg border border-border/40 bg-card p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/30 sm:p-4 dark:border-border/20 dark:bg-background/50"
+                            :class="{ 'backdrop-blur-sm': !isCoarsePointer }"
                             :style="{ transitionDelay: `${sIdx * 50}ms` }"
                         >
                             <p

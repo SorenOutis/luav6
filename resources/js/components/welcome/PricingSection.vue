@@ -12,6 +12,8 @@ const props = defineProps<{
     dashboard: () => string;
     login: () => string;
     register: () => string;
+    isCoarsePointer?: boolean;
+    prefersReducedMotion?: boolean;
 }>();
 
 const pricingRef = ref<HTMLElement | null>(null);
@@ -158,6 +160,13 @@ watch(isYearly, (yearly) => {
 
     const proTarget = yearly ? 24 : 30;
     const entTarget = yearly ? 40 : 50;
+
+    if (props.prefersReducedMotion) {
+        // Skip animation on low-end devices — set values directly
+        proDisplayPrice.value = proTarget;
+        enterpriseDisplayPrice.value = entTarget;
+        return;
+    }
 
     // Kill previous tweens to avoid overlapping animations
     priceTweenPro?.kill();

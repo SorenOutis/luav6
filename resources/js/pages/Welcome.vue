@@ -67,8 +67,7 @@ const props = withDefaults(
 
 const isBooted = ref(true);
 const isDemoVideoOpen = ref(false);
-const isCoarsePointer = ref(false);
-const { prefersReducedMotion } = useMobile();
+const { isCoarsePointer, prefersReducedMotion } = useMobile();
 
 const { isTransitioningTheme } = useAppearance();
 
@@ -368,6 +367,8 @@ onUnmounted(() => {
                 :dashboard="dashboard"
                 :login="login"
                 :register="register"
+                :is-coarse-pointer="isCoarsePointer"
+                :prefers-reduced-motion="prefersReducedMotion"
             />
         </main>
 
