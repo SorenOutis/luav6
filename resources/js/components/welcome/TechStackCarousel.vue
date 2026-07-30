@@ -111,13 +111,10 @@ const props = defineProps<{
 }>();
 
 onMounted(() => {
-    gsapCtx = gsap.context(() => {
-        if (props.prefersReducedMotion) {
-            // On low-end, set visible immediately — no entrance or marquee
-            gsap.set(techStackRef.value, { opacity: 1, y: 0, scale: 1 });
-            return;
-        }
+    // On low-end, skip all GSAP — no entrance, no marquee, no scroll-triggered FX
+    if (props.prefersReducedMotion) return;
 
+    gsapCtx = gsap.context(() => {
         // ─── Scroll-triggered entrance: fade + scale in before marquee starts ───
         gsap.fromTo(techStackRef.value,
             { opacity: 0, y: 40, scale: 0.97 },

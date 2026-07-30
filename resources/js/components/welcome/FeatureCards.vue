@@ -114,74 +114,70 @@ const resetFeatureMouse = (e: MouseEvent) => {
 };
 
 onMounted(() => {
+    // On low-end devices, skip all GSAP — no entrance animations, no continuous FX
+    if (props.prefersReducedMotion) return;
+
     nextTick(() => {
         // ─── Scroll-triggered stagger entrance for feature cards ───
         gsapCtx = gsap.context(() => {
             const cards = featureCardsRef.value?.querySelectorAll('.feature-card');
             if (cards?.length) {
-                // On low-end devices, skip the entrance animation — cards already visible
-                if (props.prefersReducedMotion) {
-                    gsap.set(cards, { opacity: 1, y: 0, scale: 1 });
-                } else {
-                    gsap.fromTo(cards,
-                        { y: 80, opacity: 0, scale: 0.95 },
-                        {
-                            y: 0,
-                            opacity: 1,
-                            scale: 1,
-                            duration: 1,
-                            stagger: 0.2,
-                            ease: 'expo.out',
-                            scrollTrigger: {
-                                trigger: featureCardsRef.value,
-                                start: 'top 80%',
-                                toggleActions: 'play none none none',
-                            },
+                gsap.fromTo(cards,
+                    { y: 80, opacity: 0, scale: 0.95 },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        scale: 1,
+                        duration: 1,
+                        stagger: 0.2,
+                        ease: 'expo.out',
+                        scrollTrigger: {
+                            trigger: featureCardsRef.value,
+                            start: 'top 80%',
+                            toggleActions: 'play none none none',
                         },
-                    );
-                }
+                    },
+                );
             }
 
-            // ─── Continuous bar wave animation (skip on low-end) ───
-            if (!props.prefersReducedMotion) {
-                gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
-                    gsap.fromTo(
-                        bar,
-                        {
-                            scaleY: 0.7,
-                            opacity: 0.4,
-                            transformOrigin: 'bottom',
-                        },
-                        {
-                            scaleY: 1.1,
-                            opacity: 1,
-                            duration: 1.5 + Math.random() * 1.5,
-                            repeat: -1,
-                            yoyo: true,
-                            ease: 'sine.inOut',
-                            delay: (i % 24) * 0.08,
-                        },
-                    );
-                });
+            // ─── Continuous bar wave animation ───
+            gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
+                gsap.fromTo(
+                    bar,
+                    {
+                        scaleY: 0.7,
+                        opacity: 0.4,
+                        transformOrigin: 'bottom',
+                    },
+                    {
+                        scaleY: 1.1,
+                        opacity: 1,
+                        duration: 1.5 + Math.random() * 1.5,
+                        repeat: -1,
+                        yoyo: true,
+                        ease: 'sine.inOut',
+                        delay: (i % 24) * 0.08,
+                    },
+                );
+            });
 
-                // Continuous bit flicker animation
-                gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
-                    gsap.fromTo(
-                        bit,
-                        {
-                            opacity: 0.1,
-                        },
-                        {
-                            opacity: 0.9,
-                            duration: 0.8 + Math.random() * 1.2,
-                            repeat: -1,
-                            yoyo: true,
-                            ease: 'power1.inOut',
-                            delay: (i % 12) * 0.15,
-                        },
-                    );
-                });
-            }
+            // Continuous bit flicker animation
+            gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
+                gsap.fromTo(
+                    bit,
+                    {
+                        opacity: 0.1,
+                    },
+                    {
+                        opacity: 0.9,
+                        duration: 0.8 + Math.random() * 1.2,
+                        repeat: -1,
+                        yoyo: true,
+                        ease: 'power1.inOut',
+                        delay: (i % 12) * 0.15,
+                    },
+                );
+            });
         }, featureCardsRef.value);
 
         ScrollTrigger.refresh();

@@ -182,7 +182,7 @@ watch(isYearly, (yearly) => {
 });
 
 const initAnimations = () => {
-    if (!pricingRef.value) return;
+    if (!pricingRef.value || props.prefersReducedMotion) return;
 
     gsapCtx = gsap.context(() => {
         const badge = pricingRef.value?.querySelector('.pricing-badge');

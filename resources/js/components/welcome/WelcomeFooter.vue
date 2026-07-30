@@ -88,7 +88,9 @@ onMounted(() => {
     updateTime();
     timer = window.setInterval(updateTime, 1000);
 
-    if (footerRef.value) {
+    // Check global reduced-motion preference via matchMedia
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reducedMotion && footerRef.value) {
         gsapCtx = gsap.context(() => {
             // ─── Dramatic stagger reveal for all footer sections ───
             const staggerEls = footerRef.value?.querySelectorAll('.footer-stagger');

@@ -67,7 +67,7 @@ const props = withDefaults(
 
 const isBooted = ref(true);
 const isDemoVideoOpen = ref(false);
-const { isCoarsePointer, prefersReducedMotion } = useMobile();
+const { isCoarsePointer, prefersReducedMotion, isLowEndDevice } = useMobile();
 
 const { isTransitioningTheme } = useAppearance();
 
@@ -105,46 +105,61 @@ const animateCounter = (obj: { users: number; exams: number; assignments: number
 const initPageAnimations = () => {
     if (!pageRoot.value) return;
 
+    // On low-end devices, skip GSAP context entirely — no scroll triggers, no animations
+    if (isLowEndDevice.value) return;
+
     gsapCtx = gsap.context(() => {
         // ─── Section Reveals ───
         const sections = pageRoot.value?.querySelectorAll('.reveal-section');
         if (sections?.length) {
-            if (prefersReducedMotion.value) {
-                gsap.set(sections, { y: 0, opacity: 1 });
-            } else {
-                gsap.fromTo(sections,
-                    { y: 60, opacity: 0 },
-                    {
-                        y: 0,
-                        opacity: 1,
-                        duration: 1.2,
-                        stagger: 0.2,
-                        ease: 'expo.out',
-                        scrollTrigger: {
-                            trigger: sections,
-                            start: 'top 85%',
-                            toggleActions: 'play none none none',
-                        },
+            gsap.fromTo(sections,
+                { y: 60, opacity: 0 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 1.2,
+                    stagger: 0.2,
+                    ease: 'expo.out',
+                    scrollTrigger: {
+                        trigger: sections,
+                        start: 'top 85%',
+                        toggleActions: 'play none none none',
                     },
-                );
-            }
+                },
+            );
         }
 
         // ─── How It Works Step Cards ───
         const stepCards = howItWorksSteps.value?.querySelectorAll('.step-card');
         if (stepCards?.length) {
-            if (prefersReducedMotion.value) {
-                gsap.set(stepCards, { y: 0, opacity: 1, scale: 1 });
-            } else {
-                gsap.fromTo(stepCards,
-                    { y: 50, opacity: 0, scale: 0.95 },
+            gsap.fromTo(stepCards,
+                { y: 50, opacity: 0, scale: 0.95 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    duration: 0.9,
+                    stagger: 0.15,
+                    ease: 'expo.out',
+                    scrollTrigger: {
+                        trigger: howItWorksSteps.value,
+                        start: 'top 80%',
+                        toggleActions: 'play none none none',
+                    },
+                },
+            );
+
+            // Animate step numbers
+            const stepNums = howItWorksSteps.value?.querySelectorAll('.step-number');
+            if (stepNums?.length) {
+                gsap.fromTo(stepNums,
+                    { scale: 0, rotation: -180 },
                     {
-                        y: 0,
-                        opacity: 1,
                         scale: 1,
-                        duration: 0.9,
+                        rotation: 0,
+                        duration: 0.6,
                         stagger: 0.15,
-                        ease: 'expo.out',
+                        ease: 'back.out(2)',
                         scrollTrigger: {
                             trigger: howItWorksSteps.value,
                             start: 'top 80%',
@@ -152,30 +167,6 @@ const initPageAnimations = () => {
                         },
                     },
                 );
-            }
-
-            // Animate step numbers
-            const stepNums = howItWorksSteps.value?.querySelectorAll('.step-number');
-            if (stepNums?.length) {
-                if (prefersReducedMotion.value) {
-                    gsap.set(stepNums, { scale: 1, rotation: 0 });
-                } else {
-                    gsap.fromTo(stepNums,
-                        { scale: 0, rotation: -180 },
-                        {
-                            scale: 1,
-                            rotation: 0,
-                            duration: 0.6,
-                            stagger: 0.15,
-                            ease: 'back.out(2)',
-                            scrollTrigger: {
-                                trigger: howItWorksSteps.value,
-                                start: 'top 80%',
-                                toggleActions: 'play none none none',
-                            },
-                        },
-                    );
-                }
             }
         }
 
@@ -198,6 +189,17 @@ const initPageAnimations = () => {
     }, pageRoot.value);
 };
 
+// On low-end, eagerly display final animated stats without scroll-triggered animation
+const initStatsDirect = () => {
+    if (!statsRef.value) return;
+    animatedStats.value = {
+        users: props.totalUsers,
+        exams: props.totalExams,
+        assignments: props.totalAssignments,
+        submissions: props.totalSubmissions,
+    };
+};
+
 const openDemoVideo = () => {
     isDemoVideoOpen.value = true;
 };
@@ -207,11 +209,20 @@ const closeDemoVideo = () => {
 };
 
 onMounted(() => {
-    initPageAnimations();
-    lenisCleanup = syncLenisWithGsap(ScrollTrigger);
+    // Set data-low-end on <html> so CSS can disable heavy effects
+    if (isLowEndDevice.value) {
+        document.documentElement.setAttribute('data-low-end', '');
+        // Show final stats directly, skip all GSAP/ScrollTrigger/lenis
+        initStatsDirect();
+    } else {
+        initPageAnimations();
+        lenisCleanup = syncLenisWithGsap(ScrollTrigger);
+    }
 });
 
 onUnmounted(() => {
+    // Clean up the data attribute when leaving the welcome page
+    document.documentElement.removeAttribute('data-low-end');
     gsapCtx?.revert();
     lenisCleanup?.();
 });
@@ -274,6 +285,7 @@ onUnmounted(() => {
             >
                 <template #background>
                     <NeuralParticleNetwork
+                        v-if="!isLowEndDevice"
                         :is-coarse-pointer="isCoarsePointer"
                         :prefers-reduced-motion="prefersReducedMotion"
                         :paused="isTransitioningTheme"
@@ -281,16 +293,16 @@ onUnmounted(() => {
                 </template>
             </WelcomeHero>
 
-            <FeatureCards
-                ref="featureCardsSection"
-                id="features"
-                class="reveal-section scroll-mt-32 mt-24"
-                :is-coarse-pointer="isCoarsePointer"
-                :prefers-reduced-motion="prefersReducedMotion"
-                :auth="$page.props.auth"
-                :dashboard="dashboard"
-                :login="login"
-            />
+                    <FeatureCards
+                        ref="featureCardsSection"
+                        id="features"
+                        class="reveal-section scroll-mt-32 mt-24"
+                        :is-coarse-pointer="isCoarsePointer"
+                        :prefers-reduced-motion="prefersReducedMotion"
+                        :auth="$page.props.auth"
+                        :dashboard="dashboard"
+                        :login="login"
+                    />
 
             <!-- Stats Counter Bar -->
             <div
@@ -335,17 +347,17 @@ onUnmounted(() => {
 
                 <!-- Remotion walkthrough animation -->
                 <div class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5">
-                    <video
-                        class="block aspect-video w-full"
-                        src="/videos/how-it-works.mp4?v=2"
-                        poster="/videos/how-it-works.png"
-                        :autoplay="!prefersReducedMotion"
-                        :loop="!prefersReducedMotion"
-                        muted
-                        playsinline
-                        preload="auto"
-                        aria-label="How LSI works from enrollment to achievement"
-                    ></video>
+                <video
+                    class="block aspect-video w-full"
+                    src="/videos/how-it-works.mp4?v=2"
+                    poster="/videos/how-it-works.png"
+                    :autoplay="!prefersReducedMotion"
+                    :loop="!prefersReducedMotion"
+                    muted
+                    playsinline
+                    :preload="isLowEndDevice ? 'metadata' : 'auto'"
+                    aria-label="How LSI works from enrollment to achievement"
+                ></video>
                 </div>
 
                 <!-- Horizontal step cards: scrollable on mobile, grid on desktop -->
@@ -422,6 +434,37 @@ onUnmounted(() => {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+/* ─── Low-end device optimisations ───
+   Applied via the `data-low-end` attribute on <html> when the system
+   detects low-end hardware (coarse pointer, low memory, few cores, slow connection).
+   Disables heavy CSS effects that the GSAP runtime already skips for these devices. */
+html[data-low-end] * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+html[data-low-end] .backdrop-blur-sm,
+html[data-low-end] .backdrop-blur,
+html[data-low-end] .backdrop-blur-md,
+html[data-low-end] .backdrop-blur-lg,
+html[data-low-end] .backdrop-blur-xl,
+html[data-low-end] .backdrop-blur-2xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+html[data-low-end] .will-change-transform {
+    will-change: auto !important;
+}
+
+html[data-low-end] [class*="animate-ping"],
+html[data-low-end] [class*="animate-pulse"],
+html[data-low-end] [class*="animate-bounce"] {
+    animation: none !important;
 }
 
 /* Force Inter on the welcome page regardless of dashboard font presets.
