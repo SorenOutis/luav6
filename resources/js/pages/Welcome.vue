@@ -109,54 +109,42 @@ const initPageAnimations = () => {
         // ─── Section Reveals ───
         const sections = pageRoot.value?.querySelectorAll('.reveal-section');
         if (sections?.length) {
-            gsap.fromTo(sections,
-                { y: 60, opacity: 0 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    duration: 1.2,
-                    stagger: 0.2,
-                    ease: 'expo.out',
-                    scrollTrigger: {
-                        trigger: sections,
-                        start: 'top 85%',
-                        toggleActions: 'play none none none',
+            if (prefersReducedMotion.value) {
+                gsap.set(sections, { y: 0, opacity: 1 });
+            } else {
+                gsap.fromTo(sections,
+                    { y: 60, opacity: 0 },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        duration: 1.2,
+                        stagger: 0.2,
+                        ease: 'expo.out',
+                        scrollTrigger: {
+                            trigger: sections,
+                            start: 'top 85%',
+                            toggleActions: 'play none none none',
+                        },
                     },
-                },
-            );
+                );
+            }
         }
 
         // ─── How It Works Step Cards ───
         const stepCards = howItWorksSteps.value?.querySelectorAll('.step-card');
         if (stepCards?.length) {
-            gsap.fromTo(stepCards,
-                { y: 50, opacity: 0, scale: 0.95 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    scale: 1,
-                    duration: 0.9,
-                    stagger: 0.15,
-                    ease: 'expo.out',
-                    scrollTrigger: {
-                        trigger: howItWorksSteps.value,
-                        start: 'top 80%',
-                        toggleActions: 'play none none none',
-                    },
-                },
-            );
-
-            // Animate step numbers
-            const stepNums = howItWorksSteps.value?.querySelectorAll('.step-number');
-            if (stepNums?.length) {
-                gsap.fromTo(stepNums,
-                    { scale: 0, rotation: -180 },
+            if (prefersReducedMotion.value) {
+                gsap.set(stepCards, { y: 0, opacity: 1, scale: 1 });
+            } else {
+                gsap.fromTo(stepCards,
+                    { y: 50, opacity: 0, scale: 0.95 },
                     {
+                        y: 0,
+                        opacity: 1,
                         scale: 1,
-                        rotation: 0,
-                        duration: 0.6,
+                        duration: 0.9,
                         stagger: 0.15,
-                        ease: 'back.out(2)',
+                        ease: 'expo.out',
                         scrollTrigger: {
                             trigger: howItWorksSteps.value,
                             start: 'top 80%',
@@ -164,6 +152,30 @@ const initPageAnimations = () => {
                         },
                     },
                 );
+            }
+
+            // Animate step numbers
+            const stepNums = howItWorksSteps.value?.querySelectorAll('.step-number');
+            if (stepNums?.length) {
+                if (prefersReducedMotion.value) {
+                    gsap.set(stepNums, { scale: 1, rotation: 0 });
+                } else {
+                    gsap.fromTo(stepNums,
+                        { scale: 0, rotation: -180 },
+                        {
+                            scale: 1,
+                            rotation: 0,
+                            duration: 0.6,
+                            stagger: 0.15,
+                            ease: 'back.out(2)',
+                            scrollTrigger: {
+                                trigger: howItWorksSteps.value,
+                                start: 'top 80%',
+                                toggleActions: 'play none none none',
+                            },
+                        },
+                    );
+                }
             }
         }
 
@@ -255,6 +267,8 @@ onUnmounted(() => {
                 :login="login"
                 :register="register"
                 :is-booted="isBooted"
+                :is-coarse-pointer="isCoarsePointer"
+                :prefers-reduced-motion="prefersReducedMotion"
                 :branding="schoolBranding"
                 @watch-demo="openDemoVideo"
             >
@@ -319,8 +333,24 @@ onUnmounted(() => {
                     </p>
                 </div>
 
+                <!-- Remotion walkthrough animation -->
+                <div class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5">
+                    <video
+                        class="block aspect-video w-full"
+                        src="/videos/how-it-works.mp4?v=2"
+                        poster="/videos/how-it-works.png"
+                        :autoplay="!prefersReducedMotion"
+                        :loop="!prefersReducedMotion"
+                        muted
+                        playsinline
+                        preload="auto"
+                        aria-label="How LSI works from enrollment to achievement"
+                    ></video>
+                </div>
+
                 <!-- Horizontal step cards: scrollable on mobile, grid on desktop -->
                 <div
+                    v-if="false"
                     ref="howItWorksSteps"
                     class="-mx-6 flex gap-4 overflow-x-auto px-6 pb-4 snap-x snap-mandatory scrollbar-none lg:mx-0 lg:grid lg:grid-cols-5 lg:gap-px lg:overflow-visible lg:rounded-xl lg:border lg:border-border/10 lg:bg-border/10 lg:p-0 lg:snap-none"
                 >
@@ -359,7 +389,10 @@ onUnmounted(() => {
             </section>
 
             <div class="reveal-section">
-                <TechStackCarousel :is-coarse-pointer="isCoarsePointer" />
+                <TechStackCarousel
+                    :is-coarse-pointer="isCoarsePointer"
+                    :prefers-reduced-motion="prefersReducedMotion"
+                />
             </div>
 
             <PricingSection

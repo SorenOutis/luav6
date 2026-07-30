@@ -201,14 +201,16 @@ onUnmounted(() => {
         <Motion
             v-for="(feature, index) in coreFeatures"
             :key="index"
-            :initial="{ opacity: 0, y: 50 }"
+            :initial="prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }"
             :in-view="{ opacity: 1, y: 0 }"
             :in-view-options="{ once: true, margin: '-100px' }"
-            :transition="{
-                duration: 0.8,
-                delay: index * 0.15,
-                ease: [0.16, 1, 0.3, 1],
-            }"
+            :transition="prefersReducedMotion
+                ? { duration: 0 }
+                : {
+                    duration: 0.8,
+                    delay: index * 0.15,
+                    ease: [0.16, 1, 0.3, 1],
+                }"
             @mousemove="handleFeatureMouseMove"
             @mouseleave="resetFeatureMouse"
             class="feature-card group relative flex cursor-pointer flex-col overflow-hidden border-border/20 p-8 transition-all duration-500 hover:bg-muted/30 sm:p-12 lg:p-16 dark:border-border/10 dark:hover:bg-foreground/[0.02]"

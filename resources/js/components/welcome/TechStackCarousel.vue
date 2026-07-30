@@ -19,10 +19,6 @@ import { ref, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
-defineProps<{
-    isCoarsePointer: boolean;
-}>();
-
 const rowTop = ref<HTMLElement | null>(null);
 const rowBottom = ref<HTMLElement | null>(null);
 const wrapper = ref<HTMLElement | null>(null);
@@ -109,8 +105,19 @@ const techStackBottom = [
 
 let tweens: gsap.core.Tween[] = [];
 
+const props = defineProps<{
+    isCoarsePointer: boolean;
+    prefersReducedMotion?: boolean;
+}>();
+
 onMounted(() => {
     gsapCtx = gsap.context(() => {
+        if (props.prefersReducedMotion) {
+            // On low-end, set visible immediately — no entrance or marquee
+            gsap.set(techStackRef.value, { opacity: 1, y: 0, scale: 1 });
+            return;
+        }
+
         // ─── Scroll-triggered entrance: fade + scale in before marquee starts ───
         gsap.fromTo(techStackRef.value,
             { opacity: 0, y: 40, scale: 0.97 },

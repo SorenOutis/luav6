@@ -16,6 +16,8 @@ const props = defineProps<{
     login: () => string;
     register: () => string;
     isBooted?: boolean;
+    isCoarsePointer?: boolean;
+    prefersReducedMotion?: boolean;
     branding?: {
         name?: string;
         tagline?: string;
@@ -82,6 +84,63 @@ const initAnimations = () => {
     if (!props.isBooted || !heroRef.value) return;
 
     gsapCtx = gsap.context(() => {
+        if (props.prefersReducedMotion) {
+            // On low-end, just set final visuals — no animation
+            const headingLines = heroRef.value?.querySelectorAll('.hero-heading-line-last .hero-char');
+            if (headingLines?.length) {
+                gsap.set(headingLines, {
+                    backgroundImage: 'linear-gradient(to right, var(--color-foreground), color-mix(in srgb, var(--color-foreground) 30%, transparent), color-mix(in srgb, var(--color-foreground) 10%, transparent))',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                    WebkitTextFillColor: 'transparent',
+                });
+            }
+
+            const allChars = heroRef.value?.querySelectorAll('.hero-char');
+            if (allChars?.length) {
+                gsap.set(allChars, { y: 0, opacity: 1, rotateX: 0 });
+            }
+
+            const ctaBtns = heroRef.value?.querySelectorAll('.hero-cta');
+            if (ctaBtns?.length) {
+                gsap.set(ctaBtns, { y: 0, opacity: 1 });
+            }
+
+            const creditEl = heroRef.value?.querySelector('.hero-credit');
+            if (creditEl) {
+                gsap.set(creditEl, { y: 0, opacity: 1 });
+            }
+
+            // Still attach scroll effects (parallax is passive scroll-driven)
+            gsap.to('.hero-parallax', {
+                y: (_, target) => {
+                    const speed = parseFloat((target as HTMLElement).dataset.speed || '0.2');
+                    return -window.innerHeight * speed;
+                },
+                ease: 'none',
+                scrollTrigger: {
+                    trigger: heroRef.value,
+                    start: 'top top',
+                    end: 'bottom top',
+                    scrub: true,
+                },
+            });
+
+            gsap.to(heroRef.value, {
+                opacity: 0,
+                y: -80,
+                ease: 'none',
+                scrollTrigger: {
+                    trigger: heroRef.value,
+                    start: 'top 15%',
+                    end: 'bottom top',
+                    scrub: 1.2,
+                },
+            });
+            return;
+        }
+
         // ─── SplitText: Hero Heading ───
         const headingLines = heroRef.value?.querySelectorAll('.hero-heading-line');
         let allChars: Element[] = [];
@@ -192,7 +251,12 @@ const initAnimations = () => {
 };
 
 onMounted(() => {
-    typingTimeout = setTimeout(type, 2500);
+    if (!props.prefersReducedMotion) {
+        typingTimeout = setTimeout(type, 2500);
+    } else {
+        // On low-end, show the final typed text immediately
+        typedText.value = words[0];
+    }
     if (props.isBooted) {
         initAnimations();
     }
@@ -255,11 +319,11 @@ onUnmounted(() => {
             </p>
 
             <Motion
-                :initial="{ opacity: 0, y: 20 }"
-                :animate="
-                    isBooted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }
-                "
-                :transition="{ duration: 1.5, ease: 'ease-out', delay: 0.2 }"
+                :initial="prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }"
+                :animate="{ opacity: 1, y: 0 }"
+                :transition="prefersReducedMotion
+                    ? { duration: 0 }
+                    : { duration: 1.5, ease: 'ease-out', delay: 0.2 }"
                 class="absolute inset-0 max-w-3xl text-sm leading-relaxed font-medium tracking-tight text-muted-foreground sm:text-xl lg:text-2xl"
             >
                 A school-ready learning platform for exams, assignments, grades,
