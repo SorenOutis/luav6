@@ -204,7 +204,7 @@ onUnmounted(() => {
             }"
             @mousemove="handleFeatureMouseMove"
             @mouseleave="resetFeatureMouse"
-            class="feature-card group relative flex cursor-pointer flex-col overflow-hidden border-border/20 p-8 transition-all hover:bg-muted/30 sm:p-12 lg:p-16 dark:border-border/10 dark:hover:bg-foreground/[0.02]"
+            class="feature-card group relative flex cursor-pointer flex-col overflow-hidden border-border/20 p-8 transition-all duration-500 hover:bg-muted/30 sm:p-12 lg:p-16 dark:border-border/10 dark:hover:bg-foreground/[0.02]"
             :class="[
                 {
                     'border-b lg:border-r lg:border-b-0':
@@ -213,10 +213,26 @@ onUnmounted(() => {
                 expandedFeature === index
                     ? 'bg-muted/20 dark:bg-foreground/[0.03]'
                     : '',
+                index === 1 ? 'feature-card-glow' : '',
             ]"
             @click="toggleFeature(index)"
         >
-            <!-- Local Card Glow -->
+            <!-- Shine sweep overlay (glass reflection) -->
+            <div
+                class="shine-overlay pointer-events-none absolute inset-0 z-20 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            ></div>
+
+            <!-- Animated gradient background -->
+            <div
+                class="feature-gradient pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                :class="[
+                    index === 0 ? 'from-blue-500/10 via-blue-400/5 to-blue-600/5' :
+                    index === 1 ? 'from-primary/20 via-primary/10 to-primary/5' :
+                    'from-amber-500/10 via-amber-400/5 to-amber-600/5',
+                ]"
+            ></div>
+
+            <!-- Local Card Glow (mouse-following radial) -->
             <div
                 class="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-[0.07] dark:group-hover:opacity-[0.12]"
                 :style="{
@@ -228,11 +244,11 @@ onUnmounted(() => {
                 class="absolute top-8 left-8 flex items-center gap-3 lg:left-12"
             >
                 <span
-                    class="text-[8px] leading-none font-black tracking-widest text-primary/70 transition-colors group-hover:text-primary"
+                    class="text-[8px] leading-none font-black tracking-widest text-primary/70 transition-colors duration-500 group-hover:text-primary"
                     >{{ feature.code }}</span
                 >
                 <div
-                    class="h-px w-8 bg-primary/20 transition-all duration-700 group-hover:w-16 group-hover:bg-gradient-to-r group-hover:from-primary group-hover:to-transparent lg:w-12 lg:group-hover:w-32"
+                    class="code-underline h-px w-8 bg-primary/20 transition-all duration-700 group-hover:w-16 group-hover:bg-gradient-to-r group-hover:from-primary group-hover:to-transparent lg:w-12 lg:group-hover:w-32"
                 ></div>
             </div>
 
@@ -245,26 +261,27 @@ onUnmounted(() => {
                         isCoarsePointer ? 12 : 24,
                     )"
                     :key="bar.id"
-                    class="fragment-bar flex-1 origin-bottom rounded-t-sm bg-muted-foreground/10 will-change-transform group-hover:bg-primary/20 dark:bg-foreground/5"
+                    class="fragment-bar flex-1 origin-bottom rounded-t-sm bg-muted-foreground/10 will-change-transform transition-all duration-500 group-hover:bg-primary/30 dark:bg-foreground/5"
                     :style="{
                         height: bar.height + '%',
                     }"
                 >
                     <div
                         v-if="bar.hasBit"
-                        class="fragment-bit h-1.5 w-full bg-primary/30 dark:bg-primary/50"
+                        class="fragment-bit h-1.5 w-full bg-primary/30 transition-all duration-500 group-hover:bg-primary/60 dark:bg-primary/50"
                         :style="{ opacity: 0.5 }"
                     ></div>
                 </div>
 
+                <!-- Fragment active badge -->
                 <div
-                    class="absolute top-0 right-0 flex items-center gap-2 rounded border border-border/20 bg-background/50 px-2 py-1 backdrop-blur-sm transition-colors group-hover:border-primary/30"
+                    class="absolute top-0 right-0 flex items-center gap-2 rounded border border-border/20 bg-background/50 px-2 py-1 backdrop-blur-sm transition-all duration-300 group-hover:border-primary/40 group-hover:bg-primary/[0.04] group-hover:shadow-lg group-hover:shadow-primary/5"
                 >
                     <div
                         class="h-1 w-1 animate-ping rounded-full bg-primary"
                     ></div>
                     <span
-                        class="text-[7px] font-black tracking-widest text-muted-foreground uppercase transition-colors group-hover:text-primary"
+                        class="text-[7px] font-black tracking-widest text-muted-foreground uppercase transition-colors duration-300 group-hover:text-primary"
                         >Fragment_Active</span
                     >
                 </div>
@@ -272,12 +289,12 @@ onUnmounted(() => {
 
             <div class="relative z-10 space-y-4 lg:space-y-6">
                 <h3
-                    class="text-xl font-black tracking-tight uppercase transition-transform duration-500 group-hover:translate-x-1 lg:text-3xl"
+                    class="text-xl font-black tracking-tight uppercase transition-all duration-500 group-hover:translate-x-1 group-hover:text-primary lg:text-3xl"
                 >
                     {{ feature.title }}
                 </h3>
                 <p
-                    class="max-w-sm text-sm leading-relaxed text-muted-foreground transition-colors duration-500 group-hover:text-foreground/90 lg:text-base"
+                    class="max-w-sm text-sm leading-relaxed text-muted-foreground transition-all duration-500 group-hover:text-foreground/90 lg:text-base"
                 >
                     {{ feature.description }}
                 </p>
@@ -285,7 +302,7 @@ onUnmounted(() => {
 
             <div class="relative z-10 mt-10 lg:mt-16">
                 <button
-                    class="group/btn flex items-center gap-4 text-[10px] font-black tracking-[0.3em] text-muted-foreground uppercase transition-all hover:text-primary lg:tracking-[0.4em]"
+                    class="view-details-btn group/btn relative flex items-center gap-4 overflow-hidden text-[10px] font-black tracking-[0.3em] text-muted-foreground uppercase transition-all hover:text-primary lg:tracking-[0.4em]"
                 >
                     {{
                         expandedFeature === index
@@ -293,7 +310,7 @@ onUnmounted(() => {
                             : 'View Details'
                     }}
                     <ChevronDown
-                        class="h-4 w-4 transition-transform duration-500 group-hover/btn:translate-y-0.5"
+                        class="h-4 w-4 transition-all duration-500 group-hover/btn:translate-y-0.5"
                         :class="{
                             'rotate-180 group-hover/btn:-translate-y-0.5':
                                 expandedFeature === index,
@@ -317,7 +334,7 @@ onUnmounted(() => {
                     ></div>
 
                     <p
-                        class="mb-8 max-w-md rounded-lg border border-border/20 bg-muted/30 p-5 text-sm leading-relaxed text-muted-foreground dark:border-border/10 dark:bg-foreground/[0.03]"
+                        class="mb-8 max-w-md rounded-lg border border-border/20 bg-muted/30 p-5 text-sm leading-relaxed text-muted-foreground transition-all duration-300 hover:border-primary/30 hover:bg-primary/[0.03] hover:shadow-sm dark:border-border/10 dark:bg-foreground/[0.03]"
                     >
                         <Sparkles
                             class="mb-3 inline-block h-4 w-4 text-primary"
@@ -328,17 +345,18 @@ onUnmounted(() => {
 
                     <div class="mb-8 grid grid-cols-3 gap-2 sm:gap-3">
                         <div
-                            v-for="stat in feature.stats"
+                            v-for="(stat, sIdx) in feature.stats"
                             :key="stat.label"
-                            class="rounded-lg border border-border/40 bg-card p-3 shadow-sm backdrop-blur-sm sm:p-4 dark:border-border/20 dark:bg-background/50"
+                            class="stat-card rounded-lg border border-border/40 bg-card p-3 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/30 sm:p-4 dark:border-border/20 dark:bg-background/50"
+                            :style="{ transitionDelay: `${sIdx * 50}ms` }"
                         >
                             <p
-                                class="mb-1.5 text-[7px] font-black tracking-[0.15em] text-muted-foreground uppercase sm:text-[8px] sm:tracking-[0.2em]"
+                                class="mb-1.5 text-[7px] font-black tracking-[0.15em] text-muted-foreground uppercase transition-colors duration-300 hover:text-primary/80 sm:text-[8px] sm:tracking-[0.2em]"
                             >
                                 {{ stat.label }}
                             </p>
                             <p
-                                class="text-[11px] font-black tracking-widest text-primary sm:text-xs"
+                                class="text-[11px] font-black tracking-widest text-primary transition-all duration-300 hover:scale-105 sm:text-xs"
                             >
                                 {{ stat.value }}
                             </p>
@@ -348,21 +366,211 @@ onUnmounted(() => {
                     <Link
                         v-if="auth.user"
                         :href="dashboard()"
-                        class="group/link inline-flex items-center gap-4 rounded-lg bg-primary px-6 py-4 text-[9px] font-black tracking-[0.3em] text-primary-foreground uppercase shadow-lg transition-all hover:gap-6 hover:bg-primary/90 hover:shadow-primary/20 sm:text-[10px]"
+                        class="cta-btn group/link relative inline-flex items-center gap-4 overflow-hidden rounded-lg bg-primary px-6 py-4 text-[9px] font-black tracking-[0.3em] text-primary-foreground uppercase shadow-lg transition-all hover:gap-6 hover:bg-primary/90 hover:shadow-primary/20 sm:text-[10px]"
                     >
-                        Open Module
-                        <ArrowRight class="h-3.5 w-3.5" />
+                        <span class="relative z-10">Open Module</span>
+                        <ArrowRight class="relative z-10 h-3.5 w-3.5 transition-all duration-300 group-hover/link:translate-x-1" />
                     </Link>
                     <Link
                         v-else
                         :href="login()"
-                        class="group/link inline-flex items-center gap-4 rounded-lg bg-foreground px-6 py-4 text-[9px] font-black tracking-[0.3em] text-background uppercase shadow-lg transition-all hover:gap-6 hover:bg-primary hover:text-primary-foreground hover:shadow-primary/20 sm:text-[10px]"
+                        class="cta-btn group/link relative inline-flex items-center gap-4 overflow-hidden rounded-lg bg-foreground px-6 py-4 text-[9px] font-black tracking-[0.3em] text-background uppercase shadow-lg transition-all hover:gap-6 hover:bg-primary hover:text-primary-foreground hover:shadow-primary/20 sm:text-[10px]"
                     >
-                        Login to Continue
-                        <ArrowRight class="h-3.5 w-3.5" />
+                        <span class="relative z-10">Login to Continue</span>
+                        <ArrowRight class="relative z-10 h-3.5 w-3.5 transition-all duration-300 group-hover/link:translate-x-1" />
                     </Link>
                 </div>
             </Motion>
         </Motion>
     </div>
 </template>
+
+<style scoped>
+/* ─── Animated Gradient ─── */
+@keyframes gradient-shift {
+    0% { background-position: 0% 0%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
+.feature-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 6s ease infinite;
+}
+
+/* ─── Shine Sweep Effect (glass reflection) ─── */
+.shine-overlay {
+    background: linear-gradient(
+        105deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.06) 40%,
+        rgba(255, 255, 255, 0.12) 45%,
+        rgba(255, 255, 255, 0.06) 50%,
+        transparent 60%
+    );
+    background-size: 300% 100%;
+    animation: shine-sweep 2.5s ease infinite;
+}
+
+@keyframes shine-sweep {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── Middle Card Glow (box-shadow pulse) ─── */
+.feature-card-glow {
+    animation: card-glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes card-glow-pulse {
+    0%, 100% {
+        box-shadow:
+            0 0 8px 0 hsl(var(--primary) / 0.15),
+            0 0 0 1px hsl(var(--primary) / 0.3),
+            0 20px 25px -5px hsl(var(--primary) / 0.05);
+    }
+    50% {
+        box-shadow:
+            0 0 20px 4px hsl(var(--primary) / 0.2),
+            0 0 0 1px hsl(var(--primary) / 0.5),
+            0 20px 25px -5px hsl(var(--primary) / 0.08);
+    }
+}
+
+.feature-card-glow:hover {
+    animation: card-glow-pulse-hover 3s ease-in-out infinite !important;
+}
+
+@keyframes card-glow-pulse-hover {
+    0%, 100% {
+        box-shadow:
+            0 0 12px 2px hsl(var(--primary) / 0.25),
+            0 0 0 1.5px hsl(var(--primary) / 0.5),
+            0 20px 25px -5px hsl(var(--primary) / 0.3);
+    }
+    50% {
+        box-shadow:
+            0 0 28px 6px hsl(var(--primary) / 0.3),
+            0 0 0 1.5px hsl(var(--primary) / 0.6),
+            0 20px 25px -5px hsl(var(--primary) / 0.3);
+    }
+}
+
+/* ─── CTA Button shine ─── */
+.cta-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.cta-btn:hover::after {
+    opacity: 1;
+    animation: cta-shine 1.2s ease infinite;
+}
+
+@keyframes cta-shine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── View Details button shine ─── */
+.view-details-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        hsl(var(--primary) / 0.08) 50%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.view-details-btn:hover::after {
+    opacity: 1;
+    animation: details-shine 1.5s ease infinite;
+}
+
+@keyframes details-shine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── Stat Cards staggered lift ─── */
+.stat-card {
+    transition:
+        transform 0.3s ease,
+        box-shadow 0.3s ease,
+        border-color 0.3s ease;
+}
+
+/* ─── Fragment badge glow on hover ─── */
+.fragment-bar {
+    transition:
+        background-color 0.5s ease,
+        opacity 0.3s ease;
+}
+
+.fragment-bit {
+    transition:
+        background-color 0.5s ease,
+        opacity 0.3s ease;
+}
+
+/* ─── Code underline expansion ─── */
+.code-underline {
+    transition:
+        width 0.7s ease,
+        background 0.7s ease;
+}
+
+/* ─── Feature card general transitions ─── */
+.feature-card {
+    transition:
+        border-color 0.4s ease,
+        box-shadow 0.5s ease,
+        transform 0.4s ease,
+        background-color 0.4s ease,
+        opacity 0.5s ease;
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+    .feature-gradient {
+        animation: none;
+    }
+    .shine-overlay {
+        animation: none;
+        opacity: 0 !important;
+    }
+    .feature-card-glow {
+        animation: none;
+    }
+    .cta-btn::after {
+        animation: none;
+    }
+    .view-details-btn::after {
+        animation: none;
+    }
+    .stat-card:hover {
+        transform: none;
+    }
+    .group:hover .fragment-bar {
+        background-color: transparent;
+    }
+}
+</style>
