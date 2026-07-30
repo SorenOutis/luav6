@@ -393,9 +393,10 @@ class ExamController extends Controller
         // `scored` means the AI has finished marking. Automatic feedback is
         // produced by the same queued job and successful submissions become
         // `graded`; the student's progress indicator should stop at `scored`.
-        $essaysScored = collect($submission->answers ?? [])
-            ->where('question_type', 'essay')
-            ->every(fn ($answer) => array_key_exists('ai_score', $answer));
+        $essaysScored = $submission->status === 'graded'
+            || collect($submission->answers ?? [])
+                ->where('question_type', 'essay')
+                ->every(fn ($answer) => array_key_exists('ai_score', $answer));
 
         return response()->json([
             'status' => $submission->status,
