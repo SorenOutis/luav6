@@ -124,7 +124,11 @@ const users = computed(() => activeLeaderboard.value?.users || []);
 const filteredUsers = computed(() => {
     if (!searchQuery.value.trim()) return users.value;
     const q = searchQuery.value.toLowerCase().trim();
-    return users.value.filter((u) => u.name.toLowerCase().includes(q));
+    // Hidden users remain in the normal ranking list, but must not be
+    // discoverable through search.
+    return users.value.filter(
+        (u) => !u.blurred && u.name.toLowerCase().includes(q),
+    );
 });
 const userRank = computed(() => activeLeaderboard.value?.userRank || 0);
 const totalPlayers = computed(() => activeLeaderboard.value?.totalPlayers || 0);
@@ -534,7 +538,7 @@ const changeSeason = async (seasonId: number) => {
                                     ]"
                                 >
                                     <img
-                                        v-if="user.avatar"
+                                        v-if="user.avatar && !user.blurred"
                                         :src="user.avatar"
                                         :alt="`${user.name} avatar`"
                                         loading="lazy"
@@ -559,7 +563,7 @@ const changeSeason = async (seasonId: number) => {
                                     ]"
                                 >
                                     <img
-                                        v-if="user.avatar"
+                                        v-if="user.avatar && !user.blurred"
                                         :src="user.avatar"
                                         :alt="`${user.name} avatar`"
                                         class="h-full w-full object-cover blur-sm"
@@ -708,7 +712,7 @@ const changeSeason = async (seasonId: number) => {
                                     class="lb-row-avatar"
                                 >
                                     <img
-                                        v-if="user.avatar"
+                                        v-if="user.avatar && !user.blurred"
                                         :src="user.avatar"
                                         :alt="`${user.name} avatar`"
                                         loading="lazy"
@@ -725,7 +729,7 @@ const changeSeason = async (seasonId: number) => {
                                     class="lb-row-avatar lb-blurred"
                                 >
                                     <img
-                                        v-if="user.avatar"
+                                        v-if="user.avatar && !user.blurred"
                                         :src="user.avatar"
                                         :alt="`${user.name} avatar`"
                                         class="h-full w-full object-cover blur-sm"
