@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -17,6 +17,12 @@ const props = defineProps<{
 const pricingRef = ref<HTMLElement | null>(null);
 const isYearly = ref(false);
 let gsapCtx: gsap.Context | null = null;
+
+// Reactive price display refs — GSAP animates these, Vue re-renders the template
+const proDisplayPrice = ref(30);
+const enterpriseDisplayPrice = ref(50);
+let priceTweenPro: gsap.core.Tween | null = null;
+let priceTweenEnterprise: gsap.core.Tween | null = null;
 
 interface PricingFeature {
     name: string;
@@ -41,7 +47,7 @@ const tiers = computed(() => [
         period: '/mo',
         description: 'Everything you need to get started with the LUAV Learning Engine.',
         icon: Sparkles,
-        gradient: 'from-zinc-500/20 to-zinc-600/10',
+        gradient: 'from-zinc-500/20 via-zinc-500/10 to-zinc-600/10',
         cta: props.auth.user ? 'Get Started Free' : 'Join Free',
         href: props.auth.user ? props.dashboard() : props.register(),
         featured: false,
@@ -51,11 +57,11 @@ const tiers = computed(() => [
         id: 'pro' as TierId,
         name: 'Pro',
         subtitle: 'For serious learners',
-        price: isYearly.value ? 24 : 30,
+        price: 0, // Not used — rendered from proDisplayPrice ref
         period: isYearly.value ? '/yr' : '/mo',
         description: 'Advanced tools, AI feedback, and deeper insights for motivated students.',
         icon: Star,
-        gradient: 'from-primary/30 to-primary/10',
+        gradient: 'from-primary/30 via-primary/15 to-primary/10',
         cta: 'Start Pro Trial',
         href: props.auth.user ? props.dashboard() : props.register(),
         featured: true,
@@ -65,11 +71,11 @@ const tiers = computed(() => [
         id: 'enterprise' as TierId,
         name: 'Enterprise',
         subtitle: 'For institutions',
-        price: isYearly.value ? 40 : 50,
+        price: 0, // Not used — rendered from enterpriseDisplayPrice ref
         period: isYearly.value ? '/yr' : '/mo',
         description: 'Full classroom deployment with analytics, priority support, and custom branding.',
         icon: Crown,
-        gradient: 'from-amber-500/20 to-amber-600/10',
+        gradient: 'from-amber-500/20 via-amber-500/10 to-amber-600/10',
         cta: 'Contact Sales',
         href: '#contact',
         featured: false,
@@ -128,6 +134,43 @@ const showTooltip = ref<string | null>(null);
 const featureValue = (feature: PricingFeature, tierId: TierId): boolean | string => {
     return feature[tierId];
 };
+
+// ─── Price switching animation ───
+// Animates the reactive ref so Vue updates the template smoothly on each frame
+const animatePriceRef = (targetRef: ReturnType<typeof ref<number>>, from: number, to: number) => {
+    const obj = { value: from };
+    targetRef.value = from;
+    return gsap.to(obj, {
+        value: to,
+        duration: 0.6,
+        ease: 'power2.out',
+        onUpdate: () => {
+            targetRef.value = to === 0 ? 0 : Math.round(obj.value);
+        },
+        onComplete: () => {
+            targetRef.value = to;
+        },
+    });
+};
+
+watch(isYearly, (yearly) => {
+    if (!pricingRef.value) return;
+
+    const proTarget = yearly ? 24 : 30;
+    const entTarget = yearly ? 40 : 50;
+
+    // Kill previous tweens to avoid overlapping animations
+    priceTweenPro?.kill();
+    priceTweenEnterprise?.kill();
+    priceTweenPro = animatePriceRef(proDisplayPrice, proDisplayPrice.value, proTarget);
+    priceTweenEnterprise = animatePriceRef(enterpriseDisplayPrice, enterpriseDisplayPrice.value, entTarget);
+
+    // Quick bounce on toggle buttons
+    gsap.fromTo('.billing-toggle',
+        { scale: 1 },
+        { scale: 0.96, duration: 0.1, yoyo: true, repeat: 1, ease: 'power1.inOut' },
+    );
+});
 
 const initAnimations = () => {
     if (!pricingRef.value) return;
@@ -205,6 +248,8 @@ onMounted(() => {
 
 onUnmounted(() => {
     gsapCtx?.revert();
+    priceTweenPro?.kill();
+    priceTweenEnterprise?.kill();
 });
 </script>
 
@@ -231,19 +276,19 @@ onUnmounted(() => {
                 <button
                     type="button"
                     @click="isYearly = false"
-                    class="relative px-4 py-2 text-sm font-medium transition-colors rounded-lg"
-                    :class="!isYearly ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+                    class="billing-toggle relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg"
+                    :class="!isYearly ? 'bg-foreground text-background shadow-lg shadow-foreground/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'"
                 >
                     Monthly
                 </button>
                 <button
                     type="button"
                     @click="isYearly = true"
-                    class="relative px-4 py-2 text-sm font-medium transition-colors rounded-lg"
-                    :class="isYearly ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+                    class="billing-toggle relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg"
+                    :class="isYearly ? 'bg-foreground text-background shadow-lg shadow-foreground/10' : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'"
                 >
                     Yearly
-                    <span class="absolute -top-2 -right-2 flex h-5 items-center rounded-full bg-primary px-2 text-[9px] font-bold text-primary-foreground tracking-wider">
+                    <span class="absolute -top-2 -right-2 flex h-5 items-center rounded-full bg-primary px-2 text-[9px] font-bold text-primary-foreground tracking-wider shadow-sm shadow-primary/30">
                         -20%
                     </span>
                 </button>
@@ -255,21 +300,29 @@ onUnmounted(() => {
             <div
                 v-for="tier in tiers"
                 :key="tier.id"
-                class="pricing-tier-card group relative flex flex-col overflow-hidden rounded-2xl border border-border/20 bg-card p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 lg:p-10"
                 :class="[
+                    'pricing-tier-card group relative flex flex-col overflow-hidden rounded-2xl border bg-card p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1.5 lg:p-10',
                     tier.featured
-                        ? 'border-primary/40 lg:scale-105 lg:shadow-xl lg:shadow-primary/5'
-                        : '',
+                        ? 'tier-pro border-primary/40 lg:scale-105 lg:shadow-xl lg:shadow-primary/5 featured-glow'
+                        : tier.id === 'enterprise'
+                            ? 'tier-enterprise border-border/20'
+                            : 'tier-free border-border/20',
                 ]"
             >
+                <!-- Shine sweep overlay -->
                 <div
-                    class="pointer-events-none absolute inset-0 bg-gradient-to-b opacity-0 transition-opacity duration-700 group-hover:opacity-100"
+                    class="shine-overlay pointer-events-none absolute inset-0 z-20 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                ></div>
+
+                <!-- Animated gradient background -->
+                <div
+                    class="animated-gradient pointer-events-none absolute inset-0 bg-gradient-to-b opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                     :class="tier.gradient"
                 ></div>
 
                 <div
                     v-if="tier.featured"
-                    class="absolute top-0 right-0 rounded-bl-xl bg-primary px-4 py-1.5 text-[9px] font-black tracking-[0.2em] text-primary-foreground uppercase shadow-lg"
+                    class="absolute top-0 right-0 rounded-bl-xl bg-primary px-4 py-1.5 text-[9px] font-black tracking-[0.2em] text-primary-foreground uppercase shadow-lg z-30"
                 >
                     {{ tier.highlight }}
                 </div>
@@ -277,24 +330,26 @@ onUnmounted(() => {
                 <div class="relative z-10 mb-6">
                     <div class="flex items-center gap-3 mb-3">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-xl border border-border/30 bg-background/50 backdrop-blur-sm"
+                            class="icon-container flex h-10 w-10 items-center justify-center rounded-xl border border-border/30 bg-background/50 backdrop-blur-sm transition-all duration-500 group-hover:border-primary/40 group-hover:shadow-lg group-hover:shadow-primary/5"
                             :class="{ 'border-primary/30': tier.featured }"
                         >
-                            <component :is="tier.icon" class="h-5 w-5" :class="tier.featured ? 'text-primary' : 'text-muted-foreground'" />
+                            <component :is="tier.icon" class="h-5 w-5 icon-svg transition-all duration-500" :class="tier.featured ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'" />
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold">{{ tier.name }}</h3>
+                            <h3 class="text-lg font-bold transition-colors duration-300 group-hover:text-primary">{{ tier.name }}</h3>
                             <p class="text-xs text-muted-foreground">{{ tier.subtitle }}</p>
                         </div>
                     </div>
 
-                    <div class="flex items-baseline gap-1 mt-4">
-                        <span class="text-4xl font-black tracking-tight">
-                            {{ tier.price === 0 ? 'Free' : `$${tier.price}` }}
+                    <div class="flex items-baseline gap-1 mt-4 price-slot">
+                        <span class="price-value text-4xl font-black tracking-tight tabular-nums">
+                            <template v-if="tier.id === 'free'">Free</template>
+                            <template v-else-if="tier.id === 'pro'">${{ proDisplayPrice }}</template>
+                            <template v-else>${{ enterpriseDisplayPrice }}</template>
                         </span>
-                        <span v-if="tier.price > 0" class="text-sm font-medium text-muted-foreground">{{ tier.period }}</span>
+                        <span v-if="tier.id !== 'free'" class="text-sm font-medium text-muted-foreground period-label transition-all duration-300">{{ tier.period }}</span>
                     </div>
-                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    <p class="mt-3 text-sm leading-relaxed text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80">
                         {{ tier.description }}
                     </p>
                 </div>
@@ -302,13 +357,13 @@ onUnmounted(() => {
                 <div class="relative z-10 mb-8">
                     <Link
                         :href="tier.href"
-                        class="inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold tracking-wide transition-all duration-300"
+                        class="cta-button inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold tracking-wide transition-all duration-300"
                         :class="tier.featured
                             ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:bg-primary/90'
-                            : 'border border-border/30 text-foreground hover:border-primary/40 hover:bg-primary/5'"
+                            : 'border border-border/30 text-foreground hover:border-primary/40 hover:bg-primary/5 hover:shadow-lg hover:shadow-primary/5'"
                     >
                         {{ tier.cta }}
-                        <ArrowRight class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                        <ArrowRight class="h-4 w-4 transition-all duration-300 group-hover:translate-x-1.5 group-hover:scale-110" />
                     </Link>
                 </div>
 
@@ -318,19 +373,23 @@ onUnmounted(() => {
                     </p>
                     <ul class="space-y-2.5">
                         <li
-                            v-for="feature in flatFeatures.slice(0, 6)"
+                            v-for="(feature, fIdx) in flatFeatures.slice(0, 6)"
                             :key="feature.name"
-                            class="flex items-start gap-2.5 text-xs"
+                            class="feature-list-item flex items-start gap-2.5 text-xs transition-all duration-300"
+                            :style="{ transitionDelay: `${fIdx * 30}ms` }"
                         >
                             <Check
                                 v-if="featureValue(feature, tier.id) === true || typeof featureValue(feature, tier.id) === 'string'"
-                                class="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary"
+                                class="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary transition-all duration-300 group-hover:scale-110 group-hover:text-primary/80"
                             />
                             <X
                                 v-else
                                 class="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/30"
                             />
-                            <span :class="featureValue(feature, tier.id) === false ? 'text-muted-foreground/40' : 'text-muted-foreground'">
+                            <span :class="[
+                                'transition-colors duration-300',
+                                featureValue(feature, tier.id) === false ? 'text-muted-foreground/40' : 'text-muted-foreground group-hover:text-foreground/70',
+                            ]">
                                 {{ feature.name }}
                             </span>
                         </li>
@@ -397,7 +456,7 @@ onUnmounted(() => {
                                 </div>
                             </button>
                         </div>
-                        <div class="col-span-7 grid grid-cols-3 gap-2 text-center">
+                        <div class="col-span-7 grid grid-cols-3 gap-2 text-center lg:col-span-6">
                             <div
                                 v-for="tierId in (['free', 'pro', 'enterprise'] as TierId[])"
                                 :key="tierId"
@@ -447,3 +506,218 @@ onUnmounted(() => {
         </div>
     </section>
 </template>
+
+<style scoped>
+/* ─── Animated Gradient ─── */
+@keyframes gradient-shift {
+    0% { background-position: 0% 0%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
+.animated-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 6s ease infinite;
+}
+
+/* ─── Shine Sweep Effect ─── */
+.shine-overlay {
+    background: linear-gradient(
+        105deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.06) 40%,
+        rgba(255, 255, 255, 0.12) 45%,
+        rgba(255, 255, 255, 0.06) 50%,
+        transparent 60%
+    );
+    background-size: 300% 100%;
+    animation: shine-sweep 2.5s ease infinite;
+}
+
+@keyframes shine-sweep {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── Featured Card Glow (box-shadow pulse) ─── */
+.featured-glow {
+    animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+    0%, 100% {
+        box-shadow:
+            0 0 8px 0 hsl(var(--primary) / 0.15),
+            0 0 0 1px hsl(var(--primary) / 0.3),
+            0 20px 25px -5px hsl(var(--primary) / 0.08),
+            0 8px 10px -6px hsl(var(--primary) / 0.05);
+    }
+    50% {
+        box-shadow:
+            0 0 20px 4px hsl(var(--primary) / 0.2),
+            0 0 0 1px hsl(var(--primary) / 0.5),
+            0 20px 25px -5px hsl(var(--primary) / 0.08),
+            0 8px 10px -6px hsl(var(--primary) / 0.05);
+    }
+}
+
+/* Override shadow on hover — keep the glow-pulse but add the hover shadow */
+.featured-glow:hover {
+    animation: glow-pulse-hover 3s ease-in-out infinite !important;
+}
+
+@keyframes glow-pulse-hover {
+    0%, 100% {
+        box-shadow:
+            0 0 12px 2px hsl(var(--primary) / 0.25),
+            0 0 0 1.5px hsl(var(--primary) / 0.5),
+            0 20px 25px -5px hsl(var(--primary) / 0.3);
+    }
+    50% {
+        box-shadow:
+            0 0 28px 6px hsl(var(--primary) / 0.3),
+            0 0 0 1.5px hsl(var(--primary) / 0.6),
+            0 20px 25px -5px hsl(var(--primary) / 0.3);
+    }
+}
+
+/* ─── Icon Container ─── */
+.icon-container {
+    transition:
+        border-color 0.4s ease,
+        box-shadow 0.4s ease,
+        transform 0.4s ease;
+}
+
+.group:hover .icon-container {
+    transform: scale(1.05) rotate(-3deg);
+}
+
+.group:hover .icon-svg {
+    transform: scale(1.1) rotate(3deg);
+}
+
+/* ─── Feature List Items ─── */
+.feature-list-item {
+    transform: translateX(0);
+    transition:
+        transform 0.3s ease,
+        color 0.3s ease;
+}
+
+.group:hover .feature-list-item {
+    transform: translateX(3px);
+}
+
+.group:hover .feature-list-item:nth-child(2) { transition-delay: 30ms; }
+.group:hover .feature-list-item:nth-child(3) { transition-delay: 60ms; }
+.group:hover .feature-list-item:nth-child(4) { transition-delay: 90ms; }
+.group:hover .feature-list-item:nth-child(5) { transition-delay: 120ms; }
+.group:hover .feature-list-item:nth-child(6) { transition-delay: 150ms; }
+
+/* ─── Price Slot ─── */
+.price-slot .period-label {
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+
+.group:hover .price-slot .period-label {
+    opacity: 0.8;
+}
+
+/* ─── CTA Button micro animation ─── */
+.cta-button {
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.08) 50%,
+        transparent 100%
+    );
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.cta-button:hover::after {
+    opacity: 1;
+    animation: cta-shine 1.2s ease infinite;
+}
+
+@keyframes cta-shine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─── Billing Toggle ─── */
+.billing-toggle {
+    transition:
+        background-color 0.3s ease,
+        color 0.3s ease,
+        box-shadow 0.3s ease,
+        transform 0.2s ease;
+}
+
+.billing-toggle:active {
+    transform: scale(0.95);
+}
+
+/* ─── Tier Cards entrance animation for the featured badge ─── */
+.pricing-tier-card {
+    transition:
+        border-color 0.4s ease,
+        box-shadow 0.5s ease,
+        transform 0.4s ease,
+        opacity 0.5s ease;
+}
+
+/* ─── Feature row hover (full breakdown) ─── */
+.feature-row {
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.feature-row:hover {
+    transform: translateX(4px);
+}
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+    .animated-gradient {
+        animation: none;
+    }
+    .shine-overlay {
+        animation: none;
+        opacity: 0 !important;
+    }
+    .featured-glow {
+        animation: none;
+    }
+    .cta-button::after {
+        animation: none;
+    }
+    .group:hover .icon-container {
+        transform: none;
+    }
+    .group:hover .icon-svg {
+        transform: none;
+    }
+    .group:hover .feature-list-item {
+        transform: none;
+    }
+    .feature-row:hover {
+        transform: none;
+    }
+}
+</style>

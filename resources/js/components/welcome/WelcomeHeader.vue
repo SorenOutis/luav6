@@ -76,6 +76,11 @@ const navItems = computed(() => {
             target: 'features',
             preview: 'Explore key capabilities and tools',
         },
+        {
+            label: 'Pricing',
+            target: 'pricing',
+            preview: 'View plans and pricing options',
+        },
     ];
     if (props.hideScrollNav) {
         return allItems.filter((item) => item.target === 'top');

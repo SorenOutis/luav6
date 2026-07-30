@@ -3,16 +3,14 @@
 namespace App\Filament\Resources\ExamSubmissions\Tables;
 
 use App\Models\ExamSubmission;
+use App\Models\Section;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
 
@@ -22,66 +20,41 @@ class ExamSubmissionsTable
     {
         return $table
             ->columns([
-                SelectColumn::make('status')
-                    ->label('Status')
-                    ->options([
-                        'submitted' => 'Submitted',
-                        'pending_ai' => 'Pending AI',
-                        'pending_review' => 'Pending Review',
-                        'graded' => 'Graded',
-                    ])
-                    ->sortable()
-                    ->alignCenter()
-                    ->extraHeaderAttributes(['class' => 'fi-ta-header-cell w-40']),
-                TextInputColumn::make('score')
-                    ->label('Score')
-                    ->type('number')
-                    ->sortable()
-                    ->summarize(Sum::make()
-                        ->label('Total Score')),
-                TextColumn::make('exam.title')
-                    ->label('Exam')
-                    ->searchable()
-                    ->sortable()
-                    ->description(fn (ExamSubmission $record): string => $record->exam?->section?->name ?? ''),
-                TextColumn::make('examPart.title')
-                    ->label('Part')
-                    ->searchable()
-                    ->sortable()
-                    ->toggleable(),
                 TextColumn::make('user.name')
                     ->label('Student')
                     ->searchable()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('exam.section.name')
-                    ->label('Section')
+                    ->weight('medium'),
+                TextColumn::make('exam.title')
+                    ->label('Exam')
                     ->searchable()
                     ->sortable()
-                    ->badge()
-                    ->color('primary')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('created_at')
-                    ->dateTime()
+                    ->description(fn (ExamSubmission $record): string => $record->exam?->section?->name ?? 'No section'),
+                TextColumn::make('examPart.title')
+                    ->label('Part')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('score')
+                    ->label('Score')
+                    ->numeric()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->suffix(' pts')
+                    ->summarize(Sum::make()->label('Total')),
+                TextColumn::make('status')
+                    ->label('Grading status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'graded' => 'success',
+                        'pending_ai', 'pending_review' => 'warning',
+                        'submitted' => 'info',
+                        default => 'gray',
+                    }),
+                TextColumn::make('created_at')
+                    ->label('Submitted')
+                    ->since()
+                    ->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
-            ->groups([
-                Group::make('exam.title')
-                    ->label('Exam')
-                    ->collapsible(),
-                Group::make('status')
-                    ->label('Status')
-                    ->collapsible(),
-                Group::make('exam.section.name')
-                    ->label('Section')
-                    ->collapsible(),
-                Group::make('user.name')
-                    ->label('Student')
-                    ->collapsible(),
-            ])
-            ->defaultGroup('user.name')
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
@@ -97,7 +70,26 @@ class ExamSubmissionsTable
                 SelectFilter::make('user_id')
                     ->label('Student')
                     ->relationship('user', 'name'),
+                SelectFilter::make('section_id')
+                    ->label('Section')
+                    ->options(fn (): array => Section::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->query(function ($query, array $data) {
+                        return $query->when(
+                            $data['value'] ?? null,
+                            fn ($submissionQuery, $sectionId) => $submissionQuery->whereHas(
+                                'exam',
+                                fn ($examQuery) => $examQuery->where('section_id', $sectionId),
+                            ),
+                        );
+                    }),
             ])
+            ->filtersFormColumns(3)
+            ->persistFiltersInSession()
+            ->striped()
+            ->paginated([25, 50, 100])
+            ->defaultPaginationPageOption(25)
+            ->emptyStateHeading('No exam submissions found')
+            ->emptyStateDescription('Adjust the filters or wait for a student submission to arrive.')
             ->actions([
                 EditAction::make()->label('Review submission'),
             ])
