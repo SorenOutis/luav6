@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Check, X, ArrowRight, Sparkles, Star, Crown, HelpCircle } from 'lucide-vue-next';
+import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 

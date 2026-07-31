@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
+import { useEventListener } from '@vueuse/core';
+import axios from 'axios';
 import gsap from 'gsap';
 import {
     GraduationCap,
@@ -16,9 +17,7 @@ import {
     Loader2,
     RefreshCw,
 } from 'lucide-vue-next';
-import { useEventListener } from '@vueuse/core';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useStaleWhileRevalidate } from '@/composables/useStaleWhileRevalidate';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
@@ -29,6 +28,7 @@ import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import Input from '@/components/ui/input/Input.vue';
 import Progress from '@/components/ui/progress/Progress.vue';
+import { useStaleWhileRevalidate } from '@/composables/useStaleWhileRevalidate';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 

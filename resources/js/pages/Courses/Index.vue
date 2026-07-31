@@ -11,13 +11,13 @@ import {
     X,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
+import PageSkeleton from '@/components/PageSkeleton.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
 import { useMobile } from '@/composables/useMobile';
-import PageSkeleton from '@/components/PageSkeleton.vue';
-import type { BreadcrumbItem } from '@/types';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 interface Course {
     id: number;

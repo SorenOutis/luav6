@@ -144,7 +144,7 @@ const initAnimations = () => {
         // ─── SplitText: Hero Heading ───
         const headingLines = heroRef.value?.querySelectorAll('.hero-heading-line');
         let allChars: Element[] = [];
-        let splitInstances: SplitText[] = [];
+        const splitInstances: SplitText[] = [];
 
         if (headingLines?.length) {
             headingLines.forEach((line, idx) => {

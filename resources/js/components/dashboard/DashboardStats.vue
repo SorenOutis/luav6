@@ -8,11 +8,11 @@ import {
     Sparkles,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { useNumberAnimation } from '@/composables/useNumberAnimation';
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import StreakCalendarModal from '@/components/dashboard/StreakCalendarModal.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface UserStats {
     totalXP: number;

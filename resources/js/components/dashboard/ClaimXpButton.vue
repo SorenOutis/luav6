@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import axios from 'axios';
+import gsap from 'gsap';
 import { Gift, Sparkles, Check, Clock, Zap } from 'lucide-vue-next';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import gsap from 'gsap';
-import axios from 'axios';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 
 const props = defineProps<{

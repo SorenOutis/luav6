@@ -5,8 +5,8 @@ import { createApp, h } from 'vue';
 import '../css/app.css';
 import GlobalLoader from '@/components/GlobalLoader.vue';
 import { initializeTheme } from '@/composables/useAppearance';
-import { useLoader } from '@/composables/useLoader';
 import { initLenis } from '@/composables/useLenis';
+import { useLoader } from '@/composables/useLoader';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const { isVisible, show, hide, hideWhenReady } = useLoader();

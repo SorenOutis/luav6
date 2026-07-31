@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { Flame, ChevronLeft, ChevronRight, Check } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 
 const props = defineProps<{

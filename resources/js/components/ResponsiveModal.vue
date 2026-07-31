@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useMobile } from '@/composables/useMobile';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 import {
     Dialog,
@@ -11,6 +10,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { useMobile } from '@/composables/useMobile';
 
 type Props = {
     modelValue?: boolean;

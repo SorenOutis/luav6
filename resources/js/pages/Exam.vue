@@ -16,16 +16,16 @@ import {
     Search,
 } from 'lucide-vue-next';
 import { ref, computed, watch, nextTick } from 'vue';
-import { Button } from '@/components/ui/button';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import { Button } from '@/components/ui/button';
 import {
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { show as examsShow } from '@/routes/exams';
 import { getLenis } from '@/composables/useLenis';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
+import { show as examsShow } from '@/routes/exams';
 
 usePoll(10000, {
     only: ['examsBySeason'],

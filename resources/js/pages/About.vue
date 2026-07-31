@@ -22,9 +22,9 @@ import {
     ArrowRight,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
-import { syncLenisWithGsap } from '@/composables/useLenis';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
+import { syncLenisWithGsap } from '@/composables/useLenis';
 gsap.registerPlugin(ScrollTrigger);
 
 defineProps<{

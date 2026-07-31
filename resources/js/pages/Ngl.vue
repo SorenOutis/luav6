@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { useTimeoutFn } from '@vueuse/core';
 import gsap from 'gsap';
 import {
     MessageSquare,
@@ -9,10 +10,9 @@ import {
     Heart,
     Sparkles,
 } from 'lucide-vue-next';
-import { useTimeoutFn } from '@vueuse/core';
 import { ref, onMounted } from 'vue';
-import { Button } from '@/components/ui/button';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import { Button } from '@/components/ui/button';
 import {
     DialogDescription,
     DialogTitle,

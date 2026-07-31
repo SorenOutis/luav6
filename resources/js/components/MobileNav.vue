@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
+import { useTimeoutFn } from '@vueuse/core';
 import { gsap } from 'gsap';
 import {
     LayoutGrid,
@@ -15,18 +16,17 @@ import {
     Flame,
     ChevronRight,
 } from 'lucide-vue-next';
-import { useTimeoutFn } from '@vueuse/core';
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
 import { dashboard } from '@/routes';
-import { edit } from '@/routes/profile';
-import { index as gamesIndex } from '@/routes/games';
-import { index as examsIndex } from '@/routes/exams';
-import { index as assignmentsIndex } from '@/routes/assignments';
-import { index as coursesIndex } from '@/routes/courses';
 import { grades, logout } from '@/routes';
+import { index as coursesIndex } from '@/routes/courses';
+import { index as gamesIndex } from '@/routes/games';
+import { index as assignmentsIndex } from '@/routes/assignments';
+import { index as examsIndex } from '@/routes/exams';
+import { edit } from '@/routes/profile';
 
 const page = usePage();
 const { getInitials } = useInitials();
@@ -178,7 +178,7 @@ function animateIndicator() {
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function setItemRef(el: any, index: number) {
     itemRefs.value[index] = el as HTMLElement | null;
 }

@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import { ArrowRight } from 'lucide-vue-next';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { syncLenisWithGsap } from '@/composables/useLenis';
+import { ArrowRight } from 'lucide-vue-next';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -20,6 +19,7 @@ import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
 
 // Composables & Routes
 import { useAppearance } from '@/composables/useAppearance';
+import { syncLenisWithGsap } from '@/composables/useLenis';
 import { useMobile } from '@/composables/useMobile';
 import { dashboard, login, register } from '@/routes';
 

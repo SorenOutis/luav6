@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Clock } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface Course {

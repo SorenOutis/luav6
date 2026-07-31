@@ -14,9 +14,9 @@ import { Label } from '@/components/ui/label';
 import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { BreadcrumbItem } from '@/types';
+import { edit } from '@/routes/profile';
 
 type Props = {
     mustVerifyEmail: boolean;

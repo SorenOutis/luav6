@@ -2,6 +2,7 @@
 import { Link, router } from '@inertiajs/vue3';
 import { LogOut, Settings } from 'lucide-vue-next';
 import { ref } from 'vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenuGroup,
@@ -9,11 +10,10 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import UserInfo from '@/components/UserInfo.vue';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
 import type { User } from '@/types';
+import { edit } from '@/routes/profile';
 
 type Props = {
     user: User;
