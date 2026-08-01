@@ -1,55 +1,86 @@
-# Production deployment
+# Production Deployment (Render + TursoDB)
 
-This is a Laravel/PHP origin. Docker runs it on a server or container platform; Cloudflare proxies the public hostname to that origin. It does not run Laravel inside Cloudflare Workers.
+## Architecture
 
-## Preserve SQLite
-
-Never delete `database/database.sqlite` during this migration. Make a timestamped copy and compare hashes:
-
-```powershell
-Copy-Item database/database.sqlite database/database.sqlite.backup-YYYYMMDD
-Get-FileHash database/database.sqlite -Algorithm SHA256
-Get-FileHash database/database.sqlite.backup-YYYYMMDD -Algorithm SHA256
+```
+Cloudflare (CDN/DNS) → Render Web Service (Docker) → TursoDB (SQLite)
+                                                      Cloudflare R2 (files)
 ```
 
-## SQLite to PostgreSQL
+- **Render** runs the Docker container: Laravel + RoadRunner + queue worker in one service.
+- **TursoDB** is the remote SQLite database (no PostgreSQL or Redis needed).
+- **Cloudflare** proxies DNS, caches assets, and provides R2 for file uploads.
+- Queue jobs and cache are database/file-backed — no Redis.
 
-Use a new, empty PostgreSQL database. PostgreSQL receives a copy; SQLite remains untouched.
+## Pre-flight
 
-1. Start PostgreSQL:
+You need these from Turso:
 
-```powershell
-$env:POSTGRES_PASSWORD = 'use-a-long-random-password'
-docker compose -f docker-compose.production.yml up -d postgres
+```
+turso db show --url <database-name>
+turso db tokens create <database-name>
 ```
 
-2. Migrate the SQLite data with `pgloader` from a one-shot container. Replace credentials as needed:
+## Render Setup
 
-```powershell
-docker run --rm --network luav6_default `
-  -v "${PWD}\database:/data:ro" `
-  dimitri/pgloader:latest `
-  pgloader /data/database.sqlite postgresql://lsi:YOUR_PASSWORD@postgres:5432/lsi
+1. Select **Web Service** (not Static Site)
+2. Connect your GitHub repo
+3. Keep build method as **Docker** (auto-detected from Dockerfile)
+4. Configure:
+
+| Field | Value |
+|---|---|
+| Name | `lsi` (or your app name) |
+| Region | Singapore |
+| Instance | Free (512 MB / shared CPU) |
+| Port | `8000` |
+| Health Check Path | `/up` |
+
+5. Add environment variables from `.env.production.example`:
+
+```
+APP_NAME=LSI
+APP_ENV=production
+APP_KEY=generate-a-unique-key
+APP_DEBUG=false
+APP_URL=https://your-domain.com
+LOG_CHANNEL=stderr
+LOG_LEVEL=warning
+
+DB_CONNECTION=libsql
+TURSO_DATABASE_URL=libsql://your-db-name-org.turso.io
+TURSO_AUTH_TOKEN=your-turso-auth-token
+
+SESSION_DRIVER=database
+SESSION_SECURE_COOKIE=true
+QUEUE_CONNECTION=database
+CACHE_STORE=file
+
+FILESYSTEM_DISK=s3
+AWS_ACCESS_KEY_ID=your-r2-access-key
+AWS_SECRET_ACCESS_KEY=your-r2-secret
+AWS_DEFAULT_REGION=auto
+AWS_BUCKET=your-r2-bucket
+AWS_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
+AWS_USE_PATH_STYLE_ENDPOINT=true
+
+MAIL_MAILER=smtp
+MAIL_HOST=your-smtp-host
+MAIL_PORT=587
+MAIL_USERNAME=your-smtp-user
+MAIL_PASSWORD=your-smtp-password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=no-reply@your-domain.com
+MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-For a managed PostgreSQL service, replace `postgres` with its private hostname and keep the database off the public internet.
+6. Deploy — Render builds the Docker image and starts the container.
 
-3. Rehearse this against a disposable database first. Compare row counts and key users before switching the application.
+## Notes
 
-4. Copy `.env.production.example` to `.env.production`, set real secrets, then run the application. Keep SQLite as the rollback source until verification is complete.
-
-## Start the application
-
-```powershell
-docker compose -f docker-compose.production.yml build
-docker compose -f docker-compose.production.yml up -d
-docker compose -f docker-compose.production.yml exec app php artisan migrate --force
-docker compose -f docker-compose.production.yml exec app php artisan storage:link
-docker compose -f docker-compose.production.yml exec app php artisan optimize
-```
-
-The `app` service runs RoadRunner. The separate `worker` service processes AI and default queue jobs. Do not spawn workers from web requests in production.
-
-## Cloudflare
-
-Point a proxied Cloudflare DNS record at the Docker host. Expose only the HTTP origin through a reverse proxy such as Caddy, Nginx, or Cloudflare Tunnel. Keep PostgreSQL and Redis private. Use R2/S3 for uploads because container-local storage is not durable.
+- **512 MB is tight for 50+ concurrent users.** Monitor memory usage and consider upgrading to Render's paid tier or switching to a VPS if performance degrades.
+- The queue worker runs as a background process inside the same container (database-backed queues, no Redis required).
+- `php artisan migrate --force` runs on every container start to keep the schema current.
+- Database queue driver stores jobs in TursoDB's `jobs` table.
+- File cache is ephemeral (reset on deploy), which is fine — cache is disposable.
+- For a custom domain, add a CNAME record in Cloudflare pointing to Render's `*.onrender.com` URL. Enable Cloudflare proxy (orange cloud) for CDN/DDoS protection.

@@ -20,10 +20,9 @@ RUN npm run build
 
 FROM php:8.4-cli-bookworm AS app
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git unzip libpq-dev libzip-dev libicu-dev libonig-dev libxml2-dev libpng-dev \
-    libjpeg62-turbo-dev libfreetype6-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath dom gd intl mbstring opcache pdo_pgsql xml xmlwriter zip \
+    git unzip libzip-dev libicu-dev libonig-dev libxml2-dev \
+    && docker-php-ext-install bcmath dom intl mbstring opcache xml xmlwriter zip \
+    && { echo 'ffi.enable = true'; } > /usr/local/etc/php/conf.d/ffi.ini \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
@@ -35,4 +34,4 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr
 EXPOSE 8000
 USER www-data
-CMD ["php", "artisan", "octane:start", "--server=roadrunner", "--host=0.0.0.0", "--port=8000"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan queue:work --queue=ai,default --tries=3 --sleep=1 & php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000"]
