@@ -252,7 +252,9 @@ const markAllNotificationsAsRead = () => {
                 </DropdownMenuContent>
             </DropdownMenu>
 
-            <div class="hidden sm:flex flex-col items-end justify-center leading-none">
+            <div
+                class="hidden flex-col items-end justify-center leading-none sm:flex"
+            >
                 <span
                     class="text-[11px] font-black tracking-tighter text-foreground uppercase sm:text-xs"
                     >{{ currentTime }}</span

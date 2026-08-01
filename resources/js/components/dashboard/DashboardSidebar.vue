@@ -21,7 +21,7 @@ import CardTitle from '@/components/ui/card/CardTitle.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import EmptyState from './EmptyState.vue';
 import NextUpCard from './NextUpCard.vue';
-import type {NextUpItem} from './NextUpCard.vue';
+import type { NextUpItem } from './NextUpCard.vue';
 import { index as examsIndex, show as examsShow } from '@/routes/exams';
 
 interface Exam {
@@ -260,7 +260,10 @@ const weeklyPercent = (xp: number, goal: number) => {
                                         <span
                                             v-else
                                             class="text-[9px] font-black tracking-widest text-primary uppercase"
-                                            >Lvl {{ badge.requiredLevel ?? '--' }}</span
+                                            >Lvl
+                                            {{
+                                                badge.requiredLevel ?? '--'
+                                            }}</span
                                         >
                                     </div>
                                     <div class="min-w-0 flex-1">
@@ -272,7 +275,10 @@ const weeklyPercent = (xp: number, goal: number) => {
                                         <p
                                             class="mt-0.5 truncate text-[10px] text-muted-foreground"
                                         >
-                                            {{ badge.earnedSeason ?? 'Unlocked badge' }}
+                                            {{
+                                                badge.earnedSeason ??
+                                                'Unlocked badge'
+                                            }}
                                         </p>
                                     </div>
                                 </div>
@@ -371,10 +377,7 @@ const weeklyPercent = (xp: number, goal: number) => {
                     </CardTitle>
                     <div class="flex items-center gap-2">
                         <!-- Season dropdown for exams -->
-                        <div
-                            v-if="examSeasons.length > 1"
-                            class="relative"
-                        >
+                        <div v-if="examSeasons.length > 1" class="relative">
                             <select
                                 :value="selectedExamSeasonId"
                                 @change="
@@ -419,7 +422,11 @@ const weeklyPercent = (xp: number, goal: number) => {
                     <!-- Content / Empty with transition -->
                     <Transition v-else name="hub-fade" mode="out-in">
                         <div
-                            :key="localExams && localExams.length > 0 ? 'exams' : 'empty'"
+                            :key="
+                                localExams && localExams.length > 0
+                                    ? 'exams'
+                                    : 'empty'
+                            "
                             class="relative z-10"
                         >
                             <!-- Season Header (consistent with /exams page) -->
@@ -461,7 +468,9 @@ const weeklyPercent = (xp: number, goal: number) => {
                                         class="group block cursor-pointer rounded-lg border border-border/30 bg-muted/20 p-3 transition-all duration-300 hover:border-primary/40 hover:bg-muted/40"
                                         as="div"
                                     >
-                                        <div class="flex items-start justify-between gap-2">
+                                        <div
+                                            class="flex items-start justify-between gap-2"
+                                        >
                                             <div class="min-w-0 flex-1">
                                                 <h4
                                                     class="truncate text-xs font-semibold text-foreground transition-colors group-hover:text-primary"
@@ -471,7 +480,9 @@ const weeklyPercent = (xp: number, goal: number) => {
                                                 <div
                                                     class="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums"
                                                 >
-                                                    <Clock class="h-2.5 w-2.5" />
+                                                    <Clock
+                                                        class="h-2.5 w-2.5"
+                                                    />
                                                     {{ exam.duration_minutes }}m
                                                 </div>
                                             </div>
@@ -482,9 +493,9 @@ const weeklyPercent = (xp: number, goal: number) => {
                                                 <div
                                                     class="text-xs font-bold text-primary tabular-nums"
                                                 >
-                                                    {{ exam.submitted_parts }}/{{
-                                                        exam.parts_count
-                                                    }}
+                                                    {{
+                                                        exam.submitted_parts
+                                                    }}/{{ exam.parts_count }}
                                                 </div>
                                             </div>
                                             <div v-else class="flex-shrink-0">

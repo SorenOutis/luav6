@@ -120,9 +120,11 @@ onMounted(() => {
     nextTick(() => {
         // ─── Scroll-triggered stagger entrance for feature cards ───
         gsapCtx = gsap.context(() => {
-            const cards = featureCardsRef.value?.querySelectorAll('.feature-card');
+            const cards =
+                featureCardsRef.value?.querySelectorAll('.feature-card');
             if (cards?.length) {
-                gsap.fromTo(cards,
+                gsap.fromTo(
+                    cards,
                     { y: 80, opacity: 0, scale: 0.95 },
                     {
                         y: 0,
@@ -141,43 +143,47 @@ onMounted(() => {
             }
 
             // ─── Continuous bar wave animation ───
-            gsap.utils.toArray('.fragment-bar').forEach((bar: any, i: number) => {
-                gsap.fromTo(
-                    bar,
-                    {
-                        scaleY: 0.7,
-                        opacity: 0.4,
-                        transformOrigin: 'bottom',
-                    },
-                    {
-                        scaleY: 1.1,
-                        opacity: 1,
-                        duration: 1.5 + Math.random() * 1.5,
-                        repeat: -1,
-                        yoyo: true,
-                        ease: 'sine.inOut',
-                        delay: (i % 24) * 0.08,
-                    },
-                );
-            });
+            gsap.utils
+                .toArray('.fragment-bar')
+                .forEach((bar: any, i: number) => {
+                    gsap.fromTo(
+                        bar,
+                        {
+                            scaleY: 0.7,
+                            opacity: 0.4,
+                            transformOrigin: 'bottom',
+                        },
+                        {
+                            scaleY: 1.1,
+                            opacity: 1,
+                            duration: 1.5 + Math.random() * 1.5,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: 'sine.inOut',
+                            delay: (i % 24) * 0.08,
+                        },
+                    );
+                });
 
             // Continuous bit flicker animation
-            gsap.utils.toArray('.fragment-bit').forEach((bit: any, i: number) => {
-                gsap.fromTo(
-                    bit,
-                    {
-                        opacity: 0.1,
-                    },
-                    {
-                        opacity: 0.9,
-                        duration: 0.8 + Math.random() * 1.2,
-                        repeat: -1,
-                        yoyo: true,
-                        ease: 'power1.inOut',
-                        delay: (i % 12) * 0.15,
-                    },
-                );
-            });
+            gsap.utils
+                .toArray('.fragment-bit')
+                .forEach((bit: any, i: number) => {
+                    gsap.fromTo(
+                        bit,
+                        {
+                            opacity: 0.1,
+                        },
+                        {
+                            opacity: 0.9,
+                            duration: 0.8 + Math.random() * 1.2,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: 'power1.inOut',
+                            delay: (i % 12) * 0.15,
+                        },
+                    );
+                });
         }, featureCardsRef.value);
 
         ScrollTrigger.refresh();
@@ -197,16 +203,22 @@ onUnmounted(() => {
         <Motion
             v-for="(feature, index) in coreFeatures"
             :key="index"
-            :initial="prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }"
+            :initial="
+                prefersReducedMotion
+                    ? { opacity: 1, y: 0 }
+                    : { opacity: 0, y: 50 }
+            "
             :in-view="{ opacity: 1, y: 0 }"
             :in-view-options="{ once: true, margin: '-100px' }"
-            :transition="prefersReducedMotion
-                ? { duration: 0 }
-                : {
-                    duration: 0.8,
-                    delay: index * 0.15,
-                    ease: [0.16, 1, 0.3, 1],
-                }"
+            :transition="
+                prefersReducedMotion
+                    ? { duration: 0 }
+                    : {
+                          duration: 0.8,
+                          delay: index * 0.15,
+                          ease: [0.16, 1, 0.3, 1],
+                      }
+            "
             @mousemove="handleFeatureMouseMove"
             @mouseleave="resetFeatureMouse"
             class="feature-card group relative flex cursor-pointer flex-col overflow-hidden border-border/20 p-8 transition-all duration-500 hover:bg-muted/30 sm:p-12 lg:p-16 dark:border-border/10 dark:hover:bg-foreground/[0.02]"
@@ -231,9 +243,11 @@ onUnmounted(() => {
             <div
                 class="feature-gradient pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100"
                 :class="[
-                    index === 0 ? 'from-blue-500/10 via-blue-400/5 to-blue-600/5' :
-                    index === 1 ? 'from-primary/20 via-primary/10 to-primary/5' :
-                    'from-amber-500/10 via-amber-400/5 to-amber-600/5',
+                    index === 0
+                        ? 'from-blue-500/10 via-blue-400/5 to-blue-600/5'
+                        : index === 1
+                          ? 'from-primary/20 via-primary/10 to-primary/5'
+                          : 'from-amber-500/10 via-amber-400/5 to-amber-600/5',
                 ]"
             ></div>
 
@@ -354,7 +368,7 @@ onUnmounted(() => {
                         <div
                             v-for="(stat, sIdx) in feature.stats"
                             :key="stat.label"
-                            class="stat-card rounded-lg border border-border/40 bg-card p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/30 sm:p-4 dark:border-border/20 dark:bg-background/50"
+                            class="stat-card rounded-lg border border-border/40 bg-card p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-md sm:p-4 dark:border-border/20 dark:bg-background/50"
                             :class="{ 'backdrop-blur-sm': !isCoarsePointer }"
                             :style="{ transitionDelay: `${sIdx * 50}ms` }"
                         >
@@ -377,7 +391,9 @@ onUnmounted(() => {
                         class="cta-btn group/link relative inline-flex items-center gap-4 overflow-hidden rounded-lg bg-primary px-6 py-4 text-[9px] font-black tracking-[0.3em] text-primary-foreground uppercase shadow-lg transition-all hover:gap-6 hover:bg-primary/90 hover:shadow-primary/20 sm:text-[10px]"
                     >
                         <span class="relative z-10">Open Module</span>
-                        <ArrowRight class="relative z-10 h-3.5 w-3.5 transition-all duration-300 group-hover/link:translate-x-1" />
+                        <ArrowRight
+                            class="relative z-10 h-3.5 w-3.5 transition-all duration-300 group-hover/link:translate-x-1"
+                        />
                     </Link>
                     <Link
                         v-else
@@ -385,7 +401,9 @@ onUnmounted(() => {
                         class="cta-btn group/link relative inline-flex items-center gap-4 overflow-hidden rounded-lg bg-foreground px-6 py-4 text-[9px] font-black tracking-[0.3em] text-background uppercase shadow-lg transition-all hover:gap-6 hover:bg-primary hover:text-primary-foreground hover:shadow-primary/20 sm:text-[10px]"
                     >
                         <span class="relative z-10">Login to Continue</span>
-                        <ArrowRight class="relative z-10 h-3.5 w-3.5 transition-all duration-300 group-hover/link:translate-x-1" />
+                        <ArrowRight
+                            class="relative z-10 h-3.5 w-3.5 transition-all duration-300 group-hover/link:translate-x-1"
+                        />
                     </Link>
                 </div>
             </Motion>
@@ -396,11 +414,21 @@ onUnmounted(() => {
 <style scoped>
 /* ─── Animated Gradient ─── */
 @keyframes gradient-shift {
-    0% { background-position: 0% 0%; }
-    25% { background-position: 100% 0%; }
-    50% { background-position: 100% 100%; }
-    75% { background-position: 0% 100%; }
-    100% { background-position: 0% 0%; }
+    0% {
+        background-position: 0% 0%;
+    }
+    25% {
+        background-position: 100% 0%;
+    }
+    50% {
+        background-position: 100% 100%;
+    }
+    75% {
+        background-position: 0% 100%;
+    }
+    100% {
+        background-position: 0% 0%;
+    }
 }
 
 .feature-gradient {
@@ -423,8 +451,12 @@ onUnmounted(() => {
 }
 
 @keyframes shine-sweep {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 /* ─── Middle Card Glow (box-shadow pulse) ─── */
@@ -433,7 +465,8 @@ onUnmounted(() => {
 }
 
 @keyframes card-glow-pulse {
-    0%, 100% {
+    0%,
+    100% {
         box-shadow:
             0 0 8px 0 hsl(var(--primary) / 0.15),
             0 0 0 1px hsl(var(--primary) / 0.3),
@@ -452,7 +485,8 @@ onUnmounted(() => {
 }
 
 @keyframes card-glow-pulse-hover {
-    0%, 100% {
+    0%,
+    100% {
         box-shadow:
             0 0 12px 2px hsl(var(--primary) / 0.25),
             0 0 0 1.5px hsl(var(--primary) / 0.5),
@@ -488,8 +522,12 @@ onUnmounted(() => {
 }
 
 @keyframes cta-shine {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 /* ─── View Details button shine ─── */
@@ -514,8 +552,12 @@ onUnmounted(() => {
 }
 
 @keyframes details-shine {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 /* ─── Stat Cards staggered lift ─── */

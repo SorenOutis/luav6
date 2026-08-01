@@ -82,10 +82,29 @@ let gsapCtx: gsap.Context | null = null;
 let lenisCleanup: (() => void) | null = null;
 
 // ─── Animated Counter Animation ───
-const animatedStats = ref({ users: 0, exams: 0, assignments: 0, submissions: 0 });
+const animatedStats = ref({
+    users: 0,
+    exams: 0,
+    assignments: 0,
+    submissions: 0,
+});
 const statsRef = ref<HTMLElement | null>(null);
 
-const animateCounter = (obj: { users: number; exams: number; assignments: number; submissions: number }, target: { users: number; exams: number; assignments: number; submissions: number }, duration: number) => {
+const animateCounter = (
+    obj: {
+        users: number;
+        exams: number;
+        assignments: number;
+        submissions: number;
+    },
+    target: {
+        users: number;
+        exams: number;
+        assignments: number;
+        submissions: number;
+    },
+    duration: number,
+) => {
     const start = performance.now();
     const update = (now: number) => {
         const elapsed = now - start;
@@ -112,7 +131,8 @@ const initPageAnimations = () => {
         // ─── Section Reveals ───
         const sections = pageRoot.value?.querySelectorAll('.reveal-section');
         if (sections?.length) {
-            gsap.fromTo(sections,
+            gsap.fromTo(
+                sections,
                 { y: 60, opacity: 0 },
                 {
                     y: 0,
@@ -132,7 +152,8 @@ const initPageAnimations = () => {
         // ─── How It Works Step Cards ───
         const stepCards = howItWorksSteps.value?.querySelectorAll('.step-card');
         if (stepCards?.length) {
-            gsap.fromTo(stepCards,
+            gsap.fromTo(
+                stepCards,
                 { y: 50, opacity: 0, scale: 0.95 },
                 {
                     y: 0,
@@ -150,9 +171,11 @@ const initPageAnimations = () => {
             );
 
             // Animate step numbers
-            const stepNums = howItWorksSteps.value?.querySelectorAll('.step-number');
+            const stepNums =
+                howItWorksSteps.value?.querySelectorAll('.step-number');
             if (stepNums?.length) {
-                gsap.fromTo(stepNums,
+                gsap.fromTo(
+                    stepNums,
                     { scale: 0, rotation: -180 },
                     {
                         scale: 1,
@@ -176,12 +199,16 @@ const initPageAnimations = () => {
                 trigger: statsRef.value,
                 start: 'top 85%',
                 onEnter: () => {
-                    animateCounter({ users: 0, exams: 0, assignments: 0, submissions: 0 }, {
-                        users: props.totalUsers,
-                        exams: props.totalExams,
-                        assignments: props.totalAssignments,
-                        submissions: props.totalSubmissions,
-                    }, 2000);
+                    animateCounter(
+                        { users: 0, exams: 0, assignments: 0, submissions: 0 },
+                        {
+                            users: props.totalUsers,
+                            exams: props.totalExams,
+                            assignments: props.totalAssignments,
+                            submissions: props.totalSubmissions,
+                        },
+                        2000,
+                    );
                 },
                 once: true,
             });
@@ -293,97 +320,160 @@ onUnmounted(() => {
                 </template>
             </WelcomeHero>
 
-                    <FeatureCards
-                        ref="featureCardsSection"
-                        id="features"
-                        class="reveal-section scroll-mt-32 mt-24"
-                        :is-coarse-pointer="isCoarsePointer"
-                        :prefers-reduced-motion="prefersReducedMotion"
-                        :auth="$page.props.auth"
-                        :dashboard="dashboard"
-                        :login="login"
-                    />
+            <FeatureCards
+                ref="featureCardsSection"
+                id="features"
+                class="reveal-section mt-24 scroll-mt-32"
+                :is-coarse-pointer="isCoarsePointer"
+                :prefers-reduced-motion="prefersReducedMotion"
+                :auth="$page.props.auth"
+                :dashboard="dashboard"
+                :login="login"
+            />
 
             <!-- Stats Counter Bar -->
             <div
                 ref="statsRef"
                 class="reveal-section mt-24 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/10 bg-border/10 lg:grid-cols-4"
             >
-                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
-                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.users.toLocaleString() }}</span>
-                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Students</span>
+                <div
+                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
+                >
+                    <span
+                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
+                        >{{ animatedStats.users.toLocaleString() }}</span
+                    >
+                    <span
+                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
+                        >Students</span
+                    >
                 </div>
-                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
-                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.exams.toLocaleString() }}</span>
-                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Exams Created</span>
+                <div
+                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
+                >
+                    <span
+                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
+                        >{{ animatedStats.exams.toLocaleString() }}</span
+                    >
+                    <span
+                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
+                        >Exams Created</span
+                    >
                 </div>
-                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
-                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.assignments.toLocaleString() }}</span>
-                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Assignments</span>
+                <div
+                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
+                >
+                    <span
+                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
+                        >{{ animatedStats.assignments.toLocaleString() }}</span
+                    >
+                    <span
+                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
+                        >Assignments</span
+                    >
                 </div>
-                <div class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10">
-                    <span class="text-3xl font-black tracking-tight tabular-nums text-foreground lg:text-4xl">{{ animatedStats.submissions.toLocaleString() }}</span>
-                    <span class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Submissions</span>
+                <div
+                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
+                >
+                    <span
+                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
+                        >{{ animatedStats.submissions.toLocaleString() }}</span
+                    >
+                    <span
+                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
+                        >Submissions</span
+                    >
                 </div>
             </div>
 
             <!-- How It Works -->
             <section
                 id="architecture"
-                class="reveal-section scroll-mt-32 mt-32"
+                class="reveal-section mt-32 scroll-mt-32"
             >
-                <div class="flex flex-col gap-2 mb-10">
-                    <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 self-start">
-                        <span class="text-sm font-medium text-primary">How It Works</span>
+                <div class="mb-10 flex flex-col gap-2">
+                    <div
+                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                    >
+                        <span class="text-sm font-medium text-primary"
+                            >How It Works</span
+                        >
                     </div>
                     <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
                         From enrollment to
                         <span class="text-primary">achievement</span>
                     </h2>
                     <p class="max-w-xl text-muted-foreground">
-                        Five steps from sign-up to success — no fluff, no distractions.
+                        Five steps from sign-up to success — no fluff, no
+                        distractions.
                     </p>
                 </div>
 
                 <!-- Remotion walkthrough animation -->
-                <div class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5">
-                <video
-                    class="block aspect-video w-full"
-                    src="/videos/how-it-works.mp4?v=2"
-                    poster="/videos/how-it-works.png"
-                    :autoplay="!prefersReducedMotion"
-                    :loop="!prefersReducedMotion"
-                    muted
-                    playsinline
-                    :preload="isLowEndDevice ? 'metadata' : 'auto'"
-                    aria-label="How LSI works from enrollment to achievement"
-                ></video>
+                <div
+                    class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5"
+                >
+                    <video
+                        class="block aspect-video w-full"
+                        src="/videos/how-it-works.mp4?v=2"
+                        poster="/videos/how-it-works.png"
+                        :autoplay="!prefersReducedMotion"
+                        :loop="!prefersReducedMotion"
+                        muted
+                        playsinline
+                        :preload="isLowEndDevice ? 'metadata' : 'auto'"
+                        aria-label="How LSI works from enrollment to achievement"
+                    ></video>
                 </div>
 
                 <!-- Horizontal step cards: scrollable on mobile, grid on desktop -->
                 <div
                     v-if="false"
                     ref="howItWorksSteps"
-                    class="-mx-6 flex gap-4 overflow-x-auto px-6 pb-4 snap-x snap-mandatory scrollbar-none lg:mx-0 lg:grid lg:grid-cols-5 lg:gap-px lg:overflow-visible lg:rounded-xl lg:border lg:border-border/10 lg:bg-border/10 lg:p-0 lg:snap-none"
+                    class="-mx-6 flex snap-x snap-mandatory scrollbar-none gap-4 overflow-x-auto px-6 pb-4 lg:mx-0 lg:grid lg:snap-none lg:grid-cols-5 lg:gap-px lg:overflow-visible lg:rounded-xl lg:border lg:border-border/10 lg:bg-border/10 lg:p-0"
                 >
                     <div
                         v-for="(step, i) in [
-                            { title: 'Enroll', description: 'Join your section and access your courses, exams, and assignments in one place.' },
-                            { title: 'Take Exams', description: 'Complete assessments in your browser with instant AI feedback on every answer.' },
-                            { title: 'Get Feedback', description: 'Know where you stand immediately — auto-graded questions and AI-powered essay reviews.' },
-                            { title: 'Track Progress', description: 'Monitor XP, streaks, and grades across all subjects on your dashboard.' },
-                            { title: 'Earn Rewards', description: 'Unlock badges, seasonal achievements, and new nodes on your learning map.' },
+                            {
+                                title: 'Enroll',
+                                description:
+                                    'Join your section and access your courses, exams, and assignments in one place.',
+                            },
+                            {
+                                title: 'Take Exams',
+                                description:
+                                    'Complete assessments in your browser with instant AI feedback on every answer.',
+                            },
+                            {
+                                title: 'Get Feedback',
+                                description:
+                                    'Know where you stand immediately — auto-graded questions and AI-powered essay reviews.',
+                            },
+                            {
+                                title: 'Track Progress',
+                                description:
+                                    'Monitor XP, streaks, and grades across all subjects on your dashboard.',
+                            },
+                            {
+                                title: 'Earn Rewards',
+                                description:
+                                    'Unlock badges, seasonal achievements, and new nodes on your learning map.',
+                            },
                         ]"
                         :key="step.title"
                         class="step-card flex min-w-[260px] shrink-0 snap-start flex-col gap-3 rounded-xl border border-border/15 bg-background p-5 lg:min-w-0 lg:flex-1 lg:rounded-none lg:border-0 lg:border-r lg:border-border/10 lg:p-6 lg:last:border-r-0"
                     >
-                        <span class="step-number text-[11px] font-semibold tracking-widest text-muted-foreground/50 uppercase">
+                        <span
+                            class="step-number text-[11px] font-semibold tracking-widest text-muted-foreground/50 uppercase"
+                        >
                             Step {{ String(i + 1).padStart(2, '0') }}
                         </span>
                         <h3 class="text-sm font-semibold lg:text-base">
                             {{ step.title }}
                         </h3>
-                        <p class="text-xs leading-relaxed text-muted-foreground lg:text-sm">
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground lg:text-sm"
+                        >
                             {{ step.description }}
                         </p>
                     </div>
@@ -461,9 +551,9 @@ html[data-low-end] .will-change-transform {
     will-change: auto !important;
 }
 
-html[data-low-end] [class*="animate-ping"],
-html[data-low-end] [class*="animate-pulse"],
-html[data-low-end] [class*="animate-bounce"] {
+html[data-low-end] [class*='animate-ping'],
+html[data-low-end] [class*='animate-pulse'],
+html[data-low-end] [class*='animate-bounce'] {
     animation: none !important;
 }
 

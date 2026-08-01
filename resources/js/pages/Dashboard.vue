@@ -3,7 +3,14 @@ import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { Calendar, ChevronDown, ChevronUp, Trophy } from 'lucide-vue-next';
-import { onMounted, onBeforeUnmount, reactive, ref, computed, watch } from 'vue';
+import {
+    onMounted,
+    onBeforeUnmount,
+    reactive,
+    ref,
+    computed,
+    watch,
+} from 'vue';
 
 const dashboardContainer = ref<HTMLElement | null>(null);
 const { isMobile, prefersReducedMotion } = useMobile();
@@ -621,8 +628,6 @@ const handleLogout = () => {
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
         >
-
-
             <!-- Skeleton loader (shown while booting) -->
             <DashboardSkeleton v-if="!isBooted" />
 
@@ -630,13 +635,21 @@ const handleLogout = () => {
             <template v-if="isBooted">
                 <!-- Hero Banner Section -->
                 <Motion
-                    :initial="isMobile || prefersReducedMotion ? false : { opacity: 0, y: 30 }"
+                    :initial="
+                        isMobile || prefersReducedMotion
+                            ? false
+                            : { opacity: 0, y: 30 }
+                    "
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="isMobile || prefersReducedMotion ? { duration: 0 } : {
-                        duration: 0.7,
-                        ease: [0.16, 1, 0.3, 1],
-                        delay: 0.05,
-                    }"
+                    :transition="
+                        isMobile || prefersReducedMotion
+                            ? { duration: 0 }
+                            : {
+                                  duration: 0.7,
+                                  ease: [0.16, 1, 0.3, 1],
+                                  delay: 0.05,
+                              }
+                    "
                     class="relative space-y-6"
                 >
                     <DashboardHero
@@ -653,7 +666,9 @@ const handleLogout = () => {
                         :smarter-status="smarterStatus"
                         :is-refreshing="isRefreshing"
                         :last-sync-time="lastSyncTime"
-                        @close-announcement="(id: number) => dismissedAnnouncementIds.add(id)"
+                        @close-announcement="
+                            (id: number) => dismissedAnnouncementIds.add(id)
+                        "
                         @refresh="manualRefresh"
                         @open-section-modal="showSectionModal = true"
                     />
@@ -661,13 +676,21 @@ const handleLogout = () => {
 
                 <!-- Header Section with User Stats -->
                 <Motion
-                    :initial="isMobile || prefersReducedMotion ? false : { opacity: 0, y: 20 }"
+                    :initial="
+                        isMobile || prefersReducedMotion
+                            ? false
+                            : { opacity: 0, y: 20 }
+                    "
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="isMobile || prefersReducedMotion ? { duration: 0 } : {
-                        duration: 0.7,
-                        ease: [0.16, 1, 0.3, 1],
-                        delay: 0.1,
-                    }"
+                    :transition="
+                        isMobile || prefersReducedMotion
+                            ? { duration: 0 }
+                            : {
+                                  duration: 0.7,
+                                  ease: [0.16, 1, 0.3, 1],
+                                  delay: 0.1,
+                              }
+                    "
                 >
                     <DashboardStats
                         class="dashboard-stats"
@@ -682,10 +705,24 @@ const handleLogout = () => {
 
                 <!-- Main Content Grid -->
                 <Motion
-                    :initial="isMobile || prefersReducedMotion ? false : { opacity: 0, y: 40 }"
-                    :in-view="isMobile || prefersReducedMotion ? false : (isBooted ? { opacity: 1, y: 0 } : {})"
+                    :initial="
+                        isMobile || prefersReducedMotion
+                            ? false
+                            : { opacity: 0, y: 40 }
+                    "
+                    :in-view="
+                        isMobile || prefersReducedMotion
+                            ? false
+                            : isBooted
+                              ? { opacity: 1, y: 0 }
+                              : {}
+                    "
                     :in-view-options="{ once: true, margin: '-50px' }"
-                    :transition="isMobile || prefersReducedMotion ? { duration: 0 } : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                    :transition="
+                        isMobile || prefersReducedMotion
+                            ? { duration: 0 }
+                            : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+                    "
                     class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
                 >
                     <!-- Main Section: Leaderboard + Learning Hub -->
@@ -693,29 +730,55 @@ const handleLogout = () => {
                         <!-- Mobile: Collapsible Leaderboard -->
                         <div v-if="isMobile" class="lg:hidden">
                             <button
-                                @click="isLeaderboardExpanded = !isLeaderboardExpanded"
+                                @click="
+                                    isLeaderboardExpanded =
+                                        !isLeaderboardExpanded
+                                "
                                 class="flex w-full items-center justify-between rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-amber-400/30"
                             >
                                 <div class="flex items-center gap-3">
                                     <Trophy class="h-4 w-4 text-amber-400" />
                                     <div>
-                                        <span class="text-xs font-bold text-foreground">Leaderboard</span>
-                                        <p v-if="sectionLeaderboards.length > 0" class="text-[9px] text-muted-foreground">
-                                            {{ sectionLeaderboards[0]?.sectionName }} · {{ sectionLeaderboards[0]?.totalPlayers }} players
+                                        <span
+                                            class="text-xs font-bold text-foreground"
+                                            >Leaderboard</span
+                                        >
+                                        <p
+                                            v-if="
+                                                sectionLeaderboards.length > 0
+                                            "
+                                            class="text-[9px] text-muted-foreground"
+                                        >
+                                            {{
+                                                sectionLeaderboards[0]
+                                                    ?.sectionName
+                                            }}
+                                            ·
+                                            {{
+                                                sectionLeaderboards[0]
+                                                    ?.totalPlayers
+                                            }}
+                                            players
                                         </p>
                                     </div>
                                 </div>
-                                <component :is="isLeaderboardExpanded ? ChevronUp : ChevronDown" class="h-4 w-4 text-muted-foreground transition-transform duration-300" />
+                                <component
+                                    :is="
+                                        isLeaderboardExpanded
+                                            ? ChevronUp
+                                            : ChevronDown
+                                    "
+                                    class="h-4 w-4 text-muted-foreground transition-transform duration-300"
+                                />
                             </button>
-                            <div
-                                v-show="isLeaderboardExpanded"
-                                class="mt-3"
-                            >
+                            <div v-show="isLeaderboardExpanded" class="mt-3">
                                 <ImprovedLeaderboard
                                     class="dashboard-leaderboard"
                                     :section-leaderboards="sectionLeaderboards"
                                     :active-season-name="activeSeason?.name"
-                                    :available-seasons="props.availableSeasons ?? []"
+                                    :available-seasons="
+                                        props.availableSeasons ?? []
+                                    "
                                     show-view-button
                                 />
                             </div>
@@ -727,7 +790,9 @@ const handleLogout = () => {
                                 class="dashboard-leaderboard"
                                 :section-leaderboards="sectionLeaderboards"
                                 :active-season-name="activeSeason?.name"
-                                :available-seasons="props.availableSeasons ?? []"
+                                :available-seasons="
+                                    props.availableSeasons ?? []
+                                "
                                 show-view-button
                             />
                         </div>
@@ -736,7 +801,9 @@ const handleLogout = () => {
                             :courses="courses"
                             :assignments="assignments"
                             @course-click="(c) => console.log('Course:', c)"
-                            @assignment-click="(a) => console.log('Assignment:', a)"
+                            @assignment-click="
+                                (a) => console.log('Assignment:', a)
+                            "
                         />
                     </div>
 
@@ -753,11 +820,25 @@ const handleLogout = () => {
                                 <div class="flex items-center gap-3">
                                     <Calendar class="h-4 w-4 text-primary" />
                                     <div>
-                                        <span class="text-xs font-bold text-foreground">Insights &amp; Progress</span>
-                                        <p class="text-[9px] text-muted-foreground">Season, activity, and quick actions</p>
+                                        <span
+                                            class="text-xs font-bold text-foreground"
+                                            >Insights &amp; Progress</span
+                                        >
+                                        <p
+                                            class="text-[9px] text-muted-foreground"
+                                        >
+                                            Season, activity, and quick actions
+                                        </p>
                                     </div>
                                 </div>
-                                <component :is="isSidebarExpanded ? ChevronUp : ChevronDown" class="h-4 w-4 text-muted-foreground transition-transform duration-300" />
+                                <component
+                                    :is="
+                                        isSidebarExpanded
+                                            ? ChevronUp
+                                            : ChevronDown
+                                    "
+                                    class="h-4 w-4 text-muted-foreground transition-transform duration-300"
+                                />
                             </button>
                             <div
                                 v-show="isSidebarExpanded"
@@ -765,7 +846,9 @@ const handleLogout = () => {
                             >
                                 <SeasonProgressBand
                                     :name="activeSeason?.name ?? null"
-                                    :start-date="activeSeason?.startDate ?? null"
+                                    :start-date="
+                                        activeSeason?.startDate ?? null
+                                    "
                                     :end-date="activeSeason?.endDate ?? null"
                                     :xp-earned="userStats.currentXP"
                                     :xp-target="seasonalXpTarget"
@@ -798,7 +881,9 @@ const handleLogout = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        <StreakHeatmap :login-dates="streak.loginDates" />
+                                        <StreakHeatmap
+                                            :login-dates="streak.loginDates"
+                                        />
                                     </div>
                                 </SpotlightCard>
 
@@ -817,7 +902,7 @@ const handleLogout = () => {
                         </div>
 
                         <!-- Desktop: Full Sidebar -->
-                        <div v-else class="hidden lg:block space-y-6">
+                        <div v-else class="hidden space-y-6 lg:block">
                             <SeasonProgressBand
                                 :name="activeSeason?.name ?? null"
                                 :start-date="activeSeason?.startDate ?? null"
@@ -854,7 +939,9 @@ const handleLogout = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    <StreakHeatmap :login-dates="streak.loginDates" />
+                                    <StreakHeatmap
+                                        :login-dates="streak.loginDates"
+                                    />
                                 </div>
                             </SpotlightCard>
 
@@ -892,9 +979,7 @@ const handleLogout = () => {
                 />
                 <div class="p-6 sm:p-8">
                     <div>
-                        <p
-                            class="text-xs font-medium text-destructive/80"
-                        >
+                        <p class="text-xs font-medium text-destructive/80">
                             Access Restricted
                         </p>
                         <h2
@@ -956,6 +1041,4 @@ const handleLogout = () => {
     /* Handled by GSAP onMounted */
     will-change: transform, opacity;
 }
-
-
 </style>

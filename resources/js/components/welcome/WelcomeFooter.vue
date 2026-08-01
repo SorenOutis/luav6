@@ -89,13 +89,17 @@ onMounted(() => {
     timer = window.setInterval(updateTime, 1000);
 
     // Check global reduced-motion preference via matchMedia
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+    ).matches;
     if (!reducedMotion && footerRef.value) {
         gsapCtx = gsap.context(() => {
             // ─── Dramatic stagger reveal for all footer sections ───
-            const staggerEls = footerRef.value?.querySelectorAll('.footer-stagger');
+            const staggerEls =
+                footerRef.value?.querySelectorAll('.footer-stagger');
             if (staggerEls?.length) {
-                gsap.fromTo(staggerEls,
+                gsap.fromTo(
+                    staggerEls,
                     { y: 40, opacity: 0, scale: 0.95, filter: 'blur(6px)' },
                     {
                         y: 0,
@@ -117,7 +121,8 @@ onMounted(() => {
             // ─── Wordmark gradient sweep + parallax ───
             const wordmark = footerRef.value?.querySelector('.footer-wordmark');
             if (wordmark) {
-                gsap.fromTo(wordmark,
+                gsap.fromTo(
+                    wordmark,
                     {
                         backgroundPositionX: '100%',
                         opacity: 0.6,
@@ -149,9 +154,11 @@ onMounted(() => {
             }
 
             // ─── Status bar staggered reveal ───
-            const statusItems = footerRef.value?.querySelectorAll('.status-item');
+            const statusItems =
+                footerRef.value?.querySelectorAll('.status-item');
             if (statusItems?.length) {
-                gsap.fromTo(statusItems,
+                gsap.fromTo(
+                    statusItems,
                     { y: 20, opacity: 0 },
                     {
                         y: 0,

@@ -388,7 +388,9 @@ const changeSeason = async (seasonId: number) => {
                         @change="
                             (e) =>
                                 changeSeason(
-                                    Number((e.target as HTMLSelectElement).value),
+                                    Number(
+                                        (e.target as HTMLSelectElement).value,
+                                    ),
                                 )
                         "
                         :disabled="isSwitchingSeason"
@@ -422,10 +424,7 @@ const changeSeason = async (seasonId: number) => {
                             : 'You are visible — click to hide'
                     "
                 >
-                    <EyeOff
-                        v-if="currentUserBlurred"
-                        class="h-3.5 w-3.5"
-                    />
+                    <EyeOff v-if="currentUserBlurred" class="h-3.5 w-3.5" />
                     <Eye v-else class="h-3.5 w-3.5" />
                     <span>{{ currentUserBlurred ? 'Hidden' : 'Visible' }}</span>
                 </button>
@@ -441,10 +440,7 @@ const changeSeason = async (seasonId: number) => {
         </div>
 
         <!-- Empty State -->
-        <div
-            v-else-if="users.length === 0"
-            class="lb-empty"
-        >
+        <div v-else-if="users.length === 0" class="lb-empty">
             <Trophy class="mb-4 h-10 w-10 text-muted-foreground/30" />
             <h3 class="mb-1 text-xl font-black">No Rankings Yet</h3>
             <p class="text-xs text-muted-foreground">
@@ -575,7 +571,9 @@ const changeSeason = async (seasonId: number) => {
                                     <div
                                         class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/[0.03] backdrop-blur-[2px]"
                                     >
-                                        <EyeOff class="h-5 w-5 text-muted-foreground/40" />
+                                        <EyeOff
+                                            class="h-5 w-5 text-muted-foreground/40"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -594,7 +592,7 @@ const changeSeason = async (seasonId: number) => {
                             <span
                                 v-else
                                 :class="[
-                                    'mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words lb-blurred lb-blurred-text',
+                                    'lb-blurred lb-blurred-text mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words',
                                     getNameSize(user.name, origIdx === 0),
                                 ]"
                                 @contextmenu.prevent
@@ -688,9 +686,9 @@ const changeSeason = async (seasonId: number) => {
                         :key="user.id"
                         class="lb-row group animate-fade-up"
                         :class="{
-                    'lb-row--you': user.isCurrentUser,
-                    'lb-row--blurred': user.blurred,
-                }"
+                            'lb-row--you': user.isCurrentUser,
+                            'lb-row--blurred': user.blurred,
+                        }"
                         :style="{ animationDelay: `${(i + 3) * 60}ms` }"
                     >
                         <!-- Rank -->
@@ -724,10 +722,7 @@ const changeSeason = async (seasonId: number) => {
                                         class="h-4 w-4 text-muted-foreground/40"
                                     />
                                 </Link>
-                                <div
-                                    v-else
-                                    class="lb-row-avatar lb-blurred"
-                                >
+                                <div v-else class="lb-row-avatar lb-blurred">
                                     <img
                                         v-if="user.avatar && !user.blurred"
                                         :src="user.avatar"
@@ -741,21 +736,27 @@ const changeSeason = async (seasonId: number) => {
                                     <div
                                         class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-primary/[0.03] backdrop-blur-[1px]"
                                     >
-                                        <EyeOff class="h-3 w-3 text-muted-foreground/30" />
+                                        <EyeOff
+                                            class="h-3 w-3 text-muted-foreground/30"
+                                        />
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Info -->                        <div
-                            class="min-w-0 flex-1"
-                        >
-                            <div
-                                class="flex flex-wrap items-center gap-1.5"
-                            >
-                                <span
-                                    class="text-xs font-bold tracking-tight break-words sm:text-sm lb-blurred-text"
-                                    @contextmenu.prevent
-                                >{{ user.blurred ? BLURRED_NAME : user.name }}</span>
+                            <!-- Info -->
+                            <div class="min-w-0 flex-1">
+                                <div
+                                    class="flex flex-wrap items-center gap-1.5"
+                                >
+                                    <span
+                                        class="lb-blurred-text text-xs font-bold tracking-tight break-words sm:text-sm"
+                                        @contextmenu.prevent
+                                        >{{
+                                            user.blurred
+                                                ? BLURRED_NAME
+                                                : user.name
+                                        }}</span
+                                    >
                                     <span
                                         v-if="user.isCurrentUser"
                                         class="shrink-0 rounded-full bg-amber-400 px-1.5 py-0.5 text-[7px] font-black text-black uppercase"
@@ -866,10 +867,15 @@ const changeSeason = async (seasonId: number) => {
                         >
                             <History class="h-5 w-5 text-amber-400" />
                         </div>
-                        <div>                                <DialogTitle
-                                    class="text-lg font-black tracking-tight"
-                                    >{{ selectedUser?.blurred ? BLURRED_NAME : selectedUser?.name }}</DialogTitle
-                                >
+                        <div>
+                            <DialogTitle
+                                class="text-lg font-black tracking-tight"
+                                >{{
+                                    selectedUser?.blurred
+                                        ? BLURRED_NAME
+                                        : selectedUser?.name
+                                }}</DialogTitle
+                            >
                             <span
                                 class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
                                 >XP History</span

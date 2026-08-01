@@ -93,8 +93,6 @@ const stats = computed(() => {
     };
 });
 
-
-
 const sortedLevels = computed(() => {
     const difficultyOrder: Record<string, number> = {
         easy: 1,
@@ -114,8 +112,6 @@ const sortedLevels = computed(() => {
 const nextObjective = computed(() => {
     return props.levels.find((l) => (l.progress?.stars ?? 0) < 3) ?? null;
 });
-
-
 
 const diffColor = (slug: string) => {
     switch (slug) {
@@ -164,7 +160,9 @@ const handleMouseMove = (e: MouseEvent) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
-            <div class="relative mx-auto flex h-full max-w-[1400px] flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10">
+            <div
+                class="relative mx-auto flex h-full max-w-[1400px] flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
+            >
                 <PageSkeleton
                     :hero="true"
                     :subtitle="true"
@@ -179,22 +177,36 @@ const handleMouseMove = (e: MouseEvent) => {
                         :key="i"
                         class="flex flex-col gap-2 rounded-xl border border-border/10 bg-card/30 p-4"
                     >
-                        <div class="h-3 w-16 animate-pulse rounded bg-primary/10"></div>
-                        <div class="h-7 w-20 animate-pulse rounded bg-primary/10"></div>
+                        <div
+                            class="h-3 w-16 animate-pulse rounded bg-primary/10"
+                        ></div>
+                        <div
+                            class="h-7 w-20 animate-pulse rounded bg-primary/10"
+                        ></div>
                     </div>
                 </div>
-                <div class="z-10 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3">
+                <div
+                    class="z-10 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]"
+                >
+                    <div
+                        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3"
+                    >
                         <div
                             v-for="i in 4"
                             :key="i"
                             class="flex flex-col gap-4 rounded-xl border border-border/10 bg-card/30 p-5"
                         >
                             <div class="flex items-center gap-3">
-                                <div class="h-11 w-11 animate-pulse rounded-xl bg-primary/10"></div>
+                                <div
+                                    class="h-11 w-11 animate-pulse rounded-xl bg-primary/10"
+                                ></div>
                                 <div class="flex flex-1 flex-col gap-1.5">
-                                    <div class="h-4 w-32 animate-pulse rounded bg-primary/10"></div>
-                                    <div class="h-3 w-20 animate-pulse rounded bg-primary/10"></div>
+                                    <div
+                                        class="h-4 w-32 animate-pulse rounded bg-primary/10"
+                                    ></div>
+                                    <div
+                                        class="h-3 w-20 animate-pulse rounded bg-primary/10"
+                                    ></div>
                                 </div>
                                 <div class="flex gap-1">
                                     <div
@@ -204,20 +216,36 @@ const handleMouseMove = (e: MouseEvent) => {
                                     ></div>
                                 </div>
                             </div>
-                            <div class="h-8 w-full animate-pulse rounded bg-primary/10"></div>
-                            <div class="flex items-center justify-between border-t border-border/10 pt-4">
+                            <div
+                                class="h-8 w-full animate-pulse rounded bg-primary/10"
+                            ></div>
+                            <div
+                                class="flex items-center justify-between border-t border-border/10 pt-4"
+                            >
                                 <div class="flex gap-4">
-                                    <div class="h-6 w-16 animate-pulse rounded bg-primary/10"></div>
-                                    <div class="h-6 w-12 animate-pulse rounded bg-primary/10"></div>
+                                    <div
+                                        class="h-6 w-16 animate-pulse rounded bg-primary/10"
+                                    ></div>
+                                    <div
+                                        class="h-6 w-12 animate-pulse rounded bg-primary/10"
+                                    ></div>
                                 </div>
-                                <div class="h-8 w-8 animate-pulse rounded-lg bg-primary/10"></div>
+                                <div
+                                    class="h-8 w-8 animate-pulse rounded-lg bg-primary/10"
+                                ></div>
                             </div>
                         </div>
                     </div>
                     <div class="flex flex-col gap-6">
-                        <div class="h-64 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
-                        <div class="h-56 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
-                        <div class="h-32 animate-pulse rounded-xl border border-border/10 bg-card/30"></div>
+                        <div
+                            class="h-64 animate-pulse rounded-xl border border-border/10 bg-card/30"
+                        ></div>
+                        <div
+                            class="h-56 animate-pulse rounded-xl border border-border/10 bg-card/30"
+                        ></div>
+                        <div
+                            class="h-32 animate-pulse rounded-xl border border-border/10 bg-card/30"
+                        ></div>
                     </div>
                 </div>
             </div>
@@ -229,673 +257,703 @@ const handleMouseMove = (e: MouseEvent) => {
                 ref="container"
                 class="relative mx-auto flex h-full max-w-[1400px] flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
             >
-            <!-- Decorative Orbs -->
-            <div
-                class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
-            ></div>
-            <div
-                class="orb pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
-            ></div>
+                <!-- Decorative Orbs -->
+                <div
+                    class="orb pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
+                ></div>
+                <div
+                    class="orb pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[120px]"
+                ></div>
 
-            <!-- Hero -->
-            <Motion
-                :initial="{ opacity: 0, y: 30 }"
-                :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                :transition="{
-                    duration: 1,
-                    ease: [0.16, 1, 0.3, 1],
-                    delay: 0.1,
-                }"
-                class="header-content group/hero relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end"
-            >
-                <div class="space-y-1">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="h-[2px] w-8 rounded-full bg-primary/40 transition-all duration-500 group-hover/hero:w-12"
-                        ></div>
-                        <h1
-                            class="text-2xl font-black tracking-tighter uppercase"
-                        >
-                            Tower_Defense
-                        </h1>
-                    </div>
-                    <p
-                        class="border-l-2 border-primary/10 pl-11 text-sm text-[9px] font-medium tracking-widest text-muted-foreground uppercase transition-colors group-hover/hero:border-primary/30"
-                    >
-                        Arcade Strategy — deploy defenses, survive waves,
-                        maximize integrity.
-                    </p>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-10 items-center gap-2 rounded-full border border-primary/10 bg-primary/5 px-4 py-1.5 font-mono"
-                    >
-                        <Shield class="h-3.5 w-3.5 text-primary" />
-                        <span
-                            class="text-[9px] font-black tracking-widest uppercase"
-                            >DEFENSE:ACTIVE</span
-                        >
-                    </div>
-                </div>
-            </Motion>
-
-            <!-- Stats Overview -->
-            <div class="z-10 grid grid-cols-2 gap-4 md:grid-cols-4">
+                <!-- Hero -->
                 <Motion
-                    v-for="(s, sIdx) in [
-                        {
-                            label: 'Deployment',
-                            val: stats.cleared,
-                            total: stats.total,
-                            icon: MapPin,
-                            glowColor: 'blue' as const,
-                        },
-                        {
-                            label: 'Integrity',
-                            val: stats.winRate,
-                            unit: '%',
-                            icon: Shield,
-                            glowColor: 'green' as const,
-                        },
-                        {
-                            label: 'Collection',
-                            val: stats.totalStars,
-                            total: stats.maxStars,
-                            icon: Star,
-                            glowColor: 'purple' as const,
-                        },
-                        {
-                            label: 'Best Score',
-                            val: stats.bestScore,
-                            icon: Trophy,
-                            glowColor: 'orange' as const,
-                        },
-                    ]"
-                    :key="s.label"
-                    :initial="{ opacity: 0, y: 20 }"
+                    :initial="{ opacity: 0, y: 30 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{
-                        duration: 0.8,
+                        duration: 1,
                         ease: [0.16, 1, 0.3, 1],
-                        delay: 0.2 + sIdx * 0.1,
+                        delay: 0.1,
                     }"
+                    class="header-content group/hero relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end"
                 >
-                    <SpotlightCard
-                        customSize
-                        :glowColor="s.glowColor"
-                        :spotlightSize="300"
-                        className="stats-card p-4 relative group/stat premium-hover bg-card/40 flex flex-col justify-between"
-                        @mousemove="handleMouseMove"
-                    >
-                        <div
-                            class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
-                        >
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-3">
                             <div
-                                class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-70"
-                                :class="{
-                                    'bg-blue-500/30': s.glowColor === 'blue',
-                                    'bg-emerald-500/30':
-                                        s.glowColor === 'green',
-                                    'bg-purple-500/30':
-                                        s.glowColor === 'purple',
-                                    'bg-orange-500/30':
-                                        s.glowColor === 'orange',
-                                }"
+                                class="h-[2px] w-8 rounded-full bg-primary/40 transition-all duration-500 group-hover/hero:w-12"
                             ></div>
-                            <div
-                                class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-50"
-                                :class="{
-                                    'bg-blue-400/25': s.glowColor === 'blue',
-                                    'bg-emerald-400/25':
-                                        s.glowColor === 'green',
-                                    'bg-purple-400/25':
-                                        s.glowColor === 'purple',
-                                    'bg-orange-400/25':
-                                        s.glowColor === 'orange',
-                                }"
-                            ></div>
-                            <div
-                                class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/stat:opacity-100"
-                            ></div>
-                            <div
-                                class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/stat:opacity-100"
-                            ></div>
-                        </div>
-                        <div class="relative z-10">
-                            <div
-                                class="flex items-center gap-2 text-muted-foreground/60"
+                            <h1
+                                class="text-2xl font-black tracking-tighter uppercase"
                             >
-                                <component :is="s.icon" class="h-3 w-3" />
-                                <span
-                                    class="font-mono text-[8px] font-black tracking-widest uppercase"
-                                    >{{ s.label }}</span
-                                >
-                            </div>
-                            <div class="mt-1 flex items-baseline gap-1">
-                                <span
-                                    class="text-xl font-black text-foreground tabular-nums"
-                                    >{{ s.val }}</span
-                                >
-                                <span
-                                    v-if="s.total"
-                                    class="font-mono text-[10px] font-bold text-muted-foreground/40"
-                                    >/{{ s.total }}</span
-                                >
-                                <span
-                                    v-if="s.unit"
-                                    class="font-mono text-[10px] font-bold text-primary"
-                                    >{{ s.unit }}</span
-                                >
-                            </div>
-                        </div>
-                    </SpotlightCard>
-                </Motion>
-            </div>
-
-            <!-- Main Content Grid -->
-            <div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
-                <div class="flex flex-col gap-8">
-                    <div
-                        v-if="levels.length === 0"
-                        class="surface-card flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 py-20 text-center"
-                    >
-                        <div
-                            class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/30"
-                        >
-                            <Shield class="h-8 w-8 text-muted-foreground/40" />
+                                Tower_Defense
+                            </h1>
                         </div>
                         <p
-                            class="text-sm font-black tracking-widest text-foreground uppercase"
+                            class="border-l-2 border-primary/10 pl-11 text-sm text-[9px] font-medium tracking-widest text-muted-foreground uppercase transition-colors group-hover/hero:border-primary/30"
                         >
-                            No levels deployed
-                        </p>
-                        <p class="mt-1 max-w-xs text-xs text-muted-foreground">
-                            The mission roster is currently empty. Contact
-                            command for deployment.
+                            Arcade Strategy — deploy defenses, survive waves,
+                            maximize integrity.
                         </p>
                     </div>
 
-                    <div
-                        v-else
-                        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3"
+                    <div class="flex items-center gap-4">
+                        <div
+                            class="flex h-10 items-center gap-2 rounded-full border border-primary/10 bg-primary/5 px-4 py-1.5 font-mono"
+                        >
+                            <Shield class="h-3.5 w-3.5 text-primary" />
+                            <span
+                                class="text-[9px] font-black tracking-widest uppercase"
+                                >DEFENSE:ACTIVE</span
+                            >
+                        </div>
+                    </div>
+                </Motion>
+
+                <!-- Stats Overview -->
+                <div class="z-10 grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <Motion
+                        v-for="(s, sIdx) in [
+                            {
+                                label: 'Deployment',
+                                val: stats.cleared,
+                                total: stats.total,
+                                icon: MapPin,
+                                glowColor: 'blue' as const,
+                            },
+                            {
+                                label: 'Integrity',
+                                val: stats.winRate,
+                                unit: '%',
+                                icon: Shield,
+                                glowColor: 'green' as const,
+                            },
+                            {
+                                label: 'Collection',
+                                val: stats.totalStars,
+                                total: stats.maxStars,
+                                icon: Star,
+                                glowColor: 'purple' as const,
+                            },
+                            {
+                                label: 'Best Score',
+                                val: stats.bestScore,
+                                icon: Trophy,
+                                glowColor: 'orange' as const,
+                            },
+                        ]"
+                        :key="s.label"
+                        :initial="{ opacity: 0, y: 20 }"
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="{
+                            duration: 0.8,
+                            ease: [0.16, 1, 0.3, 1],
+                            delay: 0.2 + sIdx * 0.1,
+                        }"
                     >
+                        <SpotlightCard
+                            customSize
+                            :glowColor="s.glowColor"
+                            :spotlightSize="300"
+                            className="stats-card p-4 relative group/stat premium-hover bg-card/40 flex flex-col justify-between"
+                            @mousemove="handleMouseMove"
+                        >
+                            <div
+                                class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+                            >
+                                <div
+                                    class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-70"
+                                    :class="{
+                                        'bg-blue-500/30':
+                                            s.glowColor === 'blue',
+                                        'bg-emerald-500/30':
+                                            s.glowColor === 'green',
+                                        'bg-purple-500/30':
+                                            s.glowColor === 'purple',
+                                        'bg-orange-500/30':
+                                            s.glowColor === 'orange',
+                                    }"
+                                ></div>
+                                <div
+                                    class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-50"
+                                    :class="{
+                                        'bg-blue-400/25':
+                                            s.glowColor === 'blue',
+                                        'bg-emerald-400/25':
+                                            s.glowColor === 'green',
+                                        'bg-purple-400/25':
+                                            s.glowColor === 'purple',
+                                        'bg-orange-400/25':
+                                            s.glowColor === 'orange',
+                                    }"
+                                ></div>
+                                <div
+                                    class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/stat:opacity-100"
+                                ></div>
+                                <div
+                                    class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/stat:opacity-100"
+                                ></div>
+                            </div>
+                            <div class="relative z-10">
+                                <div
+                                    class="flex items-center gap-2 text-muted-foreground/60"
+                                >
+                                    <component :is="s.icon" class="h-3 w-3" />
+                                    <span
+                                        class="font-mono text-[8px] font-black tracking-widest uppercase"
+                                        >{{ s.label }}</span
+                                    >
+                                </div>
+                                <div class="mt-1 flex items-baseline gap-1">
+                                    <span
+                                        class="text-xl font-black text-foreground tabular-nums"
+                                        >{{ s.val }}</span
+                                    >
+                                    <span
+                                        v-if="s.total"
+                                        class="font-mono text-[10px] font-bold text-muted-foreground/40"
+                                        >/{{ s.total }}</span
+                                    >
+                                    <span
+                                        v-if="s.unit"
+                                        class="font-mono text-[10px] font-bold text-primary"
+                                        >{{ s.unit }}</span
+                                    >
+                                </div>
+                            </div>
+                        </SpotlightCard>
+                    </Motion>
+                </div>
+
+                <!-- Main Content Grid -->
+                <div class="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
+                    <div class="flex flex-col gap-8">
+                        <div
+                            v-if="levels.length === 0"
+                            class="surface-card flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 py-20 text-center"
+                        >
+                            <div
+                                class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/30"
+                            >
+                                <Shield
+                                    class="h-8 w-8 text-muted-foreground/40"
+                                />
+                            </div>
+                            <p
+                                class="text-sm font-black tracking-widest text-foreground uppercase"
+                            >
+                                No levels deployed
+                            </p>
+                            <p
+                                class="mt-1 max-w-xs text-xs text-muted-foreground"
+                            >
+                                The mission roster is currently empty. Contact
+                                command for deployment.
+                            </p>
+                        </div>
+
+                        <div
+                            v-else
+                            class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2 2xl:grid-cols-3"
+                        >
+                            <Motion
+                                v-for="(level, lIdx) in sortedLevels"
+                                :key="level.id"
+                                :initial="{ opacity: 0, y: 40 }"
+                                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                                :in-view-options="{
+                                    once: true,
+                                    margin: '-50px',
+                                }"
+                                :transition="{
+                                    duration: 1,
+                                    ease: [0.16, 1, 0.3, 1],
+                                    delay: lIdx * 0.05,
+                                }"
+                                as="div"
+                            >
+                                <SpotlightCard
+                                    customSize
+                                    :as="Link"
+                                    :href="`/games/tower-defense/play/${level.slug}`"
+                                    :glowColor="
+                                        diffGlowColor(level.difficulty.slug)
+                                    "
+                                    :spotlightSize="300"
+                                    className="level-card relative group/level premium-hover bg-card/40 !flex flex-col h-full min-w-0 w-full overflow-hidden"
+                                    @mousemove="handleMouseMove"
+                                >
+                                    <div
+                                        class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+                                    >
+                                        <div
+                                            class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/level:opacity-70"
+                                            :class="{
+                                                'bg-emerald-500/30':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'green',
+                                                'bg-blue-500/30':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'blue',
+                                                'bg-orange-500/30':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'orange',
+                                                'bg-red-500/30':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'red',
+                                            }"
+                                        ></div>
+                                        <div
+                                            class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/level:opacity-50"
+                                            :class="{
+                                                'bg-emerald-400/25':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'green',
+                                                'bg-blue-400/25':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'blue',
+                                                'bg-orange-400/25':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'orange',
+                                                'bg-red-400/25':
+                                                    diffGlowColor(
+                                                        level.difficulty.slug,
+                                                    ) === 'red',
+                                            }"
+                                        ></div>
+                                        <div
+                                            class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/level:opacity-100"
+                                        ></div>
+                                        <div
+                                            class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/level:opacity-100"
+                                        ></div>
+                                        <div
+                                            class="absolute inset-0 opacity-[0.03] transition-opacity group-hover/level:opacity-[0.05]"
+                                        >
+                                            <svg
+                                                class="h-full w-full"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                width="100%"
+                                                height="100%"
+                                            >
+                                                <defs>
+                                                    <pattern
+                                                        :id="`level-grid-${level.id}`"
+                                                        width="15"
+                                                        height="15"
+                                                        patternUnits="userSpaceOnUse"
+                                                    >
+                                                        <path
+                                                            d="M 15 0 L 0 0 0 15"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            stroke-width="0.5"
+                                                        />
+                                                    </pattern>
+                                                </defs>
+                                                <rect
+                                                    width="100%"
+                                                    height="100%"
+                                                    :fill="`url(#level-grid-${level.id})`"
+                                                />
+                                            </svg>
+                                        </div>
+                                        <div
+                                            class="group-hover/level:animate-scan-horizontal absolute inset-0 h-full w-32 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 transition-opacity group-hover/level:opacity-100"
+                                        ></div>
+                                    </div>
+
+                                    <div
+                                        class="relative z-10 flex flex-col gap-3 border-b border-border/40 p-5"
+                                    >
+                                        <div
+                                            class="flex min-w-0 items-center gap-3"
+                                        >
+                                            <div
+                                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 shadow-sm transition-colors group-hover/level:border-primary/40"
+                                            >
+                                                <span
+                                                    class="text-sm font-black text-primary tabular-nums"
+                                                    >{{ level.order }}</span
+                                                >
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <h2
+                                                    class="truncate text-sm font-black tracking-widest text-foreground uppercase transition-colors group-hover/level:text-primary"
+                                                >
+                                                    {{ level.name }}
+                                                </h2>
+                                                <p
+                                                    class="mt-0.5 truncate text-[9px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
+                                                >
+                                                    {{ level.map.name }}
+                                                </p>
+                                            </div>
+                                            <div class="flex shrink-0 gap-0.5">
+                                                <Star
+                                                    v-for="i in 3"
+                                                    :key="i"
+                                                    class="h-3 w-3 transition-all duration-500"
+                                                    :class="
+                                                        i <=
+                                                        (level.progress
+                                                            ?.stars || 0)
+                                                            ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)] group-hover/level:scale-110'
+                                                            : 'fill-muted-foreground/10 text-muted-foreground/50'
+                                                    "
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="relative z-10 flex flex-col gap-4 p-5"
+                                    >
+                                        <p
+                                            class="line-clamp-2 h-8 text-[11px] leading-relaxed text-muted-foreground/80"
+                                        >
+                                            {{ level.description }}
+                                        </p>
+
+                                        <div
+                                            class="flex items-center justify-between gap-2 border-t border-border/40 pt-4"
+                                        >
+                                            <div class="flex min-w-0 gap-3">
+                                                <div
+                                                    class="flex min-w-0 flex-col gap-0.5"
+                                                >
+                                                    <span
+                                                        class="font-mono text-[7px] font-bold tracking-widest text-muted-foreground/50 uppercase"
+                                                        >Difficulty</span
+                                                    >
+                                                    <span
+                                                        class="truncate text-[9px] font-black tracking-wider uppercase"
+                                                        :class="
+                                                            diffColor(
+                                                                level.difficulty
+                                                                    .slug,
+                                                            )
+                                                        "
+                                                        >{{
+                                                            level.difficulty
+                                                                .name
+                                                        }}</span
+                                                    >
+                                                </div>
+                                                <div
+                                                    class="flex flex-col gap-0.5"
+                                                >
+                                                    <span
+                                                        class="font-mono text-[7px] font-bold tracking-widest text-muted-foreground/50 uppercase"
+                                                        >Waves</span
+                                                    >
+                                                    <span
+                                                        class="text-[9px] font-black tracking-wider text-foreground uppercase"
+                                                        >{{
+                                                            level.waves_count
+                                                        }}</span
+                                                    >
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                v-if="level.progress?.wins"
+                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition-all duration-500 group-hover/level:border-emerald-500/50 group-hover/level:bg-emerald-500/20"
+                                                :title="'Cleared'"
+                                            >
+                                                <Swords
+                                                    class="h-3.5 w-3.5 transition-transform duration-300 group-hover/level:scale-110"
+                                                />
+                                            </div>
+                                            <div
+                                                v-else
+                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-all duration-500 group-hover/level:border-primary group-hover/level:bg-primary group-hover/level:text-primary-foreground"
+                                                :title="'Deploy'"
+                                            >
+                                                <ChevronRight
+                                                    class="h-3.5 w-3.5 transition-all duration-300 group-hover/level:translate-x-0.5"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </SpotlightCard>
+                            </Motion>
+                        </div>
+                    </div>
+
+                    <aside class="flex flex-col gap-8">
+                        <!-- Current Objective -->
                         <Motion
-                            v-for="(level, lIdx) in sortedLevels"
-                            :key="level.id"
-                            :initial="{ opacity: 0, y: 40 }"
-                            :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
-                            :in-view-options="{ once: true, margin: '-50px' }"
-                            :transition="{
-                                duration: 1,
-                                ease: [0.16, 1, 0.3, 1],
-                                delay: lIdx * 0.05,
-                            }"
-                            as="div"
+                            v-if="nextObjective"
+                            :initial="{ opacity: 0, x: 20 }"
+                            :animate="isBooted ? { opacity: 1, x: 0 } : {}"
+                            :transition="{ duration: 0.8, delay: 0.2 }"
                         >
                             <SpotlightCard
                                 customSize
-                                :as="Link"
-                                :href="`/games/tower-defense/play/${level.slug}`"
                                 :glowColor="
-                                    diffGlowColor(level.difficulty.slug)
+                                    diffGlowColor(nextObjective.difficulty.slug)
                                 "
                                 :spotlightSize="300"
-                                className="level-card relative group/level premium-hover bg-card/40 !flex flex-col h-full min-w-0 w-full overflow-hidden"
+                                className="sidebar-card relative group/sidebar premium-hover bg-card/40 flex flex-col"
                                 @mousemove="handleMouseMove"
                             >
                                 <div
                                     class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
                                 >
                                     <div
-                                        class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/level:opacity-70"
+                                        class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-70"
                                         :class="{
                                             'bg-emerald-500/30':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'green',
                                             'bg-blue-500/30':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'blue',
                                             'bg-orange-500/30':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'orange',
                                             'bg-red-500/30':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'red',
                                         }"
                                     ></div>
                                     <div
-                                        class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/level:opacity-50"
+                                        class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-50"
                                         :class="{
                                             'bg-emerald-400/25':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'green',
                                             'bg-blue-400/25':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'blue',
                                             'bg-orange-400/25':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'orange',
                                             'bg-red-400/25':
                                                 diffGlowColor(
-                                                    level.difficulty.slug,
+                                                    nextObjective.difficulty
+                                                        .slug,
                                                 ) === 'red',
                                         }"
                                     ></div>
                                     <div
-                                        class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/level:opacity-100"
+                                        class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
                                     ></div>
                                     <div
-                                        class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/level:opacity-100"
-                                    ></div>
-                                    <div
-                                        class="absolute inset-0 opacity-[0.03] transition-opacity group-hover/level:opacity-[0.05]"
-                                    >
-                                        <svg
-                                            class="h-full w-full"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="100%"
-                                            height="100%"
-                                        >
-                                            <defs>
-                                                <pattern
-                                                    :id="`level-grid-${level.id}`"
-                                                    width="15"
-                                                    height="15"
-                                                    patternUnits="userSpaceOnUse"
-                                                >
-                                                    <path
-                                                        d="M 15 0 L 0 0 0 15"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="0.5"
-                                                    />
-                                                </pattern>
-                                            </defs>
-                                            <rect
-                                                width="100%"
-                                                height="100%"
-                                                :fill="`url(#level-grid-${level.id})`"
-                                            />
-                                        </svg>
-                                    </div>
-                                    <div
-                                        class="group-hover/level:animate-scan-horizontal absolute inset-0 h-full w-32 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 transition-opacity group-hover/level:opacity-100"
+                                        class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
                                     ></div>
                                 </div>
-
-                                <div
-                                    class="relative z-10 flex flex-col gap-3 border-b border-border/40 p-5"
-                                >
+                                <div class="relative z-10 p-6">
                                     <div
-                                        class="flex min-w-0 items-center gap-3"
+                                        class="flex items-center gap-2 text-[10px] font-black tracking-[0.3em] text-primary uppercase"
                                     >
-                                        <div
-                                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 shadow-sm transition-colors group-hover/level:border-primary/40"
-                                        >
-                                            <span
-                                                class="text-sm font-black text-primary tabular-nums"
-                                                >{{ level.order }}</span
-                                            >
-                                        </div>
-                                        <div class="min-w-0 flex-1">
-                                            <h2
-                                                class="truncate text-sm font-black tracking-widest text-foreground uppercase transition-colors group-hover/level:text-primary"
-                                            >
-                                                {{ level.name }}
-                                            </h2>
-                                            <p
-                                                class="mt-0.5 truncate text-[9px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                                            >
-                                                {{ level.map.name }}
-                                            </p>
-                                        </div>
-                                        <div class="flex shrink-0 gap-0.5">
-                                            <Star
-                                                v-for="i in 3"
-                                                :key="i"
-                                                class="h-3 w-3 transition-all duration-500"
-                                                :class="
-                                                    i <=
-                                                    (level.progress?.stars || 0)
-                                                        ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)] group-hover/level:scale-110'
-                                                        : 'fill-muted-foreground/10 text-muted-foreground/50'
-                                                "
-                                            />
-                                        </div>
+                                        <Flame
+                                            class="h-3.5 w-3.5 animate-pulse"
+                                        />
+                                        Current Objective
                                     </div>
-                                </div>
-
-                                <div
-                                    class="relative z-10 flex flex-col gap-4 p-5"
-                                >
+                                    <h3
+                                        class="mt-3 text-xl font-black tracking-tight text-foreground uppercase"
+                                    >
+                                        {{ nextObjective.name }}
+                                    </h3>
                                     <p
-                                        class="line-clamp-2 h-8 text-[11px] leading-relaxed text-muted-foreground/80"
+                                        class="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground/80"
                                     >
-                                        {{ level.description }}
+                                        {{ nextObjective.description }}
                                     </p>
 
-                                    <div
-                                        class="flex items-center justify-between gap-2 border-t border-border/40 pt-4"
-                                    >
-                                        <div class="flex min-w-0 gap-3">
-                                            <div
-                                                class="flex min-w-0 flex-col gap-0.5"
-                                            >
-                                                <span
-                                                    class="font-mono text-[7px] font-bold tracking-widest text-muted-foreground/50 uppercase"
-                                                    >Difficulty</span
-                                                >
-                                                <span
-                                                    class="truncate text-[9px] font-black tracking-wider uppercase"
-                                                    :class="
-                                                        diffColor(
-                                                            level.difficulty
-                                                                .slug,
-                                                        )
-                                                    "
-                                                    >{{
-                                                        level.difficulty.name
-                                                    }}</span
-                                                >
-                                            </div>
-                                            <div class="flex flex-col gap-0.5">
-                                                <span
-                                                    class="font-mono text-[7px] font-bold tracking-widest text-muted-foreground/50 uppercase"
-                                                    >Waves</span
-                                                >
-                                                <span
-                                                    class="text-[9px] font-black tracking-wider text-foreground uppercase"
-                                                    >{{
-                                                        level.waves_count
-                                                    }}</span
-                                                >
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            v-if="level.progress?.wins"
-                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 transition-all duration-500 group-hover/level:border-emerald-500/50 group-hover/level:bg-emerald-500/20"
-                                            :title="'Cleared'"
+                                    <div class="mt-4 flex flex-wrap gap-2">
+                                        <span
+                                            class="rounded border px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase"
+                                            :class="
+                                                diffColor(
+                                                    nextObjective.difficulty
+                                                        .slug,
+                                                )
+                                            "
                                         >
-                                            <Swords
-                                                class="h-3.5 w-3.5 transition-transform duration-300 group-hover/level:scale-110"
-                                            />
-                                        </div>
-                                        <div
-                                            v-else
-                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary transition-all duration-500 group-hover/level:border-primary group-hover/level:bg-primary group-hover/level:text-primary-foreground"
-                                            :title="'Deploy'"
+                                            {{ nextObjective.difficulty.name }}
+                                        </span>
+                                        <span
+                                            class="flex items-center gap-1 rounded border border-border/40 bg-muted/30 px-2 py-0.5 text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
                                         >
-                                            <ChevronRight
-                                                class="h-3.5 w-3.5 transition-all duration-300 group-hover/level:translate-x-0.5"
-                                            />
-                                        </div>
+                                            <Zap class="h-3 w-3" />
+                                            {{ nextObjective.waves_count }}
+                                            Waves
+                                        </span>
                                     </div>
+
+                                    <Link
+                                        :href="`/games/tower-defense/play/${nextObjective.slug}`"
+                                        class="group/btn relative mt-6 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-4 py-3 text-[10px] font-black tracking-[0.2em] text-primary-foreground uppercase shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_35px_rgba(var(--primary-rgb),0.5)] active:scale-[0.98]"
+                                    >
+                                        <span class="relative z-10"
+                                            >Deploy Now</span
+                                        >
+                                        <ChevronRight
+                                            class="relative z-10 h-3 w-3 transition-transform group-hover/btn:translate-x-1"
+                                        />
+                                        <div
+                                            class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full"
+                                        ></div>
+                                    </Link>
                                 </div>
                             </SpotlightCard>
                         </Motion>
-                    </div>
-                </div>
 
-                <aside class="flex flex-col gap-8">
-                    <!-- Current Objective -->
-                    <Motion
-                        v-if="nextObjective"
-                        :initial="{ opacity: 0, x: 20 }"
-                        :animate="isBooted ? { opacity: 1, x: 0 } : {}"
-                        :transition="{ duration: 0.8, delay: 0.2 }"
-                    >
-                        <SpotlightCard
-                            customSize
-                            :glowColor="
-                                diffGlowColor(nextObjective.difficulty.slug)
-                            "
-                            :spotlightSize="300"
-                            className="sidebar-card relative group/sidebar premium-hover bg-card/40 flex flex-col"
-                            @mousemove="handleMouseMove"
+                        <!-- Tactical Guide -->
+                        <Motion
+                            :initial="{ opacity: 0, x: 20 }"
+                            :animate="isBooted ? { opacity: 1, x: 0 } : {}"
+                            :transition="{ duration: 0.8, delay: 0.3 }"
                         >
-                            <div
-                                class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+                            <SpotlightCard
+                                customSize
+                                glowColor="purple"
+                                :spotlightSize="300"
+                                className="sidebar-card relative group/sidebar premium-hover bg-card/40 flex flex-col"
+                                @mousemove="handleMouseMove"
                             >
                                 <div
-                                    class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-70"
-                                    :class="{
-                                        'bg-emerald-500/30':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'green',
-                                        'bg-blue-500/30':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'blue',
-                                        'bg-orange-500/30':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'orange',
-                                        'bg-red-500/30':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'red',
-                                    }"
-                                ></div>
-                                <div
-                                    class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-50"
-                                    :class="{
-                                        'bg-emerald-400/25':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'green',
-                                        'bg-blue-400/25':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'blue',
-                                        'bg-orange-400/25':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'orange',
-                                        'bg-red-400/25':
-                                            diffGlowColor(
-                                                nextObjective.difficulty.slug,
-                                            ) === 'red',
-                                    }"
-                                ></div>
-                                <div
-                                    class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
-                                ></div>
-                                <div
-                                    class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
-                                ></div>
-                            </div>
-                            <div class="relative z-10 p-6">
-                                <div
-                                    class="flex items-center gap-2 text-[10px] font-black tracking-[0.3em] text-primary uppercase"
+                                    class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
                                 >
-                                    <Flame class="h-3.5 w-3.5 animate-pulse" />
-                                    Current Objective
-                                </div>
-                                <h3
-                                    class="mt-3 text-xl font-black tracking-tight text-foreground uppercase"
-                                >
-                                    {{ nextObjective.name }}
-                                </h3>
-                                <p
-                                    class="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground/80"
-                                >
-                                    {{ nextObjective.description }}
-                                </p>
-
-                                <div class="mt-4 flex flex-wrap gap-2">
-                                    <span
-                                        class="rounded border px-2 py-0.5 text-[9px] font-bold tracking-widest uppercase"
-                                        :class="
-                                            diffColor(
-                                                nextObjective.difficulty.slug,
-                                            )
-                                        "
-                                    >
-                                        {{ nextObjective.difficulty.name }}
-                                    </span>
-                                    <span
-                                        class="flex items-center gap-1 rounded border border-border/40 bg-muted/30 px-2 py-0.5 text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
-                                    >
-                                        <Zap class="h-3 w-3" />
-                                        {{ nextObjective.waves_count }} Waves
-                                    </span>
-                                </div>
-
-                                <Link
-                                    :href="`/games/tower-defense/play/${nextObjective.slug}`"
-                                    class="group/btn relative mt-6 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-4 py-3 text-[10px] font-black tracking-[0.2em] text-primary-foreground uppercase shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_0_35px_rgba(var(--primary-rgb),0.5)] active:scale-[0.98]"
-                                >
-                                    <span class="relative z-10"
-                                        >Deploy Now</span
-                                    >
-                                    <ChevronRight
-                                        class="relative z-10 h-3 w-3 transition-transform group-hover/btn:translate-x-1"
-                                    />
                                     <div
-                                        class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover/btn:translate-x-full"
+                                        class="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-purple-500/30 opacity-40 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-70"
                                     ></div>
-                                </Link>
-                            </div>
-                        </SpotlightCard>
-                    </Motion>
-
-                    <!-- Tactical Guide -->
-                    <Motion
-                        :initial="{ opacity: 0, x: 20 }"
-                        :animate="isBooted ? { opacity: 1, x: 0 } : {}"
-                        :transition="{ duration: 0.8, delay: 0.3 }"
-                    >
-                        <SpotlightCard
-                            customSize
-                            glowColor="purple"
-                            :spotlightSize="300"
-                            className="sidebar-card relative group/sidebar premium-hover bg-card/40 flex flex-col"
-                            @mousemove="handleMouseMove"
-                        >
-                            <div
-                                class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
-                            >
-                                <div
-                                    class="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-purple-500/30 opacity-40 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-70"
-                                ></div>
-                                <div
-                                    class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-purple-400/25 opacity-25 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-50"
-                                ></div>
-                                <div
-                                    class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
-                                ></div>
-                                <div
-                                    class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
-                                ></div>
-                            </div>
-                            <div class="relative z-10 p-6">
-                                <div
-                                    class="mb-5 flex items-center gap-3 border-b border-border/40 pb-4"
-                                >
                                     <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/10 bg-primary/5"
-                                    >
-                                        <Target class="h-4 w-4 text-primary" />
-                                    </div>
-                                    <h3
-                                        class="text-[11px] font-black tracking-[0.3em] uppercase"
-                                    >
-                                        Tactical Guide
-                                    </h3>
+                                        class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-purple-400/25 opacity-25 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-50"
+                                    ></div>
+                                    <div
+                                        class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
+                                    ></div>
+                                    <div
+                                        class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
+                                    ></div>
                                 </div>
-                                <ul class="space-y-4">
-                                    <li
-                                        v-for="(tip, idx) in [
-                                            'Use setup time to strategically place and upgrade your core defenses.',
-                                            'Right-click tower slots to cancel or refund placements during the build phase.',
-                                            'Stars are earned based on core integrity. Maintain 90%+ HP for a 3-star clear.',
-                                            'Selling towers refunds 70% of total investment. Adapt your strategy mid-game.',
-                                        ]"
-                                        :key="idx"
-                                        class="flex gap-4"
+                                <div class="relative z-10 p-6">
+                                    <div
+                                        class="mb-5 flex items-center gap-3 border-b border-border/40 pb-4"
                                     >
                                         <div
-                                            class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/40"
-                                        />
-                                        <p
-                                            class="text-[11px] leading-relaxed font-medium text-muted-foreground/80"
+                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/10 bg-primary/5"
                                         >
-                                            {{ tip }}
-                                        </p>
-                                    </li>
-                                </ul>
-                            </div>
-                        </SpotlightCard>
-                    </Motion>
-
-                    <!-- Security Alert -->
-                    <Motion
-                        :initial="{ opacity: 0, x: 20 }"
-                        :animate="isBooted ? { opacity: 1, x: 0 } : {}"
-                        :transition="{ duration: 0.8, delay: 0.4 }"
-                    >
-                        <SpotlightCard
-                            customSize
-                            glowColor="green"
-                            :spotlightSize="300"
-                            className="sidebar-card relative group/sidebar premium-hover bg-card/40 flex flex-col p-6"
-                            @mousemove="handleMouseMove"
-                        >
-                            <div
-                                class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
-                            >
-                                <div
-                                    class="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-emerald-500/30 opacity-40 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-70"
-                                ></div>
-                                <div
-                                    class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-emerald-400/25 opacity-25 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-50"
-                                ></div>
-                                <div
-                                    class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
-                                ></div>
-                                <div
-                                    class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
-                                ></div>
-                            </div>
-                            <div class="relative z-10">
-                                <div
-                                    class="mb-4 flex items-center justify-between"
-                                >
-                                    <div class="flex items-center gap-2">
-                                        <Shield class="h-4 w-4 text-primary" />
+                                            <Target
+                                                class="h-4 w-4 text-primary"
+                                            />
+                                        </div>
                                         <h3
-                                            class="text-[10px] font-black tracking-[0.2em] uppercase"
+                                            class="text-[11px] font-black tracking-[0.3em] uppercase"
                                         >
-                                            Integrity Protocol
+                                            Tactical Guide
                                         </h3>
                                     </div>
+                                    <ul class="space-y-4">
+                                        <li
+                                            v-for="(tip, idx) in [
+                                                'Use setup time to strategically place and upgrade your core defenses.',
+                                                'Right-click tower slots to cancel or refund placements during the build phase.',
+                                                'Stars are earned based on core integrity. Maintain 90%+ HP for a 3-star clear.',
+                                                'Selling towers refunds 70% of total investment. Adapt your strategy mid-game.',
+                                            ]"
+                                            :key="idx"
+                                            class="flex gap-4"
+                                        >
+                                            <div
+                                                class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/40"
+                                            />
+                                            <p
+                                                class="text-[11px] leading-relaxed font-medium text-muted-foreground/80"
+                                            >
+                                                {{ tip }}
+                                            </p>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </SpotlightCard>
+                        </Motion>
+
+                        <!-- Security Alert -->
+                        <Motion
+                            :initial="{ opacity: 0, x: 20 }"
+                            :animate="isBooted ? { opacity: 1, x: 0 } : {}"
+                            :transition="{ duration: 0.8, delay: 0.4 }"
+                        >
+                            <SpotlightCard
+                                customSize
+                                glowColor="green"
+                                :spotlightSize="300"
+                                className="sidebar-card relative group/sidebar premium-hover bg-card/40 flex flex-col p-6"
+                                @mousemove="handleMouseMove"
+                            >
+                                <div
+                                    class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+                                >
                                     <div
-                                        class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+                                        class="absolute -top-16 -right-16 h-48 w-48 rounded-full bg-emerald-500/30 opacity-40 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-70"
+                                    ></div>
+                                    <div
+                                        class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-emerald-400/25 opacity-25 blur-3xl transition-opacity duration-700 group-hover/sidebar:opacity-50"
+                                    ></div>
+                                    <div
+                                        class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
+                                    ></div>
+                                    <div
+                                        class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/sidebar:opacity-100"
                                     ></div>
                                 </div>
-                                <p
-                                    class="font-mono text-[10px] leading-relaxed text-muted-foreground/60 italic"
-                                >
-                                    Mission progress is encrypted and synced
-                                    with the LSI core. Unauthorized modification
-                                    will result in session termination.
-                                </p>
-                            </div>
-                        </SpotlightCard>
-                    </Motion>
-                </aside>
+                                <div class="relative z-10">
+                                    <div
+                                        class="mb-4 flex items-center justify-between"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <Shield
+                                                class="h-4 w-4 text-primary"
+                                            />
+                                            <h3
+                                                class="text-[10px] font-black tracking-[0.2em] uppercase"
+                                            >
+                                                Integrity Protocol
+                                            </h3>
+                                        </div>
+                                        <div
+                                            class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+                                        ></div>
+                                    </div>
+                                    <p
+                                        class="font-mono text-[10px] leading-relaxed text-muted-foreground/60 italic"
+                                    >
+                                        Mission progress is encrypted and synced
+                                        with the LSI core. Unauthorized
+                                        modification will result in session
+                                        termination.
+                                    </p>
+                                </div>
+                            </SpotlightCard>
+                        </Motion>
+                    </aside>
+                </div>
             </div>
-        </div>
         </template>
     </AppLayout>
 </template>

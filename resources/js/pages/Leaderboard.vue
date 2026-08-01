@@ -44,28 +44,50 @@ defineProps<{
 
     <AppLayout :breadcrumbs="[{ title: 'Leaderboard', href: '/leaderboard' }]">
         <div class="w-full space-y-6 p-4 sm:p-6 lg:p-8">
-            <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div
+                class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+            >
                 <div>
-                    <Link href="/dashboard" class="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
+                    <Link
+                        href="/dashboard"
+                        class="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
+                    >
                         <ArrowLeft class="h-4 w-4" />
                         Back to dashboard
                     </Link>
                     <div class="flex items-center gap-3">
-                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-400">
+                        <div
+                            class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-400"
+                        >
                             <Trophy class="h-5 w-5" />
                         </div>
                         <div>
-                            <p class="text-xs font-black tracking-[0.2em] text-amber-400 uppercase">Compete and grow</p>
-                            <h1 class="text-3xl font-black tracking-tight sm:text-4xl">Leaderboard</h1>
+                            <p
+                                class="text-xs font-black tracking-[0.2em] text-amber-400 uppercase"
+                            >
+                                Compete and grow
+                            </p>
+                            <h1
+                                class="text-3xl font-black tracking-tight sm:text-4xl"
+                            >
+                                Leaderboard
+                            </h1>
                         </div>
                     </div>
-                    <p class="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                        See how you rank in each section, track XP progress, and learn from the students leading the season.
+                    <p
+                        class="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                    >
+                        See how you rank in each section, track XP progress, and
+                        learn from the students leading the season.
                     </p>
                 </div>
             </div>
 
-            <SpotlightCard customSize glowColor="yellow" className="bg-card/40 p-4 sm:p-6">
+            <SpotlightCard
+                customSize
+                glowColor="yellow"
+                className="bg-card/40 p-4 sm:p-6"
+            >
                 <ImprovedLeaderboard
                     :section-leaderboards="sectionLeaderboards"
                     :active-season-name="activeSeasonName"

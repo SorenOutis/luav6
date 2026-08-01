@@ -131,10 +131,9 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                     />
                     <Command v-else class="h-5 w-5 lg:h-6 lg:w-6" />
                 </div>
-                <span
-                    class="text-sm font-semibold text-foreground"
-                    >{{ brandName }}</span
-                >
+                <span class="text-sm font-semibold text-foreground">{{
+                    brandName
+                }}</span>
             </Link>
         </Motion>
 
@@ -181,7 +180,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                 <!-- Mobile menu trigger -->
                 <SheetTrigger as-child>
                     <button
-                        class="lg:hidden rounded-lg p-2 text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground"
+                        class="rounded-lg p-2 text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground lg:hidden"
                         aria-label="Open Menu"
                     >
                         <Menu class="h-5 w-5" />
@@ -190,15 +189,19 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 
                 <!-- Mobile menu panel -->
                 <SheetContent side="right" class="w-[280px] p-0">
-                    <div class="flex flex-col h-full">
+                    <div class="flex h-full flex-col">
                         <!-- Header with close -->
-                        <div class="flex items-center justify-between border-b border-border/10 px-5 py-4">
+                        <div
+                            class="flex items-center justify-between border-b border-border/10 px-5 py-4"
+                        >
                             <Link
                                 href="/"
                                 class="flex items-center gap-2.5"
                                 @click="closeMobileMenu"
                             >
-                                <div class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-foreground/5">
+                                <div
+                                    class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-foreground/5"
+                                >
                                     <img
                                         v-if="brandLogoUrl"
                                         :src="brandLogoUrl"
@@ -207,7 +210,9 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                     />
                                     <Command v-else class="h-4 w-4" />
                                 </div>
-                                <span class="text-sm font-semibold">{{ brandName }}</span>
+                                <span class="text-sm font-semibold">{{
+                                    brandName
+                                }}</span>
                             </Link>
                             <SheetClose as-child>
                                 <button
@@ -229,7 +234,10 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                 class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
                             >
                                 <span>{{ item.label }}</span>
-                                <span class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70">{{ item.preview }}</span>
+                                <span
+                                    class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70"
+                                    >{{ item.preview }}</span
+                                >
                             </a>
                             <Link
                                 href="/about"
@@ -237,7 +245,10 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                 class="group flex flex-col rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
                             >
                                 <span>About</span>
-                                <span class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70">Learn about the LSI platform and team</span>
+                                <span
+                                    class="mt-0.5 text-xs text-muted-foreground/50 transition-colors group-hover:text-muted-foreground/70"
+                                    >Learn about the LSI platform and team</span
+                                >
                             </Link>
                         </div>
 
@@ -279,7 +290,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <template v-if="auth.user">
                 <Link
                     :href="dashboard()"
-                    class="hidden lg:inline-flex items-center gap-2 rounded-lg bg-foreground/5 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+                    class="hidden items-center gap-2 rounded-lg bg-foreground/5 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary/10 hover:text-primary lg:inline-flex"
                 >
                     Dashboard
                 </Link>
@@ -287,14 +298,14 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             <template v-else>
                 <Link
                     :href="login()"
-                    class="hidden lg:inline-flex text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    class="hidden text-sm font-medium text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"
                 >
                     Login
                 </Link>
                 <Link
                     v-if="canRegister"
                     :href="register()"
-                    class="hidden lg:inline-flex rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-primary"
+                    class="hidden rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-primary lg:inline-flex"
                 >
                     Get Started
                 </Link>
@@ -305,7 +316,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 
 <style scoped>
 /* Hide the built-in Sheet close button — we use our own in the menu header */
-:deep([data-slot="sheet-content"] [data-dialog-close]) {
+:deep([data-slot='sheet-content'] [data-dialog-close]) {
     display: none;
 }
 </style>

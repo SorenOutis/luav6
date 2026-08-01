@@ -6,10 +6,7 @@ import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    DialogDescription,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';

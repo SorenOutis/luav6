@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import {
-    Calendar,
-    Shield,
-    Trophy,
-    LayoutGrid,
-    Zap,
-} from 'lucide-vue-next';
+import { Calendar, Shield, Trophy, LayoutGrid, Zap } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -215,58 +209,64 @@ const formatDelta = (value: number) => {
                                     :key="item.id"
                                     class="group rounded-xl border border-border/50 bg-card p-3 shadow-sm transition-colors hover:bg-muted/30"
                                 >
-                                <div
-                                    class="flex items-start justify-between gap-2"
-                                >
-                                    <div class="space-y-1">
-                                        <h4
-                                            class="text-xs font-black tracking-widest text-primary uppercase"
+                                    <div
+                                        class="flex items-start justify-between gap-2"
+                                    >
+                                        <div class="space-y-1">
+                                            <h4
+                                                class="text-xs font-black tracking-widest text-primary uppercase"
+                                            >
+                                                {{ item.reason }}
+                                            </h4>
+                                            <p
+                                                class="line-clamp-2 text-xs leading-tight font-bold"
+                                            >
+                                                {{ item.description }}
+                                            </p>
+                                            <p
+                                                v-if="item.section"
+                                                class="text-[10px] font-bold text-muted-foreground"
+                                            >
+                                                {{ item.section }}
+                                            </p>
+                                            <p
+                                                class="text-[10px] font-medium text-muted-foreground opacity-60"
+                                                :title="item.full_date"
+                                            >
+                                                {{ item.date }}
+                                            </p>
+                                        </div>
+                                        <div
+                                            class="flex flex-col items-end gap-1"
                                         >
-                                            {{ item.reason }}
-                                        </h4>
-                                        <p
-                                            class="line-clamp-2 text-xs leading-tight font-bold"
-                                        >
-                                            {{ item.description }}
-                                        </p>
-                                        <p
-                                            v-if="item.section"
-                                            class="text-[10px] font-bold text-muted-foreground"
-                                        >
-                                            {{ item.section }}
-                                        </p>
-                                        <p
-                                            class="text-[10px] font-medium text-muted-foreground opacity-60"
-                                            :title="item.full_date"
-                                        >
-                                            {{ item.date }}
-                                        </p>
+                                            <span
+                                                class="flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary"
+                                                :class="{
+                                                    'bg-red-500/10 text-red-500':
+                                                        item.amount_xp < 0,
+                                                }"
+                                            >
+                                                <Zap class="h-2.5 w-2.5" />
+                                                {{
+                                                    formatDelta(item.amount_xp)
+                                                }}
+                                            </span>
+                                            <span
+                                                class="flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-500"
+                                                :class="{
+                                                    'bg-red-500/10 text-red-500':
+                                                        item.amount_points < 0,
+                                                }"
+                                            >
+                                                <Trophy class="h-2.5 w-2.5" />
+                                                {{
+                                                    formatDelta(
+                                                        item.amount_points,
+                                                    )
+                                                }}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div class="flex flex-col items-end gap-1">
-                                        <span
-                                            class="flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary"
-                                            :class="{
-                                                'bg-red-500/10 text-red-500':
-                                                    item.amount_xp < 0,
-                                            }"
-                                        >
-                                            <Zap class="h-2.5 w-2.5" />
-                                            {{ formatDelta(item.amount_xp) }}
-                                        </span>
-                                        <span
-                                            class="flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-500"
-                                            :class="{
-                                                'bg-red-500/10 text-red-500':
-                                                    item.amount_points < 0,
-                                            }"
-                                        >
-                                            <Trophy class="h-2.5 w-2.5" />
-                                            {{
-                                                formatDelta(item.amount_points)
-                                            }}
-                                        </span>
-                                    </div>
-                                </div>
                                 </div>
                             </template>
                             <div
@@ -333,59 +333,63 @@ const formatDelta = (value: number) => {
                                     :key="item.id"
                                     class="rounded-xl border border-border/50 bg-card p-4 shadow-sm transition-colors hover:bg-muted/30"
                                 >
-                                <div
-                                    class="flex items-start justify-between gap-3"
-                                >
-                                    <div class="space-y-1">
-                                        <h4
-                                            class="text-xs font-black tracking-widest text-primary uppercase"
-                                        >
-                                            {{ item.reason }}
-                                        </h4>
-                                        <p
-                                            class="text-sm leading-tight font-bold"
-                                        >
-                                            {{ item.description }}
-                                        </p>
-                                        <p
-                                            v-if="item.section"
-                                            class="text-[10px] font-bold text-muted-foreground"
-                                        >
-                                            {{ item.section }}
-                                        </p>
-                                        <p
-                                            class="text-[10px] font-medium text-muted-foreground opacity-60"
-                                        >
-                                            {{ item.date }}
-                                        </p>
-                                    </div>
                                     <div
-                                        class="flex shrink-0 flex-col items-end gap-1.5"
+                                        class="flex items-start justify-between gap-3"
                                     >
-                                        <span
-                                            class="flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs font-black text-primary"
-                                            :class="{
-                                                'bg-red-500/10 text-red-500':
-                                                    item.amount_xp < 0,
-                                            }"
+                                        <div class="space-y-1">
+                                            <h4
+                                                class="text-xs font-black tracking-widest text-primary uppercase"
+                                            >
+                                                {{ item.reason }}
+                                            </h4>
+                                            <p
+                                                class="text-sm leading-tight font-bold"
+                                            >
+                                                {{ item.description }}
+                                            </p>
+                                            <p
+                                                v-if="item.section"
+                                                class="text-[10px] font-bold text-muted-foreground"
+                                            >
+                                                {{ item.section }}
+                                            </p>
+                                            <p
+                                                class="text-[10px] font-medium text-muted-foreground opacity-60"
+                                            >
+                                                {{ item.date }}
+                                            </p>
+                                        </div>
+                                        <div
+                                            class="flex shrink-0 flex-col items-end gap-1.5"
                                         >
-                                            <Zap class="h-3 w-3" />
-                                            {{ formatDelta(item.amount_xp) }}
-                                        </span>
-                                        <span
-                                            class="flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-xs font-black text-amber-500"
-                                            :class="{
-                                                'bg-red-500/10 text-red-500':
-                                                    item.amount_points < 0,
-                                            }"
-                                        >
-                                            <Trophy class="h-3 w-3" />
-                                            {{
-                                                formatDelta(item.amount_points)
-                                            }}
-                                        </span>
+                                            <span
+                                                class="flex items-center gap-1 rounded bg-primary/10 px-2 py-1 text-xs font-black text-primary"
+                                                :class="{
+                                                    'bg-red-500/10 text-red-500':
+                                                        item.amount_xp < 0,
+                                                }"
+                                            >
+                                                <Zap class="h-3 w-3" />
+                                                {{
+                                                    formatDelta(item.amount_xp)
+                                                }}
+                                            </span>
+                                            <span
+                                                class="flex items-center gap-1 rounded bg-amber-500/10 px-2 py-1 text-xs font-black text-amber-500"
+                                                :class="{
+                                                    'bg-red-500/10 text-red-500':
+                                                        item.amount_points < 0,
+                                                }"
+                                            >
+                                                <Trophy class="h-3 w-3" />
+                                                {{
+                                                    formatDelta(
+                                                        item.amount_points,
+                                                    )
+                                                }}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
                                 </div>
                             </template>
                             <div

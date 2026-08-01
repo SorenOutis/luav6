@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    X,
-    Plus,
-    Megaphone,
-    ArrowRight,
-    RefreshCw,
-} from 'lucide-vue-next';
+import { X, Plus, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
@@ -47,7 +41,11 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits(['close-announcement', 'refresh', 'open-section-modal']);
+const emit = defineEmits([
+    'close-announcement',
+    'refresh',
+    'open-section-modal',
+]);
 
 const animatedLevel = useNumberAnimation(() => props.userStats.level);
 const animatedXP = useNumberAnimation(() => props.userStats.currentXP);
@@ -143,12 +141,15 @@ const xpPercentage = computed(() => {
         <div class="relative flex flex-col justify-center sm:px-2 lg:px-4">
             <div
                 class="relative flex flex-col justify-between gap-3 lg:flex-row lg:items-end lg:gap-10"
-            >                    <!-- Left side: Greetings + Integrated Progress | Right: Profile Picture (mobile) -->
+            >
+                <!-- Left side: Greetings + Integrated Progress | Right: Profile Picture (mobile) -->
                 <div
                     class="flex w-full flex-row items-center gap-2 sm:gap-6 lg:w-auto lg:items-center lg:gap-10"
                 >
                     <!-- Profile Picture with Integrated Level Badge -->
-                    <div class="group/avatar relative shrink-0 order-2 lg:order-1">
+                    <div
+                        class="group/avatar relative order-2 shrink-0 lg:order-1"
+                    >
                         <div class="relative">
                             <!-- Level Badge integrated into Avatar -->
                             <div
@@ -179,10 +180,10 @@ const xpPercentage = computed(() => {
                                     v-if="userAvatar"
                                     :src="userAvatar"
                                     :alt="userName"
-                                    class="object-cover aspect-square"
+                                    class="aspect-square object-cover"
                                 />
                                 <AvatarFallback
-                                    class="bg-primary/5 text-sm font-black text-primary sm:text-xl lg:text-2xl flex items-center justify-center"
+                                    class="flex items-center justify-center bg-primary/5 text-sm font-black text-primary sm:text-xl lg:text-2xl"
                                 >
                                     {{ getInitials(userName) }}
                                 </AvatarFallback>
@@ -190,7 +191,7 @@ const xpPercentage = computed(() => {
                         </div>
                     </div>
 
-                    <div class="min-w-0 flex-1 order-1 lg:order-2">
+                    <div class="order-1 min-w-0 flex-1 lg:order-2">
                         <div
                             class="flex flex-wrap items-center gap-1.5 text-[7px] font-black tracking-[0.1em] text-muted-foreground/40 uppercase sm:text-[10px] sm:tracking-[0.2em] lg:text-xs lg:tracking-[0.3em]"
                         >
@@ -203,7 +204,7 @@ const xpPercentage = computed(() => {
                                     :class="{ 'animate-spin': isRefreshing }"
                                 />
                                 <span
-                                    class="hidden sm:inline text-[6px] whitespace-nowrap tabular-nums sm:text-[9px] lg:text-xs"
+                                    class="hidden text-[6px] whitespace-nowrap tabular-nums sm:inline sm:text-[9px] lg:text-xs"
                                     >{{
                                         lastSyncTime
                                             ? lastSyncTime.toLocaleTimeString(
@@ -239,7 +240,9 @@ const xpPercentage = computed(() => {
                         </div>
 
                         <!-- Integrated XP Bar & Mini Stats -->
-                        <div class="mt-1.5 w-full max-w-sm space-y-0.5 sm:mt-3 sm:space-y-1.5 lg:max-w-lg lg:space-y-3">
+                        <div
+                            class="mt-1.5 w-full max-w-sm space-y-0.5 sm:mt-3 sm:space-y-1.5 lg:max-w-lg lg:space-y-3"
+                        >
                             <div
                                 class="flex items-center justify-between text-[6px] font-black tracking-widest text-muted-foreground/40 uppercase sm:text-[8px] lg:text-xs"
                             >
@@ -307,7 +310,9 @@ const xpPercentage = computed(() => {
                                 @click="emit('open-section-modal')"
                                 class="group inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[8px] font-black tracking-widest text-primary uppercase backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm active:scale-95"
                             >
-                                <Plus class="h-3 w-3 shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+                                <Plus
+                                    class="h-3 w-3 shrink-0 transition-transform duration-300 group-hover:rotate-90"
+                                />
                                 Join Section
                             </button>
                         </div>
@@ -315,9 +320,7 @@ const xpPercentage = computed(() => {
                 </div>
 
                 <!-- Desktop: Add Section CTA -->
-                <div
-                    class="mb-1 hidden shrink-0 self-end lg:block"
-                >
+                <div class="mb-1 hidden shrink-0 self-end lg:block">
                     <button
                         @click="emit('open-section-modal')"
                         class="group relative flex items-center gap-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5 px-4 py-2 text-[10px] font-black tracking-widest text-primary uppercase backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm active:scale-95"
@@ -327,7 +330,9 @@ const xpPercentage = computed(() => {
                             class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"
                         ></div>
 
-                        <Plus class="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:rotate-90" />
+                        <Plus
+                            class="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:rotate-90"
+                        />
                         Join Section
                     </button>
                 </div>

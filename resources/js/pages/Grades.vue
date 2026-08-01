@@ -17,7 +17,14 @@ import {
     Loader2,
     RefreshCw,
 } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
@@ -90,7 +97,9 @@ const {
 } = useStaleWhileRevalidate<SubjectGrade[]>(
     'grades-data',
     async () => {
-        const { data } = await axios.get<{ subjectGrades: SubjectGrade[] }>('/api/grades');
+        const { data } = await axios.get<{ subjectGrades: SubjectGrade[] }>(
+            '/api/grades',
+        );
         return data.subjectGrades;
     },
     30 * 1000, // 30-second TTL — grades are admin-entered and should reflect quickly
@@ -129,16 +138,14 @@ const averageSemesterGrade = computed(() => {
 
     if (validGrades.length === 0) return 0;
     return Math.round(
-        validGrades.reduce((sum, grade) => sum + grade, 0) /
-            validGrades.length,
+        validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length,
     );
 });
 
 const completedCount = computed(
     () =>
-        filteredSubjectGrades.value.filter(
-            (sg) => sg.semesterGrade !== null,
-        ).length,
+        filteredSubjectGrades.value.filter((sg) => sg.semesterGrade !== null)
+            .length,
 );
 
 const totalFilteredCount = computed(() => filteredSubjectGrades.value.length);
@@ -261,9 +268,7 @@ const STORAGE_KEY = 'grades-expanded-periods';
 const expandedPeriods = ref<string[]>(
     (() => {
         try {
-            return JSON.parse(
-                sessionStorage.getItem(STORAGE_KEY) ?? '[]',
-            );
+            return JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '[]');
         } catch {
             return [];
         }
@@ -283,9 +288,7 @@ const togglePeriod = (key: string) => {
     const wasExpanded = expandedPeriods.value.includes(key);
 
     if (wasExpanded) {
-        expandedPeriods.value = expandedPeriods.value.filter(
-            (k) => k !== key,
-        );
+        expandedPeriods.value = expandedPeriods.value.filter((k) => k !== key);
         // Clear any pending hint timer for collapsed periods
         if (scrollHintTimers.value[key]) {
             clearTimeout(scrollHintTimers.value[key]);
@@ -296,9 +299,7 @@ const togglePeriod = (key: string) => {
         expandedPeriods.value = [...expandedPeriods.value, key];
         // Scroll period content to top on expand so user sees first subjects
         nextTick(() => {
-            const el = document.querySelector(
-                `[data-period-key="${key}"]`,
-            );
+            const el = document.querySelector(`[data-period-key="${key}"]`);
             if (el) el.scrollTop = 0;
         });
         // Clear any previous timer before setting a new one
@@ -324,19 +325,14 @@ watch(searchQuery, (query) => {
             // Mobile period keys (prefixed per subject)
             for (const subject of group.subjects) {
                 for (const period of group.periods) {
-                    keys.push(
-                        'm-' + subject.subject + '-' + period.key,
-                    );
+                    keys.push('m-' + subject.subject + '-' + period.key);
                 }
             }
         }
         expandedPeriods.value = keys;
         // Show scroll hints for desktop periods in groups with many subjects
         for (const group of gradeGroups.value) {
-            if (
-                group.isSeniorHigh ||
-                group.subjects.length <= MAX_VISIBLE_ROWS
-            )
+            if (group.isSeniorHigh || group.subjects.length <= MAX_VISIBLE_ROWS)
                 continue;
             for (const period of group.periods) {
                 const key = period.key;
@@ -500,7 +496,9 @@ const exportPdf = async () => {
 // ── Animations ───────────────────────────────────────────────────
 // Pending scroll-hint timers would otherwise fire into a destroyed component.
 onBeforeUnmount(() => {
-    Object.values(scrollHintTimers.value).forEach((timer) => clearTimeout(timer));
+    Object.values(scrollHintTimers.value).forEach((timer) =>
+        clearTimeout(timer),
+    );
     scrollHintTimers.value = {};
 });
 
@@ -565,9 +563,7 @@ onMounted(() => {
                 class="animate-section mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
             >
                 <div>
-                    <h1 class="text-3xl font-bold tracking-tight">
-                        My Grades
-                    </h1>
+                    <h1 class="text-3xl font-bold tracking-tight">My Grades</h1>
                     <p class="mt-2 text-muted-foreground">
                         View your academic performance across all Enrolled
                         Subjects.
@@ -576,7 +572,7 @@ onMounted(() => {
                 <div class="flex items-center gap-3">
                     <div class="relative w-full sm:w-56 lg:w-72">
                         <Search
-                            class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
                         <Input
                             v-model="searchQuery"
@@ -601,22 +597,25 @@ onMounted(() => {
                 v-if="isLoading"
                 class="animate-section mb-8 flex flex-col items-center justify-center py-16"
             >
-                <Loader2 class="mb-4 h-10 w-10 animate-spin text-muted-foreground" />
+                <Loader2
+                    class="mb-4 h-10 w-10 animate-spin text-muted-foreground"
+                />
                 <p class="text-muted-foreground">Loading your grades...</p>
             </div>
 
             <!-- Error state -->
-            <div
-                v-else-if="fetchError"
-                class="animate-section mb-8"
-            >
+            <div v-else-if="fetchError" class="animate-section mb-8">
                 <Card class="border-destructive/30">
                     <CardContent
                         class="flex flex-col items-center justify-center py-12"
                     >
                         <AlertCircle class="mb-4 h-12 w-12 text-destructive" />
-                        <h3 class="text-lg font-semibold">Something went wrong</h3>
-                        <p class="mt-2 max-w-md text-center text-muted-foreground">
+                        <h3 class="text-lg font-semibold">
+                            Something went wrong
+                        </h3>
+                        <p
+                            class="mt-2 max-w-md text-center text-muted-foreground"
+                        >
                             {{ fetchError }}
                         </p>
                         <Button
@@ -717,7 +716,11 @@ onMounted(() => {
 
             <!-- Empty State -->
             <Card
-                v-if="!isLoading && filteredSubjectGrades.length === 0 && !searchQuery"
+                v-if="
+                    !isLoading &&
+                    filteredSubjectGrades.length === 0 &&
+                    !searchQuery
+                "
                 class="animate-section border-dashed"
             >
                 <CardContent
@@ -757,21 +760,16 @@ onMounted(() => {
                     class="animate-group mb-6"
                 >
                     <CardHeader>
-                        <div
-                            class="flex items-start justify-between gap-4"
-                        >
+                        <div class="flex items-start justify-between gap-4">
                             <div>
-                                <CardTitle
-                                    class="flex items-center gap-2"
-                                >
+                                <CardTitle class="flex items-center gap-2">
                                     <GraduationCap
                                         class="h-5 w-5 text-primary"
                                     />
                                     {{ group.label }} Performance
                                 </CardTitle>
                                 <CardDescription>
-                                    Grades by subject across all grading
-                                    periods
+                                    Grades by subject across all grading periods
                                 </CardDescription>
                             </div>
                             <Button
@@ -789,10 +787,7 @@ onMounted(() => {
                                             : ''
                                     "
                                 />
-                                <Transition
-                                    name="fade"
-                                    mode="out-in"
-                                >
+                                <Transition name="fade" mode="out-in">
                                     <span
                                         :key="
                                             isGroupAllExpanded(group)
@@ -830,23 +825,24 @@ onMounted(() => {
                                         >
                                             {{ subjectGrade.subject }}
                                         </CardTitle>
-                                        <Badge variant="outline" class="text-[10px]">
+                                        <Badge
+                                            variant="outline"
+                                            class="text-[10px]"
+                                        >
                                             {{ subjectGrade.section?.name }}
                                         </Badge>
                                     </div>
                                 </CardHeader>
                                 <CardContent class="divide-y p-0">
                                     <!-- Senior High: semesters with quarters -->
-                                    <template
-                                        v-if="group.isSeniorHigh"
-                                    >
+                                    <template v-if="group.isSeniorHigh">
                                         <div
                                             v-for="semester in subjectGrade.semesterGrades"
                                             :key="semester.key"
                                             class="px-4 py-3"
                                         >
                                             <div
-                                                class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                                                class="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
                                             >
                                                 {{ semester.label }}
                                             </div>
@@ -865,7 +861,10 @@ onMounted(() => {
                                                     class="flex flex-1 items-center gap-2"
                                                 >
                                                     <Progress
-                                                        :value="quarter.grade.percentage"
+                                                        :value="
+                                                            quarter.grade
+                                                                .percentage
+                                                        "
                                                         class="h-1.5 flex-1"
                                                         :indicator-class="
                                                             progressColor(
@@ -893,9 +892,7 @@ onMounted(() => {
                                                     v-else
                                                     class="flex items-center gap-1 text-muted-foreground"
                                                 >
-                                                    <Clock
-                                                        class="h-3 w-3"
-                                                    />
+                                                    <Clock class="h-3 w-3" />
                                                     <span class="text-xs"
                                                         >Pending</span
                                                     >
@@ -904,7 +901,8 @@ onMounted(() => {
                                             <div
                                                 class="mt-1 flex items-center justify-between border-t pt-2 text-xs"
                                             >
-                                                <span class="text-muted-foreground"
+                                                <span
+                                                    class="text-muted-foreground"
                                                     >Semester Grade</span
                                                 >
                                                 <span
@@ -946,8 +944,7 @@ onMounted(() => {
                                         <div class="divide-y">
                                             <div
                                                 v-for="(
-                                                    period,
-                                                    pIdx,
+                                                    period, pIdx
                                                 ) in group.periods"
                                                 :key="period.key"
                                             >
@@ -955,8 +952,7 @@ onMounted(() => {
                                                     @click="
                                                         togglePeriod(
                                                             'm-' +
-                                                                subjectGrade
-                                                                    .subject +
+                                                                subjectGrade.subject +
                                                                 '-' +
                                                                 period.key,
                                                         )
@@ -964,8 +960,7 @@ onMounted(() => {
                                                     :aria-expanded="
                                                         expandedPeriods.includes(
                                                             'm-' +
-                                                                subjectGrade
-                                                                    .subject +
+                                                                subjectGrade.subject +
                                                                 '-' +
                                                                 period.key,
                                                         )
@@ -983,9 +978,7 @@ onMounted(() => {
                                                         <span
                                                             class="text-sm font-medium"
                                                         >
-                                                            {{
-                                                                period.label
-                                                            }}
+                                                            {{ period.label }}
                                                         </span>
                                                         <span
                                                             v-if="
@@ -1008,8 +1001,7 @@ onMounted(() => {
                                                         :class="
                                                             expandedPeriods.includes(
                                                                 'm-' +
-                                                                    subjectGrade
-                                                                        .subject +
+                                                                    subjectGrade.subject +
                                                                     '-' +
                                                                     period.key,
                                                             )
@@ -1021,8 +1013,7 @@ onMounted(() => {
                                                 <div
                                                     :data-period-key="
                                                         'm-' +
-                                                        subjectGrade
-                                                            .subject +
+                                                        subjectGrade.subject +
                                                         '-' +
                                                         period.key
                                                     "
@@ -1030,29 +1021,28 @@ onMounted(() => {
                                                         'transition-all duration-300 ease-out',
                                                         expandedPeriods.includes(
                                                             'm-' +
-                                                                subjectGrade
-                                                                    .subject +
+                                                                subjectGrade.subject +
                                                                 '-' +
                                                                 period.key,
                                                         )
-                                                ? 'border-t px-4 py-3 opacity-100 overflow-y-auto grades-period-scroll relative'
-                                                : 'border-t-0 px-0 py-0 opacity-0 overflow-hidden',
-                                        ]"
-                                        :style="{
-                                            maxHeight: expandedPeriods.includes(
-                                                'm-' +
-                                                    subjectGrade
-                                                        .subject +
-                                                    '-' +
-                                                    period.key,
-                                            )
-                                                ? periodMobileHeight() +
-                                                  'px'
-                                                : '0px',
-                                        }"
-                                    >
-                                        <div
-                                            v-if="
+                                                            ? 'grades-period-scroll relative overflow-y-auto border-t px-4 py-3 opacity-100'
+                                                            : 'overflow-hidden border-t-0 px-0 py-0 opacity-0',
+                                                    ]"
+                                                    :style="{
+                                                        maxHeight:
+                                                            expandedPeriods.includes(
+                                                                'm-' +
+                                                                    subjectGrade.subject +
+                                                                    '-' +
+                                                                    period.key,
+                                                            )
+                                                                ? periodMobileHeight() +
+                                                                  'px'
+                                                                : '0px',
+                                                    }"
+                                                >
+                                                    <div
+                                                        v-if="
                                                             getPeriodGrade(
                                                                 subjectGrade,
                                                                 period.key,
@@ -1074,16 +1064,14 @@ onMounted(() => {
                                                                     getPeriodGrade(
                                                                         subjectGrade,
                                                                         period.key,
-                                                                    )!
-                                                                        .score
+                                                                    )!.score
                                                                 }}
                                                                 /
                                                                 {{
                                                                     getPeriodGrade(
                                                                         subjectGrade,
                                                                         period.key,
-                                                                    )!
-                                                                        .maxScore
+                                                                    )!.maxScore
                                                                 }}
                                                             </span>
                                                         </div>
@@ -1158,8 +1146,7 @@ onMounted(() => {
                                                                     getPeriodGrade(
                                                                         subjectGrade,
                                                                         period.key,
-                                                                    )!
-                                                                        .remarks
+                                                                    )!.remarks
                                                                 }}
                                                             </span>
                                                         </div>
@@ -1176,7 +1163,7 @@ onMounted(() => {
                                                         >
                                                     </div>
                                                     <div
-                                                        class="sticky bottom-0 -mx-4 -mb-3 h-6 bg-gradient-to-t from-card to-transparent pointer-events-none"
+                                                        class="pointer-events-none sticky bottom-0 -mx-4 -mb-3 h-6 bg-gradient-to-t from-card to-transparent"
                                                     ></div>
                                                 </div>
                                             </div>
@@ -1188,7 +1175,7 @@ onMounted(() => {
                                         class="flex items-center justify-between bg-muted/20 px-4 py-3"
                                     >
                                         <span
-                                            class="text-xs font-semibold uppercase tracking-wider"
+                                            class="text-xs font-semibold tracking-wider uppercase"
                                         >
                                             {{
                                                 group.isSeniorHigh
@@ -1234,9 +1221,7 @@ onMounted(() => {
                                             class="flex items-center gap-1 text-muted-foreground"
                                         >
                                             <Clock class="h-3 w-3" />
-                                            <span class="text-xs"
-                                                >Pending</span
-                                            >
+                                            <span class="text-xs">Pending</span>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -1248,21 +1233,18 @@ onMounted(() => {
                             <!-- Senior High: Separate tables per semester -->
                             <template v-if="group.isSeniorHigh">
                                 <div
-                                    v-for="semester in group.subjects[0]?.semesterGrades ?? []"
+                                    v-for="semester in group.subjects[0]
+                                        ?.semesterGrades ?? []"
                                     :key="semester.key"
                                     class="mb-6 last:mb-0"
                                 >
-                                    <div
-                                        class="mb-3 flex items-center gap-2"
-                                    >
+                                    <div class="mb-3 flex items-center gap-2">
                                         <span
                                             class="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary"
                                         >
                                             {{ semester.label }}
                                         </span>
-                                        <div
-                                            class="h-px flex-1 bg-border"
-                                        />
+                                        <div class="h-px flex-1 bg-border" />
                                     </div>
                                     <table class="w-full">
                                         <thead>
@@ -1295,9 +1277,7 @@ onMounted(() => {
                                                 <td
                                                     class="sticky left-0 z-10 bg-card p-3 text-sm font-medium hover:bg-muted/50"
                                                 >
-                                                    {{
-                                                        subjectGrade.subject
-                                                    }}
+                                                    {{ subjectGrade.subject }}
                                                 </td>
                                                 <td
                                                     v-for="quarter in semester.quarters"
@@ -1341,8 +1321,7 @@ onMounted(() => {
                                                                     subjectGrade,
                                                                     semester.key,
                                                                     quarter.key,
-                                                                )!
-                                                                    .percentage
+                                                                )!.percentage
                                                             "
                                                             class="h-1 w-14"
                                                             :indicator-class="
@@ -1372,8 +1351,7 @@ onMounted(() => {
                                                                     subjectGrade,
                                                                     semester.key,
                                                                     quarter.key,
-                                                                )!
-                                                                    .maxScore
+                                                                )!.maxScore
                                                             }}
                                                         </div>
                                                     </div>
@@ -1389,9 +1367,7 @@ onMounted(() => {
                                                         >
                                                     </div>
                                                 </td>
-                                                <td
-                                                    class="p-3 text-center"
-                                                >
+                                                <td class="p-3 text-center">
                                                     <div
                                                         v-if="
                                                             getSubjectFinalGrade(
@@ -1476,14 +1452,12 @@ onMounted(() => {
                                         class="flex items-center justify-between"
                                     >
                                         <span
-                                            class="text-sm font-semibold uppercase tracking-wider"
+                                            class="text-sm font-semibold tracking-wider uppercase"
                                         >
                                             Overall {{ group.finalGradeLabel }}
                                         </span>
                                         <div
-                                            v-if="
-                                                group.subjects.length > 0
-                                            "
+                                            v-if="group.subjects.length > 0"
                                             class="flex items-center gap-4"
                                         >
                                             <div
@@ -1494,9 +1468,7 @@ onMounted(() => {
                                                 <span
                                                     class="text-xs text-muted-foreground"
                                                 >
-                                                    {{
-                                                        subjectGrade.subject
-                                                    }}:
+                                                    {{ subjectGrade.subject }}:
                                                 </span>
                                                 <span
                                                     v-if="
@@ -1520,9 +1492,7 @@ onMounted(() => {
                                                     v-else
                                                     class="flex items-center gap-1 text-xs text-muted-foreground"
                                                 >
-                                                    <Clock
-                                                        class="h-3 w-3"
-                                                    />
+                                                    <Clock class="h-3 w-3" />
                                                     Pending
                                                 </span>
                                             </div>
@@ -1541,24 +1511,18 @@ onMounted(() => {
                                     <button
                                         @click="togglePeriod(period.key)"
                                         :aria-expanded="
-                                            expandedPeriods.includes(
-                                                period.key,
-                                            )
+                                            expandedPeriods.includes(period.key)
                                         "
                                         class="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30"
                                     >
-                                        <div
-                                            class="flex items-center gap-3"
-                                        >
+                                        <div class="flex items-center gap-3">
                                             <div
                                                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary"
                                             >
                                                 {{ pIdx + 1 }}
                                             </div>
                                             <div>
-                                                <div
-                                                    class="font-semibold"
-                                                >
+                                                <div class="font-semibold">
                                                     {{ period.label }}
                                                 </div>
                                                 <div
@@ -1571,9 +1535,7 @@ onMounted(() => {
                                                         )
                                                     }}
                                                     /
-                                                    {{
-                                                        group.subjects.length
-                                                    }}
+                                                    {{ group.subjects.length }}
                                                     graded
                                                     <span
                                                         v-if="
@@ -1589,7 +1551,7 @@ onMounted(() => {
                                                         +{{
                                                             group.subjects
                                                                 .length -
-                                                                MAX_VISIBLE_ROWS
+                                                            MAX_VISIBLE_ROWS
                                                         }}
                                                         more
                                                     </span>
@@ -1629,19 +1591,16 @@ onMounted(() => {
                                         :data-period-key="period.key"
                                         :class="[
                                             'transition-all duration-300 ease-out',
-                                            expandedPeriods.includes(
-                                                period.key,
-                                            )
-                                                ? 'border-t opacity-100 overflow-y-auto grades-period-scroll relative'
-                                                : 'border-t-0 opacity-0 overflow-hidden',
+                                            expandedPeriods.includes(period.key)
+                                                ? 'grades-period-scroll relative overflow-y-auto border-t opacity-100'
+                                                : 'overflow-hidden border-t-0 opacity-0',
                                         ]"
                                         :style="{
                                             maxHeight: expandedPeriods.includes(
                                                 period.key,
                                             )
                                                 ? periodDesktopHeight(
-                                                      group.subjects
-                                                          .length,
+                                                      group.subjects.length,
                                                   ) + 'px'
                                                 : '0px',
                                         }"
@@ -1686,9 +1645,7 @@ onMounted(() => {
                                                             subjectGrade.subject
                                                         }}
                                                     </td>
-                                                    <td
-                                                        class="p-3 text-center"
-                                                    >
+                                                    <td class="p-3 text-center">
                                                         <span
                                                             v-if="
                                                                 getPeriodGrade(
@@ -1725,9 +1682,7 @@ onMounted(() => {
                                                             >
                                                         </span>
                                                     </td>
-                                                    <td
-                                                        class="p-3 text-center"
-                                                    >
+                                                    <td class="p-3 text-center">
                                                         <div
                                                             v-if="
                                                                 getPeriodGrade(
@@ -1790,9 +1745,7 @@ onMounted(() => {
                                                             >
                                                         </span>
                                                     </td>
-                                                    <td
-                                                        class="p-3 text-center"
-                                                    >
+                                                    <td class="p-3 text-center">
                                                         <span
                                                             v-if="
                                                                 getPeriodGrade(
@@ -1819,27 +1772,23 @@ onMounted(() => {
                                             </tbody>
                                         </table>
                                         <div
-                                            class="sticky bottom-0 h-6 bg-gradient-to-t from-card to-transparent pointer-events-none"
+                                            class="pointer-events-none sticky bottom-0 h-6 bg-gradient-to-t from-card to-transparent"
                                         ></div>
                                     </div>
                                 </div>
 
                                 <!-- Overall Semester Grade summary -->
-                                <div
-                                    class="rounded-lg border bg-muted/20 p-4"
-                                >
+                                <div class="rounded-lg border bg-muted/20 p-4">
                                     <div
                                         class="flex items-center justify-between"
                                     >
                                         <span
-                                            class="text-sm font-semibold uppercase tracking-wider"
+                                            class="text-sm font-semibold tracking-wider uppercase"
                                         >
                                             {{ group.finalGradeLabel }}
                                         </span>
                                         <div
-                                            v-if="
-                                                group.subjects.length > 0
-                                            "
+                                            v-if="group.subjects.length > 0"
                                             class="flex flex-wrap items-center gap-x-4 gap-y-2"
                                         >
                                             <div
@@ -1850,9 +1799,7 @@ onMounted(() => {
                                                 <span
                                                     class="text-xs text-muted-foreground"
                                                 >
-                                                    {{
-                                                        subjectGrade.subject
-                                                    }}:
+                                                    {{ subjectGrade.subject }}:
                                                 </span>
                                                 <span
                                                     v-if="
@@ -1876,9 +1823,7 @@ onMounted(() => {
                                                     v-else
                                                     class="flex items-center gap-1 text-xs text-muted-foreground"
                                                 >
-                                                    <Clock
-                                                        class="h-3 w-3"
-                                                    />
+                                                    <Clock class="h-3 w-3" />
                                                     Pending
                                                 </span>
                                             </div>

@@ -16,8 +16,8 @@ import {
 } from 'lucide-vue-next';
 import { onBeforeUnmount, onMounted, ref, shallowRef, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { TowerDefenseGame  } from './engine/Game';
-import type {GameSnapshot} from './engine/Game';
+import { TowerDefenseGame } from './engine/Game';
+import type { GameSnapshot } from './engine/Game';
 import type { HudState, LevelPayload } from './engine/types';
 
 const props = defineProps<{ level: LevelPayload }>();
@@ -248,8 +248,6 @@ const setSpeed = (s: 1 | 2 | 3) => game.value?.setSpeed(s);
 const sell = () => game.value?.sellSelected();
 const upgrade = () => game.value?.upgradeSelected();
 
-
-
 const retry = () => {
     clearCheckpoint();
     window.location.reload();
@@ -323,7 +321,10 @@ const cancelReset = () => {
 <template>
     <Head :title="`${level.name} — Tower Defense`" />
     <AppLayout :breadcrumbs="breadcrumbs" hide-sidebar>
-        <div data-lenis-prevent class="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4">
+        <div
+            data-lenis-prevent
+            class="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4"
+        >
             <!-- Top bar -->
             <div
                 class="surface-card relative overflow-hidden rounded-xl shadow-lg"

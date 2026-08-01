@@ -18,7 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const claimState = ref<'idle' | 'claiming' | 'claimed' | 'waiting'>(
-    props.canClaim ? 'idle' : 'claimed'
+    props.canClaim ? 'idle' : 'claimed',
 );
 const claimedAmount = ref(0);
 const showParticles = ref(false);
@@ -79,7 +79,7 @@ function triggerParticleBurst() {
             onComplete: () => {
                 showParticles.value = false;
             },
-        }
+        },
     );
 }
 
@@ -147,7 +147,6 @@ onMounted(() => {
         updateCountdown();
         countdownInterval = setInterval(updateCountdown, 10000);
     }
-
 });
 
 onBeforeUnmount(() => {
@@ -169,17 +168,30 @@ onBeforeUnmount(() => {
             content-class="sm:max-w-md"
         >
             <div class="space-y-5 py-2">
-                <div class="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-5 text-center">
-                    <p class="text-xs font-black tracking-[0.18em] text-amber-400/70 uppercase">You can claim</p>
-                    <p class="mt-2 text-4xl font-black text-amber-300">+{{ amount }} XP</p>
+                <div
+                    class="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-5 text-center"
+                >
+                    <p
+                        class="text-xs font-black tracking-[0.18em] text-amber-400/70 uppercase"
+                    >
+                        You can claim
+                    </p>
+                    <p class="mt-2 text-4xl font-black text-amber-300">
+                        +{{ amount }} XP
+                    </p>
                     <p class="mt-2 text-sm text-muted-foreground">
                         1 base XP
-                        <span v-if="amount > 1"> + {{ amount - 1 }} streak bonus</span>
-                        <span class="text-amber-400"> · Streak {{ streak }}</span>
+                        <span v-if="amount > 1">
+                            + {{ amount - 1 }} streak bonus</span
+                        >
+                        <span class="text-amber-400">
+                            · Streak {{ streak }}</span
+                        >
                     </p>
                 </div>
                 <p class="text-sm leading-relaxed text-muted-foreground">
-                    Claim now to add this reward to your XP total, or choose Later and come back anytime today.
+                    Claim now to add this reward to your XP total, or choose
+                    Later and come back anytime today.
                 </p>
                 <div class="flex justify-end gap-2">
                     <button
@@ -238,9 +250,7 @@ onBeforeUnmount(() => {
                 class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-amber-400/10 to-transparent transition-transform duration-1000 group-hover:translate-x-full"
             ></div>
 
-            <div
-                class="relative z-10 flex items-center gap-2.5"
-            >
+            <div class="relative z-10 flex items-center gap-2.5">
                 <!-- Icon -->
                 <div
                     class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/20 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6"
@@ -277,7 +287,7 @@ onBeforeUnmount(() => {
 
             <!-- Arrow indicator -->
             <div
-                class="relative z-10 ml-auto flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 transition-all duration-300 group-hover:bg-amber-500/30 group-hover:scale-110"
+                class="relative z-10 ml-auto flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 transition-all duration-300 group-hover:scale-110 group-hover:bg-amber-500/30"
             >
                 <Sparkles class="h-3 w-3 text-amber-400" />
             </div>

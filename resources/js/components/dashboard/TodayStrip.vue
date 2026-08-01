@@ -39,8 +39,6 @@ const dayPercent = computed(() => {
     return Math.min(100, Math.max(0, (elapsed / 86_400_000) * 100));
 });
 
-
-
 // --- Next-item countdown ---
 const countdown = computed(() => {
     if (!props.nextItem?.dueAt) return null;

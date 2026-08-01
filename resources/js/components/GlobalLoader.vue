@@ -249,11 +249,7 @@ watch(pendingHide, (isPending) => {
                     <span
                         class="text-[10px] font-medium tracking-widest text-muted-foreground/30 uppercase"
                     >
-                        {{
-                            isTerminating
-                                ? 'Cleaning up...'
-                                : 'Loading...'
-                        }}
+                        {{ isTerminating ? 'Cleaning up...' : 'Loading...' }}
                     </span>
                 </div>
             </div>

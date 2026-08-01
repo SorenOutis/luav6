@@ -5,10 +5,7 @@ import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
-import {
-    DialogDescription,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -233,7 +230,9 @@ const onSubmit = () => {
             </DialogDescription>
         </template>
 
-        <div class="max-h-[70vh] space-y-5 overflow-y-auto py-4 text-sm leading-6 text-muted-foreground">
+        <div
+            class="max-h-[70vh] space-y-5 overflow-y-auto py-4 text-sm leading-6 text-muted-foreground"
+        >
             <section>
                 <h3
                     class="text-sm font-bold tracking-wide text-foreground uppercase sm:text-base"
@@ -241,8 +240,9 @@ const onSubmit = () => {
                     1. Account Responsibility
                 </h3>
                 <p class="mt-1">
-                    You are responsible for maintaining the confidentiality of your account
-                    credentials and for activity under your account.
+                    You are responsible for maintaining the confidentiality of
+                    your account credentials and for activity under your
+                    account.
                 </p>
             </section>
             <section>
@@ -252,8 +252,9 @@ const onSubmit = () => {
                     2. Acceptable Use
                 </h3>
                 <p class="mt-1">
-                    You agree not to abuse, disrupt, scrape, reverse engineer, or attempt
-                    unauthorized access to platform services, data, or accounts.
+                    You agree not to abuse, disrupt, scrape, reverse engineer,
+                    or attempt unauthorized access to platform services, data,
+                    or accounts.
                 </p>
             </section>
             <section>
@@ -263,8 +264,9 @@ const onSubmit = () => {
                     3. Content and Conduct
                 </h3>
                 <p class="mt-1">
-                    You retain ownership of your submitted content, but grant LUA V6
-                    permission to process and display it to provide core features.
+                    You retain ownership of your submitted content, but grant
+                    LUA V6 permission to process and display it to provide core
+                    features.
                 </p>
             </section>
             <section>
@@ -285,8 +287,9 @@ const onSubmit = () => {
                     5. Limitation of Liability
                 </h3>
                 <p class="mt-1">
-                    The platform is provided on an &quot;as is&quot; basis and is not liable for
-                    indirect, incidental, or consequential damages.
+                    The platform is provided on an &quot;as is&quot; basis and
+                    is not liable for indirect, incidental, or consequential
+                    damages.
                 </p>
             </section>
             <section>
@@ -296,8 +299,8 @@ const onSubmit = () => {
                     6. Changes to Terms
                 </h3>
                 <p class="mt-1">
-                    These terms may be revised from time to time. Continued use after updates
-                    means you accept the revised terms.
+                    These terms may be revised from time to time. Continued use
+                    after updates means you accept the revised terms.
                 </p>
             </section>
         </div>

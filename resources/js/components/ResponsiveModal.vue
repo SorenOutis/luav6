@@ -85,10 +85,7 @@ function handleDesktopOpenChange(v: boolean) {
 
     <!-- ════════════════════ DESKTOP: Centered Dialog ════════════════════ -->
     <template v-else>
-        <Dialog
-            :open="isOpen"
-            @update:open="handleDesktopOpenChange"
-        >
+        <Dialog :open="isOpen" @update:open="handleDesktopOpenChange">
             <!-- Trigger button slot (for DialogTrigger pattern) -->
             <DialogTrigger v-if="$slots.trigger" as-child>
                 <slot name="trigger" />

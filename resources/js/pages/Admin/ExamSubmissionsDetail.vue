@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import {
-    ChevronLeft,
-    User,
-    Calendar,
-    FileText,
-    Zap,
-} from 'lucide-vue-next';
+import { ChevronLeft, User, Calendar, FileText, Zap } from 'lucide-vue-next';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 

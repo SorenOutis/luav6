@@ -1,8 +1,8 @@
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { router } from '@inertiajs/vue3';
-import { ref  } from 'vue';
-import type {Ref} from 'vue';
+import { ref } from 'vue';
+import type { Ref } from 'vue';
 
 /**
  * A singleton wrapper around Lenis smooth scroll.
@@ -22,21 +22,21 @@ export const lenisScroll: Ref<number> = ref(0);
 export const lenisProgress: Ref<number> = ref(0);
 
 export interface LenisConfig {
-  duration?: number;
-  smoothWheel?: boolean;
-  wheelMultiplier?: number;
-  touchMultiplier?: number;
-  anchors?: boolean;
-  autoRaf?: boolean;
+    duration?: number;
+    smoothWheel?: boolean;
+    wheelMultiplier?: number;
+    touchMultiplier?: number;
+    anchors?: boolean;
+    autoRaf?: boolean;
 }
 
 const defaultConfig: LenisConfig = {
-  duration: 1.2,
-  smoothWheel: true,
-  wheelMultiplier: 1,
-  touchMultiplier: 1.5,
-  anchors: true,
-  autoRaf: true,
+    duration: 1.2,
+    smoothWheel: true,
+    wheelMultiplier: 1,
+    touchMultiplier: 1.5,
+    anchors: true,
+    autoRaf: true,
 };
 
 /**
@@ -44,49 +44,49 @@ const defaultConfig: LenisConfig = {
  * Call once from `app.ts` after the app mounts.
  */
 export function initLenis(config: LenisConfig = {}): Lenis {
-  if (lenisInstance) {
-    lenisInstance.resize();
+    if (lenisInstance) {
+        lenisInstance.resize();
+        return lenisInstance;
+    }
+
+    const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const opts = { ...defaultConfig, ...config };
+
+    lenisInstance = new Lenis({
+        duration: opts.duration,
+        smoothWheel: !prefersReducedMotion && opts.smoothWheel,
+        wheelMultiplier: opts.wheelMultiplier,
+        touchMultiplier: opts.touchMultiplier,
+        orientation: 'vertical',
+        gestureOrientation: 'vertical',
+        anchors: opts.anchors,
+        autoRaf: opts.autoRaf,
+        autoResize: true,
+        overscroll: true,
+        stopInertiaOnNavigate: true,
+    });
+
+    // Expose scroll progress reactively
+    lenisInstance.on('scroll', (l: Lenis) => {
+        lenisScroll.value = l.animatedScroll;
+        lenisProgress.value = l.progress;
+    });
+
+    // Recalculate dimensions after each Inertia navigation
+    const removeFinishListener = router.on('finish', () => {
+        lenisInstance?.resize();
+        // Small delay to let DOM settle
+        setTimeout(() => lenisInstance?.resize(), 100);
+    });
+
+    cleanupListeners = () => {
+        removeFinishListener();
+    };
+
     return lenisInstance;
-  }
-
-  const prefersReducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const opts = { ...defaultConfig, ...config };
-
-  lenisInstance = new Lenis({
-    duration: opts.duration,
-    smoothWheel: !prefersReducedMotion && opts.smoothWheel,
-    wheelMultiplier: opts.wheelMultiplier,
-    touchMultiplier: opts.touchMultiplier,
-    orientation: 'vertical',
-    gestureOrientation: 'vertical',
-    anchors: opts.anchors,
-    autoRaf: opts.autoRaf,
-    autoResize: true,
-    overscroll: true,
-    stopInertiaOnNavigate: true,
-  });
-
-  // Expose scroll progress reactively
-  lenisInstance.on('scroll', (l: Lenis) => {
-    lenisScroll.value = l.animatedScroll;
-    lenisProgress.value = l.progress;
-  });
-
-  // Recalculate dimensions after each Inertia navigation
-  const removeFinishListener = router.on('finish', () => {
-    lenisInstance?.resize();
-    // Small delay to let DOM settle
-    setTimeout(() => lenisInstance?.resize(), 100);
-  });
-
-  cleanupListeners = () => {
-    removeFinishListener();
-  };
-
-  return lenisInstance;
 }
 
 /**
@@ -102,32 +102,32 @@ export function initLenis(config: LenisConfig = {}): Lenis {
  * });
  */
 export function syncLenisWithGsap(ScrollTrigger: any): () => void {
-  const lenis = getLenis();
-  if (!lenis) return () => {};
+    const lenis = getLenis();
+    if (!lenis) return () => {};
 
-  const onScroll = () => ScrollTrigger.update();
-  lenis.on('scroll', onScroll);
+    const onScroll = () => ScrollTrigger.update();
+    lenis.on('scroll', onScroll);
 
-  return () => {
-    lenis.off('scroll', onScroll);
-  };
+    return () => {
+        lenis.off('scroll', onScroll);
+    };
 }
 
 /**
  * Get the current Lenis instance (or null if not yet initialised).
  */
 export function getLenis(): Lenis | null {
-  return lenisInstance;
+    return lenisInstance;
 }
 
 /**
  * Destroy Lenis and clean up all listeners.
  */
 export function destroyLenis(): void {
-  cleanupListeners?.();
-  cleanupListeners = null;
-  lenisInstance?.destroy();
-  lenisInstance = null;
-  lenisScroll.value = 0;
-  lenisProgress.value = 0;
+    cleanupListeners?.();
+    cleanupListeners = null;
+    lenisInstance?.destroy();
+    lenisInstance = null;
+    lenisScroll.value = 0;
+    lenisProgress.value = 0;
 }

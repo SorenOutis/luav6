@@ -69,8 +69,13 @@ export function useMobile() {
     const isLowEndDevice = computed(() => {
         if (isCoarsePointer.value || prefersReducedMotion.value) return true;
         if (deviceMemory.value !== null && deviceMemory.value <= 4) return true;
-        if (hardwareConcurrency.value !== null && hardwareConcurrency.value <= 4) return true;
-        if (connectionType.value === 'slow-2g' || connectionType.value === '2g') return true;
+        if (
+            hardwareConcurrency.value !== null &&
+            hardwareConcurrency.value <= 4
+        )
+            return true;
+        if (connectionType.value === 'slow-2g' || connectionType.value === '2g')
+            return true;
         return false;
     });
 

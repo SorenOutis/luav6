@@ -194,7 +194,8 @@ onMounted(() => {
 
         nextTick(() => {
             const sections = Array.from(
-                root.value?.querySelectorAll<HTMLElement>('main > section') ?? [],
+                root.value?.querySelectorAll<HTMLElement>('main > section') ??
+                    [],
             );
             const viewportH = window.innerHeight;
             sections.forEach((section) => {
@@ -272,7 +273,6 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
         ref="root"
         class="about-root relative min-h-screen w-full bg-background font-sans text-foreground selection:bg-primary/20"
     >
-
         <WelcomeHeader
             :can-register="canRegister"
             :auth="$page.props.auth"
@@ -283,20 +283,35 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
             hide-scroll-nav
         />
 
-        <main class="relative z-10 mx-auto max-w-[1500px] px-6 pt-12 pb-24 lg:px-16 lg:pt-20">
+        <main
+            class="relative z-10 mx-auto max-w-[1500px] px-6 pt-12 pb-24 lg:px-16 lg:pt-20"
+        >
             <!-- Hero -->
-            <section class="about-hero grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-16">
+            <section
+                class="about-hero grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-16"
+            >
                 <div class="flex flex-col gap-6 lg:col-span-8">
-                    <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 self-start">
-                        <span class="text-sm font-medium text-primary">About LSI</span>
+                    <div
+                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                    >
+                        <span class="text-sm font-medium text-primary"
+                            >About LSI</span
+                        >
                     </div>
-                    <h1 class="text-4xl leading-[0.95] font-bold tracking-tighter sm:text-5xl lg:text-7xl">
+                    <h1
+                        class="text-4xl leading-[0.95] font-bold tracking-tighter sm:text-5xl lg:text-7xl"
+                    >
                         Learning,<br />
                         <span class="text-primary">re-imagined</span><br />
                         from the ground up.
                     </h1>
-                    <p class="max-w-xl text-base leading-relaxed text-muted-foreground lg:text-lg">
-                        LSI is an academic platform built for institutions that take learning seriously. We remove friction between teachers, students, and the moments that actually matter.
+                    <p
+                        class="max-w-xl text-base leading-relaxed text-muted-foreground lg:text-lg"
+                    >
+                        LSI is an academic platform built for institutions that
+                        take learning seriously. We remove friction between
+                        teachers, students, and the moments that actually
+                        matter.
                     </p>
                 </div>
                 <div class="flex justify-end lg:col-span-4">
@@ -305,13 +320,21 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                             v-for="(stat, i) in [
                                 { label: 'Learners', value: totalUsers ?? 144 },
                                 { label: 'Exams', value: totalExams ?? 7 },
-                                { label: 'Submissions', value: totalSubmissions ?? 719 },
+                                {
+                                    label: 'Submissions',
+                                    value: totalSubmissions ?? 719,
+                                },
                             ]"
                             :key="i"
                             class="flex flex-col gap-2 rounded-lg border border-border/20 bg-card/30 p-4 lg:p-5"
                         >
-                            <span class="text-xs font-medium text-muted-foreground/70">{{ stat.label }}</span>
-                            <span class="text-2xl font-bold tabular-nums tracking-tight lg:text-3xl">
+                            <span
+                                class="text-xs font-medium text-muted-foreground/70"
+                                >{{ stat.label }}</span
+                            >
+                            <span
+                                class="text-2xl font-bold tracking-tight tabular-nums lg:text-3xl"
+                            >
                                 {{ stat.value.toLocaleString() }}
                             </span>
                         </div>
@@ -320,31 +343,57 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
             </section>
 
             <!-- Mission / Vision -->
-            <section class="reveal-block mt-24 grid grid-cols-1 gap-12 lg:mt-40 lg:grid-cols-2 lg:gap-20">
-                <article class="flex flex-col gap-4 border-l-2 border-primary pl-6 lg:pl-8">
+            <section
+                class="reveal-block mt-24 grid grid-cols-1 gap-12 lg:mt-40 lg:grid-cols-2 lg:gap-20"
+            >
+                <article
+                    class="flex flex-col gap-4 border-l-2 border-primary pl-6 lg:pl-8"
+                >
                     <div class="flex items-center gap-3">
                         <Compass class="h-4 w-4 text-primary" />
-                        <span class="text-sm font-semibold text-primary">Mission</span>
+                        <span class="text-sm font-semibold text-primary"
+                            >Mission</span
+                        >
                     </div>
-                    <h2 class="text-2xl leading-tight font-bold tracking-tight lg:text-4xl">
+                    <h2
+                        class="text-2xl leading-tight font-bold tracking-tight lg:text-4xl"
+                    >
                         Make assessment a tool for<br />
-                        <span class="text-primary">growth</span>, not surveillance.
+                        <span class="text-primary">growth</span>, not
+                        surveillance.
                     </h2>
-                    <p class="max-w-lg text-sm leading-relaxed text-muted-foreground/80 lg:text-base">
-                        We believe great assessment is generous: it teaches as it measures. Our platform turns every exam, assignment, and quiz into a feedback loop students actually want to engage with.
+                    <p
+                        class="max-w-lg text-sm leading-relaxed text-muted-foreground/80 lg:text-base"
+                    >
+                        We believe great assessment is generous: it teaches as
+                        it measures. Our platform turns every exam, assignment,
+                        and quiz into a feedback loop students actually want to
+                        engage with.
                     </p>
                 </article>
 
-                <article class="flex flex-col gap-4 border-l-2 border-border/20 pl-6 lg:pl-8">
+                <article
+                    class="flex flex-col gap-4 border-l-2 border-border/20 pl-6 lg:pl-8"
+                >
                     <div class="flex items-center gap-3">
                         <Layers class="h-4 w-4 text-muted-foreground/40" />
-                        <span class="text-sm font-semibold text-muted-foreground/50">Vision</span>
+                        <span
+                            class="text-sm font-semibold text-muted-foreground/50"
+                            >Vision</span
+                        >
                     </div>
-                    <h2 class="text-2xl leading-tight font-bold tracking-tight lg:text-4xl">
-                        A learning platform that feels less like software and more like a <span class="text-primary">place</span>.
+                    <h2
+                        class="text-2xl leading-tight font-bold tracking-tight lg:text-4xl"
+                    >
+                        A learning platform that feels less like software and
+                        more like a <span class="text-primary">place</span>.
                     </h2>
-                    <p class="max-w-lg text-sm leading-relaxed text-muted-foreground/80 lg:text-base">
-                        Classrooms, dashboards, and learning maps that fade into the background — leaving the human relationships at the center of every cohort.
+                    <p
+                        class="max-w-lg text-sm leading-relaxed text-muted-foreground/80 lg:text-base"
+                    >
+                        Classrooms, dashboards, and learning maps that fade into
+                        the background — leaving the human relationships at the
+                        center of every cohort.
                     </p>
                 </article>
             </section>
@@ -352,22 +401,43 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
             <!-- Principles -->
             <section class="mt-24 lg:mt-40">
                 <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 self-start">
-                        <span class="text-sm font-medium text-primary">Principles</span>
+                    <div
+                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                    >
+                        <span class="text-sm font-medium text-primary"
+                            >Principles</span
+                        >
                     </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">What we believe</h2>
+                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
+                        What we believe
+                    </h2>
                 </div>
-                <div class="grid grid-cols-1 gap-px bg-border/10 sm:grid-cols-2 lg:grid-cols-4">
+                <div
+                    class="grid grid-cols-1 gap-px bg-border/10 sm:grid-cols-2 lg:grid-cols-4"
+                >
                     <div
                         v-for="p in principles"
                         :key="p.title"
                         class="reveal-block flex flex-col gap-4 bg-background p-6 transition-colors hover:bg-muted/[0.03] lg:p-8"
                     >
-                        <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/20 bg-primary/5">
-                            <component :is="p.icon" class="h-5 w-5 text-primary" />
+                        <div
+                            class="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/20 bg-primary/5"
+                        >
+                            <component
+                                :is="p.icon"
+                                class="h-5 w-5 text-primary"
+                            />
                         </div>
-                        <h3 class="text-base font-bold tracking-tight lg:text-lg">{{ p.title }}</h3>
-                        <p class="text-sm leading-relaxed text-muted-foreground">{{ p.body }}</p>
+                        <h3
+                            class="text-base font-bold tracking-tight lg:text-lg"
+                        >
+                            {{ p.title }}
+                        </h3>
+                        <p
+                            class="text-sm leading-relaxed text-muted-foreground"
+                        >
+                            {{ p.body }}
+                        </p>
                     </div>
                 </div>
             </section>
@@ -375,8 +445,12 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
             <!-- Interactive: Role Picker -->
             <section class="mt-24 lg:mt-40">
                 <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 self-start">
-                        <span class="text-sm font-medium text-primary">For Everyone</span>
+                    <div
+                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                    >
+                        <span class="text-sm font-medium text-primary"
+                            >For Everyone</span
+                        >
                     </div>
                     <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
                         What LSI does for <span class="text-primary">you</span>
@@ -385,9 +459,14 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                         Pick the role that fits — see what changes on day one.
                     </p>
                 </div>
-                <div class="reveal-block rounded-xl border border-border/20 bg-gradient-to-br from-muted/[0.03] to-transparent overflow-hidden">
+                <div
+                    class="reveal-block overflow-hidden rounded-xl border border-border/20 bg-gradient-to-br from-muted/[0.03] to-transparent"
+                >
                     <!-- Tabs -->
-                    <div role="tablist" class="grid grid-cols-3 border-b border-border/15">
+                    <div
+                        role="tablist"
+                        class="grid grid-cols-3 border-b border-border/15"
+                    >
                         <button
                             v-for="r in roles"
                             :key="r.key"
@@ -404,13 +483,17 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                             <component
                                 :is="r.icon"
                                 class="h-4 w-4"
-                                :class="activeRole === r.key ? 'text-primary' : ''"
+                                :class="
+                                    activeRole === r.key ? 'text-primary' : ''
+                                "
                             />
                             <span>{{ r.label }}</span>
                             <span
                                 class="absolute inset-x-0 bottom-0 h-0.5 bg-primary transition-transform duration-300"
                                 :class="
-                                    activeRole === r.key ? 'scale-x-100' : 'scale-x-0'
+                                    activeRole === r.key
+                                        ? 'scale-x-100'
+                                        : 'scale-x-0'
                                 "
                             ></span>
                         </button>
@@ -421,22 +504,32 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                         class="role-panel grid grid-cols-1 gap-8 p-6 lg:grid-cols-[1.4fr_1fr] lg:gap-12 lg:p-10"
                     >
                         <div class="flex flex-col gap-4">
-                            <span class="text-xs font-semibold text-primary">{{ currentRole.label }}</span>
-                            <h3 class="text-2xl leading-tight font-bold tracking-tight lg:text-3xl">
+                            <span class="text-xs font-semibold text-primary">{{
+                                currentRole.label
+                            }}</span>
+                            <h3
+                                class="text-2xl leading-tight font-bold tracking-tight lg:text-3xl"
+                            >
                                 {{ currentRole.headline }}
                             </h3>
-                            <p class="max-w-xl text-sm leading-relaxed text-muted-foreground lg:text-base">
+                            <p
+                                class="max-w-xl text-sm leading-relaxed text-muted-foreground lg:text-base"
+                            >
                                 {{ currentRole.body }}
                             </p>
                         </div>
-                        <ul class="flex flex-col gap-3 lg:border-l lg:border-border/20 lg:pl-8">
+                        <ul
+                            class="flex flex-col gap-3 lg:border-l lg:border-border/20 lg:pl-8"
+                        >
                             <li
                                 v-for="(b, i) in currentRole.bullets"
                                 :key="b"
                                 class="flex items-start gap-3 text-sm"
                                 :style="{ animationDelay: `${i * 80}ms` }"
                             >
-                                <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"></span>
+                                <span
+                                    class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                                ></span>
                                 <span class="text-foreground/90">{{ b }}</span>
                             </li>
                         </ul>
@@ -447,21 +540,37 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
             <!-- Interactive: Try a question -->
             <section class="mt-24 lg:mt-40">
                 <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 self-start">
-                        <span class="text-sm font-medium text-primary">Try It</span>
+                    <div
+                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                    >
+                        <span class="text-sm font-medium text-primary"
+                            >Try It</span
+                        >
                     </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">A taste of the platform</h2>
+                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
+                        A taste of the platform
+                    </h2>
                     <p class="max-w-xl text-muted-foreground">
-                        A 10-second demo of what an LSI question feels like — instant feedback, no scoreboard.
+                        A 10-second demo of what an LSI question feels like —
+                        instant feedback, no scoreboard.
                     </p>
                 </div>
-                <div class="reveal-block grid grid-cols-1 rounded-xl border border-border/15 bg-border/15 overflow-hidden lg:grid-cols-[1fr_320px]">
+                <div
+                    class="reveal-block grid grid-cols-1 overflow-hidden rounded-xl border border-border/15 bg-border/15 lg:grid-cols-[1fr_320px]"
+                >
                     <div class="flex flex-col gap-6 bg-background p-6 lg:p-10">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-medium text-muted-foreground">Question · 01</span>
-                            <span class="text-xs font-semibold text-primary">Pedagogy 101</span>
+                            <span
+                                class="text-xs font-medium text-muted-foreground"
+                                >Question · 01</span
+                            >
+                            <span class="text-xs font-semibold text-primary"
+                                >Pedagogy 101</span
+                            >
                         </div>
-                        <h3 class="text-lg leading-snug font-bold tracking-tight lg:text-xl">
+                        <h3
+                            class="text-lg leading-snug font-bold tracking-tight lg:text-xl"
+                        >
                             {{ demoQuestion.prompt }}
                         </h3>
                         <div class="flex flex-col gap-3">
@@ -489,41 +598,86 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                             >
                                 <span
                                     class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border/40 text-xs font-medium"
-                                >{{ opt.id }}</span>
-                                <span class="flex-1 text-sm leading-snug font-medium lg:text-[15px]">{{ opt.text }}</span>
+                                    >{{ opt.id }}</span
+                                >
+                                <span
+                                    class="flex-1 text-sm leading-snug font-medium lg:text-[15px]"
+                                    >{{ opt.text }}</span
+                                >
                                 <CheckCircle2
-                                    v-if="selectedAnswer !== null && opt.correct"
+                                    v-if="
+                                        selectedAnswer !== null && opt.correct
+                                    "
                                     class="h-5 w-5 shrink-0 text-emerald-500"
                                 />
                                 <XCircle
-                                    v-else-if="selectedAnswer === opt.id && !opt.correct"
+                                    v-else-if="
+                                        selectedAnswer === opt.id &&
+                                        !opt.correct
+                                    "
                                     class="h-5 w-5 shrink-0 text-rose-500"
                                 />
                             </button>
                         </div>
                     </div>
-                    <aside class="flex flex-col justify-between gap-4 bg-background p-6 lg:p-8">
+                    <aside
+                        class="flex flex-col justify-between gap-4 bg-background p-6 lg:p-8"
+                    >
                         <div class="flex flex-col gap-3">
-                            <span class="text-xs font-semibold text-muted-foreground">Live feedback</span>
-                            <div v-if="!showFeedback" class="text-sm leading-relaxed text-muted-foreground">
-                                Pick an answer to see how LSI replies — students get the same kind of instant, supportive feedback after every prompt.
+                            <span
+                                class="text-xs font-semibold text-muted-foreground"
+                                >Live feedback</span
+                            >
+                            <div
+                                v-if="!showFeedback"
+                                class="text-sm leading-relaxed text-muted-foreground"
+                            >
+                                Pick an answer to see how LSI replies — students
+                                get the same kind of instant, supportive
+                                feedback after every prompt.
                             </div>
-                            <div v-else-if="isCorrect" class="flex flex-col gap-2">
-                                <div class="flex items-center gap-2 text-emerald-500">
+                            <div
+                                v-else-if="isCorrect"
+                                class="flex flex-col gap-2"
+                            >
+                                <div
+                                    class="flex items-center gap-2 text-emerald-500"
+                                >
                                     <CheckCircle2 class="h-5 w-5" />
-                                    <span class="text-sm font-semibold">Correct</span>
+                                    <span class="text-sm font-semibold"
+                                        >Correct</span
+                                    >
                                 </div>
-                                <p class="text-sm leading-relaxed text-muted-foreground">
-                                    Exactly. Formative assessment is about <span class="font-semibold text-foreground">guiding</span> learning while it's still happening — not ranking it after.
+                                <p
+                                    class="text-sm leading-relaxed text-muted-foreground"
+                                >
+                                    Exactly. Formative assessment is about
+                                    <span class="font-semibold text-foreground"
+                                        >guiding</span
+                                    >
+                                    learning while it's still happening — not
+                                    ranking it after.
                                 </p>
                             </div>
                             <div v-else class="flex flex-col gap-2">
-                                <div class="flex items-center gap-2 text-rose-500">
+                                <div
+                                    class="flex items-center gap-2 text-rose-500"
+                                >
                                     <XCircle class="h-5 w-5" />
-                                    <span class="text-sm font-semibold">Not quite</span>
+                                    <span class="text-sm font-semibold"
+                                        >Not quite</span
+                                    >
                                 </div>
-                                <p class="text-sm leading-relaxed text-muted-foreground">
-                                    That describes <span class="font-semibold text-foreground">summative</span> assessment. Formative happens <em>during</em> learning to inform what comes next.
+                                <p
+                                    class="text-sm leading-relaxed text-muted-foreground"
+                                >
+                                    That describes
+                                    <span class="font-semibold text-foreground"
+                                        >summative</span
+                                    >
+                                    assessment. Formative happens
+                                    <em>during</em> learning to inform what
+                                    comes next.
                                 </p>
                             </div>
                         </div>
@@ -542,22 +696,39 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
             <!-- FAQ -->
             <section class="mt-24 lg:mt-40">
                 <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div class="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 self-start">
-                        <span class="text-sm font-medium text-primary">FAQ</span>
+                    <div
+                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                    >
+                        <span class="text-sm font-medium text-primary"
+                            >FAQ</span
+                        >
                     </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">Common questions</h2>
+                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
+                        Common questions
+                    </h2>
                 </div>
-                <div class="grid grid-cols-1 gap-px rounded-xl border border-border/15 bg-border/15 overflow-hidden lg:grid-cols-2">
+                <div
+                    class="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border/15 bg-border/15 lg:grid-cols-2"
+                >
                     <details
                         v-for="f in faqs"
                         :key="f.q"
                         class="group cursor-pointer bg-background p-6 lg:p-8"
                     >
-                        <summary class="flex list-none items-center justify-between gap-4">
-                            <h3 class="text-sm font-semibold lg:text-base">{{ f.q }}</h3>
-                            <span class="text-xl font-semibold text-primary transition-transform group-open:rotate-45">+</span>
+                        <summary
+                            class="flex list-none items-center justify-between gap-4"
+                        >
+                            <h3 class="text-sm font-semibold lg:text-base">
+                                {{ f.q }}
+                            </h3>
+                            <span
+                                class="text-xl font-semibold text-primary transition-transform group-open:rotate-45"
+                                >+</span
+                            >
                         </summary>
-                        <p class="mt-3 text-sm leading-relaxed text-muted-foreground">
+                        <p
+                            class="mt-3 text-sm leading-relaxed text-muted-foreground"
+                        >
                             {{ f.a }}
                         </p>
                     </details>
@@ -565,15 +736,27 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
             </section>
 
             <!-- CTA -->
-            <section class="reveal-block relative mt-24 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.06] via-transparent to-transparent p-8 lg:mt-40 lg:p-16">
-                <div class="relative grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.4fr_1fr]">
+            <section
+                class="reveal-block relative mt-24 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.06] via-transparent to-transparent p-8 lg:mt-40 lg:p-16"
+            >
+                <div
+                    class="relative grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.4fr_1fr]"
+                >
                     <div class="flex flex-col gap-4">
-                        <span class="text-xs font-semibold text-primary">Get in touch</span>
-                        <h2 class="text-3xl leading-tight font-bold tracking-tight lg:text-5xl">
+                        <span class="text-xs font-semibold text-primary"
+                            >Get in touch</span
+                        >
+                        <h2
+                            class="text-3xl leading-tight font-bold tracking-tight lg:text-5xl"
+                        >
                             Bring LSI to your<br />institution.
                         </h2>
-                        <p class="max-w-xl text-sm leading-relaxed text-muted-foreground">
-                            We pilot with a small number of institutions every cycle. If your school cares about meaningful assessment, we'd love to talk.
+                        <p
+                            class="max-w-xl text-sm leading-relaxed text-muted-foreground"
+                        >
+                            We pilot with a small number of institutions every
+                            cycle. If your school cares about meaningful
+                            assessment, we'd love to talk.
                         </p>
                     </div>
                     <div class="flex flex-col gap-4">
@@ -585,7 +768,9 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                                 <Mail class="h-4 w-4" />
                                 hello@koamishin.dev
                             </span>
-                            <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                            <ArrowRight
+                                class="h-4 w-4 transition-transform group-hover:translate-x-1"
+                            />
                         </a>
                         <div class="flex items-center gap-2">
                             <a
@@ -599,7 +784,10 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
                                 :aria-label="s.label"
                                 class="flex h-10 w-10 items-center justify-center rounded-lg border border-border/30 transition-colors hover:border-primary/60 hover:bg-primary/5"
                             >
-                                <component :is="s.icon" class="h-4 w-4 text-muted-foreground" />
+                                <component
+                                    :is="s.icon"
+                                    class="h-4 w-4 text-muted-foreground"
+                                />
                             </a>
                             <button
                                 @click="scrollTop"
@@ -615,11 +803,16 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
         </main>
 
         <!-- Developed by credit -->
-        <div class="about-credit pb-8 flex justify-center">
-            <span class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase">
+        <div class="about-credit flex justify-center pb-8">
+            <span
+                class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase"
+            >
                 <span class="h-px w-6 bg-border/40"></span>
                 Developed by
-                <span class="font-black tracking-[0.3em] text-muted-foreground/80">KOAMISHIN</span>
+                <span
+                    class="font-black tracking-[0.3em] text-muted-foreground/80"
+                    >KOAMISHIN</span
+                >
             </span>
         </div>
 

@@ -116,7 +116,8 @@ onMounted(() => {
 
     gsapCtx = gsap.context(() => {
         // ─── Scroll-triggered entrance: fade + scale in before marquee starts ───
-        gsap.fromTo(techStackRef.value,
+        gsap.fromTo(
+            techStackRef.value,
             { opacity: 0, y: 40, scale: 0.97 },
             {
                 opacity: 1,
@@ -153,8 +154,10 @@ onMounted(() => {
                     tweens = [t1, t2].filter(Boolean) as gsap.core.Tween[];
 
                     if (wrapper.value) {
-                        const onEnter = () => tweens.forEach((t) => t.timeScale(0.25));
-                        const onLeave = () => tweens.forEach((t) => t.timeScale(1));
+                        const onEnter = () =>
+                            tweens.forEach((t) => t.timeScale(0.25));
+                        const onLeave = () =>
+                            tweens.forEach((t) => t.timeScale(1));
                         wrapper.value.addEventListener('mouseenter', onEnter);
                         wrapper.value.addEventListener('mouseleave', onLeave);
                     }

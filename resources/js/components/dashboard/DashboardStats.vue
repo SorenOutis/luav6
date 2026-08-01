@@ -65,15 +65,20 @@ const showStreakModal = ref(false);
 const showBreakdownModal = ref(false);
 const selectedBreakdown = ref<'rank' | 'xp' | 'points'>('xp');
 
-const breakdownTitle = computed(() => ({
-    rank: 'How your rank is calculated',
-    xp: 'How you accumulated XP',
-    points: 'How you accumulated points',
-}[selectedBreakdown.value]));
+const breakdownTitle = computed(
+    () =>
+        ({
+            rank: 'How your rank is calculated',
+            xp: 'How you accumulated XP',
+            points: 'How you accumulated points',
+        })[selectedBreakdown.value],
+);
 
-const breakdownEntries = computed(() => selectedBreakdown.value === 'xp'
-    ? props.statsBreakdown?.xp ?? []
-    : props.statsBreakdown?.points ?? []);
+const breakdownEntries = computed(() =>
+    selectedBreakdown.value === 'xp'
+        ? (props.statsBreakdown?.xp ?? [])
+        : (props.statsBreakdown?.points ?? []),
+);
 
 function openBreakdown(type: 'rank' | 'xp' | 'points') {
     selectedBreakdown.value = type;
@@ -92,7 +97,7 @@ watch(
     () => props.userStats.totalXP,
     (newVal) => {
         localTotalXp.value = newVal;
-    }
+    },
 );
 
 // When a new day's claim becomes available, unhide the card
@@ -100,7 +105,7 @@ watch(
     () => props.claimXp?.canClaim,
     (canClaim) => {
         if (canClaim) hideClaimCard.value = false;
-    }
+    },
 );
 
 // Last 7 days mini preview for the streak card
@@ -144,7 +149,6 @@ async function onClaimed(amount: number, _totalXp: number) {
         localTotalXp.value = Math.round((startXp + increment * i) * 100) / 100;
     }
     localTotalXp.value = endXp;
-
 }
 
 const displayStats = computed(() => [
@@ -206,7 +210,9 @@ const displayStats = computed(() => [
 <template>
     <div class="flex flex-col gap-3 md:gap-4">
         <!-- Stats cards grid -->
-        <div class="flex gap-3 overflow-x-auto scrollbar-none md:grid md:grid-cols-4 md:gap-4">
+        <div
+            class="flex scrollbar-none gap-3 overflow-x-auto md:grid md:grid-cols-4 md:gap-4"
+        >
             <SpotlightCard
                 v-for="(stat, idx) in displayStats"
                 :key="stat.label"
@@ -214,15 +220,68 @@ const displayStats = computed(() => [
                 :glowColor="stat.glowColor"
                 :class="[
                     `stagger-${idx + 1}`,
-                    ['Day Streak', 'Current Rank', 'Total Exp', 'Total Points'].includes(stat.label) ? 'cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:bg-card/70' : '',
+                    [
+                        'Day Streak',
+                        'Current Rank',
+                        'Total Exp',
+                        'Total Points',
+                    ].includes(stat.label)
+                        ? 'cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:bg-card/70'
+                        : '',
                 ]"
                 className="min-w-[155px] shrink-0 p-3 sm:p-5 group animate-fade-up bg-card/40 flex flex-col justify-between md:min-w-0 md:shrink"
-                :tabindex="['Day Streak', 'Current Rank', 'Total Exp', 'Total Points'].includes(stat.label) ? 0 : undefined"
-                :role="['Day Streak', 'Current Rank', 'Total Exp', 'Total Points'].includes(stat.label) ? 'button' : undefined"
-                :aria-label="stat.label === 'Day Streak' ? 'Open streak calendar' : `Open ${stat.label} breakdown`"
-                @click="stat.label === 'Day Streak' ? showStreakModal = true : stat.label === 'Current Rank' ? openBreakdown('rank') : stat.label === 'Total Exp' ? openBreakdown('xp') : openBreakdown('points')"
-                @keydown.enter.prevent="stat.label === 'Day Streak' ? showStreakModal = true : stat.label === 'Current Rank' ? openBreakdown('rank') : stat.label === 'Total Exp' ? openBreakdown('xp') : openBreakdown('points')"
-                @keydown.space.prevent="stat.label === 'Day Streak' ? showStreakModal = true : stat.label === 'Current Rank' ? openBreakdown('rank') : stat.label === 'Total Exp' ? openBreakdown('xp') : openBreakdown('points')"
+                :tabindex="
+                    [
+                        'Day Streak',
+                        'Current Rank',
+                        'Total Exp',
+                        'Total Points',
+                    ].includes(stat.label)
+                        ? 0
+                        : undefined
+                "
+                :role="
+                    [
+                        'Day Streak',
+                        'Current Rank',
+                        'Total Exp',
+                        'Total Points',
+                    ].includes(stat.label)
+                        ? 'button'
+                        : undefined
+                "
+                :aria-label="
+                    stat.label === 'Day Streak'
+                        ? 'Open streak calendar'
+                        : `Open ${stat.label} breakdown`
+                "
+                @click="
+                    stat.label === 'Day Streak'
+                        ? (showStreakModal = true)
+                        : stat.label === 'Current Rank'
+                          ? openBreakdown('rank')
+                          : stat.label === 'Total Exp'
+                            ? openBreakdown('xp')
+                            : openBreakdown('points')
+                "
+                @keydown.enter.prevent="
+                    stat.label === 'Day Streak'
+                        ? (showStreakModal = true)
+                        : stat.label === 'Current Rank'
+                          ? openBreakdown('rank')
+                          : stat.label === 'Total Exp'
+                            ? openBreakdown('xp')
+                            : openBreakdown('points')
+                "
+                @keydown.space.prevent="
+                    stat.label === 'Day Streak'
+                        ? (showStreakModal = true)
+                        : stat.label === 'Current Rank'
+                          ? openBreakdown('rank')
+                          : stat.label === 'Total Exp'
+                            ? openBreakdown('xp')
+                            : openBreakdown('points')
+                "
             >
                 <!-- Inner container to clip overflowing background icons without clipping the outer glow -->
                 <div
@@ -243,7 +302,9 @@ const displayStats = computed(() => [
                     class="relative z-10 flex h-full w-full flex-col justify-between"
                 >
                     <div>
-                        <div class="mb-3 flex items-center justify-between sm:mb-4">
+                        <div
+                            class="mb-3 flex items-center justify-between sm:mb-4"
+                        >
                             <div
                                 class="rounded-lg p-1.5 sm:rounded-xl sm:p-2"
                                 :class="stat.bg"
@@ -299,15 +360,23 @@ const displayStats = computed(() => [
                             <Flame
                                 v-if="day.isActive"
                                 class="h-2.5 w-2.5"
-                                :class="day.isToday ? 'text-orange-400' : 'text-orange-400/60'"
+                                :class="
+                                    day.isToday
+                                        ? 'text-orange-400'
+                                        : 'text-orange-400/60'
+                                "
                             />
                             <div
                                 v-else
                                 class="h-2.5 w-2.5 rounded-full border border-muted-foreground/15"
                             ></div>
                             <span
-                                class="text-[6px] font-bold leading-none"
-                                :class="day.isToday ? 'text-foreground/60' : 'text-muted-foreground/25'"
+                                class="text-[6px] leading-none font-bold"
+                                :class="
+                                    day.isToday
+                                        ? 'text-foreground/60'
+                                        : 'text-muted-foreground/25'
+                                "
                             >
                                 {{ day.label }}
                             </span>
@@ -328,19 +397,19 @@ const displayStats = computed(() => [
                         />
                     </div>
                 </div>
-        </SpotlightCard>
-    </div>
+            </SpotlightCard>
+        </div>
 
-    <!-- Streak Calendar Modal -->
-    <StreakCalendarModal
-        :open="showStreakModal"
-        :login-dates="props.loginDates ?? []"
-        :current-streak="props.userStats.streak"
-        :longest-streak="props.userStats.longestStreak"
-        @close="showStreakModal = false"
-    />
+        <!-- Streak Calendar Modal -->
+        <StreakCalendarModal
+            :open="showStreakModal"
+            :login-dates="props.loginDates ?? []"
+            :current-streak="props.userStats.streak"
+            :longest-streak="props.userStats.longestStreak"
+            @close="showStreakModal = false"
+        />
 
-    <!-- Claim XP Card -->
+        <!-- Claim XP Card -->
         <SpotlightCard
             v-if="claimXp?.canClaim && !hideClaimCard"
             customSize
@@ -357,25 +426,69 @@ const displayStats = computed(() => [
             />
         </SpotlightCard>
 
-        <ResponsiveModal v-model="showBreakdownModal" :title="breakdownTitle" content-class="sm:max-w-lg">
+        <ResponsiveModal
+            v-model="showBreakdownModal"
+            :title="breakdownTitle"
+            content-class="sm:max-w-lg"
+        >
             <div v-if="selectedBreakdown === 'rank'" class="space-y-4 py-2">
-                <div class="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5 text-center">
-                    <p class="text-xs font-black tracking-[0.18em] text-blue-400/70 uppercase">Current position</p>
-                    <p class="mt-2 text-4xl font-black text-foreground">#{{ userStats.rankNumber || '—' }}</p>
-                    <p class="mt-2 text-sm text-muted-foreground">out of {{ userStats.totalPlayers || '—' }} players</p>
+                <div
+                    class="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5 text-center"
+                >
+                    <p
+                        class="text-xs font-black tracking-[0.18em] text-blue-400/70 uppercase"
+                    >
+                        Current position
+                    </p>
+                    <p class="mt-2 text-4xl font-black text-foreground">
+                        #{{ userStats.rankNumber || '—' }}
+                    </p>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        out of {{ userStats.totalPlayers || '—' }} players
+                    </p>
                 </div>
-                <p class="text-sm leading-relaxed text-muted-foreground">Your rank is based on your position on the active season leaderboard. Earn XP and points through lessons, assignments, exams, and other learning activities to move up.</p>
+                <p class="text-sm leading-relaxed text-muted-foreground">
+                    Your rank is based on your position on the active season
+                    leaderboard. Earn XP and points through lessons,
+                    assignments, exams, and other learning activities to move
+                    up.
+                </p>
             </div>
             <div v-else class="space-y-3 py-2">
-                <div v-if="breakdownEntries.length === 0" class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No activity has contributed to this total yet.</div>
-                <div v-for="entry in breakdownEntries" :key="entry.label" class="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-                    <div>
-                        <p class="text-sm font-semibold text-foreground">{{ entry.label }}</p>
-                        <p class="text-xs text-muted-foreground">{{ entry.count }} {{ entry.count === 1 ? 'entry' : 'entries' }}</p>
-                    </div>
-                    <span class="font-black tabular-nums" :class="selectedBreakdown === 'xp' ? 'text-purple-400' : 'text-emerald-400'">+{{ entry.amount.toLocaleString() }} {{ selectedBreakdown === 'xp' ? 'XP' : 'pts' }}</span>
+                <div
+                    v-if="breakdownEntries.length === 0"
+                    class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
+                >
+                    No activity has contributed to this total yet.
                 </div>
-                <p class="pt-1 text-xs text-muted-foreground">Showing activity from the active season.</p>
+                <div
+                    v-for="entry in breakdownEntries"
+                    :key="entry.label"
+                    class="flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-4 py-3"
+                >
+                    <div>
+                        <p class="text-sm font-semibold text-foreground">
+                            {{ entry.label }}
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                            {{ entry.count }}
+                            {{ entry.count === 1 ? 'entry' : 'entries' }}
+                        </p>
+                    </div>
+                    <span
+                        class="font-black tabular-nums"
+                        :class="
+                            selectedBreakdown === 'xp'
+                                ? 'text-purple-400'
+                                : 'text-emerald-400'
+                        "
+                        >+{{ entry.amount.toLocaleString() }}
+                        {{ selectedBreakdown === 'xp' ? 'XP' : 'pts' }}</span
+                    >
+                </div>
+                <p class="pt-1 text-xs text-muted-foreground">
+                    Showing activity from the active season.
+                </p>
             </div>
         </ResponsiveModal>
     </div>

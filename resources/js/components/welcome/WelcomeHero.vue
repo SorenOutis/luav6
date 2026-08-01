@@ -86,10 +86,13 @@ const initAnimations = () => {
     gsapCtx = gsap.context(() => {
         if (props.prefersReducedMotion) {
             // On low-end, just set final visuals — no animation
-            const headingLines = heroRef.value?.querySelectorAll('.hero-heading-line-last .hero-char');
+            const headingLines = heroRef.value?.querySelectorAll(
+                '.hero-heading-line-last .hero-char',
+            );
             if (headingLines?.length) {
                 gsap.set(headingLines, {
-                    backgroundImage: 'linear-gradient(to right, var(--color-foreground), color-mix(in srgb, var(--color-foreground) 30%, transparent), color-mix(in srgb, var(--color-foreground) 10%, transparent))',
+                    backgroundImage:
+                        'linear-gradient(to right, var(--color-foreground), color-mix(in srgb, var(--color-foreground) 30%, transparent), color-mix(in srgb, var(--color-foreground) 10%, transparent))',
                     backgroundClip: 'text',
                     WebkitBackgroundClip: 'text',
                     color: 'transparent',
@@ -115,7 +118,9 @@ const initAnimations = () => {
             // Still attach scroll effects (parallax is passive scroll-driven)
             gsap.to('.hero-parallax', {
                 y: (_, target) => {
-                    const speed = parseFloat((target as HTMLElement).dataset.speed || '0.2');
+                    const speed = parseFloat(
+                        (target as HTMLElement).dataset.speed || '0.2',
+                    );
                     return -window.innerHeight * speed;
                 },
                 ease: 'none',
@@ -142,7 +147,8 @@ const initAnimations = () => {
         }
 
         // ─── SplitText: Hero Heading ───
-        const headingLines = heroRef.value?.querySelectorAll('.hero-heading-line');
+        const headingLines =
+            heroRef.value?.querySelectorAll('.hero-heading-line');
         let allChars: Element[] = [];
         const splitInstances: SplitText[] = [];
 
@@ -159,10 +165,13 @@ const initAnimations = () => {
             });
 
             // Apply gradient styling to INTELLIGENCE chars BEFORE animation so they look correct while animating in
-            const lastLineChars = heroRef.value?.querySelectorAll('.hero-heading-line-last .hero-char');
+            const lastLineChars = heroRef.value?.querySelectorAll(
+                '.hero-heading-line-last .hero-char',
+            );
             if (lastLineChars?.length) {
                 gsap.set(lastLineChars, {
-                    backgroundImage: 'linear-gradient(to right, var(--color-foreground), color-mix(in srgb, var(--color-foreground) 30%, transparent), color-mix(in srgb, var(--color-foreground) 10%, transparent))',
+                    backgroundImage:
+                        'linear-gradient(to right, var(--color-foreground), color-mix(in srgb, var(--color-foreground) 30%, transparent), color-mix(in srgb, var(--color-foreground) 10%, transparent))',
                     backgroundClip: 'text',
                     WebkitBackgroundClip: 'text',
                     color: 'transparent',
@@ -172,7 +181,8 @@ const initAnimations = () => {
 
             // Animate all chars with a continuous stagger
             if (allChars.length) {
-                gsap.fromTo(allChars,
+                gsap.fromTo(
+                    allChars,
                     { y: 120, opacity: 0, rotateX: -90 },
                     {
                         y: 0,
@@ -192,7 +202,8 @@ const initAnimations = () => {
         // ─── CTA Buttons ───
         const ctaBtns = heroRef.value?.querySelectorAll('.hero-cta');
         if (ctaBtns?.length) {
-            gsap.fromTo(ctaBtns,
+            gsap.fromTo(
+                ctaBtns,
                 { y: 40, opacity: 0 },
                 {
                     y: 0,
@@ -208,7 +219,8 @@ const initAnimations = () => {
         // ─── Developed By credit ───
         const creditEl = heroRef.value?.querySelector('.hero-credit');
         if (creditEl) {
-            gsap.fromTo(creditEl,
+            gsap.fromTo(
+                creditEl,
                 { y: 15, opacity: 0 },
                 {
                     y: 0,
@@ -223,7 +235,9 @@ const initAnimations = () => {
         // ─── Scroll Parallax ───
         gsap.to('.hero-parallax', {
             y: (_, target) => {
-                const speed = parseFloat((target as HTMLElement).dataset.speed || '0.2');
+                const speed = parseFloat(
+                    (target as HTMLElement).dataset.speed || '0.2',
+                );
                 return -window.innerHeight * speed;
             },
             ease: 'none',
@@ -292,9 +306,15 @@ onUnmounted(() => {
             <h1
                 class="flex flex-col text-5xl leading-[0.9] font-black tracking-[-0.04em] uppercase sm:text-7xl sm:leading-[0.8] lg:text-[8rem]"
             >
-                <span class="hero-heading-line flex overflow-hidden">LEARNING</span>
-                <span class="hero-heading-line flex overflow-hidden">SYSTEMS</span>
-                <span class="hero-heading-line hero-heading-line-last flex overflow-hidden italic">
+                <span class="hero-heading-line flex overflow-hidden"
+                    >LEARNING</span
+                >
+                <span class="hero-heading-line flex overflow-hidden"
+                    >SYSTEMS</span
+                >
+                <span
+                    class="hero-heading-line hero-heading-line-last flex overflow-hidden italic"
+                >
                     INTELLIGENCE
                 </span>
             </h1>
@@ -319,11 +339,17 @@ onUnmounted(() => {
             </p>
 
             <Motion
-                :initial="prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }"
+                :initial="
+                    prefersReducedMotion
+                        ? { opacity: 1, y: 0 }
+                        : { opacity: 0, y: 20 }
+                "
                 :animate="{ opacity: 1, y: 0 }"
-                :transition="prefersReducedMotion
-                    ? { duration: 0 }
-                    : { duration: 1.5, ease: 'ease-out', delay: 0.2 }"
+                :transition="
+                    prefersReducedMotion
+                        ? { duration: 0 }
+                        : { duration: 1.5, ease: 'ease-out', delay: 0.2 }
+                "
                 class="absolute inset-0 max-w-3xl text-sm leading-relaxed font-medium tracking-tight text-muted-foreground sm:text-xl lg:text-2xl"
             >
                 A school-ready learning platform for exams, assignments, grades,
@@ -425,10 +451,15 @@ onUnmounted(() => {
 
         <!-- Developed by credit -->
         <div class="hero-credit mt-10 flex justify-end lg:mt-14">
-            <span class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase lg:text-[10px]">
+            <span
+                class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase lg:text-[10px]"
+            >
                 <span class="h-px w-6 bg-border/40"></span>
                 Developed by
-                <span class="font-black tracking-[0.3em] text-muted-foreground/80">KOAMISHIN</span>
+                <span
+                    class="font-black tracking-[0.3em] text-muted-foreground/80"
+                    >KOAMISHIN</span
+                >
             </span>
         </div>
     </div>

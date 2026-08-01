@@ -60,7 +60,12 @@ const clearUserStorage = () => {
     localStorage.removeItem('dyslexia-friendly');
 
     // Clear corresponding cookies
-    const cookieKeys = ['appearance', 'themePreset', 'fontPreset', 'cardStylePreset'];
+    const cookieKeys = [
+        'appearance',
+        'themePreset',
+        'fontPreset',
+        'cardStylePreset',
+    ];
     cookieKeys.forEach((key) => {
         document.cookie = `${key}=;path=/;max-age=0;SameSite=Lax`;
     });

@@ -2,7 +2,14 @@
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { MessageCircle, Send, X, Bot, User } from 'lucide-vue-next';
-import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue';
+import {
+    ref,
+    computed,
+    nextTick,
+    watch,
+    onMounted,
+    onBeforeUnmount,
+} from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,7 +60,10 @@ const showSuggestions = computed(() => {
 });
 
 const suggestions = [
-    { label: '📋 My Assignments', message: 'What are my upcoming assignments?' },
+    {
+        label: '📋 My Assignments',
+        message: 'What are my upcoming assignments?',
+    },
     { label: '📊 My Progress', message: 'Show me my learning progress' },
     { label: '🏆 My Streak', message: "What's my current streak?" },
     { label: '📝 Upcoming Exams', message: 'What exams do I have coming up?' },
@@ -118,7 +128,8 @@ const guardrails: GuardrailPattern[] = [
  * E.g. "Can you explain the stock market for my economics class?" has "class"
  * and "economics" so it passes, but "What should I invest in?" does not.
  */
-const educationalKeywords = /\b(assignment|exam|course|lesson|study|learn|class|homework|grade|teacher|professor|school|university|subject|topic|chapter|review|practice|quiz|test|project|research|paper|essay|report|reading|lecture|tutor|academic|science|math|history|literature|english|filipino|physics|chemistry|biology|geography|economics|psychology|philosophy|art|music|drama|exercise|problem|solve|explain|understand|help|question|answer|feedback|score|level|x[pP]|streak|badge|achiev|progress|module|unit|curriculum|syllabus|lesson|discuss|analyze|analysis|evaluate|critique|summarize|define|describe|compare|contrast|outline|diagram|illustrate|interpret|justify|argument|thesis|concept|theory|principle|formula|equation|experiment|lab|observation|data|evidence|source|citation|reference|bibliography|vocabulary|grammar|sentence|paragraph|comprehension|essay|writing|prompt|rubric|score)\b/i;
+const educationalKeywords =
+    /\b(assignment|exam|course|lesson|study|learn|class|homework|grade|teacher|professor|school|university|subject|topic|chapter|review|practice|quiz|test|project|research|paper|essay|report|reading|lecture|tutor|academic|science|math|history|literature|english|filipino|physics|chemistry|biology|geography|economics|psychology|philosophy|art|music|drama|exercise|problem|solve|explain|understand|help|question|answer|feedback|score|level|x[pP]|streak|badge|achiev|progress|module|unit|curriculum|syllabus|lesson|discuss|analyze|analysis|evaluate|critique|summarize|define|describe|compare|contrast|outline|diagram|illustrate|interpret|justify|argument|thesis|concept|theory|principle|formula|equation|experiment|lab|observation|data|evidence|source|citation|reference|bibliography|vocabulary|grammar|sentence|paragraph|comprehension|essay|writing|prompt|rubric|score)\b/i;
 
 /**
  * Harassment/toxicity patterns — these are ALWAYS blocked regardless of context.
@@ -150,19 +161,21 @@ const toxicityPatterns = [
  * with word-boundary matching.
  */
 const normalizeMessage = (message: string): string => {
-    return message
-        // Leetspeak character substitutions
-        .replace(/0/g, 'o')
-        .replace(/1/g, 'i')
-        .replace(/3/g, 'e')
-        .replace(/4/g, 'a')
-        .replace(/5/g, 's')
-        .replace(/7/g, 't')
-        .replace(/8/g, 'b')
-        .replace(/@/g, 'a')
-        .replace(/\$/g, 's')
-        .replace(/\!/g, 'i')
-        .replace(/\|/g, 'i');
+    return (
+        message
+            // Leetspeak character substitutions
+            .replace(/0/g, 'o')
+            .replace(/1/g, 'i')
+            .replace(/3/g, 'e')
+            .replace(/4/g, 'a')
+            .replace(/5/g, 's')
+            .replace(/7/g, 't')
+            .replace(/8/g, 'b')
+            .replace(/@/g, 'a')
+            .replace(/\$/g, 's')
+            .replace(/\!/g, 'i')
+            .replace(/\|/g, 'i')
+    );
 };
 
 /**
@@ -242,7 +255,7 @@ const fetchHistory = async () => {
             messages.value = [
                 {
                     role: 'assistant',
-                    content: 'Hello! I\'m Echo. How can I assist you today?',
+                    content: "Hello! I'm Echo. How can I assist you today?",
                 },
             ];
         }
@@ -250,7 +263,10 @@ const fetchHistory = async () => {
     } catch (error) {
         console.error('Failed to fetch chat history:', error);
         messages.value = [
-            { role: 'assistant', content: 'Hello! I\'m Echo. How can I assist you today?' },
+            {
+                role: 'assistant',
+                content: "Hello! I'm Echo. How can I assist you today?",
+            },
         ];
     }
 };
@@ -385,7 +401,7 @@ watch(inputMessage, () => {
                 <CardHeader
                     class="flex flex-row items-center justify-between space-y-0 rounded-t-xl border-b border-border/40 bg-gradient-to-r from-primary/95 to-primary/90 px-3 py-2.5"
                 >
-                    <div class="flex items-center gap-2 min-w-0">
+                    <div class="flex min-w-0 items-center gap-2">
                         <div
                             class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-foreground/10"
                         >
@@ -402,11 +418,13 @@ watch(inputMessage, () => {
                         </div>
                         <div class="min-w-0">
                             <CardTitle
-                                class="text-xs font-semibold leading-tight text-primary-foreground truncate"
+                                class="truncate text-xs leading-tight font-semibold text-primary-foreground"
                             >
                                 Echo — LSI Assistant
                             </CardTitle>
-                            <p class="text-[10px] leading-tight text-primary-foreground/60">
+                            <p
+                                class="text-[10px] leading-tight text-primary-foreground/60"
+                            >
                                 Your intelligent companion
                             </p>
                         </div>
@@ -426,7 +444,7 @@ watch(inputMessage, () => {
                 <!-- Messages -->
                 <CardContent
                     ref="scrollContainer"
-                    class="flex-1 space-y-3 overflow-y-auto scroll-smooth p-3 scrollbar-thin"
+                    class="flex-1 scrollbar-thin space-y-3 overflow-y-auto scroll-smooth p-3"
                 >
                     <template v-for="(msg, index) in messages" :key="index">
                         <div
@@ -455,10 +473,7 @@ watch(inputMessage, () => {
                                     alt="Echo"
                                     class="h-full w-full object-contain p-1"
                                 />
-                                <Bot
-                                    v-else
-                                    class="h-3.5 w-3.5 text-primary"
-                                />
+                                <Bot v-else class="h-3.5 w-3.5 text-primary" />
                             </div>
                             <div
                                 :class="[
@@ -476,7 +491,7 @@ watch(inputMessage, () => {
                     <!-- Suggestion chips -->
                     <div
                         v-if="showSuggestions"
-                        class="flex flex-wrap gap-1.5 px-1 animate-fade-in"
+                        class="animate-fade-in flex flex-wrap gap-1.5 px-1"
                     >
                         <button
                             v-for="(chip, i) in suggestions"
@@ -491,7 +506,7 @@ watch(inputMessage, () => {
                     <!-- Loading indicator -->
                     <div
                         v-if="isLoading"
-                        class="flex max-w-[88%] animate-fade-in gap-2"
+                        class="animate-fade-in flex max-w-[88%] gap-2"
                     >
                         <div
                             class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/80"
@@ -502,10 +517,7 @@ watch(inputMessage, () => {
                                 alt="Echo"
                                 class="h-full w-full object-contain p-1"
                             />
-                            <Bot
-                                v-else
-                                class="h-3.5 w-3.5 text-primary"
-                            />
+                            <Bot v-else class="h-3.5 w-3.5 text-primary" />
                         </div>
                         <div
                             class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 p-3"
@@ -541,9 +553,15 @@ watch(inputMessage, () => {
                         v-if="showBlockedWarning"
                         class="flex items-center gap-1.5 border-b border-border/40 bg-amber-500/10 px-3 py-1.5"
                     >
-                        <span class="text-[10px] font-medium text-amber-600 dark:text-amber-400">⚠</span>
-                        <span class="text-[10px] text-amber-700/80 dark:text-amber-300/70">
-                            Message flagged — please keep the conversation respectful and study-focused
+                        <span
+                            class="text-[10px] font-medium text-amber-600 dark:text-amber-400"
+                            >⚠</span
+                        >
+                        <span
+                            class="text-[10px] text-amber-700/80 dark:text-amber-300/70"
+                        >
+                            Message flagged — please keep the conversation
+                            respectful and study-focused
                         </span>
                     </div>
                 </transition>
@@ -578,7 +596,7 @@ watch(inputMessage, () => {
                     </form>
                     <div
                         v-else
-                        class="w-full rounded-xl border border-dashed border-border/40 bg-muted/20 px-3 py-2 text-center text-[11px] text-muted-foreground italic leading-relaxed"
+                        class="w-full rounded-xl border border-dashed border-border/40 bg-muted/20 px-3 py-2 text-center text-[11px] leading-relaxed text-muted-foreground italic"
                     >
                         {{ maintenanceMessage }}
                     </div>
@@ -627,9 +645,19 @@ watch(inputMessage, () => {
 }
 
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 50%, 90% { transform: translateX(-4px); }
-    30%, 70% { transform: translateX(4px); }
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    10%,
+    50%,
+    90% {
+        transform: translateX(-4px);
+    }
+    30%,
+    70% {
+        transform: translateX(4px);
+    }
 }
 
 .animate-shake {

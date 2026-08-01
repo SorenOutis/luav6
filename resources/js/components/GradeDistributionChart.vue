@@ -60,10 +60,7 @@ const isEmpty = computed(() => props.total === 0);
 <template>
     <div :class="cn('flex items-center gap-4', props.class)">
         <div class="relative shrink-0">
-            <svg
-                viewBox="0 0 100 100"
-                class="h-24 w-24 -rotate-90"
-            >
+            <svg viewBox="0 0 100 100" class="h-24 w-24 -rotate-90">
                 <!-- Background circle -->
                 <circle
                     cx="50"
@@ -90,23 +87,15 @@ const isEmpty = computed(() => props.total === 0);
                 />
             </svg>
             <!-- Center text -->
-            <div
-                class="absolute inset-0 flex items-center justify-center"
-            >
+            <div class="absolute inset-0 flex items-center justify-center">
                 <div class="text-center">
-                    <div
-                        v-if="!isEmpty"
-                        class="text-lg font-bold leading-none"
-                    >
+                    <div v-if="!isEmpty" class="text-lg leading-none font-bold">
                         {{ total }}
                     </div>
+                    <div v-else class="text-sm text-muted-foreground">—</div>
                     <div
-                        v-else
-                        class="text-sm text-muted-foreground"
+                        class="text-[10px] leading-tight text-muted-foreground"
                     >
-                        —
-                    </div>
-                    <div class="text-[10px] text-muted-foreground leading-tight">
                         Total
                     </div>
                 </div>
@@ -124,10 +113,7 @@ const isEmpty = computed(() => props.total === 0);
                     :style="{ backgroundColor: segment.color }"
                 />
                 <span class="text-muted-foreground">{{ segment.label }}</span>
-                <span
-                    class="ml-auto font-medium"
-                    :class="segment.textColor"
-                >
+                <span class="ml-auto font-medium" :class="segment.textColor">
                     {{ segment.count }}
                 </span>
             </div>

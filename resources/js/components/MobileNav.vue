@@ -156,12 +156,14 @@ function animateIndicator() {
         activeIndex.value < navItems.value.length &&
         itemRefs.value[activeIndex.value] &&
         indicatorRef.value &&
-        typeof (itemRefs.value[activeIndex.value] as any).getBoundingClientRect === 'function'
+        typeof (itemRefs.value[activeIndex.value] as any)
+            .getBoundingClientRect === 'function'
     ) {
         const target = itemRefs.value[activeIndex.value]!;
         const targetRect = target.getBoundingClientRect();
-        const parentRect =
-            target.parentElement?.getBoundingClientRect() ?? { left: 0 };
+        const parentRect = target.parentElement?.getBoundingClientRect() ?? {
+            left: 0,
+        };
 
         gsap.to(indicatorRef.value, {
             x: targetRect.left - parentRect.left + targetRect.width / 2 - 20,
@@ -178,7 +180,6 @@ function animateIndicator() {
     }
 }
 
- 
 function setItemRef(el: any, index: number) {
     itemRefs.value[index] = el as HTMLElement | null;
 }
@@ -206,7 +207,6 @@ const handleLogout = () => {
     sessionStorage.setItem('logged_out', 'true');
     router.post(logout());
 };
-
 </script>
 
 <template>
@@ -240,11 +240,11 @@ const handleLogout = () => {
                     >
                         <component
                             :is="item.icon"
-                            class="size-5.5 text-muted-foreground stroke-[1.5px] transition-all duration-500"
+                            class="size-5.5 stroke-[1.5px] text-muted-foreground transition-all duration-500"
                         />
                     </div>
                     <span
-                        class="text-[7px] font-black tracking-[0.12em] uppercase text-muted-foreground opacity-60 transition-all duration-500"
+                        class="text-[7px] font-black tracking-[0.12em] text-muted-foreground uppercase opacity-60 transition-all duration-500"
                     >
                         {{ item.label }}
                     </span>
@@ -260,17 +260,15 @@ const handleLogout = () => {
                 >
                     <div
                         class="flex items-center justify-center transition-all duration-500"
-                        :class="[
-                            activeIndex === index ? 'scale-110' : '',
-                        ]"
+                        :class="[activeIndex === index ? 'scale-110' : '']"
                     >
                         <component
                             :is="item.icon"
                             class="transition-all duration-500"
                             :class="
                                 activeIndex === index
-                                    ? 'size-6 text-primary stroke-[2.5px]'
-                                    : 'size-5.5 text-muted-foreground stroke-[1.5px]'
+                                    ? 'size-6 stroke-[2.5px] text-primary'
+                                    : 'size-5.5 stroke-[1.5px] text-muted-foreground'
                             "
                         />
                     </div>
@@ -299,15 +297,19 @@ const handleLogout = () => {
         <!-- User Profile Preview -->
         <div
             v-if="user"
-            class="sheet-item mx-2 mb-4 mt-2 flex items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 p-3"
+            class="sheet-item mx-2 mt-2 mb-4 flex items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 p-3"
         >
-            <Avatar class="h-10 w-10 overflow-hidden rounded-xl border border-border/50">
+            <Avatar
+                class="h-10 w-10 overflow-hidden rounded-xl border border-border/50"
+            >
                 <AvatarImage
                     v-if="user.avatar"
                     :src="user.avatar"
                     :alt="user.name"
                 />
-                <AvatarFallback class="rounded-xl bg-primary/10 text-sm font-bold text-primary">
+                <AvatarFallback
+                    class="rounded-xl bg-primary/10 text-sm font-bold text-primary"
+                >
                     {{ getInitials(user.name) }}
                 </AvatarFallback>
             </Avatar>

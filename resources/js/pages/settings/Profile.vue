@@ -81,15 +81,19 @@ const leaveSection = (sectionId: number) => {
         .filter((s) => s.id !== sectionId)
         .map((s) => s.id);
 
-    router.patch('/profile/section', {
-        section_ids: remaining,
-        section_passwords: {},
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            router.reload({ only: ['userSections'] });
+    router.patch(
+        '/profile/section',
+        {
+            section_ids: remaining,
+            section_passwords: {},
         },
-    });
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                router.reload({ only: ['userSections'] });
+            },
+        },
+    );
 };
 </script>
 

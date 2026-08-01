@@ -65,8 +65,8 @@ const auth = computed(() => page.props.auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 const { appearance, toggleTheme } = useAppearance();
 
-const sectionName = computed(() =>
-    (page.props.sectionName as string | undefined) || '',
+const sectionName = computed(
+    () => (page.props.sectionName as string | undefined) || '',
 );
 
 interface HeaderNotification {
@@ -242,7 +242,7 @@ const rightNavItems: NavItem[] = [
                                             class="h-1.5 w-1.5 rounded-full bg-primary"
                                         ></div>
                                         <span
-                                            class="text-[10px] font-medium text-muted-foreground truncate"
+                                            class="truncate text-[10px] font-medium text-muted-foreground"
                                         >
                                             {{ sectionName }}
                                         </span>
@@ -281,11 +281,9 @@ const rightNavItems: NavItem[] = [
                         v-if="sectionName"
                         class="ml-4 hidden items-center gap-1.5 rounded-lg border border-border/30 bg-primary/[0.03] px-2.5 py-1 lg:flex"
                     >
-                        <div
-                            class="h-1.5 w-1.5 rounded-full bg-primary"
-                        ></div>
+                        <div class="h-1.5 w-1.5 rounded-full bg-primary"></div>
                         <span
-                            class="text-[10px] font-medium text-muted-foreground max-w-[120px] truncate"
+                            class="max-w-[120px] truncate text-[10px] font-medium text-muted-foreground"
                         >
                             {{ sectionName }}
                         </span>
@@ -373,9 +371,7 @@ const rightNavItems: NavItem[] = [
                                             <p
                                                 class="text-[10px] tracking-widest text-muted-foreground uppercase"
                                             >
-                                                {{
-                                                    notifications.unreadCount
-                                                }}
+                                                {{ notifications.unreadCount }}
                                                 unread
                                             </p>
                                         </div>
@@ -485,7 +481,9 @@ const rightNavItems: NavItem[] = [
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <div class="hidden sm:flex flex-col items-end justify-center">
+                            <div
+                                class="hidden flex-col items-end justify-center sm:flex"
+                            >
                                 <span
                                     class="font-mono text-[10px] font-bold tracking-tight text-foreground sm:text-xs"
                                     >{{ currentTime }}</span

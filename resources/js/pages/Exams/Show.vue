@@ -22,14 +22,7 @@ import {
     Grid3x3,
     X,
 } from 'lucide-vue-next';
-import {
-    onMounted,
-    onUnmounted,
-    ref,
-    computed,
-    reactive,
-    watch,
-} from 'vue';
+import { onMounted, onUnmounted, ref, computed, reactive, watch } from 'vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useAccessibility } from '@/composables/useAccessibility';
 import { useLoader } from '@/composables/useLoader';
@@ -42,8 +35,6 @@ const { isDyslexiaFriendly, toggleDyslexiaMode, updateDyslexiaMode } =
     useAccessibility();
 const { isMobile: isMobileDevice } = useMobile();
 const isBooted = ref(false);
-
-
 
 interface Question {
     text: string;
@@ -96,12 +87,11 @@ const selectedPart = ref<ExamPart | null>(null);
 const examStarted = ref(false);
 const container = ref<HTMLElement | null>(null);
 
-
 const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
 // Track submitted part IDs locally to handle stale server data after redirect
-const locallySubmittedPartIds = ref(new Set<number>(
-    Object.keys(props.submissions).map(Number)
-));
+const locallySubmittedPartIds = ref(
+    new Set<number>(Object.keys(props.submissions).map(Number)),
+);
 // Keep a client-side copy because the submit request can complete before an
 // Inertia visit refreshes the page props. This prevents a saved part from
 // briefly appearing as available again.
@@ -224,7 +214,6 @@ watch(selectedPart, () => {
     showMobileProgress.value = false;
 });
 
-
 // ─── LIVE TIMER LOGIC ───────────────────────────────────────
 const timeLeftSeconds = ref(props.exam.duration_minutes * 60);
 const timerInterval = ref<ReturnType<typeof setInterval> | null>(null);
@@ -303,7 +292,7 @@ const calculatePace = () => {
     const avgSecondsPerQuestion = elapsedSeconds / answeredCount;
 
     // Estimate based on ALL questions in the exam, not just the current part
-    
+
     const remainingQuestionsInPart =
         (selectedPart.value.questions?.length ?? 0) - answeredCount;
 
@@ -334,36 +323,35 @@ const stopTimer = () => {
     }
 };
 
-
 // ─── CONFETTI CELEBRATION ──────────────────────────────────
 // Creates a burst of confetti particles when all questions are answered
 const burstConfetti = () => {
-  const colors = [
-    'var(--color-primary)',
-    '#22c55e', // emerald-500
-    '#f59e0b', // amber-500
-    '#a78bfa', // violet-400
-    '#f472b6', // pink-400
-    '#60a5fa', // blue-400
-    '#34d399', // emerald-400
-    '#fb923c', // orange-400
-  ];
-  
-  const container = progressBoxRef.value;
-  if (!container) return;
-  
-  const rect = container.getBoundingClientRect();
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height / 2;
-  
-  // Create 50 confetti pieces
-  for (let i = 0; i < 50; i++) {
-    const el = document.createElement('div');
-    const size = 6 + Math.random() * 6;
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const isCircle = Math.random() > 0.5;
-    
-    el.style.cssText = `
+    const colors = [
+        'var(--color-primary)',
+        '#22c55e', // emerald-500
+        '#f59e0b', // amber-500
+        '#a78bfa', // violet-400
+        '#f472b6', // pink-400
+        '#60a5fa', // blue-400
+        '#34d399', // emerald-400
+        '#fb923c', // orange-400
+    ];
+
+    const container = progressBoxRef.value;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // Create 50 confetti pieces
+    for (let i = 0; i < 50; i++) {
+        const el = document.createElement('div');
+        const size = 6 + Math.random() * 6;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const isCircle = Math.random() > 0.5;
+
+        el.style.cssText = `
       position: fixed;
       z-index: 9999;
       pointer-events: none;
@@ -375,99 +363,99 @@ const burstConfetti = () => {
       top: ${centerY}px;
       opacity: 1;
     `;
-    document.body.appendChild(el);
-    
-    const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
-    const velocity = 300 + Math.random() * 500;
-    const vx = Math.cos(angle) * velocity;
-    const vy = Math.sin(angle) * velocity;
-    const rotation = Math.random() * 720 - 360;
-    const gravity = 800;
-    const duration = 1.2 + Math.random() * 0.8;
-    
-    gsap.to(el, {
-      x: vx * 0.5,
-      y: vy * 0.5 + 0.5 * gravity * 0.25,
-      rotation: rotation,
-      opacity: 0,
-      scale: 0.3,
-      duration: duration,
-      ease: 'power2.out',
-      onComplete: () => el.remove(),
-    });
-  }
+        document.body.appendChild(el);
+
+        const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.2;
+        const velocity = 300 + Math.random() * 500;
+        const vx = Math.cos(angle) * velocity;
+        const vy = Math.sin(angle) * velocity;
+        const rotation = Math.random() * 720 - 360;
+        const gravity = 800;
+        const duration = 1.2 + Math.random() * 0.8;
+
+        gsap.to(el, {
+            x: vx * 0.5,
+            y: vy * 0.5 + 0.5 * gravity * 0.25,
+            rotation: rotation,
+            opacity: 0,
+            scale: 0.3,
+            duration: duration,
+            ease: 'power2.out',
+            onComplete: () => el.remove(),
+        });
+    }
 };
 
 // ─── ALL-ANSWERED CELEBRATION ──────────────────────────────────
 // Watches for when all questions are answered and animates the progress box
 watch(unansweredCount, (newCount, oldCount) => {
-  if (oldCount > 0 && newCount === 0 && progressBoxRef.value) {
-    burstConfetti();
-    gsap.killTweensOf(progressBoxRef.value);
-    gsap.fromTo(
-      progressBoxRef.value,
-      {
-        scale: 1,
-        borderColor: 'var(--color-border)',
-        boxShadow: '0 0 0px rgba(var(--color-primary), 0)',
-      },
-      {
-        scale: 1.02,
-        borderColor: 'var(--color-primary)',
-        boxShadow: '0 0 30px var(--color-primary)',
-        duration: 1.2,
-        ease: 'elastic.out(1, 0.4)',
-        yoyo: true,
-        repeat: 2,
-        clearProps: 'borderColor,boxShadow,transform',
-      },
-    );
+    if (oldCount > 0 && newCount === 0 && progressBoxRef.value) {
+        burstConfetti();
+        gsap.killTweensOf(progressBoxRef.value);
+        gsap.fromTo(
+            progressBoxRef.value,
+            {
+                scale: 1,
+                borderColor: 'var(--color-border)',
+                boxShadow: '0 0 0px rgba(var(--color-primary), 0)',
+            },
+            {
+                scale: 1.02,
+                borderColor: 'var(--color-primary)',
+                boxShadow: '0 0 30px var(--color-primary)',
+                duration: 1.2,
+                ease: 'elastic.out(1, 0.4)',
+                yoyo: true,
+                repeat: 2,
+                clearProps: 'borderColor,boxShadow,transform',
+            },
+        );
 
-    // Also pulse the progress percentage
-    const pctEl = progressBoxRef.value.querySelector('.progress-pct');
-    if (pctEl) {
-      gsap.fromTo(
-        pctEl,
-        { scale: 1, color: '' },
-        {
-          scale: 1.3,
-          color: 'var(--color-primary)',
-          duration: 0.4,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 5,
-        },
-      );
+        // Also pulse the progress percentage
+        const pctEl = progressBoxRef.value.querySelector('.progress-pct');
+        if (pctEl) {
+            gsap.fromTo(
+                pctEl,
+                { scale: 1, color: '' },
+                {
+                    scale: 1.3,
+                    color: 'var(--color-primary)',
+                    duration: 0.4,
+                    ease: 'power2.out',
+                    yoyo: true,
+                    repeat: 5,
+                },
+            );
+        }
+
+        // Pulse the submit buttons to encourage submission
+        const submitBtns = document.querySelectorAll('.submit-celebration-btn');
+        submitBtns.forEach((btn) => {
+            gsap.killTweensOf(btn);
+            gsap.fromTo(
+                btn,
+                { scale: 1, boxShadow: '0 0 0px transparent' },
+                {
+                    scale: 1.05,
+                    boxShadow: '0 0 25px var(--color-primary)',
+                    duration: 0.8,
+                    ease: 'power1.inOut',
+                    yoyo: true,
+                    repeat: -1,
+                },
+            );
+        });
     }
-
-    // Pulse the submit buttons to encourage submission
-    const submitBtns = document.querySelectorAll('.submit-celebration-btn');
-    submitBtns.forEach((btn) => {
-      gsap.killTweensOf(btn);
-      gsap.fromTo(
-        btn,
-        { scale: 1, boxShadow: '0 0 0px transparent' },
-        {
-          scale: 1.05,
-          boxShadow: '0 0 25px var(--color-primary)',
-          duration: 0.8,
-          ease: 'power1.inOut',
-          yoyo: true,
-          repeat: -1,
-        },
-      );
-    });
-  }
 });
 
 // Stop the submit button pulse when user starts submitting
 watch(isSubmitting, (submitting) => {
-  if (submitting) {
-    document.querySelectorAll('.submit-celebration-btn').forEach((btn) => {
-      gsap.killTweensOf(btn);
-      gsap.set(btn, { clearProps: 'transform,boxShadow' });
-    });
-  }
+    if (submitting) {
+        document.querySelectorAll('.submit-celebration-btn').forEach((btn) => {
+            gsap.killTweensOf(btn);
+            gsap.set(btn, { clearProps: 'transform,boxShadow' });
+        });
+    }
 });
 
 // Find the first unanswered question index (for the jump-to-unanswered button)
@@ -475,7 +463,11 @@ const firstUnansweredIndex = computed(() => {
     if (!selectedPart.value?.questions) return -1;
     return selectedPart.value.questions.findIndex((_, i) => {
         const a = answers[i];
-        return a === undefined || a === null || (typeof a === 'string' && a.trim() === '');
+        return (
+            a === undefined ||
+            a === null ||
+            (typeof a === 'string' && a.trim() === '')
+        );
     });
 });
 
@@ -549,7 +541,8 @@ const jumpToNextFlagged = () => {
 
     // Find the current position among flagged questions, or start from the first
     const currentIdx = flagged.indexOf(visibleQuestionIndex.value);
-    const nextIdx = currentIdx >= 0 && currentIdx < flagged.length - 1 ? currentIdx + 1 : 0;
+    const nextIdx =
+        currentIdx >= 0 && currentIdx < flagged.length - 1 ? currentIdx + 1 : 0;
     scrollToQuestion(flagged[nextIdx]);
 };
 
@@ -577,18 +570,20 @@ const clearDraft = () => {
     localStorage.removeItem(getDraftKey());
 };
 
-
-
 // ─── AUTO-SAVE ON ANSWER CHANGE ─────────────────────────────
 let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
-watch(answers, () => {
-    if (saveDraftTimeout) {
-        clearTimeout(saveDraftTimeout);
-    }
-    saveDraftTimeout = setTimeout(() => {
-        saveDraft();
-    }, 500);
-}, { deep: true });
+watch(
+    answers,
+    () => {
+        if (saveDraftTimeout) {
+            clearTimeout(saveDraftTimeout);
+        }
+        saveDraftTimeout = setTimeout(() => {
+            saveDraft();
+        }, 500);
+    },
+    { deep: true },
+);
 
 // ─── INTEGRITY & ANTI-CHEATING ───────────────────────────────
 const integrityWarnings = ref(0);
@@ -669,7 +664,9 @@ const totalScore = computed(() =>
 );
 
 const isExamPendingReview = computed(() =>
-    Object.values(localSubmissions.value).some((s) => s.status === 'pending_review'),
+    Object.values(localSubmissions.value).some(
+        (s) => s.status === 'pending_review',
+    ),
 );
 
 const totalPossiblePoints = computed(() =>
@@ -697,7 +694,10 @@ const nextPartId = computed(() => {
 });
 
 const isPartSubmitted = (partId: number) => {
-    return locallySubmittedPartIds.value.has(partId) || !!localSubmissions.value[partId];
+    return (
+        locallySubmittedPartIds.value.has(partId) ||
+        !!localSubmissions.value[partId]
+    );
 };
 
 watch(
@@ -1086,7 +1086,8 @@ const scrollToQuestion = (index: number) => {
             duration: 0.8,
             ease: 'power2.out',
             // Clear leftover inline styles after animation so next click starts clean
-            clearProps: 'outline,outlineWidth,outlineStyle,outlineColor,outlineOffset,transform',
+            clearProps:
+                'outline,outlineWidth,outlineStyle,outlineColor,outlineOffset,transform',
         },
     );
 };
@@ -1163,17 +1164,24 @@ const submitPart = async () => {
                 const submittedPartId = Number(selectedPart.value?.id);
                 locallySubmittedPartIds.value.add(submittedPartId);
                 localSubmissions.value[submittedPartId] = {
-                    status: currentPartHasEssay.value ? 'pending_review' : 'submitted',
+                    status: currentPartHasEssay.value
+                        ? 'pending_review'
+                        : 'submitted',
                     score: 0,
                 };
 
-                Object.entries(page.props.submissions ?? {}).forEach(([id, submission]) => {
-                    localSubmissions.value[Number(id)] = { ...submission };
-                    locallySubmittedPartIds.value.add(Number(id));
-                });
+                Object.entries(page.props.submissions ?? {}).forEach(
+                    ([id, submission]) => {
+                        localSubmissions.value[Number(id)] = { ...submission };
+                        locallySubmittedPartIds.value.add(Number(id));
+                    },
+                );
 
-                const effectiveCount = Object.keys(localSubmissions.value).length;
-                const freshSubmittedPartId = (page.props.submittedPartId ?? props.submittedPartId) as number | null;
+                const effectiveCount = Object.keys(
+                    localSubmissions.value,
+                ).length;
+                const freshSubmittedPartId = (page.props.submittedPartId ??
+                    props.submittedPartId) as number | null;
                 triggerSuccessModal(
                     props.exam.parts.length - effectiveCount,
                     freshSubmittedPartId ?? submittedPartId,
@@ -1220,8 +1228,6 @@ const closeUnansweredWarning = (proceed: boolean) => {
     }
 };
 
-
-
 const animateDisplayedScore = (score: number) => {
     gsap.killTweensOf(displayedScore);
     gsap.to(displayedScore, {
@@ -1258,12 +1264,14 @@ const startEssayGradingPoll = (partId: number) => {
                 localSubmissions.value[partId] = submission;
                 isCalculatingScore.value = false;
                 animateDisplayedScore(submission.score);
-                if (gradingPollTimer.value) clearInterval(gradingPollTimer.value);
+                if (gradingPollTimer.value)
+                    clearInterval(gradingPollTimer.value);
                 gradingPollTimer.value = null;
             } else if (data.grading_failed) {
                 localSubmissions.value[partId] = submission;
                 isCalculatingScore.value = false;
-                if (gradingPollTimer.value) clearInterval(gradingPollTimer.value);
+                if (gradingPollTimer.value)
+                    clearInterval(gradingPollTimer.value);
                 gradingPollTimer.value = null;
             }
         } catch {
@@ -1275,9 +1283,13 @@ const startEssayGradingPoll = (partId: number) => {
     gradingPollTimer.value = setInterval(checkStatus, 2000);
 };
 
-const triggerSuccessModal = (remainingCount?: number, newSubmittedPartId?: number | null) => {
+const triggerSuccessModal = (
+    remainingCount?: number,
+    newSubmittedPartId?: number | null,
+) => {
     const effectiveRemainingCount = remainingCount ?? remainingPartsCount.value;
-    const effectiveSubmittedPartId = newSubmittedPartId ?? props.submittedPartId;
+    const effectiveSubmittedPartId =
+        newSubmittedPartId ?? props.submittedPartId;
 
     hasShownUnansweredWarning.value = false;
     clearDraft();
@@ -1517,8 +1529,6 @@ onUnmounted(() => {
     document.querySelectorAll('.submit-celebration-btn').forEach((btn) => {
         gsap.killTweensOf(btn);
     });
-
-
 });
 const isExamInProgress = computed(
     () =>
@@ -1553,8 +1563,6 @@ const feedbackContent = computed(() => {
         bg: 'bg-amber-500/5',
     };
 });
-
-
 </script>
 
 <template>
@@ -1563,7 +1571,9 @@ const feedbackContent = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs" :hide-sidebar="hideSidebar">
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
-            <div class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8">
+            <div
+                class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8"
+            >
                 <PageSkeleton
                     :hero="true"
                     :stats="5"
@@ -1572,8 +1582,12 @@ const feedbackContent = computed(() => {
                     wrapperClass="mb-6"
                 />
                 <div class="mb-4 flex items-center justify-between">
-                    <div class="h-6 w-24 animate-pulse rounded bg-primary/10"></div>
-                    <div class="h-6 w-28 animate-pulse rounded bg-primary/10"></div>
+                    <div
+                        class="h-6 w-24 animate-pulse rounded bg-primary/10"
+                    ></div>
+                    <div
+                        class="h-6 w-28 animate-pulse rounded bg-primary/10"
+                    ></div>
                 </div>
                 <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                     <div
@@ -1587,436 +1601,438 @@ const feedbackContent = computed(() => {
 
         <!-- Real Content -->
         <template v-if="isBooted">
-        <div
-            ref="container"
-            class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
-        >
-
-
-            <div class="relative z-10 flex flex-1 flex-col gap-6 p-4 md:p-8">
-                <!-- Integrity Alert Overlay -->
-                <transition name="modal-fade">
-                    <div
-                        v-if="showIntegrityAlert"
-                        class="pointer-events-none fixed top-24 left-1/2 z-[100] w-full max-w-md -translate-x-1/2 px-4"
-                    >
-                        <div
-                            class="flex animate-bounce items-center gap-4 rounded-2xl border border-white/20 bg-red-500/90 p-4 text-white shadow-2xl backdrop-blur-xl"
-                        >
-                            <div
-                                class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/20"
-                            >
-                                <AlertCircle class="h-6 w-6" />
-                            </div>
-                            <div class="flex-1">
-                                <h4
-                                    class="text-sm font-black tracking-widest uppercase"
-                                >
-                                    Security Warning
-                                </h4>
-                                <p class="text-[10px] font-bold opacity-90">
-                                    Potential integrity breach detected. Your
-                                    session activity is being logged. Please
-                                    return to full screen and do not leave the
-                                    page.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </transition>
-
-                <!-- ─── BREADCRUMB NAV ─────────────────────────────────── -->
-                <Motion
-                    :initial="{ opacity: 0, y: -10 }"
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
-                    class="flex items-center justify-between"
+            <div
+                ref="container"
+                class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
+            >
+                <div
+                    class="relative z-10 flex flex-1 flex-col gap-6 p-4 md:p-8"
                 >
-                    <div class="flex items-center gap-3">
-                        <Link
-                            v-if="!selectedPart"
-                            href="/exams"
-                            class="inline-flex items-center gap-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/40 hover:text-primary"
-                        >
-                            <ChevronLeft
-                                class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1"
-                            />
-                            All Assessments
-                        </Link>
-                    </div>
-
-                    <!-- Live Floating Timer & Smart Stats (Only in list view) -->
-                    <div
-                        v-if="examStarted && !selectedPart"
-                        class="group/timer relative flex items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-black/60 px-6 py-3 shadow-2xl backdrop-blur-2xl transition-all duration-500 hover:border-primary/40 md:gap-6"
-                    >
-                        <!-- Pulse decoration for timer -->
+                    <!-- Integrity Alert Overlay -->
+                    <transition name="modal-fade">
                         <div
-                            class="absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover/timer:opacity-100"
-                        ></div>
-
-                        <!-- Draft Status (Desktop Only) -->
-                        <div
-                            v-if="lastSavedAt"
-                            class="hidden items-center gap-2 border-r border-white/10 pr-6 text-xs text-muted-foreground/60 lg:flex"
+                            v-if="showIntegrityAlert"
+                            class="pointer-events-none fixed top-24 left-1/2 z-[100] w-full max-w-md -translate-x-1/2 px-4"
                         >
                             <div
-                                class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
-                            ></div>
-                            {{ lastSavedAt }}
-                        </div>
-
-                        <!-- Pace Indicator -->
-                        <div
-                            v-if="
-                                estimatedFinishMinutes !== null &&
-                                estimatedFinishMinutes > 0
-                            "
-                            class="hidden items-center gap-2 text-xs text-amber-500 md:flex"
-                        >
-                            <Zap
-                                class="h-4 w-4 fill-amber-400/20 transition-transform group-hover/timer:scale-110"
-                            />
-                            <span class="hidden lg:inline"></span>
-                            {{ estimatedFinishMinutes }}M
-                        </div>
-
-                        <div
-                            class="relative z-10 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1"
-                            :class="
-                                timeLeftSeconds < 300
-                                    ? 'animate-pulse border-red-500/50 bg-red-500/10 text-red-500'
-                                    : 'text-primary'
-                            "
-                        >
-                            <Clock
-                                class="h-4 w-4 transition-transform group-hover/timer:rotate-12"
-                            />
-                            <span
-                                class="font-mono text-lg font-semibold tracking-tight tabular-nums"
-                                >{{ formattedTime }}</span
+                                class="flex animate-bounce items-center gap-4 rounded-2xl border border-white/20 bg-red-500/90 p-4 text-white shadow-2xl backdrop-blur-xl"
                             >
-                        </div>
-
-                        <!-- Accessibility Toggle -->
-                        <button
-                            @click="toggleDyslexiaMode"
-                            class="flex items-center gap-2 rounded-xl border px-3 py-1.5 backdrop-blur-md transition-all duration-300"
-                            :class="
-                                isDyslexiaFriendly
-                                    ? 'border-primary bg-primary text-primary-foreground'
-                                    : 'border-white/10 bg-white/5 text-white/40 hover:border-white/30 hover:text-white/60'
-                            "
-                            title="Toggle Dyslexia-Friendly Font"
-                        >
-                            <span
-                                class="text-xs font-medium"
-                                >Font_Accessibility</span
-                            >
-                            <div class="relative">
-                                <span class="text-sm font-medium">Aa</span>
                                 <div
-                                    v-if="isDyslexiaFriendly"
-                                    class="absolute -bottom-0.5 left-0 h-0.5 w-full bg-current"
-                                ></div>
-                            </div>
-                        </button>
-                    </div>
-                </Motion>
-
-                <!-- ─── HERO BANNER ─────────────────────────────────────── -->
-                <Motion
-                    v-if="!selectedPart"
-                    :initial="{ opacity: 0, y: 30 }"
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="{
-                        duration: 1,
-                        ease: [0.16, 1, 0.3, 1],
-                        delay: 0.1,
-                    }"
-                    class="exam-hero relative rounded-lg border border-border bg-card p-6 shadow-sm md:p-8"
-                >
-
-                    <div
-                        class="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center"
-                    >
-                        <div class="max-w-3xl space-y-4">
-                            <div class="flex items-center gap-4">
-<div class="space-y-0.5">
-                                    <span
-                                        class="text-xs font-medium text-muted-foreground"
-                                        >Exam</span
+                                    class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/20"
+                                >
+                                    <AlertCircle class="h-6 w-6" />
+                                </div>
+                                <div class="flex-1">
+                                    <h4
+                                        class="text-sm font-black tracking-widest uppercase"
                                     >
-                                    <h1
-                                        class="text-2xl font-bold tracking-tight text-foreground md:text-4xl"
-                                    >
-                                        {{ exam.title }}
-                                    </h1>
+                                        Security Warning
+                                    </h4>
+                                    <p class="text-[10px] font-bold opacity-90">
+                                        Potential integrity breach detected.
+                                        Your session activity is being logged.
+                                        Please return to full screen and do not
+                                        leave the page.
+                                    </p>
                                 </div>
                             </div>
+                        </div>
+                    </transition>
 
-                            <div
+                    <!-- ─── BREADCRUMB NAV ─────────────────────────────────── -->
+                    <Motion
+                        :initial="{ opacity: 0, y: -10 }"
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                        class="flex items-center justify-between"
+                    >
+                        <div class="flex items-center gap-3">
+                            <Link
                                 v-if="!selectedPart"
-                                class="rounded-lg border border-border/40 bg-muted/20 p-4"
+                                href="/exams"
+                                class="inline-flex items-center gap-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/40 hover:text-primary"
                             >
-<p
-                                    class="text-sm leading-relaxed text-muted-foreground"
-                                >
-                                    {{
-                                        exam.description ||
-                                        'Quickly assess and master the material with our streamlined exam interface.'
-                                    }}
-                                </p>
+                                <ChevronLeft
+                                    class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1"
+                                />
+                                All Assessments
+                            </Link>
+                        </div>
+
+                        <!-- Live Floating Timer & Smart Stats (Only in list view) -->
+                        <div
+                            v-if="examStarted && !selectedPart"
+                            class="group/timer relative flex items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-black/60 px-6 py-3 shadow-2xl backdrop-blur-2xl transition-all duration-500 hover:border-primary/40 md:gap-6"
+                        >
+                            <!-- Pulse decoration for timer -->
+                            <div
+                                class="absolute inset-0 bg-primary/5 opacity-0 transition-opacity group-hover/timer:opacity-100"
+                            ></div>
+
+                            <!-- Draft Status (Desktop Only) -->
+                            <div
+                                v-if="lastSavedAt"
+                                class="hidden items-center gap-2 border-r border-white/10 pr-6 text-xs text-muted-foreground/60 lg:flex"
+                            >
                                 <div
-                                    class="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60"
-                                >
-                                    <Calendar class="h-3.5 w-3.5" />
-                                    {{ formatDateTime(exam.exam_date) }}
-                                </div>
+                                    class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+                                ></div>
+                                {{ lastSavedAt }}
+                            </div>
+
+                            <!-- Pace Indicator -->
+                            <div
+                                v-if="
+                                    estimatedFinishMinutes !== null &&
+                                    estimatedFinishMinutes > 0
+                                "
+                                class="hidden items-center gap-2 text-xs text-amber-500 md:flex"
+                            >
+                                <Zap
+                                    class="h-4 w-4 fill-amber-400/20 transition-transform group-hover/timer:scale-110"
+                                />
+                                <span class="hidden lg:inline"></span>
+                                {{ estimatedFinishMinutes }}M
                             </div>
 
                             <div
-                                v-if="selectedPart && lastSavedAt"
-                                class="sync-heartbeat flex w-fit items-center gap-2 border border-emerald-500/20 bg-emerald-500/10 px-4 py-2"
+                                class="relative z-10 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1"
+                                :class="
+                                    timeLeftSeconds < 300
+                                        ? 'animate-pulse border-red-500/50 bg-red-500/10 text-red-500'
+                                        : 'text-primary'
+                                "
                             >
-                                <CheckCircle2
-                                    class="h-4 w-4 text-emerald-500"
+                                <Clock
+                                    class="h-4 w-4 transition-transform group-hover/timer:rotate-12"
                                 />
                                 <span
-                                    class="text-xs text-emerald-600"
-                                    >Auto-saved at {{
-                                        lastSavedAt.replace(/:/g, '_')
-                                    }}</span
+                                    class="font-mono text-lg font-semibold tracking-tight tabular-nums"
+                                    >{{ formattedTime }}</span
                                 >
-                            </div>
-                        </div>
-
-                        <!-- Stats Architecture -->
-                        <div
-                            class="grid grid-cols-2 gap-4 rounded-lg border border-border/40 bg-muted/10 p-4 md:gap-6 lg:grid-cols-5"
-                        >
-
-                            <div
-                                v-if="allPartsSubmitted"
-                                class="flex flex-col gap-1"
-                            >
-                                <span
-                                    class="text-xs text-muted-foreground"
-                                    >Score</span
-                                >
-                                <div
-                                    class="text-lg font-semibold text-foreground tabular-nums"
-                                >
-                                    {{ totalScore }}/{{ totalPossiblePoints }}
-                                </div>
-                            </div>
-
-                            <div class="flex flex-col gap-1">
-                                <span
-                                    class="text-xs text-muted-foreground"
-                                    >Time Limit</span
-                                >
-                                <div class="flex items-baseline gap-1">
-                                    <span
-                                        class="text-lg font-semibold text-foreground tabular-nums"
-                                        >{{ exam.duration_minutes }}</span
-                                    >
-                                    <span
-                                        class="text-xs text-muted-foreground/60"
-                                        >min</span
-                                    >
-                                </div>
-                            </div>
-
-                            <div class="flex flex-col gap-1">
-                                <span
-                                    class="text-xs text-muted-foreground"
-                                    >Sections</span
-                                >
-                                <div
-                                    class="text-lg font-semibold text-foreground tabular-nums"
-                                >
-                                    {{ exam.parts.length }}
-                                </div>
-                            </div>
-
-                            <div class="flex flex-col gap-1">
-                                <span
-                                    class="text-xs text-muted-foreground"
-                                    >Questions</span
-                                >
-                                <div
-                                    class="text-lg font-semibold text-foreground tabular-nums"
-                                >
-                                    {{ totalQuestions }}
-                                </div>
                             </div>
 
                             <!-- Accessibility Toggle -->
                             <button
                                 @click="toggleDyslexiaMode"
-                                class="group/acc -m-3 flex flex-col gap-1 rounded-xl border border-transparent p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 active:scale-95"
+                                class="flex items-center gap-2 rounded-xl border px-3 py-1.5 backdrop-blur-md transition-all duration-300"
                                 :class="
                                     isDyslexiaFriendly
-                                        ? 'border-primary/20 bg-primary/5'
-                                        : ''
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-white/10 bg-white/5 text-white/40 hover:border-white/30 hover:text-white/60'
                                 "
+                                title="Toggle Dyslexia-Friendly Font"
                             >
-                                <span
-                                    class="text-[10px] font-medium transition-colors"
-                                    :class="
-                                        isDyslexiaFriendly
-                                            ? 'text-primary'
-                                            : 'text-muted-foreground'
-                                    "
-                                    >ACCESSIBILITY</span
+                                <span class="text-xs font-medium"
+                                    >Font_Accessibility</span
                                 >
-                                <div class="flex items-center gap-2">
+                                <div class="relative">
+                                    <span class="text-sm font-medium">Aa</span>
                                     <div
-                                        class="text-lg font-semibold tabular-nums transition-colors"
-                                        :class="
-                                            isDyslexiaFriendly
-                                                ? 'text-primary'
-                                                : 'text-foreground'
-                                        "
-                                    >
-                                        Aa
-                                    </div>
-                                    <div
-                                        class="h-2 w-2 rounded-full transition-all"
-                                        :class="
-                                            isDyslexiaFriendly
-                                                ? 'scale-110 bg-primary shadow-lg shadow-primary/50'
-                                                : 'bg-muted-foreground/30'
-                                        "
+                                        v-if="isDyslexiaFriendly"
+                                        class="absolute -bottom-0.5 left-0 h-0.5 w-full bg-current"
                                     ></div>
                                 </div>
                             </button>
                         </div>
-                    </div>
-                </Motion>
-
-                <!-- Global Progress Bar -->
-                <Motion
-                    v-if="!allPartsSubmitted && examStarted && !selectedPart"
-                    :initial="{ opacity: 0 }"
-                    :animate="isBooted ? { opacity: 1 } : {}"
-                    :transition="{ duration: 1, delay: 0.3 }"
-                    class="mt-2 w-full space-y-4"
-                >
-                    <!-- Overall Evaluation Progress -->
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between px-1">
-                            <span
-                                class="text-xs text-muted-foreground/60"
-                                >Progress</span
-                            >
-                            <span class="text-[9px] font-black text-primary/60"
-                                >{{ Math.round(overallProgress) }}%
-                                COMPLETED</span
-                            >
-                        </div>
-                        <div
-                            class="relative h-1 w-full overflow-hidden border border-primary/10 bg-muted/30"
-                        >
-                            <div
-                                class="h-full rounded-full bg-primary transition-all duration-1000 ease-out"
-                                :style="{ width: `${overallProgress}%` }"
-                            ></div>
-                        </div>
-                    </div>
-                </Motion>
-
-                <!-- ═══════════════════════════════════════════════════════ -->
-                <!--  PARTS LIST STATE                                       -->
-                <!-- ═══════════════════════════════════════════════════════ -->
-                <template v-if="!selectedPart">
-                    <Motion
-                        :initial="{ opacity: 0, y: 20 }"
-                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                        :transition="{
-                            duration: 0.8,
-                            ease: [0.16, 1, 0.3, 1],
-                            delay: 0.2,
-                        }"
-                        class="flex items-center justify-between"
-                    >
-                        <h2
-                            class="flex items-center gap-2 text-lg font-semibold"
-                        >
-                            <Layers class="h-5 w-5 text-primary" />
-                            Parts
-                        </h2>
-                        <span
-                            class="rounded-lg border border-border/40 bg-muted/30 px-3 py-1 text-xs text-muted-foreground"
-                        >
-                            {{ exam.parts.length }} sections
-                        </span>
                     </Motion>
 
-                    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                        <Motion
-                            v-for="(part, index) in exam.parts"
-                            :key="part.id"
-                            @click="selectPart(part, index)"
-                            :initial="{ opacity: 0, y: 30 }"
-                            :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
-                            :in-view-options="{ once: true, margin: '-50px' }"
-                            :transition="{
-                                duration: 0.8,
-                                ease: [0.16, 1, 0.3, 1],
-                                delay: index * 0.05,
-                            }"
-                            class="exam-part-card group/part flex flex-col justify-between rounded-lg border border-border bg-card p-5 transition-all duration-500"
-                            :class="[
-                                isPartSubmitted(part.id)
-                                    ? 'opacity-80'
-                                    : isPartLocked(index)
-                                      ? 'cursor-not-allowed opacity-60 grayscale'
-                                      : 'cursor-pointer hover:-translate-y-1 hover:shadow-xl',
-                                nextPartId === part.id
-                                    ? 'border-primary/50 shadow-xl ring-2 shadow-primary/20 ring-primary'
-                                    : '',
-                            ]"
+                    <!-- ─── HERO BANNER ─────────────────────────────────────── -->
+                    <Motion
+                        v-if="!selectedPart"
+                        :initial="{ opacity: 0, y: 30 }"
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="{
+                            duration: 1,
+                            ease: [0.16, 1, 0.3, 1],
+                            delay: 0.1,
+                        }"
+                        class="exam-hero relative rounded-lg border border-border bg-card p-6 shadow-sm md:p-8"
+                    >
+                        <div
+                            class="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center"
                         >
-                            <!-- Onboarding -->
-                            <div
-                                v-if="nextPartId === part.id"
-                                class="pointer-events-none absolute inset-0 z-0"
-                            >
+                            <div class="max-w-3xl space-y-4">
+                                <div class="flex items-center gap-4">
+                                    <div class="space-y-0.5">
+                                        <span
+                                            class="text-xs font-medium text-muted-foreground"
+                                            >Exam</span
+                                        >
+                                        <h1
+                                            class="text-2xl font-bold tracking-tight text-foreground md:text-4xl"
+                                        >
+                                            {{ exam.title }}
+                                        </h1>
+                                    </div>
+                                </div>
+
                                 <div
-                                    class="absolute inset-0 animate-pulse bg-primary/5"
-                                ></div>
-                                <div
-                                    class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-[10px] font-medium text-primary-foreground shadow-sm"
+                                    v-if="!selectedPart"
+                                    class="rounded-lg border border-border/40 bg-muted/20 p-4"
                                 >
-                                    Recommended
+                                    <p
+                                        class="text-sm leading-relaxed text-muted-foreground"
+                                    >
+                                        {{
+                                            exam.description ||
+                                            'Quickly assess and master the material with our streamlined exam interface.'
+                                        }}
+                                    </p>
+                                    <div
+                                        class="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60"
+                                    >
+                                        <Calendar class="h-3.5 w-3.5" />
+                                        {{ formatDateTime(exam.exam_date) }}
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-if="selectedPart && lastSavedAt"
+                                    class="sync-heartbeat flex w-fit items-center gap-2 border border-emerald-500/20 bg-emerald-500/10 px-4 py-2"
+                                >
+                                    <CheckCircle2
+                                        class="h-4 w-4 text-emerald-500"
+                                    />
+                                    <span class="text-xs text-emerald-600"
+                                        >Auto-saved at
+                                        {{
+                                            lastSavedAt.replace(/:/g, '_')
+                                        }}</span
+                                    >
                                 </div>
                             </div>
 
+                            <!-- Stats Architecture -->
+                            <div
+                                class="grid grid-cols-2 gap-4 rounded-lg border border-border/40 bg-muted/10 p-4 md:gap-6 lg:grid-cols-5"
+                            >
+                                <div
+                                    v-if="allPartsSubmitted"
+                                    class="flex flex-col gap-1"
+                                >
+                                    <span class="text-xs text-muted-foreground"
+                                        >Score</span
+                                    >
+                                    <div
+                                        class="text-lg font-semibold text-foreground tabular-nums"
+                                    >
+                                        {{ totalScore }}/{{
+                                            totalPossiblePoints
+                                        }}
+                                    </div>
+                                </div>
 
-                            <!-- Top: Status & Metadata -->
-                            <div class="relative z-10 flex flex-col gap-3">
-                                <div class="flex items-center justify-between">
-                                    <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-xs font-medium text-muted-foreground"
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Time Limit</span
                                     >
-                                        {{ index + 1 }}
+                                    <div class="flex items-baseline gap-1">
+                                        <span
+                                            class="text-lg font-semibold text-foreground tabular-nums"
+                                            >{{ exam.duration_minutes }}</span
+                                        >
+                                        <span
+                                            class="text-xs text-muted-foreground/60"
+                                            >min</span
+                                        >
                                     </div>
-                                    <div
-                                        v-if="isPartLocked(index)"
-                                        class="rounded-lg border border-white/5 bg-zinc-950/50 p-1.5"
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Sections</span
                                     >
-                                        <Lock
-                                            class="h-3.5 w-3.5 text-muted-foreground/40"
-                                        />
+                                    <div
+                                        class="text-lg font-semibold text-foreground tabular-nums"
+                                    >
+                                        {{ exam.parts.length }}
                                     </div>
-                                    <div
-                                        v-else-if="isPartSubmitted(part.id)"
-                                        class="rounded-md bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white"
+                                </div>
+
+                                <div class="flex flex-col gap-1">
+                                    <span class="text-xs text-muted-foreground"
+                                        >Questions</span
                                     >
+                                    <div
+                                        class="text-lg font-semibold text-foreground tabular-nums"
+                                    >
+                                        {{ totalQuestions }}
+                                    </div>
+                                </div>
+
+                                <!-- Accessibility Toggle -->
+                                <button
+                                    @click="toggleDyslexiaMode"
+                                    class="group/acc -m-3 flex flex-col gap-1 rounded-xl border border-transparent p-3 text-left transition-all hover:border-primary/30 hover:bg-primary/5 active:scale-95"
+                                    :class="
+                                        isDyslexiaFriendly
+                                            ? 'border-primary/20 bg-primary/5'
+                                            : ''
+                                    "
+                                >
+                                    <span
+                                        class="text-[10px] font-medium transition-colors"
+                                        :class="
+                                            isDyslexiaFriendly
+                                                ? 'text-primary'
+                                                : 'text-muted-foreground'
+                                        "
+                                        >ACCESSIBILITY</span
+                                    >
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            class="text-lg font-semibold tabular-nums transition-colors"
+                                            :class="
+                                                isDyslexiaFriendly
+                                                    ? 'text-primary'
+                                                    : 'text-foreground'
+                                            "
+                                        >
+                                            Aa
+                                        </div>
+                                        <div
+                                            class="h-2 w-2 rounded-full transition-all"
+                                            :class="
+                                                isDyslexiaFriendly
+                                                    ? 'scale-110 bg-primary shadow-lg shadow-primary/50'
+                                                    : 'bg-muted-foreground/30'
+                                            "
+                                        ></div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </Motion>
+
+                    <!-- Global Progress Bar -->
+                    <Motion
+                        v-if="
+                            !allPartsSubmitted && examStarted && !selectedPart
+                        "
+                        :initial="{ opacity: 0 }"
+                        :animate="isBooted ? { opacity: 1 } : {}"
+                        :transition="{ duration: 1, delay: 0.3 }"
+                        class="mt-2 w-full space-y-4"
+                    >
+                        <!-- Overall Evaluation Progress -->
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between px-1">
+                                <span class="text-xs text-muted-foreground/60"
+                                    >Progress</span
+                                >
+                                <span
+                                    class="text-[9px] font-black text-primary/60"
+                                    >{{ Math.round(overallProgress) }}%
+                                    COMPLETED</span
+                                >
+                            </div>
+                            <div
+                                class="relative h-1 w-full overflow-hidden border border-primary/10 bg-muted/30"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-primary transition-all duration-1000 ease-out"
+                                    :style="{ width: `${overallProgress}%` }"
+                                ></div>
+                            </div>
+                        </div>
+                    </Motion>
+
+                    <!-- ═══════════════════════════════════════════════════════ -->
+                    <!--  PARTS LIST STATE                                       -->
+                    <!-- ═══════════════════════════════════════════════════════ -->
+                    <template v-if="!selectedPart">
+                        <Motion
+                            :initial="{ opacity: 0, y: 20 }"
+                            :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                            :transition="{
+                                duration: 0.8,
+                                ease: [0.16, 1, 0.3, 1],
+                                delay: 0.2,
+                            }"
+                            class="flex items-center justify-between"
+                        >
+                            <h2
+                                class="flex items-center gap-2 text-lg font-semibold"
+                            >
+                                <Layers class="h-5 w-5 text-primary" />
+                                Parts
+                            </h2>
+                            <span
+                                class="rounded-lg border border-border/40 bg-muted/30 px-3 py-1 text-xs text-muted-foreground"
+                            >
+                                {{ exam.parts.length }} sections
+                            </span>
+                        </Motion>
+
+                        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                            <Motion
+                                v-for="(part, index) in exam.parts"
+                                :key="part.id"
+                                @click="selectPart(part, index)"
+                                :initial="{ opacity: 0, y: 30 }"
+                                :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
+                                :in-view-options="{
+                                    once: true,
+                                    margin: '-50px',
+                                }"
+                                :transition="{
+                                    duration: 0.8,
+                                    ease: [0.16, 1, 0.3, 1],
+                                    delay: index * 0.05,
+                                }"
+                                class="exam-part-card group/part flex flex-col justify-between rounded-lg border border-border bg-card p-5 transition-all duration-500"
+                                :class="[
+                                    isPartSubmitted(part.id)
+                                        ? 'opacity-80'
+                                        : isPartLocked(index)
+                                          ? 'cursor-not-allowed opacity-60 grayscale'
+                                          : 'cursor-pointer hover:-translate-y-1 hover:shadow-xl',
+                                    nextPartId === part.id
+                                        ? 'border-primary/50 shadow-xl ring-2 shadow-primary/20 ring-primary'
+                                        : '',
+                                ]"
+                            >
+                                <!-- Onboarding -->
+                                <div
+                                    v-if="nextPartId === part.id"
+                                    class="pointer-events-none absolute inset-0 z-0"
+                                >
+                                    <div
+                                        class="absolute inset-0 animate-pulse bg-primary/5"
+                                    ></div>
+                                    <div
+                                        class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-[10px] font-medium text-primary-foreground shadow-sm"
+                                    >
+                                        Recommended
+                                    </div>
+                                </div>
+
+                                <!-- Top: Status & Metadata -->
+                                <div class="relative z-10 flex flex-col gap-3">
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <div
+                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-xs font-medium text-muted-foreground"
+                                        >
+                                            {{ index + 1 }}
+                                        </div>
+                                        <div
+                                            v-if="isPartLocked(index)"
+                                            class="rounded-lg border border-white/5 bg-zinc-950/50 p-1.5"
+                                        >
+                                            <Lock
+                                                class="h-3.5 w-3.5 text-muted-foreground/40"
+                                            />
+                                        </div>
+                                        <div
+                                            v-else-if="isPartSubmitted(part.id)"
+                                            class="rounded-md bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white"
+                                        >
                                             {{
-                                                localSubmissions[part.id]?.score ?? 0
+                                                localSubmissions[part.id]
+                                                    ?.score ?? 0
                                             }}
                                             /
                                             {{
@@ -2029,1626 +2045,1611 @@ const feedbackContent = computed(() => {
                                                     0,
                                                 ) ?? 0
                                             }}
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div class="space-y-1">
-                                    <span
-                                        class="text-xs font-medium text-primary"
-                                        >Part {{ index + 1 }}</span
-                                    >
-                                    <h3
-                                        class="text-lg font-semibold text-foreground transition-colors group-hover/part:text-primary"
-                                    >
-                                        {{ part.title }}
-                                    </h3>
-                                </div>
-
-                                <!-- Middle: Question Types Stagger -->
-                                <div
-                                    class="space-y-2 border border-border/50 bg-muted/30 p-4 dark:bg-zinc-950/40"
-                                >
-                                    <span
-                                        v-for="type in getQuestionTypes(part)"
-                                        :key="type"
-                                        class="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
-                                    >
-                                        {{ formatType(type) }}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <!-- Bottom: Footer Info & Action -->
-                            <div
-                                class="relative z-10 mt-6 flex items-center justify-between border-t border-border/10 pt-4"
-                            >
-                                <div class="flex items-center gap-6">
-                                    <div class="flex items-center gap-2">
+                                    <div class="space-y-1">
                                         <span
-                                            class="text-sm font-semibold text-foreground"
-                                            >{{
-                                                part.questions?.length ?? 0
-                                            }}</span
+                                            class="text-xs font-medium text-primary"
+                                            >Part {{ index + 1 }}</span
                                         >
-                                        <span
-                                            class="text-xs text-muted-foreground/60"
-                                            >questions</span
+                                        <h3
+                                            class="text-lg font-semibold text-foreground transition-colors group-hover/part:text-primary"
                                         >
+                                            {{ part.title }}
+                                        </h3>
                                     </div>
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="text-xs font-black text-amber-500"
-                                            >{{
-                                                part.questions?.reduce(
-                                                    (sum, q) =>
-                                                        sum +
-                                                        (parseInt(q.points) ||
-                                                            parseInt(
-                                                                part.points,
-                                                            ) ||
-                                                            1),
-                                                    0,
-                                                ) ?? 0
-                                            }}</span
-                                        >
-                                        <span
-                                            class="text-xs text-muted-foreground/60"
-                                            >points</span
-                                        >
-                                    </div>
-                                </div>
 
-                                <div
-                                    v-if="!isPartSubmitted(part.id)"
-                                    class="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-all hover:bg-primary hover:text-primary-foreground"
-                                    :class="
-                                        isPartLocked(index)
-                                            ? 'opacity-20 grayscale'
-                                            : ''
-                                    "
-                                >
-                                    <span>{{
-                                        isPartLocked(index) ? 'Locked' : 'Start'
-                                    }}</span>
-                                    <ArrowRight
-                                        v-if="!isPartLocked(index)"
-                                        class="h-3.5 w-3.5"
-                                    />
-                                </div>
-                            </div>
-                        </Motion>
-                    </div>
-
-                    <!-- Instructions footer -->
-                    <Motion
-                        :initial="{ opacity: 0, y: 10 }"
-                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                        :transition="{ duration: 0.8, delay: 0.5 }"
-                        class="mt-2 flex items-start gap-2 rounded-lg border border-border/20 bg-muted/10 p-3"
-                    >
-                        <ListChecks
-                            class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50"
-                        />
-                        <p
-                            class="text-xs leading-relaxed text-muted-foreground/70"
-                        >
-                            Parts unlock sequentially. Work is auto-saved locally.
-                        </p>
-                    </Motion>
-                </template>
-
-                <!-- ═══════════════════════════════════════════════════════ -->
-                <!--  QUESTIONS STATE (after start)                          -->
-                <!-- ═══════════════════════════════════════════════════════ -->
-                <template v-else>
-                    <div class="flex flex-col gap-6 lg:flex-row lg:items-start relative">
-                        <!-- Main Question List -->
-                        <div class="flex-1 space-y-6 lg:pr-[22rem]">
-                            <!-- Part Instructions -->
-                            <div
-                                v-if="selectedPart!.instructions"
-                                class="relative overflow-hidden rounded-lg border border-border/50 bg-muted/30 p-6"
-                            >
-
-                                <div class="relative flex items-start gap-5">
+                                    <!-- Middle: Question Types Stagger -->
                                     <div
-                                        class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10"
+                                        class="space-y-2 border border-border/50 bg-muted/30 p-4 dark:bg-zinc-950/40"
                                     >
-                                        <FileText
-                                            class="h-5 w-5 text-primary-foreground"
+                                        <span
+                                            v-for="type in getQuestionTypes(
+                                                part,
+                                            )"
+                                            :key="type"
+                                            class="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
+                                        >
+                                            {{ formatType(type) }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Bottom: Footer Info & Action -->
+                                <div
+                                    class="relative z-10 mt-6 flex items-center justify-between border-t border-border/10 pt-4"
+                                >
+                                    <div class="flex items-center gap-6">
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="text-sm font-semibold text-foreground"
+                                                >{{
+                                                    part.questions?.length ?? 0
+                                                }}</span
+                                            >
+                                            <span
+                                                class="text-xs text-muted-foreground/60"
+                                                >questions</span
+                                            >
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span
+                                                class="text-xs font-black text-amber-500"
+                                                >{{
+                                                    part.questions?.reduce(
+                                                        (sum, q) =>
+                                                            sum +
+                                                            (parseInt(
+                                                                q.points,
+                                                            ) ||
+                                                                parseInt(
+                                                                    part.points,
+                                                                ) ||
+                                                                1),
+                                                        0,
+                                                    ) ?? 0
+                                                }}</span
+                                            >
+                                            <span
+                                                class="text-xs text-muted-foreground/60"
+                                                >points</span
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-if="!isPartSubmitted(part.id)"
+                                        class="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-all hover:bg-primary hover:text-primary-foreground"
+                                        :class="
+                                            isPartLocked(index)
+                                                ? 'opacity-20 grayscale'
+                                                : ''
+                                        "
+                                    >
+                                        <span>{{
+                                            isPartLocked(index)
+                                                ? 'Locked'
+                                                : 'Start'
+                                        }}</span>
+                                        <ArrowRight
+                                            v-if="!isPartLocked(index)"
+                                            class="h-3.5 w-3.5"
                                         />
                                     </div>
-                                    <div class="flex-1 space-y-2">
-                                        <h4
-                                            class="text-xs font-semibold tracking-wide text-foreground"
-                                        >
-                                            Instructions
-                                        </h4>
-                                        <p
-                                            class="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap"
-                                        >
-                                            {{ selectedPart!.instructions }}
-                                        </p>
-                                    </div>
                                 </div>
-                            </div>
+                            </Motion>
+                        </div>
 
-                            <!-- ═══ MOBILE: Single question carousel (swipeable) ═══ -->
-                            <div class="block md:hidden">
-                                <!-- Current question card -->
+                        <!-- Instructions footer -->
+                        <Motion
+                            :initial="{ opacity: 0, y: 10 }"
+                            :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                            :transition="{ duration: 0.8, delay: 0.5 }"
+                            class="mt-2 flex items-start gap-2 rounded-lg border border-border/20 bg-muted/10 p-3"
+                        >
+                            <ListChecks
+                                class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/50"
+                            />
+                            <p
+                                class="text-xs leading-relaxed text-muted-foreground/70"
+                            >
+                                Parts unlock sequentially. Work is auto-saved
+                                locally.
+                            </p>
+                        </Motion>
+                    </template>
+
+                    <!-- ═══════════════════════════════════════════════════════ -->
+                    <!--  QUESTIONS STATE (after start)                          -->
+                    <!-- ═══════════════════════════════════════════════════════ -->
+                    <template v-else>
+                        <div
+                            class="relative flex flex-col gap-6 lg:flex-row lg:items-start"
+                        >
+                            <!-- Main Question List -->
+                            <div class="flex-1 space-y-6 lg:pr-[22rem]">
+                                <!-- Part Instructions -->
                                 <div
-                                    v-if="selectedPart!.questions![mobileQuestionIndex]"
-                                    :id="`q-${mobileQuestionIndex}`"
-                                    @touchstart="handleTouchStart"
-                                    @touchend="handleTouchEnd"
-                                    :class="[
-                                        'question-card relative flex flex-col gap-4 rounded-xl border border-border/40 border-l-[3px] p-4 transition-all duration-500',
-                                        getQuestionStatus(mobileQuestionIndex) === 'answered'
-                                            ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
-                                            : 'border-border/40 border-l-muted bg-card/40',
-                                    ]"
+                                    v-if="selectedPart!.instructions"
+                                    class="relative overflow-hidden rounded-lg border border-border/50 bg-muted/30 p-6"
                                 >
-                                    <!-- Question Content -->
-                                    <div class="flex flex-col items-start gap-4">
-                                        <!-- ID & Flag row -->
-                                        <div class="flex w-full items-center justify-between">
-                                            <div class="flex items-center gap-3">
-                                                <div class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-                                                    {{ mobileQuestionIndex + 1 }}
-                                                </div>
-                                                <span class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                                                    {{ formatType(selectedPart!.questions![mobileQuestionIndex].type) }}
-                                                </span>
-                                                <span class="text-[10px] text-muted-foreground">
-                                                    {{ selectedPart!.questions![mobileQuestionIndex].points ?? selectedPart!.points ?? 1 }} pt
-                                                </span>
-                                            </div>
-                                            <button
-                                                @click="toggleFlag(mobileQuestionIndex)"
-                                                class="flex h-7 w-7 items-center justify-center rounded-lg border border-border/40 transition-all"
-                                                :class="
-                                                    flaggedQuestions.has(mobileQuestionIndex)
-                                                        ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
-                                                        : 'text-muted-foreground/30'
-                                                "
-                                            >
-                                                <Flag
-                                                    class="h-3.5 w-3.5"
-                                                    :class="flaggedQuestions.has(mobileQuestionIndex) ? 'fill-amber-500' : ''"
-                                                />
-                                            </button>
-                                        </div>
-
-                                        <p class="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                                            {{ selectedPart!.questions![mobileQuestionIndex].text }}
-                                        </p>
-                                    </div>
-
-                                    <!-- Answer Area -->
-                                    <div class="w-full">
-                                        <!-- Multiple Choice / True-False -->
+                                    <div
+                                        class="relative flex items-start gap-5"
+                                    >
                                         <div
-                                            v-if="selectedPart!.questions![mobileQuestionIndex].type === 'multiple_choice' || selectedPart!.questions![mobileQuestionIndex].type === 'true_false'"
-                                            class="flex flex-col gap-3"
+                                            class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10"
                                         >
-                                            <label
-                                                v-for="(option, oIndex) in selectedPart!.questions![mobileQuestionIndex].options"
-                                                :key="option.text"
-                                                class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
-                                            >
-                                                <div class="relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-border/60 transition-colors group-hover/option:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary">
-                                                    <input
-                                                        type="radio"
-                                                        :name="`q-mobile-${mobileQuestionIndex}`"
-                                                        :value="oIndex"
-                                                        v-model.number="answers[mobileQuestionIndex]"
-                                                        class="sr-only"
-                                                    />
-                                                    <Check
-                                                        v-if="answers[mobileQuestionIndex] === oIndex"
-                                                        class="h-3 w-3 text-primary-foreground"
-                                                    />
-                                                </div>
-                                                <span class="relative text-sm text-muted-foreground transition-colors group-hover/option:text-foreground has-[:checked]:text-primary">{{ option.text }}</span>
-                                            </label>
-                                        </div>
-
-                                        <!-- Identification -->
-                                        <div v-else-if="selectedPart!.questions![mobileQuestionIndex].type === 'identification'" class="max-w-full">
-                                            <input
-                                                v-model="answers[mobileQuestionIndex]"
-                                                type="text"
-                                                placeholder="Type your answer here..."
-                                                class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                            <FileText
+                                                class="h-5 w-5 text-primary-foreground"
                                             />
                                         </div>
-
-                                        <!-- Essay -->
-                                        <div v-else-if="selectedPart!.questions![mobileQuestionIndex].type === 'essay'" class="w-full">
-                                            <textarea
-                                                v-model="answers[mobileQuestionIndex]"
-                                                rows="6"
-                                                placeholder="Write your answer here..."
-                                                class="min-h-[150px] w-full resize-y rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm leading-relaxed transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
-                                            ></textarea>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Mobile: Prev / Next Navigation -->
-                                <div class="mt-4 flex items-center justify-between gap-2">
-                                    <button
-                                        @click="goToPrevQuestion"
-                                        :disabled="mobileQuestionIndex === 0"
-                                        class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[10px] font-bold text-muted-foreground transition-all disabled:opacity-30 enabled:hover:border-primary/40 enabled:hover:text-primary"
-                                    >
-                                        <ChevronLeft class="h-3.5 w-3.5" />
-                                        Prev
-                                    </button>
-
-                                    <span class="text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase">
-                                        {{ mobileQuestionIndex + 1 }} / {{ selectedPart!.questions!.length }}
-                                    </span>
-
-                                    <button
-                                        @click="goToNextQuestion"
-                                        :disabled="mobileQuestionIndex >= selectedPart!.questions!.length - 1"
-                                        class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[10px] font-bold text-muted-foreground transition-all disabled:opacity-30 enabled:hover:border-primary/40 enabled:hover:text-primary"
-                                    >
-                                        Next
-                                        <ChevronRight class="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- ═══ DESKTOP: Full question grid ═══ -->
-                            <div class="hidden md:grid md:grid-cols-2 gap-6">
-                                <div
-                                    v-for="(question, qIndex) in selectedPart!
-                                        .questions"
-                                    :key="qIndex"
-                                    :id="`q-${qIndex}`"
-                                    :class="[
-                                        'question-card relative flex flex-col gap-4 rounded-xl border border-border/40 border-l-[3px] p-4 transition-all duration-500 md:p-5 scroll-mt-24',
-                                        getQuestionStatus(qIndex) === 'answered'
-                                            ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
-                                            : 'border-border/40 border-l-muted bg-card/40',
-                                        question.type === 'essay'
-                                            ? 'md:col-span-2'
-                                            : '',
-                                    ]"
-                                >
-
-                                    <!-- Question Content -->
-                                    <div
-                                        class="flex flex-col items-start gap-6 md:flex-row"
-                                    >
-                                        <!-- ID & Flag -->
-                                        <div
-                                            class="flex flex-shrink-0 items-center gap-4"
-                                        >
-                                            <div
-                                                class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                                        <div class="flex-1 space-y-2">
+                                            <h4
+                                                class="text-xs font-semibold tracking-wide text-foreground"
                                             >
-                                                {{ qIndex + 1 }}
-                                            </div>
-                                            <button
-                                                @click="toggleFlag(qIndex)"
-                                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-border/40 transition-all hover:border-amber-500/50 hover:bg-amber-500/10"
-                                                :class="
-                                                    flaggedQuestions.has(qIndex)
-                                                        ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
-                                                        : 'text-muted-foreground/30'
-                                                "
-                                            >
-                                                <Flag
-                                                    class="h-4 w-4"
-                                                    :class="
-                                                        flaggedQuestions.has(
-                                                            qIndex,
-                                                        )
-                                                            ? 'fill-amber-500'
-                                                            : ''
-                                                    "
-                                                />
-                                            </button>
-                                        </div>
-
-                                        <!-- Text & Type -->
-                                        <div class="flex-1 space-y-4">
-                                            <div
-                                                class="flex items-center gap-3"
-                                            >
-                                                <span
-                                                    class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
-                                                >
-                                                    {{
-                                                        formatType(
-                                                            question.type,
-                                                        )
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="text-xs text-muted-foreground"
-                                                >
-                                                    {{
-                                                        question.points ??
-                                                        selectedPart!.points ??
-                                                        1
-                                                    }}
-                                                    {{
-                                                        (question.points ??
-                                                            selectedPart!
-                                                                .points ??
-                                                            1) === 1
-                                                            ? 'point'
-                                                            : 'points'
-                                                    }}
-                                                </span>
-                                            </div>
+                                                Instructions
+                                            </h4>
                                             <p
-                                                class="text-base leading-relaxed text-foreground whitespace-pre-wrap"
+                                                class="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground"
                                             >
-                                                {{ question.text }}
+                                                {{ selectedPart!.instructions }}
                                             </p>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- Answer Area -->
-                                    <div class="w-full pl-0 md:pl-16">
-                                        <!-- Multiple Choice / True-False -->
+                                <!-- ═══ MOBILE: Single question carousel (swipeable) ═══ -->
+                                <div class="block md:hidden">
+                                    <!-- Current question card -->
+                                    <div
+                                        v-if="
+                                            selectedPart!.questions![
+                                                mobileQuestionIndex
+                                            ]
+                                        "
+                                        :id="`q-${mobileQuestionIndex}`"
+                                        @touchstart="handleTouchStart"
+                                        @touchend="handleTouchEnd"
+                                        :class="[
+                                            'question-card relative flex flex-col gap-4 rounded-xl border border-l-[3px] border-border/40 p-4 transition-all duration-500',
+                                            getQuestionStatus(
+                                                mobileQuestionIndex,
+                                            ) === 'answered'
+                                                ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
+                                                : 'border-border/40 border-l-muted bg-card/40',
+                                        ]"
+                                    >
+                                        <!-- Question Content -->
                                         <div
-                                            v-if="
-                                                question.type ===
-                                                    'multiple_choice' ||
-                                                question.type === 'true_false'
-                                            "
-                                            class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                                            class="flex flex-col items-start gap-4"
                                         >
-                                            <label
-                                                v-for="(
-                                                    option, oIndex
-                                                ) in question.options"
-                                                :key="option.text"
-                                                class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+                                            <!-- ID & Flag row -->
+                                            <div
+                                                class="flex w-full items-center justify-between"
                                             >
-
                                                 <div
-                                                    class="relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-border/60 transition-colors group-hover/option:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary"
+                                                    class="flex items-center gap-3"
                                                 >
-                                                    <input
-                                                        type="radio"
-                                                        :name="`q-${qIndex}`"
-                                                        :value="oIndex"
-                                                        v-model.number="
-                                                            answers[qIndex]
-                                                        "
-                                                        class="sr-only"
-                                                    />
-                                                    <Check
-                                                        v-if="
-                                                            answers[qIndex] ===
-                                                            oIndex
-                                                        "
-                                                        class="h-3 w-3 text-primary-foreground"
-                                                    />
+                                                    <div
+                                                        class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary"
+                                                    >
+                                                        {{
+                                                            mobileQuestionIndex +
+                                                            1
+                                                        }}
+                                                    </div>
+                                                    <span
+                                                        class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                                                    >
+                                                        {{
+                                                            formatType(
+                                                                selectedPart!
+                                                                    .questions![
+                                                                    mobileQuestionIndex
+                                                                ].type,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        class="text-[10px] text-muted-foreground"
+                                                    >
+                                                        {{
+                                                            selectedPart!
+                                                                .questions![
+                                                                mobileQuestionIndex
+                                                            ].points ??
+                                                            selectedPart!
+                                                                .points ??
+                                                            1
+                                                        }}
+                                                        pt
+                                                    </span>
                                                 </div>
-                                                <span
-                                                    class="relative text-sm text-muted-foreground transition-colors group-hover/option:text-foreground has-[:checked]:text-primary"
-                                                    >{{ option.text }}</span
+                                                <button
+                                                    @click="
+                                                        toggleFlag(
+                                                            mobileQuestionIndex,
+                                                        )
+                                                    "
+                                                    class="flex h-7 w-7 items-center justify-center rounded-lg border border-border/40 transition-all"
+                                                    :class="
+                                                        flaggedQuestions.has(
+                                                            mobileQuestionIndex,
+                                                        )
+                                                            ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
+                                                            : 'text-muted-foreground/30'
+                                                    "
                                                 >
-                                            </label>
+                                                    <Flag
+                                                        class="h-3.5 w-3.5"
+                                                        :class="
+                                                            flaggedQuestions.has(
+                                                                mobileQuestionIndex,
+                                                            )
+                                                                ? 'fill-amber-500'
+                                                                : ''
+                                                        "
+                                                    />
+                                                </button>
+                                            </div>
+
+                                            <p
+                                                class="text-sm leading-relaxed whitespace-pre-wrap text-foreground"
+                                            >
+                                                {{
+                                                    selectedPart!.questions![
+                                                        mobileQuestionIndex
+                                                    ].text
+                                                }}
+                                            </p>
                                         </div>
 
-                                        <!-- Identification -->
-                                        <div
-                                            v-else-if="
-                                                question.type ===
-                                                'identification'
-                                            "
-                                            class="max-w-xl"
-                                        >
-                                            <div class="group/input relative">
+                                        <!-- Answer Area -->
+                                        <div class="w-full">
+                                            <!-- Multiple Choice / True-False -->
+                                            <div
+                                                v-if="
+                                                    selectedPart!.questions![
+                                                        mobileQuestionIndex
+                                                    ].type ===
+                                                        'multiple_choice' ||
+                                                    selectedPart!.questions![
+                                                        mobileQuestionIndex
+                                                    ].type === 'true_false'
+                                                "
+                                                class="flex flex-col gap-3"
+                                            >
+                                                <label
+                                                    v-for="(
+                                                        option, oIndex
+                                                    ) in selectedPart!
+                                                        .questions![
+                                                        mobileQuestionIndex
+                                                    ].options"
+                                                    :key="option.text"
+                                                    class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+                                                >
+                                                    <div
+                                                        class="relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-border/60 transition-colors group-hover/option:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary"
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            :name="`q-mobile-${mobileQuestionIndex}`"
+                                                            :value="oIndex"
+                                                            v-model.number="
+                                                                answers[
+                                                                    mobileQuestionIndex
+                                                                ]
+                                                            "
+                                                            class="sr-only"
+                                                        />
+                                                        <Check
+                                                            v-if="
+                                                                answers[
+                                                                    mobileQuestionIndex
+                                                                ] === oIndex
+                                                            "
+                                                            class="h-3 w-3 text-primary-foreground"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="relative text-sm text-muted-foreground transition-colors group-hover/option:text-foreground has-[:checked]:text-primary"
+                                                        >{{ option.text }}</span
+                                                    >
+                                                </label>
+                                            </div>
+
+                                            <!-- Identification -->
+                                            <div
+                                                v-else-if="
+                                                    selectedPart!.questions![
+                                                        mobileQuestionIndex
+                                                    ].type === 'identification'
+                                                "
+                                                class="max-w-full"
+                                            >
                                                 <input
-                                                    v-model="answers[qIndex]"
+                                                    v-model="
+                                                        answers[
+                                                            mobileQuestionIndex
+                                                        ]
+                                                    "
                                                     type="text"
                                                     placeholder="Type your answer here..."
                                                     class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
                                                 />
+                                            </div>
 
+                                            <!-- Essay -->
+                                            <div
+                                                v-else-if="
+                                                    selectedPart!.questions![
+                                                        mobileQuestionIndex
+                                                    ].type === 'essay'
+                                                "
+                                                class="w-full"
+                                            >
+                                                <textarea
+                                                    v-model="
+                                                        answers[
+                                                            mobileQuestionIndex
+                                                        ]
+                                                    "
+                                                    rows="6"
+                                                    placeholder="Write your answer here..."
+                                                    class="min-h-[150px] w-full resize-y rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm leading-relaxed transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                                ></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mobile: Prev / Next Navigation -->
+                                    <div
+                                        class="mt-4 flex items-center justify-between gap-2"
+                                    >
+                                        <button
+                                            @click="goToPrevQuestion"
+                                            :disabled="
+                                                mobileQuestionIndex === 0
+                                            "
+                                            class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[10px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
+                                        >
+                                            <ChevronLeft class="h-3.5 w-3.5" />
+                                            Prev
+                                        </button>
+
+                                        <span
+                                            class="text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase"
+                                        >
+                                            {{ mobileQuestionIndex + 1 }} /
+                                            {{
+                                                selectedPart!.questions!.length
+                                            }}
+                                        </span>
+
+                                        <button
+                                            @click="goToNextQuestion"
+                                            :disabled="
+                                                mobileQuestionIndex >=
+                                                selectedPart!.questions!
+                                                    .length -
+                                                    1
+                                            "
+                                            class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[10px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
+                                        >
+                                            Next
+                                            <ChevronRight class="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- ═══ DESKTOP: Full question grid ═══ -->
+                                <div
+                                    class="hidden gap-6 md:grid md:grid-cols-2"
+                                >
+                                    <div
+                                        v-for="(
+                                            question, qIndex
+                                        ) in selectedPart!.questions"
+                                        :key="qIndex"
+                                        :id="`q-${qIndex}`"
+                                        :class="[
+                                            'question-card relative flex scroll-mt-24 flex-col gap-4 rounded-xl border border-l-[3px] border-border/40 p-4 transition-all duration-500 md:p-5',
+                                            getQuestionStatus(qIndex) ===
+                                            'answered'
+                                                ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
+                                                : 'border-border/40 border-l-muted bg-card/40',
+                                            question.type === 'essay'
+                                                ? 'md:col-span-2'
+                                                : '',
+                                        ]"
+                                    >
+                                        <!-- Question Content -->
+                                        <div
+                                            class="flex flex-col items-start gap-6 md:flex-row"
+                                        >
+                                            <!-- ID & Flag -->
+                                            <div
+                                                class="flex flex-shrink-0 items-center gap-4"
+                                            >
+                                                <div
+                                                    class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
+                                                >
+                                                    {{ qIndex + 1 }}
+                                                </div>
+                                                <button
+                                                    @click="toggleFlag(qIndex)"
+                                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-border/40 transition-all hover:border-amber-500/50 hover:bg-amber-500/10"
+                                                    :class="
+                                                        flaggedQuestions.has(
+                                                            qIndex,
+                                                        )
+                                                            ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
+                                                            : 'text-muted-foreground/30'
+                                                    "
+                                                >
+                                                    <Flag
+                                                        class="h-4 w-4"
+                                                        :class="
+                                                            flaggedQuestions.has(
+                                                                qIndex,
+                                                            )
+                                                                ? 'fill-amber-500'
+                                                                : ''
+                                                        "
+                                                    />
+                                                </button>
+                                            </div>
+
+                                            <!-- Text & Type -->
+                                            <div class="flex-1 space-y-4">
+                                                <div
+                                                    class="flex items-center gap-3"
+                                                >
+                                                    <span
+                                                        class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
+                                                    >
+                                                        {{
+                                                            formatType(
+                                                                question.type,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        class="text-xs text-muted-foreground"
+                                                    >
+                                                        {{
+                                                            question.points ??
+                                                            selectedPart!
+                                                                .points ??
+                                                            1
+                                                        }}
+                                                        {{
+                                                            (question.points ??
+                                                                selectedPart!
+                                                                    .points ??
+                                                                1) === 1
+                                                                ? 'point'
+                                                                : 'points'
+                                                        }}
+                                                    </span>
+                                                </div>
+                                                <p
+                                                    class="text-base leading-relaxed whitespace-pre-wrap text-foreground"
+                                                >
+                                                    {{ question.text }}
+                                                </p>
                                             </div>
                                         </div>
 
-                                        <!-- Essay -->
-                                        <div
-                                            v-else-if="
-                                                question.type === 'essay'
-                                            "
-                                            class="w-full"
-                                        >
+                                        <!-- Answer Area -->
+                                        <div class="w-full pl-0 md:pl-16">
+                                            <!-- Multiple Choice / True-False -->
                                             <div
-                                                class="group/textarea relative"
+                                                v-if="
+                                                    question.type ===
+                                                        'multiple_choice' ||
+                                                    question.type ===
+                                                        'true_false'
+                                                "
+                                                class="grid grid-cols-1 gap-4 sm:grid-cols-2"
                                             >
-                                                <textarea
-                                                    v-model="answers[qIndex]"
-                                                    rows="10"
-                                                    placeholder="Write your answer here..."
-                                                    class="min-h-[200px] w-full resize-y rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm leading-relaxed transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
-                                                ></textarea>
+                                                <label
+                                                    v-for="(
+                                                        option, oIndex
+                                                    ) in question.options"
+                                                    :key="option.text"
+                                                    class="group/option relative flex cursor-pointer items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 transition-all hover:border-primary/60 hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/10"
+                                                >
+                                                    <div
+                                                        class="relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-border/60 transition-colors group-hover/option:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary"
+                                                    >
+                                                        <input
+                                                            type="radio"
+                                                            :name="`q-${qIndex}`"
+                                                            :value="oIndex"
+                                                            v-model.number="
+                                                                answers[qIndex]
+                                                            "
+                                                            class="sr-only"
+                                                        />
+                                                        <Check
+                                                            v-if="
+                                                                answers[
+                                                                    qIndex
+                                                                ] === oIndex
+                                                            "
+                                                            class="h-3 w-3 text-primary-foreground"
+                                                        />
+                                                    </div>
+                                                    <span
+                                                        class="relative text-sm text-muted-foreground transition-colors group-hover/option:text-foreground has-[:checked]:text-primary"
+                                                        >{{ option.text }}</span
+                                                    >
+                                                </label>
+                                            </div>
 
+                                            <!-- Identification -->
+                                            <div
+                                                v-else-if="
+                                                    question.type ===
+                                                    'identification'
+                                                "
+                                                class="max-w-xl"
+                                            >
+                                                <div
+                                                    class="group/input relative"
+                                                >
+                                                    <input
+                                                        v-model="
+                                                            answers[qIndex]
+                                                        "
+                                                        type="text"
+                                                        placeholder="Type your answer here..."
+                                                        class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <!-- Essay -->
+                                            <div
+                                                v-else-if="
+                                                    question.type === 'essay'
+                                                "
+                                                class="w-full"
+                                            >
+                                                <div
+                                                    class="group/textarea relative"
+                                                >
+                                                    <textarea
+                                                        v-model="
+                                                            answers[qIndex]
+                                                        "
+                                                        rows="10"
+                                                        placeholder="Write your answer here..."
+                                                        class="min-h-[200px] w-full resize-y rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm leading-relaxed transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                                    ></textarea>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Progress Navigator (Mini-Map) - Question status overview -->
-                        <div
-                            v-if="selectedPart && examStarted"
-                            class="fixed top-24 right-8 z-50 hidden w-80 space-y-6 lg:block"
-                        >
+                            <!-- Progress Navigator (Mini-Map) - Question status overview -->
                             <div
-                                ref="progressBoxRef"
-                                class="group relative overflow-hidden rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
+                                v-if="selectedPart && examStarted"
+                                class="fixed top-24 right-8 z-50 hidden w-80 space-y-6 lg:block"
                             >
-                                <!-- Background Glow -->
                                 <div
-                                    class="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 blur-3xl transition-colors duration-700 group-hover:bg-primary/10"
-                                ></div>
-
-                                <div class="relative space-y-8">
+                                    ref="progressBoxRef"
+                                    class="group relative overflow-hidden rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
+                                >
+                                    <!-- Background Glow -->
                                     <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <h3
-                                            class="text-xs font-medium text-muted-foreground"
-                                        >
-                                            Progress
-                                        </h3>
-                                        <div
-                                            class="border border-primary/20 bg-primary/10 px-2 py-1 text-[9px] font-black tracking-widest text-primary uppercase italic"
-                                        >
-                                            {{ Object.keys(answers).length }}/{{
-                                                selectedPart!.questions!.length
-                                            }}
-                                        </div>
-                                    </div>
+                                        class="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 blur-3xl transition-colors duration-700 group-hover:bg-primary/10"
+                                    ></div>
 
-                                    <div class="grid grid-cols-5 gap-3">
-                                        <button
-                                            v-for="(_, qIndex) in selectedPart!
-                                                .questions"
-                                            :key="qIndex"
-                                            @click.prevent="scrollToQuestion(qIndex)"
-                                            class="group/nav-item relative flex aspect-square items-center justify-center rounded-none border border-border/40 text-xs font-black transition-all duration-300 cursor-pointer"
-                                            :class="[                                        qIndex === visibleQuestionIndex
-                                            ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/40 ring-2 ring-primary/30'
-                                            : getQuestionStatus(qIndex) ===
-                                                  'answered'
-                                                ? 'scale-105 border-primary/70 bg-primary/10 text-primary shadow-lg shadow-primary/20'
-                                                : getQuestionStatus(
-                                                        qIndex,
-                                                    ) === 'flagged'
-                                                  ? 'border-amber-500 bg-amber-500/20 text-amber-600 shadow-sm'
-                                                  : 'bg-muted/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50',
-                                            ]"
-                                        >
-                                            {{ qIndex + 1 }}
-
-                                            <!-- Flag indicator -->
-                                            <div
-                                                v-if="
-                                                    flaggedQuestions.has(qIndex)
-                                                "
-                                                class="absolute -top-1 -right-1 h-2.5 w-2.5 border border-card bg-red-600 shadow-sm"
-                                            ></div>
-                                        </button>
-                                    </div>
-
-                                    <div
-                                        class="space-y-4 border-t border-border/20 pt-6"
-                                    >
+                                    <div class="relative space-y-8">
                                         <div
                                             class="flex items-center justify-between"
                                         >
-                                            <div class="flex flex-col gap-1">
-                                                <span
-                                                    class="text-[8px] font-black tracking-[0.4em] text-muted-foreground uppercase italic opacity-60"
-                                                    >Current Progress</span
-                                                >
-                                                <span
-                                                    v-if="unansweredCount === 0"
-                                                    class="progress-pct mb-1 inline-flex items-center gap-1.5 text-[10px] font-black tracking-widest text-emerald-500 uppercase"
-                                                >
-                                                    <CheckCircle2 class="h-3 w-3" />
-                                                    All Answered
-                                                </span>
-                                                <span
-                                                    class="text-xl font-black text-foreground italic"
-                                                    >{{
-                                                        Math.round(
-                                                            (Object.keys(
-                                                                answers,
-                                                            ).length /
-                                                                selectedPart!
-                                                                    .questions!
-                                                                    .length) *
-                                                                100,
-                                                        )
-                                                    }}%</span
-                                                >
+                                            <h3
+                                                class="text-xs font-medium text-muted-foreground"
+                                            >
+                                                Progress
+                                            </h3>
+                                            <div
+                                                class="border border-primary/20 bg-primary/10 px-2 py-1 text-[9px] font-black tracking-widest text-primary uppercase italic"
+                                            >
+                                                {{
+                                                    Object.keys(answers).length
+                                                }}/{{
+                                                    selectedPart!.questions!
+                                                        .length
+                                                }}
                                             </div>
-                                            <Trophy
-                                                class="h-6 w-6 text-primary/20"
-                                            />
                                         </div>
+
+                                        <div class="grid grid-cols-5 gap-3">
+                                            <button
+                                                v-for="(
+                                                    _, qIndex
+                                                ) in selectedPart!.questions"
+                                                :key="qIndex"
+                                                @click.prevent="
+                                                    scrollToQuestion(qIndex)
+                                                "
+                                                class="group/nav-item relative flex aspect-square cursor-pointer items-center justify-center rounded-none border border-border/40 text-xs font-black transition-all duration-300"
+                                                :class="[
+                                                    qIndex ===
+                                                    visibleQuestionIndex
+                                                        ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg ring-2 shadow-primary/40 ring-primary/30'
+                                                        : getQuestionStatus(
+                                                                qIndex,
+                                                            ) === 'answered'
+                                                          ? 'scale-105 border-primary/70 bg-primary/10 text-primary shadow-lg shadow-primary/20'
+                                                          : getQuestionStatus(
+                                                                  qIndex,
+                                                              ) === 'flagged'
+                                                            ? 'border-amber-500 bg-amber-500/20 text-amber-600 shadow-sm'
+                                                            : 'bg-muted/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50',
+                                                ]"
+                                            >
+                                                {{ qIndex + 1 }}
+
+                                                <!-- Flag indicator -->
+                                                <div
+                                                    v-if="
+                                                        flaggedQuestions.has(
+                                                            qIndex,
+                                                        )
+                                                    "
+                                                    class="absolute -top-1 -right-1 h-2.5 w-2.5 border border-card bg-red-600 shadow-sm"
+                                                ></div>
+                                            </button>
+                                        </div>
+
                                         <div
-                                            class="h-1.5 w-full overflow-hidden rounded-none border border-border/40 bg-muted/30"
+                                            class="space-y-4 border-t border-border/20 pt-6"
                                         >
                                             <div
-                                                class="h-full bg-primary shadow-lg shadow-primary/50 transition-all duration-1000 ease-out"
-                                                :style="{
-                                                    width: `${(Object.keys(answers).length / selectedPart!.questions!.length) * 100}%`,
-                                                }"
-                                            ></div>
+                                                class="flex items-center justify-between"
+                                            >
+                                                <div
+                                                    class="flex flex-col gap-1"
+                                                >
+                                                    <span
+                                                        class="text-[8px] font-black tracking-[0.4em] text-muted-foreground uppercase italic opacity-60"
+                                                        >Current Progress</span
+                                                    >
+                                                    <span
+                                                        v-if="
+                                                            unansweredCount ===
+                                                            0
+                                                        "
+                                                        class="progress-pct mb-1 inline-flex items-center gap-1.5 text-[10px] font-black tracking-widest text-emerald-500 uppercase"
+                                                    >
+                                                        <CheckCircle2
+                                                            class="h-3 w-3"
+                                                        />
+                                                        All Answered
+                                                    </span>
+                                                    <span
+                                                        class="text-xl font-black text-foreground italic"
+                                                        >{{
+                                                            Math.round(
+                                                                (Object.keys(
+                                                                    answers,
+                                                                ).length /
+                                                                    selectedPart!
+                                                                        .questions!
+                                                                        .length) *
+                                                                    100,
+                                                            )
+                                                        }}%</span
+                                                    >
+                                                </div>
+                                                <Trophy
+                                                    class="h-6 w-6 text-primary/20"
+                                                />
+                                            </div>
+                                            <div
+                                                class="h-1.5 w-full overflow-hidden rounded-none border border-border/40 bg-muted/30"
+                                            >
+                                                <div
+                                                    class="h-full bg-primary shadow-lg shadow-primary/50 transition-all duration-1000 ease-out"
+                                                    :style="{
+                                                        width: `${(Object.keys(answers).length / selectedPart!.questions!.length) * 100}%`,
+                                                    }"
+                                                ></div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Quick Stats -->
+                                        <div
+                                            class="grid grid-cols-2 gap-4 pt-2"
+                                        >
+                                            <div class="flex flex-col gap-1">
+                                                <span
+                                                    class="text-[8px] font-black tracking-widest text-muted-foreground uppercase italic opacity-40"
+                                                    >Flagged</span
+                                                >
+                                                <span
+                                                    class="flex items-center gap-2 text-xs font-black text-amber-500"
+                                                >
+                                                    <Flag
+                                                        class="h-3 w-3 fill-amber-500/20"
+                                                    />
+                                                    {{ flaggedQuestions.size }}
+                                                    Units
+                                                </span>
+                                            </div>
+                                            <div class="flex flex-col gap-1">
+                                                <span
+                                                    class="text-[8px] font-black tracking-widest text-muted-foreground uppercase italic opacity-40"
+                                                    >System Clock</span
+                                                >
+                                                <span
+                                                    class="flex items-center gap-2 text-xs font-black text-primary"
+                                                >
+                                                    <Zap
+                                                        class="h-3 w-3 animate-pulse"
+                                                    />
+                                                    {{
+                                                        estimatedFinishMinutes ||
+                                                        '--'
+                                                    }}m Est.
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- Quick Stats -->
-                                    <div class="grid grid-cols-2 gap-4 pt-2">
-                                        <div class="flex flex-col gap-1">
+                                <!-- Exam Summary card -->
+                                <div
+                                    class="rounded-none border border-border/20 bg-muted/20 p-6"
+                                >
+                                    <h4
+                                        class="mb-4 text-[9px] font-black tracking-[0.4em] text-muted-foreground uppercase italic"
+                                    >
+                                        Question Status
+                                    </h4>
+                                    <div class="space-y-3">
+                                        <!-- Answered count -->
+                                        <div
+                                            class="flex items-center justify-between border-b border-border/10 pb-2"
+                                        >
                                             <span
-                                                class="text-[8px] font-black tracking-widest text-muted-foreground uppercase italic opacity-40"
+                                                class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
+                                                >Answered</span
+                                            >
+                                            <span
+                                                class="font-mono text-xs font-black text-emerald-500"
+                                                >{{ getAnsweredCount() }}
+                                                /
+                                                {{
+                                                    selectedPart?.questions
+                                                        ?.length ?? 0
+                                                }}</span
+                                            >
+                                        </div>
+
+                                        <!-- Unanswered count -->
+                                        <div
+                                            class="flex items-center justify-between border-b border-border/10 pb-2"
+                                        >
+                                            <span
+                                                class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
+                                                >Unanswered</span
+                                            >
+                                            <span
+                                                class="font-mono text-xs font-black"
+                                                :class="
+                                                    unansweredCount > 0
+                                                        ? 'text-rose-500'
+                                                        : 'text-emerald-500'
+                                                "
+                                                >{{
+                                                    unansweredCount > 0
+                                                        ? unansweredCount
+                                                        : 'None'
+                                                }}</span
+                                            >
+                                        </div>
+
+                                        <!-- Flagged count -->
+                                        <div
+                                            class="flex items-center justify-between border-b border-border/10 pb-2"
+                                        >
+                                            <span
+                                                class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
                                                 >Flagged</span
                                             >
                                             <span
-                                                class="flex items-center gap-2 text-xs font-black text-amber-500"
+                                                class="font-mono text-xs font-black text-amber-500"
+                                                >{{
+                                                    flaggedQuestions.size > 0
+                                                        ? flaggedQuestions.size
+                                                        : 'None'
+                                                }}</span
                                             >
-                                                <Flag
-                                                    class="h-3 w-3 fill-amber-500/20"
-                                                />
-                                                {{
-                                                    flaggedQuestions.size
-                                                }}
-                                                Units
-                                            </span>
                                         </div>
-                                        <div class="flex flex-col gap-1">
-                                            <span
-                                                class="text-[8px] font-black tracking-widest text-muted-foreground uppercase italic opacity-40"
-                                                >System Clock</span
-                                            >
-                                            <span
-                                                class="flex items-center gap-2 text-xs font-black text-primary"
-                                            >
-                                                <Zap
-                                                    class="h-3 w-3 animate-pulse"
-                                                />
-                                                {{
-                                                    estimatedFinishMinutes ||
-                                                    '--'
-                                                }}m Est.
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Exam Summary card -->
-                            <div
-                                class="rounded-none border border-border/20 bg-muted/20 p-6"
-                            >
-                                <h4
-                                    class="mb-4 text-[9px] font-black tracking-[0.4em] text-muted-foreground uppercase italic"
-                                >
-                                    Question Status
-                                </h4>
-                                <div class="space-y-3">
-                                    <!-- Answered count -->
-                                    <div
-                                        class="flex items-center justify-between border-b border-border/10 pb-2"
-                                    >
-                                        <span
-                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
-                                            >Answered</span
-                                        >
-                                        <span
-                                            class="font-mono text-xs font-black text-emerald-500"
-                                            >{{ getAnsweredCount() }}
-                                            /
-                                            {{
-                                                selectedPart?.questions
-                                                    ?.length ?? 0
-                                            }}</span
-                                        >
-                                    </div>
-
-                                    <!-- Unanswered count -->
-                                    <div
-                                        class="flex items-center justify-between border-b border-border/10 pb-2"
-                                    >
-                                        <span
-                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
-                                            >Unanswered</span
-                                        >
-                                        <span
-                                            class="font-mono text-xs font-black"
-                                            :class="
-                                                unansweredCount > 0
-                                                    ? 'text-rose-500'
-                                                    : 'text-emerald-500'
-                                            "
-                                            >{{
-                                                unansweredCount > 0
-                                                    ? unansweredCount
-                                                    : 'None'
-                                            }}</span
-                                        >
-                                    </div>
-
-                                    <!-- Flagged count -->
-                                    <div
-                                        class="flex items-center justify-between border-b border-border/10 pb-2"
-                                    >
-                                        <span
-                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
-                                            >Flagged</span
-                                        >
-                                        <span
-                                            class="font-mono text-xs font-black text-amber-500"
-                                            >{{
-                                                flaggedQuestions.size > 0
-                                                    ? flaggedQuestions.size
-                                                    : 'None'
-                                            }}</span
-                                        >
-                                    </div>
-
-                                    <!-- Time remaining -->
-                                    <div
-                                        class="flex items-center justify-between pt-1"
-                                    >
-                                        <span
-                                            class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
-                                            >Time Left</span
-                                        >
-                                        <span
-                                            class="font-mono text-xs font-black"
-                                            :class="
-                                                timeLeftSeconds < 300
-                                                    ? 'text-rose-500'
-                                                    : 'text-primary'
-                                            "
-                                            >{{ formattedTime }}</span
-                                        >
-                                    </div>
-                                </div>
-
-                                <!-- Action buttons -->
-                                <div class="mt-4 space-y-2">
-                                    <button
-                                        v-if="firstUnansweredIndex >= 0"
-                                        @click.prevent="scrollToQuestion(firstUnansweredIndex)"
-                                        class="flex w-full items-center justify-center gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-rose-500 uppercase transition-all hover:bg-rose-500/20"
-                                    >
-                                        <ArrowRight
-                                            class="h-3 w-3"
-                                        />
-                                        Jump to Unanswered
-                                    </button>
-
-                                    <!-- Submit part -->
-                                    <button
-                                        @click="submitPart"
-                                        :disabled="isSubmitting"
-                                        class="submit-celebration-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden bg-primary px-4 py-3 text-[11px] font-black tracking-[0.15em] text-primary-foreground uppercase transition-all shadow-lg shadow-primary/40 hover:shadow-xl hover:shadow-primary/50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        <!-- Shine effect on hover -->
+                                        <!-- Time remaining -->
                                         <div
-                                            class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
-                                        ></div>
-                                        <ArrowRight
-                                            class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-                                        />
-                                        {{
-                                            isSubmitting
-                                                ? currentPartHasEssay
-                                                    ? 'Checking your answers...'
-                                                    : 'Submitting...'
-                                                : 'Submit this part'
-                                        }}
-                                    </button>
-
-                                    <button
-                                        v-if="firstFlaggedIndex >= 0"
-                                        @click.prevent="jumpToNextFlagged"
-                                        class="flex w-full items-center justify-center gap-2 border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-amber-500 uppercase transition-all hover:bg-amber-500/20"
-                                    >
-                                        <Flag
-                                            class="h-3 w-3 fill-amber-500/20"
-                                        />
-                                        Jump to Next Flagged
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Mobile Bottom Bar Navigator (Small) - Only show when all parts are completed -->
-                    <div
-                        v-if="selectedPart && examStarted"
-                        class="fixed right-0 bottom-0 left-0 z-40 p-4 lg:hidden"
-                    >
-                        <div
-                            class="no-scrollbar flex items-center gap-3 overflow-x-auto rounded-2xl border border-white/10 bg-black/80 p-3 shadow-2xl backdrop-blur-2xl"
-                        >
-                            <div
-                                class="vertical-writing mr-1 rotate-180 text-[9px] font-black text-muted-foreground uppercase"
-                            >
-                                NAV
-                            </div>
-                            <div
-                                v-for="(_, qIndex) in selectedPart!.questions"
-                                :key="qIndex"
-                                class="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/5 text-[10px] font-black transition-all"
-                                :class="[
-                                    getQuestionStatus(qIndex) === 'answered'
-                                        ? 'bg-primary text-primary-foreground'
-                                        : getQuestionStatus(qIndex) ===
-                                            'flagged'
-                                          ? 'bg-amber-500 text-white'
-                                          : 'bg-white/5 text-white/40',
-                                ]"
-                            >
-                                {{ qIndex + 1 }}
-                                <div
-                                    v-if="flaggedQuestions.has(qIndex)"
-                                    class="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-black bg-red-500 shadow-sm"
-                                ></div>
-                            </div>
-                        </div>
-                    </div>
-
-
-                </template>
-            </div>
-
-            <!-- ═══════════════════════════════════════════════════════ -->
-            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
-
-
-                        <!-- ═══ MOBILE: Progress Bottom Sheet Overlay ═══ -->
-                        <div v-if="selectedPart && examStarted" class="md:hidden">
-                            <!-- Floating progress button -->
-                            <button
-                                @click="showMobileProgress = !showMobileProgress"
-                                class="fixed right-4 z-[60] flex items-center gap-2 rounded-full border border-primary/20 bg-primary/90 px-3.5 py-2.5 text-[10px] font-black tracking-widest text-primary-foreground uppercase shadow-2xl shadow-primary/30 backdrop-blur-xl transition-all duration-300 hover:bg-primary active:scale-95"
-                                :style="{
-                                    bottom: `calc(5rem + env(safe-area-inset-bottom, 0px))`,
-                                }"
-                            >
-                                <Grid3x3 class="h-3.5 w-3.5" />
-                                {{ Object.keys(answers).length }}/{{ selectedPart!.questions!.length }}
-                            </button>
-
-                            <!-- Overlay backdrop -->
-                            <transition name="modal-fade">
-                                <div
-                                    v-if="showMobileProgress"
-                                    class="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
-                                    @click="showMobileProgress = false"
-                                />
-                            </transition>
-
-                            <!-- Bottom sheet -->
-                            <transition name="slide-up">
-                                <div
-                                    v-if="showMobileProgress"
-                                    class="fixed right-0 bottom-0 left-0 z-[80] max-h-[70vh] overflow-y-auto rounded-t-2xl border border-border/50 bg-background/95 p-5 pb-8 shadow-2xl backdrop-blur-2xl"
-                                    style="padding-bottom: max(2rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))"
-                                >
-                                    <!-- Sheet grab handle -->
-                                    <div class="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/20" />
-
-                                    <!-- Header -->
-                                    <div class="mb-5 flex items-center justify-between">
-                                        <div>
-                                            <h3 class="text-sm font-bold text-foreground">Progress</h3>
-                                            <p class="text-[10px] text-muted-foreground">
-                                                {{ Object.keys(answers).length }} of {{ selectedPart!.questions!.length }} answered
-                                            </p>
-                                        </div>
-                                        <button
-                                            @click="showMobileProgress = false"
-                                            class="rounded-lg border border-border/40 p-1.5 text-muted-foreground transition-all hover:bg-muted/30"
+                                            class="flex items-center justify-between pt-1"
                                         >
-                                            <X class="h-4 w-4" />
-                                        </button>
+                                            <span
+                                                class="text-[9px] font-bold tracking-widest text-muted-foreground/70 uppercase"
+                                                >Time Left</span
+                                            >
+                                            <span
+                                                class="font-mono text-xs font-black"
+                                                :class="
+                                                    timeLeftSeconds < 300
+                                                        ? 'text-rose-500'
+                                                        : 'text-primary'
+                                                "
+                                                >{{ formattedTime }}</span
+                                            >
+                                        </div>
                                     </div>
 
-                                    <!-- Question grid -->
-                                    <div class="mb-5 grid grid-cols-5 gap-2.5">
+                                    <!-- Action buttons -->
+                                    <div class="mt-4 space-y-2">
                                         <button
-                                            v-for="(_, qIndex) in selectedPart!.questions"
-                                            :key="qIndex"
-                                            @click="mobileQuestionIndex = qIndex; visibleQuestionIndex = qIndex; showMobileProgress = false; scrollToQuestion(qIndex);"
-                                            class="group/nav-item relative flex aspect-square items-center justify-center rounded-lg border text-xs font-black transition-all duration-200"
-                                            :class="[
-                                                qIndex === mobileQuestionIndex
-                                                    ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-2 ring-primary/30'
-                                                    : getQuestionStatus(qIndex) === 'answered'
-                                                        ? 'border-primary/60 bg-primary/10 text-primary'
-                                                        : getQuestionStatus(qIndex) === 'flagged'
-                                                            ? 'border-amber-500 bg-amber-500/20 text-amber-600'
-                                                            : 'border-border/40 bg-muted/20 text-muted-foreground hover:border-primary/40 hover:bg-muted/40',
-                                            ]"
+                                            v-if="firstUnansweredIndex >= 0"
+                                            @click.prevent="
+                                                scrollToQuestion(
+                                                    firstUnansweredIndex,
+                                                )
+                                            "
+                                            class="flex w-full items-center justify-center gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-rose-500 uppercase transition-all hover:bg-rose-500/20"
                                         >
-                                            {{ qIndex + 1 }}
+                                            <ArrowRight class="h-3 w-3" />
+                                            Jump to Unanswered
+                                        </button>
+
+                                        <!-- Submit part -->
+                                        <button
+                                            @click="submitPart"
+                                            :disabled="isSubmitting"
+                                            class="submit-celebration-btn group relative flex w-full items-center justify-center gap-2 overflow-hidden bg-primary px-4 py-3 text-[11px] font-black tracking-[0.15em] text-primary-foreground uppercase shadow-lg shadow-primary/40 transition-all hover:shadow-xl hover:shadow-primary/50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <!-- Shine effect on hover -->
                                             <div
-                                                v-if="flaggedQuestions.has(qIndex)"
-                                                class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 shadow-sm"
+                                                class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
+                                            ></div>
+                                            <ArrowRight
+                                                class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
                                             />
+                                            {{
+                                                isSubmitting
+                                                    ? currentPartHasEssay
+                                                        ? 'Checking your answers...'
+                                                        : 'Submitting...'
+                                                    : 'Submit this part'
+                                            }}
+                                        </button>
+
+                                        <button
+                                            v-if="firstFlaggedIndex >= 0"
+                                            @click.prevent="jumpToNextFlagged"
+                                            class="flex w-full items-center justify-center gap-2 border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-amber-500 uppercase transition-all hover:bg-amber-500/20"
+                                        >
+                                            <Flag
+                                                class="h-3 w-3 fill-amber-500/20"
+                                            />
+                                            Jump to Next Flagged
                                         </button>
                                     </div>
-
-                                    <!-- Quick stats -->
-                                    <div class="mb-4 flex items-center justify-between rounded-lg border border-border/30 bg-muted/20 px-3.5 py-2.5">
-                                        <div class="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                            <Flag class="h-3 w-3 text-amber-500" />
-                                            Flagged: {{ flaggedQuestions.size }}
-                                        </div>
-                                        <div class="flex items-center gap-2 text-[10px] text-muted-foreground">
-                                            <Zap class="h-3 w-3 text-primary" />
-                                            Est: {{ estimatedFinishMinutes || '--' }} min
-                                        </div>
-                                    </div>
-
-                                    <!-- Submit button -->
-                                    <button
-                                        @click="submitFromSheet"
-                                        :disabled="isSubmitting"
-                                        class="w-full rounded-xl bg-primary py-3 text-xs font-black tracking-widest text-primary-foreground uppercase shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
-                                    >
-                                        <template v-if="isSubmitting">Submitting...</template>
-                                        <template v-else>Submit Answers</template>
-                                    </button>
                                 </div>
-                            </transition>
-                        </div>
-
-            <!--  UNANSWERED WARNING MODAL                                -->
-
-            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
-
-            <transition name="modal-fade">
-
-                <div
-
-                    v-if="showUnansweredWarning"
-
-                    class="fixed inset-0 z-[150] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
-
-                >
-
-                    <div
-
-                        ref="unansweredWarningRef"
-
-                        class="surface-card relative w-full max-w-md p-8 md:p-10"
-
-                    >
-
-                        <div class="flex flex-col items-center gap-6 text-center">
-
-                            <div
-
-                                class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
-
-                            >
-
-                                <HelpCircle class="h-6 w-6 text-amber-500" />
-
-                            </div>
-
-
-
-                            <div class="space-y-2">
-
-                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
-
-                                    {{
-
-                                        isTimeoutSubmission
-
-                                            ? "Time's Up!"
-
-                                            : 'Almost There!'
-
-                                    }}
-
-                                </h3>
-
-                                <p
-
-                                    v-if="isTimeoutSubmission"
-
-                                    class="mx-auto max-w-sm text-sm text-muted-foreground"
-
-                                >
-
-                                    The time for this section has expired.
-
-                                    Your progress will be saved automatically.
-
-                                </p>
-
-                                <p
-
-                                    v-else
-
-                                    class="mx-auto max-w-sm text-sm text-muted-foreground"
-
-                                >
-
-                                    You have
-
-                                    <span
-
-                                        class="font-semibold text-amber-600"
-
-                                        >{{ unansweredCount }}</span
-
-                                    >
-
-                                    unanswered question{{
-
-                                        unansweredCount > 1 ? 's' : ''
-
-                                    }}.
-
-                                </p>
-
-                                <p class="text-sm text-muted-foreground">
-
-                                    {{
-
-                                        isTimeoutSubmission
-
-                                            ? 'Click below to proceed to the next section.'
-
-                                            : 'You can go back to review them or submit as-is.'
-
-                                    }}
-
-                                </p>
-
-                            </div>
-
-
-
-                            <div class="flex w-full flex-col gap-3">
-
-                                <button
-
-                                    @click="closeUnansweredWarning(true)"
-
-                                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
-
-                                >
-
-                                    <span>{{
-
-                                        isTimeoutSubmission
-
-                                            ? 'Continue'
-
-                                            : 'Submit Anyway'
-
-                                    }}</span>
-
-                                    <ArrowRight class="h-4 w-4" />
-
-                                </button>
-
-                                <button
-
-                                    v-if="!isTimeoutSubmission"
-
-                                    @click="closeUnansweredWarning(false)"
-
-                                    class="w-full py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-
-                                >
-
-                                    Review Answers
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </transition>
-
-
-            <!-- ═══════════════════════════════════════════════════════ -->
-            <!-- ══════════════════════════════════════════════════════════════════════ -->
-
-            <!--  START CONFIRMATION MODAL                               -->
-
-            <!-- ══════════════════════════════════════════════════════════════════════ -->
-
-            <transition name="modal-fade">
-
-                <div
-
-                    v-if="showStartModal"
-
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
-
-                >
-
-                    <div
-
-                        ref="startModalRef"
-
-                        class="surface-card relative w-full max-w-md p-8 md:p-10"
-
-                    >
-
-                        <div class="flex flex-col items-center gap-6 text-center">
-
-                            <div
-
-                                class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"
-
-                            >
-
-                                <Play class="h-6 w-6 text-primary" />
-
-                            </div>
-
-
-
-                            <div class="space-y-2">
-
-                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
-
-                                    Ready to Start?
-
-                                </h3>
-
-                                <p class="mx-auto max-w-sm text-sm text-muted-foreground">
-
-                                    You're about to begin
-
-                                    <span class="font-medium text-foreground"
-
-                                        >Part {{ (pendingIndex || 0) + 1 }}:
-
-                                        {{ pendingPart?.title }}</span
-
-                                    >.
-
-                                </p>
-
-                            </div>
-
-
-
-                            <div class="w-full space-y-3 rounded-lg bg-muted/50 p-4 text-left">
-
-                                <div class="flex items-start gap-3">
-
-                                    <Info class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-
-                                    <p class="text-sm leading-relaxed text-muted-foreground">
-
-                                        Full screen will be enabled for focus. Once started, this part
-
-                                        must be completed — please avoid exiting until you’re done.
-
-                                    </p>
-
-                                </div>
-
-                                <div class="flex items-start gap-3">
-
-                                    <Info class="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-
-                                    <p class="text-sm leading-relaxed text-muted-foreground">
-
-                                        Take your time and answer each question carefully. You'll
-
-                                        be able to review your answers before submitting.
-
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-
-
-                            <div class="flex w-full flex-col gap-3">
-
-                                <button
-
-                                    @click="confirmStart"
-
-                                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
-
-                                >
-
-                                    Start Part
-
-                                    <ArrowRight class="h-4 w-4" />
-
-                                </button>
-
-                                <button
-
-                                    @click="showStartModal = false"
-
-                                    class="w-full py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-
-                                >
-
-                                    Cancel
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </transition>
-
-            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
-
-            <!--  FULLSCREEN LOCKOUT MODAL                               -->
-
-            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
-
-            <transition name="modal-fade">
-
-                <div
-
-                    v-if="showFullscreenLockout"
-
-                    class="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
-
-                >
-
-                    <div
-
-                        ref="lockoutModalRef"
-
-                        class="surface-card relative w-full max-w-md p-8 md:p-10"
-
-                    >
-
-                        <div class="flex flex-col items-center gap-6 text-center">
-
-                            <div
-
-                                class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
-
-                            >
-
-                                <AlertCircle class="h-6 w-6 text-amber-500" />
-
-                            </div>
-
-
-
-                            <div class="space-y-2">
-
-                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
-
-                                    Focus Mode Required
-
-                                </h3>
-
-                                <p class="mx-auto max-w-sm text-sm text-muted-foreground">
-
-                                    Please return to full screen to continue your exam.
-
-                                    This helps maintain a fair testing environment.
-
-                                </p>
-
-                            </div>
-
-
-
-                            <button
-
-                                @click="reEnterFullscreen"
-
-                                class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
-
-                            >
-
-                                <Maximize class="h-4 w-4" />
-
-                                Return to Full Screen
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </transition>
-
-            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
-
-            <!--  SUCCESS MODAL OVERLAY                                  -->
-
-            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
-
-            <transition name="modal-fade">
-
-                <div
-
-                    v-if="showSuccessModal"
-
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
-
-                >
-
-                    <div
-
-                        ref="successModalRef"
-
-                        class="surface-card relative w-full max-w-md p-8 md:p-10"
-
-                    >
-
-                        <div class="flex flex-col items-center gap-6 text-center">
-
-                            <div
-
-                                class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10"
-
-                            >
-
-                                <CheckCircle2 class="h-8 w-8 text-emerald-500" />
-
-                            </div>
-
-
-
-                            <div class="space-y-2">
-
-                                <h3 class="text-2xl font-semibold tracking-tight text-foreground">
-
-                                    Part Complete!
-
-                                </h3>
-
-                                <p class="mx-auto max-w-sm text-sm text-muted-foreground">
-
-                                    Great work! Your answers have been saved successfully.
-
-                                </p>
-
-                            </div>
-
-
-
-                            <!-- Progress / Score Info -->
-
-                            <div
-
-                                v-if="partsPendingCount > 0"
-
-                                class="w-full space-y-3"
-
-                            >
-
-                                <div class="rounded-lg bg-muted/50 p-4">
-
-                                    <p class="text-sm text-muted-foreground">
-
-                                        {{ partsPendingCount }} part{{
-
-                                            partsPendingCount === 1
-
-                                                ? ''
-
-                                                : 's'
-
-                                        }} remaining
-
-                                    </p>
-
-                                </div>
-
-                            </div>
-
-
-
-                            <!-- Final Score Reveal -->
-
-                            <div
-
-                                v-else
-
-                                class="w-full space-y-4"
-
-                            >
-
-                                <div
-
-                                    v-if="isCalculatingScore"
-
-                                    class="flex flex-col items-center gap-4 py-4"
-
-                                >
-
-                                    <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-
-                                    <p class="text-sm text-muted-foreground">
-
-                                        {{
-
-                                            currentPartHasEssay
-
-                                                ? 'Reviewing your essay...'
-
-                                                : 'Calculating your score...'
-
-                                        }}
-
-                                    </p>
-
-                                </div>
-
-
-
-                                <div
-
-                                    v-else
-
-                                    class="space-y-4"
-
-                                >
-
-                                    <div class="rounded-lg bg-muted/50 p-6">
-
-                                        <div class="flex items-baseline justify-center gap-2">
-
-                                            <span
-
-                                                class="text-5xl font-bold tracking-tight text-primary tabular-nums"
-
-                                                >{{ displayedScore }}</span
-
-                                            >
-
-                                            <span
-
-                                                class="text-xl font-semibold text-muted-foreground/40"
-
-                                                >/ {{ totalPossiblePoints }}</span
-
-                                            >
-
-                                        </div>
-
-                                    </div>
-
-
-
-                                    <div
-
-                                        v-if="isExamPendingReview"
-
-                                        class="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2"
-
-                                    >
-
-                                        <Clock class="h-4 w-4 text-amber-500" />
-
-                                        <span class="text-sm font-medium text-amber-600">Awaiting review</span>
-
-                                    </div>
-
-                                    <div
-
-                                        v-else
-
-                                        class="flex items-center justify-center gap-2 rounded-lg border px-4 py-2"
-
-                                        :class="[
-
-                                            feedbackContent.border,
-
-                                            feedbackContent.bg,
-
-                                        ]"
-
-                                    >
-
-                                        <component
-
-                                            :is="feedbackContent.icon"
-
-                                            :class="['h-4 w-4', feedbackContent.color]"
-
-                                        />
-
-                                        <span
-
-                                            :class="['text-sm font-medium', feedbackContent.color]"
-
-                                            >{{ feedbackContent.text }}</span
-
-                                        >
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-
-
-                            <button
-
-                                @click="closeSuccessModal"
-
-                                class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-
-                            >
-
-                                <span>{{
-
-                                    isCalculatingScore
-
-                                        ? currentPartHasEssay
-
-                                            ? 'Continue while reviewing'
-
-                                            : 'Calculating...'
-
-                                        : partsPendingCount > 0
-
-                                          ? 'Continue to Next Part'
-
-                                          : 'Back to Exams'
-
-                                }}</span>
-
-                                <ArrowRight v-if="!isCalculatingScore" class="h-4 w-4" />
-
-                                <div
-
-                                    v-else
-
-                                    class="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/20 border-t-primary-foreground"
-
-                                ></div>
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </transition>
-
-            <!-- ─── STICKY EXAM FOOTER (shows when a part is being taken) ─── -->
-            <transition name="modal-fade">
-                <div
-                    v-if="examStarted && selectedPart && !showSuccessModal"
-                    class="exam-sticky-header fixed right-0 bottom-0 left-0 z-[90] border-t border-border bg-card/95 shadow-[0_-2px_12px_-4px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:bg-zinc-950/90"
-                >
-                    <div
-                        class="mx-auto flex max-w-screen-2xl items-center gap-3 px-3 py-2.5 md:gap-5 md:px-6"
-                    >
-                        <!-- Part title (left) -->
-                        <div class="flex min-w-0 flex-1 items-center gap-2">
-                            <div
-                                class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
-                            ></div>
-                            <div class="flex min-w-0 flex-col">
-                                <span
-                                    class="text-[9px] leading-none font-bold tracking-widest text-muted-foreground uppercase"
-                                    >In progress</span
-                                >
-                                <span
-                                    class="truncate text-sm leading-tight font-bold text-foreground"
-                                    >{{ selectedPart.title }}</span
-                                >
                             </div>
                         </div>
 
-                        <!-- Progress (center, hidden on small) -->
+                        <!-- Mobile Bottom Bar Navigator (Small) - Only show when all parts are completed -->
                         <div
-                            class="hidden min-w-[200px] items-center gap-3 md:flex"
+                            v-if="selectedPart && examStarted"
+                            class="fixed right-0 bottom-0 left-0 z-40 p-4 lg:hidden"
                         >
-                            <span
-                                class="text-[10px] font-bold whitespace-nowrap text-muted-foreground"
-                            >
-                                {{ Object.keys(answers).length }} /
-                                {{ selectedPart.questions?.length ?? 0 }}
-                            </span>
                             <div
-                                class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/40"
+                                class="no-scrollbar flex items-center gap-3 overflow-x-auto rounded-2xl border border-white/10 bg-black/80 p-3 shadow-2xl backdrop-blur-2xl"
                             >
                                 <div
-                                    class="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-                                    :style="{ width: `${partProgress}%` }"
-                                ></div>
+                                    class="vertical-writing mr-1 rotate-180 text-[9px] font-black text-muted-foreground uppercase"
+                                >
+                                    NAV
+                                </div>
+                                <div
+                                    v-for="(_, qIndex) in selectedPart!
+                                        .questions"
+                                    :key="qIndex"
+                                    class="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/5 text-[10px] font-black transition-all"
+                                    :class="[
+                                        getQuestionStatus(qIndex) === 'answered'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : getQuestionStatus(qIndex) ===
+                                                'flagged'
+                                              ? 'bg-amber-500 text-white'
+                                              : 'bg-white/5 text-white/40',
+                                    ]"
+                                >
+                                    {{ qIndex + 1 }}
+                                    <div
+                                        v-if="flaggedQuestions.has(qIndex)"
+                                        class="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-black bg-red-500 shadow-sm"
+                                    ></div>
+                                </div>
                             </div>
-                            <span
-                                class="text-[10px] font-bold whitespace-nowrap text-primary tabular-nums"
-                                >{{ Math.round(partProgress) }}%</span
-                            >
                         </div>
+                    </template>
+                </div>
 
-                        <!-- Timer (right) -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+                <!-- ═══ MOBILE: Progress Bottom Sheet Overlay ═══ -->
+                <div v-if="selectedPart && examStarted" class="md:hidden">
+                    <!-- Floating progress button -->
+                    <button
+                        @click="showMobileProgress = !showMobileProgress"
+                        class="fixed right-4 z-[60] flex items-center gap-2 rounded-full border border-primary/20 bg-primary/90 px-3.5 py-2.5 text-[10px] font-black tracking-widest text-primary-foreground uppercase shadow-2xl shadow-primary/30 backdrop-blur-xl transition-all duration-300 hover:bg-primary active:scale-95"
+                        :style="{
+                            bottom: `calc(5rem + env(safe-area-inset-bottom, 0px))`,
+                        }"
+                    >
+                        <Grid3x3 class="h-3.5 w-3.5" />
+                        {{ Object.keys(answers).length }}/{{
+                            selectedPart!.questions!.length
+                        }}
+                    </button>
+
+                    <!-- Overlay backdrop -->
+                    <transition name="modal-fade">
                         <div
-                            class="flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors"
-                            :class="
-                                timeLeftSeconds < 60
-                                    ? 'animate-pulse border-red-500/40 bg-red-500/15 text-red-500'
-                                    : timeLeftSeconds < 300
-                                      ? 'border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                                      : 'border-primary/30 bg-primary/10 text-primary'
+                            v-if="showMobileProgress"
+                            class="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
+                            @click="showMobileProgress = false"
+                        />
+                    </transition>
+
+                    <!-- Bottom sheet -->
+                    <transition name="slide-up">
+                        <div
+                            v-if="showMobileProgress"
+                            class="fixed right-0 bottom-0 left-0 z-[80] max-h-[70vh] overflow-y-auto rounded-t-2xl border border-border/50 bg-background/95 p-5 pb-8 shadow-2xl backdrop-blur-2xl"
+                            style="
+                                padding-bottom: max(
+                                    2rem,
+                                    calc(
+                                        env(safe-area-inset-bottom, 0px) +
+                                            0.5rem
+                                    )
+                                );
                             "
                         >
-                            <Clock class="h-4 w-4" />
-                            <span
-                                class="font-mono text-base font-bold tracking-tight tabular-nums"
-                                >{{ formattedTime }}</span
+                            <!-- Sheet grab handle -->
+                            <div
+                                class="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/20"
+                            />
+
+                            <!-- Header -->
+                            <div class="mb-5 flex items-center justify-between">
+                                <div>
+                                    <h3
+                                        class="text-sm font-bold text-foreground"
+                                    >
+                                        Progress
+                                    </h3>
+                                    <p
+                                        class="text-[10px] text-muted-foreground"
+                                    >
+                                        {{ Object.keys(answers).length }} of
+                                        {{ selectedPart!.questions!.length }}
+                                        answered
+                                    </p>
+                                </div>
+                                <button
+                                    @click="showMobileProgress = false"
+                                    class="rounded-lg border border-border/40 p-1.5 text-muted-foreground transition-all hover:bg-muted/30"
+                                >
+                                    <X class="h-4 w-4" />
+                                </button>
+                            </div>
+
+                            <!-- Question grid -->
+                            <div class="mb-5 grid grid-cols-5 gap-2.5">
+                                <button
+                                    v-for="(_, qIndex) in selectedPart!
+                                        .questions"
+                                    :key="qIndex"
+                                    @click="
+                                        mobileQuestionIndex = qIndex;
+                                        visibleQuestionIndex = qIndex;
+                                        showMobileProgress = false;
+                                        scrollToQuestion(qIndex);
+                                    "
+                                    class="group/nav-item relative flex aspect-square items-center justify-center rounded-lg border text-xs font-black transition-all duration-200"
+                                    :class="[
+                                        qIndex === mobileQuestionIndex
+                                            ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg ring-2 shadow-primary/30 ring-primary/30'
+                                            : getQuestionStatus(qIndex) ===
+                                                'answered'
+                                              ? 'border-primary/60 bg-primary/10 text-primary'
+                                              : getQuestionStatus(qIndex) ===
+                                                  'flagged'
+                                                ? 'border-amber-500 bg-amber-500/20 text-amber-600'
+                                                : 'border-border/40 bg-muted/20 text-muted-foreground hover:border-primary/40 hover:bg-muted/40',
+                                    ]"
+                                >
+                                    {{ qIndex + 1 }}
+                                    <div
+                                        v-if="flaggedQuestions.has(qIndex)"
+                                        class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 shadow-sm"
+                                    />
+                                </button>
+                            </div>
+
+                            <!-- Quick stats -->
+                            <div
+                                class="mb-4 flex items-center justify-between rounded-lg border border-border/30 bg-muted/20 px-3.5 py-2.5"
                             >
+                                <div
+                                    class="flex items-center gap-2 text-[10px] text-muted-foreground"
+                                >
+                                    <Flag class="h-3 w-3 text-amber-500" />
+                                    Flagged: {{ flaggedQuestions.size }}
+                                </div>
+                                <div
+                                    class="flex items-center gap-2 text-[10px] text-muted-foreground"
+                                >
+                                    <Zap class="h-3 w-3 text-primary" />
+                                    Est:
+                                    {{ estimatedFinishMinutes || '--' }} min
+                                </div>
+                            </div>
+
+                            <!-- Submit button -->
+                            <button
+                                @click="submitFromSheet"
+                                :disabled="isSubmitting"
+                                class="w-full rounded-xl bg-primary py-3 text-xs font-black tracking-widest text-primary-foreground uppercase shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-50"
+                            >
+                                <template v-if="isSubmitting"
+                                    >Submitting...</template
+                                >
+                                <template v-else>Submit Answers</template>
+                            </button>
+                        </div>
+                    </transition>
+                </div>
+
+                <!--  UNANSWERED WARNING MODAL                                -->
+
+                <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+                <transition name="modal-fade">
+                    <div
+                        v-if="showUnansweredWarning"
+                        class="fixed inset-0 z-[150] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+                    >
+                        <div
+                            ref="unansweredWarningRef"
+                            class="surface-card relative w-full max-w-md p-8 md:p-10"
+                        >
+                            <div
+                                class="flex flex-col items-center gap-6 text-center"
+                            >
+                                <div
+                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
+                                >
+                                    <HelpCircle
+                                        class="h-6 w-6 text-amber-500"
+                                    />
+                                </div>
+
+                                <div class="space-y-2">
+                                    <h3
+                                        class="text-2xl font-semibold tracking-tight text-foreground"
+                                    >
+                                        {{
+                                            isTimeoutSubmission
+                                                ? "Time's Up!"
+                                                : 'Almost There!'
+                                        }}
+                                    </h3>
+
+                                    <p
+                                        v-if="isTimeoutSubmission"
+                                        class="mx-auto max-w-sm text-sm text-muted-foreground"
+                                    >
+                                        The time for this section has expired.
+                                        Your progress will be saved
+                                        automatically.
+                                    </p>
+
+                                    <p
+                                        v-else
+                                        class="mx-auto max-w-sm text-sm text-muted-foreground"
+                                    >
+                                        You have
+
+                                        <span
+                                            class="font-semibold text-amber-600"
+                                            >{{ unansweredCount }}</span
+                                        >
+
+                                        unanswered question{{
+                                            unansweredCount > 1 ? 's' : ''
+                                        }}.
+                                    </p>
+
+                                    <p class="text-sm text-muted-foreground">
+                                        {{
+                                            isTimeoutSubmission
+                                                ? 'Click below to proceed to the next section.'
+                                                : 'You can go back to review them or submit as-is.'
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div class="flex w-full flex-col gap-3">
+                                    <button
+                                        @click="closeUnansweredWarning(true)"
+                                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                    >
+                                        <span>{{
+                                            isTimeoutSubmission
+                                                ? 'Continue'
+                                                : 'Submit Anyway'
+                                        }}</span>
+
+                                        <ArrowRight class="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        v-if="!isTimeoutSubmission"
+                                        @click="closeUnansweredWarning(false)"
+                                        class="w-full py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        Review Answers
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </transition>
 
-                    <!-- Mobile submit button -->
+                <!-- ═══════════════════════════════════════════════════════ -->
+                <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+                <!--  START CONFIRMATION MODAL                               -->
+
+                <!-- ══════════════════════════════════════════════════════════════════════ -->
+
+                <transition name="modal-fade">
                     <div
-                        class="fixed right-4 bottom-20 z-40 lg:hidden"
+                        v-if="showStartModal"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
                     >
-                        <button
-                            @click="submitPart"
-                            :disabled="isSubmitting"
-                            class="submit-celebration-btn group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-xs font-black tracking-[0.15em] text-primary-foreground uppercase shadow-2xl shadow-primary/50 transition-all hover:shadow-2xl hover:shadow-primary/70 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                        <div
+                            ref="startModalRef"
+                            class="surface-card relative w-full max-w-md p-8 md:p-10"
                         >
-                            <!-- Shine effect on hover -->
                             <div
-                                class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
-                            ></div>
-                            {{
-                                isSubmitting
-                                    ? currentPartHasEssay
-                                        ? 'Checking...'
-                                        : 'Submitting...'
-                                    : 'Submit this part'
-                            }}
-                            <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                        </button>
-                    </div>
-                </div>
-            </transition>
+                                class="flex flex-col items-center gap-6 text-center"
+                            >
+                                <div
+                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"
+                                >
+                                    <Play class="h-6 w-6 text-primary" />
+                                </div>
 
-        </div>
+                                <div class="space-y-2">
+                                    <h3
+                                        class="text-2xl font-semibold tracking-tight text-foreground"
+                                    >
+                                        Ready to Start?
+                                    </h3>
+
+                                    <p
+                                        class="mx-auto max-w-sm text-sm text-muted-foreground"
+                                    >
+                                        You're about to begin
+
+                                        <span
+                                            class="font-medium text-foreground"
+                                            >Part {{ (pendingIndex || 0) + 1 }}:
+
+                                            {{ pendingPart?.title }}</span
+                                        >.
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="w-full space-y-3 rounded-lg bg-muted/50 p-4 text-left"
+                                >
+                                    <div class="flex items-start gap-3">
+                                        <Info
+                                            class="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                                        />
+
+                                        <p
+                                            class="text-sm leading-relaxed text-muted-foreground"
+                                        >
+                                            Full screen will be enabled for
+                                            focus. Once started, this part must
+                                            be completed — please avoid exiting
+                                            until you’re done.
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-start gap-3">
+                                        <Info
+                                            class="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                                        />
+
+                                        <p
+                                            class="text-sm leading-relaxed text-muted-foreground"
+                                        >
+                                            Take your time and answer each
+                                            question carefully. You'll be able
+                                            to review your answers before
+                                            submitting.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex w-full flex-col gap-3">
+                                    <button
+                                        @click="confirmStart"
+                                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                    >
+                                        Start Part
+
+                                        <ArrowRight class="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        @click="showStartModal = false"
+                                        class="w-full py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+
+                <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+                <!--  FULLSCREEN LOCKOUT MODAL                               -->
+
+                <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+                <transition name="modal-fade">
+                    <div
+                        v-if="showFullscreenLockout"
+                        class="fixed inset-0 z-[200] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+                    >
+                        <div
+                            ref="lockoutModalRef"
+                            class="surface-card relative w-full max-w-md p-8 md:p-10"
+                        >
+                            <div
+                                class="flex flex-col items-center gap-6 text-center"
+                            >
+                                <div
+                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
+                                >
+                                    <AlertCircle
+                                        class="h-6 w-6 text-amber-500"
+                                    />
+                                </div>
+
+                                <div class="space-y-2">
+                                    <h3
+                                        class="text-2xl font-semibold tracking-tight text-foreground"
+                                    >
+                                        Focus Mode Required
+                                    </h3>
+
+                                    <p
+                                        class="mx-auto max-w-sm text-sm text-muted-foreground"
+                                    >
+                                        Please return to full screen to continue
+                                        your exam. This helps maintain a fair
+                                        testing environment.
+                                    </p>
+                                </div>
+
+                                <button
+                                    @click="reEnterFullscreen"
+                                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                >
+                                    <Maximize class="h-4 w-4" />
+
+                                    Return to Full Screen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+
+                <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+                <!--  SUCCESS MODAL OVERLAY                                  -->
+
+                <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═            <!-- ═ -->
+
+                <transition name="modal-fade">
+                    <div
+                        v-if="showSuccessModal"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
+                    >
+                        <div
+                            ref="successModalRef"
+                            class="surface-card relative w-full max-w-md p-8 md:p-10"
+                        >
+                            <div
+                                class="flex flex-col items-center gap-6 text-center"
+                            >
+                                <div
+                                    class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10"
+                                >
+                                    <CheckCircle2
+                                        class="h-8 w-8 text-emerald-500"
+                                    />
+                                </div>
+
+                                <div class="space-y-2">
+                                    <h3
+                                        class="text-2xl font-semibold tracking-tight text-foreground"
+                                    >
+                                        Part Complete!
+                                    </h3>
+
+                                    <p
+                                        class="mx-auto max-w-sm text-sm text-muted-foreground"
+                                    >
+                                        Great work! Your answers have been saved
+                                        successfully.
+                                    </p>
+                                </div>
+
+                                <!-- Progress / Score Info -->
+
+                                <div
+                                    v-if="partsPendingCount > 0"
+                                    class="w-full space-y-3"
+                                >
+                                    <div class="rounded-lg bg-muted/50 p-4">
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            {{ partsPendingCount }} part{{
+                                                partsPendingCount === 1
+                                                    ? ''
+                                                    : 's'
+                                            }}
+                                            remaining
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Final Score Reveal -->
+
+                                <div v-else class="w-full space-y-4">
+                                    <div
+                                        v-if="isCalculatingScore"
+                                        class="flex flex-col items-center gap-4 py-4"
+                                    >
+                                        <div
+                                            class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"
+                                        ></div>
+
+                                        <p
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            {{
+                                                currentPartHasEssay
+                                                    ? 'Reviewing your essay...'
+                                                    : 'Calculating your score...'
+                                            }}
+                                        </p>
+                                    </div>
+
+                                    <div v-else class="space-y-4">
+                                        <div class="rounded-lg bg-muted/50 p-6">
+                                            <div
+                                                class="flex items-baseline justify-center gap-2"
+                                            >
+                                                <span
+                                                    class="text-5xl font-bold tracking-tight text-primary tabular-nums"
+                                                    >{{ displayedScore }}</span
+                                                >
+
+                                                <span
+                                                    class="text-xl font-semibold text-muted-foreground/40"
+                                                    >/
+                                                    {{
+                                                        totalPossiblePoints
+                                                    }}</span
+                                                >
+                                            </div>
+                                        </div>
+
+                                        <div
+                                            v-if="isExamPendingReview"
+                                            class="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2"
+                                        >
+                                            <Clock
+                                                class="h-4 w-4 text-amber-500"
+                                            />
+
+                                            <span
+                                                class="text-sm font-medium text-amber-600"
+                                                >Awaiting review</span
+                                            >
+                                        </div>
+
+                                        <div
+                                            v-else
+                                            class="flex items-center justify-center gap-2 rounded-lg border px-4 py-2"
+                                            :class="[
+                                                feedbackContent.border,
+
+                                                feedbackContent.bg,
+                                            ]"
+                                        >
+                                            <component
+                                                :is="feedbackContent.icon"
+                                                :class="[
+                                                    'h-4 w-4',
+                                                    feedbackContent.color,
+                                                ]"
+                                            />
+
+                                            <span
+                                                :class="[
+                                                    'text-sm font-medium',
+                                                    feedbackContent.color,
+                                                ]"
+                                                >{{
+                                                    feedbackContent.text
+                                                }}</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    @click="closeSuccessModal"
+                                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <span>{{
+                                        isCalculatingScore
+                                            ? currentPartHasEssay
+                                                ? 'Continue while reviewing'
+                                                : 'Calculating...'
+                                            : partsPendingCount > 0
+                                              ? 'Continue to Next Part'
+                                              : 'Back to Exams'
+                                    }}</span>
+
+                                    <ArrowRight
+                                        v-if="!isCalculatingScore"
+                                        class="h-4 w-4"
+                                    />
+
+                                    <div
+                                        v-else
+                                        class="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/20 border-t-primary-foreground"
+                                    ></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+
+                <!-- ─── STICKY EXAM FOOTER (shows when a part is being taken) ─── -->
+                <transition name="modal-fade">
+                    <div
+                        v-if="examStarted && selectedPart && !showSuccessModal"
+                        class="exam-sticky-header fixed right-0 bottom-0 left-0 z-[90] border-t border-border bg-card/95 shadow-[0_-2px_12px_-4px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:bg-zinc-950/90"
+                    >
+                        <div
+                            class="mx-auto flex max-w-screen-2xl items-center gap-3 px-3 py-2.5 md:gap-5 md:px-6"
+                        >
+                            <!-- Part title (left) -->
+                            <div class="flex min-w-0 flex-1 items-center gap-2">
+                                <div
+                                    class="h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary"
+                                ></div>
+                                <div class="flex min-w-0 flex-col">
+                                    <span
+                                        class="text-[9px] leading-none font-bold tracking-widest text-muted-foreground uppercase"
+                                        >In progress</span
+                                    >
+                                    <span
+                                        class="truncate text-sm leading-tight font-bold text-foreground"
+                                        >{{ selectedPart.title }}</span
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- Progress (center, hidden on small) -->
+                            <div
+                                class="hidden min-w-[200px] items-center gap-3 md:flex"
+                            >
+                                <span
+                                    class="text-[10px] font-bold whitespace-nowrap text-muted-foreground"
+                                >
+                                    {{ Object.keys(answers).length }} /
+                                    {{ selectedPart.questions?.length ?? 0 }}
+                                </span>
+                                <div
+                                    class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/40"
+                                >
+                                    <div
+                                        class="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+                                        :style="{ width: `${partProgress}%` }"
+                                    ></div>
+                                </div>
+                                <span
+                                    class="text-[10px] font-bold whitespace-nowrap text-primary tabular-nums"
+                                    >{{ Math.round(partProgress) }}%</span
+                                >
+                            </div>
+
+                            <!-- Timer (right) -->
+                            <div
+                                class="flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors"
+                                :class="
+                                    timeLeftSeconds < 60
+                                        ? 'animate-pulse border-red-500/40 bg-red-500/15 text-red-500'
+                                        : timeLeftSeconds < 300
+                                          ? 'border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                          : 'border-primary/30 bg-primary/10 text-primary'
+                                "
+                            >
+                                <Clock class="h-4 w-4" />
+                                <span
+                                    class="font-mono text-base font-bold tracking-tight tabular-nums"
+                                    >{{ formattedTime }}</span
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Mobile submit button -->
+                        <div class="fixed right-4 bottom-20 z-40 lg:hidden">
+                            <button
+                                @click="submitPart"
+                                :disabled="isSubmitting"
+                                class="submit-celebration-btn group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-xs font-black tracking-[0.15em] text-primary-foreground uppercase shadow-2xl shadow-primary/50 transition-all hover:shadow-2xl hover:shadow-primary/70 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <!-- Shine effect on hover -->
+                                <div
+                                    class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
+                                ></div>
+                                {{
+                                    isSubmitting
+                                        ? currentPartHasEssay
+                                            ? 'Checking...'
+                                            : 'Submitting...'
+                                        : 'Submit this part'
+                                }}
+                                <ArrowRight
+                                    class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                                />
+                            </button>
+                        </div>
+                    </div>
+                </transition>
+            </div>
         </template>
     </AppLayout>
 </template>

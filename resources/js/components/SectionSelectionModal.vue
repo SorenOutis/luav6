@@ -21,7 +21,11 @@ const enterDashboard = () => {
 const joinCode = ref('');
 const isVerifyingCode = ref(false);
 const codeError = ref('');
-const joinedSection = ref<{ id: number; name: string; already_joined: boolean } | null>(null);
+const joinedSection = ref<{
+    id: number;
+    name: string;
+    already_joined: boolean;
+} | null>(null);
 const showSuccess = ref(false);
 const isEnteringDashboard = ref(false);
 
@@ -73,7 +77,8 @@ const submitCode = async () => {
 
         if (!data.valid || !data.section) {
             codeError.value =
-                data.message || 'Invalid section code. Please check and try again.';
+                data.message ||
+                'Invalid section code. Please check and try again.';
             return;
         }
 
@@ -81,11 +86,14 @@ const submitCode = async () => {
         showSuccess.value = true;
 
         // Auto-redirect after celebration (shorter for already-joined users)
-        setTimeout(() => {
-            if (!isEnteringDashboard.value) {
-                window.location.href = '/dashboard';
-            }
-        }, data.section.already_joined ? 1200 : 2000);
+        setTimeout(
+            () => {
+                if (!isEnteringDashboard.value) {
+                    window.location.href = '/dashboard';
+                }
+            },
+            data.section.already_joined ? 1200 : 2000,
+        );
     } catch (err: unknown) {
         if (axios.isAxiosError(err) && err.response?.data?.message) {
             codeError.value = err.response.data.message;
@@ -135,8 +143,8 @@ watch(
                 <p
                     class="mx-auto max-w-lg pt-2 text-xs leading-relaxed text-muted-foreground/80 sm:text-sm"
                 >
-                    Enter your section code to join your class. Your
-                    instructor should have provided this code.
+                    Enter your section code to join your class. Your instructor
+                    should have provided this code.
                 </p>
             </div>
 
@@ -198,12 +206,20 @@ watch(
             <div class="sm:text-center">
                 <div
                     class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full sm:h-20 sm:w-20"
-                    :class="joinedSection.already_joined ? 'bg-amber-500/10' : 'bg-primary/10'"
+                    :class="
+                        joinedSection.already_joined
+                            ? 'bg-amber-500/10'
+                            : 'bg-primary/10'
+                    "
                 >
                     <template v-if="joinedSection.already_joined">
                         <Check
                             class="h-8 w-8 text-amber-500 sm:h-10 sm:w-10"
-                            :class="isEnteringDashboard ? 'animate-none' : 'animate-bounce'"
+                            :class="
+                                isEnteringDashboard
+                                    ? 'animate-none'
+                                    : 'animate-bounce'
+                            "
                         />
                     </template>
                     <template v-else>
@@ -215,22 +231,26 @@ watch(
                 <h2
                     class="text-xl font-black tracking-tight uppercase sm:text-3xl"
                 >
-                    {{ joinedSection.already_joined ? 'Already Joined' : 'You\'re in!' }}
+                    {{
+                        joinedSection.already_joined
+                            ? 'Already Joined'
+                            : "You're in!"
+                    }}
                 </h2>
-                <p
-                    class="mx-auto max-w-md pt-2 text-sm leading-relaxed"
-                >
+                <p class="mx-auto max-w-md pt-2 text-sm leading-relaxed">
                     <template v-if="joinedSection.already_joined">
                         You&apos;re already a member of
                         <strong class="text-foreground">{{
                             joinedSection.name
-                        }}</strong>.
+                        }}</strong
+                        >.
                     </template>
                     <template v-else>
                         You&apos;ve successfully joined
                         <strong class="text-foreground">{{
                             joinedSection.name
-                        }}</strong>. Redirecting to your dashboard...
+                        }}</strong
+                        >. Redirecting to your dashboard...
                     </template>
                 </p>
             </div>

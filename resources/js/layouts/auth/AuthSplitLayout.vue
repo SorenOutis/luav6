@@ -473,10 +473,15 @@ onBeforeUnmount(() => {
 
                 <!-- Developed by credit -->
                 <div class="form-reveal flex justify-center">
-                    <span class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase">
+                    <span
+                        class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase"
+                    >
                         <span class="h-px w-6 bg-border/40"></span>
                         Developed by
-                        <span class="font-black tracking-[0.3em] text-muted-foreground/80">KOAMISHIN</span>
+                        <span
+                            class="font-black tracking-[0.3em] text-muted-foreground/80"
+                            >KOAMISHIN</span
+                        >
                     </span>
                 </div>
             </div>

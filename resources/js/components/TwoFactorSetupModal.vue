@@ -7,10 +7,7 @@ import AlertError from '@/components/AlertError.vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
-import {
-    DialogDescription,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import {
     InputOTP,
     InputOTPGroup,
@@ -114,9 +111,7 @@ watch(
         content-class="sm:max-w-md"
     >
         <template #header>
-            <div
-                class="flex items-center justify-center"
-            >
+            <div class="flex items-center justify-center">
                 <div
                     class="mb-3 w-auto rounded-full border border-border bg-card p-0.5 shadow-sm"
                 >

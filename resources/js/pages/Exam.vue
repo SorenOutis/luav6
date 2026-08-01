@@ -8,7 +8,6 @@ import {
     CheckCircle2,
     XCircle,
     Shield,
-
     ArrowRight,
     Zap,
     Timer,
@@ -18,10 +17,7 @@ import {
 import { ref, computed, watch, nextTick } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
-import {
-    DialogDescription,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getLenis } from '@/composables/useLenis';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
@@ -88,9 +84,7 @@ const getExamSectionName = (exam: Exam) =>
     exam.section_name?.trim() || 'General';
 
 // Flatten all exams across all seasons for top-level filtering
-const allExams = computed(() =>
-    props.examsBySeason.flatMap((sg) => sg.exams),
-);
+const allExams = computed(() => props.examsBySeason.flatMap((sg) => sg.exams));
 
 const statusFilteredExams = computed(() => {
     if (activeFilter.value === 'active')
@@ -243,12 +237,16 @@ const getCardStatusClass = (exam: Exam) => {
     const dateStr = exam.exam_date_iso || exam.exam_date;
     if (dateStr && !exam.is_locked) {
         const examDate = new Date(dateStr);
-        if (!Number.isNaN(examDate.getTime()) && examDate.getTime() < Date.now()) {
+        if (
+            !Number.isNaN(examDate.getTime()) &&
+            examDate.getTime() < Date.now()
+        ) {
             return 'border-l-red-400/40 hover:border-l-red-400/60';
         }
     }
 
-    if (allPartsDone) return 'border-l-emerald-400/40 hover:border-l-emerald-400/60';
+    if (allPartsDone)
+        return 'border-l-emerald-400/40 hover:border-l-emerald-400/60';
     if (exam.is_locked) return '';
     return 'border-l-primary/20 hover:border-l-primary/40';
 };
@@ -259,7 +257,9 @@ const getProgressPercent = (exam: Exam) => {
     return ((exam.submitted_parts_count ?? 0) / exam.total_parts) * 100;
 };
 
-const answersRevealed = computed(() => selectedExamForReview.value?.status === 'closed');
+const answersRevealed = computed(
+    () => selectedExamForReview.value?.status === 'closed',
+);
 
 const openReview = (exam: Exam) => {
     selectedExamForReview.value = exam;
@@ -378,13 +378,13 @@ function showScrollbar() {
                 class="space-y-2"
             >
                 <div class="flex items-center gap-4">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <div
+                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10"
+                    >
                         <TrendingUp class="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold tracking-tight">
-                            Exams
-                        </h1>
+                        <h1 class="text-2xl font-bold tracking-tight">Exams</h1>
                         <p class="text-sm text-muted-foreground">
                             View and take your assessments.
                         </p>
@@ -394,19 +394,21 @@ function showScrollbar() {
 
             <!-- Search Input -->
             <div class="relative">
-                <Search class="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground/50" />
+                <Search
+                    class="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground/50"
+                />
                 <input
                     v-model="searchQuery"
                     type="text"
                     placeholder="Search exams by title or description..."
-                    class="w-full rounded-xl border border-border/50 bg-card py-3.5 pl-12 pr-4 text-base transition-all outline-none placeholder:text-muted-foreground/40 focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+                    class="w-full rounded-xl border border-border/50 bg-card py-3.5 pr-4 pl-12 text-base transition-all outline-none placeholder:text-muted-foreground/40 focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
                 />
             </div>
 
             <!-- Section Tabs (Sticky) -->
             <div
                 v-if="sectionTabs.length > 1"
-                class="no-scrollbar sticky top-0 z-20 -mx-4 flex items-center gap-3 overflow-x-auto border-b border-transparent bg-background/80 px-4 pb-4 pt-3 backdrop-blur-md md:-mx-8 md:px-8"
+                class="no-scrollbar sticky top-0 z-20 -mx-4 flex items-center gap-3 overflow-x-auto border-b border-transparent bg-background/80 px-4 pt-3 pb-4 backdrop-blur-md md:-mx-8 md:px-8"
             >
                 <button
                     v-for="section in sectionTabs"
@@ -450,16 +452,18 @@ function showScrollbar() {
                     :initial="{ opacity: 0, y: 30 }"
                     :in-view="{ opacity: 1, y: 0 }"
                     :in-view-options="{ once: true, margin: '-40px' }"
-                    :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: sIdx * 0.1 }"
+                    :transition="{
+                        duration: 0.8,
+                        ease: [0.16, 1, 0.3, 1],
+                        delay: sIdx * 0.1,
+                    }"
                     class="space-y-5"
                 >
                     <!-- Season Header -->
-                    <div class="flex items-center gap-3 mb-1">
+                    <div class="mb-1 flex items-center gap-3">
                         <div class="flex items-center gap-2">
                             <Calendar class="h-5 w-5 text-primary" />
-                            <h2
-                                class="text-lg font-semibold tracking-tight"
-                            >
+                            <h2 class="text-lg font-semibold tracking-tight">
                                 {{ seasonGroup.seasonName }}
                             </h2>
                         </div>
@@ -470,7 +474,11 @@ function showScrollbar() {
                             class="text-xs font-medium text-muted-foreground tabular-nums"
                         >
                             {{ seasonGroup.exams.length }}
-                            {{ seasonGroup.exams.length === 1 ? 'exam' : 'exams' }}
+                            {{
+                                seasonGroup.exams.length === 1
+                                    ? 'exam'
+                                    : 'exams'
+                            }}
                         </span>
                     </div>
 
@@ -484,22 +492,30 @@ function showScrollbar() {
                             :initial="{ opacity: 0, y: 20 }"
                             :in-view="{ opacity: 1, y: 0 }"
                             :in-view-options="{ once: true, margin: '-30px' }"
-                            :transition="{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: eIdx * 0.05 }"
-                            class="exam-card flex min-w-0 flex-col sm:flex-col justify-between border-l-[3px] sm:border-l-[3px] sm:border-t sm:border-r sm:border-b rounded-none sm:rounded-xl p-4 sm:p-5 transition-all duration-300"
+                            :transition="{
+                                duration: 0.5,
+                                ease: [0.16, 1, 0.3, 1],
+                                delay: eIdx * 0.05,
+                            }"
+                            class="exam-card flex min-w-0 flex-col justify-between rounded-none border-l-[3px] p-4 transition-all duration-300 sm:flex-col sm:rounded-xl sm:border-t sm:border-r sm:border-b sm:border-l-[3px] sm:p-5"
                             :class="[
                                 exam.is_locked
                                     ? 'cursor-not-allowed opacity-60'
-                                    : 'hover:bg-muted/30 sm:hover:-translate-y-0.5 sm:hover:shadow-md cursor-pointer',
+                                    : 'cursor-pointer hover:bg-muted/30 sm:hover:-translate-y-0.5 sm:hover:shadow-md',
                                 getCardStatusClass(exam),
                             ]"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex-1">
                                     <!-- Status Badge + Score -->
-                                    <div class="mb-2 flex items-start justify-between gap-2">
+                                    <div
+                                        class="mb-2 flex items-start justify-between gap-2"
+                                    >
                                         <span
                                             class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-sm sm:px-3 sm:py-1 sm:text-xs"
-                                            :class="getStatusBadgeInfo(exam).color"
+                                            :class="
+                                                getStatusBadgeInfo(exam).color
+                                            "
                                         >
                                             {{ getStatusBadgeInfo(exam).label }}
                                         </span>
@@ -511,7 +527,8 @@ function showScrollbar() {
                                                 exam.submissions
                                                     ?.reduce(
                                                         (acc, s) =>
-                                                            acc + parseFloat(s.score),
+                                                            acc +
+                                                            parseFloat(s.score),
                                                         0,
                                                     )
                                                     .toFixed(1)
@@ -535,16 +552,23 @@ function showScrollbar() {
                                             {{ exam.title }}
                                         </h2>
 
-                                        <p class="line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                                        <p
+                                            class="line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                                        >
                                             {{ exam.description }}
                                         </p>
 
                                         <!-- Progress Bar -->
                                         <div
-                                            v-if="exam.total_parts && exam.total_parts > 0"
+                                            v-if="
+                                                exam.total_parts &&
+                                                exam.total_parts > 0
+                                            "
                                             class="space-y-1.5 pt-1.5 sm:space-y-2 sm:pt-2"
                                         >
-                                            <div class="flex items-center justify-between text-[10px] font-medium sm:text-xs">
+                                            <div
+                                                class="flex items-center justify-between text-[10px] font-medium sm:text-xs"
+                                            >
                                                 <span
                                                     :class="
                                                         exam.is_locked
@@ -552,13 +576,28 @@ function showScrollbar() {
                                                             : 'text-muted-foreground'
                                                     "
                                                 >
-                                                    {{ exam.submitted_parts_count }} / {{ exam.total_parts }} parts
+                                                    {{
+                                                        exam.submitted_parts_count
+                                                    }}
+                                                    /
+                                                    {{ exam.total_parts }} parts
                                                 </span>
-                                                <span v-if="!exam.is_locked" class="text-muted-foreground">
-                                                    {{ Math.round(getProgressPercent(exam)) }}%
+                                                <span
+                                                    v-if="!exam.is_locked"
+                                                    class="text-muted-foreground"
+                                                >
+                                                    {{
+                                                        Math.round(
+                                                            getProgressPercent(
+                                                                exam,
+                                                            ),
+                                                        )
+                                                    }}%
                                                 </span>
                                             </div>
-                                            <div class="h-1.5 overflow-hidden rounded-full bg-muted sm:h-2">
+                                            <div
+                                                class="h-1.5 overflow-hidden rounded-full bg-muted sm:h-2"
+                                            >
                                                 <div
                                                     class="h-full rounded-full transition-all duration-700"
                                                     :class="
@@ -574,15 +613,43 @@ function showScrollbar() {
                                         </div>
 
                                         <!-- Meta Info -->
-                                        <div class="flex items-center gap-2.5 pt-1.5 text-xs text-muted-foreground sm:gap-3 sm:pt-2 sm:text-sm">
-                                            <div class="flex items-center gap-1">
-                                                <Clock class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                                                <span>{{ exam.duration_minutes }} min</span>
+                                        <div
+                                            class="flex items-center gap-2.5 pt-1.5 text-xs text-muted-foreground sm:gap-3 sm:pt-2 sm:text-sm"
+                                        >
+                                            <div
+                                                class="flex items-center gap-1"
+                                            >
+                                                <Clock
+                                                    class="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                                                />
+                                                <span
+                                                    >{{
+                                                        exam.duration_minutes
+                                                    }}
+                                                    min</span
+                                                >
                                             </div>
-                                            <div class="flex items-center gap-1">
-                                                <Timer class="h-3.5 w-3.5 sm:h-4 sm:w-4" :class="getExamTimeInfo(exam).color" />
-                                                <span :class="getExamTimeInfo(exam).color" class="text-[10px] font-medium sm:text-xs">
-                                                    {{ getExamTimeInfo(exam).label }}
+                                            <div
+                                                class="flex items-center gap-1"
+                                            >
+                                                <Timer
+                                                    class="h-3.5 w-3.5 sm:h-4 sm:w-4"
+                                                    :class="
+                                                        getExamTimeInfo(exam)
+                                                            .color
+                                                    "
+                                                />
+                                                <span
+                                                    :class="
+                                                        getExamTimeInfo(exam)
+                                                            .color
+                                                    "
+                                                    class="text-[10px] font-medium sm:text-xs"
+                                                >
+                                                    {{
+                                                        getExamTimeInfo(exam)
+                                                            .label
+                                                    }}
                                                 </span>
                                             </div>
                                         </div>
@@ -590,7 +657,9 @@ function showScrollbar() {
                                 </div>
 
                                 <!-- Chevron for list style on mobile -->
-                                <ArrowRight class="h-5 w-5 text-muted-foreground/50 flex-shrink-0 sm:hidden" />
+                                <ArrowRight
+                                    class="h-5 w-5 flex-shrink-0 text-muted-foreground/50 sm:hidden"
+                                />
                             </div>
 
                             <!-- Action Button (only show on sm+) -->
@@ -637,14 +706,19 @@ function showScrollbar() {
                     <Calendar class="h-12 w-12 text-muted-foreground/40" />
                 </div>
                 <div class="space-y-1">
-                    <h3 class="text-xl font-semibold text-foreground">No exams found</h3>
+                    <h3 class="text-xl font-semibold text-foreground">
+                        No exams found
+                    </h3>
                     <p
                         v-if="activeSection !== 'all'"
                         class="text-sm text-muted-foreground"
                     >
                         Try selecting a different section to see more exams.
                     </p>
-                    <p v-else-if="searchQuery" class="text-sm text-muted-foreground">
+                    <p
+                        v-else-if="searchQuery"
+                        class="text-sm text-muted-foreground"
+                    >
                         No exams match your search. Try a different keyword.
                     </p>
                     <p v-else class="text-sm text-muted-foreground">
@@ -666,7 +740,9 @@ function showScrollbar() {
         <template #header>
             <div class="flex items-center justify-between gap-4">
                 <div class="min-w-0 space-y-0.5">
-                    <span class="text-xs font-medium text-primary">Your Results</span>
+                    <span class="text-xs font-medium text-primary"
+                        >Your Results</span
+                    >
                     <DialogTitle class="text-lg font-bold text-foreground">
                         {{ selectedExamForReview?.title }}
                     </DialogTitle>
@@ -677,13 +753,17 @@ function showScrollbar() {
 
                 <div class="flex shrink-0 items-center gap-3">
                     <div class="rounded-lg bg-primary/5 px-3 py-1.5 text-right">
-                        <span class="text-[9px] font-medium text-muted-foreground">Score</span>
-                        <span class="ml-1.5 text-base font-bold text-foreground tabular-nums">
+                        <span
+                            class="text-[9px] font-medium text-muted-foreground"
+                            >Score</span
+                        >
+                        <span
+                            class="ml-1.5 text-base font-bold text-foreground tabular-nums"
+                        >
                             {{
                                 selectedExamForReview?.submissions
                                     ?.reduce(
-                                        (acc, s) =>
-                                            acc + parseFloat(s.score),
+                                        (acc, s) => acc + parseFloat(s.score),
                                         0,
                                     )
                                     .toFixed(1)
@@ -696,7 +776,9 @@ function showScrollbar() {
 
         <!-- Part Navigation Tabs -->
         <div
-            v-if="selectedExamForReview && selectedExamForReview.parts.length > 1"
+            v-if="
+                selectedExamForReview && selectedExamForReview.parts.length > 1
+            "
             class="no-scrollbar flex items-center gap-1.5 overflow-x-auto border-b border-border/50 bg-muted/5 px-6 py-2.5"
         >
             <button
@@ -740,12 +822,28 @@ function showScrollbar() {
                             {{ part.title }}
                         </h3>
                         <span
-                            v-if="getSubmissionForPart(selectedExamForReview, part.id)"
+                            v-if="
+                                getSubmissionForPart(
+                                    selectedExamForReview,
+                                    part.id,
+                                )
+                            "
                             class="rounded-lg bg-muted/50 px-3 py-1 text-[11px] font-semibold text-foreground tabular-nums"
                         >
-                            Score: {{ getSubmissionForPart(selectedExamForReview, part.id)?.score }}
+                            Score:
+                            {{
+                                getSubmissionForPart(
+                                    selectedExamForReview,
+                                    part.id,
+                                )?.score
+                            }}
                             /
-                            {{ part.questions?.reduce((acc, q) => acc + (parseInt(q.points) || 1), 0) }}
+                            {{
+                                part.questions?.reduce(
+                                    (acc, q) => acc + (parseInt(q.points) || 1),
+                                    0,
+                                )
+                            }}
                         </span>
                     </div>
 
@@ -755,99 +853,224 @@ function showScrollbar() {
                             :key="qIndex"
                             :initial="{ opacity: 0, y: 15 }"
                             :animate="{ opacity: 1, y: 0 }"
-                            :transition="{ duration: 0.4, delay: qIndex * 0.05, ease: [0.16, 1, 0.3, 1] }"
+                            :transition="{
+                                duration: 0.4,
+                                delay: qIndex * 0.05,
+                                ease: [0.16, 1, 0.3, 1],
+                            }"
                             class="question-card relative overflow-hidden rounded-xl border p-5 transition-all"
                             :class="
                                 !answersRevealed
                                     ? 'border-border/50 bg-card/40'
                                     : isAnswerCorrect(
-                                        question,
-                                        getAnswerForQuestion(
-                                            getSubmissionForPart(selectedExamForReview, part.id)?.answers,
-                                            qIndex + 1,
-                                        ),
-                                        getAnswerObjectForQuestion(
-                                            getSubmissionForPart(selectedExamForReview, part.id)?.answers,
-                                            qIndex + 1,
-                                        ),
-                                    )
-                                        ? 'border-emerald-500/30 bg-emerald-500/[0.02]'
-                                        : 'border-red-500/30 bg-red-500/[0.02]'
+                                            question,
+                                            getAnswerForQuestion(
+                                                getSubmissionForPart(
+                                                    selectedExamForReview,
+                                                    part.id,
+                                                )?.answers,
+                                                qIndex + 1,
+                                            ),
+                                            getAnswerObjectForQuestion(
+                                                getSubmissionForPart(
+                                                    selectedExamForReview,
+                                                    part.id,
+                                                )?.answers,
+                                                qIndex + 1,
+                                            ),
+                                        )
+                                      ? 'border-emerald-500/30 bg-emerald-500/[0.02]'
+                                      : 'border-red-500/30 bg-red-500/[0.02]'
                             "
                         >
                             <!-- Privacy Overlay: visible by default, fades on hover to reveal content -->
                             <div
                                 class="question-reveal-overlay pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-100 transition-opacity duration-300"
                             >
-                                <div class="flex items-center gap-2 rounded-xl border border-primary/20 bg-background/90 px-4 py-2 shadow-lg backdrop-blur-sm">
+                                <div
+                                    class="flex items-center gap-2 rounded-xl border border-primary/20 bg-background/90 px-4 py-2 shadow-lg backdrop-blur-sm"
+                                >
                                     <Shield class="h-4 w-4 text-primary" />
-                                    <span class="text-[11px] font-medium text-primary">Hover to reveal</span>
+                                    <span
+                                        class="text-[11px] font-medium text-primary"
+                                        >Hover to reveal</span
+                                    >
                                 </div>
                             </div>
 
                             <div
-                                class="question-reveal-content space-y-3 transition-all duration-500 blur-sm select-none"
+                                class="question-reveal-content space-y-3 blur-sm transition-all duration-500 select-none"
                             >
-                                <div class="flex items-start justify-between gap-3">
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
                                     <div class="flex items-center gap-2">
-                                        <span class="text-[11px] font-medium text-muted-foreground">
+                                        <span
+                                            class="text-[11px] font-medium text-muted-foreground"
+                                        >
                                             #{{ qIndex + 1 }}
                                         </span>
-                                        <span class="rounded-md bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                            {{ question.type.replace('_', ' ') }}
+                                        <span
+                                            class="rounded-md bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                                        >
+                                            {{
+                                                question.type.replace('_', ' ')
+                                            }}
                                         </span>
                                     </div>
-                                    <div class="flex items-center gap-1.5 text-[11px] font-medium">
+                                    <div
+                                        class="flex items-center gap-1.5 text-[11px] font-medium"
+                                    >
                                         <template v-if="answersRevealed">
                                             <CheckCircle2
-                                                v-if="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))"
+                                                v-if="
+                                                    isAnswerCorrect(
+                                                        question,
+                                                        getAnswerForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ),
+                                                        getAnswerObjectForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ),
+                                                    )
+                                                "
                                                 class="h-3.5 w-3.5 text-emerald-500"
                                             />
                                             <XCircle
                                                 v-else
                                                 class="h-3.5 w-3.5 text-red-500"
                                             />
-                                            <span :class="isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-red-600'">
-                                                {{ question.type === 'essay'
-                                                    ? 'Reviewed'
-                                                    : isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1), getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1))
-                                                        ? 'Correct'
-                                                        : 'Incorrect'
+                                            <span
+                                                :class="
+                                                    isAnswerCorrect(
+                                                        question,
+                                                        getAnswerForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ),
+                                                        getAnswerObjectForQuestion(
+                                                            getSubmissionForPart(
+                                                                selectedExamForReview,
+                                                                part.id,
+                                                            )?.answers,
+                                                            qIndex + 1,
+                                                        ),
+                                                    )
+                                                        ? 'text-emerald-600'
+                                                        : 'text-red-600'
+                                                "
+                                            >
+                                                {{
+                                                    question.type === 'essay'
+                                                        ? 'Reviewed'
+                                                        : isAnswerCorrect(
+                                                                question,
+                                                                getAnswerForQuestion(
+                                                                    getSubmissionForPart(
+                                                                        selectedExamForReview,
+                                                                        part.id,
+                                                                    )?.answers,
+                                                                    qIndex + 1,
+                                                                ),
+                                                                getAnswerObjectForQuestion(
+                                                                    getSubmissionForPart(
+                                                                        selectedExamForReview,
+                                                                        part.id,
+                                                                    )?.answers,
+                                                                    qIndex + 1,
+                                                                ),
+                                                            )
+                                                          ? 'Correct'
+                                                          : 'Incorrect'
                                                 }}
                                             </span>
                                         </template>
                                         <template v-else>
-                                            <CheckCircle2 class="h-3.5 w-3.5 text-muted-foreground/40" />
-                                            <span class="text-muted-foreground/60">Submitted</span>
+                                            <CheckCircle2
+                                                class="h-3.5 w-3.5 text-muted-foreground/40"
+                                            />
+                                            <span
+                                                class="text-muted-foreground/60"
+                                                >Submitted</span
+                                            >
                                         </template>
                                     </div>
                                 </div>
 
-                                <p class="text-sm leading-relaxed font-medium text-foreground">
+                                <p
+                                    class="text-sm leading-relaxed font-medium text-foreground"
+                                >
                                     {{ question.text }}
                                 </p>
 
                                 <!-- Multiple Choice / True False -->
-                                <div v-if="question.type === 'multiple_choice' || question.type === 'true_false'" class="space-y-1.5">
+                                <div
+                                    v-if="
+                                        question.type === 'multiple_choice' ||
+                                        question.type === 'true_false'
+                                    "
+                                    class="space-y-1.5"
+                                >
                                     <div
-                                        v-for="(option, oIndex) in question.options"
+                                        v-for="(
+                                            option, oIndex
+                                        ) in question.options"
                                         :key="oIndex"
                                         class="flex items-center justify-between rounded-lg border p-2.5 text-sm transition-all"
                                         :class="
                                             !answersRevealed
-                                                ? parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex
+                                                ? parseInt(
+                                                      getAnswerForQuestion(
+                                                          getSubmissionForPart(
+                                                              selectedExamForReview,
+                                                              part.id,
+                                                          )?.answers,
+                                                          qIndex + 1,
+                                                      ),
+                                                  ) === oIndex
                                                     ? 'border-border/60 bg-muted/40'
                                                     : 'border-border/40 bg-muted/10 opacity-50'
                                                 : option.is_correct
-                                                    ? 'border-emerald-500/50 bg-emerald-500/10'
-                                                    : parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex
-                                                        ? 'border-red-500/50 bg-red-500/10'
-                                                        : 'border-border/50 bg-muted/20 opacity-60'
+                                                  ? 'border-emerald-500/50 bg-emerald-500/10'
+                                                  : parseInt(
+                                                          getAnswerForQuestion(
+                                                              getSubmissionForPart(
+                                                                  selectedExamForReview,
+                                                                  part.id,
+                                                              )?.answers,
+                                                              qIndex + 1,
+                                                          ),
+                                                      ) === oIndex
+                                                    ? 'border-red-500/50 bg-red-500/10'
+                                                    : 'border-border/50 bg-muted/20 opacity-60'
                                         "
                                     >
-                                        <span class="text-sm">{{ option.text }}</span>
+                                        <span class="text-sm">{{
+                                            option.text
+                                        }}</span>
                                         <span
-                                            v-if="parseInt(getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) === oIndex"
+                                            v-if="
+                                                parseInt(
+                                                    getAnswerForQuestion(
+                                                        getSubmissionForPart(
+                                                            selectedExamForReview,
+                                                            part.id,
+                                                        )?.answers,
+                                                        qIndex + 1,
+                                                    ),
+                                                ) === oIndex
+                                            "
                                             class="ml-2 rounded-md bg-foreground/10 px-2 py-0.5 text-[10px] font-semibold text-foreground"
                                         >
                                             Your answer
@@ -856,50 +1079,177 @@ function showScrollbar() {
                                 </div>
 
                                 <!-- Identification -->
-                                <div v-else-if="question.type === 'identification'" class="space-y-2">
-                                    <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                        <span class="text-[10px] font-medium text-muted-foreground">Your answer</span>
-                                        <p class="mt-1 text-sm font-semibold" :class="answersRevealed && isAnswerCorrect(question, getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)) ? 'text-emerald-600' : 'text-foreground'">
-                                            {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No answer' }}
+                                <div
+                                    v-else-if="
+                                        question.type === 'identification'
+                                    "
+                                    class="space-y-2"
+                                >
+                                    <div
+                                        class="rounded-lg border border-border/50 bg-muted/20 p-3"
+                                    >
+                                        <span
+                                            class="text-[10px] font-medium text-muted-foreground"
+                                            >Your answer</span
+                                        >
+                                        <p
+                                            class="mt-1 text-sm font-semibold"
+                                            :class="
+                                                answersRevealed &&
+                                                isAnswerCorrect(
+                                                    question,
+                                                    getAnswerForQuestion(
+                                                        getSubmissionForPart(
+                                                            selectedExamForReview,
+                                                            part.id,
+                                                        )?.answers,
+                                                        qIndex + 1,
+                                                    ),
+                                                )
+                                                    ? 'text-emerald-600'
+                                                    : 'text-foreground'
+                                            "
+                                        >
+                                            {{
+                                                getAnswerForQuestion(
+                                                    getSubmissionForPart(
+                                                        selectedExamForReview,
+                                                        part.id,
+                                                    )?.answers,
+                                                    qIndex + 1,
+                                                ) || 'No answer'
+                                            }}
                                         </p>
                                     </div>
                                     <div
-                                        v-if="answersRevealed && question.correct_answer"
+                                        v-if="
+                                            answersRevealed &&
+                                            question.correct_answer
+                                        "
                                         class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3"
                                     >
-                                        <span class="text-[10px] font-medium text-emerald-600">Correct answer</span>
-                                        <p class="mt-1 text-sm font-semibold text-emerald-600">{{ question.correct_answer }}</p>
+                                        <span
+                                            class="text-[10px] font-medium text-emerald-600"
+                                            >Correct answer</span
+                                        >
+                                        <p
+                                            class="mt-1 text-sm font-semibold text-emerald-600"
+                                        >
+                                            {{ question.correct_answer }}
+                                        </p>
                                     </div>
                                 </div>
 
                                 <!-- Essay -->
-                                <div v-else-if="question.type === 'essay'" class="space-y-3">
-                                    <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
-                                        <span class="text-[10px] font-medium text-muted-foreground">Your response</span>
-                                        <p class="mt-1 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                                            {{ getAnswerForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1) || 'No response submitted' }}
+                                <div
+                                    v-else-if="question.type === 'essay'"
+                                    class="space-y-3"
+                                >
+                                    <div
+                                        class="rounded-lg border border-border/50 bg-muted/20 p-3"
+                                    >
+                                        <span
+                                            class="text-[10px] font-medium text-muted-foreground"
+                                            >Your response</span
+                                        >
+                                        <p
+                                            class="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-foreground"
+                                        >
+                                            {{
+                                                getAnswerForQuestion(
+                                                    getSubmissionForPart(
+                                                        selectedExamForReview,
+                                                        part.id,
+                                                    )?.answers,
+                                                    qIndex + 1,
+                                                ) || 'No response submitted'
+                                            }}
                                         </p>
                                     </div>
 
                                     <!-- AI Feedback -->
-                                    <div v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score !== undefined" class="rounded-lg border border-primary/20 bg-primary/5 p-3">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-1.5">
-                                                <Zap class="h-3.5 w-3.5 text-primary" />
-                                                <span class="text-[11px] font-medium text-primary">AI Feedback</span>
+                                    <div
+                                        v-if="
+                                            getAnswerObjectForQuestion(
+                                                getSubmissionForPart(
+                                                    selectedExamForReview,
+                                                    part.id,
+                                                )?.answers,
+                                                qIndex + 1,
+                                            )?.ai_score !== undefined
+                                        "
+                                        class="rounded-lg border border-primary/20 bg-primary/5 p-3"
+                                    >
+                                        <div
+                                            class="flex items-center justify-between gap-2"
+                                        >
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
+                                                <Zap
+                                                    class="h-3.5 w-3.5 text-primary"
+                                                />
+                                                <span
+                                                    class="text-[11px] font-medium text-primary"
+                                                    >AI Feedback</span
+                                                >
                                             </div>
-                                            <span class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary tabular-nums">
-                                                Score: {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_score }} / {{ question.points }}
+                                            <span
+                                                class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary tabular-nums"
+                                            >
+                                                Score:
+                                                {{
+                                                    getAnswerObjectForQuestion(
+                                                        getSubmissionForPart(
+                                                            selectedExamForReview,
+                                                            part.id,
+                                                        )?.answers,
+                                                        qIndex + 1,
+                                                    )?.ai_score
+                                                }}
+                                                / {{ question.points }}
                                             </span>
                                         </div>
-                                        <p v-if="getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback" class="mt-2 text-sm leading-relaxed text-foreground/80">
-                                            {{ getAnswerObjectForQuestion(getSubmissionForPart(selectedExamForReview, part.id)?.answers, qIndex + 1)?.ai_feedback }}
+                                        <p
+                                            v-if="
+                                                getAnswerObjectForQuestion(
+                                                    getSubmissionForPart(
+                                                        selectedExamForReview,
+                                                        part.id,
+                                                    )?.answers,
+                                                    qIndex + 1,
+                                                )?.ai_feedback
+                                            "
+                                            class="mt-2 text-sm leading-relaxed text-foreground/80"
+                                        >
+                                            {{
+                                                getAnswerObjectForQuestion(
+                                                    getSubmissionForPart(
+                                                        selectedExamForReview,
+                                                        part.id,
+                                                    )?.answers,
+                                                    qIndex + 1,
+                                                )?.ai_feedback
+                                            }}
                                         </p>
                                     </div>
 
-                                    <div v-else-if="getSubmissionForPart(selectedExamForReview, part.id)?.status === 'pending_ai'" class="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/20 p-3">
-                                        <Timer class="h-3.5 w-3.5 text-amber-500" />
-                                        <span class="text-xs font-medium text-amber-600">Feedback pending</span>
+                                    <div
+                                        v-else-if="
+                                            getSubmissionForPart(
+                                                selectedExamForReview,
+                                                part.id,
+                                            )?.status === 'pending_ai'
+                                        "
+                                        class="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/20 p-3"
+                                    >
+                                        <Timer
+                                            class="h-3.5 w-3.5 text-amber-500"
+                                        />
+                                        <span
+                                            class="text-xs font-medium text-amber-600"
+                                            >Feedback pending</span
+                                        >
                                     </div>
                                 </div>
                             </div>
@@ -919,17 +1269,46 @@ function showScrollbar() {
                 Close
             </Button>
 
-            <div v-if="selectedExamForReview && selectedExamForReview.parts.length > 1" class="flex items-center gap-2">
+            <div
+                v-if="
+                    selectedExamForReview &&
+                    selectedExamForReview.parts.length > 1
+                "
+                class="flex items-center gap-2"
+            >
                 <button
-                    v-if="selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) > 0"
-                    @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) - 1].id"
+                    v-if="
+                        selectedExamForReview.parts.findIndex(
+                            (p) => p.id === selectedPartId,
+                        ) > 0
+                    "
+                    @click="
+                        selectedPartId =
+                            selectedExamForReview.parts[
+                                selectedExamForReview.parts.findIndex(
+                                    (p) => p.id === selectedPartId,
+                                ) - 1
+                            ].id
+                    "
                     class="rounded-lg border border-border/50 bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
                 >
                     Previous
                 </button>
                 <button
-                    v-if="selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) < selectedExamForReview.parts.length - 1"
-                    @click="selectedPartId = selectedExamForReview.parts[selectedExamForReview.parts.findIndex((p) => p.id === selectedPartId) + 1].id"
+                    v-if="
+                        selectedExamForReview.parts.findIndex(
+                            (p) => p.id === selectedPartId,
+                        ) <
+                        selectedExamForReview.parts.length - 1
+                    "
+                    @click="
+                        selectedPartId =
+                            selectedExamForReview.parts[
+                                selectedExamForReview.parts.findIndex(
+                                    (p) => p.id === selectedPartId,
+                                ) + 1
+                            ].id
+                    "
                     class="rounded-lg bg-primary px-5 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                 >
                     Next
@@ -944,7 +1323,8 @@ function showScrollbar() {
 
 .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in srgb, var(--color-primary) 30%, transparent) transparent;
+    scrollbar-color: color-mix(in srgb, var(--color-primary) 30%, transparent)
+        transparent;
     scroll-behavior: smooth;
 }
 

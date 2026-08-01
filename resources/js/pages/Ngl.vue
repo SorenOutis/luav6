@@ -13,10 +13,7 @@ import {
 import { ref, onMounted } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
-import {
-    DialogDescription,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -400,9 +397,13 @@ onMounted(() => {
             content-class="overflow-hidden rounded-[2rem] border-primary/30 bg-background/95 p-0 shadow-2xl shadow-primary/20 backdrop-blur-3xl sm:rounded-[2.5rem] sm:max-w-[600px]"
             @close="showSubmissionModal = false"
         >
-            <div class="absolute top-0 left-0 h-2 w-full bg-gradient-to-r from-transparent via-primary to-transparent pointer-events-none"></div>
+            <div
+                class="pointer-events-none absolute top-0 left-0 h-2 w-full bg-gradient-to-r from-transparent via-primary to-transparent"
+            ></div>
             <template #header>
-                <div class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+                <div
+                    class="flex flex-col items-center gap-4 sm:flex-row sm:gap-6"
+                >
                     <div
                         class="group relative flex h-12 w-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 shadow-2xl sm:h-20 sm:w-20 sm:rounded-3xl"
                     >
@@ -421,8 +422,8 @@ onMounted(() => {
                         <DialogDescription
                             class="text-xs leading-tight font-medium text-muted-foreground sm:text-lg"
                         >
-                            Your message will be encrypted and shielded.
-                            No one will know it's you.
+                            Your message will be encrypted and shielded. No one
+                            will know it's you.
                         </DialogDescription>
                     </div>
                 </div>
@@ -453,9 +454,7 @@ onMounted(() => {
                     <div
                         class="rounded-lg bg-primary/10 p-1.5 transition-transform group-hover:rotate-12"
                     >
-                        <Shield
-                            class="h-4 w-4 text-primary sm:h-6 sm:w-6"
-                        />
+                        <Shield class="h-4 w-4 text-primary sm:h-6 sm:w-6" />
                     </div>
                     <div class="space-y-0.5">
                         <div

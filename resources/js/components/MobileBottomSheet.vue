@@ -113,9 +113,7 @@ function handleClose() {
             v-if="open"
             ref="sheetRef"
             class="fixed right-0 bottom-0 left-0 z-[70] mx-auto max-w-lg rounded-t-3xl border-t border-border/60 bg-background/95 shadow-2xl shadow-black/20 backdrop-blur-2xl"
-            style="
-                padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
-            "
+            style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem)"
         >
             <!-- Grab Handle -->
             <div
@@ -127,9 +125,7 @@ function handleClose() {
                 v-if="title || showCloseButton"
                 class="flex items-center justify-between px-6 pt-4 pb-2"
             >
-                <h2
-                    class="text-base font-black tracking-tight text-foreground"
-                >
+                <h2 class="text-base font-black tracking-tight text-foreground">
                     {{ title }}
                 </h2>
                 <button

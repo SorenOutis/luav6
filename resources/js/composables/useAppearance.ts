@@ -164,7 +164,7 @@ const getStoredThemePreset = () => {
     }
 
     return localStorage.getItem('themePreset') as ThemePreset | null;
-}
+};
 
 const DEFAULT_THEME: ThemePreset = 'default';
 

@@ -53,8 +53,7 @@ function patchModuleExports(module: any): void {
  * Immediately patch route modules synchronously
  * This runs when this module is imported
  */
-export function initRoutePatching(): void {
-}
+export function initRoutePatching(): void {}
 
 // Initialize immediately
 initRoutePatching();

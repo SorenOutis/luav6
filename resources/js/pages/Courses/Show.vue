@@ -109,14 +109,18 @@ onMounted(() => {
     }
 
     // Auto-scroll to first incomplete module
-    const firstIncompleteIdx = props.modules.findIndex(mod =>
-        mod.lessons.some(l => !l.completed)
+    const firstIncompleteIdx = props.modules.findIndex((mod) =>
+        mod.lessons.some((l) => !l.completed),
     );
     if (firstIncompleteIdx > 0 && el) {
         const target = el.children[firstIncompleteIdx] as HTMLElement;
         if (target) {
             setTimeout(() => {
-                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center',
+                });
             }, 300);
         }
     }
@@ -150,9 +154,9 @@ const firstIncompleteLesson = computed(() => {
 
 // ─── Module Progress ───
 const moduleProgress = computed(() => {
-    return props.modules.map(mod => {
+    return props.modules.map((mod) => {
         const total = mod.lessons.length;
-        const done = mod.lessons.filter(l => l.completed).length;
+        const done = mod.lessons.filter((l) => l.completed).length;
         return {
             id: mod.id,
             total,
@@ -162,7 +166,7 @@ const moduleProgress = computed(() => {
     });
 });
 
-const mp = (modId: number) => moduleProgress.value.find(m => m.id === modId)!;
+const mp = (modId: number) => moduleProgress.value.find((m) => m.id === modId)!;
 
 // ─── Confetti ───
 const burstConfetti = () => {
@@ -223,22 +227,33 @@ const burstConfetti = () => {
         });
     }
 };
-
-
 </script>
 
 <template>
     <Head :title="course.name" />
 
-    <AppLayout :breadcrumbs="breadcrumbs">                        <div class="relative flex h-full flex-1 flex-col overflow-hidden bg-background">
+    <AppLayout :breadcrumbs="breadcrumbs">
+        <div
+            class="relative flex h-full flex-1 flex-col overflow-hidden bg-background"
+        >
             <!-- Course Header -->
-            <div class="course-header relative overflow-hidden border-b border-border/10">
+            <div
+                class="course-header relative overflow-hidden border-b border-border/10"
+            >
                 <!-- Background -->
-                <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-background"></div>
+                <div
+                    class="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-background"
+                ></div>
                 <div v-if="course.cover_photo" class="absolute inset-0">
-                    <img :src="course.cover_photo" :alt="course.name" class="h-full w-full object-cover opacity-20" />
+                    <img
+                        :src="course.cover_photo"
+                        :alt="course.name"
+                        class="h-full w-full object-cover opacity-20"
+                    />
                 </div>
-                <div class="absolute inset-0 bg-gradient-to-r from-background/80 via-background/60 to-background/40"></div>
+                <div
+                    class="absolute inset-0 bg-gradient-to-r from-background/80 via-background/60 to-background/40"
+                ></div>
 
                 <div class="relative z-10 p-6 md:p-10">
                     <Motion
@@ -248,42 +263,89 @@ const burstConfetti = () => {
                     >
                         <div class="flex items-start justify-between gap-6">
                             <div class="flex-1">
-                                <div class="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+                                <div
+                                    class="mb-3 flex items-center gap-2 text-xs text-muted-foreground"
+                                >
                                     <BookOpen class="h-4 w-4" />
                                     <span>Course</span>
                                     <ChevronRight class="h-3 w-3" />
-                                    <span class="text-foreground/60">{{ course.name }}</span>
+                                    <span class="text-foreground/60">{{
+                                        course.name
+                                    }}</span>
                                 </div>
-                                <h1 class="text-3xl font-black tracking-tight md:text-4xl">{{ course.name }}</h1>
-                                <p v-if="course.description" class="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground/70">
+                                <h1
+                                    class="text-3xl font-black tracking-tight md:text-4xl"
+                                >
+                                    {{ course.name }}
+                                </h1>
+                                <p
+                                    v-if="course.description"
+                                    class="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground/70"
+                                >
                                     {{ course.description }}
                                 </p>
 
                                 <!-- Stats -->
-                                <div class="mt-6 flex flex-wrap items-center gap-6">
+                                <div
+                                    class="mt-6 flex flex-wrap items-center gap-6"
+                                >
                                     <div class="flex items-center gap-2">
-                                        <BarChart3 class="h-4 w-4 text-primary" />
-                                        <span class="text-sm font-medium">{{ course.completedLessons }} / {{ course.totalLessons }} lessons</span>
+                                        <BarChart3
+                                            class="h-4 w-4 text-primary"
+                                        />
+                                        <span class="text-sm font-medium"
+                                            >{{ course.completedLessons }} /
+                                            {{ course.totalLessons }}
+                                            lessons</span
+                                        >
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <BookMarked class="h-4 w-4 text-primary" />
-                                        <span class="text-sm font-medium">{{ modules.length }} modules</span>
+                                        <BookMarked
+                                            class="h-4 w-4 text-primary"
+                                        />
+                                        <span class="text-sm font-medium"
+                                            >{{ modules.length }} modules</span
+                                        >
                                     </div>
                                 </div>
 
                                 <!-- Course Progress Bar -->
                                 <div class="mt-4 max-w-md space-y-1.5">
-                                    <div class="flex items-center justify-between text-xs">
-                                        <span class="font-medium text-foreground/60">Course Progress</span>
-                                        <span class="font-black tabular-nums" :class="course.progress >= 100 ? 'text-emerald-500' : 'text-primary'">
-                                            {{ course.progress >= 100 ? '🎉 100%' : course.progress + '%' }}
+                                    <div
+                                        class="flex items-center justify-between text-xs"
+                                    >
+                                        <span
+                                            class="font-medium text-foreground/60"
+                                            >Course Progress</span
+                                        >
+                                        <span
+                                            class="font-black tabular-nums"
+                                            :class="
+                                                course.progress >= 100
+                                                    ? 'text-emerald-500'
+                                                    : 'text-primary'
+                                            "
+                                        >
+                                            {{
+                                                course.progress >= 100
+                                                    ? '🎉 100%'
+                                                    : course.progress + '%'
+                                            }}
                                         </span>
                                     </div>
-                                    <div class="h-2.5 overflow-hidden rounded-full bg-muted">
+                                    <div
+                                        class="h-2.5 overflow-hidden rounded-full bg-muted"
+                                    >
                                         <div
                                             class="h-full rounded-full transition-all duration-1000"
-                                            :class="course.progress >= 100 ? 'bg-emerald-500' : 'bg-primary'"
-                                            :style="{ width: `${course.progress}%` }"
+                                            :class="
+                                                course.progress >= 100
+                                                    ? 'bg-emerald-500'
+                                                    : 'bg-primary'
+                                            "
+                                            :style="{
+                                                width: `${course.progress}%`,
+                                            }"
                                         ></div>
                                     </div>
                                 </div>
@@ -291,13 +353,22 @@ const burstConfetti = () => {
                                 <!-- Completion Celebration -->
                                 <Motion
                                     v-if="course.progress >= 100"
-                                    :initial="{ opacity: 0, y: 10, scale: 0.95 }"
+                                    :initial="{
+                                        opacity: 0,
+                                        y: 10,
+                                        scale: 0.95,
+                                    }"
                                     :animate="{ opacity: 1, y: 0, scale: 1 }"
-                                    :transition="{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }"
+                                    :transition="{
+                                        duration: 0.6,
+                                        ease: [0.16, 1, 0.3, 1],
+                                    }"
                                     class="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3"
                                 >
                                     <Trophy class="h-5 w-5 text-emerald-500" />
-                                    <span class="text-sm font-bold text-emerald-600">
+                                    <span
+                                        class="text-sm font-bold text-emerald-600"
+                                    >
                                         You completed this course! 🎉
                                     </span>
                                 </Motion>
@@ -312,7 +383,9 @@ const burstConfetti = () => {
                                 <span class="flex items-center gap-2">
                                     <PlayCircle class="h-5 w-5" />
                                     Continue
-                                    <ChevronRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                                    <ChevronRight
+                                        class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                                    />
                                 </span>
                             </Link>
                             <Link
@@ -323,7 +396,9 @@ const burstConfetti = () => {
                                 <span class="flex items-center gap-2">
                                     <ListChecks class="h-5 w-5" />
                                     Review
-                                    <ChevronRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                                    <ChevronRight
+                                        class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                                    />
                                 </span>
                             </Link>
                         </div>
@@ -338,14 +413,14 @@ const burstConfetti = () => {
                     <button
                         v-if="canScrollLeft"
                         @click="scrollModules('left')"
-                        class="absolute left-0 top-1/2 z-20 hidden -translate-y-1/2 rounded-full border border-border/40 bg-background/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-background hover:shadow-xl md:flex"
+                        class="absolute top-1/2 left-0 z-20 hidden -translate-y-1/2 rounded-full border border-border/40 bg-background/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-background hover:shadow-xl md:flex"
                     >
                         <ChevronLeft class="h-5 w-5" />
                     </button>
                     <button
                         v-if="canScrollRight"
                         @click="scrollModules('right')"
-                        class="absolute right-0 top-1/2 z-20 hidden -translate-y-1/2 rounded-full border border-border/40 bg-background/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-background hover:shadow-xl md:flex"
+                        class="absolute top-1/2 right-0 z-20 hidden -translate-y-1/2 rounded-full border border-border/40 bg-background/80 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-background hover:shadow-xl md:flex"
                     >
                         <ChevronRight class="h-5 w-5" />
                     </button>
@@ -353,8 +428,11 @@ const burstConfetti = () => {
                     <!-- Horizontal Module Cards -->
                     <div
                         ref="scrollContainer"
-                        class="scrollbar-none flex gap-4 overflow-x-auto pb-4 md:gap-6"
-                        style="overscroll-behavior-x: contain; scroll-snap-type: x proximity;"
+                        class="flex scrollbar-none gap-4 overflow-x-auto pb-4 md:gap-6"
+                        style="
+                            overscroll-behavior-x: contain;
+                            scroll-snap-type: x proximity;
+                        "
                     >
                         <Motion
                             v-for="(mod, mIdx) in modules"
@@ -362,58 +440,119 @@ const burstConfetti = () => {
                             :initial="{ opacity: 0, x: 40 }"
                             :in-view="{ opacity: 1, x: 0 }"
                             :in-view-options="{ once: true, margin: '-50px' }"
-                            :transition="{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: mIdx * 0.08 }"
+                            :transition="{
+                                duration: 0.7,
+                                ease: [0.16, 1, 0.3, 1],
+                                delay: mIdx * 0.08,
+                            }"
                             :data-module-index="mIdx"
                             class="shrink-0"
-                            style="scroll-snap-align: start; width: min(85vw, 420px);"
+                            style="
+                                scroll-snap-align: start;
+                                width: min(85vw, 420px);
+                            "
                         >
                             <div
                                 class="surface-card flex h-full flex-col overflow-hidden rounded-2xl border border-border/40 transition-all duration-500 hover:border-border/60 hover:shadow-lg"
-                                :class="mp(mod.id).done === mp(mod.id).total && mp(mod.id).total > 0
-                                    ? 'border-emerald-500/20'
-                                    : ''"
+                                :class="
+                                    mp(mod.id).done === mp(mod.id).total &&
+                                    mp(mod.id).total > 0
+                                        ? 'border-emerald-500/20'
+                                        : ''
+                                "
                             >
                                 <!-- Module Header -->
-                                <div class="border-b border-border/10 p-4 md:p-5">
-                                    <div class="flex items-start justify-between gap-2 md:gap-3">
+                                <div
+                                    class="border-b border-border/10 p-4 md:p-5"
+                                >
+                                    <div
+                                        class="flex items-start justify-between gap-2 md:gap-3"
+                                    >
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-center gap-1.5">
-                                                <span class="text-[8px] font-bold text-muted-foreground/40 md:text-[10px]">MODULE {{ mIdx + 1 }}</span>
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
                                                 <span
-                                                    v-if="mp(mod.id).done === mp(mod.id).total && mp(mod.id).total > 0"
+                                                    class="text-[8px] font-bold text-muted-foreground/40 md:text-[10px]"
+                                                    >MODULE {{ mIdx + 1 }}</span
+                                                >
+                                                <span
+                                                    v-if="
+                                                        mp(mod.id).done ===
+                                                            mp(mod.id).total &&
+                                                        mp(mod.id).total > 0
+                                                    "
                                                     class="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[8px] font-bold text-emerald-500 md:px-2 md:text-[9px]"
                                                 >
                                                     ✓ Done
                                                 </span>
                                             </div>
-                                            <h3 class="mt-1 text-sm font-bold truncate md:text-base">{{ mod.title }}</h3>
-                                            <p v-if="mod.description" class="mt-1 text-[10px] leading-relaxed text-muted-foreground/60 line-clamp-1 md:text-[11px] md:line-clamp-2">
+                                            <h3
+                                                class="mt-1 truncate text-sm font-bold md:text-base"
+                                            >
+                                                {{ mod.title }}
+                                            </h3>
+                                            <p
+                                                v-if="mod.description"
+                                                class="mt-1 line-clamp-1 text-[10px] leading-relaxed text-muted-foreground/60 md:line-clamp-2 md:text-[11px]"
+                                            >
                                                 {{ mod.description }}
                                             </p>
                                         </div>
                                         <div
                                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl md:h-10 md:w-10"
-                                            :class="mp(mod.id).done === mp(mod.id).total && mp(mod.id).total > 0
-                                                ? 'bg-emerald-500/10 text-emerald-500'
-                                                : 'bg-primary/10 text-primary'"
+                                            :class="
+                                                mp(mod.id).done ===
+                                                    mp(mod.id).total &&
+                                                mp(mod.id).total > 0
+                                                    ? 'bg-emerald-500/10 text-emerald-500'
+                                                    : 'bg-primary/10 text-primary'
+                                            "
                                         >
-                                            <GraduationCap class="h-4 w-4 md:h-5 md:w-5" />
+                                            <GraduationCap
+                                                class="h-4 w-4 md:h-5 md:w-5"
+                                            />
                                         </div>
                                     </div>
 
                                     <!-- Module progress bar -->
                                     <div class="mt-3 space-y-1 md:mt-4">
-                                        <div class="flex items-center justify-between text-[9px] md:text-[10px]">
-                                            <span class="font-medium text-muted-foreground/50">{{ mp(mod.id).done }}/{{ mp(mod.id).total }} lessons</span>
-                                            <span class="font-bold" :class="mp(mod.id).done === mp(mod.id).total ? 'text-emerald-500' : 'text-primary'">
+                                        <div
+                                            class="flex items-center justify-between text-[9px] md:text-[10px]"
+                                        >
+                                            <span
+                                                class="font-medium text-muted-foreground/50"
+                                                >{{ mp(mod.id).done }}/{{
+                                                    mp(mod.id).total
+                                                }}
+                                                lessons</span
+                                            >
+                                            <span
+                                                class="font-bold"
+                                                :class="
+                                                    mp(mod.id).done ===
+                                                    mp(mod.id).total
+                                                        ? 'text-emerald-500'
+                                                        : 'text-primary'
+                                                "
+                                            >
                                                 {{ mp(mod.id).pct }}%
                                             </span>
                                         </div>
-                                        <div class="h-1 overflow-hidden rounded-full bg-muted md:h-1.5">
+                                        <div
+                                            class="h-1 overflow-hidden rounded-full bg-muted md:h-1.5"
+                                        >
                                             <div
                                                 class="h-full rounded-full transition-all duration-700"
-                                                :class="mp(mod.id).done === mp(mod.id).total ? 'bg-emerald-500' : 'bg-primary/60'"
-                                                :style="{ width: `${mp(mod.id).pct}%` }"
+                                                :class="
+                                                    mp(mod.id).done ===
+                                                    mp(mod.id).total
+                                                        ? 'bg-emerald-500'
+                                                        : 'bg-primary/60'
+                                                "
+                                                :style="{
+                                                    width: `${mp(mod.id).pct}%`,
+                                                }"
                                             ></div>
                                         </div>
                                     </div>
@@ -423,51 +562,83 @@ const burstConfetti = () => {
                                 <div class="flex-1 overflow-y-auto p-3">
                                     <div class="space-y-1.5">
                                         <Link
-                                            v-for="(lesson, lIdx) in mod.lessons"
+                                            v-for="(
+                                                lesson, lIdx
+                                            ) in mod.lessons"
                                             :key="lesson.id"
                                             :href="`/courses/${course.id}/lessons/${lesson.id}`"
                                             class="group flex items-center gap-3 rounded-xl px-3 py-3 transition-all hover:bg-muted/20 focus:bg-muted/30 focus:outline-none"
-                                            :class="lesson.completed
-                                                ? 'bg-emerald-500/[0.03]'
-                                                : lIdx === 0 && mIdx === 0
-                                                    ? 'bg-primary/[0.03]'
-                                                    : ''"
+                                            :class="
+                                                lesson.completed
+                                                    ? 'bg-emerald-500/[0.03]'
+                                                    : lIdx === 0 && mIdx === 0
+                                                      ? 'bg-primary/[0.03]'
+                                                      : ''
+                                            "
                                         >
                                             <!-- Status -->
                                             <div
                                                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all"
-                                                :class="lesson.completed
-                                                    ? 'bg-emerald-500/10'
-                                                    : 'border-2 border-muted-foreground/20 bg-muted/20 group-hover:border-primary/30'"
+                                                :class="
+                                                    lesson.completed
+                                                        ? 'bg-emerald-500/10'
+                                                        : 'border-2 border-muted-foreground/20 bg-muted/20 group-hover:border-primary/30'
+                                                "
                                             >
                                                 <CheckCircle2
                                                     v-if="lesson.completed"
                                                     class="h-4.5 w-4.5 text-emerald-500"
                                                 />
-                                                <span v-else class="text-[10px] font-bold text-muted-foreground/40">{{ lIdx + 1 }}</span>
+                                                <span
+                                                    v-else
+                                                    class="text-[10px] font-bold text-muted-foreground/40"
+                                                    >{{ lIdx + 1 }}</span
+                                                >
                                             </div>
 
                                             <!-- Info -->
                                             <div class="min-w-0 flex-1">
-                                                <div class="flex items-center gap-1.5">
-                                                    <span class="text-[10px] font-medium text-muted-foreground/40">L{{ lIdx + 1 }}</span>
-                                                    <span v-if="lesson.hasQuiz" class="rounded bg-primary/10 px-1.5 py-0.5 text-[8px] font-bold text-primary leading-none">Q</span>
+                                                <div
+                                                    class="flex items-center gap-1.5"
+                                                >
+                                                    <span
+                                                        class="text-[10px] font-medium text-muted-foreground/40"
+                                                        >L{{ lIdx + 1 }}</span
+                                                    >
+                                                    <span
+                                                        v-if="lesson.hasQuiz"
+                                                        class="rounded bg-primary/10 px-1.5 py-0.5 text-[8px] leading-none font-bold text-primary"
+                                                        >Q</span
+                                                    >
                                                 </div>
-                                                <p class="mt-0.5 text-xs font-semibold leading-snug transition-colors group-hover:text-primary line-clamp-2">
+                                                <p
+                                                    class="mt-0.5 line-clamp-2 text-xs leading-snug font-semibold transition-colors group-hover:text-primary"
+                                                >
                                                     {{ lesson.title }}
                                                 </p>
                                             </div>
 
                                             <!-- Score -->
-                                            <div class="flex shrink-0 items-center gap-1">
+                                            <div
+                                                class="flex shrink-0 items-center gap-1"
+                                            >
                                                 <span
-                                                    v-if="lesson.quizScore !== null"
+                                                    v-if="
+                                                        lesson.quizScore !==
+                                                        null
+                                                    "
                                                     class="rounded-md px-1.5 py-0.5 text-[9px] font-bold"
-                                                    :class="lesson.quizScore >= 75 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'"
+                                                    :class="
+                                                        lesson.quizScore >= 75
+                                                            ? 'bg-emerald-500/10 text-emerald-500'
+                                                            : 'bg-amber-500/10 text-amber-500'
+                                                    "
                                                 >
                                                     {{ lesson.quizScore }}%
                                                 </span>
-                                                <ChevronRight class="h-3.5 w-3.5 text-muted-foreground/20 transition-all group-hover:translate-x-0.5 group-hover:text-primary" />
+                                                <ChevronRight
+                                                    class="h-3.5 w-3.5 text-muted-foreground/20 transition-all group-hover:translate-x-0.5 group-hover:text-primary"
+                                                />
                                             </div>
                                         </Link>
                                     </div>
@@ -476,12 +647,21 @@ const burstConfetti = () => {
                                 <!-- Module footer -->
                                 <div class="border-t border-border/10 p-3">
                                     <Link
-                                        v-if="mp(mod.id).done < mp(mod.id).total && mod.lessons.length > 0"
-                                        :href="`/courses/${course.id}/lessons/${mod.lessons.find(l => !l.completed)?.id ?? mod.lessons[0].id}`"
+                                        v-if="
+                                            mp(mod.id).done <
+                                                mp(mod.id).total &&
+                                            mod.lessons.length > 0
+                                        "
+                                        :href="`/courses/${course.id}/lessons/${mod.lessons.find((l) => !l.completed)?.id ?? mod.lessons[0].id}`"
                                         class="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary/10 py-2.5 text-[11px] font-bold text-primary transition-all hover:bg-primary/20 active:scale-[0.98]"
                                     >
                                         <PlayCircle class="h-4 w-4" />
-                                        {{ mp(mod.id).done > 0 ? 'Continue' : 'Start' }} Module
+                                        {{
+                                            mp(mod.id).done > 0
+                                                ? 'Continue'
+                                                : 'Start'
+                                        }}
+                                        Module
                                     </Link>
                                     <div
                                         v-else
@@ -498,23 +678,27 @@ const burstConfetti = () => {
                     <!-- Scroll hint fade edges -->
                     <div
                         v-if="canScrollLeft"
-                        class="pointer-events-none absolute left-0 top-0 bottom-4 w-12 bg-gradient-to-r from-background to-transparent md:hidden"
+                        class="pointer-events-none absolute top-0 bottom-4 left-0 w-12 bg-gradient-to-r from-background to-transparent md:hidden"
                     ></div>
                     <div
                         v-if="canScrollRight"
-                        class="pointer-events-none absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent md:hidden"
+                        class="pointer-events-none absolute top-0 right-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent md:hidden"
                     ></div>
                 </div>
 
                 <!-- Dots indicator -->
-                <div class="mt-2 flex items-center justify-center gap-1.5 md:hidden">
+                <div
+                    class="mt-2 flex items-center justify-center gap-1.5 md:hidden"
+                >
                     <div
                         v-for="(mod, mIdx) in modules"
                         :key="mod.id"
                         class="rounded-full transition-all duration-300"
-                        :class="mIdx === activeModuleIndex
-                            ? 'w-4 bg-primary h-1.5'
-                            : 'w-1.5 h-1.5 bg-muted-foreground/20'"
+                        :class="
+                            mIdx === activeModuleIndex
+                                ? 'h-1.5 w-4 bg-primary'
+                                : 'h-1.5 w-1.5 bg-muted-foreground/20'
+                        "
                     ></div>
                 </div>
             </div>

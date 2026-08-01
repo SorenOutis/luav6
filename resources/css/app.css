@@ -395,12 +395,15 @@
 
 :root[data-card-style='vibrant'] .surface-card {
     backdrop-filter: blur(18px) saturate(140%);
-    background-color: color-mix(in srgb, var(--color-card) 75%, transparent) !important;
+    background-color: color-mix(
+        in srgb,
+        var(--color-card) 75%,
+        transparent
+    ) !important;
     box-shadow:
         0 10px 30px -10px rgb(0 0 0 / 0.1),
         0 0 0 1px rgb(255 255 255 / 0.05) inset,
-        0 22px 70px -28px
-            color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
+        0 22px 70px -28px color-mix(in srgb, var(--color-primary) 35%, #000000) !important;
 }
 
 :root[data-card-style='vibrant'] [data-glow]::before,
@@ -556,14 +559,10 @@
 .exam-theme-page .exam-bracket,
 .exam-theme-page .exam-tactical-mark,
 .exam-theme-page .exam-part-diamond,
-.exam-theme-page .exam-part-card
-    > div.absolute.top-0.left-0.border-t-2,
-.exam-theme-page .exam-part-card
-    > div.absolute.bottom-0.right-0.border-b-2,
-.exam-theme-page .exam-instruction-callout
-    > div.absolute[class*='border-t-2'],
-.exam-theme-page .exam-instruction-callout
-    > div.absolute[class*='border-b-2'] {
+.exam-theme-page .exam-part-card > div.absolute.top-0.left-0.border-t-2,
+.exam-theme-page .exam-part-card > div.absolute.bottom-0.right-0.border-b-2,
+.exam-theme-page .exam-instruction-callout > div.absolute[class*='border-t-2'],
+.exam-theme-page .exam-instruction-callout > div.absolute[class*='border-b-2'] {
     display: none !important;
 }
 
@@ -712,8 +711,7 @@
     border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent) !important;
 }
 
-.exam-theme-page .exam-alert-box
-    span.text-amber-500.font-black {
+.exam-theme-page .exam-alert-box span.text-amber-500.font-black {
     display: none !important;
 }
 
@@ -766,9 +764,7 @@
 }
 
 /* Round square icon containers */
-.exam-theme-page .exam-instruction-callout
-    > div.relative
-    > div.bg-primary {
+.exam-theme-page .exam-instruction-callout > div.relative > div.bg-primary {
     border-radius: 0.875rem !important;
 }
 
@@ -785,8 +781,6 @@
     display: none !important;
 }
 
-
-
 /* ════════════════════════════════════════════════════
    STUDENT-FRIENDLY QUESTION + ANSWER UI
    ════════════════════════════════════════════════════ */
@@ -796,7 +790,11 @@
     transform: none !important;
     border-radius: 1rem !important;
     border-width: 0 !important;
-    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-card)) !important;
+    background: color-mix(
+        in srgb,
+        var(--color-primary) 10%,
+        var(--color-card)
+    ) !important;
     color: var(--color-primary) !important;
     box-shadow: 0 4px 12px -6px
         color-mix(in srgb, var(--color-primary) 50%, transparent) !important;
@@ -817,7 +815,8 @@
 }
 
 /* — Question type pill — */
-.exam-theme-page .question-card
+.exam-theme-page
+    .question-card
     span.bg-primary\\/10.border.border-primary\\/20.italic {
     border-radius: 999px !important;
     font-style: normal !important;
@@ -1157,8 +1156,6 @@
         @apply relative min-h-screen bg-background text-foreground antialiased;
     }
 
-
-
     * {
         @apply border-border;
     }
@@ -1379,7 +1376,9 @@
     box-shadow: none !important;
 }
 
-.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-text {
+.exam-theme-page.paper-layout
+    .exam-answer-option:has(:checked)
+    .exam-answer-text {
     font-weight: 700 !important;
     color: var(--color-primary) !important;
 }
@@ -1397,7 +1396,9 @@
     background: transparent !important;
 }
 
-.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-radio {
+.exam-theme-page.paper-layout
+    .exam-answer-option:has(:checked)
+    .exam-answer-radio {
     border-color: var(--color-primary) !important;
     background: var(--color-primary) !important;
     box-shadow: none !important;
@@ -1412,7 +1413,9 @@
     opacity: 0;
 }
 
-.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-radio::after {
+.exam-theme-page.paper-layout
+    .exam-answer-option:has(:checked)
+    .exam-answer-radio::after {
     opacity: 1;
 }
 
@@ -1439,10 +1442,16 @@
     flex-shrink: 0 !important;
 }
 
-.exam-theme-page.paper-layout .exam-answer-option:has(:checked) .exam-answer-letter {
+.exam-theme-page.paper-layout
+    .exam-answer-option:has(:checked)
+    .exam-answer-letter {
     border-color: var(--color-primary) !important;
     color: var(--color-primary) !important;
-    background: color-mix(in srgb, var(--color-primary) 8%, transparent) !important;
+    background: color-mix(
+        in srgb,
+        var(--color-primary) 8%,
+        transparent
+    ) !important;
 }
 
 /* Hide old radio indicator in paper mode */
@@ -1473,13 +1482,12 @@
 
 /* Essay textarea — ruled lines background */
 .exam-theme-page.paper-layout .exam-essay-input {
-    background:
-        repeating-linear-gradient(
-            transparent,
-            transparent 1.75rem,
-            var(--color-border) 1.75rem,
-            var(--color-border) 1.8rem
-        ) !important;
+    background: repeating-linear-gradient(
+        transparent,
+        transparent 1.75rem,
+        var(--color-border) 1.75rem,
+        var(--color-border) 1.8rem
+    ) !important;
     border: none !important;
     border-bottom: 2px solid var(--color-border) !important;
     border-radius: 0 !important;
@@ -1542,7 +1550,7 @@
 
 /* Text area general - no rounded corners */
 .exam-theme-page.paper-layout textarea,
-.exam-theme-page.paper-layout input[type="text"] {
+.exam-theme-page.paper-layout input[type='text'] {
     border-radius: 0 !important;
 }
 
