@@ -16,6 +16,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
+import { withForm } from '@/lib/route-helpers';
 import { confirm } from '@/routes/two-factor';
 import type { TwoFactorConfigContent } from '@/types';
 
@@ -238,7 +239,7 @@ watch(
 
             <template v-else>
                 <Form
-                    v-bind="confirm.form()"
+                    v-bind="withForm(confirm).form()"
                     error-bag="confirmTwoFactorAuthentication"
                     reset-on-error
                     @finish="code = ''"

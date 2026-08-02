@@ -22,10 +22,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useInitials } from '@/composables/useInitials';
 import { dashboard } from '@/routes';
 import { grades, logout } from '@/routes';
-import { index as coursesIndex } from '@/routes/courses';
-import { index as gamesIndex } from '@/routes/games';
 import { index as assignmentsIndex } from '@/routes/assignments';
+import { index as coursesIndex } from '@/routes/courses';
 import { index as examsIndex } from '@/routes/exams';
+import { index as gamesIndex } from '@/routes/games';
 import { edit } from '@/routes/profile';
 
 const page = usePage();

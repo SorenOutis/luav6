@@ -348,7 +348,7 @@ onUnmounted(() => {
                 :transition="
                     prefersReducedMotion
                         ? { duration: 0 }
-                        : { duration: 1.5, ease: 'ease-out', delay: 0.2 }
+                        : { duration: 1.5, easing: 'ease-out', delay: 0.2 }
                 "
                 class="absolute inset-0 max-w-3xl text-sm leading-relaxed font-medium tracking-tight text-muted-foreground sm:text-xl lg:text-2xl"
             >
@@ -373,7 +373,7 @@ onUnmounted(() => {
                 "
                 :transition="{
                     duration: 1,
-                    ease: [0.16, 1, 0.3, 1],
+                    easing: [0.16, 1, 0.3, 1],
                     delay: 0.4,
                 }"
                 class="hero-cta flex flex-col gap-3 sm:flex-row sm:gap-4 lg:gap-5"

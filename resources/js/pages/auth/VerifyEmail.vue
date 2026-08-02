@@ -4,6 +4,7 @@ import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { withForm } from '@/lib/route-helpers';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 
@@ -40,7 +41,7 @@ defineOptions({ layout: AuthLayout });
     </div>
 
     <Form
-        v-bind="send.form()"
+        v-bind="withForm(send).form()"
         class="space-y-6 text-center"
         v-slot="{ processing }"
     >

@@ -116,7 +116,11 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
         <Motion
             :initial="{ x: -20, opacity: 0 }"
             :animate="isBooted ? { x: 0, opacity: 1 } : { x: -20, opacity: 0 }"
-            :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }"
+            :transition="{
+                duration: 0.8,
+                easing: [0.16, 1, 0.3, 1],
+                delay: 0.2,
+            }"
             class="flex items-center gap-3"
         >
             <Link href="/" class="flex items-center gap-3">
@@ -140,7 +144,11 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
         <Motion
             :initial="{ y: -20, opacity: 0 }"
             :animate="isBooted ? { y: 0, opacity: 1 } : { y: -20, opacity: 0 }"
-            :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.3 }"
+            :transition="{
+                duration: 0.8,
+                easing: [0.16, 1, 0.3, 1],
+                delay: 0.3,
+            }"
             class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex"
         >
             <a
@@ -163,7 +171,11 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
         <Motion
             :initial="{ y: -10, opacity: 0 }"
             :animate="isBooted ? { y: 0, opacity: 1 } : { y: -10, opacity: 0 }"
-            :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.4 }"
+            :transition="{
+                duration: 0.8,
+                easing: [0.16, 1, 0.3, 1],
+                delay: 0.4,
+            }"
             as="nav"
             class="flex items-center gap-4 lg:gap-6"
         >

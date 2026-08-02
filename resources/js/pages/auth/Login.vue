@@ -11,6 +11,7 @@ import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
+import { withForm } from '@/lib/route-helpers';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
@@ -65,7 +66,7 @@ const onSubmit = (event: Event) => {
     </div>
 
     <Form
-        v-bind="store.form()"
+        v-bind="withForm(store).form()"
         :reset-on-success="['password']"
         v-slot="{ errors, processing }"
         class="flex flex-col gap-6"

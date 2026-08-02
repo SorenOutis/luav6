@@ -11,6 +11,8 @@ import {
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 
+const canRegister = true;
+
 const steps = [
     {
         icon: BookOpen,

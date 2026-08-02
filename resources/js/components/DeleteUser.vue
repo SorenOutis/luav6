@@ -8,6 +8,7 @@ import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { withForm } from '@/lib/route-helpers';
 
 const passwordInput = useTemplateRef('passwordInput');
 const showDeleteDialog = ref(false);
@@ -45,7 +46,7 @@ const showDeleteDialog = ref(false);
                 @close="showDeleteDialog = false"
             >
                 <Form
-                    v-bind="ProfileController.destroy.form()"
+                    v-bind="withForm(ProfileController.destroy).form()"
                     reset-on-success
                     @error="() => passwordInput?.$el?.focus()"
                     :options="{

@@ -1,22 +1,31 @@
-import type { RouteDefinition } from '../wayfinder';
+/**
+ * The HTTP methods supported by the wayfinder-generated route types.
+ *
+ * The generated `@/wayfinder` module declares `type Method` locally without
+ * exporting it, so this union is replicated here.
+ */
+export type FormMethod =
+    | 'get'
+    | 'post'
+    | 'put'
+    | 'delete'
+    | 'patch'
+    | 'head'
+    | 'options';
 
 /**
- * Enhances a route method with a .form() helper for Inertia.js Form component
- * Returns form configuration { action, method } that can be bound to <Form v-bind="..." />
+ * The HTTP methods accepted by Inertia's `<Form>` component (`Method`).
  */
-export function withFormHelper<TMethod extends string>(
-    routeMethod: RouteDefinition<TMethod> & {
-        url?: (options?: any) => string;
-        definition?: { url: string };
-    },
-) {
-    return Object.assign(routeMethod, {
-        form: () => ({
-            action:
-                typeof routeMethod.url === 'function'
-                    ? routeMethod.url()
-                    : routeMethod.definition?.url || '',
-            method: routeMethod.method,
-        }),
-    });
+export type RouteFormMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
+
+/**
+ * Type-only helper for the `.form()` method that `resources/js/app.ts`
+ * attaches to wayfinder route functions at runtime (`ensureFormMethod`).
+ * The generated modules cannot declare it themselves, so pages wrap their
+ * route/action imports with this before calling `.form()`.
+ */
+export function withForm<T extends (...args: any[]) => unknown>(
+    route: T,
+): T & { form(): { action: string; method: RouteFormMethod } } {
+    return route as T & { form(): { action: string; method: RouteFormMethod } };
 }

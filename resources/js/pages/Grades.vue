@@ -121,11 +121,10 @@ useEventListener(document, 'visibilitychange', () => {
 const searchQuery = ref('');
 
 const filteredSubjectGrades = computed(() => {
-    if (!searchQuery.value) return subjectGrades.value;
+    const grades = subjectGrades.value ?? [];
+    if (!searchQuery.value) return grades;
     const q = searchQuery.value.toLowerCase();
-    return subjectGrades.value.filter((sg) =>
-        sg.subject.toLowerCase().includes(q),
-    );
+    return grades.filter((sg) => sg.subject.toLowerCase().includes(q));
 });
 
 // ── Computed Values (from filtered data) ─────────────────────────
@@ -161,7 +160,8 @@ const gradeGroups = computed(() => {
         }
     >();
 
-    for (const subjectGrade of filteredSubjectGrades.value) {
+    for (const rawSubject of filteredSubjectGrades.value) {
+        const subjectGrade = rawSubject as SubjectGrade;
         const key =
             subjectGrade.section?.schoolLevel ??
             subjectGrade.periods.map((period) => period.key).join('|');
@@ -1400,7 +1400,7 @@ onMounted(() => {
                                                                 getSubjectFinalGrade(
                                                                     subjectGrade,
                                                                     semester.key,
-                                                                )
+                                                                ) ?? undefined
                                                             "
                                                             class="mt-1 h-1.5 w-14"
                                                             :indicator-class="

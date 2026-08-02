@@ -1191,7 +1191,7 @@ const submitPart = async () => {
             },
             // Increase timeout for LAN environments where AI might queue
             headers: {
-                'X-Inertia-Timeout': 300000, // 5 minutes in milliseconds
+                'X-Inertia-Timeout': '300000', // 5 minutes in milliseconds
             },
         },
     );
@@ -1641,7 +1641,10 @@ const feedbackContent = computed(() => {
                     <Motion
                         :initial="{ opacity: 0, y: -10 }"
                         :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                        :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                        :transition="{
+                            duration: 0.8,
+                            easing: [0.16, 1, 0.3, 1],
+                        }"
                         class="flex items-center justify-between"
                     >
                         <div class="flex items-center gap-3">
@@ -1742,7 +1745,7 @@ const feedbackContent = computed(() => {
                         :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                         :transition="{
                             duration: 1,
-                            ease: [0.16, 1, 0.3, 1],
+                            easing: [0.16, 1, 0.3, 1],
                             delay: 0.1,
                         }"
                         class="exam-hero relative rounded-lg border border-border bg-card p-6 shadow-sm md:p-8"
@@ -1945,7 +1948,7 @@ const feedbackContent = computed(() => {
                             :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                             :transition="{
                                 duration: 0.8,
-                                ease: [0.16, 1, 0.3, 1],
+                                easing: [0.16, 1, 0.3, 1],
                                 delay: 0.2,
                             }"
                             class="flex items-center justify-between"
@@ -1976,7 +1979,7 @@ const feedbackContent = computed(() => {
                                 }"
                                 :transition="{
                                     duration: 0.8,
-                                    ease: [0.16, 1, 0.3, 1],
+                                    easing: [0.16, 1, 0.3, 1],
                                     delay: index * 0.05,
                                 }"
                                 class="exam-part-card group/part flex flex-col justify-between rounded-lg border border-border bg-card p-5 transition-all duration-500"
@@ -2098,12 +2101,8 @@ const feedbackContent = computed(() => {
                                                     part.questions?.reduce(
                                                         (sum, q) =>
                                                             sum +
-                                                            (parseInt(
-                                                                q.points,
-                                                            ) ||
-                                                                parseInt(
-                                                                    part.points,
-                                                                ) ||
+                                                            (q.points ||
+                                                                part.points ||
                                                                 1),
                                                         0,
                                                     ) ?? 0

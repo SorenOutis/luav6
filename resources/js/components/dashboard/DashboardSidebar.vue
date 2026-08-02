@@ -19,10 +19,10 @@ import CardContent from '@/components/ui/card/CardContent.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { index as examsIndex, show as examsShow } from '@/routes/exams';
 import EmptyState from './EmptyState.vue';
 import NextUpCard from './NextUpCard.vue';
 import type { NextUpItem } from './NextUpCard.vue';
-import { index as examsIndex, show as examsShow } from '@/routes/exams';
 
 interface Exam {
     id: number;

@@ -137,7 +137,7 @@ const statsGridClass = computed(() => {
                         :style="{ width: widths[i % widths.length] }"
                     ></div>
                     <div
-                        v-for="l in Math.max(1, cards.lines - 1)"
+                        v-for="l in Math.max(1, (cards.lines ?? 1) - 1)"
                         :key="l"
                         class="h-3 animate-pulse rounded bg-primary/10"
                         :style="{ width: widths[(i + l + 1) % widths.length] }"

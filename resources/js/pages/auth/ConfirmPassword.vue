@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { withForm } from '@/lib/route-helpers';
 import { store } from '@/routes/password/confirm';
 
 defineOptions({ layout: AuthLayout });
@@ -29,7 +30,7 @@ defineOptions({ layout: AuthLayout });
     </div>
 
     <Form
-        v-bind="store.form()"
+        v-bind="withForm(store).form()"
         reset-on-success
         v-slot="{ errors, processing }"
     >

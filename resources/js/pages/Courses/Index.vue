@@ -369,7 +369,7 @@ const filteredCourses = computed(() => {
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{
                         duration: 0.8,
-                        ease: [0.16, 1, 0.3, 1],
+                        easing: [0.16, 1, 0.3, 1],
                         delay: 0.2,
                     }"
                     class="relative z-10"
@@ -442,7 +442,7 @@ const filteredCourses = computed(() => {
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{
                         duration: 0.6,
-                        ease: [0.16, 1, 0.3, 1],
+                        easing: [0.16, 1, 0.3, 1],
                         delay: 0.4,
                     }"
                     class="relative z-10"
@@ -530,7 +530,7 @@ const filteredCourses = computed(() => {
                         :in-view-options="{ once: true, margin: '-50px' }"
                         :transition="{
                             duration: 0.8,
-                            ease: [0.16, 1, 0.3, 1],
+                            easing: [0.16, 1, 0.3, 1],
                             delay: idx * 0.1,
                         }"
                     >

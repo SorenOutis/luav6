@@ -14,9 +14,10 @@ import { Label } from '@/components/ui/label';
 import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { withForm } from '@/lib/route-helpers';
+import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { BreadcrumbItem } from '@/types';
-import { edit } from '@/routes/profile';
 
 type Props = {
     mustVerifyEmail: boolean;
@@ -112,7 +113,7 @@ const leaveSection = (sectionId: number) => {
                 />
 
                 <Form
-                    v-bind="ProfileController.update.form()"
+                    v-bind="withForm(ProfileController.update).form()"
                     class="space-y-6"
                     enc-type="multipart/form-data"
                     v-slot="{ errors, processing, recentlySuccessful }"
@@ -127,7 +128,7 @@ const leaveSection = (sectionId: number) => {
                             >
                                 <AvatarImage
                                     v-if="previewUrl || user.avatar"
-                                    :src="previewUrl || user.avatar"
+                                    :src="previewUrl || user.avatar || ''"
                                     :alt="user.name"
                                     class="object-cover"
                                 />
@@ -219,7 +220,10 @@ const leaveSection = (sectionId: number) => {
                             <!-- Decorative: the surrounding button carries the accessible label. -->
                             <img
                                 v-if="coverPreviewUrl || user.cover_photo"
-                                :src="coverPreviewUrl || user.cover_photo"
+                                :src="
+                                    coverPreviewUrl ||
+                                    String(user.cover_photo ?? '')
+                                "
                                 alt=""
                                 class="h-full w-full cursor-pointer object-cover transition-opacity group-hover:opacity-80"
                             />

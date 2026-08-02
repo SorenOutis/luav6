@@ -221,7 +221,9 @@ const useSuggestion = (suggestion: string) => {
 
 const scrollToBottom = async () => {
     await nextTick();
-    const container = scrollContainer.value?.$el || scrollContainer.value;
+    const container =
+        (scrollContainer.value as (HTMLElement & { $el?: HTMLElement }) | null)
+            ?.$el || scrollContainer.value;
     if (container) {
         container.scrollTop = container.scrollHeight;
     }
@@ -356,9 +358,10 @@ const sendMessage = async () => {
         messages.value = response.data.history;
     } catch (error) {
         isLoading.value = false;
+        const err = error as { response?: { data?: { response?: string } } };
         console.error('Chat error:', error);
         const errorMessage =
-            error.response?.data?.response ||
+            err.response?.data?.response ||
             'Sorry, something went wrong. Please try again in a moment.';
         await typeMessage(errorMessage);
     } finally {

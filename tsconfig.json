@@ -34,7 +34,12 @@
         "moduleResolution": "bundler" /* Specify how TypeScript looks up a file from a given module specifier. */,
         // "baseUrl": "./",                                  /* Specify the base directory to resolve non-relative module names. */
         "paths": {
-            /* Specify a set of entries that re-map imports to additional lookup locations. */ "@/*": ["./resources/js/*"],
+            /* Specify a set of entries that re-map imports to additional lookup locations. */
+            "@/routes": ["./resources/js/routes_temp/routes/index.ts"],
+            "@/routes/*": ["./resources/js/routes_temp/routes/*"],
+            "@/actions/*": ["./resources/js/routes_temp/actions/*"],
+            "@/wayfinder": ["./resources/js/routes_temp/wayfinder/index.ts"],
+            "@/*": ["./resources/js/*"]
         },
         // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
         // "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */
@@ -119,7 +124,7 @@
     "include": [
         "resources/js/**/*.ts",
         "resources/js/**/*.d.ts",
-        "resources/js/**/*.tsx", 
+        "resources/js/**/*.tsx",
         "resources/js/**/*.vue"
     ]
 }

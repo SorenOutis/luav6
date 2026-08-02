@@ -17,16 +17,16 @@ import {
 import { onMounted, ref, computed, watch } from 'vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { Button } from '@/components/ui/button';
-
-const { isVisible: isLoaderVisible } = useLoader();
-const isBooted = ref(false);
-
-gsap.registerPlugin(ScrollTrigger);
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+
+const { isVisible: isLoaderVisible } = useLoader();
+const isBooted = ref(false);
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface Assignment {
     id: number;
@@ -285,7 +285,7 @@ declare const route: any;
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{
                         duration: 1,
-                        ease: [0.16, 1, 0.3, 1],
+                        easing: [0.16, 1, 0.3, 1],
                         delay: 0.1,
                     }"
                     class="assignments-hero header-content group/hero relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end"
@@ -396,7 +396,7 @@ declare const route: any;
                         :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                         :transition="{
                             duration: 0.8,
-                            ease: [0.16, 1, 0.3, 1],
+                            easing: [0.16, 1, 0.3, 1],
                             delay: 0.2 + sIdx * 0.1,
                         }"
                     >
@@ -584,7 +584,7 @@ declare const route: any;
                             :in-view-options="{ once: true, margin: '-50px' }"
                             :transition="{
                                 duration: 1,
-                                ease: [0.16, 1, 0.3, 1],
+                                easing: [0.16, 1, 0.3, 1],
                                 delay: aIdx * 0.05,
                             }"
                             class="assignment-card surface-card group/card premium-hover relative overflow-hidden p-5 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 md:p-6"

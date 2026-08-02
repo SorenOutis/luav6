@@ -288,9 +288,9 @@ onUnmounted(() => {
         <WelcomeHeader
             :can-register="canRegister"
             :auth="$page.props.auth"
-            :dashboard="dashboard"
-            :login="login"
-            :register="register"
+            :dashboard="() => dashboard().url"
+            :login="() => login().url"
+            :register="() => register().url"
             :is-booted="isBooted"
             :branding="schoolBranding"
         />
@@ -301,9 +301,9 @@ onUnmounted(() => {
             <WelcomeHero
                 :can-register="canRegister"
                 :auth="$page.props.auth"
-                :dashboard="dashboard"
-                :login="login"
-                :register="register"
+                :dashboard="() => dashboard().url"
+                :login="() => login().url"
+                :register="() => register().url"
                 :is-booted="isBooted"
                 :is-coarse-pointer="isCoarsePointer"
                 :prefers-reduced-motion="prefersReducedMotion"
@@ -327,8 +327,8 @@ onUnmounted(() => {
                 :is-coarse-pointer="isCoarsePointer"
                 :prefers-reduced-motion="prefersReducedMotion"
                 :auth="$page.props.auth"
-                :dashboard="dashboard"
-                :login="login"
+                :dashboard="() => dashboard().url"
+                :login="() => login().url"
             />
 
             <!-- Stats Counter Bar -->
@@ -499,9 +499,9 @@ onUnmounted(() => {
 
             <PricingSection
                 :auth="$page.props.auth"
-                :dashboard="dashboard"
-                :login="login"
-                :register="register"
+                :dashboard="() => dashboard().url"
+                :login="() => login().url"
+                :register="() => register().url"
                 :is-coarse-pointer="isCoarsePointer"
                 :prefers-reduced-motion="prefersReducedMotion"
             />

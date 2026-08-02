@@ -19,8 +19,8 @@ import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getLenis } from '@/composables/useLenis';
 import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem } from '@/types';
 import { show as examsShow } from '@/routes/exams';
+import type { BreadcrumbItem } from '@/types';
 
 usePoll(10000, {
     only: ['examsBySeason'],
@@ -373,7 +373,7 @@ function showScrollbar() {
             <Motion
                 :initial="{ opacity: 0, y: 20 }"
                 :animate="{ opacity: 1, y: 0 }"
-                :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                :transition="{ duration: 0.8, easing: [0.16, 1, 0.3, 1] }"
                 class="space-y-2"
             >
                 <div class="flex items-center gap-4">
@@ -453,7 +453,7 @@ function showScrollbar() {
                     :in-view-options="{ once: true, margin: '-40px' }"
                     :transition="{
                         duration: 0.8,
-                        ease: [0.16, 1, 0.3, 1],
+                        easing: [0.16, 1, 0.3, 1],
                         delay: sIdx * 0.1,
                     }"
                     class="space-y-5"
@@ -493,7 +493,7 @@ function showScrollbar() {
                             :in-view-options="{ once: true, margin: '-30px' }"
                             :transition="{
                                 duration: 0.5,
-                                ease: [0.16, 1, 0.3, 1],
+                                easing: [0.16, 1, 0.3, 1],
                                 delay: eIdx * 0.05,
                             }"
                             class="exam-card flex min-w-0 flex-col justify-between rounded-none border-l-[3px] p-4 transition-all duration-300 sm:flex-col sm:rounded-xl sm:border-t sm:border-r sm:border-b sm:border-l-[3px] sm:p-5"
@@ -698,7 +698,7 @@ function showScrollbar() {
                 v-else
                 :initial="{ opacity: 0, scale: 0.95 }"
                 :animate="{ opacity: 1, scale: 1 }"
-                :transition="{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }"
+                :transition="{ duration: 0.6, easing: [0.16, 1, 0.3, 1] }"
                 class="surface-card flex flex-col items-center justify-center space-y-4 border-dashed py-20 text-center"
             >
                 <div class="rounded-full bg-muted/30 p-4">
@@ -813,7 +813,7 @@ function showScrollbar() {
                     v-show="selectedPartId === part.id"
                     :initial="{ opacity: 0, y: 10 }"
                     :animate="{ opacity: 1, y: 0 }"
-                    :transition="{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }"
+                    :transition="{ duration: 0.4, easing: [0.16, 1, 0.3, 1] }"
                     class="space-y-4"
                 >
                     <div class="flex items-center justify-between">
@@ -855,7 +855,7 @@ function showScrollbar() {
                             :transition="{
                                 duration: 0.4,
                                 delay: qIndex * 0.05,
-                                ease: [0.16, 1, 0.3, 1],
+                                easing: [0.16, 1, 0.3, 1],
                             }"
                             class="question-card relative overflow-hidden rounded-xl border p-5 transition-all"
                             :class="

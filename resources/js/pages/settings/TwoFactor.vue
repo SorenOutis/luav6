@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { withForm } from '@/lib/route-helpers';
 import { disable, enable, show } from '@/routes/two-factor';
 import type { BreadcrumbItem } from '@/types';
 
@@ -74,7 +75,7 @@ onUnmounted(() => {
                         </Button>
                         <Form
                             v-else
-                            v-bind="enable.form()"
+                            v-bind="withForm(enable).form()"
                             @success="showSetupModal = true"
                             #default="{ processing }"
                         >
@@ -101,7 +102,10 @@ onUnmounted(() => {
                     <TwoFactorRecoveryCodes />
 
                     <div class="relative inline">
-                        <Form v-bind="disable.form()" #default="{ processing }">
+                        <Form
+                            v-bind="withForm(disable).form()"
+                            #default="{ processing }"
+                        >
                             <Button
                                 variant="destructive"
                                 type="submit"

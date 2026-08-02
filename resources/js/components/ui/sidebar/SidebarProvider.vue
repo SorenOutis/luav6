@@ -25,7 +25,7 @@ const openMobile = ref(false)
 const open = useVModel(props, "open", emits, {
   defaultValue: props.defaultOpen ?? false,
   passive: (props.open === undefined) as false,
-}) as Ref<boolean>
+}) as unknown as Ref<boolean>
 
 function setOpen(value: boolean) {
   open.value = value // emits('update:open', value)
@@ -58,7 +58,7 @@ provideSidebarContext({
   state,
   open,
   setOpen,
-  isMobile,
+  isMobile: isMobile as unknown as Ref<boolean>,
   openMobile,
   setOpenMobile,
   toggleSidebar,

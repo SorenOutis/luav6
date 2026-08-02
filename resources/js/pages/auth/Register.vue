@@ -10,6 +10,7 @@ import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
+import { withForm } from '@/lib/route-helpers';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
@@ -91,7 +92,7 @@ const onSubmit = () => {
 
     <Form
         v-if="registrationEnabled"
-        v-bind="store.form()"
+        v-bind="withForm(store).form()"
         :reset-on-success="['password', 'password_confirmation']"
         v-slot="{ errors, processing }"
         class="flex flex-col gap-6"

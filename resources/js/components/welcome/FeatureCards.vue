@@ -184,7 +184,7 @@ onMounted(() => {
                         },
                     );
                 });
-        }, featureCardsRef.value);
+        }, featureCardsRef.value ?? undefined);
 
         ScrollTrigger.refresh();
     });
@@ -216,7 +216,7 @@ onUnmounted(() => {
                     : {
                           duration: 0.8,
                           delay: index * 0.15,
-                          ease: [0.16, 1, 0.3, 1],
+                          easing: [0.16, 1, 0.3, 1],
                       }
             "
             @mousemove="handleFeatureMouseMove"
@@ -346,7 +346,7 @@ onUnmounted(() => {
                     opacity: expandedFeature === index ? 1 : 0,
                 }"
                 :initial="{ height: 0, opacity: 0 }"
-                :transition="{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }"
+                :transition="{ duration: 0.5, easing: [0.16, 1, 0.3, 1] }"
                 class="overflow-hidden"
             >
                 <div class="relative z-10 mt-8 overflow-hidden pt-8 lg:mt-12">

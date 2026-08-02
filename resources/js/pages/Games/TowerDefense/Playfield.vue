@@ -78,6 +78,18 @@ const resetModalOpen = ref(false);
 const waveBanner = ref<{ n: number; total: number; key: number } | null>(null);
 let waveBannerTimer: number | null = null;
 
+/** Format a duration (in milliseconds) as `m:ss` or `h:mm:ss`. */
+const formatDuration = (ms: number): string => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+};
+
 const triggerWaveBanner = (n: number, total: number) => {
     waveBanner.value = { n, total, key: Date.now() };
     if (waveBannerTimer) window.clearTimeout(waveBannerTimer);

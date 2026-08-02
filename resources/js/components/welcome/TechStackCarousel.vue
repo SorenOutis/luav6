@@ -164,7 +164,7 @@ onMounted(() => {
                 },
             },
         );
-    }, techStackRef.value);
+    }, techStackRef.value ?? undefined);
 });
 
 onBeforeUnmount(() => {

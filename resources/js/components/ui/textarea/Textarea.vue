@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import { useVModel } from "@vueuse/core"
+import { computed } from "vue"
 import { cn } from "@/lib/utils"
 
 const props = defineProps<{
-  class?: HTMLAttributes["class"]
   defaultValue?: string | number
   modelValue?: string | number
+  class?: HTMLAttributes["class"]
 }>()
 
 const emits = defineEmits<{
   (e: "update:modelValue", payload: string | number): void
 }>()
 
-const modelValue = useVModel(props, "modelValue", emits, {
-  passive: true,
-  defaultValue: props.defaultValue,
+// Native `v-model` on <textarea> type-checks the bound ref strictly, and
+// `useVModel` returns a Ref from @vueuse's own bundled copy of @vue/reactivity,
+// which vue-tsc rejects. A plain computed from this project's `vue` resolves
+// the same behavior with types vue-tsc accepts.
+const modelValue = computed<string | number | undefined>({
+  get: () => props.modelValue ?? props.defaultValue,
+  set: (value) => {
+    emits('update:modelValue', value ?? '')
+  },
 })
 </script>
 

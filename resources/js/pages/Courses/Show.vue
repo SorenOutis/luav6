@@ -257,7 +257,10 @@ const burstConfetti = () => {
                     <Motion
                         :initial="{ opacity: 0, y: 20 }"
                         :animate="{ opacity: 1, y: 0 }"
-                        :transition="{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }"
+                        :transition="{
+                            duration: 0.8,
+                            easing: [0.16, 1, 0.3, 1],
+                        }"
                     >
                         <div class="flex items-start justify-between gap-6">
                             <div class="flex-1">
@@ -359,7 +362,7 @@ const burstConfetti = () => {
                                     :animate="{ opacity: 1, y: 0, scale: 1 }"
                                     :transition="{
                                         duration: 0.6,
-                                        ease: [0.16, 1, 0.3, 1],
+                                        easing: [0.16, 1, 0.3, 1],
                                     }"
                                     class="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3"
                                 >
@@ -440,7 +443,7 @@ const burstConfetti = () => {
                             :in-view-options="{ once: true, margin: '-50px' }"
                             :transition="{
                                 duration: 0.7,
-                                ease: [0.16, 1, 0.3, 1],
+                                easing: [0.16, 1, 0.3, 1],
                                 delay: mIdx * 0.08,
                             }"
                             :data-module-index="mIdx"

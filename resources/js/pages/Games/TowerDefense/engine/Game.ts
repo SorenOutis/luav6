@@ -1424,6 +1424,7 @@ export class TowerDefenseGame {
             hoverTile: this.hoverTile,
             canBuild,
             selectedPlacedTowerId: this.selectedPlacedTowerId,
+            movingTowerId: this.movingTowerId,
             speed: this.speed,
         });
     }

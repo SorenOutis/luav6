@@ -34,9 +34,11 @@ import { index as assignmentsIndex } from '@/routes/assignments';
 import { show as examsShow } from '@/routes/exams';
 import { edit as profileEdit } from '@/routes/profile';
 
+import type { BreadcrumbItem } from '@/types';
+
 const { isVisible: isLoaderVisible } = useLoader();
 
-const breadcrumbs = [];
+const breadcrumbs: BreadcrumbItem[] = [];
 
 const lastSyncTime = ref(new Date());
 const isRefreshing = ref(false);
@@ -645,7 +647,7 @@ const handleLogout = () => {
                             ? { duration: 0 }
                             : {
                                   duration: 0.7,
-                                  ease: [0.16, 1, 0.3, 1],
+                                  easing: [0.16, 1, 0.3, 1],
                                   delay: 0.05,
                               }
                     "
@@ -686,7 +688,7 @@ const handleLogout = () => {
                             ? { duration: 0 }
                             : {
                                   duration: 0.7,
-                                  ease: [0.16, 1, 0.3, 1],
+                                  easing: [0.16, 1, 0.3, 1],
                                   delay: 0.1,
                               }
                     "
@@ -711,7 +713,7 @@ const handleLogout = () => {
                     "
                     :in-view="
                         isMobile || prefersReducedMotion
-                            ? false
+                            ? undefined
                             : isBooted
                               ? { opacity: 1, y: 0 }
                               : {}
@@ -720,7 +722,7 @@ const handleLogout = () => {
                     :transition="
                         isMobile || prefersReducedMotion
                             ? { duration: 0 }
-                            : { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+                            : { duration: 0.8, easing: [0.16, 1, 0.3, 1] }
                     "
                     class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
                 >

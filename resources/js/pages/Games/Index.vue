@@ -207,7 +207,7 @@ onMounted(() => {
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{
                         duration: 1,
-                        ease: [0.16, 1, 0.3, 1],
+                        easing: [0.16, 1, 0.3, 1],
                         delay: 0.1,
                     }"
                     class="games-hero header-content group/hero relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end"
@@ -259,7 +259,7 @@ onMounted(() => {
                             :in-view-options="{ once: true, margin: '-50px' }"
                             :transition="{
                                 duration: 1,
-                                ease: [0.16, 1, 0.3, 1],
+                                easing: [0.16, 1, 0.3, 1],
                                 delay: gIdx * 0.1,
                             }"
                             as="div"

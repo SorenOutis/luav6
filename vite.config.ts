@@ -27,13 +27,46 @@ export default defineConfig({
     ],
     resolve: {
         alias: [
-            // These 3 route files are locked on Windows (EPERM on realpath).
-            // Redirect imports to fresh copies in routes_temp.
+            // Wayfinder output is generated into routes_temp/ by the prebuild
+            // script (bin/generate-routes.mjs) because the canonical
+            // resources/js/{routes,actions,wayfinder} copies are gitignored and
+            // can be locked on Windows (EPERM from a crashed wayfinder process).
+            // Redirect ALL generated imports there so fresh clones build and
+            // type-check out of the box.
             // IMPORTANT: specific aliases must come BEFORE the catch-all @ alias.
-            { find: '@/routes/assignments', replacement: fileURLToPath(new URL('./resources/js/routes_temp/routes/assignments', import.meta.url)) },
-            { find: '@/routes/exams', replacement: fileURLToPath(new URL('./resources/js/routes_temp/routes/exams', import.meta.url)) },
-            { find: '@/routes/profile', replacement: fileURLToPath(new URL('./resources/js/routes_temp/routes/profile', import.meta.url)) },
-            { find: '@', replacement: fileURLToPath(new URL('./resources/js', import.meta.url)) },
-        ]
+            {
+                find: '@/routes',
+                replacement: fileURLToPath(
+                    new URL(
+                        './resources/js/routes_temp/routes',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
+                find: '@/actions',
+                replacement: fileURLToPath(
+                    new URL(
+                        './resources/js/routes_temp/actions',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
+                find: '@/wayfinder',
+                replacement: fileURLToPath(
+                    new URL(
+                        './resources/js/routes_temp/wayfinder',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
+                find: '@',
+                replacement: fileURLToPath(
+                    new URL('./resources/js', import.meta.url),
+                ),
+            },
+        ],
     },
 });

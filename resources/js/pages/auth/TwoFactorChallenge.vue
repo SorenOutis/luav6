@@ -10,6 +10,7 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import AuthLayout from '@/layouts/AuthLayout.vue';
+import { withForm } from '@/lib/route-helpers';
 import { store } from '@/routes/two-factor/login';
 import type { TwoFactorConfigContent } from '@/types';
 
@@ -63,7 +64,7 @@ defineOptions({ layout: AuthLayout });
     <div class="space-y-6">
         <template v-if="!showRecoveryInput">
             <Form
-                v-bind="store.form()"
+                v-bind="withForm(store).form()"
                 class="space-y-4"
                 reset-on-error
                 @error="code = ''"
@@ -110,7 +111,7 @@ defineOptions({ layout: AuthLayout });
 
         <template v-else>
             <Form
-                v-bind="store.form()"
+                v-bind="withForm(store).form()"
                 class="space-y-4"
                 reset-on-error
                 #default="{ errors, processing, clearErrors }"

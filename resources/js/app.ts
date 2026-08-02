@@ -131,8 +131,12 @@ router.on('finish', (event) => {
 
     // Signal the loader to hide
     if (isVisible.value) {
-        // Use the errors from the event detail if available, or the current page
-        const page = event.detail.page || router.page;
+        // Use the errors from the event detail if available.
+        // (Inertia v2 no longer exposes router.page; the finish event carries it.)
+        const detail = event.detail as unknown as {
+            page?: { props?: { errors?: Record<string, unknown> } };
+        };
+        const page = detail.page;
         const errors = page?.props?.errors || {};
         const hasErrors = Object.keys(errors).length > 0;
 
