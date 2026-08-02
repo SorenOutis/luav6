@@ -104,7 +104,7 @@
     "extra": {
         "laravel": {
             "dont-discover": [
-                "Libsql\\Laravel\\LibsqlServiceProvider"
+                "turso/libsql-laravel"
             ]
         }
     },
