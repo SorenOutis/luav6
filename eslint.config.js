@@ -34,6 +34,20 @@ export default defineConfigWithVueTs(
                 'error',
                 {
                     groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+                    pathGroups: [
+                        {
+                            // Force every `@/*` alias import into the `internal`
+                            // group even when the file can't be resolved (the
+                            // wayfinder-generated `routes/`, `actions/` and
+                            // `wayfinder/` dirs are gitignored, so they don't
+                            // exist in a fresh CI checkout). Without this,
+                            // eslint's resolver buckets them into different
+                            // groups and `import/order` fails only in CI.
+                            pattern: '@/**',
+                            group: 'internal',
+                        },
+                    ],
+                    pathGroupsExcludedImportTypes: ['builtin'],
                     alphabetize: {
                         order: 'asc',
                         caseInsensitive: true,
