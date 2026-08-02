@@ -4,7 +4,6 @@ import { Motion } from '@motionone/vue';
 import {
     Calendar,
     Clock,
-    AlertCircle,
     CheckCircle2,
     XCircle,
     Shield,

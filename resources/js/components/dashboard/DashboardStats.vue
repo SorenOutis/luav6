@@ -132,7 +132,7 @@ const last7Days = computed(() => {
     });
 });
 
-async function onClaimed(amount: number, _totalXp: number) {
+async function onClaimed(amount: number) {
     // The reward has been consumed; remove the action card immediately so it
     // does not remain below the stats as a persistent "Claimed" status.
     hideClaimCard.value = true;

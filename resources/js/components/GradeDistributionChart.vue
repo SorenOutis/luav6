@@ -22,7 +22,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const RADIUS = 40;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-const CENTER = 50;
 const GAP = 2; // gap between segments in degrees
 
 const chartData = computed(() => {

@@ -1,8 +1,8 @@
-import Lenis from 'lenis';
-import 'lenis/dist/lenis.css';
 import { router } from '@inertiajs/vue3';
+import Lenis from 'lenis';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
+import 'lenis/dist/lenis.css';
 
 /**
  * A singleton wrapper around Lenis smooth scroll.

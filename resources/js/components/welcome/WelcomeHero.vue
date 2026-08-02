@@ -153,7 +153,7 @@ const initAnimations = () => {
         const splitInstances: SplitText[] = [];
 
         if (headingLines?.length) {
-            headingLines.forEach((line, idx) => {
+            headingLines.forEach((line) => {
                 const split = SplitText.create(line as HTMLElement, {
                     type: 'chars',
                     charsClass: 'hero-char',

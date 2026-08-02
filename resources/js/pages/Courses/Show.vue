@@ -6,14 +6,12 @@ import {
     BookOpen,
     BookMarked,
     CheckCircle2,
-    Circle,
     ChevronRight,
     ChevronLeft,
     PlayCircle,
     BarChart3,
     Trophy,
     ListChecks,
-    Sparkles,
     GraduationCap,
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, onUnmounted } from 'vue';

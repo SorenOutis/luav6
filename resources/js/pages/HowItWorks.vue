@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import {
-    Command,
     BookOpen,
     PenLine,
     CheckCircle2,
@@ -11,13 +10,6 @@ import {
 } from 'lucide-vue-next';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
-
-const props = defineProps<{
-    canRegister: boolean;
-    auth: { user: any };
-}>();
-
-const { appearance } = useAppearance();
 
 const steps = [
     {
@@ -76,25 +68,6 @@ const steps = [
             'Learning map with unlockable nodes',
             'Anonymous messaging for classroom connection',
         ],
-    },
-];
-
-const faqs = [
-    {
-        q: 'How do I join a section?',
-        a: "After logging in, go to your profile settings and select your section from the dropdown. If the section has a password, you'll need to enter it — your teacher can provide this.",
-    },
-    {
-        q: 'Can I retake an exam?',
-        a: 'It depends on how your teacher configured the exam. Some exams allow multiple attempts, while others are one-time only. Check the exam details before starting.',
-    },
-    {
-        q: 'How are points calculated?',
-        a: 'You earn XP for completing exams, maintaining streaks, and engaging with the platform. Each level requires 100 XP. Points are separate and tied to seasonal progression.',
-    },
-    {
-        q: 'Is there a mobile app?',
-        a: 'LSI runs entirely in your browser — no app download needed. It works on phones, tablets, and laptops. Just visit the URL and log in.',
     },
 ];
 </script>

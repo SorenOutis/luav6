@@ -382,7 +382,6 @@ const announcements = computed(() =>
 const userBadges = computed(() => props.userBadges);
 const courses = computed(() => props.courses);
 const assignments = computed(() => props.assignments);
-const upcomingExams = computed(() => props.upcomingExams);
 const sectionLeaderboards = computed(() => props.sectionLeaderboards);
 
 const streak = computed(() => ({

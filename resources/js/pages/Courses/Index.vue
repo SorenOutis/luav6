@@ -12,9 +12,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted } from 'vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
-import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -36,7 +34,6 @@ const props = defineProps<{
 }>();
 
 const { isVisible: isLoaderVisible } = useLoader();
-const { isMobile: isMobileDevice } = useMobile();
 const isBooted = ref(false);
 
 if (!isLoaderVisible.value) {

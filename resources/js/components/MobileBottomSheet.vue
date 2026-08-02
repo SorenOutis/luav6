@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { gsap } from 'gsap';
 import { X } from 'lucide-vue-next';
-import { ref, watch, onMounted, nextTick } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 
 type Props = {
     open: boolean;

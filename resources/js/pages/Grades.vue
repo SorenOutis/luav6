@@ -7,7 +7,6 @@ import {
     GraduationCap,
     TrendingUp,
     AlertCircle,
-    FileText,
     Clock,
     Search,
     Printer,
@@ -92,7 +91,6 @@ const {
     data: subjectGrades,
     isLoading,
     error: fetchError,
-    isFromCache,
     revalidate: fetchGrades,
 } = useStaleWhileRevalidate<SubjectGrade[]>(
     'grades-data',

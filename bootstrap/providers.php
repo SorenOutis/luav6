@@ -8,4 +8,5 @@ return [
     AppServiceProvider::class,
     AdminPanelProvider::class,
     FortifyServiceProvider::class,
+    ...(env('DB_CONNECTION') === 'libsql' ? [\Libsql\Laravel\LibsqlServiceProvider::class] : []),
 ];

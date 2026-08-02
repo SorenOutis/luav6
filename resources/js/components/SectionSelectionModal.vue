@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import axios from 'axios';
-import { Check, Hash, Loader2, Sparkles, X } from 'lucide-vue-next';
+import { Check, Hash, Loader2, Sparkles } from 'lucide-vue-next';
 import { ref, nextTick, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
