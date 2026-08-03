@@ -23,6 +23,13 @@ use Libsql\Statement;
  * silently ignores the duplicates, but remote Turso databases (Hrana
  * protocol) reject the statement with "Number of arguments mismatch:
  * expected N, got 2N". Fetch without re-binding.
+ *
+ * PERFORMANCE: both the vendor and this project's previous implementation
+ * re-executed the query on every fetch()/fetchAll() call. Over a remote
+ * Turso connection (HTTP), a single Laravel select became 2+ round trips
+ * (execute + fetchAll) and a cursor became N round trips (one per row).
+ * We now cache the rows from execute() and serve fetch()/fetchAll() from
+ * that cache — one HTTP round trip per query, total.
  */
 class LibsqlStatement extends BaseLibsqlStatement
 {
@@ -30,6 +37,18 @@ class LibsqlStatement extends BaseLibsqlStatement
      * The underlying libsql statement.
      */
     protected Statement $statement;
+
+    /**
+     * Rows materialized by the last execute() call.
+     *
+     * @var array<int, array<string, mixed>>|null
+     */
+    protected ?array $executedRows = null;
+
+    /**
+     * Cursor position for fetch() iteration over $executedRows.
+     */
+    protected int $fetchPosition = 0;
 
     /**
      * Create a new libsql statement wrapper.
@@ -43,6 +62,11 @@ class LibsqlStatement extends BaseLibsqlStatement
 
     /**
      * Execute the statement.
+     *
+     * For row-returning statements the result set is materialized here and
+     * cached so that subsequent fetch()/fetchAll() calls do NOT re-execute
+     * the query (each re-execution is a full HTTP round trip on remote
+     * Turso databases).
      */
     public function execute(array $parameters = []): bool
     {
@@ -52,9 +76,14 @@ class LibsqlStatement extends BaseLibsqlStatement
 
         $this->statement->bind($parameters);
 
+        // Reset the cache and cursor for the new execution.
+        $this->executedRows = null;
+        $this->fetchPosition = 0;
+        $this->response = null;
+
         if (preg_match('/^\s*(select|pragma|explain|with)\b/i', $this->query)) {
-            $queryRows = $this->statement->query()->fetchArray();
-            $this->affectedRows = count($queryRows);
+            $this->executedRows = $this->statement->query()->fetchArray();
+            $this->affectedRows = count($this->executedRows);
         } else {
             $this->affectedRows = $this->statement->execute();
         }
@@ -65,20 +94,18 @@ class LibsqlStatement extends BaseLibsqlStatement
     /**
      * Fetch all rows from the result set.
      *
+     * Serves from the execute() cache — zero additional HTTP round trips.
+     *
      * Return rows as stdClass objects (like PDO/SQLite does) instead of raw
      * arrays, so query-builder results behave identically to the sqlite
      * driver. The package only returns objects for FETCH_OBJ, where it
      * returns a single object instead of an array of rows.
-     *
-     * Unlike the parent, the bindings are NOT re-applied here: they were
-     * already bound by execute(). Re-binding them sends every placeholder
-     * twice to the driver, which remote Turso databases reject.
      */
     public function fetchAll(int $mode = \PDO::FETCH_DEFAULT, ...$args): array
     {
         $mode = $mode === \PDO::FETCH_DEFAULT ? \PDO::FETCH_ASSOC : $mode;
 
-        $rows = $this->statement->query()->fetchArray();
+        $rows = $this->executedRows ?? [];
 
         // The parent returns a single object (not an array of rows) for
         // FETCH_OBJ; normalize it so the declared array return type holds.
@@ -97,9 +124,8 @@ class LibsqlStatement extends BaseLibsqlStatement
     /**
      * Fetch the next row from the result set.
      *
-     * Same as {@see fetchAll()}: bindings were already applied by execute(),
-     * so do not re-bind them like the parent does (double-binds break remote
-     * Turso databases).
+     * Serves from the execute() cache with an internal position counter —
+     * zero additional HTTP round trips per row.
      */
     #[\ReturnTypeWillChange]
     public function fetch(int $mode = \PDO::FETCH_DEFAULT, int $cursorOrientation = \PDO::FETCH_ORI_NEXT, int $cursorOffset = 0): array|false
@@ -108,18 +134,15 @@ class LibsqlStatement extends BaseLibsqlStatement
             $mode = $this->mode;
         }
 
-        $rows = $this->statement->query()->fetchArray();
+        $rows = $this->executedRows ?? [];
 
-        $row = $rows[$cursorOffset] ?? null;
+        $row = $rows[$this->fetchPosition] ?? null;
 
-        // Terminate iteration like the parent: the query is re-executed on
-        // every fetch() call, so returning the same row again means there is
-        // nothing new left to yield.
-        if ($row === null || $this->response === $row) {
+        if ($row === null) {
             return false;
         }
 
-        $this->response = $row;
+        $this->fetchPosition++;
 
         $rowValues = array_values($row);
 
