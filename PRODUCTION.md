@@ -57,12 +57,22 @@ QUEUE_CONNECTION=database
 CACHE_STORE=file
 
 FILESYSTEM_DISK=s3
+PUBLIC_DISK=s3
 AWS_ACCESS_KEY_ID=your-r2-access-key
 AWS_SECRET_ACCESS_KEY=your-r2-secret
 AWS_DEFAULT_REGION=auto
 AWS_BUCKET=your-r2-bucket
 AWS_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com
 AWS_USE_PATH_STYLE_ENDPOINT=true
+AWS_URL=https://pub-<bucket-id>.r2.dev
+
+> **R2 public bucket**: enable **Public access** on the bucket in the Cloudflare
+> dashboard (R2 → bucket → Settings → Public access → Enable). `AWS_URL` must be
+> the bucket's public URL — the `https://pub-<id>.r2.dev` URL shown there, or a
+> custom domain you attach to the bucket. This is what `Storage::url()` returns
+> for avatars, badges, course covers and the school logo.
+> `PUBLIC_DISK=s3` redirects the `public` disk (used by all uploads) to R2; the
+> old local-disk `public/storage` symlink remains as a fallback for local dev.
 
 MAIL_MAILER=smtp
 MAIL_HOST=your-smtp-host

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
@@ -192,7 +193,7 @@ class User extends Authenticatable
             return null;
         }
 
-        return asset('storage/'.$value);
+        return Storage::disk('public')->url($value);
     }
 
     /**
@@ -282,6 +283,6 @@ class User extends Authenticatable
             return null;
         }
 
-        return asset('storage/'.$value);
+        return Storage::disk('public')->url($value);
     }
 }

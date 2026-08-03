@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Course extends Model
 {
@@ -30,7 +31,7 @@ class Course extends Model
             return null;
         }
 
-        return asset('storage/'.$this->cover_photo);
+        return Storage::disk('public')->url($this->cover_photo);
     }
 
     /**

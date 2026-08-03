@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Setting;
 use App\Support\StudentPageRegistry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -74,7 +75,7 @@ class HandleInertiaRequests extends Middleware
             'schoolBranding' => fn () => [
                 'name' => Setting::get('school_name', 'LSI Engine'),
                 'tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),
-                'logoUrl' => filled(Setting::get('school_logo_path')) ? asset('storage/'.Setting::get('school_logo_path')) : null,
+                'logoUrl' => filled(Setting::get('school_logo_path')) ? Storage::disk('public')->url(Setting::get('school_logo_path')) : null,
                 'accentColor' => Setting::get('school_accent_color', '#f59e0b'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

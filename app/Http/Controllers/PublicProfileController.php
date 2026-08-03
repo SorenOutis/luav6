@@ -7,6 +7,7 @@ use App\Models\SeasonProgress;
 use App\Models\User;
 use App\Services\BadgeAwardService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PublicProfileController extends Controller
@@ -127,7 +128,7 @@ class PublicProfileController extends Controller
                 'name' => $b->name,
                 'description' => $b->description,
                 'requiredLevel' => $b->required_level,
-                'image' => $b->image_path ? asset('storage/'.$b->image_path) : null,
+                'image' => $b->image_path ? Storage::disk('public')->url($b->image_path) : null,
                 'iconUrl' => $b->icon_url,
                 'earnedSeason' => $b->pivot->season_id ? ($badgeSeasonNames[$b->pivot->season_id] ?? 'Unknown Season') : null,
                 'earnedAt' => optional($b->pivot->created_at)?->format('M d, Y'),

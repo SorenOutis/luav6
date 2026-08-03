@@ -98,7 +98,25 @@ class SubmissionsRelationManager extends RelationManager
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('info')
                     ->visible(fn ($record) => $record->file_path !== null)
-                    ->action(fn ($record) => response()->download(Storage::disk('public')->path($record->file_path))),
+                    // Stream the file so downloads keep working when the public
+                    // disk points at S3/R2 (->path() is unsupported there).
+                    ->action(function ($record) {
+                        $stream = Storage::disk('public')->readStream($record->file_path);
+
+                        if (! $stream) {
+                            abort(404);
+                        }
+
+                        return response()->streamDownload(function () use ($stream) {
+                            fpassthru($stream);
+
+                            if (is_resource($stream)) {
+                                fclose($stream);
+                            }
+                        }, basename((string) $record->file_path), [
+                            'Content-Type' => Storage::disk('public')->mimeType($record->file_path) ?? 'application/octet-stream',
+                        ]);
+                    }),
                 EditAction::make()
                     ->label('Grade/Edit'),
                 DeleteAction::make(),

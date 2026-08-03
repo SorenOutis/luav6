@@ -38,7 +38,23 @@ return [
             'report' => false,
         ],
 
-        'public' => [
+        // PUBLIC_DISK=s3 points all public uploads (avatars, badges, covers,
+        // logo) at Cloudflare R2 so they survive redeploys. The bucket must have
+        // public access enabled and AWS_URL set to its public URL (r2.dev or a
+        // custom domain) so Storage::url() returns a readable URL.
+        'public' => env('PUBLIC_DISK', 'local') === 's3' ? [
+            'driver' => 's3',
+            'url' => env('PUBLIC_DISK_URL', env('AWS_URL')),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+        ] : [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',

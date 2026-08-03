@@ -8,6 +8,7 @@ use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Fortify\Features;
 
 class WelcomeController extends Controller
@@ -34,7 +35,7 @@ class WelcomeController extends Controller
                 'endDate' => $currentSeason->end_date?->toISOString(),
                 'showCountdown' => (bool) $currentSeason->show_countdown_on_welcome,
             ] : null,
-            'demoVideoUrl' => filled($demoVideoPath) ? asset('storage/'.$demoVideoPath) : null,
+            'demoVideoUrl' => filled($demoVideoPath) ? Storage::disk('public')->url($demoVideoPath) : null,
         ]);
     }
 }
