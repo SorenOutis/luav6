@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git unzip libzip-dev libicu-dev libonig-dev libxml2-dev \
         libpng-dev libjpeg-dev libfreetype6-dev libffi-dev pkg-config \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath dom intl mbstring opcache xml xmlwriter zip gd sockets ffi \
+    && docker-php-ext-install bcmath dom intl mbstring opcache xml xmlwriter zip gd sockets ffi pcntl \
     && { echo 'ffi.enable = true'; } > /usr/local/etc/php/conf.d/ffi.ini \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
@@ -81,7 +81,20 @@ COPY --from=vendor /app/vendor ./vendor
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache
+    # database/*.sqlite is gitignored/dockerignored, so the file never ships in
+    # the image — create it so `php artisan migrate` (and the sqlite fallback
+    # when TURSO_DATABASE_URL isn't set) has a file to open.
+    && touch database/database.sqlite \
+    # Pre-install the RoadRunner binary + .rr.yaml at build time: the runtime
+    # CMD (octane:start --server=roadrunner) would otherwise download rr and
+    # write .rr.yaml into /var/www/html at startup, which needs network and
+    # write access the www-data user doesn't have.
+    && php artisan octane:install --server=roadrunner --no-interaction \
+    && chmod 0755 rr \
+    # octane:start calls touch(base_path('.rr.yaml')) at startup; hand both the
+    # binary and the config to www-data so the runtime user can touch it.
+    && chown www-data:www-data rr .rr.yaml \
+    && chown -R www-data:www-data storage bootstrap/cache database
 ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr
 EXPOSE 8000
 USER www-data
