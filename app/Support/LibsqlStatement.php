@@ -79,7 +79,7 @@ class LibsqlStatement extends BaseLibsqlStatement
         // Reset the cache and cursor for the new execution.
         $this->executedRows = null;
         $this->fetchPosition = 0;
-        $this->response = null;
+        $this->response = [];
 
         if (preg_match('/^\s*(select|pragma|explain|with)\b/i', $this->query)) {
             $this->executedRows = $this->statement->query()->fetchArray();
