@@ -15,6 +15,14 @@ use Libsql\Statement;
  * EXPLAIN and WITH...SELECT statements also return result rows, which makes
  * the underlying FFI `execute()` throw a "Execute returned rows" exception.
  * Route every row-returning statement through `query()` instead.
+ *
+ * The package's `fetchAll()`/`fetch()` re-bind `$this->bindings` to the
+ * underlying statement, but Laravel already bound them (via `bindValue()`)
+ * before calling `execute()`. Binding them a second time sends every
+ * placeholder's value twice to the driver — the embedded SQLite build
+ * silently ignores the duplicates, but remote Turso databases (Hrana
+ * protocol) reject the statement with "Number of arguments mismatch:
+ * expected N, got 2N". Fetch without re-binding.
  */
 class LibsqlStatement extends BaseLibsqlStatement
 {
@@ -61,25 +69,68 @@ class LibsqlStatement extends BaseLibsqlStatement
      * arrays, so query-builder results behave identically to the sqlite
      * driver. The package only returns objects for FETCH_OBJ, where it
      * returns a single object instead of an array of rows.
+     *
+     * Unlike the parent, the bindings are NOT re-applied here: they were
+     * already bound by execute(). Re-binding them sends every placeholder
+     * twice to the driver, which remote Turso databases reject.
      */
     public function fetchAll(int $mode = \PDO::FETCH_DEFAULT, ...$args): array
     {
         $mode = $mode === \PDO::FETCH_DEFAULT ? \PDO::FETCH_ASSOC : $mode;
 
-        $rows = parent::fetchAll($mode, ...$args);
+        $rows = $this->statement->query()->fetchArray();
 
         // The parent returns a single object (not an array of rows) for
         // FETCH_OBJ; normalize it so the declared array return type holds.
         if ($mode === \PDO::FETCH_OBJ) {
-            return [$rows];
+            return [(object) $rows];
         }
 
         // FETCH_NUM already returns arrays; leave positional access intact.
         if ($mode === \PDO::FETCH_NUM) {
-            return $rows;
+            return array_map('array_values', $rows);
         }
 
         return array_map(fn ($row) => (object) $row, $rows);
+    }
+
+    /**
+     * Fetch the next row from the result set.
+     *
+     * Same as {@see fetchAll()}: bindings were already applied by execute(),
+     * so do not re-bind them like the parent does (double-binds break remote
+     * Turso databases).
+     */
+    #[\ReturnTypeWillChange]
+    public function fetch(int $mode = \PDO::FETCH_DEFAULT, int $cursorOrientation = \PDO::FETCH_ORI_NEXT, int $cursorOffset = 0): array|false
+    {
+        if ($mode === \PDO::FETCH_DEFAULT) {
+            $mode = $this->mode;
+        }
+
+        $rows = $this->statement->query()->fetchArray();
+
+        $row = $rows[$cursorOffset] ?? null;
+
+        // Terminate iteration like the parent: the query is re-executed on
+        // every fetch() call, so returning the same row again means there is
+        // nothing new left to yield.
+        if ($row === null || $this->response === $row) {
+            return false;
+        }
+
+        $this->response = $row;
+
+        $rowValues = array_values($row);
+
+        // Keep the parent's declared `array|false` return type: the connection
+        // always fetches with FETCH_ASSOC, so rows are returned as assoc arrays.
+        return match ($mode) {
+            \PDO::FETCH_BOTH => array_merge($row, $rowValues),
+            \PDO::FETCH_ASSOC, \PDO::FETCH_NAMED, \PDO::FETCH_OBJ => $row,
+            \PDO::FETCH_NUM => $rowValues,
+            default => throw new \PDOException('Unsupported fetch mode.'),
+        };
     }
 
     /**
