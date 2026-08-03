@@ -80,11 +80,16 @@ WORKDIR /var/www/html
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
-RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache \
     # database/*.sqlite is gitignored/dockerignored, so the file never ships in
     # the image — create it so `php artisan migrate` (and the sqlite fallback
     # when TURSO_DATABASE_URL isn't set) has a file to open.
     && touch database/database.sqlite \
+    # public/storage is gitignored + dockerignored, so it never ships in the
+    # image; without it every /storage/... asset URL (avatars, badges, covers,
+    # school logo) 404s. Link it so RoadRunner's static middleware (configured
+    # by Octane via http.static.dir=public/) serves uploaded files.
+    && ln -s ../storage/app/public public/storage \
     # Pre-install the RoadRunner binary + .rr.yaml at build time: the runtime
     # CMD (octane:start --server=roadrunner) would otherwise download rr and
     # write .rr.yaml into /var/www/html at startup, which needs network and
