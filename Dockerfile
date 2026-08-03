@@ -96,6 +96,14 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && chown www-data:www-data rr .rr.yaml \
     && chown -R www-data:www-data storage bootstrap/cache database
 ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr
+# EXPOSE is cosmetic only — Render ignores it and routes traffic to the
+# container on the $PORT env var (default 10000). Bind Octane to $PORT so the
+# proxy can reach the app (the local docker-compose maps 8000:8000 explicitly).
 EXPOSE 8000
 USER www-data
-CMD ["sh", "-c", "php artisan migrate --force && php artisan queue:work --queue=ai,default --tries=3 --sleep=1 & php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=8000"]
+# Run migrations first (retrying up to ~30s so a transient blip reaching the
+# remote Turso DB at boot can't crash-loop the container), then background the
+# queue worker and start Octane in the foreground. Octane's --port is honored
+# by RoadRunner via the `-o http.address=host:port` override, so this binds to
+# $PORT on Render.
+CMD ["sh", "-c", "i=0; until php artisan migrate --force || [ $i -ge 10 ]; do i=$((i+1)); echo migration-attempt-$i-failed-retrying; sleep 3; done && (php artisan queue:work --queue=ai,default --tries=3 --sleep=1 & php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000})"]
