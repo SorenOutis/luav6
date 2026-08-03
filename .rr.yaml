@@ -1,22 +1,14 @@
 version: '3'
 
-server:
-  command: "php vendor/bin/roadrunner-worker"
-  relay: pipes
+# Octane overrides most settings via CLI flags (see StartRoadRunnerCommand.php).
+# Only settings NOT covered by Octane's -o flags take effect here.
+# num_workers, max_jobs, exec_ttl, server.command, http.address, static.dir,
+# middleware, and logs.* are all overridden by Octane at startup.
 
 http:
-  address: 0.0.0.0:${PORT:-8000}
   pool:
-    num_workers: 1
-    max_jobs: 100
     supervisor:
-      exec_ttl: 300s
+      # RoadRunner restarts a worker whose RSS exceeds this many MB.
       max_worker_memory: 128
-  static:
-    dir: public
-    forbid: [".php"]
-
-logs:
-  mode: production
-  level: warn
-  encoding: console
+      # How often the supervisor polls worker stats.
+      watch_tick: 5s

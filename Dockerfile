@@ -9,6 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install bcmath dom intl mbstring opcache xml xmlwriter zip gd sockets ffi pcntl \
     && { echo 'ffi.enable = true'; } > /usr/local/etc/php/conf.d/ffi.ini \
+    # PHP CLI default memory_limit is -1 (unlimited). RoadRunner workers are
+    # long-lived CLI processes, so a single worker leaking memory can OOM the
+    # whole 512MB container. Cap it so the worker is killed and recycled by
+    # RoadRunner's supervisor instead.
+    && { echo 'memory_limit = 128M'; } > /usr/local/etc/php/conf.d/memory-limit.ini \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
 
@@ -114,4 +119,4 @@ USER www-data
 # the foreground. Octane's --port is honored by RoadRunner via the
 # `-o http.address=host:port` override, so this binds to $PORT on Render.
 # Jobs are processed on-demand by AiQueueWorker (spawns temporary workers).
-CMD ["sh", "-c", "i=0; until php artisan migrate --force || [ $i -ge 10 ]; do i=$((i+1)); echo migration-attempt-$i-failed-retrying; sleep 3; done && php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000}"]
+CMD ["sh", "-c", "i=0; until php artisan migrate --force || [ $i -ge 10 ]; do i=$((i+1)); echo migration-attempt-$i-failed-retrying; sleep 3; done && php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000} --workers=1 --max-requests=100"]
