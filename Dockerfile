@@ -78,26 +78,29 @@ RUN npm run build
 FROM php-base AS app
 WORKDIR /var/www/html
 COPY --from=vendor /app/vendor ./vendor
+# Copy enough of the app so octane:install can boot Laravel and download the
+# RoadRunner binary. We copy the full app AFTER this step so our custom .rr.yaml
+# (with production-appropriate worker/memory limits) overwrites the generated one.
+COPY artisan .env.example composer.json composer.lock ./
+COPY app ./app
+COPY bootstrap ./bootstrap
+COPY config ./config
+COPY database ./database
+COPY routes ./routes
+RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache \
+    && touch database/database.sqlite \
+    && cp .env.example .env \
+    && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env \
+    && php artisan key:generate --force \
+    && php artisan octane:install --server=roadrunner --no-interaction \
+    && chmod 0755 rr
+# Now copy the full app — this brings in our custom .rr.yaml, public/, resources/, etc.
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
+# The app stage already copied vendor + octane:install binary above — finish setup.
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache \
-    # database/*.sqlite is gitignored/dockerignored, so the file never ships in
-    # the image — create it so `php artisan migrate` (and the sqlite fallback
-    # when TURSO_DATABASE_URL isn't set) has a file to open.
     && touch database/database.sqlite \
-    # public/storage is gitignored + dockerignored, so it never ships in the
-    # image; without it every /storage/... asset URL (avatars, badges, covers,
-    # school logo) 404s. Link it so RoadRunner's static middleware (configured
-    # by Octane via http.static.dir=public/) serves uploaded files.
     && ln -s ../storage/app/public public/storage \
-    # Pre-install the RoadRunner binary + .rr.yaml at build time: the runtime
-    # CMD (octane:start --server=roadrunner) would otherwise download rr and
-    # write .rr.yaml into /var/www/html at startup, which needs network and
-    # write access the www-data user doesn't have.
-    && php artisan octane:install --server=roadrunner --no-interaction \
-    && chmod 0755 rr \
-    # octane:start calls touch(base_path('.rr.yaml')) at startup; hand both the
-    # binary and the config to www-data so the runtime user can touch it.
     && chown www-data:www-data rr .rr.yaml \
     && chown -R www-data:www-data storage bootstrap/cache database
 ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr
@@ -107,8 +110,8 @@ ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr
 EXPOSE 8000
 USER www-data
 # Run migrations first (retrying up to ~30s so a transient blip reaching the
-# remote Turso DB at boot can't crash-loop the container), then background the
-# queue worker and start Octane in the foreground. Octane's --port is honored
-# by RoadRunner via the `-o http.address=host:port` override, so this binds to
-# $PORT on Render.
-CMD ["sh", "-c", "i=0; until php artisan migrate --force || [ $i -ge 10 ]; do i=$((i+1)); echo migration-attempt-$i-failed-retrying; sleep 3; done && (php artisan queue:work --queue=ai,default --tries=3 --sleep=1 & php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000})"]
+# remote Turso DB at boot can't crash-loop the container), then start Octane in
+# the foreground. Octane's --port is honored by RoadRunner via the
+# `-o http.address=host:port` override, so this binds to $PORT on Render.
+# Jobs are processed on-demand by AiQueueWorker (spawns temporary workers).
+CMD ["sh", "-c", "i=0; until php artisan migrate --force || [ $i -ge 10 ]; do i=$((i+1)); echo migration-attempt-$i-failed-retrying; sleep 3; done && php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000}"]

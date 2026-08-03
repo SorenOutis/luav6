@@ -1,0 +1,22 @@
+version: '3'
+
+server:
+  command: "php vendor/bin/roadrunner-worker"
+  relay: pipes
+
+http:
+  address: 0.0.0.0:${PORT:-8000}
+  pool:
+    num_workers: 1
+    max_jobs: 100
+    supervisor:
+      exec_ttl: 300s
+      max_worker_memory: 128
+  static:
+    dir: public
+    forbid: [".php"]
+
+logs:
+  mode: production
+  level: warn
+  encoding: console
