@@ -44,12 +44,22 @@ class LibsqlServiceProvider extends ServiceProvider
             }
 
             $useHttp = $config['use_http'] ?? false;
-            $database = $useHttp
-                ? new HttpLibsqlDatabase($config)
-                : new LibsqlDatabase($config);
+
+            if ($useHttp) {
+                // For HTTP mode, wrap HttpLibsqlDatabase in a PDO-like wrapper
+                $httpDb = new HttpLibsqlDatabase($config);
+                $pdo = $this->createPdoWrapper($httpDb);
+
+                return new LibsqlConnection(
+                    $pdo,
+                    $config['database'] ?? ':memory:',
+                    $config['prefix'] ?? '',
+                    $config
+                );
+            }
 
             return new LibsqlConnection(
-                $database,
+                new LibsqlDatabase($config),
                 $config['database'] ?? ':memory:',
                 $config['prefix'] ?? '',
                 $config
@@ -65,5 +75,76 @@ class LibsqlServiceProvider extends ServiceProvider
         if ($this->app->resolved('db')) {
             $this->app->make('db')->extend('libsql', $resolver);
         }
+    }
+
+    /**
+     * Create a PDO-like wrapper for HttpLibsqlDatabase.
+     */
+    private function createPdoWrapper(HttpLibsqlDatabase $httpDb)
+    {
+        return new class($httpDb)
+        {
+            private $httpDb;
+
+            public function __construct($httpDb)
+            {
+                $this->httpDb = $httpDb;
+            }
+
+            public function prepare($query)
+            {
+                return $this->httpDb->prepare($query);
+            }
+
+            public function exec($query)
+            {
+                return $this->httpDb->unprepared($query);
+            }
+
+            public function query($query)
+            {
+                return $this->httpDb->select($query);
+            }
+
+            public function getAttribute($attribute)
+            {
+                return $this->httpDb->getAttribute($attribute);
+            }
+
+            public function version()
+            {
+                return '1.0.0';
+            }
+
+            public function inTransaction()
+            {
+                return false;
+            }
+
+            public function beginTransaction()
+            {
+                return true;
+            }
+
+            public function commit()
+            {
+                return true;
+            }
+
+            public function rollBack()
+            {
+                return true;
+            }
+
+            public function lastInsertId()
+            {
+                return 0;
+            }
+
+            public function quote($string)
+            {
+                return "'".str_replace("'", "''", $string)."'";
+            }
+        };
     }
 }

@@ -2,11 +2,10 @@
 
 namespace App\Support;
 
-use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Http;
 use PDO;
 
-class HttpLibsqlDatabase extends Connection
+class HttpLibsqlDatabase
 {
     private string $baseUrl;
 
@@ -22,21 +21,9 @@ class HttpLibsqlDatabase extends Connection
         $this->baseUrl = "http://{$parsed['host']}:{$parsed['port']}";
         $this->user = $parsed['user'] ?? 'admin';
         $this->password = $parsed['pass'] ?? '';
-
-        parent::__construct($pdo = $this->createPdo(), $config['database'] ?? 'main');
     }
 
-    private function createPdo()
-    {
-        // Create a dummy PDO since Connection requires it
-        // We'll override all methods to use HTTP instead
-        return new class extends PDO
-        {
-            public function __construct() {}
-        };
-    }
-
-    public function select($query, $bindings = [], $useReadPdo = true)
+    public function select($query, $bindings = [])
     {
         return $this->runHttpQuery($query, $bindings);
     }
@@ -64,25 +51,61 @@ class HttpLibsqlDatabase extends Connection
 
     public function prepare($query)
     {
-        $db = $this;
+        $baseUrl = $this->baseUrl;
+        $user = $this->user;
+        $password = $this->password;
 
-        return new class($query, $db)
+        return new class($query, $baseUrl, $user, $password)
         {
             private $query;
 
-            private $db;
+            private $baseUrl;
 
-            public function __construct($query, $db)
+            private $user;
+
+            private $password;
+
+            public function __construct($query, $baseUrl, $user, $password)
             {
                 $this->query = $query;
-                $this->db = $db;
+                $this->baseUrl = $baseUrl;
+                $this->user = $user;
+                $this->password = $password;
             }
 
             public function execute($bindings = [])
             {
-                $this->db->runHttpQuery($this->query, $bindings);
+                $response = Http::withBasicAuth($this->user, $this->password)
+                    ->withHeaders(['Content-Type' => 'application/json'])
+                    ->post($this->baseUrl, [
+                        'statements' => [
+                            [
+                                'q' => $this->bindParams($this->query, $bindings),
+                            ],
+                        ],
+                    ]);
+
+                if ($response->failed()) {
+                    throw new \Exception("HTTP {$response->status()}: {$response->body()}");
+                }
 
                 return true;
+            }
+
+            private function bindParams($query, $bindings)
+            {
+                foreach ($bindings as $binding) {
+                    if ($binding === null) {
+                        $replacement = 'NULL';
+                    } elseif (is_numeric($binding)) {
+                        $replacement = $binding;
+                    } else {
+                        $replacement = "'".str_replace("'", "''", $binding)."'";
+                    }
+                    $query = preg_replace('/\?/', $replacement, $query, 1);
+                }
+
+                return $query;
             }
 
             public function fetchAll()
@@ -102,7 +125,7 @@ class HttpLibsqlDatabase extends Connection
         };
     }
 
-    protected function runHttpQuery($query, $bindings)
+    private function runHttpQuery($query, $bindings)
     {
         $response = Http::withBasicAuth($this->user, $this->password)
             ->withHeaders(['Content-Type' => 'application/json'])
