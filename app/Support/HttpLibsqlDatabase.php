@@ -38,26 +38,26 @@ class HttpLibsqlDatabase extends Connection
 
     public function select($query, $bindings = [], $useReadPdo = true)
     {
-        return $this->executeViaHttp($query, $bindings);
+        return $this->runHttpQuery($query, $bindings);
     }
 
     public function statement($query, $bindings = [])
     {
-        $this->executeViaHttp($query, $bindings);
+        $this->runHttpQuery($query, $bindings);
 
         return true;
     }
 
     public function affectingStatement($query, $bindings = [])
     {
-        $result = $this->executeViaHttp($query, $bindings);
+        $result = $this->runHttpQuery($query, $bindings);
 
         return $result['affected_row_count'] ?? 0;
     }
 
     public function unprepared($query)
     {
-        $this->executeViaHttp($query, []);
+        $this->runHttpQuery($query, []);
 
         return true;
     }
@@ -78,7 +78,7 @@ class HttpLibsqlDatabase extends Connection
 
             public function execute($bindings = [])
             {
-                $this->db->executeViaHttp($this->query, $bindings);
+                $this->db->runHttpQuery($this->query, $bindings);
 
                 return true;
             }
@@ -100,7 +100,7 @@ class HttpLibsqlDatabase extends Connection
         };
     }
 
-    private function executeViaHttp($query, $bindings)
+    private function runHttpQuery($query, $bindings)
     {
         $response = Http::withBasicAuth($this->user, $this->password)
             ->withHeaders(['Content-Type' => 'application/json'])
