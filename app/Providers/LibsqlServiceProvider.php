@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\HttpLibsqlDatabase;
 use App\Support\LibsqlConnection;
 use App\Support\LibsqlDatabase;
 use Illuminate\Database\DatabaseManager;
@@ -42,8 +43,13 @@ class LibsqlServiceProvider extends ServiceProvider
                 $config['driver'] = 'libsql';
             }
 
+            $useHttp = $config['use_http'] ?? false;
+            $database = $useHttp
+                ? new HttpLibsqlDatabase($config)
+                : new LibsqlDatabase($config);
+
             return new LibsqlConnection(
-                new LibsqlDatabase($config),
+                $database,
                 $config['database'] ?? ':memory:',
                 $config['prefix'] ?? '',
                 $config
