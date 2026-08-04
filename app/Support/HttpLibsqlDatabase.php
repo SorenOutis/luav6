@@ -64,7 +64,9 @@ class HttpLibsqlDatabase extends Connection
 
     public function prepare($query)
     {
-        return new class($query, $this)
+        $db = $this;
+
+        return new class($query, $db)
         {
             private $query;
 
@@ -100,7 +102,7 @@ class HttpLibsqlDatabase extends Connection
         };
     }
 
-    private function runHttpQuery($query, $bindings)
+    protected function runHttpQuery($query, $bindings)
     {
         $response = Http::withBasicAuth($this->user, $this->password)
             ->withHeaders(['Content-Type' => 'application/json'])
