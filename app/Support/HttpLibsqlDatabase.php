@@ -5,19 +5,20 @@ namespace App\Support;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Http;
 use PDO;
-use PDOStatement;
 
 class HttpLibsqlDatabase extends Connection
 {
     private string $baseUrl;
+
     private string $user;
+
     private string $password;
 
     public function __construct(array $config)
     {
         $url = $config['url'] ?? '';
         $parsed = parse_url($url);
-        
+
         $this->baseUrl = "http://{$parsed['host']}:{$parsed['port']}";
         $this->user = $parsed['user'] ?? 'admin';
         $this->password = $parsed['pass'] ?? '';
@@ -29,7 +30,8 @@ class HttpLibsqlDatabase extends Connection
     {
         // Create a dummy PDO since Connection requires it
         // We'll override all methods to use HTTP instead
-        return new class extends PDO {
+        return new class extends PDO
+        {
             public function __construct() {}
         };
     }
@@ -42,28 +44,30 @@ class HttpLibsqlDatabase extends Connection
     public function statement($query, $bindings = [])
     {
         $this->executeViaHttp($query, $bindings);
-        
+
         return true;
     }
 
     public function affectingStatement($query, $bindings = [])
     {
         $result = $this->executeViaHttp($query, $bindings);
-        
+
         return $result['affected_row_count'] ?? 0;
     }
 
     public function unprepared($query)
     {
         $this->executeViaHttp($query, []);
-        
+
         return true;
     }
 
     public function prepare($query)
     {
-        return new class($query, $this) {
+        return new class($query, $this)
+        {
             private $query;
+
             private $db;
 
             public function __construct($query, $db)
@@ -75,6 +79,7 @@ class HttpLibsqlDatabase extends Connection
             public function execute($bindings = [])
             {
                 $this->db->executeViaHttp($this->query, $bindings);
+
                 return true;
             }
 
@@ -107,7 +112,7 @@ class HttpLibsqlDatabase extends Connection
         }
 
         $data = $response->json();
-        
+
         if (isset($data['results'][0])) {
             return $data['results'][0];
         }
