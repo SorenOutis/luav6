@@ -92,6 +92,11 @@ class HttpLibsqlDatabase extends Connection
             {
                 return 0;
             }
+
+            public function setFetchMode($mode)
+            {
+                return true;
+            }
         };
     }
 
