@@ -116,7 +116,7 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && ln -s ../storage/app/public public/storage \
     && chown www-data:www-data rr .rr.yaml \
     && chown -R www-data:www-data storage bootstrap/cache database
-ENV APP_ENV=production APP_DEBUG=false LOG_CHANNEL=stderr
+
 # EXPOSE is cosmetic only — Render ignores it and routes traffic to the
 # container on the $PORT env var (default 10000). Bind Octane to $PORT so the
 # proxy can reach the app (the local docker-compose maps 8000:8000 explicitly).
