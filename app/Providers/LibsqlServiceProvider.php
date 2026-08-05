@@ -147,6 +147,18 @@ class LibsqlServiceProvider extends ServiceProvider
             {
                 return "'".str_replace("'", "''", $string)."'";
             }
+
+            public function bindValue($parameter, $value, $type = null)
+            {
+                // No-op for HTTP mode - parameters are handled in the query string
+                return true;
+            }
+
+            public function bindParam($parameter, &$variable, $type = null, $maxLength = null, $driverOptions = null)
+            {
+                // No-op for HTTP mode - parameters are handled in the query string
+                return true;
+            }
         };
     }
 }
