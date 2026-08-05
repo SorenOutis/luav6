@@ -36,7 +36,6 @@ return [
             'driver' => 'libsql',
             'url' => env('TURSO_DATABASE_URL'),
             'password' => env('TURSO_AUTH_TOKEN'),
-            'use_http' => env('LIBSQL_USE_HTTP', false),
         ],
 
         'sqlite' => [

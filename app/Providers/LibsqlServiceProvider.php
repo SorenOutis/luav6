@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Support\HttpLibsqlDatabase;
 use App\Support\LibsqlConnection;
 use App\Support\LibsqlDatabase;
 use Illuminate\Database\DatabaseManager;
@@ -43,23 +42,6 @@ class LibsqlServiceProvider extends ServiceProvider
                 $config['driver'] = 'libsql';
             }
 
-            // Check if HTTP mode is enabled and load the HTTP driver if needed
-            $useHttp = $config['use_http'] ?? false;
-
-            if ($useHttp && class_exists('App\Support\HttpLibsqlDatabase')) {
-                // For HTTP mode (Dokploy internal database), wrap HttpLibsqlDatabase in a PDO-like wrapper
-                $httpDb = new HttpLibsqlDatabase($config);
-                $pdo = $this->createPdoWrapper($httpDb);
-
-                return new LibsqlConnection(
-                    $pdo,
-                    $config['database'] ?? ':memory:',
-                    $config['prefix'] ?? '',
-                    $config
-                );
-            }
-
-            // For Turso cloud, use native libsql driver
             return new LibsqlConnection(
                 new LibsqlDatabase($config),
                 $config['database'] ?? ':memory:',
@@ -77,88 +59,5 @@ class LibsqlServiceProvider extends ServiceProvider
         if ($this->app->resolved('db')) {
             $this->app->make('db')->extend('libsql', $resolver);
         }
-    }
-
-    /**
-     * Create a PDO-like wrapper for HttpLibsqlDatabase.
-     */
-    private function createPdoWrapper($httpDb)
-    {
-        return new class($httpDb)
-        {
-            private $httpDb;
-
-            public function __construct($httpDb)
-            {
-                $this->httpDb = $httpDb;
-            }
-
-            public function prepare($query)
-            {
-                return $this->httpDb->prepare($query);
-            }
-
-            public function exec($query)
-            {
-                return $this->httpDb->unprepared($query);
-            }
-
-            public function query($query)
-            {
-                return $this->httpDb->select($query);
-            }
-
-            public function getAttribute($attribute)
-            {
-                return $this->httpDb->getAttribute($attribute);
-            }
-
-            public function version()
-            {
-                return '1.0.0';
-            }
-
-            public function inTransaction()
-            {
-                return false;
-            }
-
-            public function beginTransaction()
-            {
-                return true;
-            }
-
-            public function commit()
-            {
-                return true;
-            }
-
-            public function rollBack()
-            {
-                return true;
-            }
-
-            public function lastInsertId()
-            {
-                return 0;
-            }
-
-            public function quote($string)
-            {
-                return "'".str_replace("'", "''", $string)."'";
-            }
-
-            public function bindValue($parameter, $value, $type = null)
-            {
-                // No-op for HTTP mode - parameters are handled in the query string
-                return true;
-            }
-
-            public function bindParam($parameter, &$variable, $type = null, $maxLength = null, $driverOptions = null)
-            {
-                // No-op for HTTP mode - parameters are handled in the query string
-                return true;
-            }
-        };
     }
 }
