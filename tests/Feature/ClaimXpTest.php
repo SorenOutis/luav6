@@ -11,6 +11,7 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\ClaimXpService;
+use Illuminate\Testing\TestResponse;
 
 use function Pest\Laravel\actingAs;
 
@@ -172,4 +173,56 @@ it('shows already claimed state on dashboard after claiming', function () {
 
     $response->assertOk();
     expect($response->getContent())->toContain('canClaim');
+});
+
+it('syncs claimed XP into the active season progress when the user has no sections', function () {
+    $season = Season::factory()->active()->create();
+    $user = User::factory()->create(['last_claimed_at' => null]);
+
+    actingAs($user)->postJson('/api/claim-xp')->assertOk();
+
+    // Both the user exp and the season progress (what the dashboard stat
+    // cards display) must reflect the claim.
+    expect((float) $user->fresh()->exp)->toBe(1.0);
+    expect((float) $user->activeSeasonProgress()->exp)->toBe(1.0);
+});
+
+function dashboardClaimPrompt(TestResponse $response): bool
+{
+    $content = $response->getContent();
+    preg_match('/data-page="([^"]*)"/', $content, $matches);
+    $page = json_decode(html_entity_decode($matches[1] ?? ''), true);
+
+    return (bool) ($page['props']['claimXp']['showPrompt'] ?? false);
+}
+
+it('keeps the claim prompt available for section-less users until it is shown', function () {
+    $season = Season::factory()->active()->create();
+    $user = User::factory()->create(['last_claimed_at' => null]);
+
+    // No section yet — the prompt is deferred, so the once-per-session flag
+    // must NOT be consumed server-side on this first visit.
+    $first = actingAs($user)->get('/dashboard');
+    $first->assertOk();
+    expect(dashboardClaimPrompt($first))->toBeTrue();
+
+    // The client marks it as shown when the prompt actually opens.
+    actingAs($user)->postJson('/api/claim-xp/prompt-shown')->assertOk();
+
+    // Later dashboard visits no longer auto-open the prompt.
+    $second = actingAs($user)->get('/dashboard');
+    $second->assertOk();
+    expect(dashboardClaimPrompt($second))->toBeFalse();
+});
+
+it('consumes the claim prompt flag once for users who already have a section', function () {
+    [$student] = claimContext();
+
+    $first = actingAs($student)->get('/dashboard');
+    $first->assertOk();
+    expect(dashboardClaimPrompt($first))->toBeTrue();
+
+    $second = actingAs($student)->get('/dashboard');
+    $second->assertOk();
+    expect(dashboardClaimPrompt($second))->toBeFalse();
 });

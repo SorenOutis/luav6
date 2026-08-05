@@ -100,6 +100,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->middleware(['auth', 'verified', 'throttle:10,1'])
         ->name('api.claim-xp');
 
+    Route::post('api/claim-xp/prompt-shown', [ClaimXpController::class, 'promptShown'])
+        ->middleware(['auth', 'verified', 'throttle:10,1'])
+        ->name('api.claim-xp.prompt-shown');
+
     Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
 

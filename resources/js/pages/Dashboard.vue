@@ -367,6 +367,18 @@ const props = defineProps<{
 }>();
 
 const userStats = computed(() => props.userStats);
+
+// The daily XP prompt must wait until the section-selection flow is done:
+// new users (no section) see the section modal first, then the claim prompt.
+// Declared above claimXpForPrompt so the computed can reference it safely.
+const claimPromptReady = ref(Boolean(props.sectionName));
+
+// Gate the auto-prompt behind the section flow (see claimPromptReady above).
+const claimXpForPrompt = computed(() => ({
+    ...props.claimXp,
+    showPrompt: claimPromptReady.value && Boolean(props.claimXp.showPrompt),
+}));
+
 const progressPercentage = computed(
     () => (userStats.value.currentXP / userStats.value.maxXPForLevel) * 100,
 );
@@ -499,6 +511,7 @@ watch(
     (newSection) => {
         if (newSection) {
             showSectionModal.value = false;
+            claimPromptReady.value = true;
         }
     },
     { immediate: true },
@@ -699,7 +712,7 @@ const handleLogout = () => {
                         :streak="streak"
                         :login-dates="props.loginDates ?? []"
                         :progress-percentage="progressPercentage"
-                        :claim-xp="props.claimXp"
+                        :claim-xp="claimXpForPrompt"
                         :stats-breakdown="props.statsBreakdown"
                     />
                 </Motion>
@@ -965,7 +978,10 @@ const handleLogout = () => {
 
         <SectionSelectionModal
             :show="showSectionModal"
-            @close="showSectionModal = false"
+            @close="
+                showSectionModal = false;
+                claimPromptReady = true;
+            "
         />
 
         <div

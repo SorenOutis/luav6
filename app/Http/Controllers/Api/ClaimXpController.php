@@ -20,4 +20,18 @@ class ClaimXpController extends Controller
 
         return response()->json($result);
     }
+
+    /**
+     * Mark the daily claim prompt as shown for this session.
+     *
+     * The prompt is deferred for users without a section until after the
+     * section-selection modal; the client calls this when the prompt actually
+     * opens so it doesn't re-appear on later dashboard visits.
+     */
+    public function promptShown(Request $request): JsonResponse
+    {
+        $request->session()->put('daily_claim_prompt_shown', true);
+
+        return response()->json(['ok' => true]);
+    }
 }

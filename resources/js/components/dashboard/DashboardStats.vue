@@ -133,9 +133,12 @@ const last7Days = computed(() => {
 });
 
 async function onClaimed(amount: number) {
-    // The reward has been consumed; remove the action card immediately so it
-    // does not remain below the stats as a persistent "Claimed" status.
-    hideClaimCard.value = true;
+    // The reward has been consumed. Keep the card visible for a beat so the
+    // button's celebration (floating +XP, particles, claimed state) can play
+    // before removing it from the dashboard.
+    setTimeout(() => {
+        hideClaimCard.value = true;
+    }, 1400);
 
     // Animate the XP counter up
     const startXp = localTotalXp.value;

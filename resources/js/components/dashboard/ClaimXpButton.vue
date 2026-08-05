@@ -2,8 +2,16 @@
 import axios from 'axios';
 import gsap from 'gsap';
 import { Gift, Sparkles, Check, Clock } from 'lucide-vue-next';
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import {
+    ref,
+    computed,
+    watch,
+    nextTick,
+    onMounted,
+    onBeforeUnmount,
+} from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import { useMobile } from '@/composables/useMobile';
 
 const props = defineProps<{
     canClaim: boolean;
@@ -17,16 +25,53 @@ const emit = defineEmits<{
     claimed: [amount: number, totalXp: number];
 }>();
 
-const claimState = ref<'idle' | 'claiming' | 'claimed' | 'waiting'>(
+const { prefersReducedMotion } = useMobile();
+
+const claimState = ref<'idle' | 'claiming' | 'claimed'>(
     props.canClaim ? 'idle' : 'claimed',
 );
 const claimedAmount = ref(0);
 const showParticles = ref(false);
+const showFloatingXp = ref(false);
+const justClaimed = ref(false);
 const buttonRef = ref<HTMLElement | null>(null);
 const particlesRef = ref<HTMLElement | null>(null);
+const floatXpRef = ref<HTMLElement | null>(null);
+const successRef = ref<HTMLElement | null>(null);
+const checkCircleRef = ref<SVGCircleElement | null>(null);
+const checkPathRef = ref<SVGPathElement | null>(null);
+const successTitleRef = ref<HTMLElement | null>(null);
 const countdownText = ref('');
-const showClaimModal = ref(Boolean(props.showPrompt && props.canClaim));
+const showClaimModal = ref(false);
 let glowAnim: gsap.core.Tween | null = null;
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
+const activeTweens = new Set<gsap.core.Tween>();
+
+const confettiColors = [
+    'bg-amber-400',
+    'bg-yellow-300',
+    'bg-orange-400',
+    'bg-rose-400',
+    'bg-emerald-400',
+    'bg-sky-400',
+];
+
+// Open the prompt modal when the parent signals it's ready — immediately for
+// users who already have a section, or after the section-selection flow for
+// new users (the prop flips to true once the section modal is dealt with).
+watch(
+    () => props.showPrompt && props.canClaim,
+    (shouldShow) => {
+        if (shouldShow && claimState.value === 'idle' && !showClaimModal.value) {
+            showClaimModal.value = true;
+
+            // Mark the prompt as delivered so it doesn't re-open on later
+            // dashboard visits in this session.
+            axios.post('/api/claim-xp/prompt-shown').catch(() => {});
+        }
+    },
+    { immediate: true },
+);
 
 // Countdown timer for next claim
 let countdownInterval: ReturnType<typeof setInterval> | null = null;
@@ -54,33 +99,155 @@ function updateCountdown() {
     countdownText.value = `Next claim in ${hours}h ${minutes}m`;
 }
 
-// The particle burst animation
+// Track tweens so they can be killed on unmount. The set is tiny (a handful
+// of tweens per claim) and cleared wholesale in onBeforeUnmount.
+function track(tween: gsap.core.Tween) {
+    activeTweens.add(tween);
+    return tween;
+}
+
+// The particle burst animation (inline button)
 function triggerParticleBurst() {
     if (!particlesRef.value) return;
     showParticles.value = true;
 
     const particles = particlesRef.value.querySelectorAll('.xp-particle');
-    gsap.fromTo(
-        particles,
-        {
-            y: 0,
-            x: 0,
-            opacity: 1,
-            scale: 1,
-        },
-        {
-            y: 'random(-120, -200)',
-            x: 'random(-60, 60)',
-            opacity: 0,
-            scale: 0.2,
-            duration: 0.8 + Math.random() * 0.4,
-            ease: 'power2.out',
-            stagger: 0.04,
-            onComplete: () => {
-                showParticles.value = false;
+    track(
+        gsap.fromTo(
+            particles,
+            {
+                y: 0,
+                x: 0,
+                opacity: 1,
+                scale: 1,
             },
-        },
+            {
+                y: 'random(-120, -200)',
+                x: 'random(-60, 60)',
+                opacity: 0,
+                scale: 0.2,
+                duration: 0.8 + Math.random() * 0.4,
+                ease: 'power2.out',
+                stagger: 0.04,
+                onComplete: () => {
+                    showParticles.value = false;
+                },
+            },
+        ),
     );
+}
+
+// Floating "+X XP" badge rising above the inline button
+function triggerFloatingXp() {
+    if (!floatXpRef.value) return;
+    showFloatingXp.value = true;
+
+    track(
+        gsap.fromTo(
+            floatXpRef.value,
+            { y: 0, opacity: 0, scale: 0.6 },
+            {
+                y: -46,
+                opacity: 1,
+                scale: 1,
+                duration: 0.9,
+                ease: 'power2.out',
+                onComplete: () => {
+                    track(
+                        gsap.to(floatXpRef.value, {
+                            y: -70,
+                            opacity: 0,
+                            scale: 1.05,
+                            duration: 0.35,
+                            ease: 'power2.in',
+                            onComplete: () => {
+                                showFloatingXp.value = false;
+                            },
+                        }),
+                    );
+                },
+            },
+        ),
+    );
+}
+
+// Success celebration inside the modal: checkmark draw + confetti + title pop
+async function playClaimSuccess() {
+    if (!successRef.value) return;
+
+    const tl = gsap.timeline({
+        defaults: { ease: 'power3.out' },
+        paused: prefersReducedMotion.value,
+    });
+
+    // Draw the circle
+    if (checkCircleRef.value) {
+        const circle = checkCircleRef.value;
+        const len = circle.getTotalLength();
+        gsap.set(circle, { strokeDasharray: len, strokeDashoffset: len });
+        tl.to(circle, {
+            strokeDashoffset: 0,
+            duration: 0.5,
+            ease: 'power2.inOut',
+        });
+    }
+
+    // Draw the checkmark
+    if (checkPathRef.value) {
+        const path = checkPathRef.value;
+        const len = path.getTotalLength();
+        gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
+        tl.to(
+            path,
+            {
+                strokeDashoffset: 0,
+                duration: 0.35,
+                ease: 'power2.out',
+            },
+            '-=0.15',
+        );
+    }
+
+    // Title pop
+    if (successTitleRef.value) {
+        tl.fromTo(
+            successTitleRef.value,
+            { scale: 0.6, opacity: 0 },
+            {
+                scale: 1,
+                opacity: 1,
+                duration: 0.4,
+                ease: 'back.out(2)',
+            },
+            '-=0.1',
+        );
+    }
+
+    // Confetti burst from the checkmark
+    const confetti = successRef.value.querySelectorAll('.claim-confetti');
+    if (confetti.length) {
+        tl.fromTo(
+            confetti,
+            { x: 0, y: 0, opacity: 1, scale: 0.4, rotation: 0 },
+            {
+                x: () => gsap.utils.random(-110, 110),
+                y: () => gsap.utils.random(-160, 30),
+                rotation: () => gsap.utils.random(-180, 180),
+                opacity: 0,
+                scale: 1,
+                duration: 0.9,
+                stagger: 0.02,
+                ease: 'power2.out',
+            },
+            '-=0.2',
+        );
+    }
+
+    if (prefersReducedMotion.value) {
+        tl.progress(1);
+    } else {
+        tl.play();
+    }
 }
 
 async function handleClaim() {
@@ -109,24 +276,44 @@ async function handleClaim() {
 
         if (data.claimed) {
             claimedAmount.value = data.amount;
+            justClaimed.value = true;
 
-            // Trigger the particle burst
-            triggerParticleBurst();
-
-            // Brief delay for the visual impact
-            await new Promise((r) => setTimeout(r, 150));
-
+            // Flip the inline button to its claimed state so it never shows a
+            // stuck spinner once the modal closes.
             claimState.value = 'claimed';
-            showClaimModal.value = false;
 
-            // Notify parent to animate XP counter
-            emit('claimed', data.amount, data.total_xp);
+            if (showClaimModal.value) {
+                // Celebration inside the modal, then close it and notify parent
+                await nextTick();
+                playClaimSuccess();
+
+                closeTimer = setTimeout(() => {
+                    showClaimModal.value = false;
+                    justClaimed.value = false;
+                    emit('claimed', data.amount, data.total_xp);
+                }, prefersReducedMotion.value ? 300 : 1500);
+            } else {
+                // Inline claim: burst + floating badge, then notify parent.
+                // Wait for the v-if elements to render before reading the refs.
+                await nextTick();
+                triggerParticleBurst();
+                triggerFloatingXp();
+
+                closeTimer = setTimeout(() => {
+                    emit('claimed', data.amount, data.total_xp);
+                }, 1000);
+            }
         } else {
             claimState.value = 'claimed'; // Already claimed
         }
     } catch {
         claimState.value = 'idle';
     }
+}
+
+function handleModalClose() {
+    if (claimState.value === 'claiming') return;
+    showClaimModal.value = false;
 }
 
 onMounted(() => {
@@ -156,6 +343,11 @@ onBeforeUnmount(() => {
     if (glowAnim) {
         glowAnim.kill();
     }
+    if (closeTimer) {
+        clearTimeout(closeTimer);
+    }
+    activeTweens.forEach((tween) => tween.kill());
+    activeTweens.clear();
 });
 </script>
 
@@ -166,8 +358,70 @@ onBeforeUnmount(() => {
             title="Your daily XP reward is ready"
             description="Keep your streak going with today’s login reward."
             content-class="sm:max-w-md"
+            @close="handleModalClose"
         >
-            <div class="space-y-5 py-2">
+            <!-- Success celebration -->
+            <div
+                v-if="justClaimed"
+                class="relative space-y-5 overflow-hidden py-2 text-center"
+                ref="successRef"
+            >
+                <!-- Confetti -->
+                <div
+                    v-for="i in 16"
+                    :key="i"
+                    class="claim-confetti absolute top-16 left-1/2 h-2.5 w-2.5 rounded-sm"
+                    :class="confettiColors[i % confettiColors.length]"
+                    :style="{ marginLeft: '-5px' }"
+                ></div>
+
+                <div class="mx-auto flex h-28 w-28 items-center justify-center">
+                    <svg
+                        viewBox="0 0 64 64"
+                        class="h-28 w-28"
+                        fill="none"
+                        stroke="currentColor"
+                    >
+                        <circle
+                            ref="checkCircleRef"
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            class="text-emerald-400"
+                            stroke-width="5"
+                            stroke-linecap="round"
+                        />
+                        <path
+                            ref="checkPathRef"
+                            d="M21 33.5 29.5 42 44 25"
+                            class="text-emerald-300"
+                            stroke-width="6"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                </div>
+
+                <div ref="successTitleRef" class="space-y-1">
+                    <p class="text-3xl font-black text-emerald-400">
+                        +{{ claimedAmount || amount }} XP
+                    </p>
+                    <p class="text-sm font-semibold text-foreground">
+                        Claimed! Keep your streak going 🔥
+                    </p>
+                    <p
+                        class="text-xs font-medium text-muted-foreground"
+                    >
+                        Streak {{ streak }}
+                        <span v-if="amount > 1">
+                            · {{ amount - 1 }} streak bonus
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Claim prompt -->
+            <div v-else class="space-y-5 py-2">
                 <div
                     class="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-5 text-center"
                 >
@@ -196,18 +450,27 @@ onBeforeUnmount(() => {
                 <div class="flex justify-end gap-2">
                     <button
                         type="button"
-                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="claimState === 'claiming'"
                         @click="showClaimModal = false"
                     >
                         Later
                     </button>
                     <button
                         type="button"
-                        class="rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black transition hover:bg-amber-400 disabled:opacity-60"
+                        class="inline-flex min-w-[9.5rem] items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-bold text-black transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="claimState === 'claiming'"
                         @click="handleClaim"
                     >
-                        Claim {{ amount }} XP
+                        <span
+                            v-if="claimState === 'claiming'"
+                            class="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black"
+                        ></span>
+                        <span>{{
+                            claimState === 'claiming'
+                                ? 'Claiming…'
+                                : `Claim ${amount} XP`
+                        }}</span>
                     </button>
                 </div>
             </div>
@@ -235,6 +498,19 @@ onBeforeUnmount(() => {
                         '0 0 6px rgba(250,204,21,0.6), 0 0 12px rgba(250,204,21,0.3)',
                 }"
             ></div>
+        </div>
+
+        <!-- Floating +XP badge (inline claims) -->
+        <div
+            v-if="showFloatingXp"
+            ref="floatXpRef"
+            class="pointer-events-none absolute inset-x-0 -top-3 z-50 flex justify-center"
+        >
+            <span
+                class="rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 px-3 py-1 text-sm font-black text-black shadow-lg shadow-amber-500/40"
+            >
+                +{{ claimedAmount || amount }} XP
+            </span>
         </div>
 
         <!-- Claim button -->
@@ -272,9 +548,14 @@ onBeforeUnmount(() => {
                         Daily Reward
                     </p>
                     <p class="text-sm font-bold text-amber-300">
-                        Claim
-                        <span class="tabular-nums">{{ amount }}</span>
-                        XP
+                        <span v-if="claimState === 'claiming'">
+                            Claiming…
+                        </span>
+                        <template v-else>
+                            Claim
+                            <span class="tabular-nums">{{ amount }}</span>
+                            XP
+                        </template>
                         <span
                             v-if="streak > 0"
                             class="text-[10px] font-medium text-amber-400/60"

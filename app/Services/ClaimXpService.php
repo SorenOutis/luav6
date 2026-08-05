@@ -107,9 +107,24 @@ class ClaimXpService
                 }
             }
 
-            // No sections — update user exp directly
+            // No sections — update user exp directly. The SectionProgress
+            // updated hook (which normally syncs exp into $user->exp and the
+            // active season progress) never fires here, so keep both in sync
+            // manually. $isSyncing suppresses the SeasonProgress updated hook
+            // so it doesn't re-increment the user or duplicate history.
             if ($sections->isEmpty()) {
                 $user->increment('exp', $amount);
+                $user->level = floor($user->exp / 100) + 1;
+                $user->save();
+
+                $seasonProgress = $user->activeSeasonProgress();
+                if ($seasonProgress) {
+                    $wasAlreadySyncing = SectionProgress::$isSyncing;
+                    SectionProgress::$isSyncing = true;
+                    $seasonProgress->increment('exp', $amount);
+                    $seasonProgress->save();
+                    SectionProgress::$isSyncing = $wasAlreadySyncing;
+                }
             }
 
             // Mark as claimed

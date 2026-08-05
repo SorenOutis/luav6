@@ -146,7 +146,15 @@ class DashboardController extends Controller
         $claimAmount = $this->claimXpService->claimAmount($user);
         $nextClaimAt = $this->claimXpService->nextClaimAt($user);
         $showClaimPrompt = $canClaim && ! $request->session()->has('daily_claim_prompt_shown');
-        $request->session()->put('daily_claim_prompt_shown', true);
+
+        // Consume the once-per-session flag only when the prompt is actually
+        // delivered now. Users without a section see the section-selection modal
+        // first, so their prompt (and flag) is deferred: either the client marks
+        // it as shown via api/claim-xp/prompt-shown when it opens, or it is set
+        // here on the reload after they join a section.
+        if ($user->sections->isNotEmpty() && $showClaimPrompt) {
+            $request->session()->put('daily_claim_prompt_shown', true);
+        }
 
         $history = $user->gamificationHistories()
             ->when($currentSeason, fn ($query) => $query->where('season_id', $currentSeason->id))
