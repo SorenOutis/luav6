@@ -43,9 +43,10 @@ class LibsqlServiceProvider extends ServiceProvider
                 $config['driver'] = 'libsql';
             }
 
+            // Check if HTTP mode is enabled and load the HTTP driver if needed
             $useHttp = $config['use_http'] ?? false;
 
-            if ($useHttp) {
+            if ($useHttp && class_exists('App\Support\HttpLibsqlDatabase')) {
                 // For HTTP mode (Dokploy internal database), wrap HttpLibsqlDatabase in a PDO-like wrapper
                 $httpDb = new HttpLibsqlDatabase($config);
                 $pdo = $this->createPdoWrapper($httpDb);
@@ -81,7 +82,7 @@ class LibsqlServiceProvider extends ServiceProvider
     /**
      * Create a PDO-like wrapper for HttpLibsqlDatabase.
      */
-    private function createPdoWrapper(HttpLibsqlDatabase $httpDb)
+    private function createPdoWrapper($httpDb)
     {
         return new class($httpDb)
         {
