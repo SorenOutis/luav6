@@ -46,7 +46,7 @@ class LibsqlServiceProvider extends ServiceProvider
             $useHttp = $config['use_http'] ?? false;
 
             if ($useHttp) {
-                // For HTTP mode, wrap HttpLibsqlDatabase in a PDO-like wrapper
+                // For HTTP mode (Dokploy internal database), wrap HttpLibsqlDatabase in a PDO-like wrapper
                 $httpDb = new HttpLibsqlDatabase($config);
                 $pdo = $this->createPdoWrapper($httpDb);
 
@@ -58,6 +58,7 @@ class LibsqlServiceProvider extends ServiceProvider
                 );
             }
 
+            // For Turso cloud, use native libsql driver
             return new LibsqlConnection(
                 new LibsqlDatabase($config),
                 $config['database'] ?? ':memory:',
