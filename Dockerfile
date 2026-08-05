@@ -119,4 +119,4 @@ USER www-data
 # the foreground. Octane's --port is honored by RoadRunner via the
 # `-o http.address=host:port` override, so this binds to $PORT on Render.
 # Jobs are processed on-demand by AiQueueWorker (spawns temporary workers).
-CMD ["php", "artisan", "octane:start", "--server=roadrunner", "--host=0.0.0.0", "--port=${PORT:-8000}", "--workers=1", "--max-requests=100"]
+CMD ["sh", "-c", "php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000} --workers=1 --max-requests=100"]
