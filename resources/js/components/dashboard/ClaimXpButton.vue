@@ -42,9 +42,11 @@ const checkCircleRef = ref<SVGCircleElement | null>(null);
 const checkPathRef = ref<SVGPathElement | null>(null);
 const successTitleRef = ref<HTMLElement | null>(null);
 const countdownText = ref('');
+const claimError = ref(false);
 const showClaimModal = ref(false);
 let glowAnim: gsap.core.Tween | null = null;
 let closeTimer: ReturnType<typeof setTimeout> | null = null;
+let errorTimer: ReturnType<typeof setTimeout> | null = null;
 const activeTweens = new Set<gsap.core.Tween>();
 
 const confettiColors = [
@@ -62,7 +64,11 @@ const confettiColors = [
 watch(
     () => props.showPrompt && props.canClaim,
     (shouldShow) => {
-        if (shouldShow && claimState.value === 'idle' && !showClaimModal.value) {
+        if (
+            shouldShow &&
+            claimState.value === 'idle' &&
+            !showClaimModal.value
+        ) {
             showClaimModal.value = true;
 
             // Mark the prompt as delivered so it doesn't re-open on later
@@ -254,6 +260,7 @@ async function handleClaim() {
     if (claimState.value !== 'idle') return;
 
     claimState.value = 'claiming';
+    claimError.value = false;
 
     // Button press animation
     if (buttonRef.value) {
@@ -272,7 +279,7 @@ async function handleClaim() {
             amount: number;
             total_xp: number;
             streak: number;
-        }>('/api/claim-xp');
+        }>('/api/claim-xp', undefined, { timeout: 15000 });
 
         if (data.claimed) {
             claimedAmount.value = data.amount;
@@ -287,11 +294,14 @@ async function handleClaim() {
                 await nextTick();
                 playClaimSuccess();
 
-                closeTimer = setTimeout(() => {
-                    showClaimModal.value = false;
-                    justClaimed.value = false;
-                    emit('claimed', data.amount, data.total_xp);
-                }, prefersReducedMotion.value ? 300 : 1500);
+                closeTimer = setTimeout(
+                    () => {
+                        showClaimModal.value = false;
+                        justClaimed.value = false;
+                        emit('claimed', data.amount, data.total_xp);
+                    },
+                    prefersReducedMotion.value ? 300 : 1500,
+                );
             } else {
                 // Inline claim: burst + floating badge, then notify parent.
                 // Wait for the v-if elements to render before reading the refs.
@@ -307,8 +317,36 @@ async function handleClaim() {
             claimState.value = 'claimed'; // Already claimed
         }
     } catch {
+        // Network error, timeout, or a hung server — release the button so the
+        // user can retry instead of being stuck on "Claiming…" until reload.
         claimState.value = 'idle';
+        showClaimError();
+
+        // Nudge the button to signal something went wrong
+        if (buttonRef.value) {
+            gsap.fromTo(
+                buttonRef.value,
+                { x: 0 },
+                {
+                    x: 8,
+                    duration: 0.08,
+                    repeat: 3,
+                    yoyo: true,
+                    ease: 'none',
+                },
+            );
+        }
     }
+}
+
+function showClaimError() {
+    claimError.value = true;
+    if (errorTimer) {
+        clearTimeout(errorTimer);
+    }
+    errorTimer = setTimeout(() => {
+        claimError.value = false;
+    }, 4000);
 }
 
 function handleModalClose() {
@@ -345,6 +383,9 @@ onBeforeUnmount(() => {
     }
     if (closeTimer) {
         clearTimeout(closeTimer);
+    }
+    if (errorTimer) {
+        clearTimeout(errorTimer);
     }
     activeTweens.forEach((tween) => tween.kill());
     activeTweens.clear();
@@ -409,9 +450,7 @@ onBeforeUnmount(() => {
                     <p class="text-sm font-semibold text-foreground">
                         Claimed! Keep your streak going 🔥
                     </p>
-                    <p
-                        class="text-xs font-medium text-muted-foreground"
-                    >
+                    <p class="text-xs font-medium text-muted-foreground">
                         Streak {{ streak }}
                         <span v-if="amount > 1">
                             · {{ amount - 1 }} streak bonus
@@ -473,6 +512,12 @@ onBeforeUnmount(() => {
                         }}</span>
                     </button>
                 </div>
+                <p
+                    v-if="claimError"
+                    class="pt-1 text-center text-xs font-semibold text-rose-400"
+                >
+                    Couldn’t claim — check your connection and try again.
+                </p>
             </div>
         </ResponsiveModal>
 
@@ -573,6 +618,14 @@ onBeforeUnmount(() => {
                 <Sparkles class="h-3 w-3 text-amber-400" />
             </div>
         </button>
+
+        <!-- Inline error hint -->
+        <p
+            v-if="claimError && claimState === 'idle'"
+            class="mt-1.5 text-center text-[11px] font-semibold text-rose-400"
+        >
+            Couldn’t claim — try again.
+        </p>
 
         <!-- Claimed state -->
         <div
