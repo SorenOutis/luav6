@@ -6,8 +6,9 @@ FROM php:8.4-cli-bookworm AS php-base
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git unzip libzip-dev libicu-dev libonig-dev libxml2-dev \
         libpng-dev libjpeg-dev libfreetype6-dev libffi-dev pkg-config \
+        libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath dom intl mbstring opcache xml xmlwriter zip gd sockets ffi pcntl \
+    && docker-php-ext-install bcmath dom intl mbstring opcache xml xmlwriter zip gd sockets ffi pcntl pgsql pdo_pgsql \
     && { echo 'ffi.enable = true'; } > /usr/local/etc/php/conf.d/ffi.ini \
     # PHP CLI default memory_limit is -1 (unlimited). RoadRunner workers are
     # long-lived CLI processes, so a single worker leaking memory can OOM the
