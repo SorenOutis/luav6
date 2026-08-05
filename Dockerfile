@@ -97,8 +97,9 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && cp .env.example .env \
     && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env \
     && php artisan key:generate --force \
-    && curl -L -o rr https://github.com/roadrunner-server/roadrunner/releases/latest/download/roadrunner-linux-amd64 \
-    && chmod +x rr
+    && curl -L -o rr https://github.com/roadrunner-server/roadrunner/releases/download/v2024.1.0/roadrunner-linux-amd64 \
+    && chmod +x rr \
+    && ./rr --version
 # Now copy the full app — this brings in our custom .rr.yaml, public/, resources/, etc.
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
