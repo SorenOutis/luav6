@@ -97,7 +97,13 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && cp .env.example .env \
     && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env \
     && php artisan key:generate --force \
-    && curl -L -o rr https://github.com/roadrunner-server/roadrunner/releases/download/v2024.1.0/roadrunner-linux-amd64 \
+    # v2024.1.0 publishes binaries as a .tar.gz archive (the bare
+    # roadrunner-linux-amd64 asset does not exist), so download, extract, and
+    # move the rr binary into place.
+    && curl -sL -o rr.tar.gz https://github.com/roadrunner-server/roadrunner/releases/download/v2024.1.0/roadrunner-2024.1.0-linux-amd64.tar.gz \
+    && tar -xzf rr.tar.gz \
+    && mv roadrunner-2024.1.0-linux-amd64/rr rr \
+    && rm -rf rr.tar.gz roadrunner-2024.1.0-linux-amd64 \
     && chmod +x rr \
     && ./rr --version
 # Now copy the full app — this brings in our custom .rr.yaml, public/, resources/, etc.
