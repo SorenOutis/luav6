@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import {
     Card,
@@ -14,6 +14,14 @@ defineProps<{
     title?: string;
     description?: string;
 }>();
+
+interface SchoolBranding {
+    name?: string;
+    logoUrl?: string | null;
+}
+
+const page = usePage();
+const branding = (page.props.schoolBranding ?? {}) as SchoolBranding;
 </script>
 
 <template>
@@ -23,13 +31,28 @@ defineProps<{
         <div class="flex w-full max-w-md flex-col gap-6">
             <Link
                 :href="home()"
-                class="flex items-center gap-2 self-center font-medium"
+                class="group flex flex-col items-center gap-2.5 self-center"
             >
-                <div class="flex h-9 w-9 items-center justify-center">
+                <div
+                    class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border bg-background p-1.5 shadow-sm transition-all duration-300 group-hover:scale-105 group-hover:border-primary/30"
+                >
+                    <img
+                        v-if="branding.logoUrl"
+                        :src="branding.logoUrl"
+                        :alt="`${branding.name || 'School'} logo`"
+                        class="h-full w-full rounded-xl object-contain"
+                    />
                     <AppLogoIcon
-                        class="size-9 fill-current text-foreground"
+                        v-else
+                        class="size-7 fill-current text-foreground"
                     />
                 </div>
+                <span
+                    v-if="branding.name"
+                    class="max-w-[16rem] truncate text-sm font-semibold text-foreground"
+                >
+                    {{ branding.name }}
+                </span>
             </Link>
 
             <div class="flex flex-col gap-6">
