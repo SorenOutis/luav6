@@ -3,13 +3,13 @@ import { Form, Head } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import {
     InputOTP,
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
-import AuthLayout from '@/layouts/AuthLayout.vue';
+import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
 import { withForm } from '@/lib/route-helpers';
 import { store } from '@/routes/two-factor/login';
 import type { TwoFactorConfigContent } from '@/types';
@@ -42,20 +42,20 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
 
 const code = ref<string>('');
 
-defineOptions({ layout: AuthLayout });
+defineOptions({ layout: AuthCard });
 </script>
 
 <template>
     <Head title="Two-factor authentication" />
 
-    <div class="space-y-3">
+    <div class="text-center">
         <h1
-            class="text-3xl leading-tight font-black tracking-tighter text-foreground uppercase sm:text-4xl"
+            class="text-2xl leading-tight font-bold tracking-tight text-foreground"
         >
             {{ authConfigContent.title }}
         </h1>
         <p
-            class="max-w-xs text-sm font-medium tracking-wide text-muted-foreground/60"
+            class="mx-auto mt-1.5 max-w-xs text-sm font-normal text-muted-foreground"
         >
             {{ authConfigContent.description }}
         </p>
@@ -93,14 +93,18 @@ defineOptions({ layout: AuthLayout });
                     </div>
                     <InputError :message="errors.code" />
                 </div>
-                <Button type="submit" class="w-full" :disabled="processing"
+                <Button
+                    type="submit"
+                    class="w-full"
+                    :disabled="processing"
+                    :tabindex="1"
                     >Continue</Button
                 >
                 <div class="text-center text-sm text-muted-foreground">
                     <span>or you can </span>
                     <button
                         type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="text-foreground underline decoration-border underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}
@@ -116,15 +120,20 @@ defineOptions({ layout: AuthLayout });
                 reset-on-error
                 #default="{ errors, processing, clearErrors }"
             >
-                <Input
+                <AnimatedInput
                     name="recovery_code"
                     type="text"
-                    placeholder="Enter recovery code"
-                    :autofocus="showRecoveryInput"
                     required
+                    :autofocus="showRecoveryInput"
+                    :tabindex="1"
+                    label="Recovery code"
                 />
                 <InputError :message="errors.recovery_code" />
-                <Button type="submit" class="w-full" :disabled="processing"
+                <Button
+                    type="submit"
+                    class="w-full"
+                    :disabled="processing"
+                    :tabindex="2"
                     >Continue</Button
                 >
 
@@ -132,7 +141,7 @@ defineOptions({ layout: AuthLayout });
                     <span>or you can </span>
                     <button
                         type="button"
-                        class="text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
+                        class="text-foreground underline decoration-border underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current"
                         @click="() => toggleRecoveryMode(clearErrors)"
                     >
                         {{ authConfigContent.buttonText }}

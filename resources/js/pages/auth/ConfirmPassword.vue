@@ -2,27 +2,26 @@
 import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/AuthLayout.vue';
+import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
 import { withForm } from '@/lib/route-helpers';
 import { store } from '@/routes/password/confirm';
 
-defineOptions({ layout: AuthLayout });
+defineOptions({ layout: AuthCard });
 </script>
 
 <template>
     <Head title="Confirm password" />
 
-    <div class="space-y-3">
+    <div class="text-center">
         <h1
-            class="text-3xl leading-tight font-black tracking-tighter text-foreground uppercase sm:text-4xl"
+            class="text-2xl leading-tight font-bold tracking-tight text-foreground"
         >
             Confirm your password
         </h1>
         <p
-            class="max-w-xs text-sm font-medium tracking-wide text-muted-foreground/60"
+            class="mx-auto mt-1.5 max-w-xs text-sm font-normal text-muted-foreground"
         >
             This is a secure area of the application. Please confirm your
             password before continuing.
@@ -36,15 +35,15 @@ defineOptions({ layout: AuthLayout });
     >
         <div class="space-y-6">
             <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
+                <AnimatedInput
                     id="password"
                     type="password"
                     name="password"
-                    class="mt-1 block w-full"
                     required
                     autocomplete="current-password"
                     autofocus
+                    :tabindex="1"
+                    label="Password"
                 />
 
                 <InputError :message="errors.password" />
@@ -52,12 +51,14 @@ defineOptions({ layout: AuthLayout });
 
             <div class="flex items-center">
                 <Button
+                    type="submit"
                     class="w-full"
+                    :tabindex="2"
                     :disabled="processing"
                     data-test="confirm-password-button"
                 >
-                    <Spinner v-if="processing" />
-                    Confirm password
+                    <Spinner v-if="processing" class="mr-2" />
+                    {{ processing ? 'Confirming...' : 'Confirm password' }}
                 </Button>
             </div>
         </div>

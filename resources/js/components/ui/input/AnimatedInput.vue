@@ -41,6 +41,7 @@ const chars = computed(() => props.label.split(''))
   <div :class="cn('relative pt-4', props.class)">
     <div
       class="absolute top-1/2 -translate-y-1/2 pointer-events-none text-foreground flex mt-2"
+      aria-hidden="true"
     >
       <span
         v-for="(char, index) in chars"
@@ -62,6 +63,7 @@ const chars = computed(() => props.label.split(''))
 
     <input
       v-model="modelValue"
+      :aria-label="label"
       @focus="isFocused = true"
       @blur="isFocused = false"
       @input="onInput"
