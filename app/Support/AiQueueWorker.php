@@ -33,8 +33,11 @@ class AiQueueWorker
             $cwd = base_path();
 
             // --stop-when-empty => worker exits when queue is empty.
-            // --tries=1         => do not retry failed AI feedback jobs.
-            // --timeout=0       => no per-job timeout (AI calls can be slow).
+            // --tries=3         => transient provider blips retry instead of
+            //                     permanently failing a job (matches the essay
+            //                     grading job's own $tries).
+            // --timeout=0       => no worker-level cap; per-job $timeout
+            //                     (e.g. 300s for essay grading) governs.
             // --sleep=1         => poll every second.
             // --max-time=3600   => hard cap so a stuck worker self-terminates.
             $args = [
@@ -43,7 +46,7 @@ class AiQueueWorker
                 'queue:work',
                 '--queue='.$queue,
                 '--stop-when-empty',
-                '--tries=1',
+                '--tries=3',
                 '--timeout=0',
                 '--sleep=1',
                 '--max-time=3600',

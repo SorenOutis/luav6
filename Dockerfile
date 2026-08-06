@@ -122,9 +122,14 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 # proxy can reach the app (the local docker-compose maps 8000:8000 explicitly).
 EXPOSE 8000
 USER www-data
-# Run migrations first (retrying up to ~30s so a transient blip reaching the
-# remote Turso DB at boot can't crash-loop the container), then start Octane in
-# the foreground. Octane's --port is honored by RoadRunner via the
-# `-o http.address=host:port` override, so this binds to $PORT on Render.
-# Jobs are processed on-demand by AiQueueWorker (spawns temporary workers).
-CMD ["sh", "-c", "php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000} --workers=1 --max-requests=100"]
+# Start a persistent AI queue worker alongside Octane. All queued work in this
+# app is AI work (essay grading, AI question/source generation) and lives on
+# the "ai" queue, so one --queue=ai worker is sufficient. The while-loop
+# restarts the worker if it ever crashes, and --max-time=3600 recycles it
+# hourly to keep memory bounded; the job classes define their own per-job
+# timeouts (e.g. 300s for essay grading). The on-demand spawner
+# (AiQueueWorker) remains as a local-dev fallback — a duplicate worker is
+# harmless because the database queue driver atomically reserves jobs.
+# Octane runs in the foreground; if it exits, the container stops and the
+# host (Dokploy/Render) restarts it.
+CMD ["sh", "-c", "( while true; do php artisan queue:work --queue=ai --sleep=2 --max-time=3600; echo 'AI queue worker exited; restarting in 2s'; sleep 2; done ) & exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000} --workers=1 --max-requests=100"]
