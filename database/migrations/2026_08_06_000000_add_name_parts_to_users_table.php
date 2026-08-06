@@ -22,7 +22,7 @@ return new class extends Migration
         $users = DB::table('users')->select('id', 'name')->orderBy('id')->get();
 
         foreach ($users as $user) {
-            [$first, $middle, $last] = static::splitName((string) $user->name);
+            [$first, $middle, $last] = self::splitName((string) $user->name);
 
             DB::table('users')->where('id', $user->id)->update([
                 'first_name' => $first,
