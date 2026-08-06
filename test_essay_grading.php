@@ -30,7 +30,7 @@ echo 'Ollama Fallback: '.($ollamaEnabled ? 'enabled' : 'disabled')."\n";
 // Log settings
 $cfAccountId = Setting::get('cloudflare_account_id');
 $cfToken = Setting::get('cloudflare_api_token');
-$cfModel = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
+$cfModel = Setting::get('cloudflare_grading_model', '@cf/meta/llama-3.1-8b-instruct');
 echo "Cloudflare Model: {$cfModel}\n\n";
 
 // 2. Test: Call the Cloudflare API DIRECTLY to see raw response

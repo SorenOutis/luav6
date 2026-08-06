@@ -130,7 +130,11 @@ class AiQuestionGeneratorService
     {
         $accountId = Setting::get('cloudflare_account_id');
         $apiToken = Setting::get('cloudflare_api_token');
-        $model = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
+        // Question/source generation follows the grading model setting — both
+        // are batch, quality-sensitive AI work (the chat widget has its own).
+        // Backfill from the legacy cloudflare_model setting until a grading
+        // model is picked explicitly.
+        $model = Setting::get('cloudflare_grading_model') ?? Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
 
         if (! $accountId || ! $apiToken) {
             throw new \Exception('Cloudflare Workers AI is not configured.');
@@ -161,6 +165,14 @@ class AiQuestionGeneratorService
 
         Log::info('Cloudflare raw response length: '.strlen($responseText));
         Log::info('Cloudflare raw response preview: '.substr($responseText, 0, 500));
+
+        app(AiUsageTracker::class)->record(
+            'cloudflare',
+            $model,
+            'generation',
+            AiUsageTracker::tokensFromChars(strlen($prompt)),
+            AiUsageTracker::tokensFromChars(strlen($responseText)),
+        );
 
         return $this->parseResponse($responseText);
     }
@@ -420,7 +432,11 @@ PROMPT;
     {
         $accountId = Setting::get('cloudflare_account_id');
         $apiToken = Setting::get('cloudflare_api_token');
-        $model = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
+        // Question/source generation follows the grading model setting — both
+        // are batch, quality-sensitive AI work (the chat widget has its own).
+        // Backfill from the legacy cloudflare_model setting until a grading
+        // model is picked explicitly.
+        $model = Setting::get('cloudflare_grading_model') ?? Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
 
         if (! $accountId || ! $apiToken) {
             throw new \Exception('Cloudflare Workers AI is not configured.');
@@ -440,8 +456,17 @@ PROMPT;
         }
 
         $data = $response->json();
+        $responseText = trim($data['result']['response'] ?? $data['response'] ?? '');
 
-        return trim($data['result']['response'] ?? $data['response'] ?? '');
+        app(AiUsageTracker::class)->record(
+            'cloudflare',
+            $model,
+            'generation',
+            AiUsageTracker::tokensFromChars(strlen($prompt)),
+            AiUsageTracker::tokensFromChars(strlen($responseText)),
+        );
+
+        return $responseText;
     }
 
     /**

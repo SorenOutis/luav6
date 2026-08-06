@@ -12,7 +12,7 @@ use Illuminate\Contracts\Console\Kernel;
 
 echo "=== Current AI Provider ===\n";
 echo 'Provider: '.Setting::get('ai_provider', 'not set')."\n";
-echo 'Cloudflare model: '.Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct')."\n\n";
+echo 'Cloudflare model: '.Setting::get('cloudflare_grading_model', '@cf/meta/llama-3.1-8b-instruct')."\n\n";
 
 $service = app(AiQuestionGeneratorService::class);
 

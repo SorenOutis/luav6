@@ -70,19 +70,39 @@ class CloudflareAIService
             $data = $response->json();
 
             // Cloudflare Workers AI response structure
-            if (isset($data['result']['response'])) {
-                return $data['result']['response'];
+            $responseText = $data['result']['response'] ?? $data['response'] ?? null;
+
+            if ($responseText === null) {
+                throw new \Exception('Unexpected response format from Cloudflare Workers AI');
             }
 
-            if (isset($data['response'])) {
-                return $data['response'];
-            }
+            $this->trackUsage($instructions, $history, $prompt, $responseText);
 
-            throw new \Exception('Unexpected response format from Cloudflare Workers AI');
+            return $responseText;
         } catch (\Exception $e) {
             Log::error('CloudflareAIService Error: '.$e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Record an estimate of the tokens/neurons consumed by a chat exchange.
+     */
+    private function trackUsage(string $instructions, array $history, string $prompt, string $responseText): void
+    {
+        $inputChars = strlen($instructions) + strlen($prompt);
+        foreach ($history as $message) {
+            $inputChars += strlen((string) ($message['content'] ?? ''));
+        }
+
+        app(AiUsageTracker::class)->record(
+            'cloudflare',
+            $this->model,
+            'chat',
+            AiUsageTracker::tokensFromChars($inputChars),
+            // Cast: a malformed (non-string) response must not break the chat.
+            AiUsageTracker::tokensFromChars(strlen((string) $responseText)),
+        );
     }
 
     /**

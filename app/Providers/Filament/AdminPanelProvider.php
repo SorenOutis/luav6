@@ -9,6 +9,7 @@ use App\Filament\Widgets\AdminAnalyticsOverview;
 use App\Filament\Widgets\AdminCommandCenterWidget;
 use App\Filament\Widgets\ExamPerformanceWidget;
 use App\Filament\Widgets\LatestExamSubmissionsWidget;
+use App\Filament\Widgets\NeuronUsageWidget;
 use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\SeasonProgressWidget;
 use App\Filament\Widgets\SectionComparisonWidget;
@@ -67,6 +68,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AdminCommandCenterWidget::class,
                 AdminAnalyticsOverview::class,
+                NeuronUsageWidget::class,
                 SeasonProgressWidget::class,
                 AdminActivityTrendChart::class,
                 ExamPerformanceWidget::class,

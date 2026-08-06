@@ -62,7 +62,10 @@ class AIService
     {
         $this->cloudflareAccountId = Setting::get('cloudflare_account_id');
         $this->cloudflareApiToken = Setting::get('cloudflare_api_token');
-        $this->cloudflareModel = Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
+        // Grading has its own model setting so the chat widget can use a
+        // different (e.g. cheaper/faster) model. Backfill from the legacy
+        // cloudflare_model setting until an admin picks a grading model.
+        $this->cloudflareModel = Setting::get('cloudflare_grading_model') ?? Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
     }
 
     private function loadGroqSettings(): void
@@ -122,11 +125,15 @@ class AIService
 
         // Dispatch to the configured AI provider
         try {
-            return match ($this->provider) {
+            $results = match ($this->provider) {
                 'cloudflare' => $this->batchAssessWithCloudflare($essays),
                 'groq' => $this->batchAssessWithGroq($essays),
                 default => $this->batchAssessWithGemini($essays),
             };
+
+            $this->trackUsage($essays, $results);
+
+            return $results;
         } catch (\Throwable $e) {
             Log::warning("AI provider '{$this->provider}' failed for essay grading: ".$e->getMessage());
 
@@ -164,6 +171,43 @@ class AIService
                 'includeFeedback' => $includeFeedback,
             ],
         ])[0] ?? ['score' => 0.0];
+    }
+
+    /**
+     * Record an estimate of the tokens/neurons consumed by a grading batch.
+     */
+    private function trackUsage(array $essays, array $results): void
+    {
+        $inputChars = 0;
+        foreach ($essays as $essay) {
+            $inputChars += strlen((string) ($essay['essayText'] ?? ''))
+                + strlen((string) ($essay['questionText'] ?? ''));
+        }
+        // The static rubric + JSON instructions are ~1,400 chars of prompt
+        // overhead per essay call.
+        $inputChars += count($essays) * 1500;
+
+        $outputChars = 0;
+        foreach ($results as $result) {
+            $outputChars += strlen((string) ($result['feedback'] ?? ''));
+        }
+        // Small JSON wrapper around each score payload.
+        $outputChars += count($results) * 24;
+
+        $model = match ($this->provider) {
+            'cloudflare' => $this->cloudflareModel,
+            'groq' => $this->groqModel,
+            'gemini' => $this->geminiModel,
+            default => null,
+        };
+
+        app(AiUsageTracker::class)->record(
+            $this->provider,
+            $model,
+            'grading',
+            AiUsageTracker::tokensFromChars($inputChars),
+            AiUsageTracker::tokensFromChars($outputChars),
+        );
     }
 
     // ──────────────────────────────────────────────

@@ -52,7 +52,10 @@ class AiSettings extends Page implements HasSchemas
             'ai_provider' => Setting::get('ai_provider', 'gemini'),
             'cloudflare_account_id' => Setting::get('cloudflare_account_id'),
             'cloudflare_api_token' => Setting::get('cloudflare_api_token'),
-            'cloudflare_model' => Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct'),
+            'cloudflare_model' => Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash'),
+            // Backfill: until an admin picks a grading model explicitly, keep
+            // using whatever cloudflare_model was set to (existing installs).
+            'cloudflare_grading_model' => Setting::get('cloudflare_grading_model') ?? Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct'),
             'groq_api_key' => Setting::get('groq_api_key'),
             'groq_model' => Setting::get('groq_model', 'llama-3.1-8b-instant'),
             'ollama_url' => Setting::get('ollama_url', 'http://localhost:11434'),
@@ -140,15 +143,28 @@ class AiSettings extends Page implements HasSchemas
                             ]),
 
                         Select::make('cloudflare_model')
-                            ->label('Cloudflare Model')
+                            ->label('AI Chat Model')
                             ->options([
+                                '@cf/zai-org/glm-4.7-flash' => 'GLM 4.7 Flash (fast, great for chat)',
                                 '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (recommended)',
                                 '@cf/meta/llama-3.1-8b-instruct-fast' => 'Llama 3.1 8B Fast (faster)',
                                 '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
                                 '@cf/meta/llama-3.2-1b-instruct' => 'Llama 3.2 1B (Ultra Fast)',
                             ])
+                            ->default('@cf/zai-org/glm-4.7-flash')
+                            ->helperText('Used by the floating chat widget. Only applies when the provider is Cloudflare.')
+                            ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
+
+                        Select::make('cloudflare_grading_model')
+                            ->label('AI Grading Model')
+                            ->options([
+                                '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (most accurate)',
+                                '@cf/meta/llama-3.1-8b-instruct-fp8-fast' => 'Llama 3.1 8B FP8 Fast (~5x cheaper, near-identical quality)',
+                                '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
+                                '@cf/meta/llama-3.2-1b-instruct' => 'Llama 3.2 1B (Ultra Fast, cheapest)',
+                            ])
                             ->default('@cf/meta/llama-3.1-8b-instruct')
-                            ->helperText('Llama 3.1 models are stable and well-tested. Use Llama 3.2 1B for ultra-fast responses.')
+                            ->helperText('Used for essay grading and AI question/source generation. FP8 Fast is the cost/quality sweet spot.')
                             ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
 
                         TextInput::make('groq_api_key')
@@ -261,7 +277,8 @@ class AiSettings extends Page implements HasSchemas
             Setting::set('ai_provider', $data['ai_provider'] ?? 'gemini');
             Setting::set('cloudflare_account_id', $data['cloudflare_account_id'] ?? null);
             Setting::set('cloudflare_api_token', $data['cloudflare_api_token'] ?? null);
-            Setting::set('cloudflare_model', $data['cloudflare_model'] ?? '@cf/meta/llama-3.1-8b-instruct');
+            Setting::set('cloudflare_model', $data['cloudflare_model'] ?? '@cf/zai-org/glm-4.7-flash');
+            Setting::set('cloudflare_grading_model', $data['cloudflare_grading_model'] ?? '@cf/meta/llama-3.1-8b-instruct');
             Setting::set('groq_api_key', $data['groq_api_key'] ?? null);
             Setting::set('groq_model', $data['groq_model'] ?? 'llama-3.1-8b-instant');
             Setting::set('ollama_url', $data['ollama_url'] ?? 'http://localhost:11434');
