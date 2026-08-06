@@ -25,9 +25,18 @@ class UsersRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                TextInput::make('name')
+                TextInput::make('first_name')
+                    ->label('First name')
                     ->required()
                     ->maxLength(255),
+                TextInput::make('last_name')
+                    ->label('Last name')
+                    ->required()
+                    ->maxLength(255),
+                TextInput::make('middle_name')
+                    ->label('Middle name (optional)')
+                    ->maxLength(255)
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -38,6 +47,18 @@ class UsersRelationManager extends RelationManager
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('first_name')
+                    ->label('First')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('middle_name')
+                    ->label('Middle')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('last_name')
+                    ->label('Last')
+                    ->placeholder('-')
+                    ->toggleable(),
                 TextColumn::make('email')
                     ->searchable()
                     ->sortable(),

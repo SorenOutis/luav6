@@ -60,7 +60,9 @@ const showPassword = ref(false);
 // reads FormData from the DOM, so all steps stay mounted — hidden
 // via CSS, never unmounted).
 const formData = reactive({
-    name: '',
+    first_name: '',
+    middle_name: '',
+    last_name: '',
     email: '',
     password: '',
     password_confirmation: '',
@@ -71,7 +73,9 @@ const formData = reactive({
 // been interacted with (blurred, typed into, or a step was submitted),
 // its errors stay visible until the field becomes valid again.
 const touched = reactive<Record<string, boolean>>({
-    name: false,
+    first_name: false,
+    middle_name: false,
+    last_name: false,
     email: false,
     password: false,
     password_confirmation: false,
@@ -80,9 +84,17 @@ const touched = reactive<Record<string, boolean>>({
 
 const stepFields: Record<
     number,
-    Array<'name' | 'email' | 'password' | 'password_confirmation' | 'terms'>
+    Array<
+        | 'first_name'
+        | 'middle_name'
+        | 'last_name'
+        | 'email'
+        | 'password'
+        | 'password_confirmation'
+        | 'terms'
+    >
 > = {
-    0: ['name', 'email'],
+    0: ['first_name', 'middle_name', 'last_name', 'email'],
     1: ['password', 'password_confirmation'],
     2: ['terms'],
     3: [],
@@ -93,9 +105,19 @@ const stepFields: Record<
 // ─────────────────────────────────────────────────────────────
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const nameValid = computed(() => {
-    const name = formData.name.trim();
-    return name.length >= 2 && name.length <= 255;
+const firstNameValid = computed(() => {
+    const first = formData.first_name.trim();
+    return first.length >= 2 && first.length <= 255;
+});
+
+// Middle name is optional — valid when empty or within the length limit.
+const middleNameValid = computed(
+    () => formData.middle_name.trim().length <= 255,
+);
+
+const lastNameValid = computed(() => {
+    const last = formData.last_name.trim();
+    return last.length >= 2 && last.length <= 255;
 });
 
 const emailValid = computed(() => EMAIL_PATTERN.test(formData.email.trim()));
@@ -117,7 +139,8 @@ const confirmValid = computed(
 const consentValid = computed(() => formData.terms);
 
 const canProceed = computed(() => {
-    if (currentStep.value === 0) return nameValid.value && emailValid.value;
+    if (currentStep.value === 0)
+        return firstNameValid.value && middleNameValid.value && lastNameValid.value && emailValid.value;
     if (currentStep.value === 1) return passwordValid.value && confirmValid.value;
     if (currentStep.value === 2) return consentValid.value;
     return true;
@@ -163,8 +186,14 @@ const meterSegmentClass = (segment: number): string => {
 // Live per-field errors — derived from touched state + current validity.
 const liveErrors = computed<Record<string, string>>(() => {
     const errors: Record<string, string> = {};
-    if (touched.name && !nameValid.value) {
-        errors.name = 'Please enter your full name (2-255 characters).';
+    if (touched.first_name && !firstNameValid.value) {
+        errors.first_name = 'Please enter your first name (2-255 characters).';
+    }
+    if (touched.last_name && !lastNameValid.value) {
+        errors.last_name = 'Please enter your last name (2-255 characters).';
+    }
+    if (touched.middle_name && !middleNameValid.value) {
+        errors.middle_name = 'Middle name must be 255 characters or less.';
     }
     if (touched.email) {
         if (!formData.email.trim()) {
@@ -258,7 +287,7 @@ const jumpTo = (step: number): void => {
 // that owns the offending field so the error is visible in context.
 const handleSubmitError = (payload: unknown): void => {
     const errs = (payload ?? {}) as Record<string, unknown>;
-    if (errs.name || errs.email) jumpTo(0);
+    if (errs.first_name || errs.middle_name || errs.last_name || errs.email) jumpTo(0);
     else if (errs.password || errs.password_confirmation) jumpTo(1);
     else if (errs.terms) jumpTo(2);
 };
@@ -462,21 +491,58 @@ onBeforeUnmount(() => {
                 :class="stepClass(0)"
             >
                 <div class="grid gap-5">
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <AnimatedInput
+                                id="first_name"
+                                v-model="formData.first_name"
+                                type="text"
+                                required
+                                :tabindex="1"
+                                autocomplete="given-name"
+                                name="first_name"
+                                label="First name"
+                                @blur="touched.first_name = true"
+                                @keydown.enter.prevent="goNext"
+                            />
+                            <InputError
+                                :message="liveErrors.first_name || errors.first_name"
+                            />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <AnimatedInput
+                                id="last_name"
+                                v-model="formData.last_name"
+                                type="text"
+                                required
+                                :tabindex="2"
+                                autocomplete="family-name"
+                                name="last_name"
+                                label="Last name"
+                                @blur="touched.last_name = true"
+                                @keydown.enter.prevent="goNext"
+                            />
+                            <InputError
+                                :message="liveErrors.last_name || errors.last_name"
+                            />
+                        </div>
+                    </div>
+
                     <div class="grid gap-2">
                         <AnimatedInput
-                            id="name"
-                            v-model="formData.name"
+                            id="middle_name"
+                            v-model="formData.middle_name"
                             type="text"
-                            required
-                            :tabindex="1"
-                            autocomplete="name"
-                            name="name"
-                            label="Full name"
-                            @blur="touched.name = true"
+                            :tabindex="3"
+                            autocomplete="additional-name"
+                            name="middle_name"
+                            label="Middle name (optional)"
+                            @blur="touched.middle_name = true"
                             @keydown.enter.prevent="goNext"
                         />
                         <InputError
-                            :message="liveErrors.name || errors.name"
+                            :message="liveErrors.middle_name || errors.middle_name"
                         />
                     </div>
 
@@ -486,7 +552,7 @@ onBeforeUnmount(() => {
                             v-model="formData.email"
                             type="email"
                             required
-                            :tabindex="2"
+                            :tabindex="4"
                             autocomplete="email"
                             name="email"
                             label="Email address"
@@ -686,7 +752,15 @@ onBeforeUnmount(() => {
                                     <p
                                         class="truncate text-sm font-semibold text-foreground"
                                     >
-                                        {{ formData.name || '—' }}
+                                        {{
+                                            [
+                                                formData.first_name,
+                                                formData.middle_name,
+                                                formData.last_name,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' ') || '—'
+                                        }}
                                     </p>
                                 </div>
                                 <button

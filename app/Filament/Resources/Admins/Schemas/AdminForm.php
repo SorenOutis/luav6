@@ -18,11 +18,23 @@ class AdminForm
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                TextInput::make('name')
-                                    ->label('Admin Name')
+                                TextInput::make('first_name')
+                                    ->label('First name')
                                     ->required()
                                     ->maxLength(255)
                                     ->prefixIcon('heroicon-m-user'),
+
+                                TextInput::make('last_name')
+                                    ->label('Last name')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->prefixIcon('heroicon-m-user'),
+
+                                TextInput::make('middle_name')
+                                    ->label('Middle name (optional)')
+                                    ->maxLength(255)
+                                    ->prefixIcon('heroicon-m-user')
+                                    ->columnSpanFull(),
 
                                 TextInput::make('email')
                                     ->label('Email Address')
@@ -47,7 +59,8 @@ class AdminForm
                                     ->required(fn (string $operation): bool => $operation === 'create')
                                     ->dehydrated(false)
                                     ->minLength(8)
-                                    ->prefixIcon('heroicon-m-lock-closed'),
+                                    ->prefixIcon('heroicon-m-lock-closed')
+                                    ->columnSpanFull(),
                             ]),
                     ]),
             ]);

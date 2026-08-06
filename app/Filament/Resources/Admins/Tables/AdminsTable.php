@@ -19,6 +19,18 @@ class AdminsTable
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('first_name')
+                    ->label('First')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('middle_name')
+                    ->label('Middle')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('last_name')
+                    ->label('Last')
+                    ->placeholder('-')
+                    ->toggleable(),
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),

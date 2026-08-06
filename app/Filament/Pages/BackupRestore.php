@@ -453,7 +453,10 @@ class BackupRestore extends Page implements HasActions, HasSchemas, HasTable
         } else {
             // Create the admin user
             $adminId = DB::table('users')->insertGetId([
-                'name' => 'Admin',
+                'name' => 'Admin User',
+                'first_name' => 'Admin',
+                'middle_name' => null,
+                'last_name' => 'User',
                 'email' => 'admin@example.com',
                 'password' => Hash::make('password'),
                 'is_admin' => true,

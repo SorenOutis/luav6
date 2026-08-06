@@ -15,7 +15,9 @@ trait ProfileValidationRules
     protected function profileRules(?int $userId = null): array
     {
         return [
-            'name' => $this->nameRules(),
+            'first_name' => $this->nameRules(),
+            'middle_name' => ['nullable', 'string', 'max:255'],
+            'last_name' => $this->nameRules(),
             'email' => $this->emailRules($userId),
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:10240'],
             'cover_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:10240'],
@@ -23,7 +25,7 @@ trait ProfileValidationRules
     }
 
     /**
-     * Get the validation rules used to validate user names.
+     * Get the validation rules used to validate a required name part.
      *
      * @return array<int, \Illuminate\Contracts\Validation\Rule|array<mixed>|string>
      */

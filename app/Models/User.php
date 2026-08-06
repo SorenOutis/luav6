@@ -31,6 +31,9 @@ class User extends Authenticatable implements FilamentUser
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'middle_name',
+        'last_name',
         'email',
         'password',
         'points',
@@ -56,6 +59,89 @@ class User extends Authenticatable implements FilamentUser
     public function isSuperAdmin(): bool
     {
         return $this->is_admin && $this->is_super_admin;
+    }
+
+    /**
+     * Split a full name into first / middle / last parts.
+     *
+     * @return array{0: string, 1: string, 2: string}
+     */
+    protected function splitName(?string $value): array
+    {
+        $parts = array_values(array_filter(
+            preg_split('/\s+/', trim((string) $value)) ?: [],
+            static fn ($part): bool => $part !== ''
+        ));
+
+        if (count($parts) === 0) {
+            return ['', '', ''];
+        }
+
+        if (count($parts) === 1) {
+            return [$parts[0], '', ''];
+        }
+
+        $first = $parts[0];
+        $last = $parts[count($parts) - 1];
+        $middle = count($parts) > 2
+            ? implode(' ', array_slice($parts, 1, -1))
+            : '';
+
+        return [$first, $middle, $last];
+    }
+
+    /**
+     * Compose the full name from the three name parts.
+     */
+    protected function composeName(): string
+    {
+        return trim(implode(' ', array_filter([
+            $this->attributes['first_name'] ?? '',
+            $this->attributes['middle_name'] ?? '',
+            $this->attributes['last_name'] ?? '',
+        ])));
+    }
+
+    /**
+     * Keep the name parts in sync when the full name is assigned directly
+     * (legacy paths such as factories, seeders, and CLI commands).
+     */
+    public function setNameAttribute($value): void
+    {
+        $this->attributes['name'] = $value;
+
+        [$first, $middle, $last] = $this->splitName($value);
+
+        $this->attributes['first_name'] = $first;
+        $this->attributes['middle_name'] = $middle;
+        $this->attributes['last_name'] = $last;
+    }
+
+    /**
+     * Keep the full name column in sync when the first name changes.
+     */
+    public function setFirstNameAttribute($value): void
+    {
+        $this->attributes['first_name'] = $value;
+        $this->attributes['name'] = $this->composeName();
+    }
+
+    /**
+     * Keep the full name column in sync when the middle name changes.
+     */
+    public function setMiddleNameAttribute($value): void
+    {
+        $this->attributes['middle_name'] = $value;
+        $this->attributes['name'] = $this->composeName();
+    }
+
+    /**
+     * Keep the full name column in sync when the last name changes.
+     */
+    public function setLastNameAttribute($value): void
+    {
+        $this->attributes['last_name'] = $value;
+        $this->attributes['name'] = $this->composeName();
     }
 
     public function seasonProgress()

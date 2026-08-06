@@ -1,6 +1,9 @@
 export type User = {
     id: number;
     name: string;
+    first_name: string | null;
+    middle_name: string | null;
+    last_name: string | null;
     email: string;
     avatar?: string;
     is_banned?: boolean;

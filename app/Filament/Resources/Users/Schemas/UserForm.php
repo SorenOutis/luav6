@@ -28,9 +28,21 @@ class UserForm
                             ->schema([
                                 Grid::make(2)
                                     ->schema([
-                                        TextInput::make('name')
+                                        TextInput::make('first_name')
+                                            ->label('First name')
                                             ->required()
+                                            ->maxLength(255)
                                             ->prefixIcon('heroicon-m-user'),
+                                        TextInput::make('last_name')
+                                            ->label('Last name')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->prefixIcon('heroicon-m-user'),
+                                        TextInput::make('middle_name')
+                                            ->label('Middle name (optional)')
+                                            ->maxLength(255)
+                                            ->prefixIcon('heroicon-m-user')
+                                            ->columnSpanFull(),
                                         TextInput::make('email')
                                             ->label('Email address')
                                             ->email()
@@ -43,7 +55,8 @@ class UserForm
                                             ->required(fn (string $operation): bool => $operation === 'create')
                                             ->prefixIcon('heroicon-m-lock-closed'),
                                         DateTimePicker::make('email_verified_at')
-                                            ->prefixIcon('heroicon-m-check-badge'),
+                                            ->prefixIcon('heroicon-m-check-badge')
+                                            ->columnSpanFull(),
                                         Toggle::make('is_admin')
                                             ->label('Administrator Access')
                                             ->helperText('Grant full access to the admin panel')

@@ -240,18 +240,56 @@ const leaveSection = (sectionId: number) => {
                         <InputError :message="errors.cover_photo" />
                     </div>
 
+                    <div class="grid gap-5 sm:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="first_name">First name</Label>
+                            <Input
+                                id="first_name"
+                                class="mt-1 block w-full"
+                                name="first_name"
+                                :default-value="user.first_name ?? ''"
+                                required
+                                autocomplete="given-name"
+                                placeholder="First name"
+                            />
+                            <InputError
+                                class="mt-2"
+                                :message="errors.first_name"
+                            />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="last_name">Last name</Label>
+                            <Input
+                                id="last_name"
+                                class="mt-1 block w-full"
+                                name="last_name"
+                                :default-value="user.last_name ?? ''"
+                                required
+                                autocomplete="family-name"
+                                placeholder="Last name"
+                            />
+                            <InputError
+                                class="mt-2"
+                                :message="errors.last_name"
+                            />
+                        </div>
+                    </div>
+
                     <div class="grid gap-2">
-                        <Label for="name">Name</Label>
+                        <Label for="middle_name">Middle name (optional)</Label>
                         <Input
-                            id="name"
+                            id="middle_name"
                             class="mt-1 block w-full"
-                            name="name"
-                            :default-value="user.name"
-                            required
-                            autocomplete="name"
-                            placeholder="Full name"
+                            name="middle_name"
+                            :default-value="user.middle_name ?? ''"
+                            autocomplete="additional-name"
+                            placeholder="Middle name"
                         />
-                        <InputError class="mt-2" :message="errors.name" />
+                        <InputError
+                            class="mt-2"
+                            :message="errors.middle_name"
+                        />
                     </div>
 
                     <div class="grid gap-2">
