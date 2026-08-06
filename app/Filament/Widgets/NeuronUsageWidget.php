@@ -42,6 +42,11 @@ class NeuronUsageWidget extends StatsOverviewWidget
 
         $color = $percent >= 80 ? 'danger' : ($percent >= 50 ? 'warning' : 'success');
 
+        // Filament v5.x Stat has no progress() method, so render a compact
+        // text bar (10 blocks) as a version-safe visual.
+        $filled = (int) min(10, round(($percent / 100) * 10));
+        $bar = str_repeat('█', $filled).str_repeat('░', 10 - $filled);
+
         $provider = Setting::get('ai_provider', 'gemini');
 
         $callDescription = sprintf(
@@ -61,10 +66,9 @@ class NeuronUsageWidget extends StatsOverviewWidget
 
         return [
             Stat::make('AI Neurons Today (est.)', number_format(round($today)).' / '.number_format($limit))
-                ->description('≈ '.$percent.'% used · free cap resets 00:00 UTC')
+                ->description($bar.' '.$percent.'% used · free cap resets 00:00 UTC')
                 ->descriptionIcon('heroicon-m-cpu-chip', IconPosition::Before)
                 ->icon('heroicon-o-sparkles')
-                ->progress(min(100, $percent))
                 ->chart($weekSeries)
                 ->color($color),
 
