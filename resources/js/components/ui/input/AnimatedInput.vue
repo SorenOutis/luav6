@@ -40,14 +40,14 @@ const chars = computed(() => props.label.split(''))
 <template>
   <div :class="cn('relative pt-4', props.class)">
     <div
-      class="absolute top-1/2 -translate-y-1/2 pointer-events-none text-zinc-900 dark:text-zinc-50 flex mt-2"
+      class="absolute top-1/2 -translate-y-1/2 pointer-events-none text-foreground flex mt-2"
     >
       <span
         v-for="(char, index) in chars"
         :key="index"
         class="inline-block text-sm"
         :class="{
-          '-translate-y-[120%] text-zinc-500': showLabel,
+          '-translate-y-[120%] text-muted-foreground': showLabel,
           'translate-y-0 text-inherit': !showLabel
         }"
         :style="{
@@ -66,7 +66,7 @@ const chars = computed(() => props.label.split(''))
       @blur="isFocused = false"
       @input="onInput"
       v-bind="$attrs"
-      class="outline-none border-b-2 border-zinc-900 dark:border-zinc-50 py-2 w-full text-base font-medium text-zinc-900 dark:text-zinc-50 bg-transparent placeholder-transparent"
+      class="outline-none border-b-2 border-foreground py-2 w-full text-base font-medium text-foreground bg-transparent placeholder-transparent"
     />
   </div>
 </template>
@@ -77,14 +77,7 @@ input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
 input:-webkit-autofill:active {
-    -webkit-text-fill-color: #18181b !important; /* zinc-900 */
+    -webkit-text-fill-color: var(--color-foreground) !important;
     transition: background-color 5000s ease-in-out 0s;
-}
-
-.dark input:-webkit-autofill,
-.dark input:-webkit-autofill:hover, 
-.dark input:-webkit-autofill:focus, 
-.dark input:-webkit-autofill:active {
-    -webkit-text-fill-color: #fafafa !important; /* zinc-50 */
 }
 </style>

@@ -27,20 +27,23 @@ defineProps<{
             >
                 <div class="flex h-9 w-9 items-center justify-center">
                     <AppLogoIcon
-                        class="size-9 fill-current text-black dark:text-white"
+                        class="size-9 fill-current text-foreground"
                     />
                 </div>
             </Link>
 
             <div class="flex flex-col gap-6">
-                <Card class="rounded-xl">
-                    <CardHeader class="px-10 pt-8 pb-0 text-center">
+                <Card class="rounded-xl py-0">
+                    <CardHeader
+                        v-if="title || description"
+                        class="px-6 pt-8 pb-0 text-center sm:px-10"
+                    >
                         <CardTitle class="text-xl">{{ title }}</CardTitle>
                         <CardDescription>
                             {{ description }}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent class="px-10 py-8">
+                    <CardContent class="px-6 py-8 sm:px-10">
                         <slot />
                     </CardContent>
                 </Card>

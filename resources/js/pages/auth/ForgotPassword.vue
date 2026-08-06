@@ -3,10 +3,9 @@ import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/AuthLayout.vue';
+import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
 import { withForm } from '@/lib/route-helpers';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
@@ -15,20 +14,20 @@ defineProps<{
     status?: string;
 }>();
 
-defineOptions({ layout: AuthLayout });
+defineOptions({ layout: AuthCard });
 </script>
 
 <template>
     <Head title="Forgot password" />
 
-    <div class="space-y-3">
+    <div class="text-center">
         <h1
-            class="text-3xl leading-tight font-black tracking-tighter text-foreground uppercase sm:text-4xl"
+            class="text-2xl leading-tight font-bold tracking-tight text-foreground"
         >
             Forgot password
         </h1>
         <p
-            class="max-w-xs text-sm font-medium tracking-wide text-muted-foreground/60"
+            class="mx-auto mt-1.5 max-w-xs text-sm font-normal text-muted-foreground"
         >
             Enter your email to receive a password reset link
         </p>
@@ -36,7 +35,7 @@ defineOptions({ layout: AuthLayout });
 
     <div
         v-if="status"
-        class="mb-4 text-center text-sm font-medium text-green-600"
+        class="mb-4 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400"
     >
         {{ status }}
     </div>
@@ -44,33 +43,35 @@ defineOptions({ layout: AuthLayout });
     <div class="space-y-6">
         <Form v-bind="withForm(email).form()" v-slot="{ errors, processing }">
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
-                <Input
+                <AnimatedInput
                     id="email"
                     type="email"
                     name="email"
                     autocomplete="off"
                     autofocus
-                    placeholder="email@example.com"
+                    :tabindex="1"
+                    label="Email address"
                 />
                 <InputError :message="errors.email" />
             </div>
 
-            <div class="my-6 flex items-center justify-start">
+            <div class="mt-6 flex items-center justify-start">
                 <Button
+                    type="submit"
                     class="w-full"
+                    :tabindex="2"
                     :disabled="processing"
                     data-test="email-password-reset-link-button"
                 >
-                    <Spinner v-if="processing" />
-                    Email password reset link
+                    <Spinner v-if="processing" class="mr-2" />
+                    {{ processing ? 'Sending link...' : 'Email password reset link' }}
                 </Button>
             </div>
         </Form>
 
         <div class="space-x-1 text-center text-sm text-muted-foreground">
             <span>Or, return to</span>
-            <TextLink :href="login()">log in</TextLink>
+            <TextLink :href="login()" :tabindex="3">log in</TextLink>
         </div>
     </div>
 </template>

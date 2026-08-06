@@ -10,7 +10,7 @@ import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import AnimatedInput from '@/components/ui/input/AnimatedInput.vue';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import AuthBase from '@/layouts/AuthLayout.vue';
+import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
 import { withForm } from '@/lib/route-helpers';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
@@ -24,7 +24,7 @@ const props = defineProps<{
     loginDisabledMessage: string;
 }>();
 
-defineOptions({ layout: AuthBase });
+defineOptions({ layout: AuthCard });
 
 const submitting = ref(false);
 const showDisabledModal = ref(false);
@@ -45,14 +45,14 @@ const onSubmit = (event: Event) => {
 <template>
     <Head title="Log in" />
 
-    <div class="space-y-3">
+    <div class="text-center">
         <h1
-            class="text-3xl leading-tight font-black tracking-tighter text-foreground uppercase sm:text-4xl"
+            class="text-2xl leading-tight font-bold tracking-tight text-foreground"
         >
             Log in to your account
         </h1>
         <p
-            class="max-w-xs text-sm font-medium tracking-wide text-muted-foreground/60"
+            class="mx-auto mt-1.5 max-w-xs text-sm font-normal text-muted-foreground"
         >
             Enter your email and password below to log in
         </p>
@@ -60,7 +60,7 @@ const onSubmit = (event: Event) => {
 
     <div
         v-if="status"
-        class="mb-4 text-center text-sm font-medium text-green-600"
+        class="mb-4 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400"
     >
         {{ status }}
     </div>
