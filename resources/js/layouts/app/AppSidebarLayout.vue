@@ -7,6 +7,7 @@ import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
 import FloatingWidget from '@/components/FloatingWidget.vue';
 import MobileNav from '@/components/MobileNav.vue';
+import SeoHead from '@/components/Seo/SeoHead.vue';
 import type { BreadcrumbItem } from '@/types';
 
 type Props = {
@@ -37,6 +38,7 @@ const contentClass = computed(() =>
 </script>
 
 <template>
+    <SeoHead noindex />
     <AppShell variant="sidebar">
         <AppSidebar v-if="!props.hideSidebar" />
         <AppContent variant="sidebar" :class="contentClass">

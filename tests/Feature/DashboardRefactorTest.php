@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Services\LeaderboardService;
 use App\Services\StreakService;
 use App\Services\UpcomingExamsService;
+use Illuminate\Support\Facades\DB;
 
 use function Pest\Laravel\actingAs;
 
@@ -170,6 +171,60 @@ it('serves the same leaderboard shape over the api', function () {
         'leaderboards' => [['sectionId', 'sectionName', 'users', 'userRank', 'totalPlayers']],
         'selectedSeason' => ['id', 'name'],
     ]);
+});
+
+it('computes weekly XP and trends from gamification history', function () {
+    [$user, $section, $season] = dashboardContext();
+
+    $climber = User::factory()->create();
+    $climber->sections()->attach($section->id, ['season_id' => $season->id]);
+
+    $slumper = User::factory()->create();
+    $slumper->sections()->attach($section->id, ['season_id' => $season->id]);
+
+    // This week: climber earned 100 XP, slumper earned nothing.
+    // Last week: climber earned 50 XP, slumper earned 20 XP.
+    DB::table('gamification_histories')->insert([
+        [
+            'user_id' => $climber->id,
+            'amount_xp' => 100,
+            'amount_points' => 0,
+            'reason' => 'Exam Submission',
+            'created_at' => now()->subDays(1),
+            'updated_at' => now()->subDays(1),
+        ],
+        [
+            'user_id' => $climber->id,
+            'amount_xp' => 50,
+            'amount_points' => 0,
+            'reason' => 'Exam Submission',
+            'created_at' => now()->subDays(10),
+            'updated_at' => now()->subDays(10),
+        ],
+        [
+            'user_id' => $slumper->id,
+            'amount_xp' => 20,
+            'amount_points' => 0,
+            'reason' => 'Exam Submission',
+            'created_at' => now()->subDays(10),
+            'updated_at' => now()->subDays(10),
+        ],
+    ]);
+
+    $boards = app(LeaderboardService::class)->forUserSections($user, $season);
+
+    $climberEntry = collect($boards[0]['users'])->firstWhere('id', $climber->id);
+    $slumperEntry = collect($boards[0]['users'])->firstWhere('id', $slumper->id);
+    $userEntry = collect($boards[0]['users'])->firstWhere('id', $user->id);
+
+    expect($climberEntry['weeklyXp'])->toBe(100)
+        ->and($climberEntry['trend'])->toBe('up');
+
+    expect($slumperEntry['weeklyXp'])->toBe(0)
+        ->and($slumperEntry['trend'])->toBe('down');
+
+    expect($userEntry['weeklyXp'])->toBe(0)
+        ->and($userEntry['trend'])->toBe('stable');
 });
 
 // ─────────────────────────────────────────────

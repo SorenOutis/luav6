@@ -20,7 +20,9 @@ use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicProfileController;
+use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +31,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', WelcomeController::class)->name('home');
 Route::get('/about', AboutController::class)->name('about');
 Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
+
+// ─── Crawler-facing routes ────────────────────────────────────────────────
+
+Route::get('/robots.txt', RobotsController::class);
+Route::get('/sitemap.xml', SitemapController::class);
 
 // ─── Authenticated routes ─────────────────────────────────────────────────
 

@@ -44,6 +44,14 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'seo' => [
+                'siteName' => config('seo.site_name'),
+                'tagline' => config('seo.tagline'),
+                'description' => config('seo.description'),
+                'siteUrl' => config('app.url'),
+                'ogImage' => config('seo.og_image'),
+                'locale' => config('seo.locale'),
+            ],
             'notifications' => fn () => $request->user() ? [
                 'unreadCount' => $request->user()->unreadNotifications()->count(),
                 'items' => $request->user()->notifications()

@@ -22,6 +22,7 @@ import {
     ArrowRight,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
+import SeoHead from '@/components/Seo/SeoHead.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import { syncLenisWithGsap } from '@/composables/useLenis';
@@ -151,6 +152,28 @@ const resetDemo = () => {
     selectedAnswer.value = null;
 };
 
+const seoJsonLd = computed(() => [
+    {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: 'LSI Learning Engine',
+        alternateName: 'Learning Systems Intelligence',
+        description:
+            'A school-ready learning platform for exams, assignments, grades, and AI feedback.',
+        url:
+            typeof window !== 'undefined' ? window.location.origin : undefined,
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map((f) => ({
+            '@type': 'Question',
+            name: f.q,
+            acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+    },
+]);
+
 onMounted(() => {
     lenisCleanup = syncLenisWithGsap(ScrollTrigger);
 
@@ -267,7 +290,12 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 </script>
 
 <template>
-    <Head title="About | LSI Learning Engine" />
+    <Head title="About" />
+    <SeoHead
+        :description="'LSI is a school-ready assessment and learning platform. We turn every exam, assignment, and quiz into a feedback loop students actually want to engage with.'"
+        type="article"
+        :jsonld="seoJsonLd"
+    />
 
     <div
         ref="root"

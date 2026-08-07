@@ -8,6 +8,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 gsap.registerPlugin(ScrollTrigger);
 
 // Only the essential sub-components
+import SeoHead from '@/components/Seo/SeoHead.vue';
 import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
 import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
@@ -71,9 +72,27 @@ const { isCoarsePointer, prefersReducedMotion, isLowEndDevice } = useMobile();
 
 const { isTransitioningTheme } = useAppearance();
 
+// Low-end devices disable heavy animation even if the user hasn't set
+// prefers-reduced-motion. Treat both signals as one so every child component
+// (hero, feature cards, marquee, pricing) skips its continuous work on
+// coarse-pointer / low-memory / few-core devices.
+const effectiveReducedMotion = computed(
+    () => prefersReducedMotion.value || isLowEndDevice.value,
+);
+
 const brandAccentColor = computed(
     () => props.schoolBranding?.accentColor || '#f59e0b',
 );
+
+const webSiteJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'LSI Learning Engine',
+    alternateName: 'Learning Systems Intelligence',
+    description:
+        props.schoolBranding?.tagline ||
+        'School-ready online assessment, exams, and assignments',
+};
 
 // ─── Refs for GSAP targets ───
 const pageRoot = ref<HTMLElement | null>(null);
@@ -256,7 +275,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Welcome | LUAV Learning Engine" />
+    <Head title="School-Ready Assessments & Online Exams" />
+    <SeoHead
+        :description="'A school-ready learning platform for exams, assignments, grades, and AI feedback — with a clear path for every learner.'"
+        type="website"
+        :jsonld="webSiteJsonLd"
+    />
 
     <div
         ref="pageRoot"
@@ -306,7 +330,7 @@ onUnmounted(() => {
                 :register="() => register().url"
                 :is-booted="isBooted"
                 :is-coarse-pointer="isCoarsePointer"
-                :prefers-reduced-motion="prefersReducedMotion"
+                :prefers-reduced-motion="effectiveReducedMotion"
                 :branding="schoolBranding"
                 @watch-demo="openDemoVideo"
             >
@@ -325,7 +349,7 @@ onUnmounted(() => {
                 id="features"
                 class="reveal-section mt-24 scroll-mt-32"
                 :is-coarse-pointer="isCoarsePointer"
-                :prefers-reduced-motion="prefersReducedMotion"
+                :prefers-reduced-motion="effectiveReducedMotion"
                 :auth="$page.props.auth"
                 :dashboard="() => dashboard().url"
                 :login="() => login().url"
@@ -417,8 +441,8 @@ onUnmounted(() => {
                         class="block aspect-video w-full"
                         src="/videos/how-it-works.mp4?v=2"
                         poster="/videos/how-it-works.png"
-                        :autoplay="!prefersReducedMotion"
-                        :loop="!prefersReducedMotion"
+                        :autoplay="!effectiveReducedMotion"
+                        :loop="!effectiveReducedMotion"
                         muted
                         playsinline
                         :preload="isLowEndDevice ? 'metadata' : 'auto'"
@@ -493,7 +517,7 @@ onUnmounted(() => {
             <div class="reveal-section">
                 <TechStackCarousel
                     :is-coarse-pointer="isCoarsePointer"
-                    :prefers-reduced-motion="prefersReducedMotion"
+                    :prefers-reduced-motion="effectiveReducedMotion"
                 />
             </div>
 
@@ -503,7 +527,7 @@ onUnmounted(() => {
                 :login="() => login().url"
                 :register="() => register().url"
                 :is-coarse-pointer="isCoarsePointer"
-                :prefers-reduced-motion="prefersReducedMotion"
+                :prefers-reduced-motion="effectiveReducedMotion"
             />
         </main>
 

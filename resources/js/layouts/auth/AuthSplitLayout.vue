@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { Command, ArrowUpRight } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
+import SeoHead from '@/components/Seo/SeoHead.vue';
 import { home } from '@/routes';
 
 // Layout doesn't need title/description props anymore since pages provide them
@@ -201,6 +202,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+    <SeoHead noindex />
     <div
         class="theme-neutral-page relative flex min-h-svh overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
         :style="{ '--school-accent': brandAccentColor }"

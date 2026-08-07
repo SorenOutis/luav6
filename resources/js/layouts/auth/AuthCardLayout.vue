@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import SeoHead from '@/components/Seo/SeoHead.vue';
 import {
     Card,
     CardContent,
@@ -25,6 +26,7 @@ const branding = (page.props.schoolBranding ?? {}) as SchoolBranding;
 </script>
 
 <template>
+    <SeoHead noindex />
     <div
         class="theme-neutral-page flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10"
     >

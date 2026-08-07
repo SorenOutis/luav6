@@ -3,6 +3,8 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#f5f0e8">
+        <meta name="color-scheme" content="light dark">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -31,6 +33,7 @@
         </style>
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <meta name="description" content="{{ config('seo.description', '') }}">
 
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">

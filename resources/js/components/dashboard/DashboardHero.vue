@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { X, Plus, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
-import { computed } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
@@ -30,14 +29,11 @@ interface Props {
     userAvatar?: string;
     userStats: UserStats;
     announcements: Announcement[];
-    totalXPProgress: number;
     timeBasedGreeting: string;
     greetingTheme?: string;
     statusColor?: string;
-    accentBadge?: { text: string; theme: string };
     smarterStatus: string;
     isRefreshing?: boolean;
-    lastSyncTime?: Date;
 }
 
 const props = defineProps<Props>();
@@ -48,15 +44,6 @@ const emit = defineEmits([
 ]);
 
 const animatedLevel = useNumberAnimation(() => props.userStats.level);
-const animatedXP = useNumberAnimation(() => props.userStats.currentXP);
-const animatedMaxXP = useNumberAnimation(() => props.userStats.maxXPForLevel);
-
-const xpPercentage = computed(() => {
-    if (!props.userStats.maxXPForLevel) return 0;
-    const percent =
-        (props.userStats.currentXP / props.userStats.maxXPForLevel) * 100;
-    return Math.min(100, Math.max(0, percent));
-});
 </script>
 
 <template>
@@ -195,36 +182,17 @@ const xpPercentage = computed(() => {
                         <div
                             class="flex flex-wrap items-center gap-1.5 text-[7px] font-black tracking-[0.1em] text-muted-foreground/40 uppercase sm:text-[10px] sm:tracking-[0.2em] lg:text-xs lg:tracking-[0.3em]"
                         >
-                            <div
-                                class="group/sync flex cursor-pointer items-center gap-1 rounded-full border border-primary/10 bg-primary/5 px-1.5 py-0.5 transition-colors hover:bg-primary/10"
+                            <button
+                                class="group/sync flex cursor-pointer items-center rounded-full border border-primary/10 bg-primary/5 p-1.5 text-primary/60 transition-colors hover:bg-primary/10 active:scale-95"
                                 @click="emit('refresh')"
+                                aria-label="Refresh dashboard"
+                                title="Refresh"
                             >
                                 <RefreshCw
-                                    class="h-2 w-2 text-primary/60 sm:h-2.5 sm:w-2.5"
+                                    class="h-2.5 w-2.5 sm:h-3 sm:w-3"
                                     :class="{ 'animate-spin': isRefreshing }"
                                 />
-                                <span
-                                    class="hidden text-[6px] whitespace-nowrap tabular-nums sm:inline sm:text-[9px] lg:text-xs"
-                                    >{{
-                                        lastSyncTime
-                                            ? lastSyncTime.toLocaleTimeString(
-                                                  [],
-                                                  {
-                                                      hour: '2-digit',
-                                                      minute: '2-digit',
-                                                  },
-                                              )
-                                            : '--:--'
-                                    }}</span
-                                >
-                            </div>
-                            <span
-                                v-if="accentBadge"
-                                class="hidden rounded-full border px-2 py-0.5 backdrop-blur-md transition-colors duration-500 sm:inline-block"
-                                :class="accentBadge.theme"
-                            >
-                                {{ accentBadge.text }}
-                            </span>
+                            </button>
                         </div>
 
                         <div class="space-y-0.5 sm:space-y-1">
@@ -237,71 +205,6 @@ const xpPercentage = computed(() => {
                                 class="line-clamp-1 text-[8px] leading-relaxed font-medium text-muted-foreground/60 sm:text-sm lg:mt-1 lg:text-lg"
                                 v-html="smarterStatus"
                             ></p>
-                        </div>
-
-                        <!-- Integrated XP Bar & Mini Stats -->
-                        <div
-                            class="mt-1.5 w-full max-w-sm space-y-0.5 sm:mt-3 sm:space-y-1.5 lg:max-w-lg lg:space-y-3"
-                        >
-                            <div
-                                class="flex items-center justify-between text-[6px] font-black tracking-widest text-muted-foreground/40 uppercase sm:text-[8px] lg:text-xs"
-                            >
-                                <div class="flex items-center gap-1">
-                                    <span class="text-primary/60"
-                                        >{{
-                                            animatedXP.toLocaleString()
-                                        }}
-                                        XP</span
-                                    >
-                                    <span class="hidden opacity-30 sm:inline"
-                                        >/</span
-                                    >
-                                    <span class="hidden sm:inline"
-                                        >{{
-                                            Math.max(
-                                                0,
-                                                animatedMaxXP - animatedXP,
-                                            ).toLocaleString()
-                                        }}
-                                        to Level {{ userStats.level + 1 }}</span
-                                    >
-                                </div>
-                                <div class="flex items-center gap-1">
-                                    <span class="text-primary"
-                                        >{{ Math.round(xpPercentage) }}%</span
-                                    >
-                                    <div
-                                        class="flex gap-0.5 sm:gap-1 lg:gap-1.5"
-                                    >
-                                        <div
-                                            v-for="i in 5"
-                                            :key="i"
-                                            class="h-0.5 w-0.5 rounded-full sm:h-1 sm:w-1 lg:h-1.5 lg:w-1.5"
-                                            :class="
-                                                i <= (userStats.level % 5) + 1
-                                                    ? 'bg-primary/60'
-                                                    : 'bg-muted/40'
-                                            "
-                                        ></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div
-                                class="relative h-1 w-full overflow-hidden rounded-full border border-white/10 bg-muted/30 shadow-inner backdrop-blur-sm sm:h-2 lg:h-6 dark:bg-black/20"
-                            >
-                                <div
-                                    class="relative h-full rounded-full bg-gradient-to-r shadow-lg shadow-primary/50 transition-all duration-1000 ease-out"
-                                    :class="
-                                        greetingTheme ||
-                                        'from-primary via-primary/90 to-primary'
-                                    "
-                                    :style="{ width: `${xpPercentage}%` }"
-                                >
-                                    <div
-                                        class="animate-shimmer absolute inset-0 w-full -skew-x-[45deg] bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                                    ></div>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Mobile: Add Section CTA (compact pill) -->

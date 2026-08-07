@@ -40,14 +40,63 @@ const defaultConfig: LenisConfig = {
 };
 
 /**
+ * Whether the current device is low-tier hardware that should avoid the
+ * per-frame cost of a smooth-scroll engine.
+ *
+ * Mirrors the heuristics in `useMobile`'s `isLowEndDevice` so the global
+ * Lenis instance shares the same signal instead of only honoring
+ * `prefers-reduced-motion`. Lenis runs its own `requestAnimationFrame`
+ * virtual-scroll loop and `scroll` → `ScrollTrigger.update()` churn, which is
+ * a leading source of frame drops on coarse-pointer / low-memory / few-core
+ * devices — even when the page's own GSAP is already disabled.
+ */
+interface DeviceMemory extends Navigator {
+    deviceMemory?: number;
+}
+interface NavigatorWithConnection extends Navigator {
+    connection?: { effectiveType?: string };
+}
+
+export function isLowEndDeviceSignal(): boolean {
+    if (typeof window === 'undefined') return false;
+    const reduced = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+    ).matches;
+    if (reduced) return true;
+
+    const coarse =
+        'ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia('(pointer: coarse)').matches;
+    if (coarse) return true;
+
+    const mem = (navigator as DeviceMemory).deviceMemory;
+    if (mem !== undefined && mem !== null && mem <= 4) return true;
+
+    const cores = navigator.hardwareConcurrency;
+    if (cores !== undefined && cores !== null && cores <= 4) return true;
+
+    const conn = (navigator as NavigatorWithConnection).connection
+        ?.effectiveType;
+    if (conn === 'slow-2g' || conn === '2g') return true;
+
+    return false;
+}
+
+/**
  * Create (or return existing) global Lenis instance.
  * Call once from `app.ts` after the app mounts.
  */
-export function initLenis(config: LenisConfig = {}): Lenis {
+export function initLenis(config: LenisConfig = {}): Lenis | null {
     if (lenisInstance) {
         lenisInstance.resize();
         return lenisInstance;
     }
+
+    // On low-end hardware, skip the smooth-scroll engine entirely — its
+    // rAF loop + ScrollTrigger.update() churn is a persistent per-frame cost
+    // that the page-level GSAP gating (data-low-end) cannot turn off.
+    if (isLowEndDeviceSignal()) return null;
 
     const prefersReducedMotion =
         typeof window !== 'undefined' &&

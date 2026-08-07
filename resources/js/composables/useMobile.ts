@@ -24,6 +24,7 @@ interface NavigatorWithConnection extends Navigator {
 
 export function useMobile() {
     const isMobile = ref(false);
+    const isDesktop = ref(false);
     const isTouchDevice = ref(false);
     const isCoarsePointer = ref(false);
     const prefersReducedMotion = ref(false);
@@ -32,6 +33,7 @@ export function useMobile() {
     const connectionType = ref<'slow-2g' | '2g' | '3g' | '4g' | null>(null);
 
     const BREAKPOINT_MOBILE = 640; // sm:
+    const BREAKPOINT_DESKTOP = 1024; // lg:
 
     // ─── Debounced resize handler ───
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,6 +41,7 @@ export function useMobile() {
 
     const update = () => {
         isMobile.value = window.innerWidth < BREAKPOINT_MOBILE;
+        isDesktop.value = window.innerWidth >= BREAKPOINT_DESKTOP;
         isTouchDevice.value =
             'ontouchstart' in window || navigator.maxTouchPoints > 0;
         isCoarsePointer.value =
@@ -80,6 +83,7 @@ export function useMobile() {
     });
 
     let mqlMobile: MediaQueryList | null = null;
+    let mqlDesktop: MediaQueryList | null = null;
     let mqlCoarsePointer: MediaQueryList | null = null;
     let mqlReducedMotion: MediaQueryList | null = null;
     let connection: NetworkInformation | null = null;
@@ -97,12 +101,14 @@ export function useMobile() {
         mqlMobile = window.matchMedia(
             `(max-width: ${BREAKPOINT_MOBILE - 1}px)`,
         );
+        mqlDesktop = window.matchMedia(`(min-width: ${BREAKPOINT_DESKTOP}px)`);
         mqlCoarsePointer = window.matchMedia('(pointer: coarse)');
         mqlReducedMotion = window.matchMedia(
             '(prefers-reduced-motion: reduce)',
         );
 
         mqlMobile.addEventListener('change', onMqlUpdate);
+        mqlDesktop.addEventListener('change', onMqlUpdate);
         mqlCoarsePointer.addEventListener('change', onMqlUpdate);
         mqlReducedMotion.addEventListener('change', onMqlUpdate);
 
@@ -119,6 +125,7 @@ export function useMobile() {
 
     onBeforeUnmount(() => {
         mqlMobile?.removeEventListener('change', onMqlUpdate);
+        mqlDesktop?.removeEventListener('change', onMqlUpdate);
         mqlCoarsePointer?.removeEventListener('change', onMqlUpdate);
         mqlReducedMotion?.removeEventListener('change', onMqlUpdate);
 
@@ -132,6 +139,7 @@ export function useMobile() {
 
     return {
         isMobile,
+        isDesktop,
         isTouchDevice,
         isCoarsePointer,
         prefersReducedMotion,

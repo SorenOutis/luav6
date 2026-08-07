@@ -13,15 +13,17 @@ import {
 } from 'vue';
 
 const dashboardContainer = ref<HTMLElement | null>(null);
-const { isMobile, prefersReducedMotion } = useMobile();
+const { isMobile, isDesktop, prefersReducedMotion } = useMobile();
 
-import CourseAssignmentList from '@/components/dashboard/CourseAssignmentList.vue';
+import DailyRewardCard from '@/components/dashboard/DailyRewardCard.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar.vue';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton.vue';
-import DashboardStats from '@/components/dashboard/DashboardStats.vue';
-import type { NextUpItem } from '@/components/dashboard/NextUpCard.vue';
+import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
+import StreakCard from '@/components/dashboard/StreakCard.vue';
+import TodayStrip, {
+    type NextUpItem,
+} from '@/components/dashboard/TodayStrip.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
@@ -32,7 +34,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { logout } from '@/routes';
 import { index as assignmentsIndex } from '@/routes/assignments';
 import { show as examsShow } from '@/routes/exams';
-import { edit as profileEdit } from '@/routes/profile';
 
 import type { BreadcrumbItem } from '@/types';
 
@@ -40,16 +41,13 @@ const { isVisible: isLoaderVisible } = useLoader();
 
 const breadcrumbs: BreadcrumbItem[] = [];
 
-const lastSyncTime = ref(new Date());
 const isRefreshing = ref(false);
 
 const POLL_PROPS = [
     'userStats',
-    'userBadges',
     'notifications',
     'loginDates',
     'announcements',
-    'courses',
     'assignments',
     'upcomingExams',
     'sectionLeaderboards',
@@ -69,7 +67,6 @@ const { stop: stopPoll, start: startPoll } = usePoll(
         },
         onFinish: () => {
             isRefreshing.value = false;
-            lastSyncTime.value = new Date();
         },
     },
     { autoStart: false },
@@ -93,7 +90,6 @@ const manualRefresh = () => {
         only: POLL_PROPS,
         onFinish: () => {
             isRefreshing.value = false;
-            lastSyncTime.value = new Date();
         },
     });
 };
@@ -173,58 +169,6 @@ const statusColor = computed(() => {
     return 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.4)]';
 });
 
-const accentBadge = computed(() => {
-    const hour = new Date().getHours();
-    const streak = props.userStats.streak;
-    const overdue = todaySummary.value.overdueCount;
-
-    if (overdue > 0)
-        return {
-            text: 'Requires Attention',
-            theme: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-        };
-    if (streak >= 7)
-        return {
-            text: 'Legendary Streak',
-            theme: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-        };
-    if (streak > 0)
-        return {
-            text: 'Active Streak',
-            theme: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-        };
-
-    if (hour >= 0 && hour < 4)
-        return {
-            text: 'Late Night Session',
-            theme: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-        };
-    if (hour >= 4 && hour < 7)
-        return {
-            text: 'Early Bird',
-            theme: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
-        };
-    if (hour >= 7 && hour < 12)
-        return {
-            text: 'Morning Session',
-            theme: 'bg-amber-400/10 text-amber-500 border-amber-400/20',
-        };
-    if (hour >= 12 && hour < 17)
-        return {
-            text: 'Afternoon Focus',
-            theme: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-        };
-    if (hour >= 17 && hour < 21)
-        return {
-            text: 'Evening Grind',
-            theme: 'bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20',
-        };
-    return {
-        text: 'Winding Down',
-        theme: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
-    };
-});
-
 // Smarter status subtext for the hero
 const smarterStatus = computed(() => {
     const xpRemaining =
@@ -246,16 +190,6 @@ const smarterStatus = computed(() => {
 });
 
 const isBooted = ref(false);
-
-interface Course {
-    id: number;
-    name: string;
-    progress: number;
-    completedLessons: number;
-    totalLessons: number;
-    xpEarned: number;
-    nextDeadline: string;
-}
 
 interface Assignment {
     id: number;
@@ -318,17 +252,6 @@ interface Exam {
     is_completed: boolean;
 }
 
-interface UserBadge {
-    id: number;
-    name: string;
-    description?: string | null;
-    requiredLevel?: number | null;
-    image?: string | null;
-    iconUrl?: string | null;
-    earnedSeason?: string | null;
-    earnedAt?: string | null;
-}
-
 const props = defineProps<{
     claimXp: {
         canClaim: boolean;
@@ -356,8 +279,6 @@ const props = defineProps<{
     };
     loginDates?: string[];
     announcements: Announcement[];
-    userBadges: UserBadge[];
-    courses: Course[];
     assignments: Assignment[];
     upcomingExams: Exam[];
     sectionLeaderboards: LeaderboardData[];
@@ -379,28 +300,13 @@ const claimXpForPrompt = computed(() => ({
     showPrompt: claimPromptReady.value && Boolean(props.claimXp.showPrompt),
 }));
 
-const progressPercentage = computed(
-    () => (userStats.value.currentXP / userStats.value.maxXPForLevel) * 100,
-);
-const totalXPProgress = computed(() => {
-    if (!userStats.value.maxXPForLevel) return 0;
-    const percent =
-        (userStats.value.currentXP / userStats.value.maxXPForLevel) * 100;
-    return Math.min(100, Math.max(0, percent));
-});
-
 const dismissedAnnouncementIds = reactive(new Set<number>());
 const announcements = computed(() =>
     props.announcements.filter((a) => !dismissedAnnouncementIds.has(a.id)),
 );
-const userBadges = computed(() => props.userBadges);
-const courses = computed(() => props.courses);
-const assignments = computed(() => props.assignments);
 const sectionLeaderboards = computed(() => props.sectionLeaderboards);
 
 const streak = computed(() => ({
-    currentStreak: props.userStats.streak || 0,
-    longestStreak: props.userStats.longestStreak || 0,
     loginDates: props.loginDates ?? [],
 }));
 
@@ -451,26 +357,6 @@ const dueItems = computed<DueItem[]>(() => {
     return items;
 });
 
-const nextUpItem = computed<NextUpItem | null>(() => {
-    const now = Date.now();
-    const candidates = dueItems.value
-        .filter((i) => !i.isCompleted)
-        .sort(
-            (a, b) =>
-                Math.abs(a.dueAt.getTime() - now) -
-                Math.abs(b.dueAt.getTime() - now),
-        );
-    const pick = candidates[0];
-    if (!pick) return null;
-    return {
-        kind: pick.kind,
-        title: pick.title,
-        dueAt: pick.dueAt.toISOString(),
-        href: pick.href,
-        meta: pick.meta,
-    };
-});
-
 const todaySummary = computed(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -495,6 +381,28 @@ const todaySummary = computed(() => {
     return { dueTodayCount, overdueCount, upcoming24hCount };
 });
 
+// The single most urgent item: overdue first, then soonest due date.
+const nextItem = computed<NextUpItem | null>(() => {
+    const urgent = dueItems.value
+        .filter((i) => !i.isCompleted)
+        .sort((a, b) => {
+            if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+            return a.dueAt.getTime() - b.dueAt.getTime();
+        })[0];
+
+    if (!urgent) return null;
+
+    return {
+        kind: urgent.kind,
+        title: urgent.title,
+        dueAt: urgent.dueAt.toISOString(),
+        href: urgent.href,
+        meta: urgent.meta,
+    };
+});
+
+const primaryLeaderboard = computed(() => sectionLeaderboards.value[0] ?? null);
+
 const seasonalXpTarget = computed(() => {
     // Rough target: fill the currently reached level's XP band; can be tuned later
     return props.userStats?.maxXPForLevel ?? 100;
@@ -504,7 +412,6 @@ let gsapCtx: gsap.Context | null = null;
 
 const showSectionModal = ref(false);
 const isLeaderboardExpanded = ref(false);
-const isSidebarExpanded = ref(false);
 
 watch(
     () => props.sectionName,
@@ -571,7 +478,9 @@ onMounted(() => {
             gsap.set(
                 [
                     '.dashboard-hero',
-                    '.dashboard-stats',
+                    '.dashboard-focus',
+                    '.dashboard-reward',
+                    '.dashboard-progress',
                     '.dashboard-leaderboard',
                     '.dashboard-main-grid',
                 ],
@@ -600,30 +509,6 @@ onBeforeUnmount(() => {
         gsapCtx.revert();
     }
 });
-
-const handleQuickAction = (action: string) => {
-    switch (action) {
-        case 'resume':
-            if (props.courses.length > 0) {
-                // Navigate to the first course or resume last
-                console.log('Resuming course...');
-            }
-            break;
-        case 'assignments':
-            router.get(assignmentsIndex().url);
-            break;
-        case 'leaderboard':
-            // If there's a specific leaderboard route, navigate there
-            // Otherwise maybe just scroll to leaderboard
-            document
-                .querySelector('.dashboard-leaderboard')
-                ?.scrollIntoView({ behavior: 'smooth' });
-            break;
-        case 'settings':
-            router.get(profileEdit().url);
-            break;
-    }
-};
 
 const handleLogout = () => {
     sessionStorage.setItem('logged_out', 'true');
@@ -672,14 +557,11 @@ const handleLogout = () => {
                         :user-avatar="userAvatar"
                         :user-stats="userStats"
                         :announcements="announcements"
-                        :total-x-p-progress="totalXPProgress"
                         :time-based-greeting="personalizedGreeting"
                         :greeting-theme="greetingTheme"
                         :status-color="statusColor"
-                        :accent-badge="accentBadge"
                         :smarter-status="smarterStatus"
                         :is-refreshing="isRefreshing"
-                        :last-sync-time="lastSyncTime"
                         @close-announcement="
                             (id: number) => dismissedAnnouncementIds.add(id)
                         "
@@ -688,7 +570,34 @@ const handleLogout = () => {
                     />
                 </Motion>
 
-                <!-- Header Section with User Stats -->
+                <!-- Focus Strip: What's due / next up -->
+                <Motion
+                    :initial="
+                        isMobile || prefersReducedMotion
+                            ? false
+                            : { opacity: 0, y: 20 }
+                    "
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="
+                        isMobile || prefersReducedMotion
+                            ? { duration: 0 }
+                            : {
+                                  duration: 0.7,
+                                  easing: [0.16, 1, 0.3, 1],
+                                  delay: 0.08,
+                              }
+                    "
+                >
+                    <TodayStrip
+                        class="dashboard-focus"
+                        :due-today-count="todaySummary.dueTodayCount"
+                        :overdue-count="todaySummary.overdueCount"
+                        :upcoming-24h-count="todaySummary.upcoming24hCount"
+                        :next-item="nextItem"
+                    />
+                </Motion>
+
+                <!-- Daily Reward (Claim XP) -->
                 <Motion
                     :initial="
                         isMobile || prefersReducedMotion
@@ -706,14 +615,49 @@ const handleLogout = () => {
                               }
                     "
                 >
-                    <DashboardStats
-                        class="dashboard-stats"
-                        :user-stats="userStats"
-                        :streak="streak"
-                        :login-dates="props.loginDates ?? []"
-                        :progress-percentage="progressPercentage"
+                    <DailyRewardCard
+                        class="dashboard-reward"
                         :claim-xp="claimXpForPrompt"
-                        :stats-breakdown="props.statsBreakdown"
+                        :streak="userStats.streak"
+                        @claimed="manualRefresh"
+                    />
+                </Motion>
+
+                <!-- Progress Row: Level / Streak / Season -->
+                <Motion
+                    :initial="
+                        isMobile || prefersReducedMotion
+                            ? false
+                            : { opacity: 0, y: 20 }
+                    "
+                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                    :transition="
+                        isMobile || prefersReducedMotion
+                            ? { duration: 0 }
+                            : {
+                                  duration: 0.7,
+                                  easing: [0.16, 1, 0.3, 1],
+                                  delay: 0.15,
+                              }
+                    "
+                    class="dashboard-progress grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+                >
+                    <LevelProgressCard
+                        class="md:col-span-2 lg:col-span-2"
+                        :user-stats="userStats"
+                        :breakdown="props.statsBreakdown?.xp ?? []"
+                    />
+                    <StreakCard
+                        :current-streak="userStats.streak"
+                        :longest-streak="userStats.longestStreak"
+                        :login-dates="streak.loginDates"
+                    />
+                    <SeasonProgressBand
+                        :name="activeSeason?.name ?? null"
+                        :start-date="activeSeason?.startDate ?? null"
+                        :end-date="activeSeason?.endDate ?? null"
+                        :xp-earned="userStats.currentXP"
+                        :xp-target="seasonalXpTarget"
                     />
                 </Motion>
 
@@ -739,53 +683,60 @@ const handleLogout = () => {
                     "
                     class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
                 >
-                    <!-- Main Section: Leaderboard + Learning Hub -->
+                    <!-- Main Section: Leaderboard -->
                     <div class="min-w-0 space-y-8 lg:col-span-2">
                         <!-- Mobile: Collapsible Leaderboard -->
-                        <div v-if="isMobile" class="lg:hidden">
+                        <div v-if="!isDesktop" class="lg:hidden">
                             <button
                                 @click="
                                     isLeaderboardExpanded =
                                         !isLeaderboardExpanded
                                 "
-                                class="flex w-full items-center justify-between rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-amber-400/30"
+                                :aria-expanded="isLeaderboardExpanded"
+                                :aria-controls="'mobile-leaderboard-panel'"
+                                class="flex w-full items-center justify-between gap-3 rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-amber-400/30"
                             >
-                                <div class="flex items-center gap-3">
+                                <div class="flex min-w-0 items-center gap-3">
                                     <Trophy class="h-4 w-4 text-amber-400" />
-                                    <div>
+                                    <div class="min-w-0">
                                         <span
                                             class="text-xs font-bold text-foreground"
                                             >Leaderboard</span
                                         >
                                         <p
-                                            v-if="
-                                                sectionLeaderboards.length > 0
-                                            "
-                                            class="text-[9px] text-muted-foreground"
+                                            v-if="primaryLeaderboard"
+                                            class="truncate text-[9px] text-muted-foreground"
                                         >
-                                            {{
-                                                sectionLeaderboards[0]
-                                                    ?.sectionName
-                                            }}
+                                            {{ primaryLeaderboard.sectionName }}
                                             ·
                                             {{
-                                                sectionLeaderboards[0]
-                                                    ?.totalPlayers
+                                                primaryLeaderboard.totalPlayers
                                             }}
                                             players
                                         </p>
                                     </div>
                                 </div>
+                                <span
+                                    v-if="primaryLeaderboard"
+                                    class="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black tracking-wide text-amber-400 uppercase"
+                                >
+                                    <Trophy class="h-3 w-3" />
+                                    #{{ primaryLeaderboard.userRank }}
+                                </span>
                                 <component
                                     :is="
                                         isLeaderboardExpanded
                                             ? ChevronUp
                                             : ChevronDown
                                     "
-                                    class="h-4 w-4 text-muted-foreground transition-transform duration-300"
+                                    class="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300"
                                 />
                             </button>
-                            <div v-show="isLeaderboardExpanded" class="mt-3">
+                            <div
+                                v-show="isLeaderboardExpanded"
+                                id="mobile-leaderboard-panel"
+                                class="mt-3"
+                            >
                                 <ImprovedLeaderboard
                                     class="dashboard-leaderboard"
                                     :section-leaderboards="sectionLeaderboards"
@@ -810,167 +761,45 @@ const handleLogout = () => {
                                 show-view-button
                             />
                         </div>
-
-                        <CourseAssignmentList
-                            :courses="courses"
-                            :assignments="assignments"
-                            @course-click="(c) => console.log('Course:', c)"
-                            @assignment-click="
-                                (a) => console.log('Assignment:', a)
-                            "
-                        />
                     </div>
 
-                    <!-- Sidebar - Season / Activity Pulse / Notifications & Achievements -->
+                    <!-- Sidebar - Activity Pulse -->
                     <div
                         class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
                     >
-                        <!-- Mobile: Collapsible Sidebar -->
-                        <div v-if="isMobile" class="lg:hidden">
-                            <button
-                                @click="isSidebarExpanded = !isSidebarExpanded"
-                                class="flex w-full items-center justify-between rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-primary/30"
+                        <!-- Streak Heatmap Card (compact) -->
+                        <SpotlightCard
+                            customSize
+                            glowColor="blue"
+                            className="surface-card p-0 w-full min-w-0"
+                        >
+                            <div
+                                class="relative flex h-full w-full flex-col p-4 sm:p-5"
                             >
-                                <div class="flex items-center gap-3">
-                                    <Calendar class="h-4 w-4 text-primary" />
+                                <div
+                                    class="relative z-10 mb-4 flex items-center justify-between"
+                                >
                                     <div>
-                                        <span
-                                            class="text-xs font-bold text-foreground"
-                                            >Insights &amp; Progress</span
+                                        <h3
+                                            class="flex items-center gap-2 text-sm font-bold"
                                         >
+                                            <Calendar
+                                                class="h-4 w-4 text-primary"
+                                            />
+                                            Activity Pulse
+                                        </h3>
                                         <p
-                                            class="text-[9px] text-muted-foreground"
+                                            class="mt-0.5 text-[10px] text-muted-foreground"
                                         >
-                                            Season, activity, and quick actions
+                                            Consistency builds momentum.
                                         </p>
                                     </div>
                                 </div>
-                                <component
-                                    :is="
-                                        isSidebarExpanded
-                                            ? ChevronUp
-                                            : ChevronDown
-                                    "
-                                    class="h-4 w-4 text-muted-foreground transition-transform duration-300"
-                                />
-                            </button>
-                            <div
-                                v-show="isSidebarExpanded"
-                                class="mt-3 space-y-6"
-                            >
-                                <SeasonProgressBand
-                                    :name="activeSeason?.name ?? null"
-                                    :start-date="
-                                        activeSeason?.startDate ?? null
-                                    "
-                                    :end-date="activeSeason?.endDate ?? null"
-                                    :xp-earned="userStats.currentXP"
-                                    :xp-target="seasonalXpTarget"
-                                />
-
-                                <SpotlightCard
-                                    customSize
-                                    glowColor="blue"
-                                    className="surface-card p-0 w-full min-w-0"
-                                >
-                                    <div
-                                        class="relative flex h-full w-full flex-col p-4 sm:p-5"
-                                    >
-                                        <div
-                                            class="relative z-10 mb-4 flex items-center justify-between"
-                                        >
-                                            <div>
-                                                <h3
-                                                    class="flex items-center gap-2 text-sm font-bold"
-                                                >
-                                                    <Calendar
-                                                        class="h-4 w-4 text-primary"
-                                                    />
-                                                    Activity Pulse
-                                                </h3>
-                                                <p
-                                                    class="mt-0.5 text-[10px] text-muted-foreground"
-                                                >
-                                                    Consistency builds momentum.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <StreakHeatmap
-                                            :login-dates="streak.loginDates"
-                                        />
-                                    </div>
-                                </SpotlightCard>
-
-                                <DashboardSidebar
-                                    :unread-notification-count="3"
-                                    :badges="userBadges"
-                                    :weekly-x-p="userStats.currentXP"
-                                    :weekly-goal="1000"
-                                    :upcoming-exams="props.upcomingExams"
-                                    :exam-seasons="props.availableSeasons ?? []"
-                                    :next-up-item="nextUpItem"
-                                    :profile-url="`/u/${page.props.auth.user?.id}`"
-                                    @quick-action="handleQuickAction"
+                                <StreakHeatmap
+                                    :login-dates="streak.loginDates"
                                 />
                             </div>
-                        </div>
-
-                        <!-- Desktop: Full Sidebar -->
-                        <div v-else class="hidden space-y-6 lg:block">
-                            <SeasonProgressBand
-                                :name="activeSeason?.name ?? null"
-                                :start-date="activeSeason?.startDate ?? null"
-                                :end-date="activeSeason?.endDate ?? null"
-                                :xp-earned="userStats.currentXP"
-                                :xp-target="seasonalXpTarget"
-                            />
-
-                            <!-- Streak Heatmap Card (compact) -->
-                            <SpotlightCard
-                                customSize
-                                glowColor="blue"
-                                className="surface-card p-0 w-full min-w-0"
-                            >
-                                <div
-                                    class="relative flex h-full w-full flex-col p-4 sm:p-5"
-                                >
-                                    <div
-                                        class="relative z-10 mb-4 flex items-center justify-between"
-                                    >
-                                        <div>
-                                            <h3
-                                                class="flex items-center gap-2 text-sm font-bold"
-                                            >
-                                                <Calendar
-                                                    class="h-4 w-4 text-primary"
-                                                />
-                                                Activity Pulse
-                                            </h3>
-                                            <p
-                                                class="mt-0.5 text-[10px] text-muted-foreground"
-                                            >
-                                                Consistency builds momentum.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <StreakHeatmap
-                                        :login-dates="streak.loginDates"
-                                    />
-                                </div>
-                            </SpotlightCard>
-
-                            <DashboardSidebar
-                                :unread-notification-count="3"
-                                :badges="userBadges"
-                                :weekly-x-p="userStats.currentXP"
-                                :weekly-goal="1000"
-                                :upcoming-exams="props.upcomingExams"
-                                :exam-seasons="props.availableSeasons ?? []"
-                                :next-up-item="nextUpItem"
-                                :profile-url="`/u/${page.props.auth.user?.id}`"
-                                @quick-action="handleQuickAction"
-                            />
-                        </div>
+                        </SpotlightCard>
                     </div>
                 </Motion>
             </template>

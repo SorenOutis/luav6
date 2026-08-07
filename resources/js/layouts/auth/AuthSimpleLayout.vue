@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { Command, Terminal } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
+import SeoHead from '@/components/Seo/SeoHead.vue';
 import { home } from '@/routes';
 
 defineProps<{
@@ -51,6 +52,7 @@ onMounted(() => {
 </script>
 
 <template>
+    <SeoHead noindex />
     <div
         class="theme-neutral-page relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-background font-sans text-foreground perspective-[1000px] selection:bg-primary/20"
     >

@@ -8,6 +8,7 @@ import {
     Trophy,
     ArrowRight,
 } from 'lucide-vue-next';
+import SeoHead from '@/components/Seo/SeoHead.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 
@@ -72,10 +73,30 @@ const steps = [
         ],
     },
 ];
+
+const seoJsonLd = [
+    {
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        name: 'How LSI Works',
+        description: 'From enrollment to achievement in five clear steps.',
+        step: steps.map((s, i) => ({
+            '@type': 'HowToStep',
+            position: i + 1,
+            name: s.title,
+            text: s.description,
+        })),
+    },
+];
 </script>
 
 <template>
-    <Head title="How It Works | LSI Learning Engine" />
+    <Head title="How It Works" />
+    <SeoHead
+        :description="'Five clear steps: enroll, take exams, get instant feedback, track progress, and celebrate milestones with LSI.'"
+        type="article"
+        :jsonld="seoJsonLd"
+    />
 
     <div
         class="howitworks-root relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
