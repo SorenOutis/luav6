@@ -64,7 +64,11 @@ defineOptions({ layout: AuthCard });
                     data-test="email-password-reset-link-button"
                 >
                     <Spinner v-if="processing" class="mr-2" />
-                    {{ processing ? 'Sending link...' : 'Email password reset link' }}
+                    {{
+                        processing
+                            ? 'Sending link...'
+                            : 'Email password reset link'
+                    }}
                 </Button>
             </div>
         </Form>

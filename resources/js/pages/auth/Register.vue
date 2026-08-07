@@ -140,8 +140,14 @@ const consentValid = computed(() => formData.terms);
 
 const canProceed = computed(() => {
     if (currentStep.value === 0)
-        return firstNameValid.value && middleNameValid.value && lastNameValid.value && emailValid.value;
-    if (currentStep.value === 1) return passwordValid.value && confirmValid.value;
+        return (
+            firstNameValid.value &&
+            middleNameValid.value &&
+            lastNameValid.value &&
+            emailValid.value
+        );
+    if (currentStep.value === 1)
+        return passwordValid.value && confirmValid.value;
     if (currentStep.value === 2) return consentValid.value;
     return true;
 });
@@ -287,7 +293,8 @@ const jumpTo = (step: number): void => {
 // that owns the offending field so the error is visible in context.
 const handleSubmitError = (payload: unknown): void => {
     const errs = (payload ?? {}) as Record<string, unknown>;
-    if (errs.first_name || errs.middle_name || errs.last_name || errs.email) jumpTo(0);
+    if (errs.first_name || errs.middle_name || errs.last_name || errs.email)
+        jumpTo(0);
     else if (errs.password || errs.password_confirmation) jumpTo(1);
     else if (errs.terms) jumpTo(2);
 };
@@ -439,14 +446,18 @@ onBeforeUnmount(() => {
                         v-if="index > 0"
                         aria-hidden="true"
                         class="rs-connector h-px flex-1 transition-colors duration-500"
-                        :class="index <= currentStep ? 'bg-primary' : 'bg-border'"
+                        :class="
+                            index <= currentStep ? 'bg-primary' : 'bg-border'
+                        "
                     />
                     <button
                         type="button"
                         :data-rs-node="index"
                         class="rs-node group flex flex-col items-center gap-1.5"
                         :disabled="index >= currentStep"
-                        :aria-current="index === currentStep ? 'step' : undefined"
+                        :aria-current="
+                            index === currentStep ? 'step' : undefined
+                        "
                         @click="jumpTo(index)"
                     >
                         <span
@@ -460,7 +471,10 @@ onBeforeUnmount(() => {
                                     'border-border text-muted-foreground/50',
                             ]"
                         >
-                            <Check v-if="index < currentStep" class="h-3.5 w-3.5" />
+                            <Check
+                                v-if="index < currentStep"
+                                class="h-3.5 w-3.5"
+                            />
                             <span v-else>{{ index + 1 }}</span>
                         </span>
                         <span
@@ -506,7 +520,9 @@ onBeforeUnmount(() => {
                                 @keydown.enter.prevent="goNext"
                             />
                             <InputError
-                                :message="liveErrors.first_name || errors.first_name"
+                                :message="
+                                    liveErrors.first_name || errors.first_name
+                                "
                             />
                         </div>
 
@@ -524,7 +540,9 @@ onBeforeUnmount(() => {
                                 @keydown.enter.prevent="goNext"
                             />
                             <InputError
-                                :message="liveErrors.last_name || errors.last_name"
+                                :message="
+                                    liveErrors.last_name || errors.last_name
+                                "
                             />
                         </div>
                     </div>
@@ -542,7 +560,9 @@ onBeforeUnmount(() => {
                             @keydown.enter.prevent="goNext"
                         />
                         <InputError
-                            :message="liveErrors.middle_name || errors.middle_name"
+                            :message="
+                                liveErrors.middle_name || errors.middle_name
+                            "
                         />
                     </div>
 
@@ -590,7 +610,9 @@ onBeforeUnmount(() => {
                             <button
                                 type="button"
                                 :aria-label="
-                                    showPassword ? 'Hide password' : 'Show password'
+                                    showPassword
+                                        ? 'Hide password'
+                                        : 'Show password'
                                 "
                                 class="absolute right-0 bottom-2.5 text-muted-foreground/50 transition-colors hover:text-foreground"
                                 @click="showPassword = !showPassword"
@@ -712,7 +734,9 @@ onBeforeUnmount(() => {
                     <div
                         class="rounded-lg border border-border/60 bg-muted/30 p-4"
                     >
-                        <p class="text-sm leading-relaxed text-muted-foreground">
+                        <p
+                            class="text-sm leading-relaxed text-muted-foreground"
+                        >
                             You're creating a personal account to access
                             lessons, assessments, and progress tracking. Your
                             data stays yours — you can review the full terms at
@@ -729,13 +753,13 @@ onBeforeUnmount(() => {
                 :class="stepClass(3)"
             >
                 <div class="grid gap-5">
-                    <div class="overflow-hidden rounded-lg border border-border/60">
+                    <div
+                        class="overflow-hidden rounded-lg border border-border/60"
+                    >
                         <div
                             class="border-b border-border/60 bg-muted/30 px-4 py-2.5"
                         >
-                            <p
-                                class="text-sm font-semibold text-foreground"
-                            >
+                            <p class="text-sm font-semibold text-foreground">
                                 Review your details
                             </p>
                         </div>
@@ -744,9 +768,7 @@ onBeforeUnmount(() => {
                                 class="flex items-center justify-between gap-4 px-4 py-3"
                             >
                                 <div class="min-w-0">
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
+                                    <p class="text-xs text-muted-foreground">
                                         Full name
                                     </p>
                                     <p
@@ -775,9 +797,7 @@ onBeforeUnmount(() => {
                                 class="flex items-center justify-between gap-4 px-4 py-3"
                             >
                                 <div class="min-w-0">
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
+                                    <p class="text-xs text-muted-foreground">
                                         Email address
                                     </p>
                                     <p
@@ -798,9 +818,7 @@ onBeforeUnmount(() => {
                                 class="flex items-center justify-between gap-4 px-4 py-3"
                             >
                                 <div class="min-w-0">
-                                    <p
-                                        class="text-xs text-muted-foreground"
-                                    >
+                                    <p class="text-xs text-muted-foreground">
                                         Password
                                     </p>
                                     <p
@@ -841,9 +859,7 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <p
-                        class="text-center text-xs text-muted-foreground"
-                    >
+                    <p class="text-center text-xs text-muted-foreground">
                         Clicking "Create account" will finalize your
                         registration.
                     </p>
@@ -895,9 +911,7 @@ onBeforeUnmount(() => {
 
         <div class="text-center text-sm text-muted-foreground">
             Already have an account?
-            <TextLink
-                :href="login()"
-                class="underline underline-offset-4"
+            <TextLink :href="login()" class="underline underline-offset-4"
                 >Log in</TextLink
             >
         </div>
@@ -980,9 +994,8 @@ onBeforeUnmount(() => {
                     5. Limitation of Liability
                 </h3>
                 <p class="mt-1">
-                    The platform is provided on an "as is" basis and
-                    is not liable for indirect, incidental, or consequential
-                    damages.
+                    The platform is provided on an "as is" basis and is not
+                    liable for indirect, incidental, or consequential damages.
                 </p>
             </section>
             <section>
