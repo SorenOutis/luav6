@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkspace;
+use App\Support\PublicFileUrl;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 class Course extends Model
 {
@@ -27,11 +27,7 @@ class Course extends Model
      */
     public function getCoverPhotoUrlAttribute(): ?string
     {
-        if (! $this->cover_photo) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($this->cover_photo);
+        return PublicFileUrl::resolve($this->cover_photo);
     }
 
     /**

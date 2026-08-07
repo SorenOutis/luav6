@@ -89,8 +89,8 @@ MAIL_FROM_NAME="${APP_NAME}"
 ## Notes
 
 - **512 MB is tight for 50+ concurrent users.** Monitor memory usage and consider upgrading to Render's paid tier or switching to a VPS if performance degrades.
-- The queue worker runs as a background process inside the same container (database-backed queues, no Redis required).
-- `php artisan migrate --force` runs on every container start to keep the schema current.
-- Database queue driver stores jobs in TursoDB's `jobs` table.
+- A persistent **AI queue worker** runs inside the same container alongside Octane (see the Dockerfile CMD): `queue:work --queue=ai` in a self-restarting loop, recycled hourly via `--max-time=3600`. All queued jobs (essay grading, AI question/source generation) live on the `ai` queue, so no separate worker service is needed.
+- If an essay submission ever shows "Reviewing your essay..." forever, first check that an AI queue worker is running (`ps aux | grep queue`), then confirm `ai_provider` is set to `cloudflare` in Platform Settings. Jobs still sitting in the `jobs` table are recovered automatically once a worker is present — the database driver also re-queues reserved jobs after `retry_after` (90s). Submissions whose job was already marked failed need a manual re-run from the admin's exam-submission AI feedback page (`AiEssayFeedbackProgress` / "Generate AI feedback").
+- Database queue driver stores jobs in TursoDB's `jobs` table; migrations are run manually (or by your deploy pipeline), not on container start.
 - File cache is ephemeral (reset on deploy), which is fine — cache is disposable.
 - For a custom domain, add a CNAME record in Cloudflare pointing to Render's `*.onrender.com` URL. Enable Cloudflare proxy (orange cloud) for CDN/DDoS protection.
