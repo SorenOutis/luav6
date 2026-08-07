@@ -73,6 +73,10 @@ const props = defineProps<{
     exam: Exam;
     submissions: Record<number, ExamSubmissionSummary>;
     submittedPartId?: number | null;
+    // Server-anchored deadlines (ISO strings) for parts the student has started
+    // but not yet submitted, keyed by part id. Used to resume the countdown
+    // after a reload instead of resetting to a fresh `duration_minutes`.
+    partDeadlines?: Record<number, string>;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -260,8 +264,50 @@ const formattedTime = computed(() => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 });
 
+// Whether this exam actually enforces a time limit. Guards the auto-submit so
+// an untimed exam (no duration) never force-submits at 00:00.
+const hasTimeLimit = computed(() => (props.exam.duration_minutes ?? 0) > 0);
+
+// Apply an authoritative server deadline (ISO) to the local countdown.
+const applyDeadline = (deadlineIso: string) => {
+    const ms = new Date(deadlineIso).getTime() - Date.now();
+    timeLeftSeconds.value = Math.max(0, Math.floor(ms / 1000));
+};
+
+// Sync the per-part countdown with the server clock. The server anchors
+// `started_at` once and never resets it, so a page reload resumes the real
+// remaining time instead of silently granting a fresh full duration.
+const startServerClock = async () => {
+    const partId = selectedPart.value?.id;
+    if (!partId) return;
+
+    // Instant resume: apply a deadline we already know from the show props so
+    // the timer doesn't flash a full duration while the request is in flight.
+    const known = props.partDeadlines?.[partId];
+    if (known) applyDeadline(known);
+
+    try {
+        const { data } = await axios.post(
+            `/exams/${props.exam.id}/parts/${partId}/start`,
+        );
+        if (data?.deadline) applyDeadline(data.deadline);
+    } catch {
+        // Offline / server hiccup — fall back to a local full-duration
+        // countdown so the student can keep working. The server stays the
+        // source of truth for late-flagging when the part is submitted.
+        if (!known) timeLeftSeconds.value = props.exam.duration_minutes * 60;
+    }
+};
+
 const startTimer = () => {
-    if (timerInterval.value) return;
+    // Always (re)establish a clean per-part countdown. The old early-return
+    // guard meant the timer never reset between parts, so the client ran one
+    // continuous exam-long countdown while the server enforced a per-part
+    // limit — the two definitions disagreed.
+    if (timerInterval.value) {
+        clearInterval(timerInterval.value);
+        timerInterval.value = null;
+    }
     partStartTime.value = Date.now();
     timerInterval.value = setInterval(() => {
         if (timeLeftSeconds.value > 0) {
@@ -269,7 +315,7 @@ const startTimer = () => {
             calculatePace();
         } else {
             stopTimer();
-            if (examStarted.value && !isSubmitting.value) {
+            if (hasTimeLimit.value && examStarted.value && !isSubmitting.value) {
                 isTimeoutSubmission.value = true;
                 submitPart(); // Auto-submit on timeout
             }
@@ -507,7 +553,6 @@ const saveDraft = () => {
     const draft = {
         answers: { ...answers },
         flagged: Array.from(flaggedQuestions.value),
-        timeLeft: timeLeftSeconds.value,
         timestamp: Date.now(),
     };
     localStorage.setItem(getDraftKey(), JSON.stringify(draft));
@@ -554,9 +599,9 @@ const loadDraft = () => {
             if (Date.now() - draft.timestamp < 2 * 60 * 60 * 1000) {
                 Object.assign(answers, draft.answers);
                 flaggedQuestions.value = new Set(draft.flagged || []);
-                // If the saved time is significantly different, we could sync it,
-                // but usually the server-side timer is authority.
-                // For now, we trust the props timer unless it's a refresh.
+                // Remaining time is intentionally NOT restored from the draft —
+                // the server-anchored deadline (startServerClock) is the
+                // authority and survives a reload.
             }
         } catch (e) {
             console.error('Failed to load draft', e);
@@ -862,10 +907,17 @@ const startPart = () => {
     estimatedFinishMinutes.value = null;
     lastSavedAt.value = null;
 
+    // Halt any countdown left over from a previous part before anchoring this
+    // part's clock.
+    stopTimer();
+
     examStarted.value = true;
-    startTimer(); // Start the countdown when the first section begins
     loadDraft(); // Load any saved progress
     void sendMonitorProgress('starting');
+
+    // Anchor the per-part clock on the server, then run the countdown from the
+    // authoritative deadline it returns.
+    void startServerClock().finally(() => startTimer());
 
     setTimeout(() => {
         gsap.fromTo(

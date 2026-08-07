@@ -13,6 +13,7 @@ use App\Services\AIService;
 use App\Support\AiQueueWorker;
 use App\Support\ExamPartSerializer;
 use Carbon\CarbonInterface as Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -120,6 +121,23 @@ class ExamController extends Controller
             })
             ->toArray();
 
+        // Active per-part clocks the student has started but not yet submitted.
+        // The frontend resumes the countdown from these authoritative deadlines
+        // on reload instead of resetting to a fresh `duration_minutes`.
+        $partDeadlines = ExamLiveSession::where('user_id', $userId)
+            ->where('exam_id', $exam->id)
+            ->whereNotNull('exam_part_id')
+            ->whereNotNull('started_at')
+            ->whereNotIn('exam_part_id', ExamSubmission::where('user_id', $userId)
+                ->where('exam_id', $exam->id)
+                ->select('exam_part_id'))
+            ->get()
+            ->mapWithKeys(fn (ExamLiveSession $session) => [
+                (string) $session->exam_part_id => $this->deadlineFor($exam, $session)?->toIso8601String(),
+            ])
+            ->filter()
+            ->toArray();
+
         // Check if we just submitted a part (from flash session)
         $submittedPartId = session()->pull('submitted_part');
 
@@ -131,6 +149,7 @@ class ExamController extends Controller
             ]),
             'submissions' => $submissions,
             'submittedPartId' => $submittedPartId,
+            'partDeadlines' => $partDeadlines,
         ]);
     }
 
@@ -340,16 +359,23 @@ class ExamController extends Controller
             }
         }
 
-        // Single attempt per part, so this is always a create.
-        $submission = ExamSubmission::create([
-            'user_id' => $request->user()->id,
-            'exam_id' => $exam->id,
-            'exam_part_id' => $examPart->id,
-            'answers' => json_encode($enrichedAnswers->values()->toArray()),
-            'status' => $hasEssay ? 'pending_review' : 'submitted',
-            'is_late' => $isLate,
-            'score' => $score,
-        ]);
+        // Single attempt per part, so this is always a create. The
+        // (user_id, exam_id, exam_part_id) unique index closes the TOCTOU gap
+        // the exists() check above leaves open: a concurrent duplicate insert
+        // fails here and is surfaced as the same 409 the guard returns.
+        try {
+            $submission = ExamSubmission::create([
+                'user_id' => $request->user()->id,
+                'exam_id' => $exam->id,
+                'exam_part_id' => $examPart->id,
+                'answers' => json_encode($enrichedAnswers->values()->toArray()),
+                'status' => $hasEssay ? 'pending_review' : 'submitted',
+                'is_late' => $isLate,
+                'score' => $score,
+            ]);
+        } catch (QueryException $e) {
+            abort(409, 'You have already submitted this part.');
+        }
 
         // The clock for this part is done.
         ExamLiveSession::where('user_id', $request->user()->id)
