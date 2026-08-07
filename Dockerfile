@@ -115,24 +115,14 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
     && touch database/database.sqlite \
     && ln -s ../storage/app/public public/storage \
     && chown www-data:www-data rr .rr.yaml \
-    && chown -R www-data:www-data storage bootstrap/cache database
+    && chown -R www-data:www-data storage bootstrap/cache database \
+    && chmod +x start.sh
 
 # EXPOSE is cosmetic only — Render ignores it and routes traffic to the
 # container on the $PORT env var (default 10000). Bind Octane to $PORT so the
 # proxy can reach the app (the local docker-compose maps 8000:8000 explicitly).
 EXPOSE 8000
 USER www-data
-# Start a persistent AI queue worker alongside Octane. All queued work in this
-# app is AI work (essay grading, AI question/source generation) and lives on
-# the "ai" queue. --processes runs N worker processes in parallel so a burst
-# of essay submissions (e.g. a whole class submitting together) is graded
-# concurrently instead of one-at-a-time; tune via AI_WORKER_PROCESSES
-# (default 4). The while-loop restarts the command if it ever crashes, and
-# --max-time=3600 recycles the workers hourly to keep memory bounded; the job
-# classes define their own per-job timeouts (e.g. 300s for essay grading).
-# The on-demand spawner (AiQueueWorker) remains as a local-dev fallback — a
-# duplicate worker is harmless because the database queue driver atomically
-# reserves jobs. Octane runs in the foreground (via exec, so it stays PID 1
-# and receives SIGTERM gracefully on deploy); if it exits, the container
-# stops and the host (Dokploy/Render) restarts it.
-CMD ["sh", "-c", "( while true; do php artisan queue:work --queue=ai --sleep=2 --max-time=3600 --processes=${AI_WORKER_PROCESSES:-4}; echo 'AI queue worker exited; restarting in 2s'; sleep 2; done ) & exec php artisan octane:start --server=roadrunner --host=0.0.0.0 --port=${PORT:-8000} --workers=${OCTANE_WORKERS:-4} --max-requests=100"]
+# Entrypoint logic (AI queue worker loop + Octane) lives in start.sh so it's
+# readable and testable on its own.
+CMD ["sh", "start.sh"]
