@@ -45,46 +45,61 @@ case "$ROLE" in
         ;;
 
     queue|worker|queue-worker)
-        # Laravel 12 removed queue:work/queue:listen --processes, so N parallel
-        # worker processes are spawned here directly (all AI work — essay
-        # grading, question/source generation — lives on the "ai" queue). Each
-        # worker self-restarts after a crash and is recycled hourly via
-        # --max-time to bound memory. The on-demand spawner (AiQueueWorker) is
-        # a local-dev fallback — a duplicate worker is harmless because the
-        # database queue driver atomically reserves jobs.
+        # Laravel 12 removed the --processes flag on queue:work/queue:listen, so
+        # N parallel workers are run under the Supervisor process manager, which
+        # restarts them on crash, reaps them gracefully on shutdown, and the
+        # hourly --max-time recycle keeps memory bounded. The on-demand spawner
+        # (AiQueueWorker) is a local-dev fallback — a duplicate worker is
+        # harmless because the database queue driver atomically reserves jobs.
         COUNT="${QUEUE_WORKER_PROCESSES:-4}"
         [ "$COUNT" -lt 1 ] && COUNT=1
-        echo "[start] role=queue — starting ${COUNT} AI queue worker process(es)..."
+        NAME="${QUEUE_NAME:-ai}"
+        TRIES="${QUEUE_TRIES:-3}"
+        TIMEOUT="${QUEUE_TIMEOUT:-300}"
+        MEMORY="${QUEUE_MEMORY:-128}"
+        echo "[start] role=queue — starting ${COUNT} AI queue worker process(es) via Supervisor..."
 
-        WORKERS=
-        stop() {
-            echo "[start] role=queue — shutting down..."
-            for pid in $WORKERS; do kill -TERM "$pid" 2>/dev/null || true; done
-            exit 0
-        }
-        trap 'stop' TERM INT
+        SUPERVISORD_CONF=/tmp/supervisord-worker.conf
+        cat > "$SUPERVISORD_CONF" <<EOF
+[supervisord]
+nodaemon=true
+logfile=/dev/fd/2
+logfile_maxbytes=0
+logfile_backups=0
+loglevel=info
+pidfile=/tmp/supervisord.pid
+childlogdir=/tmp
 
-        i=1
-        while [ "$i" -le "$COUNT" ]; do
-            (
-                while true; do
-                    php artisan queue:work \
-                        --queue="${QUEUE_NAME:-ai}" \
-                        --sleep=2 \
-                        --tries="${QUEUE_TRIES:-3}" \
-                        --timeout="${QUEUE_TIMEOUT:-300}" \
-                        --memory="${QUEUE_MEMORY:-128}" \
-                        --max-time=3600
-                    echo "[start] queue worker exited; restarting in 2s..." >&2
-                    sleep 2
-                done
-            ) &
-            WORKERS="$WORKERS $!"
-            i=$((i + 1))
-        done
+[unix_http_server]
+file=/tmp/supervisord.sock
 
-        # Workers run forever (rebooting internally), so this never returns.
-        wait
+[supervisorctl]
+serverurl=unix:///tmp/supervisord.sock
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface
+
+[program:queue-worker]
+command=php artisan queue:work --queue=$NAME --sleep=2 --tries=$TRIES --timeout=$TIMEOUT --memory=$MEMORY --max-time=3600
+directory=/app
+user=www-data
+process_name=%(program_name)s_%(process_num)02d
+numprocs=$COUNT
+autostart=true
+autorestart=true
+startretries=10
+startsecs=1
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=30
+redirect_stderr=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
+EOF
+
+        # exec so Supervisor becomes PID 1 and forwards SIGTERM to the workers,
+        # shutting them down gracefully on deploy.
+        exec supervisord -n -c "$SUPERVISORD_CONF"
         ;;
 
     scheduler|schedule|cron)

@@ -91,10 +91,13 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
   container start, so you control when schema changes apply.
 - The **AI queue worker** consumes the `ai` queue. Tune concurrency with
   `QUEUE_WORKER_PROCESSES` (default `4`) — a whole class submitting essays
-  together is graded concurrently. Workers are recycled hourly (`--max-time=3600`)
-  to bound memory. The on-demand spawner (`AiQueueWorker`) remains a local-dev
-  fallback; a duplicate worker is harmless because the database queue driver
-  atomically reserves jobs.
+  together is graded concurrently. The worker processes are supervised by
+  **Supervisor** (installed in the image; the `queue` role runs
+  `supervisord` as PID 1), which restarts a crashed worker and shuts workers
+  down gracefully on deploy. Each worker recycles itself hourly
+  (`--max-time=3600`) to bound memory. The on-demand spawner (`AiQueueWorker`)
+  remains a local-dev fallback; a duplicate worker is harmless because the
+  database queue driver atomically reserves jobs.
 - If an essay submission shows "Reviewing your essay..." forever, first check a
   queue worker is running (`docker compose ... ps`), then confirm `ai_provider`
   is set to `cloudflare` in Platform Settings. Pending jobs are recovered
