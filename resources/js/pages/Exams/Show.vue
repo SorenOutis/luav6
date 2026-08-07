@@ -315,7 +315,11 @@ const startTimer = () => {
             calculatePace();
         } else {
             stopTimer();
-            if (hasTimeLimit.value && examStarted.value && !isSubmitting.value) {
+            if (
+                hasTimeLimit.value &&
+                examStarted.value &&
+                !isSubmitting.value
+            ) {
                 isTimeoutSubmission.value = true;
                 submitPart(); // Auto-submit on timeout
             }
