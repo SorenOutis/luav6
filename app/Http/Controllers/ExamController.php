@@ -368,7 +368,10 @@ class ExamController extends Controller
                 // is already saved (Phase 1.0.2), the job is idempotent, and
                 // AIService::batchAssessEssays degrades to zero-scores/Ollama
                 // instead of throwing, so a provider blip cannot 500 the
-                // request — it only flags grading_failed for the teacher.
+                // request — it only flags grading_failed for the teacher. Any
+                // submission that still slips through (e.g. made before this
+                // change, or an APP_ENV misconfiguration) is healed by
+                // partStatus() on the next poll.
                 try {
                     GradeExamSubmissionEssays::dispatchSync($submission->id);
                 } catch (\Throwable $e) {
@@ -417,6 +420,35 @@ class ExamController extends Controller
 
         if (! $submission) {
             return response()->json(['status' => 'not_submitted']);
+        }
+
+        // Self-heal: submissions left pending (created before sync grading
+        // shipped, or whenever no queue worker is consuming the "ai" queue)
+        // are graded inline here. The modal polls this endpoint every 2s, so
+        // a stuck "Reviewing your essay..." resolves by itself. A short-lived
+        // cache lock ensures concurrent polls cannot fire the AI provider
+        // twice for the same submission.
+        if (in_array($submission->status, ['pending_review', 'pending_ai'], true)
+            && ! $submission->grading_failed
+            && $this->hasPendingEssayGrading($submission)) {
+            $lock = Cache::lock('essay_grading_'.$submission->id, 60);
+
+            if ($lock->get()) {
+                try {
+                    GradeExamSubmissionEssays::dispatchSync($submission->id);
+                } catch (\Throwable $e) {
+                    Log::warning('Self-heal essay grading failed for submission '.$submission->id.': '.$e->getMessage());
+
+                    ExamSubmission::whereKey($submission->id)->update([
+                        'status' => 'pending_ai',
+                        'grading_failed' => true,
+                    ]);
+                } finally {
+                    $lock->release();
+                }
+
+                $submission->refresh();
+            }
         }
 
         // `scored` means the AI has finished marking. Automatic feedback is
@@ -483,5 +515,32 @@ class ExamController extends Controller
             ->copy()
             ->addMinutes($exam->duration_minutes)
             ->addSeconds(30);
+    }
+
+    /**
+     * Whether any non-blank essay answer in the submission is still awaiting
+     * AI grading (no score or no feedback yet).
+     */
+    private function hasPendingEssayGrading(ExamSubmission $submission): bool
+    {
+        foreach ($submission->answers ?? [] as $answer) {
+            if (! is_array($answer) || ($answer['question_type'] ?? null) !== 'essay') {
+                continue;
+            }
+
+            $text = trim((string) ($answer['answer'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+
+            $hasScore = array_key_exists('ai_score', $answer);
+            $hasFeedback = trim((string) ($answer['ai_feedback'] ?? '')) !== '';
+
+            if (! ($hasScore && $hasFeedback)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
