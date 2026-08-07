@@ -18,8 +18,12 @@ import {
     Loader2,
     ChevronDown,
     ChevronUp,
+    TrendingUp,
+    TrendingDown,
+    Minus,
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
+import type { Component } from 'vue';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
@@ -133,6 +137,35 @@ const filteredUsers = computed(() => {
 const userRank = computed(() => activeLeaderboard.value?.userRank || 0);
 const totalPlayers = computed(() => activeLeaderboard.value?.totalPlayers || 0);
 const sectionName = computed(() => activeLeaderboard.value?.sectionName || '');
+const currentUser = computed(
+    () => users.value.find((u) => u.isCurrentUser) || null,
+);
+
+// Weekly trend indicators (computed server-side from real XP history)
+const trendMeta: Record<
+    'up' | 'down' | 'stable',
+    { icon: Component; label: string; chip: string; iconColor: string }
+> = {
+    up: {
+        icon: TrendingUp,
+        label: 'Up',
+        chip: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-400',
+        iconColor: 'text-emerald-400',
+    },
+    down: {
+        icon: TrendingDown,
+        label: 'Down',
+        chip: 'border-rose-400/25 bg-rose-400/10 text-rose-400',
+        iconColor: 'text-rose-400',
+    },
+    stable: {
+        icon: Minus,
+        label: 'Steady',
+        chip: 'border-border/30 bg-muted/30 text-muted-foreground',
+        iconColor: 'text-muted-foreground/40',
+    },
+};
+const trendOf = (u: LeaderboardUser) => trendMeta[u.trend] ?? trendMeta.stable;
 
 const currentSeasonName = computed(() => {
     if (selectedSeasonName.value) return selectedSeasonName.value;
@@ -350,16 +383,6 @@ const changeSeason = async (seasonId: number) => {
                 <h2 class="text-2xl font-black tracking-tight sm:text-3xl">
                     Leaderboard
                 </h2>
-                <p
-                    v-if="totalPlayers > 0"
-                    class="mt-1 text-xs text-muted-foreground"
-                >
-                    You are ranked
-                    <span class="font-bold text-foreground"
-                        >#{{ userRank }}</span
-                    >
-                    of {{ totalPlayers }}
-                </p>
             </div>
             <div class="flex flex-wrap items-center justify-end gap-2">
                 <Link
@@ -428,6 +451,67 @@ const changeSeason = async (seasonId: number) => {
                     <Eye v-else class="h-3.5 w-3.5" />
                     <span>{{ currentUserBlurred ? 'Hidden' : 'Visible' }}</span>
                 </button>
+            </div>
+        </div>
+
+        <!-- Your Rank Row -->
+        <div v-if="currentUser && totalPlayers > 0" class="lb-rank-row">
+            <div
+                class="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-amber-400/10 blur-2xl"
+                aria-hidden="true"
+            ></div>
+            <div
+                class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+                    <div
+                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400"
+                    >
+                        <Trophy class="h-5 w-5" />
+                    </div>
+                    <div class="min-w-0">
+                        <p
+                            class="text-[10px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase"
+                        >
+                            Your Rank
+                        </p>
+                        <div class="flex items-baseline gap-2">
+                            <span
+                                class="text-2xl leading-none font-black tracking-tighter tabular-nums sm:text-3xl"
+                                >#{{ userRank }}</span
+                            >
+                            <span
+                                class="text-xs font-bold text-muted-foreground"
+                                >of {{ totalPlayers }} players</span
+                            >
+                        </div>
+                        <p class="mt-1 truncate text-xs text-muted-foreground">
+                            {{
+                                currentUser.blurred
+                                    ? BLURRED_NAME
+                                    : currentUser.name
+                            }}
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 sm:flex-col sm:items-end">
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black tracking-widest uppercase"
+                        :class="trendOf(currentUser).chip"
+                    >
+                        <component
+                            :is="trendOf(currentUser).icon"
+                            class="h-3 w-3"
+                        />
+                        {{ trendOf(currentUser).label }}
+                    </span>
+                    <span
+                        class="text-[10px] font-bold text-muted-foreground tabular-nums"
+                    >
+                        +{{ currentUser.weeklyXp.toLocaleString() }} XP this
+                        week
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -792,6 +876,11 @@ const changeSeason = async (seasonId: number) => {
                                 <div
                                     class="flex items-center justify-end gap-1"
                                 >
+                                    <component
+                                        :is="trendOf(user).icon"
+                                        class="h-2.5 w-2.5"
+                                        :class="trendOf(user).iconColor"
+                                    />
                                     <Sparkles
                                         class="h-2 w-2 text-amber-400/60"
                                     />
@@ -994,6 +1083,11 @@ const changeSeason = async (seasonId: number) => {
 }
 .lb-empty {
     @apply flex flex-col items-center justify-center rounded-2xl border border-border/30 bg-card/20 px-6 py-16 text-center;
+}
+
+/* ═══ Your Rank Row ═══ */
+.lb-rank-row {
+    @apply relative overflow-hidden rounded-2xl border border-amber-400/25 bg-gradient-to-r from-amber-400/10 via-card/40 to-transparent p-4 sm:p-5;
 }
 
 /* ═══ Podium ═══ */

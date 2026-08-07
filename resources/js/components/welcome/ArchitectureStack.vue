@@ -19,7 +19,7 @@ const archStack = [
     },
     {
         title: 'Student Progress Data',
-        desc: 'Scores, streaks, rankings, and learning analytics tracked over time.',
+        desc: 'Scores, rankings, and learning analytics tracked over time.',
         color: 'muted',
     },
     {

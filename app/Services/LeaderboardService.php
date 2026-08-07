@@ -73,18 +73,33 @@ class LeaderboardService
             ->groupBy('section_id')
             ->pluck('total', 'section_id');
 
-        // ── Weekly XP — one query for all users across all sections ──
+        // ── Weekly XP + trend — one query over the last 14 days of XP ──
+        // gamification_histories is the canonical XP log (exams, daily claims,
+        // admin adjustments, enrollment). course_user.xp_earned is not kept in
+        // sync by the live lesson flow, so it is a poor source for activity.
         $allUserIds = $userSections->flatMap(fn ($s) => $s->users()
             ->where('is_admin', false)
             ->pluck('users.id')
         )->unique();
 
-        $weeklyXpMap = DB::table('course_user')
+        $thisWeekStart = now()->subDays(7);
+        $prevWeekStart = now()->subDays(14);
+
+        // Single-pass conditional aggregation for both week buckets.
+        // NOTE: bindings must go through selectRaw() — DB::raw() only accepts
+        // the expression and would silently drop a second argument, leaving the
+        // ? placeholders unbound and misaligning every subsequent binding.
+        $weekStats = DB::table('gamification_histories')
             ->whereIn('user_id', $allUserIds)
-            ->where('updated_at', '>=', now()->subDays(7))
-            ->select('user_id', DB::raw('SUM(xp_earned) as total'))
+            ->where('created_at', '>=', $prevWeekStart)
+            ->where('amount_xp', '>', 0)
+            ->selectRaw(
+                'user_id, SUM(CASE WHEN created_at >= ? THEN amount_xp ELSE 0 END) as this_week, SUM(CASE WHEN created_at < ? THEN amount_xp ELSE 0 END) as prev_week',
+                [$thisWeekStart, $thisWeekStart]
+            )
             ->groupBy('user_id')
-            ->pluck('total', 'user_id');
+            ->get()
+            ->keyBy('user_id');
 
         // ── Build per-section leaderboards ──────────────────────────
         $sectionLeaderboards = [];
@@ -99,10 +114,14 @@ class LeaderboardService
             $userRankRow = $sectionRanks->firstWhere('user_id', $user->id);
             $userRank = $userRankRow ? (int) $userRankRow->rank : 1;
 
-            $leaderboardUsers = $usersInSection->map(function ($u) use ($weeklyXpMap, $user) {
+            $leaderboardUsers = $usersInSection->map(function ($u) use ($weekStats, $user) {
                 $progress = $u->sectionProgress->first();
                 $xp = $progress?->exp ?? 0;
                 $level = $progress?->level ?? 1;
+
+                $weekly = $weekStats[$u->id] ?? null;
+                $thisWeek = (float) ($weekly->this_week ?? 0);
+                $prevWeek = (float) ($weekly->prev_week ?? 0);
 
                 return [
                     'id' => $u->id,
@@ -113,8 +132,8 @@ class LeaderboardService
                     'xpProgress' => (int) ($xp % 100),
                     'streak' => $u->current_streak,
                     'joinedAt' => $u->created_at->format('M Y'),
-                    'weeklyXp' => (int) ($weeklyXpMap[$u->id] ?? 0),
-                    'trend' => 'stable',
+                    'weeklyXp' => (int) round($thisWeek),
+                    'trend' => $this->trendFor($thisWeek, $prevWeek),
                     'isCurrentUser' => $u->id === $user->id,
                     'blurred' => $u->blur_leaderboard,
                 ];
@@ -130,5 +149,28 @@ class LeaderboardService
         }
 
         return $sectionLeaderboards;
+    }
+
+    /**
+     * Derive a weekly trend by comparing XP earned in the last 7 days against
+     * the 7 days before that. A ~15% shift either way counts as movement.
+     */
+    protected function trendFor(float $thisWeek, float $prevWeek): string
+    {
+        if ($prevWeek <= 0) {
+            return $thisWeek > 0 ? 'up' : 'stable';
+        }
+
+        $ratio = $thisWeek / $prevWeek;
+
+        if ($ratio >= 1.15) {
+            return 'up';
+        }
+
+        if ($ratio <= 0.85) {
+            return 'down';
+        }
+
+        return 'stable';
     }
 }

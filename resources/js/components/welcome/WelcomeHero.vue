@@ -5,7 +5,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { ArrowRight, CalendarCheck, LayoutDashboard } from 'lucide-vue-next';
-import { ref, onMounted, onBeforeUnmount, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
@@ -28,53 +28,11 @@ const props = defineProps<{
 
 const emit = defineEmits(['magnetic', 'resetMagnetic', 'watchDemo']);
 
-const words = [
-    'School-Ready Assessment.',
-    'Teacher Clarity.',
-    'Student Momentum.',
-    'Actionable Reports.',
-    'Guided Growth.',
-];
-const currentWordIndex = ref(0);
-const currentCharIndex = ref(words[0].length);
-const isTyping = ref(false);
-const typedText = ref(words[0]);
-let typingTimeout: ReturnType<typeof setTimeout> | null = null;
+const heroSubtitle =
+    'A school-ready learning platform for exams, assignments, grades, and AI feedback — with a clear path for every learner.';
 let gsapCtx: gsap.Context | null = null;
 
 const heroRef = ref<HTMLElement | null>(null);
-
-const type = () => {
-    const currentWord = words[currentWordIndex.value];
-
-    if (isTyping.value) {
-        typedText.value = currentWord.substring(0, currentCharIndex.value + 1);
-        currentCharIndex.value++;
-
-        if (currentCharIndex.value === currentWord.length) {
-            isTyping.value = false;
-            typingTimeout = setTimeout(type, 2500);
-            return;
-        }
-    } else {
-        typedText.value = currentWord.substring(0, currentCharIndex.value - 1);
-        currentCharIndex.value--;
-
-        if (currentCharIndex.value === 0) {
-            isTyping.value = true;
-            currentWordIndex.value =
-                (currentWordIndex.value + 1) % words.length;
-            typingTimeout = setTimeout(type, 800);
-            return;
-        }
-    }
-
-    let delay = isTyping.value ? 40 + Math.random() * 60 : 30;
-    if (isTyping.value && typedText.value.endsWith(' '))
-        delay += 60 + Math.random() * 40;
-
-    typingTimeout = setTimeout(type, delay);
-};
 
 const handleMagnetic = (e: MouseEvent) => emit('magnetic', e);
 const resetMagnetic = (e: MouseEvent) => emit('resetMagnetic', e);
@@ -115,34 +73,10 @@ const initAnimations = () => {
                 gsap.set(creditEl, { y: 0, opacity: 1 });
             }
 
-            // Still attach scroll effects (parallax is passive scroll-driven)
-            gsap.to('.hero-parallax', {
-                y: (_, target) => {
-                    const speed = parseFloat(
-                        (target as HTMLElement).dataset.speed || '0.2',
-                    );
-                    return -window.innerHeight * speed;
-                },
-                ease: 'none',
-                scrollTrigger: {
-                    trigger: heroRef.value,
-                    start: 'top top',
-                    end: 'bottom top',
-                    scrub: true,
-                },
-            });
-
-            gsap.to(heroRef.value, {
-                opacity: 0,
-                y: -80,
-                ease: 'none',
-                scrollTrigger: {
-                    trigger: heroRef.value,
-                    start: 'top 15%',
-                    end: 'bottom top',
-                    scrub: 1.2,
-                },
-            });
+            // Low-end / reduced-motion: skip scrubbed parallax entirely.
+            // Scrub re-renders transforms on every scroll frame, which is a
+            // primary source of frame drops on coarse-pointer / low-memory
+            // hardware. Static positioning keeps the page smooth.
             return;
         }
 
@@ -265,12 +199,6 @@ const initAnimations = () => {
 };
 
 onMounted(() => {
-    if (!props.prefersReducedMotion) {
-        typingTimeout = setTimeout(type, 2500);
-    } else {
-        // On low-end, show the final typed text immediately
-        typedText.value = words[0];
-    }
     if (props.isBooted) {
         initAnimations();
     }
@@ -284,12 +212,6 @@ watch(
         }
     },
 );
-
-onBeforeUnmount(() => {
-    if (typingTimeout) {
-        clearTimeout(typingTimeout);
-    }
-});
 
 onUnmounted(() => {
     gsapCtx?.revert();
@@ -327,15 +249,7 @@ onUnmounted(() => {
             <p
                 class="pointer-events-none invisible max-w-3xl text-sm leading-relaxed font-medium tracking-tight whitespace-pre-wrap opacity-0 select-none sm:text-xl lg:text-2xl"
             >
-                A school-ready learning platform for exams, assignments, grades,
-                AI feedback, and student engagement through
-                <span
-                    class="inline-flex items-center font-black tracking-widest uppercase"
-                >
-                    Guided Growth.<span
-                        class="ml-1 h-[0.8em] w-1 bg-primary"
-                    ></span>
-                </span>
+                {{ heroSubtitle }}
             </p>
 
             <Motion
@@ -352,16 +266,7 @@ onUnmounted(() => {
                 "
                 class="absolute inset-0 max-w-3xl text-sm leading-relaxed font-medium tracking-tight text-muted-foreground sm:text-xl lg:text-2xl"
             >
-                A school-ready learning platform for exams, assignments, grades,
-                AI feedback, and student engagement through
-                <span
-                    class="inline-flex items-center font-black tracking-widest text-foreground uppercase"
-                >
-                    {{ typedText
-                    }}<span
-                        class="ml-1 h-[0.8em] w-1 animate-[pulse_1s_infinite] bg-primary shadow-[0_0_8px_var(--color-primary)]"
-                    ></span>
-                </span>
+                {{ heroSubtitle }}
             </Motion>
         </div>
 

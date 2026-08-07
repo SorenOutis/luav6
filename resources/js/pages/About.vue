@@ -57,7 +57,7 @@ const principles = [
     {
         icon: Sparkles,
         title: 'Joyful by default',
-        body: 'Streaks, badges, and a Learning Map make progress feel inevitable — without ever being patronizing.',
+        body: 'Clear progress signals and a Learning Map make achievement feel inevitable — without ever being patronizing.',
     },
 ];
 
@@ -100,11 +100,11 @@ const roles = [
         icon: Users,
         label: 'Student',
         headline: 'Learn with momentum, not anxiety.',
-        body: 'Streaks, badges, and the Learning Map turn each lesson into a checkpoint on a clear journey — instead of a wall of grades.',
+        body: 'A clear learning map and steady progress turn each lesson into a checkpoint on a clear journey — instead of a wall of grades.',
         bullets: [
-            'Daily streaks & XP',
-            'Personal learning map',
-            'Anonymous classroom messaging',
+            'Personal progress tracking',
+            'A personal learning map',
+            'Achievement milestones',
         ],
     },
     {

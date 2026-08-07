@@ -51,24 +51,24 @@ const steps = [
         icon: BarChart3,
         title: 'Track Your Progress',
         description:
-            'Monitor your grades, streaks, and XP across all subjects. The learning map shows your journey at every step.',
+            'Monitor your grades and progress across all subjects. The learning map shows your journey at every step.',
         details: [
-            'Real-time dashboard with XP and level tracking',
-            'Streak system that rewards daily engagement',
-            'Section leaderboards for friendly competition',
+            'Real-time dashboard with progress and level tracking',
+            'Daily engagement system that rewards consistent work',
+            'Section leaderboards for healthy classroom competition',
             'Comprehensive grades page for all subjects',
         ],
     },
     {
         icon: Trophy,
-        title: 'Earn Badges & Rewards',
+        title: 'Celebrate Milestones',
         description:
-            'Stay motivated with achievements, seasonal rewards, and a gamified learning experience that makes progress fun.',
+            'Stay motivated with achievements, review milestones, and an engaging learning experience that makes progress clear and rewarding.',
         details: [
-            'Badges for milestones and achievements',
-            'Seasonal events with exclusive rewards',
-            'Learning map with unlockable nodes',
-            'Anonymous messaging for classroom connection',
+            'Recognition for milestones and achievements',
+            'Learning campaigns and seasonal milestones',
+            'A learning map with unlockable checkpoints',
+            'Classroom connection through shared sections and engagement',
         ],
     },
 ];

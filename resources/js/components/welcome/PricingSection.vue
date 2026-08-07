@@ -11,7 +11,7 @@ import {
     Crown,
     HelpCircle,
 } from 'lucide-vue-next';
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -25,14 +25,7 @@ const props = defineProps<{
 }>();
 
 const pricingRef = ref<HTMLElement | null>(null);
-const isYearly = ref(false);
 let gsapCtx: gsap.Context | null = null;
-
-// Reactive price display refs — GSAP animates these, Vue re-renders the template
-const proDisplayPrice = ref(30);
-const enterpriseDisplayPrice = ref(50);
-let priceTweenPro: gsap.core.Tween | null = null;
-let priceTweenEnterprise: gsap.core.Tween | null = null;
 
 interface PricingFeature {
     name: string;
@@ -49,48 +42,48 @@ const flatFeatures = computed(() => featureGroups.flatMap((g) => g.features));
 const tiers = computed(() => [
     {
         id: 'free' as TierId,
-        name: 'Free',
-        subtitle: 'Getting started',
+        name: 'Starter',
+        subtitle: 'Get started',
         price: 0,
-        period: '/mo',
+        period: '',
         description:
-            'Everything you need to get started with the LUAV Learning Engine.',
+            'Everything a teacher needs to try LSI — exams, assignments, and instant AI feedback.',
         icon: Sparkles,
         gradient: 'from-zinc-500/20 via-zinc-500/10 to-zinc-600/10',
-        cta: props.auth.user ? 'Get Started Free' : 'Join Free',
+        cta: props.auth.user ? 'Open Dashboard' : 'Create free account',
         href: props.auth.user ? props.dashboard() : props.register(),
         featured: false,
-        highlight: 'Best for individual students',
+        highlight: 'Best to get started',
     },
     {
         id: 'pro' as TierId,
-        name: 'Pro',
-        subtitle: 'For serious learners',
-        price: 0, // Not used — rendered from proDisplayPrice ref
-        period: isYearly.value ? '/yr' : '/mo',
+        name: 'Classroom',
+        subtitle: 'For a school',
+        price: 'Custom',
+        period: '',
         description:
-            'Advanced tools, AI feedback, and deeper insights for motivated students.',
+            'Roll LSI out across your classroom or whole school with engagement tools, analytics, and support.',
         icon: Star,
         gradient: 'from-primary/30 via-primary/15 to-primary/10',
-        cta: 'Start Pro Trial',
-        href: props.auth.user ? props.dashboard() : props.register(),
+        cta: 'Contact Sales',
+        href: '#contact',
         featured: true,
-        highlight: 'Most popular',
+        highlight: 'Most popular for schools',
     },
     {
         id: 'enterprise' as TierId,
-        name: 'Enterprise',
+        name: 'District',
         subtitle: 'For institutions',
-        price: 0, // Not used — rendered from enterpriseDisplayPrice ref
-        period: isYearly.value ? '/yr' : '/mo',
+        price: 'Custom',
+        period: '',
         description:
-            'Full classroom deployment with analytics, priority support, and custom branding.',
+            'A district-wide rollout with role-based access, custom branding, and a dedicated success manager.',
         icon: Crown,
         gradient: 'from-amber-500/20 via-amber-500/10 to-amber-600/10',
         cta: 'Contact Sales',
         href: '#contact',
         featured: false,
-        highlight: 'Best for schools & districts',
+        highlight: 'Best for institutions',
     },
 ]);
 
@@ -146,7 +139,7 @@ const featureGroups: { group: string; features: PricingFeature[] }[] = [
                 enterprise: true,
             },
             {
-                name: 'Gamification (XP, Levels, Streaks)',
+                name: 'Student engagement tools',
                 free: true,
                 pro: true,
                 enterprise: true,
@@ -173,29 +166,28 @@ const featureGroups: { group: string; features: PricingFeature[] }[] = [
         ],
     },
     {
-        group: 'Community & Engagement',
+        group: 'School tools & engagement',
         features: [
             {
-                name: 'Anonymous Feedback (NGL)',
-                free: true,
-                pro: true,
-                enterprise: true,
-            },
-            { name: 'Leaderboards', free: false, pro: true, enterprise: true },
-            {
-                name: 'Badge & Award System',
-                free: true,
-                pro: true,
-                enterprise: true,
-            },
-            {
-                name: 'Seasonal Events & Challenges',
+                name: 'Section leaderboards',
                 free: false,
                 pro: true,
                 enterprise: true,
             },
             {
-                name: 'Custom Badges',
+                name: 'Achievement & recognition',
+                free: true,
+                pro: true,
+                enterprise: true,
+            },
+            {
+                name: 'Learning campaigns & events',
+                free: false,
+                pro: true,
+                enterprise: true,
+            },
+            {
+                name: 'Custom achievements',
                 free: false,
                 pro: false,
                 enterprise: true,
@@ -248,69 +240,6 @@ const featureValue = (
 ): boolean | string => {
     return feature[tierId];
 };
-
-// ─── Price switching animation ───
-// Animates the reactive ref so Vue updates the template smoothly on each frame
-const animatePriceRef = (
-    targetRef: ReturnType<typeof ref<number>>,
-    from: number,
-    to: number,
-) => {
-    const obj = { value: from };
-    targetRef.value = from;
-    return gsap.to(obj, {
-        value: to,
-        duration: 0.6,
-        ease: 'power2.out',
-        onUpdate: () => {
-            targetRef.value = to === 0 ? 0 : Math.round(obj.value);
-        },
-        onComplete: () => {
-            targetRef.value = to;
-        },
-    });
-};
-
-watch(isYearly, (yearly) => {
-    if (!pricingRef.value) return;
-
-    const proTarget = yearly ? 24 : 30;
-    const entTarget = yearly ? 40 : 50;
-
-    if (props.prefersReducedMotion) {
-        // Skip animation on low-end devices — set values directly
-        proDisplayPrice.value = proTarget;
-        enterpriseDisplayPrice.value = entTarget;
-        return;
-    }
-
-    // Kill previous tweens to avoid overlapping animations
-    priceTweenPro?.kill();
-    priceTweenEnterprise?.kill();
-    priceTweenPro = animatePriceRef(
-        proDisplayPrice,
-        proDisplayPrice.value,
-        proTarget,
-    );
-    priceTweenEnterprise = animatePriceRef(
-        enterpriseDisplayPrice,
-        enterpriseDisplayPrice.value,
-        entTarget,
-    );
-
-    // Quick bounce on toggle buttons
-    gsap.fromTo(
-        '.billing-toggle',
-        { scale: 1 },
-        {
-            scale: 0.96,
-            duration: 0.1,
-            yoyo: true,
-            repeat: 1,
-            ease: 'power1.inOut',
-        },
-    );
-});
 
 const initAnimations = () => {
     if (!pricingRef.value || props.prefersReducedMotion) return;
@@ -426,8 +355,6 @@ onMounted(() => {
 
 onUnmounted(() => {
     gsapCtx?.revert();
-    priceTweenPro?.kill();
-    priceTweenEnterprise?.kill();
 });
 </script>
 
@@ -447,45 +374,13 @@ onUnmounted(() => {
             <h2
                 class="pricing-heading text-3xl font-bold tracking-tight lg:text-5xl"
             >
-                Simple, transparent
-                <span class="text-primary">pricing</span>
+                Transparent plans for schools
+                <span class="text-primary">& districts</span>
             </h2>
             <p class="pricing-desc max-w-xl text-muted-foreground">
-                Choose the plan that fits your learning journey. No hidden fees,
-                no surprises.
+                From a free trial for one teacher to a full district rollout —
+                no hidden fees, no surprises.
             </p>
-
-            <div class="pricing-desc mt-4 flex items-center gap-3">
-                <button
-                    type="button"
-                    @click="isYearly = false"
-                    class="billing-toggle relative rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300"
-                    :class="
-                        !isYearly
-                            ? 'bg-foreground text-background shadow-lg shadow-foreground/10'
-                            : 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'
-                    "
-                >
-                    Monthly
-                </button>
-                <button
-                    type="button"
-                    @click="isYearly = true"
-                    class="billing-toggle relative rounded-lg px-4 py-2 text-sm font-medium transition-all duration-300"
-                    :class="
-                        isYearly
-                            ? 'bg-foreground text-background shadow-lg shadow-foreground/10'
-                            : 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'
-                    "
-                >
-                    Yearly
-                    <span
-                        class="absolute -top-2 -right-2 flex h-5 items-center rounded-full bg-primary px-2 text-[9px] font-bold tracking-wider text-primary-foreground shadow-sm shadow-primary/30"
-                    >
-                        -20%
-                    </span>
-                </button>
-            </div>
         </div>
 
         <!-- Tier Cards -->
@@ -553,15 +448,10 @@ onUnmounted(() => {
                             class="price-value text-4xl font-black tracking-tight tabular-nums"
                         >
                             <template v-if="tier.id === 'free'">Free</template>
-                            <template v-else-if="tier.id === 'pro'"
-                                >${{ proDisplayPrice }}</template
-                            >
-                            <template v-else
-                                >${{ enterpriseDisplayPrice }}</template
-                            >
+                            <template v-else>{{ tier.price }}</template>
                         </span>
                         <span
-                            v-if="tier.id !== 'free'"
+                            v-if="tier.period"
                             class="period-label text-sm font-medium text-muted-foreground transition-all duration-300"
                             >{{ tier.period }}</span
                         >
@@ -661,15 +551,15 @@ onUnmounted(() => {
                     >
                         <span
                             class="text-[10px] font-bold tracking-[0.15em] text-muted-foreground/60 uppercase"
-                            >Free</span
+                            >Starter</span
                         >
                         <span
                             class="text-[10px] font-bold tracking-[0.15em] text-primary uppercase"
-                            >Pro</span
+                            >Classroom</span
                         >
                         <span
                             class="text-[10px] font-bold tracking-[0.15em] text-muted-foreground/60 uppercase"
-                            >Enterprise</span
+                            >District</span
                         >
                     </div>
                 </div>
@@ -972,19 +862,6 @@ onUnmounted(() => {
     100% {
         background-position: -200% 0;
     }
-}
-
-/* ─── Billing Toggle ─── */
-.billing-toggle {
-    transition:
-        background-color 0.3s ease,
-        color 0.3s ease,
-        box-shadow 0.3s ease,
-        transform 0.2s ease;
-}
-
-.billing-toggle:active {
-    transform: scale(0.95);
 }
 
 /* ─── Tier Cards entrance animation for the featured badge ─── */
