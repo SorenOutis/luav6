@@ -15,6 +15,7 @@ use App\Support\ExamPartSerializer;
 use Carbon\CarbonInterface as Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -356,14 +357,42 @@ class ExamController extends Controller
             ->where('exam_part_id', $examPart->id)
             ->delete();
 
-        // Answers are now durable. Grade the essays off-request.
+        // Answers are now durable. Grade the essays.
         if ($hasEssay) {
-            GradeExamSubmissionEssays::dispatch($submission->id);
+            if (app()->isProduction()) {
+                // Production has no guarantee a queue worker is alive: the
+                // on-demand spawner (AiQueueWorker) does not survive under
+                // RoadRunner, and a deploy may predate the persistent worker
+                // in the Docker CMD. Grade inline so a student always gets
+                // their score without depending on the queue. The submission
+                // is already saved (Phase 1.0.2), the job is idempotent, and
+                // AIService::batchAssessEssays degrades to zero-scores/Ollama
+                // instead of throwing, so a provider blip cannot 500 the
+                // request — it only flags grading_failed for the teacher.
+                try {
+                    GradeExamSubmissionEssays::dispatchSync($submission->id);
+                } catch (\Throwable $e) {
+                    Log::error('Inline essay grading failed for submission '.$submission->id.': '.$e->getMessage());
 
-            // Spawns a detached `queue:work --stop-when-empty` if none is
-            // running, so the teacher doesn't have to remember to start one
-            // alongside `octane:start`.
-            AiQueueWorker::ensureRunning();
+                    // Last resort: queue the job so a running worker (if any)
+                    // can retry with the job's own tries/backoff. Safe to
+                    // dispatch here — the sync run already aborted, so there
+                    // is no double-processing race.
+                    GradeExamSubmissionEssays::dispatch($submission->id);
+
+                    $submission->forceFill([
+                        'status' => 'pending_ai',
+                        'grading_failed' => true,
+                    ])->save();
+                }
+            } else {
+                GradeExamSubmissionEssays::dispatch($submission->id);
+
+                // Spawns a detached `queue:work --stop-when-empty` if none is
+                // running, so the teacher doesn't have to remember to start one
+                // alongside `octane:start`.
+                AiQueueWorker::ensureRunning();
+            }
         }
 
         return redirect('/exams/'.$exam->id)->with('submitted_part', $examPart->id);
