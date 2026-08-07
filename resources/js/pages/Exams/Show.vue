@@ -1185,6 +1185,14 @@ const submitPart = async () => {
                     freshSubmittedPartId ?? submittedPartId,
                 );
             },
+            // A request that dies (network drop, tab killed, server restart)
+            // can leave isSubmitting stuck true — Inertia may not fire
+            // onFinish for a request that never completes. Reset here so the
+            // submit button can never spin forever.
+            onError: () => {
+                isFinalSubmitting.value = false;
+                isSubmitting.value = false;
+            },
             onFinish: () => {
                 isFinalSubmitting.value = false;
                 isSubmitting.value = false;
