@@ -1,53 +1,58 @@
-# ── PHP runtime base (glibc — same platform as production/CI) ──────────
-# turso/libsql bundles a glibc-built liblibsql.so loaded via FFI, so any PHP
-# that boots the app (wayfinder route generation, the app itself) must be
-# glibc-based. The app stage and the route-generation stage both build on this.
-FROM php:8.4-cli-bookworm AS php-base
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        git unzip libzip-dev libicu-dev libonig-dev libxml2-dev \
-        libpng-dev libjpeg-dev libfreetype6-dev libffi-dev pkg-config \
-        libpq-dev \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install bcmath dom intl mbstring opcache xml xmlwriter zip gd sockets ffi pcntl pgsql pdo_pgsql \
-    && { echo 'ffi.enable = true'; } > /usr/local/etc/php/conf.d/ffi.ini \
-    # PHP CLI default memory_limit is -1 (unlimited). RoadRunner workers are
-    # long-lived CLI processes, so a single worker leaking memory can OOM the
-    # whole 512MB container. Cap it so the worker is killed and recycled by
-    # RoadRunner's supervisor instead.
-    && { echo 'memory_limit = 128M'; } > /usr/local/etc/php/conf.d/memory-limit.ini \
-    && rm -rf /var/lib/apt/lists/*
-COPY --from=composer:2.10 /usr/bin/composer /usr/bin/composer
+# syntax=docker/dockerfile:1.4
 
-# ── Composer dependencies ──────────────────────────────────────────────
-# composer:2.10 ships a minimal Alpine PHP without intl/gd/sockets/ffi, but the
-# production dependencies hard-require them (Filament->intl, phpword->gd,
-# RoadRunner goridge->sockets, turso/libsql->ffi). Install them so composer's
-# platform check passes. `composer install` only writes the autoloader — it
-# never executes the app, so the Alpine/musl image is fine here.
-FROM composer:2.10 AS vendor
+# ── Base runtime: FrankenPHP (Caddy + PHP 8.5 worker) ───────────────────
+# dunglas/frankenphp ships the `frankenphp` binary (Caddy with the PHP
+# worker SAPI) plus the `install-php-extensions` helper. Laravel Octane uses
+# this binary as its `frankenphp` server (`--server=frankenphp`), so no
+# separate web server or RoadRunner binary needs to be fetched.
+FROM dunglas/frankenphp:1.12-php8.5 AS base
+
+WORKDIR /app
+
+# The FrankenPHP image does not ship Composer, so copy it in for the install
+# stages.
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# PHP extensions required by the production dependencies (Filament→intl,
+# PHPWord→gd), Octane's FrankenPHP server (pcntl/opcache), and the optional
+# Postgres driver. `curl` is used by the container HEALTHCHECK.
+# `memory_limit` is capped so a long-lived FrankenPHP worker that leaks is
+# killed by Octane's max-requests recycling instead of OOM-ing the container.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && install-php-extensions \
+        bcmath \
+        exif \
+        gd \
+        intl \
+        mbstring \
+        opcache \
+        pcntl \
+        pdo_pgsql \
+        pgsql \
+        sockets \
+        zip \
+    && printf 'memory_limit = 128M\n' > /usr/local/etc/php/conf.d/zz-memory-limit.ini \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Composer dependencies ────────────────────────────────────────────────
+# `--no-scripts` keeps the post-autoload-dump scripts from booting the app
+# before autoload is fully assembled; package discovery re-runs on deploy via
+# `php artisan package:discover`. `--optimize-autoloader` is NOT
+# classmap-authoritative so that first-party `App\` classes (added in later
+# stages where app/ is present) stay reachable via PSR-4.
+FROM base AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./
-RUN apk add --no-cache --virtual .build-deps \
-        autoconf gcc g++ make musl-dev \
-        icu-dev libpng-dev libjpeg-turbo-dev freetype-dev libffi-dev pkgconf \
-    && docker-php-source extract \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install intl gd sockets ffi \
-    && docker-php-source delete
-# Keep composer install separate so dependency-lock changes don't force the
-# ~4 min extension recompilation above to re-run.
-RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts \
-    && apk del .build-deps
+RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
+        --optimize-autoloader --no-scripts
 
-# ── Wayfinder routes ───────────────────────────────────────────────────
+# ── Wayfinder routes ─────────────────────────────────────────────────────
 # resources/js/routes_temp is gitignored, so a fresh clone can't build the
-# frontend without regenerating it. Generate here on glibc PHP (the Alpine
-# composer image cannot boot the app: turso/libsql needs the glibc loader).
-FROM php-base AS routes
+# frontend without regenerating it. Generate it here on a bootable PHP image.
+FROM base AS routes
 WORKDIR /app
 COPY --from=vendor /app/vendor ./vendor
-# composer.json is required by PackageManifest so that the broken vendor
-# turso/libsql-laravel provider stays excluded via extra.laravel.dont-discover.
 COPY composer.json composer.lock ./
 COPY artisan .env.example ./
 COPY app ./app
@@ -55,7 +60,6 @@ COPY bootstrap ./bootstrap
 COPY config ./config
 COPY database ./database
 COPY routes ./routes
-# storage/ and the sqlite file are gitignored, so create what the app boot needs.
 RUN mkdir -p storage/framework/views storage/framework/cache/data storage/framework/sessions storage/logs \
     && touch database/database.sqlite \
     && cp .env.example .env \
@@ -63,7 +67,7 @@ RUN mkdir -p storage/framework/views storage/framework/cache/data storage/framew
     && php artisan key:generate --force \
     && php artisan wayfinder:generate --path=resources/js/routes_temp
 
-# ── Frontend assets ────────────────────────────────────────────────────
+# ── Frontend assets ──────────────────────────────────────────────────────
 FROM node:22-bookworm AS frontend
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -80,49 +84,53 @@ COPY config ./config
 COPY database ./database
 RUN npm run build
 
-# ── Final app image ────────────────────────────────────────────────────
-FROM php-base AS app
-WORKDIR /var/www/html
+# ── Final application image ──────────────────────────────────────────────
+# All roles (octane web server, queue worker, scheduler, migrations) share
+# this image; the container entrypoint (start.sh) dispatches on CONTAINER_ROLE.
+FROM base AS app
+WORKDIR /app
+
+# Ensure build steps below (chown of runtime dirs) run as root even if a later
+# base revision changes its default user; the final USER www-data is set below.
+USER root
+
 COPY --from=vendor /app/vendor ./vendor
-# Copy enough of the app so octane:install can boot Laravel and download the
-# RoadRunner binary. We copy the full app AFTER this step so our custom .rr.yaml
-# (with production-appropriate worker/memory limits) overwrites the generated one.
-COPY artisan .env.example composer.json composer.lock ./
-COPY app ./app
-COPY bootstrap ./bootstrap
-COPY config ./config
-COPY database ./database
-COPY routes ./routes
-RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache \
-    && touch database/database.sqlite \
-    && cp .env.example .env \
-    && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env \
-    && php artisan key:generate --force \
-    # v2024.1.0 publishes binaries as a .tar.gz archive (the bare
-    # roadrunner-linux-amd64 asset does not exist), so download, extract, and
-    # move the rr binary into place.
-    && curl -sL -o rr.tar.gz https://github.com/roadrunner-server/roadrunner/releases/download/v2024.1.0/roadrunner-2024.1.0-linux-amd64.tar.gz \
-    && tar -xzf rr.tar.gz \
-    && mv roadrunner-2024.1.0-linux-amd64/rr rr \
-    && rm -rf rr.tar.gz roadrunner-2024.1.0-linux-amd64 \
-    && chmod +x rr \
-    && ./rr --version
-# Now copy the full app — this brings in our custom .rr.yaml, public/, resources/, etc.
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
-# The app stage already copied vendor + octane:install binary above — finish setup.
-RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs storage/app/public bootstrap/cache \
-    && touch database/database.sqlite \
-    && ln -s ../storage/app/public public/storage \
-    && chown www-data:www-data rr .rr.yaml \
-    && chown -R www-data:www-data storage bootstrap/cache database \
-    && chmod +x start.sh
 
-# EXPOSE is cosmetic only — Render ignores it and routes traffic to the
-# container on the $PORT env var (default 10000). Bind Octane to $PORT so the
-# proxy can reach the app (the local docker-compose maps 8000:8000 explicitly).
-EXPOSE 8000
+# Octane creates public/frankenphp-worker.php at server start if it's missing.
+# Bake it in so the production container can run with a read-only public/ dir.
+# Copied from the vendor build stage (the repo's vendor/ is gitignored/excluded).
+COPY --from=vendor /app/vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php ./public/frankenphp-worker.php
+
+# Create the Laravel runtime directories, the public storage symlink, and make
+# everything Laravel writes to owned by the non-root www-data user.
+RUN set -eux; \
+    mkdir -p \
+        storage/framework/cache/data \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        storage/app/public \
+        bootstrap/cache; \
+    touch database/database.sqlite; \
+    ln -sfn storage/app/public public/storage; \
+    chown -R www-data:www-data storage bootstrap/cache database; \
+    chmod +x start.sh
+
+# Keep Caddy/FrankenPHP administrative data in the tmpfs-mounted /tmp so the
+# container can run with a read-only root filesystem.
+ENV XDG_DATA_HOME=/tmp \
+    XDG_CONFIG_HOME=/tmp \
+    OCTANE_SERVER=frankenphp
+
 USER www-data
-# Entrypoint logic (AI queue worker loop + Octane) lives in start.sh so it's
-# readable and testable on its own.
+
+# EXPOSE is cosmetic — the host proxy routes traffic to $PORT (default 8000).
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=5 \
+    CMD curl -f --silent http://127.0.0.1:8000/up || exit 1
+
+# Container entrypoint: dispatch on CONTAINER_ROLE (octane|queue|scheduler).
 CMD ["sh", "start.sh"]
