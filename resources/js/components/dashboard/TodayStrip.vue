@@ -9,9 +9,6 @@ import {
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { index as assignmentsIndex } from '@/routes/assignments';
-import { index as examsIndex } from '@/routes/exams';
-import EmptyState from './EmptyState.vue';
 
 export interface NextUpItem {
     kind: 'exam' | 'assignment';
@@ -435,40 +432,6 @@ const accentClasses = (accent: string, active: boolean) => {
                     class="relative z-10 h-4 w-4 shrink-0 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary"
                 />
             </SpotlightCard>
-        </div>
-    </section>
-
-    <!-- All clear / first-run: nothing due right now -->
-    <section
-        v-else
-        class="surface-card relative overflow-hidden"
-        aria-label="All caught up"
-    >
-        <div class="relative z-10 p-4 sm:p-6">
-            <EmptyState
-                :icon="CalendarCheck"
-                title="All caught up"
-                message="Nothing is due right now. Browse upcoming exams and assignments to plan your next move."
-                cta-label="Browse exams"
-                :cta-href="examsIndex().url"
-            />
-            <p
-                class="mt-3 text-center text-[9px] font-black tracking-[0.25em] text-muted-foreground/50 uppercase"
-            >
-                <a
-                    :href="assignmentsIndex().url"
-                    class="transition-colors hover:text-primary"
-                >
-                    View assignments
-                </a>
-                ·
-                <a
-                    :href="examsIndex().url"
-                    class="transition-colors hover:text-primary"
-                >
-                    View exams
-                </a>
-            </p>
         </div>
     </section>
 </template>
