@@ -160,8 +160,7 @@ const seoJsonLd = computed(() => [
         alternateName: 'Learning Systems Intelligence',
         description:
             'A school-ready learning platform for exams, assignments, grades, and AI feedback.',
-        url:
-            typeof window !== 'undefined' ? window.location.origin : undefined,
+        url: typeof window !== 'undefined' ? window.location.origin : undefined,
     },
     {
         '@context': 'https://schema.org',

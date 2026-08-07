@@ -37,9 +37,10 @@ const metaDescription = computed(
 const robots = computed(() =>
     props.noindex ? 'noindex, nofollow' : 'index, follow',
 );
-const canonical = computed(() =>
-    props.canonical ||
-    resolveCanonicalUrl(String(usePage().url ?? '/'), seo),
+const canonical = computed(
+    () =>
+        props.canonical ||
+        resolveCanonicalUrl(String(usePage().url ?? '/'), seo),
 );
 const image = computed(() => resolveOgImage(props.ogImage, seo));
 const jsonldNodes = computed(() => normalizeJsonLd(props.jsonld));
@@ -54,14 +55,20 @@ const lang = computed(() => seo.locale ?? 'en_US');
 
         <meta property="og:type" :content="type" />
         <meta property="og:site_name" :content="seo.siteName || 'LSI'" />
-        <meta property="og:title" :content="seo.tagline || seo.siteName || ''" />
+        <meta
+            property="og:title"
+            :content="seo.tagline || seo.siteName || ''"
+        />
         <meta property="og:description" :content="metaDescription" />
         <meta property="og:url" :content="canonical" />
         <meta v-if="image" property="og:image" :content="image" />
         <meta property="og:locale" :content="lang" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" :content="seo.tagline || seo.siteName || ''" />
+        <meta
+            name="twitter:title"
+            :content="seo.tagline || seo.siteName || ''"
+        />
         <meta name="twitter:description" :content="metaDescription" />
         <meta v-if="image" name="twitter:image" :content="image" />
 
@@ -69,7 +76,8 @@ const lang = computed(() => seo.locale ?? 'en_US');
             v-for="block in jsonldNodes"
             :key="JSON.stringify(block)"
             type="application/ld+json"
-            >{{ JSON.stringify(block) }}</script
         >
+            {{ JSON.stringify(block) }}
+        </script>
     </Head>
 </template>

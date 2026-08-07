@@ -32,10 +32,7 @@ export function resolveCanonicalUrl(path: string, config: SeoConfig): string {
 }
 
 /** ... */
-export function resolveOgImage(
-    override: string,
-    config: SeoConfig,
-): string {
+export function resolveOgImage(override: string, config: SeoConfig): string {
     const candidate = override || config.ogImage || '';
     if (!candidate) return '';
     if (/^https?:\/\//.test(candidate)) return candidate;
@@ -47,7 +44,9 @@ export function resolveOgImage(
 }
 
 /** Normalize a single JSON-LD block or an array into an array. */
-export function normalizeJsonLd(input?: JsonLdObject | JsonLdObject[]): JsonLdObject[] {
+export function normalizeJsonLd(
+    input?: JsonLdObject | JsonLdObject[],
+): JsonLdObject[] {
     if (!input) return [];
     return Array.isArray(input) ? input : [input];
 }
