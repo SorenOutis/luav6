@@ -6,7 +6,7 @@ A modern full-stack web application built with **Laravel 12** and **Vue 3**, fea
 
 ### Backend
 - **Framework**: Laravel 12
-- **Server**: Laravel Octane (with RoadRunner)
+- **Server**: Laravel Octane (with FrankenPHP)
 - **Authentication**: Laravel Fortify
 - **Admin Panel**: Filament
 - **AI Integration**: Laravel AI
@@ -180,35 +180,35 @@ Run specific tests:
 php artisan test
 ```
 
-## Production Deployment
+## Production Deployment (Docker)
 
-1. **Set environment to production:**
+The repo ships a `docker-compose.yml` (base/local stack) plus a
+`docker-compose.production.yml` overlay. The production stack runs four
+services — `app` (Laravel Octane on **FrankenPHP**), `queue`, `scheduler`,
+and `db` (Postgres) — all built from the same image and differentiated by the
+`CONTAINER_ROLE` environment variable (see `start.sh`).
+
+1. **Copy the production env template and fill in secrets:**
    ```bash
-   APP_ENV=production
-   APP_DEBUG=false
+   cp .env.production.example .env.production
    ```
 
-2. **Build assets:**
+2. **Run migrations** (once, and again after each deploy):
    ```bash
-   npm run build
+   docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml \
+     run --rm app php artisan migrate --force
    ```
 
-3. **Run migrations:**
+3. **Build and start the stack:**
    ```bash
-   php artisan migrate --force
+   docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml \
+     up -d --build
    ```
 
-4. **Clear caches:**
-   ```bash
-   php artisan config:cache
-   php artisan route:cache
-   php artisan view:cache
-   ```
+The web port (`8000`) is exposed only on loopback (`127.0.0.1:8000`); terminate
+TLS at your reverse proxy / load balancer and forward to `localhost:8000`.
+See `PRODUCTION.md` for the full runbook.
 
-5. **Start application with Octane:**
-   ```bash
-   php artisan octane:start
-   ```
 
 ## Project Notes
 
