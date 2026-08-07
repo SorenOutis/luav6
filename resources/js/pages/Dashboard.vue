@@ -21,9 +21,8 @@ import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
-import TodayStrip, {
-    type NextUpItem,
-} from '@/components/dashboard/TodayStrip.vue';
+import TodayStrip from '@/components/dashboard/TodayStrip.vue';
+import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';

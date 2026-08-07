@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Flame } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 interface Props {
     loginDates: string[];
