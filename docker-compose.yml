@@ -1,0 +1,91 @@
+name: luav6
+
+# ── Shared container runtime settings for every app role ─────────────────
+# All build from the same image; only CONTAINER_ROLE differs.
+x-app: &app
+  build:
+    context: .
+  restart: unless-stopped
+  init: true
+  env_file:
+    - .env
+  environment:
+    CONTAINER_ROLE: "${CONTAINER_ROLE:-octane}"
+    PORT: "${PORT:-8000}"
+    OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
+    OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+    QUEUE_NAME: "${QUEUE_NAME:-ai}"
+    QUEUE_WORKER_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+    QUEUE_TRIES: "${QUEUE_TRIES:-3}"
+    QUEUE_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+
+services:
+  # Web server: Laravel Octane on FrankenPHP.
+  app:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: octane
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # AI queue worker: consumes jobs on the "ai" queue.
+  queue:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: queue
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # Laravel scheduler: runs scheduled commands.
+  scheduler:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: scheduler
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      app:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${DB_USERNAME:-laravel}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-secret}"
+      POSTGRES_DB: "${DB_DATABASE:-laravel}"
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-laravel} -d ${DB_DATABASE:-laravel}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Local email testing UI: http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  app_storage:
+  dbdata:
