@@ -15,11 +15,12 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # PHP extensions required by the production dependencies (Filament→intl,
 # PHPWord→gd), Octane's FrankenPHP server (pcntl/opcache), and the optional
-# Postgres driver. `curl` is used by the container HEALTHCHECK.
+# Postgres driver. `curl` is used by the container HEALTHCHECK; `supervisor`
+# manages the persistent AI queue worker processes.
 # `memory_limit` is capped so a long-lived FrankenPHP worker that leaks is
 # killed by Octane's max-requests recycling instead of OOM-ing the container.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl supervisor \
     && install-php-extensions \
         bcmath \
         exif \
