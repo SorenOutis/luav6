@@ -32,6 +32,7 @@ class AiQuestionDraft extends Model
         'status',
         'questions',
         'last_error',
+        'ai_response',
         'generated_at',
         'admin_id',
     ];
@@ -50,7 +51,7 @@ class AiQuestionDraft extends Model
         // Sanitize on every save so all write paths (jobs, Filament, tinker)
         // store clean data — this also repairs legacy rows when re-saved.
         static::saving(function (AiQuestionDraft $draft): void {
-            foreach (['title', 'topic', 'source_filename', 'source_text', 'last_error'] as $attribute) {
+            foreach (['title', 'topic', 'source_filename', 'source_text', 'last_error', 'ai_response'] as $attribute) {
                 $value = $draft->getAttribute($attribute);
 
                 if (is_string($value)) {
@@ -93,6 +94,13 @@ class AiQuestionDraft extends Model
     }
 
     protected function lastError(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?string => $value === null ? null : Utf8::clean($value),
+        );
+    }
+
+    protected function aiResponse(): Attribute
     {
         return Attribute::make(
             get: fn (?string $value): ?string => $value === null ? null : Utf8::clean($value),

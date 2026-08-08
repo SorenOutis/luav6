@@ -58,12 +58,14 @@ class GenerateAiQuestions implements ShouldQueue
             $draft->forceFill([
                 'questions' => $questions,
                 'status' => 'ready',
+                'ai_response' => $service->lastRawResponse,
                 'generated_at' => now(),
             ])->save();
         } catch (\Throwable $e) {
             $draft->forceFill([
                 'status' => 'failed',
                 'last_error' => $e->getMessage(),
+                'ai_response' => $service->lastRawResponse,
             ])->save();
 
             throw $e;

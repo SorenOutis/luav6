@@ -20,6 +20,14 @@ class AiQuestionGeneratorService
 
     protected ?string $provider;
 
+    /**
+     * The raw completion text returned by the last successful provider call.
+     * Exposed so callers (e.g. the queue job) can persist what the AI actually
+     * said for debugging, even when the response cannot be parsed into usable
+     * questions.
+     */
+    public ?string $lastRawResponse = null;
+
     public function __construct()
     {
         $this->provider = Setting::get('ai_provider', 'gemini');
@@ -132,6 +140,8 @@ class AiQuestionGeneratorService
         $prompt = $this->buildPrompt($sourceText, $typeCounts, $difficulty, $topic);
 
         $raw = $this->ask($prompt, jsonMode: true, maxTokens: 8192, temperature: 0.2);
+
+        $this->lastRawResponse = $raw;
 
         // Enforce requested counts — slice AI output to at most the requested
         // amount per type, even when the model ignores the count instructions.
