@@ -150,6 +150,22 @@ class AiQuestionDraftForm
                             ->disabled()
                             ->hiddenLabel(),
                     ]),
+
+                // Raw AI response — lets the admin see exactly what the provider
+                // returned (especially when it produced unusable JSON), so a
+                // "no questions" outcome is diagnosable instead of mysterious.
+                Section::make('AI Response')
+                    ->description('The raw text the AI returned for this run. Useful for diagnosing why questions did or did not appear.')
+                    ->collapsed()
+                    ->columnSpanFull()
+                    ->visible(fn ($record) => filled($record?->ai_response))
+                    ->schema([
+                        Textarea::make('ai_response')
+                            ->rows(12)
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->hiddenLabel(),
+                    ]),
             ]);
     }
 }

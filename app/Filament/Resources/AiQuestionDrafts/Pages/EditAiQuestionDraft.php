@@ -204,8 +204,29 @@ class EditAiQuestionDraft extends EditRecord
      */
     public function pollGenerationStatus(): void
     {
-        if (in_array($this->record->status ?? '', ['pending', 'running', 'generating_source'])) {
-            $this->record->refresh();
+        $status = $this->record->status ?? '';
+
+        if (! in_array($status, ['pending', 'running', 'generating_source'], true)) {
+            return;
+        }
+
+        $this->record->refresh();
+        $newStatus = $this->record->status ?? '';
+
+        // Refreshing the Eloquent record updates the schema callbacks (which read
+        // $record for their ->visible()), but the form FIELD state (the questions
+        // Repeater, last_error, ai_response, etc.) was filled once when the page
+        // mounted — while status was still pending and questions was null. Without
+        // re-filling, the "Generated Questions" section turns visible as empty once
+        // the job finishes, which makes it look like the AI never responded.
+        if (in_array($newStatus, ['ready', 'failed'], true)) {
+            $this->refreshFormData([
+                'status',
+                'questions',
+                'last_error',
+                'ai_response',
+                'generated_at',
+            ]);
         }
     }
 }
