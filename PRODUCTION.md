@@ -118,8 +118,11 @@ Three ways to know whether the queue workers are running after a deploy:
   (`HORIZON_TRIES`, default `3`); failures land on the dashboard's Failed
   Jobs tab. The on-demand spawner (`AiQueueWorker`) is skipped automatically
   on the Redis driver — it remains the local-dev fallback for the database
-  queue. The old Supervisor-based `queue` container role is still available
-  in `start.sh` if Horizon ever needs to be bypassed.
+  queue. If `QUEUE_CONNECTION` is not `redis`, the `horizon` container role
+  refuses to start Horizon and **falls back to the Supervisor-based `queue`
+  role** (logged as a warning; the container healthcheck stays `unhealthy`
+  so the misconfiguration is visible in `docker compose ps`). The old
+  Supervisor role is also still available directly via `CONTAINER_ROLE=queue`.
 - If an essay submission shows "Reviewing your essay..." forever, first check
   Horizon is running (`docker compose ... ps` — the `horizon` service should
   be `(healthy)`), then confirm `ai_provider` is set to `cloudflare` in

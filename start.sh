@@ -103,6 +103,15 @@ EOF
         ;;
 
     horizon)
+        # Horizon only works with the Redis queue driver. If the stack was
+        # configured with a different driver, degrade to the Supervisor-based
+        # queue worker instead of crash-looping on Horizon's Redis error —
+        # the healthcheck still reports this container unhealthy as a signal.
+        if [ "${QUEUE_CONNECTION:-database}" != "redis" ]; then
+            echo "[start] WARNING: QUEUE_CONNECTION='${QUEUE_CONNECTION:-database}' — Horizon requires the Redis queue driver." >&2
+            echo "[start] Falling back to the Supervisor-based 'queue' role instead." >&2
+            exec sh start.sh queue
+        fi
         # Laravel Horizon supervises the queue workers itself — no Supervisor
         # setup needed; the process stays in the foreground as PID 1 and
         # gracefully stops its workers on SIGTERM.
