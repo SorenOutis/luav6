@@ -13,7 +13,8 @@ import {
 } from 'vue';
 
 const dashboardContainer = ref<HTMLElement | null>(null);
-const { isMobile, isDesktop, prefersReducedMotion } = useMobile();
+const { isMobile, isDesktop, prefersReducedMotion, isLowEndDevice } =
+    useMobile();
 
 import DailyRewardCard from '@/components/dashboard/DailyRewardCard.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
@@ -473,7 +474,11 @@ onMounted(() => {
     if (!dashboardContainer.value) return;
 
     gsapCtx = gsap.context(() => {
-        if (prefersReducedMotion.value || isMobile.value) {
+        if (
+            prefersReducedMotion.value ||
+            isMobile.value ||
+            isLowEndDevice.value
+        ) {
             gsap.set(
                 [
                     '.dashboard-hero',
@@ -534,13 +539,13 @@ const handleLogout = () => {
                 <!-- Hero Banner Section -->
                 <Motion
                     :initial="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? false
                             : { opacity: 0, y: 30 }
                     "
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? { duration: 0 }
                             : {
                                   duration: 0.7,
@@ -572,13 +577,13 @@ const handleLogout = () => {
                 <!-- Focus Strip: What's due / next up -->
                 <Motion
                     :initial="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? false
                             : { opacity: 0, y: 20 }
                     "
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? { duration: 0 }
                             : {
                                   duration: 0.7,
@@ -599,13 +604,13 @@ const handleLogout = () => {
                 <!-- Daily Reward (Claim XP) -->
                 <Motion
                     :initial="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? false
                             : { opacity: 0, y: 20 }
                     "
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? { duration: 0 }
                             : {
                                   duration: 0.7,
@@ -625,13 +630,13 @@ const handleLogout = () => {
                 <!-- Progress Row: Level / Streak / Season -->
                 <Motion
                     :initial="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? false
                             : { opacity: 0, y: 20 }
                     "
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? { duration: 0 }
                             : {
                                   duration: 0.7,
@@ -663,12 +668,12 @@ const handleLogout = () => {
                 <!-- Main Content Grid -->
                 <Motion
                     :initial="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? false
                             : { opacity: 0, y: 40 }
                     "
                     :in-view="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? undefined
                             : isBooted
                               ? { opacity: 1, y: 0 }
@@ -676,7 +681,7 @@ const handleLogout = () => {
                     "
                     :in-view-options="{ once: true, margin: '-50px' }"
                     :transition="
-                        isMobile || prefersReducedMotion
+                        isMobile || prefersReducedMotion || isLowEndDevice
                             ? { duration: 0 }
                             : { duration: 0.8, easing: [0.16, 1, 0.3, 1] }
                     "

@@ -7,7 +7,7 @@ import {
     Timer,
     Zap,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 export interface NextUpItem {
@@ -42,7 +42,25 @@ const stopTicking = () => {
     }
 };
 
-onBeforeUnmount(stopTicking);
+// Don't tick while the tab is hidden — the countdown only matters when the
+// dashboard is visible, and a 1s interval keeps waking the CPU in the background.
+const handleVisibilityChange = () => {
+    if (document.hidden) {
+        stopTicking();
+    } else if (hasActivity.value) {
+        now.value = new Date();
+        startTicking();
+    }
+};
+
+onMounted(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    stopTicking();
+});
 
 // --- Day timeline marker (midnight → now → midnight) ---
 const dayPercent = computed(() => {
@@ -135,7 +153,7 @@ const hasActivity = computed(
 watch(
     hasActivity,
     (active) => {
-        if (active) {
+        if (active && !document.hidden) {
             startTicking();
         } else {
             stopTicking();

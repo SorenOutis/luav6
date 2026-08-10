@@ -279,10 +279,9 @@ const initVideoPlayback = (): void => {
 };
 
 onMounted(() => {
-    // Set data-low-end on <html> so CSS can disable heavy effects
+    // On low-end, show final stats directly — skip all GSAP/ScrollTrigger/lenis.
+    // (The global `data-low-end` attribute is set app-wide in app.ts.)
     if (isLowEndDevice.value) {
-        document.documentElement.setAttribute('data-low-end', '');
-        // Show final stats directly, skip all GSAP/ScrollTrigger/lenis
         initStatsDirect();
     } else {
         initPageAnimations();
@@ -292,8 +291,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    // Clean up the data attribute when leaving the welcome page
-    document.documentElement.removeAttribute('data-low-end');
     gsapCtx?.revert();
     lenisCleanup?.();
     videoObserver?.disconnect();
@@ -575,37 +572,6 @@ onUnmounted(() => {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
-}
-
-/* ─── Low-end device optimisations ───
-   Applied via the `data-low-end` attribute on <html> when the system
-   detects low-end hardware (coarse pointer, low memory, few cores, slow connection).
-   Disables heavy CSS effects that the GSAP runtime already skips for these devices. */
-html[data-low-end] * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-}
-
-html[data-low-end] .backdrop-blur-sm,
-html[data-low-end] .backdrop-blur,
-html[data-low-end] .backdrop-blur-md,
-html[data-low-end] .backdrop-blur-lg,
-html[data-low-end] .backdrop-blur-xl,
-html[data-low-end] .backdrop-blur-2xl {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-
-html[data-low-end] .will-change-transform {
-    will-change: auto !important;
-}
-
-html[data-low-end] [class*='animate-ping'],
-html[data-low-end] [class*='animate-pulse'],
-html[data-low-end] [class*='animate-bounce'] {
-    animation: none !important;
 }
 
 /* Force Inter on the welcome page regardless of dashboard font presets.

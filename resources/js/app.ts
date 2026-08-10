@@ -5,7 +5,7 @@ import { createApp, h } from 'vue';
 import '../css/app.css';
 import GlobalLoader from '@/components/GlobalLoader.vue';
 import { initializeTheme } from '@/composables/useAppearance';
-import { initLenis } from '@/composables/useLenis';
+import { initLenis, isLowEndDeviceSignal } from '@/composables/useLenis';
 import { useLoader } from '@/composables/useLoader';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -259,6 +259,12 @@ function ensureFormMethod(route: any): void {
         });
 
         initializeTheme();
+
+        // Flag low-end hardware on <html> so global CSS can disable heavy
+        // effects (animations, backdrop-blur, will-change) on every route.
+        if (isLowEndDeviceSignal()) {
+            document.documentElement.setAttribute('data-low-end', '');
+        }
 
         // Initialise Lenis smooth scroll globally
         initLenis();

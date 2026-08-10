@@ -25,7 +25,7 @@ const emit = defineEmits<{
     claimed: [amount: number, totalXp: number];
 }>();
 
-const { prefersReducedMotion } = useMobile();
+const { prefersReducedMotion, isLowEndDevice } = useMobile();
 
 const claimState = ref<'idle' | 'claiming' | 'claimed'>(
     props.canClaim ? 'idle' : 'claimed',
@@ -355,8 +355,14 @@ function handleModalClose() {
 }
 
 onMounted(() => {
-    // Start idle pulse animation
-    if (buttonRef.value && claimState.value === 'idle') {
+    // Start idle pulse animation (skipped on low-end / reduced-motion —
+    // the loop repaints box-shadow every frame, an avoidable per-frame cost).
+    if (
+        buttonRef.value &&
+        claimState.value === 'idle' &&
+        !prefersReducedMotion.value &&
+        !isLowEndDevice.value
+    ) {
         glowAnim = gsap.to(buttonRef.value, {
             boxShadow:
                 '0 0 20px rgba(250,204,21,0.3), 0 0 40px rgba(250,204,21,0.1)',
