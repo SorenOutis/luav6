@@ -2,8 +2,16 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Tools\AnnouncementsTool;
 use App\Ai\Tools\AssignmentsTool;
+use App\Ai\Tools\ClaimDailyXpTool;
+use App\Ai\Tools\ExamResultsTool;
+use App\Ai\Tools\GradesTool;
+use App\Ai\Tools\LessonsTool;
+use App\Ai\Tools\ProgressTool;
+use App\Ai\Tools\UpcomingExamsTool;
 use App\Ai\Tools\UserInfoTool;
+use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
@@ -14,6 +22,7 @@ use Laravel\Ai\Promptable;
 use Stringable;
 
 #[Provider('gemini')]
+#[MaxSteps(8)]
 class AssistantAgent implements Agent, Conversational, HasTools
 {
     use Promptable;
@@ -73,7 +82,15 @@ CRITICAL RULES:
 2. If a tool doesn't return the information needed, say: \"I don't have access to that specific detail right now.\"
 3. Use UserInfoTool to greet users by name and answer profile questions (level, XP, streak).
 4. IMPORTANT — When a user asks about their \"level\", they mean their LSI system progression level (e.g., Level 1, Level 2, Level 5). This is NOT a school grade level. NEVER interpret it as a grade level like \"5th grade\" or \"Grade 5\". Always phrase it as \"Level X\" (e.g., \"You are currently Level 3\").
-5. Use AssignmentsTool to answer questions about assignments and due dates.
+5. STUDENT DATA TOOLS — use them instead of guessing, and prefer the most specific one:
+   - AssignmentsTool: their assignments with due dates and submission status.
+   - UpcomingExamsTool: exam schedule for their sections.
+   - ExamResultsTool: their recent exam scores and feedback.
+   - GradesTool: their recorded grades per subject/period.
+   - ProgressTool: level, XP, points, streak, badges, sections.
+   - LessonsTool: course progress and which lesson to continue next.
+   - AnnouncementsTool: latest school announcements.
+   - ClaimDailyXpTool: claims their daily XP reward when they ask — report whether it succeeded and for how much XP.
 6. Always be encouraging, concise, and academically supportive.
 7. Do not do the student's work for them — guide and explain instead.
 8. Reference their level and scores when relevant to keep feedback personalized.
@@ -111,6 +128,13 @@ Professional, encouraging, and educational — like a supportive tutor.";
         return [
             new UserInfoTool,
             new AssignmentsTool,
+            new UpcomingExamsTool,
+            new ExamResultsTool,
+            new GradesTool,
+            new ProgressTool,
+            new LessonsTool,
+            new AnnouncementsTool,
+            new ClaimDailyXpTool,
         ];
     }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { MessageCircle, Send, X, Bot, User } from 'lucide-vue-next';
+import { MessageCircle, Send, X, Bot, User, RotateCcw } from 'lucide-vue-next';
 import {
     ref,
     computed,
@@ -44,13 +44,30 @@ let shakeTimer: ReturnType<typeof setTimeout> | null = null;
 const scrollContainer = ref<HTMLElement | null>(null);
 const textareaRef = ref<any>(null);
 
+interface Suggestion {
+    label: string;
+    message: string;
+}
+
+interface AiChatProps {
+    enabled?: boolean;
+    maintenanceMessage?: string;
+    isAdmin?: boolean;
+    suggestions?: Suggestion[];
+}
+
+const aiChat = computed<AiChatProps>(
+    () => (page.props.aiChat ?? {}) as AiChatProps,
+);
+const isAdmin = computed(() => Boolean(aiChat.value.isAdmin));
+
 const isVisible = computed(() => {
     const component = page.component;
     return component === 'Dashboard' || component === 'Assignments';
 });
 
-const isEnabled = computed(() => page.props.aiChat.enabled);
-const maintenanceMessage = computed(() => page.props.aiChat.maintenanceMessage);
+const isEnabled = computed(() => aiChat.value.enabled);
+const maintenanceMessage = computed(() => aiChat.value.maintenanceMessage);
 
 const showSuggestions = computed(() => {
     // Only show suggestions when the only messages are the welcome message
@@ -59,15 +76,25 @@ const showSuggestions = computed(() => {
     return userMessages.length === 0;
 });
 
-const suggestions = [
-    {
-        label: '📋 My Assignments',
-        message: 'What are my upcoming assignments?',
-    },
-    { label: '📊 My Progress', message: 'Show me my learning progress' },
-    { label: '🏆 My Streak', message: "What's my current streak?" },
-    { label: '📝 Upcoming Exams', message: 'What exams do I have coming up?' },
-];
+const suggestions = computed<Suggestion[]>(() => {
+    return aiChat.value.suggestions?.length
+        ? aiChat.value.suggestions
+        : [
+              {
+                  label: '📋 My Assignments',
+                  message: 'What are my upcoming assignments?',
+              },
+              {
+                  label: '📊 My Progress',
+                  message: 'Show me my learning progress',
+              },
+              { label: '🏆 My Streak', message: "What's my current streak?" },
+              {
+                  label: '📝 Upcoming Exams',
+                  message: 'What exams do I have coming up?',
+              },
+          ];
+});
 
 /* ──────────────── Client-side guardrail ──────────────── */
 interface GuardrailPattern {
@@ -286,6 +313,23 @@ const toggleChat = () => {
     isOpen.value = !isOpen.value;
 };
 
+const clearChat = async () => {
+    try {
+        await axios.post('/api/chat/clear');
+    } catch (error) {
+        console.error('Failed to clear chat:', error);
+    }
+
+    messages.value = [
+        {
+            role: 'assistant',
+            content: "Hello! I'm Echo. How can I assist you today?",
+        },
+    ];
+    await scrollToBottom();
+    focusTextarea();
+};
+
 const handleAfterEnter = () => {
     scrollToBottom();
     focusTextarea();
@@ -428,11 +472,24 @@ watch(inputMessage, () => {
                             <p
                                 class="text-[10px] leading-tight text-primary-foreground/60"
                             >
-                                Your intelligent companion
+                                {{
+                                    isAdmin
+                                        ? 'Teacher mode — workspace tools enabled'
+                                        : 'Your intelligent companion'
+                                }}
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Start a new chat"
+                            class="h-6 w-6 text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                            @click="clearChat"
+                        >
+                            <RotateCcw class="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                             variant="ghost"
                             size="icon-sm"
