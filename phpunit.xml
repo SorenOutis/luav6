@@ -18,7 +18,12 @@
         </include>
     </source>
     <php>
-        <env name="APP_ENV" value="testing"/>
+        <env name="APP_ENV" value="testing" force="true"/>
+        <!-- A globally-exported APP_ENV (e.g. APP_ENV=local on a dev machine)
+             survives into $_SERVER and wins Laravel's env detection over
+             <env>. Force the $_SERVER value too so tests always run in the
+             testing environment (and runningUnitTests() works). -->
+        <server name="APP_ENV" value="testing" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

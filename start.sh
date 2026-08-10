@@ -102,6 +102,23 @@ EOF
         exec supervisord -n -c "$SUPERVISORD_CONF"
         ;;
 
+    horizon)
+        # Horizon only works with the Redis queue driver. If the stack was
+        # configured with a different driver, degrade to the Supervisor-based
+        # queue worker instead of crash-looping on Horizon's Redis error —
+        # the healthcheck still reports this container unhealthy as a signal.
+        if [ "${QUEUE_CONNECTION:-database}" != "redis" ]; then
+            echo "[start] WARNING: QUEUE_CONNECTION='${QUEUE_CONNECTION:-database}' — Horizon requires the Redis queue driver." >&2
+            echo "[start] Falling back to the Supervisor-based 'queue' role instead." >&2
+            exec sh start.sh queue
+        fi
+        # Laravel Horizon supervises the queue workers itself — no Supervisor
+        # setup needed; the process stays in the foreground as PID 1 and
+        # gracefully stops its workers on SIGTERM.
+        echo "[start] role=horizon — starting Laravel Horizon (Redis queue supervisor)..."
+        exec php artisan horizon
+        ;;
+
     scheduler|schedule|cron)
         echo "[start] role=scheduler — starting the Laravel scheduler..."
         exec php artisan schedule:work
@@ -114,7 +131,7 @@ EOF
 
     *)
         echo "[start] ERROR: unknown CONTAINER_ROLE '${ROLE}'." >&2
-        echo "[start] Valid roles: octane | queue | scheduler | migrate" >&2
+        echo "[start] Valid roles: octane | queue | horizon | scheduler | migrate" >&2
         exit 1
         ;;
 esac

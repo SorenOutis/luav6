@@ -5,24 +5,30 @@
 ```
 Reverse proxy / Load Balancer (TLS) → :8000 → Octane (FrankenPHP)
                                                         ↑ shared Postgres "db"
-                       queue worker (ai queue) ────────┤
-                       scheduler ───────────────────────┤
+                       horizon (queue supervisor) ------+-- Redis "redis" (queue)
+                       scheduler -----------------------+
                               Cloudflare R2 (files/Mail)
 ```
 
-- **One image, many roles.** All runtime services (`app`, `queue`,
+- **One image, many roles.** All runtime services (`app`, `horizon`,
   `scheduler`) are built from the same Docker image and differ only by the
   `CONTAINER_ROLE` env var, which `start.sh` (the container entrypoint)
   dispatches on:
   - `octane` — Laravel Octane on **FrankenPHP** (`dunglas/frankenphp:1.12-php8.5`),
     the foreground web process.
-  - `queue` — the persistent **AI queue worker** (`queue:work --queue=ai`),
-    self-restarting and recycled hourly.
+  - `horizon` — **Laravel Horizon**, which supervises the queue workers
+    (queues `ai` + `default`) and serves the `/horizon` dashboard.
   - `scheduler` — Laravel's scheduler (`schedule:work`).
+  - `queue` — legacy fallback: plain Supervisor-managed `queue:work`
+    processes (pre-Horizon behavior).
   - `migrate` — runs `php artisan migrate --force` once, then exits (used as a
     one-off job, not on container start).
-- **Postgres** holds sessions, cache, and the database queue driver — the web,
-  queue, and scheduler containers share state without Redis.
+- **Laravel Horizon is installed into the Docker image only** (the
+  `Dockerfile` runs `composer require laravel/horizon` at build time) — it is
+  deliberately absent from the repo's `composer.json`, so non-Docker
+  environments never load it.
+- **Postgres** holds sessions and cache; **Redis** holds the queue (Horizon
+  manages it) — AOF persistence keeps queued jobs across restarts.
 - Port `8000` binds only to loopback; your reverse proxy terminates TLS and
   forwards to `localhost:8000` (the app already trusts `X-Forwarded-*` headers).
 
@@ -32,7 +38,7 @@ Reverse proxy / Load Balancer (TLS) → :8000 → Octane (FrankenPHP)
 |---|---|
 | `Dockerfile` | Multi-stage: PHP extensions → composer deps → wayfinder routes → frontend build → runtime (non-root `www-data`, read-only friendly) |
 | `start.sh` | Container entrypoint that dispatches on `CONTAINER_ROLE` |
-| `docker-compose.yml` | Base/local stack (app, queue, scheduler, db, mailpit) |
+| `docker-compose.yml` | Base/local stack (app, horizon, scheduler, db, redis, mailpit) |
 | `docker-compose.production.yml` | Production overlay (hardening + resource limits) |
 
 ## Pre-flight
@@ -78,31 +84,49 @@ docker compose --env-file .env.production -f docker-compose.yml -f docker-compos
 # Rebuild after a deploy
 docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml up -d --build
 
-# Scale queue workers independently of the web server
-docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml up -d --scale queue=2
+# Scale queue workers independently of the web server (Horizon spawns N
+# worker processes per supervisor; run exactly ONE horizon container)
+docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml up -d -e HORIZON_PROCESSES=8 horizon
 
 # Tear down (keeps the Postgres volume)
 docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml down
 ```
 
+## Queue status (Laravel Horizon)
+
+Three ways to know whether the queue workers are running after a deploy:
+
+1. **Dashboard** — open `https://your-domain/horizon`. It shows the
+   supervisor state, throughput, pending/failed jobs, and queue wait times.
+   Access is gated by the `viewHorizon` gate: **super admins only**, via the
+   normal app login session.
+2. **CLI** — `docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.production.yml exec horizon php artisan horizon:status`
+   prints `Horizon is running.` (or `...is not running.`).
+3. **Container health** — the `horizon` service has a healthcheck based on
+   that command, so `docker compose ... ps` shows `(healthy)` /
+   `(unhealthy)` next to it.
+
 ## Notes
 
 - **Migrations are manual** (run via the `migrate` role / `run --rm`), not on
   container start, so you control when schema changes apply.
-- The **AI queue worker** consumes the `ai` queue. Tune concurrency with
-  `QUEUE_WORKER_PROCESSES` (default `4`) — a whole class submitting essays
-  together is graded concurrently. The worker processes are supervised by
-  **Supervisor** (installed in the image; the `queue` role runs
-  `supervisord` as PID 1), which restarts a crashed worker and shuts workers
-  down gracefully on deploy. Each worker recycles itself hourly
-  (`--max-time=3600`) to bound memory. The on-demand spawner (`AiQueueWorker`)
-  remains a local-dev fallback; a duplicate worker is harmless because the
-  database queue driver atomically reserves jobs.
-- If an essay submission shows "Reviewing your essay..." forever, first check a
-  queue worker is running (`docker compose ... ps`), then confirm `ai_provider`
-  is set to `cloudflare` in Platform Settings. Pending jobs are recovered
-  automatically once a worker is present (the database driver also re-queues
-  reserved jobs after `retry_after`).
+- The **queue runs on Redis and is supervised by Laravel Horizon** (queues
+  `ai` + `default`). Tune concurrency with `HORIZON_PROCESSES` (default `4`;
+  the `QUEUE_*` vars map onto it) — a whole class submitting essays together
+  is graded concurrently. Horizon restarts crashed workers, bounds memory
+  (`HORIZON_MEMORY`, default `128` MB), and retries failed jobs
+  (`HORIZON_TRIES`, default `3`); failures land on the dashboard's Failed
+  Jobs tab. The on-demand spawner (`AiQueueWorker`) is skipped automatically
+  on the Redis driver — it remains the local-dev fallback for the database
+  queue. If `QUEUE_CONNECTION` is not `redis`, the `horizon` container role
+  refuses to start Horizon and **falls back to the Supervisor-based `queue`
+  role** (logged as a warning; the container healthcheck stays `unhealthy`
+  so the misconfiguration is visible in `docker compose ps`). The old
+  Supervisor role is also still available directly via `CONTAINER_ROLE=queue`.
+- If an essay submission shows "Reviewing your essay..." forever, first check
+  Horizon is running (`docker compose ... ps` — the `horizon` service should
+  be `(healthy)`), then confirm `ai_provider` is set to `cloudflare` in
+  Platform Settings. Pending jobs sit in Redis until a worker picks them up.
 - **Secrets live only in `.env.production`** (gitignored) — never in the image.
 - The production overlay runs with `read_only: true`, `no-new-privileges`,
   dropped capabilities, `tmpfs /tmp`, and CPU/memory limits. Laravel writes to
