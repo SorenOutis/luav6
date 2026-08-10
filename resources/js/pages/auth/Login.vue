@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { Eye, EyeOff } from 'lucide-vue-next';
 import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
@@ -28,6 +29,7 @@ defineOptions({ layout: AuthCard });
 
 const submitting = ref(false);
 const showDisabledModal = ref(false);
+const showPassword = ref(false);
 
 const onSubmit = (event: Event) => {
     // If login is disabled, we should have already intercepted this with the button type="button"
@@ -94,6 +96,34 @@ const onSubmit = (event: Event) => {
             </div>
 
             <div class="grid gap-2">
+                <div class="relative">
+                    <AnimatedInput
+                        id="password"
+                        :type="showPassword ? 'text' : 'password'"
+                        name="password"
+                        required
+                        :tabindex="2"
+                        autocomplete="current-password"
+                        label="Password"
+                        @keydown.enter="
+                            !loginEnabled &&
+                            ($event.preventDefault(),
+                            (showDisabledModal = true))
+                        "
+                    />
+                    <button
+                        type="button"
+                        :aria-label="
+                            showPassword ? 'Hide password' : 'Show password'
+                        "
+                        class="absolute right-0 bottom-2.5 text-muted-foreground/50 transition-colors hover:text-foreground"
+                        @click="showPassword = !showPassword"
+                    >
+                        <EyeOff v-if="showPassword" class="h-4 w-4" />
+                        <Eye v-else class="h-4 w-4" />
+                    </button>
+                </div>
+                <InputError :message="errors.password" />
                 <div class="flex items-center justify-end">
                     <TextLink
                         v-if="canResetPassword"
@@ -104,20 +134,6 @@ const onSubmit = (event: Event) => {
                         Forgot password?
                     </TextLink>
                 </div>
-                <AnimatedInput
-                    id="password"
-                    type="password"
-                    name="password"
-                    required
-                    :tabindex="2"
-                    autocomplete="current-password"
-                    label="Password"
-                    @keydown.enter="
-                        !loginEnabled &&
-                        ($event.preventDefault(), (showDisabledModal = true))
-                    "
-                />
-                <InputError :message="errors.password" />
             </div>
 
             <div class="flex items-center justify-between">
