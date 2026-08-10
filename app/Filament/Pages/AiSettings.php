@@ -216,25 +216,14 @@ class AiSettings extends Page implements HasSchemas
     /**
      * Providers that can serve text (chat widget, essay grading, and AI
      * question generation) and can therefore be marked as the default.
-     * Cloudflare is a custom integration, not a Laravel AI SDK driver.
+     * The shared map lives on AiSdkProviderService so the provider pickers
+     * on the AI Question Draft screens stay in sync.
      *
      * @return array<string, string> Provider key => card label
      */
     private function defaultableProviders(): array
     {
-        return [
-            'gemini' => 'Gemini (Google)',
-            'openai' => 'OpenAI',
-            'anthropic' => 'Anthropic (Claude)',
-            'groq' => 'Groq',
-            'mistral' => 'Mistral',
-            'deepseek' => 'DeepSeek',
-            'xai' => 'xAI (Grok)',
-            'openrouter' => 'OpenRouter',
-            'azure' => 'Azure OpenAI',
-            'ollama' => 'Ollama (Local)',
-            'cloudflare' => 'Cloudflare Workers AI',
-        ];
+        return AiSdkProviderService::TEXT_PROVIDER_LABELS;
     }
 
     /**

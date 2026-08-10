@@ -31,8 +31,13 @@ class AiQuestionDraftForm
                         Placeholder::make('gen_status')
                             ->label('')
                             ->content(fn ($record) => match ($record?->status) {
-                                'pending' => '⏳ Queued — waiting for AI worker...',
-                                'running', 'generating_source' => '🔄 AI is generating your questions...',
+                                'pending' => filled($record?->questions)
+                                    ? '⏳ Follow-up queued — waiting for AI worker...'
+                                    : '⏳ Queued — waiting for AI worker...',
+                                'running' => filled($record?->questions)
+                                    ? '🔄 Applying your follow-up instructions...'
+                                    : '🔄 AI is generating your questions...',
+                                'generating_source' => '🔄 AI is writing the lesson source material...',
                                 default => strtoupper((string) ($record?->status ?? '—')),
                             })
                             ->columnSpanFull(),

@@ -37,6 +37,21 @@ class AiQuestionGeneratorService
         $this->model = Setting::get('ollama_model', 'llama3.2:1b');
     }
 
+    /**
+     * Override the provider for subsequent generate()/generateSource()/
+     * refine() calls instead of the platform default from Platform Settings.
+     * Unknown or empty values keep the default; the Ollama fallback behavior
+     * is unaffected.
+     */
+    public function forProvider(?string $provider): static
+    {
+        if ($provider !== null && array_key_exists($provider, AiSdkProviderService::TEXT_PROVIDER_LABELS)) {
+            $this->provider = $provider;
+        }
+
+        return $this;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Text extraction
@@ -180,6 +195,32 @@ PROMPT;
         return trim(Utf8::clean($text));
     }
 
+    /**
+     * Follow-up generation: apply a teacher instruction to the current draft.
+     *
+     * - mode "add": generate ADDITIONAL questions that do not repeat the
+     *   existing ones (the caller merges them into the draft).
+     * - mode "replace": rewrite the whole set per the instruction (the
+     *   returned set REPLACES the existing one).
+     *
+     * @param  array<int, array<string, mixed>>  $existingQuestions
+     * @return array<int, array<string, mixed>>
+     *
+     * @throws \RuntimeException when every configured provider fails
+     */
+    public function refine(string $sourceText, array $existingQuestions, string $instruction, string $mode = 'add', string $difficulty = 'medium', ?string $topic = null): array
+    {
+        $sourceText = self::clampSource($sourceText, self::SOURCE_PROMPT_LIMIT);
+        $prompt = $this->buildRefinePrompt($sourceText, $existingQuestions, $instruction, $mode, $difficulty, $topic);
+
+        $raw = $this->ask($prompt, jsonMode: true, maxTokens: 8192, temperature: 0.3);
+
+        $this->lastRawResponse = $raw;
+
+        // A single follow-up may produce at most 50 questions.
+        return array_slice($this->parseResponse($raw), 0, 50);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Provider layer
@@ -195,12 +236,15 @@ PROMPT;
     protected function ask(string $prompt, bool $jsonMode, int $maxTokens, float $temperature): string
     {
         // Cloudflare and Groq keep their dedicated HTTP integrations and
-        // Ollama is called directly; every other text-capable provider goes
-        // through the Laravel AI SDK. Anything unknown (including gemini,
-        // which only serves chat and grading) falls back to Ollama as before.
-        $primary = in_array($this->provider, ['cloudflare', 'groq'], true) || AiSdkProviderService::isSdkRouted($this->provider)
-            ? $this->provider
-            : 'ollama';
+        // Ollama is called directly; Gemini and every other text-capable
+        // provider go through the Laravel AI SDK. Anything unknown falls
+        // back to Ollama as before.
+        $primary = match (true) {
+            in_array($this->provider, ['cloudflare', 'groq', 'ollama'], true) => $this->provider,
+            $this->provider === 'gemini' => 'gemini',
+            AiSdkProviderService::isSdkRouted($this->provider) => $this->provider,
+            default => 'ollama',
+        };
         $failures = [];
 
         try {
@@ -238,31 +282,45 @@ PROMPT;
     }
 
     /**
-     * Call a Laravel AI SDK provider (OpenAI, Anthropic, Mistral, DeepSeek,
-     * xAI, OpenRouter, Azure) with the credentials saved in Platform Settings
-     * and return the raw text completion.
+     * Call a Laravel AI SDK provider (Gemini, OpenAI, Anthropic, Mistral,
+     * DeepSeek, xAI, OpenRouter, Azure) with the credentials saved in
+     * Platform Settings and return the raw text completion.
      *
      * Note: the SDK text API has no JSON-mode toggle — the prompt already
      * instructs JSON and the response parser decodes leniently.
      */
     protected function callSdkProvider(string $provider, string $prompt, bool $jsonMode, int $maxTokens, float $temperature): string
     {
-        if (! AiSdkProviderService::isSdkRouted($provider) || $provider === 'ollama') {
-            throw new \RuntimeException("Unsupported AI provider [{$provider}].");
+        if ($provider === 'gemini') {
+            // Gemini keeps its dedicated settings service; the grading model
+            // doubles for question/source generation.
+            $gemini = app(GeminiAIService::class);
+
+            if (! $gemini->apiKey()) {
+                throw new \RuntimeException('Gemini is not configured. Paste your API key in Platform Settings.');
+            }
+
+            $gemini->applyToSdk();
+            $model = $gemini->gradingModel();
+        } else {
+            if (! AiSdkProviderService::isSdkRouted($provider) || $provider === 'ollama') {
+                throw new \RuntimeException("Unsupported AI provider [{$provider}].");
+            }
+
+            $sdkProvider = AiSdkProviderService::for($provider);
+
+            if (! $sdkProvider->isConfigured()) {
+                throw new \RuntimeException("{$provider} is not configured. Paste your API key in Platform Settings.");
+            }
+
+            $sdkProvider->applyToSdk();
+            $model = $sdkProvider->model();
         }
-
-        $sdkProvider = AiSdkProviderService::for($provider);
-
-        if (! $sdkProvider->isConfigured()) {
-            throw new \RuntimeException("{$provider} is not configured. Paste your API key in Platform Settings.");
-        }
-
-        $sdkProvider->applyToSdk();
 
         $response = agent()->prompt(
             $prompt,
             provider: $provider,
-            model: $sdkProvider->model(),
+            model: $model,
             timeout: 300,
         );
 
@@ -270,7 +328,7 @@ PROMPT;
 
         app(AiUsageTracker::class)->record(
             $provider,
-            $sdkProvider->model(),
+            $model,
             'generation',
             AiUsageTracker::tokensFromChars(strlen($prompt)),
             AiUsageTracker::tokensFromChars(strlen($text)),
@@ -535,6 +593,70 @@ RULES:
 4. Identification answers must be short and exact.
 5. Essay questions must require analysis/explanation (no yes/no).
 6. Respond with raw JSON only — no markdown code fences, no commentary.
+
+Respond ONLY with valid JSON matching this schema:
+{
+  "questions": [
+    {
+      "type": "multiple_choice" | "true_false" | "identification" | "essay",
+      "text": "<question text>",
+      "options": [ { "text": "<choice>", "is_correct": true|false } ],   // only for multiple_choice and true_false
+      "correct_answer": "<string>"                                          // only for identification
+    }
+  ]
+}
+PROMPT;
+    }
+
+    /**
+     * Build the follow-up prompt: the current question list (so "add" mode
+     * avoids repeats), the teacher's instruction, and the source material.
+     *
+     * @param  array<int, array<string, mixed>>  $existingQuestions
+     */
+    protected function buildRefinePrompt(string $sourceText, array $existingQuestions, string $instruction, string $mode, string $difficulty, ?string $topic): string
+    {
+        $existing = collect($existingQuestions)
+            ->pluck('text')
+            ->filter()
+            ->take(40)
+            ->map(fn ($text, $i) => ($i + 1).'. '.mb_substr((string) $text, 0, 140))
+            ->implode("\n");
+
+        $existingBlock = $existing === '' ? '(none yet)' : $existing;
+
+        $task = $mode === 'replace'
+            ? 'REWRITE the question set following the teacher\'s instruction below. Return the FULL replacement set of questions — the old set will be discarded.'
+            : 'Generate ADDITIONAL exam questions following the teacher\'s instruction below. Do NOT repeat or paraphrase any existing question.';
+
+        $topicLine = $topic ? "Topic focus: {$topic}\n" : '';
+
+        return <<<PROMPT
+You are an expert exam author working on an existing question draft.
+
+{$topicLine}Difficulty: {$difficulty}
+
+EXISTING QUESTIONS:
+{$existingBlock}
+
+TASK: {$task}
+
+TEACHER'S INSTRUCTION:
+\"\"\"
+{$instruction}
+\"\"\"
+
+SOURCE MATERIAL:
+\"\"\"
+{$sourceText}
+\"\"\"
+
+RULES:
+1. Honor the counts and question types the instruction asks for; if it does not say, generate 5 questions matching the difficulty above.
+2. Every non-essay question MUST be answerable from the source material.
+3. Do NOT invent facts. If the material is insufficient, produce fewer questions.
+4. multiple_choice: exactly 4 options, exactly one correct. true_false: "True"/"False" options, exactly one correct. identification: short exact answer (<= 5 words). essay: open-ended, no answer key.
+5. Respond with raw JSON only — no markdown code fences, no commentary.
 
 Respond ONLY with valid JSON matching this schema:
 {
