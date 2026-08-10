@@ -20,6 +20,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { renderMarkdown } from '@/lib/markdown';
 
 const page = usePage();
 
@@ -543,7 +544,21 @@ watch(inputMessage, () => {
                                         : 'rounded-tl-sm border border-border/40 bg-muted/40 text-foreground',
                                 ]"
                             >
-                                {{ msg.content }}
+                                <template v-if="msg.role === 'user'">{{
+                                    msg.content
+                                }}</template>
+                                <!-- While the typing effect runs, show raw
+                                text; snap to rendered markdown when done. -->
+                                <span
+                                    v-else-if="msg.typing"
+                                    class="whitespace-pre-wrap"
+                                    >{{ msg.content }}</span
+                                >
+                                <div
+                                    v-else
+                                    class="chat-markdown"
+                                    v-html="renderMarkdown(msg.content)"
+                                ></div>
                             </div>
                         </div>
                     </template>
@@ -737,5 +752,125 @@ watch(inputMessage, () => {
 
 .animate-fade-in {
     animation: fade-in 0.25s ease-out both;
+}
+
+/* Rendered markdown inside Echo's assistant messages (v-html content needs
+   :deep() to be reached by scoped styles). Sized to match the text-xs bubble. */
+.chat-markdown :deep(p) {
+    margin: 0.25rem 0;
+}
+
+.chat-markdown :deep(p:first-child) {
+    margin-top: 0;
+}
+
+.chat-markdown :deep(p:last-child) {
+    margin-bottom: 0;
+}
+
+.chat-markdown :deep(strong) {
+    font-weight: 600;
+}
+
+.chat-markdown :deep(em) {
+    font-style: italic;
+}
+
+.chat-markdown :deep(ul),
+.chat-markdown :deep(ol) {
+    margin: 0.25rem 0;
+    padding-left: 1.125rem;
+}
+
+.chat-markdown :deep(ul) {
+    list-style: disc;
+}
+
+.chat-markdown :deep(ol) {
+    list-style: decimal;
+}
+
+.chat-markdown :deep(li) {
+    margin: 0.125rem 0;
+}
+
+.chat-markdown :deep(h1),
+.chat-markdown :deep(h2),
+.chat-markdown :deep(h3),
+.chat-markdown :deep(h4) {
+    margin: 0.375rem 0 0.125rem;
+    font-weight: 600;
+}
+
+.chat-markdown :deep(h1) {
+    font-size: 0.95rem;
+}
+
+.chat-markdown :deep(h2) {
+    font-size: 0.875rem;
+}
+
+.chat-markdown :deep(h3),
+.chat-markdown :deep(h4) {
+    font-size: 0.8125rem;
+}
+
+.chat-markdown :deep(code) {
+    border-radius: 0.25rem;
+    background: color-mix(
+        in srgb,
+        var(--color-muted-foreground) 12%,
+        transparent
+    );
+    padding: 0 0.25rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem;
+}
+
+.chat-markdown :deep(pre) {
+    margin: 0.375rem 0;
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    background: color-mix(
+        in srgb,
+        var(--color-muted-foreground) 10%,
+        transparent
+    );
+    padding: 0.5rem 0.625rem;
+}
+
+.chat-markdown :deep(pre code) {
+    background: transparent;
+    padding: 0;
+}
+
+.chat-markdown :deep(blockquote) {
+    margin: 0.375rem 0;
+    border-left: 2px solid var(--color-border);
+    padding-left: 0.5rem;
+    opacity: 0.85;
+}
+
+.chat-markdown :deep(a) {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+.chat-markdown :deep(table) {
+    margin: 0.375rem 0;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.chat-markdown :deep(th),
+.chat-markdown :deep(td) {
+    border: 1px solid var(--color-border);
+    padding: 0.125rem 0.375rem;
+    text-align: left;
+}
+
+.chat-markdown :deep(hr) {
+    margin: 0.5rem 0;
+    border-color: var(--color-border);
 }
 </style>
