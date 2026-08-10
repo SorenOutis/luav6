@@ -97,8 +97,10 @@ const webSiteJsonLd = {
 // ─── Refs for GSAP targets ───
 const pageRoot = ref<HTMLElement | null>(null);
 const howItWorksSteps = ref<HTMLElement | null>(null);
+const howItWorksVideo = ref<HTMLVideoElement | null>(null);
 let gsapCtx: gsap.Context | null = null;
 let lenisCleanup: (() => void) | null = null;
+let videoObserver: IntersectionObserver | null = null;
 
 // ─── Animated Counter Animation ───
 const animatedStats = ref({
@@ -254,6 +256,28 @@ const closeDemoVideo = () => {
     isDemoVideoOpen.value = false;
 };
 
+// The walkthrough video only plays while it's actually on screen — it starts
+// when the section scrolls into view and pauses when it leaves. Low-end /
+// reduced-motion visitors keep the poster frame (no playback at all).
+const initVideoPlayback = (): void => {
+    const video = howItWorksVideo.value;
+    if (!video || effectiveReducedMotion.value) return;
+
+    videoObserver = new IntersectionObserver(
+        (entries) => {
+            const entry = entries[0];
+            if (!entry) return;
+            if (entry.isIntersecting) {
+                video.play().catch(() => {});
+            } else {
+                video.pause();
+            }
+        },
+        { threshold: 0.35 },
+    );
+    videoObserver.observe(video);
+};
+
 onMounted(() => {
     // Set data-low-end on <html> so CSS can disable heavy effects
     if (isLowEndDevice.value) {
@@ -264,6 +288,7 @@ onMounted(() => {
         initPageAnimations();
         lenisCleanup = syncLenisWithGsap(ScrollTrigger);
     }
+    initVideoPlayback();
 });
 
 onUnmounted(() => {
@@ -271,6 +296,8 @@ onUnmounted(() => {
     document.documentElement.removeAttribute('data-low-end');
     gsapCtx?.revert();
     lenisCleanup?.();
+    videoObserver?.disconnect();
+    videoObserver = null;
 });
 </script>
 
@@ -438,11 +465,11 @@ onUnmounted(() => {
                     class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5"
                 >
                     <video
+                        ref="howItWorksVideo"
                         class="block aspect-video w-full"
                         src="/videos/how-it-works.mp4?v=2"
                         poster="/videos/how-it-works.png"
-                        :autoplay="!effectiveReducedMotion"
-                        :loop="!effectiveReducedMotion"
+                        loop
                         muted
                         playsinline
                         :preload="isLowEndDevice ? 'metadata' : 'auto'"
