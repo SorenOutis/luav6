@@ -84,9 +84,15 @@ const suggestions = computed<Suggestion[]>(() => {
                   label: '📋 My Assignments',
                   message: 'What are my upcoming assignments?',
               },
-              { label: '📊 My Progress', message: 'Show me my learning progress' },
+              {
+                  label: '📊 My Progress',
+                  message: 'Show me my learning progress',
+              },
               { label: '🏆 My Streak', message: "What's my current streak?" },
-              { label: '📝 Upcoming Exams', message: 'What exams do I have coming up?' },
+              {
+                  label: '📝 Upcoming Exams',
+                  message: 'What exams do I have coming up?',
+              },
           ];
 });
 
