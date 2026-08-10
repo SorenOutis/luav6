@@ -5,6 +5,7 @@ namespace App\Providers;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -24,6 +25,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // Laravel Horizon is installed only inside the Docker image (never in
+        // the repo's composer.json), so its dashboard gate is defined with a
+        // plain Laravel API — this boots fine whether or not the package is
+        // present. Only super admins may inspect queue status.
+        Gate::define('viewHorizon', fn ($user = null): bool => (bool) $user?->isSuperAdmin());
     }
 
     /**

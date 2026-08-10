@@ -14,9 +14,10 @@ WORKDIR /app
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # PHP extensions required by the production dependencies (Filament→intl,
-# PHPWord→gd), Octane's FrankenPHP server (pcntl/opcache), and the optional
-# Postgres driver. `curl` is used by the container HEALTHCHECK; `supervisor`
-# manages the persistent AI queue worker processes.
+# PHPWord→gd), Octane's FrankenPHP server (pcntl/opcache), the optional
+# Postgres driver, and Redis (Horizon's queue backend). `curl` is used by the
+# container HEALTHCHECK; `supervisor` manages the persistent AI queue worker
+# processes when the legacy `queue` role is used instead of Horizon.
 # `memory_limit` is capped so a long-lived FrankenPHP worker that leaks is
 # killed by Octane's max-requests recycling instead of OOM-ing the container.
 RUN apt-get update \
@@ -31,6 +32,7 @@ RUN apt-get update \
         pcntl \
         pdo_pgsql \
         pgsql \
+        redis \
         sockets \
         zip \
     && printf 'memory_limit = 128M\n' > /usr/local/etc/php/conf.d/zz-memory-limit.ini \
@@ -47,6 +49,14 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
         --optimize-autoloader --no-scripts
+
+# Laravel Horizon is intentionally NOT in the repo's composer.json: it is
+# installed only into the Docker image, so local/non-Docker environments
+# never load it. It runs as the `horizon` container role (see start.sh) and
+# supervises the Redis-backed queue workers. The require lives in this stage
+# so the layer stays cached until composer.json/lock change.
+RUN composer require laravel/horizon:^5.36 --no-interaction --no-progress \
+        --no-scripts --optimize-autoloader
 
 # ── Wayfinder routes ─────────────────────────────────────────────────────
 # resources/js/routes_temp is gitignored, so a fresh clone can't build the
@@ -66,7 +76,9 @@ RUN mkdir -p storage/framework/views storage/framework/cache/data storage/framew
     && cp .env.example .env \
     && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env \
     && php artisan key:generate --force \
-    && php artisan wayfinder:generate --path=resources/js/routes_temp
+    && php artisan package:discover --ansi \
+    && php artisan wayfinder:generate --path=resources/js/routes_temp \
+    && php artisan vendor:publish --tag=horizon-assets --no-interaction
 
 # ── Frontend assets ──────────────────────────────────────────────────────
 FROM node:22-bookworm AS frontend
@@ -103,6 +115,12 @@ COPY --from=frontend /app/public/build ./public/build
 # Bake it in so the production container can run with a read-only public/ dir.
 # Copied from the vendor build stage (the repo's vendor/ is gitignored/excluded).
 COPY --from=vendor /app/vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php ./public/frankenphp-worker.php
+
+# Horizon package discovery (bootstrap/cache/packages.php + services.php, so
+# the image-only provider registers without running composer at runtime) and
+# its published dashboard assets. Both come from the bootable `routes` stage.
+COPY --from=routes /app/bootstrap/cache ./bootstrap/cache
+COPY --from=routes /app/public/vendor/horizon ./public/vendor/horizon
 
 # Create the Laravel runtime directories, the public storage symlink, and make
 # everything Laravel writes to owned by the non-root www-data user.

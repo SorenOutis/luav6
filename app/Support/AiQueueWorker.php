@@ -22,8 +22,7 @@ class AiQueueWorker
      */
     public static function ensureRunning(string $queue = 'ai'): void
     {
-        // Never spawn real OS processes from the test suite.
-        if (app()->runningUnitTests()) {
+        if (! static::shouldSpawnWorkers()) {
             return;
         }
 
@@ -70,6 +69,22 @@ class AiQueueWorker
         } catch (\Throwable $e) {
             Log::warning('Failed to spawn AI queue worker: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Whether an ad-hoc worker may be spawned in this environment.
+     *
+     * False when the queue runs on Redis — the Docker stack runs Laravel
+     * Horizon supervisors there, and ad-hoc workers would compete with them.
+     * Also false in tests: the suite must never spawn real OS processes.
+     */
+    public static function shouldSpawnWorkers(): bool
+    {
+        if (config('queue.default') === 'redis') {
+            return false;
+        }
+
+        return ! app()->runningUnitTests();
     }
 
     /**

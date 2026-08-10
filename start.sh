@@ -102,6 +102,14 @@ EOF
         exec supervisord -n -c "$SUPERVISORD_CONF"
         ;;
 
+    horizon)
+        # Laravel Horizon supervises the queue workers itself — no Supervisor
+        # setup needed; the process stays in the foreground as PID 1 and
+        # gracefully stops its workers on SIGTERM.
+        echo "[start] role=horizon — starting Laravel Horizon (Redis queue supervisor)..."
+        exec php artisan horizon
+        ;;
+
     scheduler|schedule|cron)
         echo "[start] role=scheduler — starting the Laravel scheduler..."
         exec php artisan schedule:work
@@ -114,7 +122,7 @@ EOF
 
     *)
         echo "[start] ERROR: unknown CONTAINER_ROLE '${ROLE}'." >&2
-        echo "[start] Valid roles: octane | queue | scheduler | migrate" >&2
+        echo "[start] Valid roles: octane | queue | horizon | scheduler | migrate" >&2
         exit 1
         ;;
 esac

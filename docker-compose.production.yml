@@ -29,10 +29,20 @@ x-app-prod: &app-prod
     PORT: "${PORT:-8000}"
     OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
     OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+    # The Docker stack runs the queue on Redis, supervised by Laravel Horizon.
+    QUEUE_CONNECTION: "${QUEUE_CONNECTION:-redis}"
+    REDIS_CLIENT: "${REDIS_CLIENT:-phpredis}"
+    REDIS_HOST: "${REDIS_HOST:-redis}"
+    REDIS_PORT: "${REDIS_PORT:-6379}"
     QUEUE_NAME: "${QUEUE_NAME:-ai}"
     QUEUE_WORKER_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
     QUEUE_TRIES: "${QUEUE_TRIES:-3}"
     QUEUE_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+    # Horizon supervisor tunables (fall back to the QUEUE_* values above).
+    HORIZON_QUEUES: "${QUEUE_NAME:-ai},default"
+    HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+    HORIZON_TRIES: "${QUEUE_TRIES:-3}"
+    HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
 
 services:
   app:
@@ -50,6 +60,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/up"]
       interval: 30s
@@ -62,14 +74,16 @@ services:
           cpus: "2.0"
           memory: 512M
 
-  queue:
+  # Queue supervisor: Laravel Horizon manages the Redis-backed queue workers
+  # and exposes the /horizon dashboard on the web app (super admins only).
+  horizon:
     <<: *app-prod
     environment:
-      CONTAINER_ROLE: queue
-      QUEUE_NAME: "${QUEUE_NAME:-ai}"
-      QUEUE_WORKER_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
-      QUEUE_TRIES: "${QUEUE_TRIES:-3}"
-      QUEUE_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+      CONTAINER_ROLE: horizon
+      HORIZON_QUEUES: "${QUEUE_NAME:-ai},default"
+      HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
+      HORIZON_TRIES: "${QUEUE_TRIES:-3}"
+      HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
     volumes:
       - app_storage:/app/storage
       - bootstrap_cache:/app/bootstrap/cache
@@ -78,6 +92,14 @@ services:
         condition: service_healthy
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan horizon:status | grep -q 'is running'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -124,7 +146,28 @@ services:
       timeout: 3s
       retries: 10
 
+  # Queue backend for Laravel Horizon. AOF persistence so queued jobs survive
+  # container restarts. Internal only — no host port is published in
+  # production.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
 volumes:
   app_storage:
   bootstrap_cache:
   dbdata:
+  redisdata:
