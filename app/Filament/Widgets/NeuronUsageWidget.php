@@ -60,7 +60,11 @@ class NeuronUsageWidget extends StatsOverviewWidget
             $chatModel = Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash');
             $gradeModel = Setting::get('cloudflare_grading_model') ?? Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
             $callDescription .= ' · chat: '.$chatModel.' · grade: '.$gradeModel;
-        } elseif ($provider !== 'gemini') {
+        } elseif ($provider === 'gemini') {
+            $chatModel = Setting::get('gemini_chat_model', 'gemini-3.5-flash');
+            $gradeModel = Setting::get('gemini_grading_model', 'gemini-3.5-flash');
+            $callDescription .= ' · chat: '.$chatModel.' · grade: '.$gradeModel;
+        } else {
             $callDescription .= ' · provider: '.$provider;
         }
 

@@ -4,7 +4,6 @@ namespace App\Ai\Agents;
 
 use App\Ai\Tools\AssignmentsTool;
 use App\Ai\Tools\UserInfoTool;
-use Laravel\Ai\Attributes\Model;
 use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
@@ -15,7 +14,6 @@ use Laravel\Ai\Promptable;
 use Stringable;
 
 #[Provider('gemini')]
-#[Model('gemini-1.5-flash')]
 class AssistantAgent implements Agent, Conversational, HasTools
 {
     use Promptable;

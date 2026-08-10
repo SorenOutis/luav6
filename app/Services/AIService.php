@@ -7,6 +7,8 @@ use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+use function Laravel\Ai\agent;
+
 class AIService
 {
     protected ?string $provider;
@@ -76,12 +78,12 @@ class AIService
 
     private function loadGeminiSettings(): void
     {
-        // Phase 2.2 — Never call env() outside a config file: it returns null
-        // once config:cache runs, which is a production-only failure.
-        // config/ai.php already reads GEMINI_API_KEY and makes it available as
-        // config('ai.providers.gemini.key').
-        $this->geminiApiKey = config('ai.providers.gemini.key');
-        $this->geminiModel = 'gemini-1.5-flash';
+        // Prefer the key pasted in Platform Settings, falling back to
+        // config/ai.php (env GEMINI_API_KEY). Phase 2.2 — never call env()
+        // outside a config file: it returns null once config:cache runs.
+        $gemini = app(GeminiAIService::class);
+        $this->geminiApiKey = $gemini->apiKey();
+        $this->geminiModel = $gemini->gradingModel();
     }
 
     /**
@@ -125,9 +127,10 @@ class AIService
 
         // Dispatch to the configured AI provider
         try {
-            $results = match ($this->provider) {
-                'cloudflare' => $this->batchAssessWithCloudflare($essays),
-                'groq' => $this->batchAssessWithGroq($essays),
+            $results = match (true) {
+                $this->provider === 'cloudflare' => $this->batchAssessWithCloudflare($essays),
+                $this->provider === 'groq' => $this->batchAssessWithGroq($essays),
+                AiSdkProviderService::isSdkRouted($this->provider) => $this->batchAssessWithSdk($essays),
                 default => $this->batchAssessWithGemini($essays),
             };
 
@@ -401,6 +404,54 @@ class AIService
     }
 
     // ──────────────────────────────────────────────
+    //   Laravel AI SDK grading (OpenAI, Anthropic, Mistral, DeepSeek, xAI,
+    //   OpenRouter, Azure, Ollama)
+    // ──────────────────────────────────────────────
+
+    /**
+     * Grade essays through any text-capable Laravel AI SDK provider whose
+     * credentials live in Platform Settings. Calls are sequential — the SDK
+     * has no HTTP pool equivalent.
+     */
+    private function batchAssessWithSdk(array $essays): array
+    {
+        $sdkProvider = AiSdkProviderService::for((string) $this->provider);
+
+        if (! $sdkProvider->isConfigured()) {
+            throw new \Exception("AI provider [{$this->provider}] is not configured. Paste your API key in Platform Settings.");
+        }
+
+        $sdkProvider->applyToSdk();
+
+        $results = [];
+        foreach ($essays as $index => $essay) {
+            $result = ['score' => 0.0];
+
+            try {
+                $feedbackOnly = (bool) ($essay['feedbackOnly'] ?? false);
+                $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
+                $prompt = $feedbackOnly
+                    ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'], $includeFeedback)
+                    : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
+
+                $response = agent(instructions: 'You are a strict academic examiner. Always respond with valid JSON only.')
+                    ->prompt($prompt, provider: $this->provider, model: $sdkProvider->model());
+
+                // Strip markdown code fences if present
+                $rawText = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', trim((string) $response->text));
+                $parsed = json_decode($rawText, true);
+                $result = $this->buildResultFromData($parsed ?: [], $essay);
+            } catch (\Throwable $e) {
+                Log::error("AI {$this->provider} assessment failed for index $index: ".$e->getMessage());
+            }
+
+            $results[$index] = $result;
+        }
+
+        return $results;
+    }
+
+    // ──────────────────────────────────────────────
     //   Gemini (Google) grading
     // ──────────────────────────────────────────────
 
@@ -408,7 +459,7 @@ class AIService
     {
         if (! $this->geminiApiKey) {
             // If no Gemini API key is configured, fall through to Ollama
-            throw new \Exception('Gemini API key is not configured. Set GEMINI_API_KEY in your .env file.');
+            throw new \Exception('Gemini API key is not configured. Paste your key in Platform Settings.');
         }
 
         $responses = Http::pool(function ($pool) use ($essays) {

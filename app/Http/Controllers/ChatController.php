@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Ai\Agents\AssistantAgent;
 use App\Models\Setting;
+use App\Services\AiSdkProviderService;
+use App\Services\AiUsageTracker;
 use App\Services\CloudflareAIService;
+use App\Services\GeminiAIService;
 use App\Services\GroqAIService;
 use App\Services\OllamaAIService;
 use Illuminate\Http\Request;
@@ -140,12 +143,59 @@ class ChatController extends Controller
                 } elseif ($provider === 'groq') {
                     $groqService = new GroqAIService;
                     $response = $groqService->prompt($request->message, $historyData, $userContext);
+                } elseif (AiSdkProviderService::isSdkRouted($provider)) {
+                    // Any other text-capable Laravel AI SDK provider (OpenAI,
+                    // Anthropic, Mistral, DeepSeek, xAI, OpenRouter, Azure,
+                    // Ollama). Credentials and model come from Platform
+                    // Settings; the per-prompt provider/model override beats
+                    // the agent's #[Provider('gemini')] attribute.
+                    $sdkProvider = AiSdkProviderService::for($provider);
+
+                    if (! $sdkProvider->isConfigured()) {
+                        throw new \Exception("{$provider} is not configured. Paste your API key in Platform Settings.");
+                    }
+
+                    $sdkProvider->applyToSdk();
+
+                    $agent = new AssistantAgent;
+                    $agent->setHistory($history);
+                    $agent->setUserContext($userContext);
+                    $agentResponse = $agent->prompt(
+                        $request->message,
+                        provider: $provider,
+                        model: $sdkProvider->model(),
+                    );
+                    $response = $agentResponse->text;
+
+                    app(AiUsageTracker::class)->record(
+                        $provider,
+                        $sdkProvider->model(),
+                        'chat',
+                        AiUsageTracker::tokensFromChars(strlen($request->message) + strlen($userContext)),
+                        AiUsageTracker::tokensFromChars(strlen((string) $response)),
+                    );
                 } else {
+                    // Point the Laravel AI SDK at the Gemini key/model stored
+                    // in Platform Settings (falls back to env GEMINI_API_KEY).
+                    $gemini = app(GeminiAIService::class);
+                    if (! $gemini->apiKey()) {
+                        throw new \Exception('Gemini is not configured. Paste your API key in Platform Settings.');
+                    }
+                    $gemini->applyToSdk();
+
                     $agent = new AssistantAgent;
                     $agent->setHistory($history);
                     $agent->setUserContext($userContext);
                     $agentResponse = $agent->prompt($request->message);
                     $response = $agentResponse->text;
+
+                    app(AiUsageTracker::class)->record(
+                        'gemini',
+                        $gemini->chatModel(),
+                        'chat',
+                        AiUsageTracker::tokensFromChars(strlen($request->message) + strlen($userContext)),
+                        AiUsageTracker::tokensFromChars(strlen((string) $response)),
+                    );
                 }
             } catch (\Exception $e) {
                 $lastError = $e->getMessage();

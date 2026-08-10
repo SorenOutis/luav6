@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpWord\IOFactory as WordIOFactory;
 use Smalot\PdfParser\Parser as PdfParser;
 
+use function Laravel\Ai\agent;
+
 class AiQuestionGeneratorService
 {
     /** Maximum number of source-material characters sent to the AI. */
@@ -192,7 +194,13 @@ PROMPT;
      */
     protected function ask(string $prompt, bool $jsonMode, int $maxTokens, float $temperature): string
     {
-        $primary = in_array($this->provider, ['cloudflare', 'groq'], true) ? $this->provider : 'ollama';
+        // Cloudflare and Groq keep their dedicated HTTP integrations and
+        // Ollama is called directly; every other text-capable provider goes
+        // through the Laravel AI SDK. Anything unknown (including gemini,
+        // which only serves chat and grading) falls back to Ollama as before.
+        $primary = in_array($this->provider, ['cloudflare', 'groq'], true) || AiSdkProviderService::isSdkRouted($this->provider)
+            ? $this->provider
+            : 'ollama';
         $failures = [];
 
         try {
@@ -224,8 +232,51 @@ PROMPT;
         return match ($provider) {
             'cloudflare' => $this->callCloudflare($prompt, $maxTokens),
             'groq' => $this->callGroq($prompt, $jsonMode, $maxTokens, $temperature),
-            default => $this->callOllama($prompt, $jsonMode, $maxTokens, $temperature),
+            'ollama' => $this->callOllama($prompt, $jsonMode, $maxTokens, $temperature),
+            default => $this->callSdkProvider($provider, $prompt, $jsonMode, $maxTokens, $temperature),
         };
+    }
+
+    /**
+     * Call a Laravel AI SDK provider (OpenAI, Anthropic, Mistral, DeepSeek,
+     * xAI, OpenRouter, Azure) with the credentials saved in Platform Settings
+     * and return the raw text completion.
+     *
+     * Note: the SDK text API has no JSON-mode toggle — the prompt already
+     * instructs JSON and the response parser decodes leniently.
+     */
+    protected function callSdkProvider(string $provider, string $prompt, bool $jsonMode, int $maxTokens, float $temperature): string
+    {
+        if (! AiSdkProviderService::isSdkRouted($provider) || $provider === 'ollama') {
+            throw new \RuntimeException("Unsupported AI provider [{$provider}].");
+        }
+
+        $sdkProvider = AiSdkProviderService::for($provider);
+
+        if (! $sdkProvider->isConfigured()) {
+            throw new \RuntimeException("{$provider} is not configured. Paste your API key in Platform Settings.");
+        }
+
+        $sdkProvider->applyToSdk();
+
+        $response = agent()->prompt(
+            $prompt,
+            provider: $provider,
+            model: $sdkProvider->model(),
+            timeout: 300,
+        );
+
+        $text = (string) $response->text;
+
+        app(AiUsageTracker::class)->record(
+            $provider,
+            $sdkProvider->model(),
+            'generation',
+            AiUsageTracker::tokensFromChars(strlen($prompt)),
+            AiUsageTracker::tokensFromChars(strlen($text)),
+        );
+
+        return $text;
     }
 
     /**
