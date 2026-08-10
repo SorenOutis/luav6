@@ -3,7 +3,6 @@ import { Form, Head } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import {
     Check,
-    CheckCircle2,
     ChevronLeft,
     ChevronRight,
     Eye,
@@ -44,10 +43,8 @@ defineOptions({ layout: AuthCard });
 // Wizard state
 // ─────────────────────────────────────────────────────────────
 const steps = [
-    { key: 'account', label: 'Account', title: 'Your details' },
-    { key: 'security', label: 'Security', title: 'Create a password' },
-    { key: 'consent', label: 'Consent', title: 'Terms & conditions' },
-    { key: 'review', label: 'Review', title: 'Review & confirm' },
+    { key: 'details', label: 'Details', title: 'Your details and password' },
+    { key: 'confirm', label: 'Confirm', title: 'Review & confirm' },
 ] as const;
 
 const currentStep = ref(0);
@@ -94,10 +91,15 @@ const stepFields: Record<
         | 'terms'
     >
 > = {
-    0: ['first_name', 'middle_name', 'last_name', 'email'],
-    1: ['password', 'password_confirmation'],
-    2: ['terms'],
-    3: [],
+    0: [
+        'first_name',
+        'middle_name',
+        'last_name',
+        'email',
+        'password',
+        'password_confirmation',
+    ],
+    1: ['terms'],
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -144,11 +146,11 @@ const canProceed = computed(() => {
             firstNameValid.value &&
             middleNameValid.value &&
             lastNameValid.value &&
-            emailValid.value
+            emailValid.value &&
+            passwordValid.value &&
+            confirmValid.value
         );
-    if (currentStep.value === 1)
-        return passwordValid.value && confirmValid.value;
-    if (currentStep.value === 2) return consentValid.value;
+    if (currentStep.value === 1) return consentValid.value;
     return true;
 });
 
@@ -293,10 +295,16 @@ const jumpTo = (step: number): void => {
 // that owns the offending field so the error is visible in context.
 const handleSubmitError = (payload: unknown): void => {
     const errs = (payload ?? {}) as Record<string, unknown>;
-    if (errs.first_name || errs.middle_name || errs.last_name || errs.email)
+    if (
+        errs.first_name ||
+        errs.middle_name ||
+        errs.last_name ||
+        errs.email ||
+        errs.password ||
+        errs.password_confirmation
+    )
         jumpTo(0);
-    else if (errs.password || errs.password_confirmation) jumpTo(1);
-    else if (errs.terms) jumpTo(2);
+    else if (errs.terms) jumpTo(1);
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -498,7 +506,7 @@ onBeforeUnmount(() => {
 
         <!-- ══════════════ Steps ══════════════ -->
         <div class="relative">
-            <!-- Step 1 — Account -->
+            <!-- Step 1 — Details & password -->
             <section
                 :ref="(el) => (stepSections[0] = el as HTMLElement | null)"
                 :aria-hidden="currentStep !== 0"
@@ -583,16 +591,7 @@ onBeforeUnmount(() => {
                             :message="liveErrors.email || errors.email"
                         />
                     </div>
-                </div>
-            </section>
 
-            <!-- Step 2 — Security -->
-            <section
-                :ref="(el) => (stepSections[1] = el as HTMLElement | null)"
-                :aria-hidden="currentStep !== 1"
-                :class="stepClass(1)"
-            >
-                <div class="grid gap-5">
                     <div class="grid gap-2">
                         <div class="relative">
                             <AnimatedInput
@@ -600,7 +599,7 @@ onBeforeUnmount(() => {
                                 v-model="formData.password"
                                 :type="showPassword ? 'text' : 'password'"
                                 required
-                                :tabindex="3"
+                                :tabindex="5"
                                 autocomplete="new-password"
                                 name="password"
                                 label="Password"
@@ -652,7 +651,7 @@ onBeforeUnmount(() => {
                             v-model="formData.password_confirmation"
                             :type="showPassword ? 'text' : 'password'"
                             required
-                            :tabindex="4"
+                            :tabindex="6"
                             autocomplete="new-password"
                             name="password_confirmation"
                             label="Confirm password"
@@ -690,67 +689,11 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- Step 3 — Consent -->
+            <!-- Step 2 — Review & confirm -->
             <section
-                :ref="(el) => (stepSections[2] = el as HTMLElement | null)"
-                :aria-hidden="currentStep !== 2"
-                :class="stepClass(2)"
-            >
-                <div class="grid gap-5">
-                    <div class="grid gap-2">
-                        <div class="flex items-start gap-3">
-                            <input
-                                id="terms"
-                                v-model="formData.terms"
-                                name="terms"
-                                type="checkbox"
-                                value="1"
-                                required
-                                :tabindex="5"
-                                class="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border border-input bg-transparent text-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-                                @change="touched.terms = true"
-                            />
-                            <div class="text-sm text-muted-foreground">
-                                <Label
-                                    for="terms"
-                                    class="inline cursor-pointer text-sm text-muted-foreground"
-                                >
-                                    I accept the
-                                </Label>
-                                <button
-                                    type="button"
-                                    @click="showTermsModal = true"
-                                    class="ml-1 inline underline underline-offset-4 transition-colors hover:text-foreground"
-                                >
-                                    Terms and Conditions
-                                </button>
-                            </div>
-                        </div>
-                        <InputError
-                            :message="liveErrors.terms || errors.terms"
-                        />
-                    </div>
-
-                    <div
-                        class="rounded-lg border border-border/60 bg-muted/30 p-4"
-                    >
-                        <p
-                            class="text-sm leading-relaxed text-muted-foreground"
-                        >
-                            You're creating a personal account to access
-                            lessons, assessments, and progress tracking. Your
-                            data stays yours — you can review the full terms at
-                            any time.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Step 4 — Review -->
-            <section
-                :ref="(el) => (stepSections[3] = el as HTMLElement | null)"
-                :aria-hidden="currentStep !== 3"
-                :class="stepClass(3)"
+                :ref="(el) => (stepSections[1] = el as HTMLElement | null)"
+                :aria-hidden="currentStep !== 1"
+                :class="stepClass(1)"
             >
                 <div class="grid gap-5">
                     <div
@@ -830,33 +773,46 @@ onBeforeUnmount(() => {
                                 <button
                                     type="button"
                                     class="shrink-0 text-xs font-medium text-primary transition-opacity hover:opacity-70"
-                                    @click="jumpTo(1)"
-                                >
-                                    Edit
-                                </button>
-                            </div>
-                            <div
-                                class="flex items-center justify-between gap-4 px-4 py-3"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <CheckCircle2
-                                        class="h-4 w-4 text-emerald-500"
-                                    />
-                                    <p
-                                        class="text-sm font-semibold text-foreground"
-                                    >
-                                        Terms accepted
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    class="shrink-0 text-xs font-medium text-primary transition-opacity hover:opacity-70"
-                                    @click="jumpTo(2)"
+                                    @click="jumpTo(0)"
                                 >
                                     Edit
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="grid gap-2">
+                        <div class="flex items-start gap-3">
+                            <input
+                                id="terms"
+                                v-model="formData.terms"
+                                name="terms"
+                                type="checkbox"
+                                value="1"
+                                required
+                                :tabindex="1"
+                                class="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border border-input bg-transparent text-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+                                @change="touched.terms = true"
+                            />
+                            <div class="text-sm text-muted-foreground">
+                                <Label
+                                    for="terms"
+                                    class="inline cursor-pointer text-sm text-muted-foreground"
+                                >
+                                    I accept the
+                                </Label>
+                                <button
+                                    type="button"
+                                    @click="showTermsModal = true"
+                                    class="ml-1 inline underline underline-offset-4 transition-colors hover:text-foreground"
+                                >
+                                    Terms and Conditions
+                                </button>
+                            </div>
+                        </div>
+                        <InputError
+                            :message="liveErrors.terms || errors.terms"
+                        />
                     </div>
 
                     <p class="text-center text-xs text-muted-foreground">
