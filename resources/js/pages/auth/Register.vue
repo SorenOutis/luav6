@@ -51,6 +51,7 @@ const currentStep = ref(0);
 const stepDirection = ref<'forward' | 'backward'>('forward');
 const showTermsModal = ref(false);
 const showPassword = ref(false);
+const submitting = ref(false);
 
 // Every field lives here so values survive step changes and the
 // single final POST submits the complete form (the Inertia <Form>
@@ -294,6 +295,7 @@ const jumpTo = (step: number): void => {
 // When the server rejects the final submission, jump back to the step
 // that owns the offending field so the error is visible in context.
 const handleSubmitError = (payload: unknown): void => {
+    submitting.value = false;
     const errs = (payload ?? {}) as Record<string, unknown>;
     if (
         errs.first_name ||
@@ -305,6 +307,10 @@ const handleSubmitError = (payload: unknown): void => {
     )
         jumpTo(0);
     else if (errs.terms) jumpTo(1);
+};
+
+const onFormSuccess = (): void => {
+    submitting.value = false;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -412,7 +418,9 @@ onBeforeUnmount(() => {
         :reset-on-success="['password', 'password_confirmation']"
         v-slot="{ errors, processing }"
         class="flex flex-col gap-6"
+        @submit="submitting = true"
         @error="handleSubmitError"
+        @success="onFormSuccess"
     >
         <div class="text-center">
             <h1
@@ -853,12 +861,16 @@ onBeforeUnmount(() => {
                 <Button
                     v-else
                     type="submit"
-                    :disabled="processing"
+                    :disabled="processing || submitting"
                     class="px-6"
                     data-test="register-user-button"
                 >
-                    <Spinner v-if="processing" class="mr-2" />
-                    {{ processing ? 'Creating account...' : 'Create account' }}
+                    <Spinner v-if="processing || submitting" class="mr-2" />
+                    {{
+                        processing || submitting
+                            ? 'Creating account...'
+                            : 'Create account'
+                    }}
                 </Button>
             </div>
 

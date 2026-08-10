@@ -9,6 +9,7 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
+import { Spinner } from '@/components/ui/spinner';
 import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
 import { withForm } from '@/lib/route-helpers';
 import { store } from '@/routes/two-factor/login';
@@ -98,8 +99,10 @@ defineOptions({ layout: AuthCard });
                     class="w-full"
                     :disabled="processing"
                     :tabindex="1"
-                    >Continue</Button
                 >
+                    <Spinner v-if="processing" class="mr-2" />
+                    {{ processing ? 'Verifying...' : 'Continue' }}
+                </Button>
                 <div class="text-center text-sm text-muted-foreground">
                     <span>or you can </span>
                     <button
@@ -134,8 +137,10 @@ defineOptions({ layout: AuthCard });
                     class="w-full"
                     :disabled="processing"
                     :tabindex="2"
-                    >Continue</Button
                 >
+                    <Spinner v-if="processing" class="mr-2" />
+                    {{ processing ? 'Verifying...' : 'Continue' }}
+                </Button>
 
                 <div class="text-center text-sm text-muted-foreground">
                     <span>or you can </span>
