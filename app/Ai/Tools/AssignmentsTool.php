@@ -2,6 +2,7 @@
 
 namespace App\Ai\Tools;
 
+use App\Models\Assignment;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
@@ -28,15 +29,37 @@ class AssignmentsTool implements Tool
             return 'No user is currently authenticated.';
         }
 
-        $assignments = $user->assignments()->get()->map(function ($assignment) {
-            return [
-                'title' => $assignment->title,
-                'due_date' => $assignment->due_date,
-                'status' => $assignment->pivot->status,
-                'submitted' => (bool) $assignment->pivot->submitted,
-                'grade' => $assignment->pivot->grade,
-            ];
-        });
+        // Assignments live on courses; students see the ones for their
+        // courses plus any they already interacted with (pivot rows hold
+        // their submission state).
+        $interacted = $user->assignments()->get()->keyBy('id');
+        $courseIds = $user->courses()->pluck('courses.id');
+
+        $assignments = Assignment::query()
+            ->with('course:id,name')
+            ->where(fn ($query) => $query
+                ->whereIn('course_id', $courseIds)
+                ->orWhereIn('id', $interacted->keys()))
+            ->orderBy('due_date')
+            ->limit(15)
+            ->get()
+            ->map(function ($assignment) use ($interacted) {
+                $pivot = $interacted->get($assignment->id)?->pivot;
+
+                return [
+                    'title' => $assignment->title,
+                    'course' => $assignment->course?->name,
+                    'due_date' => $assignment->due_date,
+                    'submitted' => (bool) ($pivot?->submitted ?? false),
+                    'status' => $pivot?->status,
+                    'grade' => $pivot?->grade,
+                ];
+            })
+            ->values();
+
+        if ($assignments->isEmpty()) {
+            return 'The student has no assignments for their courses right now.';
+        }
 
         return json_encode($assignments);
     }

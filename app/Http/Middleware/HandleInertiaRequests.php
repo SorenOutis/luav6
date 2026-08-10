@@ -75,9 +75,23 @@ class HandleInertiaRequests extends Middleware
                 'unreadCount' => 0,
                 'items' => [],
             ],
-            'aiChat' => [
+            'aiChat' => fn () => [
                 'enabled' => (bool) Setting::get('ai_chat_enabled', true),
                 'maintenanceMessage' => Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance. Please try again later.'),
+                'isAdmin' => (bool) ($request->user()?->is_admin),
+                'suggestions' => $request->user()?->is_admin
+                    ? [
+                        ['label' => '📋 Needs grading', 'message' => 'Which submissions are waiting to be graded?'],
+                        ['label' => '🗂️ Workspace overview', 'message' => 'Give me an overview of my workspace'],
+                        ['label' => '📝 Create an exam', 'message' => 'Help me create a new exam'],
+                        ['label' => '📣 Post announcement', 'message' => 'I want to post an announcement for my students'],
+                    ]
+                    : [
+                        ['label' => '📋 My Assignments', 'message' => 'What are my upcoming assignments?'],
+                        ['label' => '📝 Upcoming Exams', 'message' => 'What exams do I have coming up?'],
+                        ['label' => '📊 My Progress', 'message' => 'Show me my learning progress'],
+                        ['label' => '🎯 Claim Daily XP', 'message' => 'Claim my daily XP reward'],
+                    ],
             ],
             'studentPageControls' => fn () => StudentPageRegistry::sharedForPath($request->path()),
             'schoolBranding' => fn () => [
