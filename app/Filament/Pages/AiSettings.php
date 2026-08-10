@@ -3,18 +3,24 @@
 namespace App\Filament\Pages;
 
 use App\Models\Setting;
+use App\Services\AiSdkProviderService;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
@@ -46,10 +52,40 @@ class AiSettings extends Page implements HasSchemas
 
     public function mount(): void
     {
-        $this->form->fill([
+        $provider = Setting::get('ai_provider', 'gemini');
+
+        $this->form->fill(array_merge([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
-            'ai_provider' => Setting::get('ai_provider', 'gemini'),
+            'ai_provider' => $provider,
+            'gemini_api_key' => Setting::get('gemini_api_key'),
+            'gemini_chat_model' => Setting::get('gemini_chat_model', 'gemini-3.5-flash'),
+            'gemini_grading_model' => Setting::get('gemini_grading_model', 'gemini-3.5-flash'),
+            'openai_api_key' => Setting::get('openai_api_key'),
+            'openai_url' => Setting::get('openai_url'),
+            'openai_model' => Setting::get('openai_model'),
+            'anthropic_api_key' => Setting::get('anthropic_api_key'),
+            'anthropic_url' => Setting::get('anthropic_url'),
+            'anthropic_model' => Setting::get('anthropic_model'),
+            'mistral_api_key' => Setting::get('mistral_api_key'),
+            'mistral_url' => Setting::get('mistral_url'),
+            'mistral_model' => Setting::get('mistral_model'),
+            'deepseek_api_key' => Setting::get('deepseek_api_key'),
+            'deepseek_model' => Setting::get('deepseek_model'),
+            'xai_api_key' => Setting::get('xai_api_key'),
+            'xai_url' => Setting::get('xai_url'),
+            'xai_model' => Setting::get('xai_model'),
+            'openrouter_api_key' => Setting::get('openrouter_api_key'),
+            'openrouter_model' => Setting::get('openrouter_model'),
+            'azure_api_key' => Setting::get('azure_api_key'),
+            'azure_url' => Setting::get('azure_url'),
+            'azure_api_version' => Setting::get('azure_api_version'),
+            'azure_deployment' => Setting::get('azure_deployment'),
+            'azure_embedding_deployment' => Setting::get('azure_embedding_deployment'),
+            'cohere_api_key' => Setting::get('cohere_api_key'),
+            'jina_api_key' => Setting::get('jina_api_key'),
+            'voyageai_api_key' => Setting::get('voyageai_api_key'),
+            'eleven_api_key' => Setting::get('eleven_api_key'),
             'cloudflare_account_id' => Setting::get('cloudflare_account_id'),
             'cloudflare_api_token' => Setting::get('cloudflare_api_token'),
             'cloudflare_model' => Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash'),
@@ -70,7 +106,10 @@ class AiSettings extends Page implements HasSchemas
             'school_tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),
             'school_logo_path' => Setting::get('school_logo_path'),
             'school_accent_color' => Setting::get('school_accent_color', '#f59e0b'),
-        ]);
+        ], collect($this->defaultableProviders())
+            ->keys()
+            ->mapWithKeys(fn (string $key): array => ["provider_default_{$key}" => $provider === $key])
+            ->all()));
     }
 
     public function form(Schema $form): Schema
@@ -108,105 +147,15 @@ class AiSettings extends Page implements HasSchemas
                             ->columnSpanFull(),
                     ]),
 
-                Section::make('AI Chat Configuration')
+                $this->aiProviderSection(),
+
+                Section::make('AI Chat Widget')
                     ->description('Manage the availability of the AI floating widget.')
                     ->schema([
                         Toggle::make('ai_chat_enabled')
                             ->label('Enable AI Chat Widget')
                             ->helperText('If disabled, the floating widget will show a maintenance message and prevent chatting.')
                             ->reactive(),
-
-                        Select::make('ai_provider')
-                            ->label('AI Provider')
-                            ->options([
-                                'gemini' => 'Gemini (Google)',
-                                'cloudflare' => 'Cloudflare Workers AI',
-                                'groq' => 'Groq (Free - 14,400 req/day)',
-                            ])
-                            ->default('gemini')
-                            ->required()
-                            ->helperText('Select the AI provider to use for the chat widget. Groq is recommended for exam grading.')
-                            ->visible(fn ($get) => $get('ai_chat_enabled')),
-
-                        Grid::make(2)
-                            ->schema([
-                                TextInput::make('cloudflare_account_id')
-                                    ->label('Cloudflare Account ID')
-                                    ->placeholder('Your Cloudflare Account ID')
-                                    ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
-
-                                TextInput::make('cloudflare_api_token')
-                                    ->label('Cloudflare API Token')
-                                    ->password()
-                                    ->placeholder('Your Workers AI API Token')
-                                    ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
-                            ]),
-
-                        Select::make('cloudflare_model')
-                            ->label('AI Chat Model')
-                            ->options([
-                                '@cf/zai-org/glm-4.7-flash' => 'GLM 4.7 Flash (fast, great for chat)',
-                                '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (recommended)',
-                                '@cf/meta/llama-3.1-8b-instruct-fast' => 'Llama 3.1 8B Fast (faster)',
-                                '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
-                                '@cf/meta/llama-3.2-1b-instruct' => 'Llama 3.2 1B (Ultra Fast)',
-                            ])
-                            ->default('@cf/zai-org/glm-4.7-flash')
-                            ->helperText('Used by the floating chat widget. Only applies when the provider is Cloudflare.')
-                            ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
-
-                        Select::make('cloudflare_grading_model')
-                            ->label('AI Grading Model')
-                            ->options([
-                                '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (most accurate)',
-                                '@cf/meta/llama-3.1-8b-instruct-fp8-fast' => 'Llama 3.1 8B FP8 Fast (~5x cheaper, near-identical quality)',
-                                '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
-                                '@cf/meta/llama-3.2-1b-instruct' => 'Llama 3.2 1B (Ultra Fast, cheapest)',
-                            ])
-                            ->default('@cf/meta/llama-3.1-8b-instruct')
-                            ->helperText('Used for essay grading and AI question/source generation. FP8 Fast is the cost/quality sweet spot.')
-                            ->visible(fn ($get) => $get('ai_provider') === 'cloudflare' && $get('ai_chat_enabled')),
-
-                        TextInput::make('groq_api_key')
-                            ->label('Groq API Key')
-                            ->password()
-                            ->placeholder('Your Groq API Key (free at console.groq.com)')
-                            ->visible(fn ($get) => $get('ai_provider') === 'groq' && $get('ai_chat_enabled')),
-
-                        Select::make('groq_model')
-                            ->label('Groq Model')
-                            ->options([
-                                'llama-3.1-8b-instant' => 'Llama 3.1 8B Instant (fastest)',
-                                'llama-3.1-70b-versatile' => 'Llama 3.1 70B Versatile',
-                                'llama-3.3-70b-versatile' => 'Llama 3.3 70B Versatile',
-                                'mixtral-8x7b-32768' => 'Mixtral 8x7B',
-                                'gemma-2-9b-it' => 'Gemma 2 9B',
-                            ])
-                            ->default('llama-3.1-8b-instant')
-                            ->helperText('Llama 3.1 8B Instant is ultra-fast. Use 70B for complex tasks.')
-                            ->visible(fn ($get) => $get('ai_provider') === 'groq' && $get('ai_chat_enabled')),
-
-                        Section::make('Ollama Fallback Configuration')
-                            ->description('Configure local Ollama as a fallback when the primary provider fails.')
-                            ->schema([
-                                TextInput::make('ollama_url')
-                                    ->label('Ollama URL')
-                                    ->placeholder('http://localhost:11434')
-                                    ->default('http://localhost:11434')
-                                    ->helperText('URL of your local Ollama instance.'),
-
-                                TextInput::make('ollama_model')
-                                    ->label('Ollama Model')
-                                    ->placeholder('llama3.2:1b')
-                                    ->default('llama3.2:1b')
-                                    ->helperText('Model to use for Ollama fallback (e.g., llama3.2:1b, llama3.1:8b).'),
-
-                                Toggle::make('ollama_enabled')
-                                    ->label('Enable Ollama Fallback')
-                                    ->default(false)
-                                    ->helperText('When enabled, Ollama will be used if the primary provider fails.'),
-                            ])
-                            ->visible(fn ($get) => $get('ai_chat_enabled')),
 
                         Textarea::make('ai_chat_maintenance_message')
                             ->label('Maintenance Message')
@@ -264,6 +213,330 @@ class AiSettings extends Page implements HasSchemas
             ->statePath('data');
     }
 
+    /**
+     * Providers that can serve text (chat widget, essay grading, and AI
+     * question generation) and can therefore be marked as the default.
+     * Cloudflare is a custom integration, not a Laravel AI SDK driver.
+     *
+     * @return array<string, string> Provider key => card label
+     */
+    private function defaultableProviders(): array
+    {
+        return [
+            'gemini' => 'Gemini (Google)',
+            'openai' => 'OpenAI',
+            'anthropic' => 'Anthropic (Claude)',
+            'groq' => 'Groq',
+            'mistral' => 'Mistral',
+            'deepseek' => 'DeepSeek',
+            'xai' => 'xAI (Grok)',
+            'openrouter' => 'OpenRouter',
+            'azure' => 'Azure OpenAI',
+            'ollama' => 'Ollama (Local)',
+            'cloudflare' => 'Cloudflare Workers AI',
+        ];
+    }
+
+    /**
+     * Field metadata for the standard Laravel AI SDK provider cards.
+     *
+     * @return array<string, array{help: string, env: string, url: ?string}>
+     */
+    private function sdkProviderFields(): array
+    {
+        return [
+            'openai' => ['help' => 'Create one at platform.openai.com.', 'env' => 'OPENAI_API_KEY', 'url' => 'https://api.openai.com/v1'],
+            'anthropic' => ['help' => 'Create one at console.anthropic.com.', 'env' => 'ANTHROPIC_API_KEY', 'url' => 'https://api.anthropic.com/v1'],
+            'mistral' => ['help' => 'Create one at console.mistral.ai.', 'env' => 'MISTRAL_API_KEY', 'url' => 'https://api.mistral.ai/v1'],
+            'deepseek' => ['help' => 'Create one at platform.deepseek.com.', 'env' => 'DEEPSEEK_API_KEY', 'url' => null],
+            'xai' => ['help' => 'Create one at console.x.ai.', 'env' => 'XAI_API_KEY', 'url' => 'https://api.x.ai/v1'],
+            'openrouter' => ['help' => 'Create one at openrouter.ai/keys.', 'env' => 'OPENROUTER_API_KEY', 'url' => null],
+        ];
+    }
+
+    /**
+     * The "Default provider" checkbox on a provider card. Radio semantics:
+     * exactly one provider is always the default — checking a card unchecks
+     * the others, and unchecking the current default snaps it back on.
+     */
+    private function defaultProviderCheckbox(string $key): Checkbox
+    {
+        return Checkbox::make("provider_default_{$key}")
+            ->label('Default provider')
+            ->helperText('Use this provider for the chat widget, essay grading, and AI question generation.')
+            ->dehydrated(false)
+            ->live()
+            ->afterStateUpdated(function (Set $set, Get $get, ?bool $state) use ($key) {
+                if ($state) {
+                    $set('ai_provider', $key);
+
+                    foreach (array_keys($this->defaultableProviders()) as $other) {
+                        if ($other !== $key) {
+                            $set("provider_default_{$other}", false);
+                        }
+                    }
+
+                    return;
+                }
+
+                if ($get('ai_provider') === $key) {
+                    $set("provider_default_{$key}", true);
+                }
+            });
+    }
+
+    /**
+     * A collapsible provider card with the "Default provider" checkbox on
+     * top. Only the current default's card starts expanded.
+     *
+     * @param  array<int, Component>  $fields
+     */
+    private function providerSection(string $key, string $label, string $description, array $fields): Section
+    {
+        return Section::make($label)
+            ->description(fn (Get $get): string => ($get('ai_provider') === $key ? '✔ Default — ' : '').$description)
+            ->collapsible()
+            ->collapsed(fn (Get $get): bool => $get('ai_provider') !== $key)
+            ->schema([
+                $this->defaultProviderCheckbox($key),
+                ...$fields,
+            ]);
+    }
+
+    /**
+     * A standard Laravel AI SDK provider card: API key, optional base URL,
+     * and a model input that falls back to the service default.
+     */
+    private function sdkProviderCard(string $key, string $label): Section
+    {
+        $meta = $this->sdkProviderFields()[$key];
+        $defaultModel = AiSdkProviderService::DEFAULT_MODELS[$key];
+
+        $fields = [
+            TextInput::make("{$key}_api_key")
+                ->label('API Key')
+                ->password()
+                ->revealable()
+                ->helperText("{$meta['help']} Falls back to the {$meta['env']} env var if left empty."),
+        ];
+
+        if ($meta['url'] !== null) {
+            $fields[] = TextInput::make("{$key}_url")
+                ->label('Base URL')
+                ->placeholder($meta['url'])
+                ->helperText('Leave empty to use the default endpoint.');
+        }
+
+        $fields[] = TextInput::make("{$key}_model")
+            ->label('Model')
+            ->placeholder($defaultModel)
+            ->helperText("Used for chat, grading, and question generation. Leave empty to use {$defaultModel}.");
+
+        return $this->providerSection($key, $label, 'Text via the Laravel AI SDK.', [
+            Grid::make(2)->schema($fields),
+        ]);
+    }
+
+    /**
+     * The AI Providers section: every Laravel AI SDK provider gets its own
+     * collapsible card with credentials, and exactly one card is checked as
+     * the default via the hidden `ai_provider` state.
+     */
+    private function aiProviderSection(): Section
+    {
+        return Section::make('AI Provider Configuration')
+            ->description('Every provider the Laravel AI SDK supports, ready to configure. Check "Default provider" on the card used for the chat widget, essay grading, and AI question generation.')
+            ->schema([
+                Hidden::make('ai_provider'),
+
+                $this->providerSection('gemini', 'Gemini (Google)', 'Text, images, embeddings, and files via the Laravel AI SDK.', [
+                    Grid::make(2)->schema([
+                        TextInput::make('gemini_api_key')
+                            ->label('Gemini API Key')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Paste your Google AI Studio API key')
+                            ->helperText('Create one for free at aistudio.google.com. Falls back to the GEMINI_API_KEY env var if left empty.'),
+
+                        Select::make('gemini_chat_model')
+                            ->label('Gemini Chat Model')
+                            ->options([
+                                'gemini-3.5-flash' => 'Gemini 3.5 Flash (recommended)',
+                                'gemini-3.5-flash-lite' => 'Gemini 3.5 Flash-Lite (faster)',
+                                'gemini-3.1-flash-lite' => 'Gemini 3.1 Flash-Lite (cheapest)',
+                                'gemini-2.5-pro' => 'Gemini 2.5 Pro (most capable)',
+                            ])
+                            ->default('gemini-3.5-flash')
+                            ->helperText('Used by the floating chat widget.'),
+
+                        Select::make('gemini_grading_model')
+                            ->label('Gemini Grading Model')
+                            ->options([
+                                'gemini-3.5-flash' => 'Gemini 3.5 Flash (recommended)',
+                                'gemini-3.5-flash-lite' => 'Gemini 3.5 Flash-Lite (faster)',
+                                'gemini-3.1-flash-lite' => 'Gemini 3.1 Flash-Lite (cheapest)',
+                                'gemini-2.5-pro' => 'Gemini 2.5 Pro (most accurate)',
+                            ])
+                            ->default('gemini-3.5-flash')
+                            ->helperText('Used for essay grading and AI question/source generation.'),
+                    ]),
+                ]),
+
+                $this->sdkProviderCard('openai', 'OpenAI'),
+                $this->sdkProviderCard('anthropic', 'Anthropic (Claude)'),
+
+                $this->providerSection('groq', 'Groq', 'Text via the Laravel AI SDK. Free tier: 14,400 requests/day.', [
+                    Grid::make(2)->schema([
+                        TextInput::make('groq_api_key')
+                            ->label('Groq API Key')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Your Groq API Key (free at console.groq.com)')
+                            ->helperText('Falls back to the GROQ_API_KEY env var if left empty.'),
+
+                        Select::make('groq_model')
+                            ->label('Groq Model')
+                            ->options([
+                                'llama-3.1-8b-instant' => 'Llama 3.1 8B Instant (fastest)',
+                                'llama-3.1-70b-versatile' => 'Llama 3.1 70B Versatile',
+                                'llama-3.3-70b-versatile' => 'Llama 3.3 70B Versatile',
+                                'mixtral-8x7b-32768' => 'Mixtral 8x7B',
+                                'gemma-2-9b-it' => 'Gemma 2 9B',
+                            ])
+                            ->default('llama-3.1-8b-instant')
+                            ->helperText('Llama 3.1 8B Instant is ultra-fast. Use 70B for complex tasks.'),
+                    ]),
+                ]),
+
+                $this->sdkProviderCard('mistral', 'Mistral'),
+                $this->sdkProviderCard('deepseek', 'DeepSeek'),
+                $this->sdkProviderCard('xai', 'xAI (Grok)'),
+                $this->sdkProviderCard('openrouter', 'OpenRouter'),
+                $this->providerSection('azure', 'Azure OpenAI', 'Text and embeddings via the Laravel AI SDK. Prompts against deployment names.', [
+                    Grid::make(2)->schema([
+                        TextInput::make('azure_api_key')
+                            ->label('Azure OpenAI API Key')
+                            ->password()
+                            ->revealable()
+                            ->helperText('Falls back to the AZURE_OPENAI_API_KEY env var if left empty.'),
+
+                        TextInput::make('azure_url')
+                            ->label('Endpoint URL')
+                            ->placeholder('https://your-resource.openai.azure.com')
+                            ->helperText('Falls back to the AZURE_OPENAI_URL env var if left empty.'),
+
+                        TextInput::make('azure_api_version')
+                            ->label('API Version')
+                            ->placeholder('2024-10-21')
+                            ->helperText('Leave empty to use the default API version.'),
+
+                        TextInput::make('azure_deployment')
+                            ->label('Chat Deployment')
+                            ->placeholder('gpt-4o')
+                            ->helperText('Deployment used for chat, grading, and question generation.'),
+
+                        TextInput::make('azure_embedding_deployment')
+                            ->label('Embedding Deployment')
+                            ->placeholder('text-embedding-3-small')
+                            ->helperText('Deployment used for embeddings.'),
+                    ]),
+                ]),
+
+                $this->providerSection('ollama', 'Ollama (Local)', 'Local text models via the Laravel AI SDK — no API key required.', [
+                    Grid::make(2)->schema([
+                        TextInput::make('ollama_url')
+                            ->label('Ollama URL')
+                            ->placeholder('http://localhost:11434')
+                            ->default('http://localhost:11434')
+                            ->helperText('URL of your local Ollama instance. Also used by the fallback below.'),
+
+                        TextInput::make('ollama_model')
+                            ->label('Ollama Model')
+                            ->placeholder('llama3.2:1b')
+                            ->default('llama3.2:1b')
+                            ->helperText('Model to use (e.g., llama3.2:1b, llama3.1:8b).'),
+                    ]),
+                ]),
+
+                $this->providerSection('cloudflare', 'Cloudflare Workers AI', 'Custom integration — not part of the Laravel AI SDK.', [
+                    Grid::make(2)->schema([
+                        TextInput::make('cloudflare_account_id')
+                            ->label('Cloudflare Account ID')
+                            ->placeholder('Your Cloudflare Account ID'),
+
+                        TextInput::make('cloudflare_api_token')
+                            ->label('Cloudflare API Token')
+                            ->password()
+                            ->placeholder('Your Workers AI API Token'),
+
+                        Select::make('cloudflare_model')
+                            ->label('AI Chat Model')
+                            ->options([
+                                '@cf/zai-org/glm-4.7-flash' => 'GLM 4.7 Flash (fast, great for chat)',
+                                '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (recommended)',
+                                '@cf/meta/llama-3.1-8b-instruct-fast' => 'Llama 3.1 8B Fast (faster)',
+                                '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
+                                '@cf/meta/llama-3.2-1b-instruct' => 'Llama 3.2 1B (Ultra Fast)',
+                            ])
+                            ->default('@cf/zai-org/glm-4.7-flash')
+                            ->helperText('Used by the floating chat widget.'),
+
+                        Select::make('cloudflare_grading_model')
+                            ->label('AI Grading Model')
+                            ->options([
+                                '@cf/meta/llama-3.1-8b-instruct' => 'Llama 3.1 8B (most accurate)',
+                                '@cf/meta/llama-3.1-8b-instruct-fp8-fast' => 'Llama 3.1 8B FP8 Fast (~5x cheaper, near-identical quality)',
+                                '@cf/meta/llama-3-8b-instruct' => 'Llama 3 8B',
+                                '@cf/meta/llama-3.2-1b-instruct' => 'Llama 3.2 1B (Ultra Fast, cheapest)',
+                            ])
+                            ->default('@cf/meta/llama-3.1-8b-instruct')
+                            ->helperText('Used for essay grading and AI question/source generation. FP8 Fast is the cost/quality sweet spot.'),
+                    ]),
+                ]),
+
+                Section::make('Specialized Providers')
+                    ->description('These Laravel AI SDK providers offer embeddings, reranking, or audio only — no text generation — so they can never be the default. Their keys are stored for SDK features that use them.')
+                    ->collapsible()
+                    ->collapsed()
+                    ->schema([
+                        Grid::make(2)->schema([
+                            TextInput::make('cohere_api_key')
+                                ->label('Cohere API Key')
+                                ->password()
+                                ->revealable()
+                                ->helperText('Embeddings and reranking. Falls back to the COHERE_API_KEY env var if left empty.'),
+
+                            TextInput::make('jina_api_key')
+                                ->label('Jina API Key')
+                                ->password()
+                                ->revealable()
+                                ->helperText('Embeddings and reranking. Falls back to the JINA_API_KEY env var if left empty.'),
+
+                            TextInput::make('voyageai_api_key')
+                                ->label('VoyageAI API Key')
+                                ->password()
+                                ->revealable()
+                                ->helperText('Embeddings. Falls back to the VOYAGEAI_API_KEY env var if left empty.'),
+
+                            TextInput::make('eleven_api_key')
+                                ->label('ElevenLabs API Key')
+                                ->password()
+                                ->revealable()
+                                ->helperText('Text-to-speech and transcription. Falls back to the ELEVENLABS_API_KEY env var if left empty.'),
+                        ]),
+                    ]),
+
+                Section::make('Ollama Fallback')
+                    ->description('Configure local Ollama as a fallback when the default provider fails.')
+                    ->schema([
+                        Toggle::make('ollama_enabled')
+                            ->label('Enable Ollama Fallback')
+                            ->default(false)
+                            ->helperText('When enabled, Ollama will be used if the default provider fails. Uses the URL and model from the Ollama card above.'),
+                    ]),
+            ]);
+    }
+
     public function save(): void
     {
         try {
@@ -274,7 +547,19 @@ class AiSettings extends Page implements HasSchemas
                 Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
             }
 
-            Setting::set('ai_provider', $data['ai_provider'] ?? 'gemini');
+            // The hidden ai_provider state is the single source of truth for
+            // the default provider. Guard against stale/unknown values (e.g.
+            // a provider that was removed or can never serve text).
+            $provider = $data['ai_provider'] ?? 'gemini';
+
+            if (! array_key_exists($provider, $this->defaultableProviders())) {
+                $provider = 'gemini';
+            }
+
+            Setting::set('ai_provider', $provider);
+            Setting::set('gemini_api_key', $data['gemini_api_key'] ?? null);
+            Setting::set('gemini_chat_model', $data['gemini_chat_model'] ?? 'gemini-3.5-flash');
+            Setting::set('gemini_grading_model', $data['gemini_grading_model'] ?? 'gemini-3.5-flash');
             Setting::set('cloudflare_account_id', $data['cloudflare_account_id'] ?? null);
             Setting::set('cloudflare_api_token', $data['cloudflare_api_token'] ?? null);
             Setting::set('cloudflare_model', $data['cloudflare_model'] ?? '@cf/zai-org/glm-4.7-flash');
@@ -284,6 +569,22 @@ class AiSettings extends Page implements HasSchemas
             Setting::set('ollama_url', $data['ollama_url'] ?? 'http://localhost:11434');
             Setting::set('ollama_model', $data['ollama_model'] ?? 'llama3.2:1b');
             Setting::set('ollama_enabled', ($data['ollama_enabled'] ?? false) ? '1' : '0');
+
+            // Laravel AI SDK provider credentials and models. Empty values
+            // are stored as null so the runtime falls back to the env vars.
+            foreach ([
+                'openai_api_key', 'openai_url', 'openai_model',
+                'anthropic_api_key', 'anthropic_url', 'anthropic_model',
+                'mistral_api_key', 'mistral_url', 'mistral_model',
+                'deepseek_api_key', 'deepseek_model',
+                'xai_api_key', 'xai_url', 'xai_model',
+                'openrouter_api_key', 'openrouter_model',
+                'azure_api_key', 'azure_url', 'azure_api_version',
+                'azure_deployment', 'azure_embedding_deployment',
+                'cohere_api_key', 'jina_api_key', 'voyageai_api_key', 'eleven_api_key',
+            ] as $sdkSetting) {
+                Setting::set($sdkSetting, $data[$sdkSetting] ?? null);
+            }
 
             Setting::set('login_enabled', ($data['login_enabled'] ?? true) ? '1' : '0');
             if (isset($data['login_disabled_message'])) {
