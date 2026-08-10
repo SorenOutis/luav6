@@ -5,12 +5,15 @@ namespace App\Filament\Resources\AiQuestionDrafts\Pages;
 use App\Filament\Resources\AiQuestionDrafts\AiQuestionDraftResource;
 use App\Filament\Resources\Exams\ExamResource;
 use App\Jobs\GenerateAiQuestions;
+use App\Jobs\RefineAiQuestions;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\User;
+use App\Services\AiSdkProviderService;
 use App\Support\AiQueueWorker;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -28,14 +31,24 @@ class EditAiQuestionDraft extends EditRecord
                 ->label('Regenerate')
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
-                ->requiresConfirmation()
+                ->modalHeading('Regenerate questions')
                 ->modalDescription('Re-run the AI over the same source material. This replaces the current questions.')
+                ->modalSubmitActionLabel('Regenerate')
                 ->visible(fn ($record): bool => $record && in_array($record->status, ['ready', 'failed'], true))
-                ->action(function () {
+                ->form([
+                    Select::make('provider')
+                        ->label('AI Provider')
+                        ->options(fn () => AiSdkProviderService::configuredProviders())
+                        ->default(fn () => $this->record?->provider)
+                        ->placeholder('Platform default')
+                        ->helperText('Only providers with saved credentials are listed. The choice is stored on the draft for future runs.'),
+                ])
+                ->action(function (array $data) {
                     $this->record->forceFill([
                         'status' => 'pending',
                         'last_error' => null,
                         'questions' => null,
+                        'provider' => $data['provider'] ?? null,
                     ])->save();
 
                     GenerateAiQuestions::dispatch($this->record->id);
@@ -43,6 +56,60 @@ class EditAiQuestionDraft extends EditRecord
 
                     Notification::make()
                         ->title('Regeneration queued')
+                        ->success()
+                        ->send();
+
+                    $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->record->id]));
+                }),
+
+            Action::make('followUp')
+                ->label('Follow-up')
+                ->icon('heroicon-o-chat-bubble-left-right')
+                ->color('primary')
+                ->modalHeading('Follow-up instructions')
+                ->modalDescription('Tell the AI how to improve this draft — add more questions, make them harder, or replace weak ones. The question list refreshes automatically when it finishes.')
+                ->modalSubmitActionLabel('Send Follow-up')
+                ->modalWidth('2xl')
+                ->visible(fn ($record): bool => $record?->status === 'ready' && is_array($record->questions) && count($record->questions) > 0)
+                ->form([
+                    Textarea::make('instruction')
+                        ->label('Instruction')
+                        ->rows(3)
+                        ->required()
+                        ->maxLength(2000)
+                        ->placeholder('e.g. "Add 5 more multiple choice questions about mitosis" or "Make the essay questions more analytical"'),
+                    Radio::make('mode')
+                        ->label('What should the AI do?')
+                        ->options([
+                            'add' => 'Add to the existing questions',
+                            'replace' => 'Replace all questions with a new set',
+                        ])
+                        ->default('add')
+                        ->required(),
+                    Select::make('provider')
+                        ->label('AI Provider')
+                        ->options(fn () => AiSdkProviderService::configuredProviders())
+                        ->default(fn () => $this->record?->provider)
+                        ->placeholder('Platform default')
+                        ->helperText('Only providers with saved credentials are listed. The choice is stored on the draft for future runs.'),
+                ])
+                ->action(function (array $data) {
+                    $this->record->forceFill([
+                        'provider' => $data['provider'] ?? $this->record->provider,
+                        'status' => 'pending',
+                        'last_error' => null,
+                    ])->save();
+
+                    RefineAiQuestions::dispatch(
+                        draftId: $this->record->id,
+                        instruction: trim((string) $data['instruction']),
+                        mode: ($data['mode'] ?? 'add') === 'replace' ? 'replace' : 'add',
+                    );
+                    AiQueueWorker::ensureRunning();
+
+                    Notification::make()
+                        ->title('Follow-up queued')
+                        ->body('The AI is working on your instruction — the questions will refresh when it finishes.')
                         ->success()
                         ->send();
 

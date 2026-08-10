@@ -6,7 +6,9 @@ use App\Filament\Resources\AiQuestionDrafts\AiQuestionDraftResource;
 use App\Jobs\GenerateAiQuestions;
 use App\Jobs\GenerateAiSource;
 use App\Models\AiQuestionDraft;
+use App\Models\Setting;
 use App\Services\AiQuestionGeneratorService;
+use App\Services\AiSdkProviderService;
 use App\Support\AiQueueWorker;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -163,6 +165,14 @@ class ListAiQuestionDrafts extends ListRecords
                         ])
                         ->default('medium')
                         ->required(),
+                    Select::make('provider')
+                        ->label('AI Provider')
+                        ->options(fn () => AiSdkProviderService::configuredProviders())
+                        ->default(fn () => ($default = Setting::get('ai_provider', 'gemini')) && array_key_exists($default, AiSdkProviderService::configuredProviders())
+                            ? $default
+                            : null)
+                        ->placeholder('Platform default')
+                        ->helperText('Only providers with saved credentials are listed. Manage them in Platform Settings. Applies to both the lesson source and the questions.'),
                 ])
                 ->action(function (array $data, AiQuestionGeneratorService $service): void {
                     // Merge user-submitted counts with defaults (handles form re-render edge cases)
@@ -204,6 +214,7 @@ class ListAiQuestionDrafts extends ListRecords
                             'source_text' => '',
                             'type_counts' => $counts,
                             'difficulty' => $data['difficulty'] ?? 'medium',
+                            'provider' => $data['provider'] ?? null,
                             'status' => 'generating_source',
                         ]);
 
@@ -257,6 +268,7 @@ class ListAiQuestionDrafts extends ListRecords
                             'source_text' => $sourceText,
                             'type_counts' => $counts,
                             'difficulty' => $data['difficulty'] ?? 'medium',
+                            'provider' => $data['provider'] ?? null,
                             'status' => 'pending',
                         ]);
 

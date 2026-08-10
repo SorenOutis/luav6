@@ -46,11 +46,57 @@ class AiSdkProviderService
     /** Providers that accept a custom base URL. */
     private const URL_PROVIDERS = ['openai', 'anthropic', 'mistral', 'xai', 'azure', 'ollama'];
 
+    /**
+     * Labels for every provider that can serve text generation in the app
+     * (the SDK-routed providers plus the dedicated Gemini/Groq/Cloudflare
+     * integrations), in display order.
+     *
+     * @var array<string, string>
+     */
+    public const TEXT_PROVIDER_LABELS = [
+        'gemini' => 'Gemini (Google)',
+        'openai' => 'OpenAI',
+        'anthropic' => 'Anthropic (Claude)',
+        'groq' => 'Groq',
+        'mistral' => 'Mistral',
+        'deepseek' => 'DeepSeek',
+        'xai' => 'xAI (Grok)',
+        'openrouter' => 'OpenRouter',
+        'azure' => 'Azure OpenAI',
+        'ollama' => 'Ollama (Local)',
+        'cloudflare' => 'Cloudflare Workers AI',
+    ];
+
     public function __construct(public readonly string $provider) {}
 
     public static function for(string $provider): self
     {
         return new self($provider);
+    }
+
+    /**
+     * Text-capable providers that have credentials configured — a key saved
+     * in Platform Settings or an env fallback — ready to be offered as
+     * one-off generation overrides. Ollama needs no key and is always
+     * listed.
+     *
+     * @return array<string, string> provider key => label
+     */
+    public static function configuredProviders(): array
+    {
+        $configured = [
+            'gemini' => filled(app(GeminiAIService::class)->apiKey()),
+            'cloudflare' => filled(Setting::get('cloudflare_account_id')) && filled(Setting::get('cloudflare_api_token')),
+            'groq' => filled(Setting::get('groq_api_key') ?: config('ai.providers.groq.env_key')),
+        ];
+
+        foreach (array_keys(self::DEFAULT_MODELS) as $provider) {
+            $configured[$provider] = self::for($provider)->isConfigured();
+        }
+
+        return collect(self::TEXT_PROVIDER_LABELS)
+            ->filter(fn (string $label, string $key): bool => $configured[$key] ?? false)
+            ->all();
     }
 
     /**

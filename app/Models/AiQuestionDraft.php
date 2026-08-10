@@ -29,6 +29,7 @@ class AiQuestionDraft extends Model
         'topic',
         'type_counts',
         'difficulty',
+        'provider',
         'status',
         'questions',
         'last_error',

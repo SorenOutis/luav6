@@ -44,7 +44,7 @@ class GenerateAiSource implements ShouldQueue
         ])->save();
 
         try {
-            $sourceText = $service->generateSource(
+            $sourceText = $service->forProvider($draft->provider)->generateSource(
                 subject: $this->subject,
                 gradeLevel: $this->gradeLevel,
                 description: $this->description,
