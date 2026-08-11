@@ -83,6 +83,15 @@ class ChatController extends Controller
             ], 200);
         }
 
+        $isStreamRetry = $request->boolean('stream_retry');
+
+        // ── Student daily message cap (cost/abuse guard; admins exempt) ──
+        // Retries skip the check here: the matched streaming action already
+        // consumed its slot (or is about to be matched by streamRetry below).
+        if (! $isStreamRetry && ($blocked = $this->chatService->dailyLimitMessage($user))) {
+            return response()->json(['response' => $blocked]);
+        }
+
         try {
             // Resolve which persisted conversation this message belongs to,
             // migrating any legacy session history into the first DB session.
@@ -92,7 +101,7 @@ class ChatController extends Controller
             // finish it, the streaming action may already have persisted this
             // turn. Reuse that work instead of charging the limit twice or
             // duplicating rows.
-            $streamRetry = $request->boolean('stream_retry')
+            $streamRetry = $isStreamRetry
                 ? $this->streamRetry($sessionId, $request->message)
                 : null;
 
@@ -107,10 +116,12 @@ class ChatController extends Controller
                 ]);
             }
 
-            // ── Student daily message cap (cost/abuse guard; admins exempt) ──
-            // A matched retry already consumed its slot in the streaming action.
-            if ($streamRetry === null && ($blocked = $this->chatService->dailyLimitMessage($user))) {
-                return response()->json(['response' => $blocked]);
+            // An unmatched retry means the stream never persisted this turn —
+            // treat it as a fresh message and consume a slot like normal.
+            if ($isStreamRetry && $streamRetry === null) {
+                if ($blocked = $this->chatService->dailyLimitMessage($user)) {
+                    return response()->json(['response' => $blocked]);
+                }
             }
 
             if (($streamRetry['state'] ?? null) === 'pending') {
