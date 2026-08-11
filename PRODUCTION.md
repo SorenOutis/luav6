@@ -19,14 +19,15 @@ Reverse proxy / Load Balancer (TLS) → :8000 → Octane (FrankenPHP)
   - `horizon` — **Laravel Horizon**, which supervises the queue workers
     (queues `ai` + `default`) and serves the `/horizon` dashboard.
   - `scheduler` — Laravel's scheduler (`schedule:work`).
-  - `queue` — legacy fallback: plain Supervisor-managed `queue:work`
-    processes (pre-Horizon behavior).
+  - `queue` — Supervisor-managed `queue:work` processes. The `horizon` role
+    automatically falls back to this role when the queue connection is not
+    Redis.
   - `migrate` — runs `php artisan migrate --force` once, then exits (used as a
     one-off job, not on container start).
-- **Laravel Horizon is installed into the Docker image only** (the
-  `Dockerfile` runs `composer require laravel/horizon` at build time) — it is
-  deliberately absent from the repo's `composer.json`, so non-Docker
-  environments never load it.
+- **Laravel Horizon is installed into the Docker image only when the build's
+  `QUEUE_CONNECTION` is `redis`**. Compose forwards that value as a build
+  argument. Horizon remains absent from the repository's `composer.json` and
+  `composer.lock`, and non-Redis images do not contain the package.
 - **Postgres** holds sessions and cache; **Redis** holds the queue (Horizon
   manages it) — AOF persistence keeps queued jobs across restarts.
 - Port `8000` binds only to loopback; your reverse proxy terminates TLS and
@@ -108,6 +109,9 @@ Three ways to know whether the queue workers are running after a deploy:
 
 ## Notes
 
+- When building the Dockerfile without Compose, pass
+  `--build-arg QUEUE_CONNECTION=redis` to include Horizon. Omitting the
+  argument produces a non-Redis image without Horizon.
 - **Migrations are manual** (run via the `migrate` role / `run --rm`), not on
   container start, so you control when schema changes apply.
 - The **queue runs on Redis and is supervised by Laravel Horizon** (queues
@@ -119,10 +123,10 @@ Three ways to know whether the queue workers are running after a deploy:
   Jobs tab. The on-demand spawner (`AiQueueWorker`) is skipped automatically
   on the Redis driver — it remains the local-dev fallback for the database
   queue. If `QUEUE_CONNECTION` is not `redis`, the `horizon` container role
-  refuses to start Horizon and **falls back to the Supervisor-based `queue`
-  role** (logged as a warning; the container healthcheck stays `unhealthy`
-  so the misconfiguration is visible in `docker compose ps`). The old
-  Supervisor role is also still available directly via `CONTAINER_ROLE=queue`.
+  does not load Horizon and **falls back to the Supervisor-based `queue`
+  role**. Its healthcheck also switches to Supervisor status, so this is a
+  supported configuration rather than an unhealthy container. The Supervisor
+  role is also available directly via `CONTAINER_ROLE=queue`.
 - If an essay submission shows "Reviewing your essay..." forever, first check
   Horizon is running (`docker compose ... ps` — the `horizon` service should
   be `(healthy)`), then confirm `ai_provider` is set to `cloudflare` in

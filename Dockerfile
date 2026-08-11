@@ -46,17 +46,26 @@ RUN apt-get update \
 # stages where app/ is present) stay reachable via PSR-4.
 FROM base AS vendor
 WORKDIR /app
+ARG QUEUE_CONNECTION=database
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
         --optimize-autoloader --no-scripts
 
 # Laravel Horizon is intentionally NOT in the repo's composer.json: it is
-# installed only into the Docker image, so local/non-Docker environments
-# never load it. It runs as the `horizon` container role (see start.sh) and
-# supervises the Redis-backed queue workers. The require lives in this stage
-# so the layer stays cached until composer.json/lock change.
-RUN composer require laravel/horizon:^5.36 --no-interaction --no-progress \
-        --no-scripts --optimize-autoloader
+# installed only into Redis-backed Docker images, so local/non-Docker and
+# non-Redis environments never load it. `composer require --no-update` changes
+# only this disposable build stage; the repository manifests remain untouched.
+# The follow-up update supports --no-dev, preventing development dependencies
+# from being pulled back into the production image.
+RUN if [ "$QUEUE_CONNECTION" = "redis" ]; then \
+        composer require laravel/horizon:^5.36 --no-update \
+            --no-interaction --no-progress --no-scripts \
+        && composer update laravel/horizon --with-all-dependencies --no-dev \
+            --no-interaction --no-progress --prefer-dist \
+            --no-scripts --optimize-autoloader; \
+    else \
+        echo "Skipping Laravel Horizon (QUEUE_CONNECTION=$QUEUE_CONNECTION)"; \
+    fi
 
 # ── Wayfinder routes ─────────────────────────────────────────────────────
 # resources/js/routes_temp is gitignored, so a fresh clone can't build the
@@ -77,8 +86,7 @@ RUN mkdir -p storage/framework/views storage/framework/cache/data storage/framew
     && sed -i 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' .env \
     && php artisan key:generate --force \
     && php artisan package:discover --ansi \
-    && php artisan wayfinder:generate --path=resources/js/routes_temp \
-    && php artisan vendor:publish --tag=horizon-assets --no-interaction
+    && php artisan wayfinder:generate --path=resources/js/routes_temp
 
 # ── Frontend assets ──────────────────────────────────────────────────────
 FROM node:22-bookworm AS frontend
@@ -116,11 +124,11 @@ COPY --from=frontend /app/public/build ./public/build
 # Copied from the vendor build stage (the repo's vendor/ is gitignored/excluded).
 COPY --from=vendor /app/vendor/laravel/octane/src/Commands/stubs/frankenphp-worker.php ./public/frankenphp-worker.php
 
-# Horizon package discovery (bootstrap/cache/packages.php + services.php, so
-# the image-only provider registers without running composer at runtime) and
-# its published dashboard assets. Both come from the bootable `routes` stage.
+# Package discovery cache (bootstrap/cache/packages.php + services.php) lets
+# the image-only Horizon provider register without running Composer at runtime.
+# Current Horizon releases serve dashboard assets directly from their `dist`
+# directory, so there is intentionally no public/vendor/horizon copy here.
 COPY --from=routes /app/bootstrap/cache ./bootstrap/cache
-COPY --from=routes /app/public/vendor/horizon ./public/vendor/horizon
 
 # Create the Laravel runtime directories, the public storage symlink, and make
 # everything Laravel writes to owned by the non-root www-data user.

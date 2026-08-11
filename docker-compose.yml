@@ -20,6 +20,9 @@ x-r2-env: &r2-env
 x-app: &app
   build:
     context: .
+    args:
+      # Horizon is added to the image only for Redis-backed queues.
+      QUEUE_CONNECTION: "${QUEUE_CONNECTION:-database}"
   restart: unless-stopped
   init: true
   env_file:
@@ -68,9 +71,9 @@ services:
       retries: 5
       start_period: 20s
 
-  # Queue supervisor: Laravel Horizon manages the Redis-backed queue workers
-  # (queues "ai" + "default") and exposes the /horizon dashboard on the web
-  # app (super admins only). Check status with:
+  # Queue runner: Laravel Horizon manages Redis-backed queues; for every other
+  # queue connection this role automatically falls back to Supervisor-managed
+  # queue:work processes. With Redis, check Horizon status using:
   #   docker compose exec horizon php artisan horizon:status
   horizon:
     <<: *app
@@ -85,7 +88,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "php artisan horizon:status | grep -q 'is running'"]
+      test:
+        [
+          "CMD-SHELL",
+          "if [ \"$${QUEUE_CONNECTION:-database}\" = redis ]; then php artisan horizon:status | grep -q 'is running'; else supervisorctl -c /tmp/supervisord-worker.conf status | grep -q RUNNING; fi",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
