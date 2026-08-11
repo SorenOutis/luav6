@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Ai\Responses\StreamableAgentResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * The persisted Chats history page — the ChatGPT-style UI where every
@@ -58,6 +61,8 @@ class ChatHistoryController extends Controller
 
         $request->validate([
             'message' => 'required|string',
+            'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
+            'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
 
         $user = $request->user();
@@ -77,18 +82,22 @@ class ChatHistoryController extends Controller
         try {
             $userContext = $this->chatService->buildUserContext();
 
-            $historyData = $session->messages
-                ->map(fn ($msg) => ['role' => $msg->role, 'content' => $msg->content])
-                ->all();
+            $historyData = $this->sessionHistory($session);
 
-            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user);
+            [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
+
+            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments);
 
             if (! $session->title || $session->title === 'New chat') {
                 $session->update(['title' => Str::limit($request->message, 60)]);
             }
 
             $session->messages()->createMany([
-                ['role' => 'user', 'content' => $request->message],
+                [
+                    'role' => 'user',
+                    'content' => $request->message,
+                    'attachments' => $attachmentMeta,
+                ],
                 ['role' => 'assistant', 'content' => $response],
             ]);
 
@@ -100,13 +109,87 @@ class ChatHistoryController extends Controller
                 'response' => $response,
                 'session' => $this->sessionPayload($session),
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Chat History Controller Error: '.$e->getMessage());
 
             return response()->json([
                 'response' => 'Sorry, something went wrong. Please try again in a moment.',
             ], 500);
         }
+    }
+
+    /**
+     * Stream an Echo reply on an existing conversation as Server-Sent Events.
+     * Persists the user turn (with attachments) up front and the assistant turn
+     * once the stream completes, then returns the uniform SSE body.
+     */
+    public function stream(Request $request, ChatSession $session): StreamableAgentResponse|Response
+    {
+        $session = $this->sessionForUser($request, $session);
+
+        $request->validate([
+            'message' => 'required|string',
+            'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
+            'attachments.*' => $this->chatService->attachmentValidationRules(),
+        ]);
+
+        $user = $request->user();
+
+        if ($this->chatService->isToxic($request->message)) {
+            return $this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?");
+        }
+
+        if ($blocked = $this->chatService->dailyLimitMessage($user)) {
+            return $this->chatService->streamText($blocked);
+        }
+
+        try {
+            $userContext = $this->chatService->buildUserContext();
+
+            $historyData = $this->sessionHistory($session);
+
+            [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
+
+            if (! $session->title || $session->title === 'New chat') {
+                $session->update(['title' => Str::limit($request->message, 60)]);
+            }
+
+            $session->messages()->create([
+                'role' => 'user',
+                'content' => $request->message,
+                'attachments' => $attachmentMeta,
+            ]);
+
+            $session->touch();
+
+            return $this->chatService
+                ->stream($request->message, $historyData, $userContext, $user, $sdkAttachments)
+                ->then(function ($response) use ($session) {
+                    $text = (string) $response->text;
+
+                    if (trim($text) !== '') {
+                        $session->messages()->create([
+                            'role' => 'assistant',
+                            'content' => $text,
+                        ]);
+                        $session->touch();
+                    }
+                });
+        } catch (Throwable $e) {
+            Log::error('Chat History Stream Error: '.$e->getMessage());
+
+            return $this->chatService->streamText('Sorry, something went wrong. Please try again in a moment.');
+        }
+    }
+
+    /**
+     * @return array<int, array{role: string, content: string}>
+     */
+    private function sessionHistory(ChatSession $session): array
+    {
+        return $session->messages
+            ->map(fn ($msg) => ['role' => $msg->role, 'content' => $msg->content])
+            ->all();
     }
 
     public function destroy(Request $request, ChatSession $session)
@@ -161,6 +244,7 @@ class ChatHistoryController extends Controller
                 'id' => $msg->id,
                 'role' => $msg->role,
                 'content' => $msg->content,
+                'attachments' => $msg->attachments,
                 'createdAt' => $msg->created_at?->toIso8601String(),
             ])->values()->all(),
             'updatedAt' => $session->updated_at?->toIso8601String(),

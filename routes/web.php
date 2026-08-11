@@ -130,6 +130,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('api/chats/{session}/messages', [ChatHistoryController::class, 'message'])
         ->middleware('throttle:60,1')
         ->name('chats.message');
+    Route::post('api/chats/{session}/stream', [ChatHistoryController::class, 'stream'])
+        ->middleware('throttle:60,1')
+        ->name('chats.stream');
     Route::delete('api/chats/{session}', [ChatHistoryController::class, 'destroy'])
         ->middleware('throttle:60,1')
         ->name('chats.destroy');

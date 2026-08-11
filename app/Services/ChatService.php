@@ -6,6 +6,7 @@ use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -77,6 +78,36 @@ class ChatService
             'mime' => $file->getMimeType() ?: 'application/octet-stream',
             'kind' => str_starts_with($file->getMimeType() ?? '', 'image/') ? 'image' : 'document',
         ];
+    }
+
+    /**
+     * Validation rules shared by the chat endpoints and the Chats history page
+     * for each individual uploaded attachment.
+     *
+     * @return array<int, string>
+     */
+    public function attachmentValidationRules(): array
+    {
+        return ['file', 'mimes:png,jpg,jpeg,webp,gif,pdf,txt,csv,md,html,doc,docx,xls,xlsx,ppt,pptx', 'max:'.self::MAX_ATTACHMENT_KB];
+    }
+
+    /**
+     * Convert the uploaded files on a request into SDK attachments (to send to
+     * the provider) and serializable metadata (to persist on the message).
+     *
+     * @return array{0: array<int, File>, 1: array<int, array<string, mixed>>}
+     */
+    public function buildAttachments(Request $request): array
+    {
+        $sdkAttachments = [];
+        $attachmentMeta = [];
+
+        foreach ($request->file('attachments', []) as $file) {
+            $sdkAttachments[] = $this->attachmentFromUpload($file);
+            $attachmentMeta[] = $this->attachmentMeta($file);
+        }
+
+        return [$sdkAttachments, $attachmentMeta];
     }
 
     /**
