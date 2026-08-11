@@ -82,7 +82,14 @@ if ($response->successful()) {
     echo $rawText."\n";
     echo "──────────────────────────────\n\n";
 
+    // Test direct json_decode vs resilient extraction
     $parsed = json_decode($rawText, true);
+    if (! $parsed) {
+        $stripped = preg_replace('/^```(?:json)?\s*/i', '', trim($rawText));
+        $stripped = preg_replace('/\s*```$/', '', $stripped);
+        $parsed = json_decode(trim($stripped), true);
+    }
+
     if ($parsed) {
         echo "Parsed JSON: score={$parsed['score']}, feedback={$parsed['feedback']}\n\n";
     } else {
