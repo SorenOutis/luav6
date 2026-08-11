@@ -125,3 +125,63 @@ it('streams the daily limit message for capped students', function () {
 
     expect($response->streamedContent())->toContain('limit resets at midnight');
 });
+
+it('streams a reply on the Chats history page as server-sent events', function () {
+    AssistantAgent::fake(['Chats page reply']);
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'About exams']);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('chats.stream', $session), ['message' => 'Hello']);
+
+    $response->assertSuccessful();
+
+    expect($response->streamedContent())->toContain('text_delta')
+        ->and($response->streamedContent())->toContain('Chats')
+        ->and($response->streamedContent())->toContain('[DONE]');
+});
+
+it('persists user and assistant turns when streaming on the Chats page', function () {
+    AssistantAgent::fake(['Chats page reply']);
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'About exams']);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('chats.stream', $session), ['message' => 'What exams?']);
+
+    $response->assertSuccessful();
+    expect($response->streamedContent())->toContain('[DONE]');
+
+    $session->refresh()->load('messages');
+
+    expect($session->messages->where('role', 'user')->where('content', 'What exams?')->count())->toBe(1);
+
+    // The assistant turn is persisted once the stream completes.
+    expect($session->messages->where('role', 'assistant')->where('content', 'Chats page reply')->count())->toBe(1);
+});
+
+it('persists attachments metadata on a Chats page message', function () {
+    AssistantAgent::fake(['Got it']);
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'About exams']);
+
+    $response = $this->actingAs($user)
+        ->post(route('chats.message', $session), [
+            'message' => 'Review this',
+            'attachments' => [
+                UploadedFile::fake()->createWithContent('notes.txt', 'study notes'),
+            ],
+        ]);
+
+    $response->assertOk();
+
+    $session->refresh()->load('messages');
+    $userMessage = $session->messages->where('role', 'user')->first();
+
+    expect($userMessage->attachments)->toBe([
+        ['name' => 'notes.txt', 'size' => 11, 'mime' => 'text/plain', 'kind' => 'document'],
+    ]);
+});

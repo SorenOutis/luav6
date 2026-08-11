@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Laravel\Ai\Files\File;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -32,7 +31,7 @@ class ChatController extends Controller
 
         $request->validate([
             'message' => 'required|string',
-            'attachments.*' => $this->attachmentValidationRules(),
+            'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
 
         $user = $request->user();
@@ -57,7 +56,7 @@ class ChatController extends Controller
             // Build user context with real data for personalization
             $userContext = $this->chatService->buildUserContext();
 
-            [$sdkAttachments, $attachmentMeta] = $this->buildAttachments($request);
+            [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
 
             $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments);
 
@@ -99,7 +98,7 @@ class ChatController extends Controller
         $request->validate([
             'message' => 'required|string',
             'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
-            'attachments.*' => $this->attachmentValidationRules(),
+            'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
 
         $user = $request->user();
@@ -119,7 +118,7 @@ class ChatController extends Controller
 
             $userContext = $this->chatService->buildUserContext();
 
-            [$sdkAttachments, $attachmentMeta] = $this->buildAttachments($request);
+            [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
 
             // Persist the user turn up front so history reflects it even if
             // the stream is interrupted part-way through.
@@ -148,36 +147,6 @@ class ChatController extends Controller
 
             return $this->chatService->streamText('Sorry, something went wrong. Please try again in a moment.');
         }
-    }
-
-    /**
-     * Validation rules shared by the streaming and non-streaming chat endpoints
-     * for each individual uploaded attachment.
-     *
-     * @return array<int, string>
-     */
-    private function attachmentValidationRules(): array
-    {
-        return ['file', 'mimes:png,jpg,jpeg,webp,gif,pdf,txt,csv,md,html,doc,docx,xls,xlsx,ppt,pptx', 'max:'.ChatService::MAX_ATTACHMENT_KB];
-    }
-
-    /**
-     * Convert uploaded files into SDK attachments (to send to the provider)
-     * and serializable metadata (to persist on the message).
-     *
-     * @return array{0: array<int, File>, 1: array<int, array<string, mixed>>}
-     */
-    private function buildAttachments(Request $request): array
-    {
-        $sdkAttachments = [];
-        $attachmentMeta = [];
-
-        foreach ($request->file('attachments', []) as $file) {
-            $sdkAttachments[] = $this->chatService->attachmentFromUpload($file);
-            $attachmentMeta[] = $this->chatService->attachmentMeta($file);
-        }
-
-        return [$sdkAttachments, $attachmentMeta];
     }
 
     /**
