@@ -5,6 +5,7 @@ import axios from 'axios';
 import {
     MessageCircle,
     Send,
+    Square,
     X,
     Bot,
     User,
@@ -69,6 +70,18 @@ interface ChatMessage {
 const messages = ref<ChatMessage[]>([]);
 const isLoading = ref(false);
 const showBlockedWarning = ref(false);
+
+// Abort controller for the in-flight reply, so the user can stop generation.
+let streamAbortController: AbortController | null = null;
+
+const isAbortError = (error: unknown): boolean =>
+    error instanceof DOMException && error.name === 'AbortError';
+
+const stopGenerating = () => {
+    streamAbortController?.abort();
+    streamAbortController = null;
+    isLoading.value = false;
+};
 const shaking = ref(false);
 
 // Attachment drag & drop / picker state
@@ -417,26 +430,33 @@ const handleAfterEnter = () => {
     focusTextarea();
 };
 
-const typeMessage = async (fullText: string) => {
-    const newMessage: ChatMessage = {
-        role: 'assistant',
-        content: '',
-        typing: true,
-    };
-    messages.value.push(newMessage);
+const typeMessage = async (
+    fullText: string,
+    index?: number,
+    signal?: AbortSignal,
+) => {
+    const messageIndex =
+        index ??
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+        }) - 1;
 
-    const index = messages.value.length - 1;
     let currentText = '';
     const speed = 15; // ms per character
 
     for (let i = 0; i < fullText.length; i++) {
+        if (signal?.aborted) {
+            break;
+        }
         currentText += fullText[i];
-        messages.value[index].content = currentText;
+        messages.value[messageIndex].content = currentText;
         await new Promise((resolve) => setTimeout(resolve, speed));
         scrollToBottom();
     }
 
-    messages.value[index].typing = false;
+    messages.value[messageIndex].typing = false;
 };
 
 /* ──────────────── Attachment helpers ──────────────── */
@@ -560,30 +580,65 @@ const getXsrfToken = (): string | null => {
 };
 
 const sendMessageNonStreaming = async (userMessage: string) => {
-    try {
-        const response = await axios.post('/api/chat', {
-            message: userMessage,
-            session_id: currentSessionId.value,
-        });
+    const messageIndex =
+        messages.value.push({ role: 'assistant', content: '', typing: true }) -
+        1;
 
-        isLoading.value = false;
+    const controller = new AbortController();
+    streamAbortController = controller;
+
+    try {
+        const response = await axios.post(
+            '/api/chat',
+            {
+                message: userMessage,
+                session_id: currentSessionId.value,
+            },
+            { signal: controller.signal },
+        );
 
         if (response.data.session_id) {
             currentSessionId.value = response.data.session_id;
         }
 
         const aiResponse = response.data.response;
-        await typeMessage(aiResponse);
+        await typeMessage(aiResponse, messageIndex, controller.signal);
+
+        if (controller.signal.aborted) {
+            // User stopped the reply — keep the partial text as-is.
+            return;
+        }
 
         messages.value = response.data.history;
     } catch (error) {
-        isLoading.value = false;
+        const aborted =
+            isAbortError(error) ||
+            (error as { code?: string })?.code === 'ERR_CANCELED';
+
+        if (aborted) {
+            // User pressed stop — keep whatever typed so far (or drop the
+            // placeholder if nothing arrived yet).
+            const content = messages.value[messageIndex].content;
+            if (!content) {
+                messages.value.splice(messageIndex, 1);
+            } else {
+                messages.value[messageIndex].typing = false;
+            }
+            return;
+        }
+
+        messages.value.splice(messageIndex, 1);
         const err = error as { response?: { data?: { response?: string } } };
         console.error('Chat error:', error);
         const errorMessage =
             err.response?.data?.response ||
             'Sorry, something went wrong. Please try again in a moment.';
-        await typeMessage(errorMessage);
+        await typeMessage(errorMessage, undefined, controller.signal);
+    } finally {
+        isLoading.value = false;
+        if (streamAbortController === controller) {
+            streamAbortController = null;
+        }
     }
 };
 
@@ -591,90 +646,136 @@ const streamMessage = async (
     userMessage: string,
     userAttachments: ChatAttachment[],
 ) => {
-    const formData = new FormData();
-    formData.append('message', userMessage);
-    if (currentSessionId.value) {
-        formData.append('session_id', String(currentSessionId.value));
-    }
-    for (const attachment of userAttachments) {
-        if (attachment.file) {
-            formData.append('attachments[]', attachment.file, attachment.name);
-        }
-    }
-
-    const headers: HeadersInit = {};
-    const xsrf = getXsrfToken();
-    if (xsrf) headers['X-XSRF-TOKEN'] = xsrf;
-
-    const response = await fetch('/api/chat/stream', {
-        method: 'POST',
-        headers,
-        body: formData,
-        credentials: 'same-origin',
-    });
-
-    if (!response.ok) {
-        throw new Error(`Stream request failed with status ${response.status}`);
-    }
-
-    const contentType = response.headers.get('content-type') ?? '';
-    if (!contentType.includes('text/event-stream')) {
-        throw new Error('Streaming is not available right now.');
-    }
-
-    // Placeholder assistant bubble that fills as deltas arrive.
+    // Show Echo's bubble (with typing dots) up front so the reply streams into
+    // a single bubble instead of a separate loading indicator in between.
     const assistantIndex =
         messages.value.push({ role: 'assistant', content: '', typing: true }) -
         1;
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-        throw new Error('Streaming is not supported by this browser.');
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let assistantText = '';
+    const controller = new AbortController();
+    streamAbortController = controller;
 
     try {
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-
-            let boundary;
-            while ((boundary = buffer.indexOf('\n\n')) !== -1) {
-                const chunk = buffer.slice(0, boundary);
-                buffer = buffer.slice(boundary + 2);
-
-                const line = chunk
-                    .split('\n')
-                    .find((l) => l.startsWith('data: '));
-
-                if (!line) continue;
-
-                const payload = line.slice(6);
-                if (payload === '[DONE]') break;
-
-                try {
-                    const event = JSON.parse(payload);
-                    if (event.type === 'text_delta' && event.delta) {
-                        assistantText += event.delta;
-                        messages.value[assistantIndex].content = assistantText;
-                        scrollToBottom();
-                    }
-                } catch {
-                    // Ignore malformed frames.
-                }
+        const formData = new FormData();
+        formData.append('message', userMessage);
+        if (currentSessionId.value) {
+            formData.append('session_id', String(currentSessionId.value));
+        }
+        for (const attachment of userAttachments) {
+            if (attachment.file) {
+                formData.append(
+                    'attachments[]',
+                    attachment.file,
+                    attachment.name,
+                );
             }
         }
-    } finally {
-        reader.releaseLock();
-    }
 
-    messages.value[assistantIndex].typing = false;
-    return assistantText;
+        const headers: HeadersInit = {};
+        const xsrf = getXsrfToken();
+        if (xsrf) headers['X-XSRF-TOKEN'] = xsrf;
+
+        const response = await fetch('/api/chat/stream', {
+            method: 'POST',
+            headers,
+            body: formData,
+            credentials: 'same-origin',
+            signal: controller.signal,
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                `Stream request failed with status ${response.status}`,
+            );
+        }
+
+        const contentType = response.headers.get('content-type') ?? '';
+        if (!contentType.includes('text/event-stream')) {
+            throw new Error('Streaming is not available right now.');
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('Streaming is not supported by this browser.');
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let assistantText = '';
+
+        try {
+            let streamDone = false;
+
+            while (!streamDone) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                let boundary;
+                while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+                    const chunk = buffer.slice(0, boundary);
+                    buffer = buffer.slice(boundary + 2);
+
+                    const line = chunk
+                        .split('\n')
+                        .find((l) => l.startsWith('data: '));
+
+                    if (!line) continue;
+
+                    const payload = line.slice(6);
+                    if (payload === '[DONE]') {
+                        streamDone = true;
+                        break;
+                    }
+
+                    try {
+                        const event = JSON.parse(payload);
+                        if (event.type === 'text_delta' && event.delta) {
+                            assistantText += event.delta;
+                            messages.value[assistantIndex].content =
+                                assistantText;
+                            scrollToBottom();
+                        }
+                    } catch {
+                        // Ignore malformed frames.
+                    }
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+
+        if (!assistantText) {
+            // The stream ended without any content — remove the placeholder so
+            // an empty bubble doesn't linger.
+            messages.value.splice(assistantIndex, 1);
+        } else {
+            messages.value[assistantIndex].typing = false;
+        }
+
+        return assistantText;
+    } catch (error) {
+        if (isAbortError(error)) {
+            // User pressed stop — keep whatever streamed so far (or drop the
+            // placeholder if nothing arrived yet).
+            const content = messages.value[assistantIndex].content;
+            if (!content) {
+                messages.value.splice(assistantIndex, 1);
+            } else {
+                messages.value[assistantIndex].typing = false;
+            }
+            return content;
+        }
+        // Remove the placeholder bubble so the non-streaming fallback can
+        // present the reply cleanly instead of leaving an empty bubble stuck.
+        messages.value.splice(assistantIndex, 1);
+        throw error;
+    } finally {
+        if (streamAbortController === controller) {
+            streamAbortController = null;
+        }
+    }
 };
 
 const sendMessage = async () => {
@@ -938,8 +1039,26 @@ watch(inputMessage, () => {
                                     </div>
                                     {{ msg.content }}
                                 </template>
-                                <!-- While the typing effect runs, show raw
-                                text; snap to rendered markdown when done. -->
+                                <!-- While the reply is pending, show typing
+                                dots; raw text while it streams in; snap to
+                                rendered markdown when done. -->
+                                <div
+                                    v-if="msg.typing && !msg.content"
+                                    class="flex items-center gap-1.5 py-0.5"
+                                >
+                                    <span
+                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                        style="animation-delay: 0ms"
+                                    ></span>
+                                    <span
+                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                        style="animation-delay: 150ms"
+                                    ></span>
+                                    <span
+                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                        style="animation-delay: 300ms"
+                                    ></span>
+                                </div>
                                 <span
                                     v-else-if="msg.typing"
                                     class="whitespace-pre-wrap"
@@ -967,42 +1086,6 @@ watch(inputMessage, () => {
                         >
                             {{ chip.label }}
                         </button>
-                    </div>
-
-                    <!-- Loading indicator -->
-                    <div
-                        v-if="isLoading"
-                        class="animate-fade-in flex max-w-[88%] gap-2"
-                    >
-                        <div
-                            class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/80"
-                        >
-                            <img
-                                v-if="logoUrl"
-                                :src="logoUrl"
-                                alt="Echo"
-                                class="h-full w-full object-contain p-1"
-                            />
-                            <Bot v-else class="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <div
-                            class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 p-3"
-                        >
-                            <div class="flex items-center gap-1.5">
-                                <span
-                                    class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                    style="animation-delay: 0ms"
-                                ></span>
-                                <span
-                                    class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                    style="animation-delay: 150ms"
-                                ></span>
-                                <span
-                                    class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                    style="animation-delay: 300ms"
-                                ></span>
-                            </div>
-                        </div>
                     </div>
                 </CardContent>
 
@@ -1135,6 +1218,18 @@ watch(inputMessage, () => {
                                 @keydown.enter.prevent="sendMessage"
                             />
                             <Button
+                                v-if="isLoading"
+                                type="button"
+                                size="icon-sm"
+                                class="h-[38px] w-[38px] shrink-0 rounded-xl shadow-md"
+                                title="Stop generating"
+                                aria-label="Stop generating"
+                                @click="stopGenerating"
+                            >
+                                <Square class="h-4 w-4" />
+                            </Button>
+                            <Button
+                                v-else
                                 type="submit"
                                 size="icon-sm"
                                 class="h-[38px] w-[38px] shrink-0 rounded-xl shadow-md"
