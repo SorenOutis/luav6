@@ -2,10 +2,10 @@
 # ── Container entrypoint ───────────────────────────────────────────────
 # A single image serves every runtime role. The role is resolved from the
 # CONTAINER_ROLE environment variable (or the first CLI argument). The
-# `octane` role runs the FrankenPHP web server AND the queue consumer
-# (Laravel Horizon on Redis, otherwise queue:work) together under Supervisor;
-# the `scheduler` and `migrate` roles run as separate, independently
-# restarted processes.
+# `octane` role runs the FrankenPHP web server, the queue consumer
+# (Laravel Horizon on Redis, otherwise queue:work), and — when NIGHTWATCH_TOKEN
+# is set — the Nightwatch agent together under Supervisor; the `scheduler` and
+# `migrate` roles run as separate, independently restarted processes.
 set -e
 
 ROLE="${1:-${CONTAINER_ROLE:-octane}}"
@@ -141,6 +141,32 @@ EOF
 
 [program:queue-worker]
 command=php artisan queue:work --queue=$NAME --sleep=2 --tries=$TRIES --timeout=$TIMEOUT --memory=$MEMORY --max-time=3600
+directory=/app
+user=www-data
+autostart=true
+autorestart=true
+startretries=10
+startsecs=1
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=30
+redirect_stderr=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
+EOF
+        fi
+
+        # ── Nightwatch agent ────────────────────────────────────────────────────
+        # The Nightwatch agent must run alongside the app to collect and forward
+        # telemetry to Laravel Nightwatch. Run it under Supervisor as a background
+        # process (the "single container per pod" pattern) so it stays alive and is
+        # restarted on crash. Only start it when a token is configured, so this
+        # container doesn't crash-loop in environments without Nightwatch.
+        if [ -n "${NIGHTWATCH_TOKEN:-}" ]; then
+            cat >> "$SUPERVISORD_CONF" <<'EOF'
+
+[program:nightwatch]
+command=php artisan nightwatch:agent
 directory=/app
 user=www-data
 autostart=true
