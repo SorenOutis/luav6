@@ -8,7 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\StreamableAgentResponse;
+use Laravel\Ai\Streaming\Events\TextDelta;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -154,9 +156,7 @@ class ChatHistoryController extends Controller
 
         try {
             $userContext = $this->chatService->buildUserContext();
-
             $historyData = $this->sessionHistory($session);
-
             [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
 
             if (! $session->title || $session->title === 'New chat') {
@@ -168,41 +168,106 @@ class ChatHistoryController extends Controller
                 'content' => $request->message,
                 'attachments' => $attachmentMeta,
             ]);
-
             $session->touch();
 
-            return $this->chatService
-                ->stream($request->message, $historyData, $userContext, $user, $sdkAttachments)
-                ->then(function ($response) use ($session) {
+            $nativeStream = $this->chatService->stream(
+                $request->message,
+                $historyData,
+                $userContext,
+                $user,
+                $sdkAttachments,
+            );
+
+            // StreamableAgentResponse is lazy: provider exceptions can happen
+            // after Laravel has already sent the HTTP 200/SSE headers. Wrap the
+            // SDK stream so an early runtime failure (or an empty text stream)
+            // can transparently fall back to the regular prompt path while the
+            // same request is still open. This avoids the browser seeing a 200
+            // response with an unusable/empty body and also avoids persisting a
+            // duplicate user message through a second HTTP fallback request.
+            $response = new StreamableAgentResponse(
+                (string) Str::uuid7(),
+                function () use ($nativeStream, $request, $historyData, $userContext, $user, $sdkAttachments, $session) {
+                    $emittedText = false;
+
                     try {
-                        $text = (string) $response->text;
+                        foreach ($nativeStream as $event) {
+                            if ($event instanceof TextDelta && trim($event->delta) !== '') {
+                                $emittedText = true;
+                            }
 
-                        if (trim($text) !== '') {
-                            $thinking = $this->chatService->combineReasoning($response->events);
-
-                            $session->messages()->create([
-                                'role' => 'assistant',
-                                'content' => $text,
-                                'thinking' => $thinking !== '' ? $thinking : null,
-                            ]);
-                            $session->touch();
+                            yield $event;
                         }
                     } catch (Throwable $e) {
-                        // Persisting the assistant turn after the stream is a
-                        // separate failure from generating the reply — log it
-                        // with its own correlation id so it isn't lost.
-                        $this->logError('Chat History Stream Persist Error', $e, $session);
+                        $this->logError('Chat History Stream Runtime Error', $e, $session);
+
+                        // If text was already delivered, do not append a second
+                        // complete answer. The partial answer is still useful and
+                        // the runtime error remains available through its log id.
+                        if ($emittedText) {
+                            return;
+                        }
                     }
-                });
+
+                    if ($emittedText) {
+                        return;
+                    }
+
+                    try {
+                        $fallbackText = $this->chatService->prompt(
+                            $request->message,
+                            $historyData,
+                            $userContext,
+                            $user,
+                            $sdkAttachments,
+                        );
+
+                        foreach ($this->chatService->streamText($fallbackText) as $event) {
+                            yield $event;
+                        }
+                    } catch (Throwable $fallbackError) {
+                        $errorId = $this->logError('Chat History Stream Fallback Error', $fallbackError, $session);
+                        $message = 'Sorry, something went wrong. Please try again in a moment.';
+
+                        if ($request->user()?->is_admin || config('app.debug')) {
+                            $message .= " (Reference: {$errorId})";
+                            if (config('app.debug')) {
+                                $message .= ' — '.$fallbackError->getMessage();
+                            }
+                        }
+
+                        foreach ($this->chatService->streamText($message) as $event) {
+                            yield $event;
+                        }
+                    }
+                },
+                new Meta,
+            );
+
+            return $response->then(function ($streamedResponse) use ($session) {
+                try {
+                    $text = (string) $streamedResponse->text;
+
+                    if (trim($text) !== '') {
+                        $thinking = $this->chatService->combineReasoning($streamedResponse->events);
+
+                        $session->messages()->create([
+                            'role' => 'assistant',
+                            'content' => $text,
+                            'thinking' => $thinking !== '' ? $thinking : null,
+                        ]);
+                        $session->touch();
+                    }
+                } catch (Throwable $e) {
+                    $this->logError('Chat History Stream Persist Error', $e, $session);
+                }
+            });
         } catch (Throwable $e) {
             $errorId = $this->logError('Chat History Stream Error', $e, $session);
             $payload = $this->errorPayload($e, $errorId);
 
             $message = 'Sorry, something went wrong. Please try again in a moment.';
 
-            // Surface the correlation id so the failure can be reported and
-            // matched to a log line; expose the raw detail only to admins or
-            // when APP_DEBUG is enabled.
             if ($request->user()?->is_admin || config('app.debug')) {
                 $message .= " (Reference: {$payload['id']})";
                 if ($payload['message'] !== 'An unexpected error occurred.') {
