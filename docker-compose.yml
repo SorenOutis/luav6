@@ -49,7 +49,11 @@ x-app: &app
     <<: *r2-env
 
 services:
-  # Web server: Laravel Octane on FrankenPHP.
+  # Web server + queue worker: Laravel Octane on FrankenPHP. The `octane`
+  # role also starts the queue consumer in this same container (Laravel
+  # Horizon when QUEUE_CONNECTION=redis, otherwise a queue:work worker) under
+  # Supervisor. Check queue status with:
+  #   docker compose exec app php artisan horizon:status / supervisorctl status
   app:
     <<: *app
     environment:
@@ -91,12 +95,12 @@ services:
       test:
         [
           "CMD-SHELL",
-          "if [ \"$${QUEUE_CONNECTION:-database}\" = redis ]; then php artisan horizon:status | grep -q 'is running'; else supervisorctl -c /tmp/supervisord-worker.conf status | grep -q RUNNING; fi",
+          "curl -f --silent http://127.0.0.1:8000/up >/dev/null && if [ -d vendor/laravel/horizon ]; then php artisan horizon:status | grep -q 'is running'; else supervisorctl -c /tmp/supervisord-octane.conf status | grep -q RUNNING; fi",
         ]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 20s
 
   # Laravel scheduler: runs scheduled commands.
   scheduler:
