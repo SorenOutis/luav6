@@ -13,6 +13,8 @@ import {
     Paperclip,
     FileText,
     Image as ImageIcon,
+    ChevronDown,
+    Sparkles,
 } from 'lucide-vue-next';
 import {
     ref,
@@ -31,6 +33,11 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
 import { renderMarkdown } from '@/lib/markdown';
 
@@ -65,6 +72,14 @@ interface ChatMessage {
     content: string;
     typing?: boolean;
     attachments?: ChatAttachment[];
+    /** The assistant's reasoning ("thinking") text, if the model emitted it. */
+    thinking?: string;
+    /** Whether the thinking collapsible is currently expanded. */
+    thinkingOpen?: boolean;
+    /** How long the model thought for (seconds), once the reply starts. */
+    thinkingMs?: number;
+    /** Internal: when the first thinking delta arrived (epoch ms). */
+    thinkingStartedAt?: number;
 }
 
 const messages = ref<ChatMessage[]>([]);
@@ -351,6 +366,8 @@ const normalizeHistoryMessages = (history: any[]): ChatMessage[] => {
     return history.map((msg) => ({
         role: msg.role,
         content: msg.content,
+        thinking: msg.thinking || undefined,
+        thinkingOpen: false,
         attachments: Array.isArray(msg.attachments)
             ? msg.attachments.map((att: any) => ({
                   name: att.name,
@@ -360,6 +377,12 @@ const normalizeHistoryMessages = (history: any[]): ChatMessage[] => {
               }))
             : undefined,
     }));
+};
+
+const thinkingLabel = (msg: ChatMessage): string => {
+    if (msg.typing && !msg.content) return 'Thinking…';
+    if (msg.thinkingMs) return `Thought for ${msg.thinkingMs}s`;
+    return 'View thinking';
 };
 
 const fetchHistory = async () => {
@@ -441,6 +464,7 @@ const typeMessage = async (
             role: 'assistant',
             content: '',
             typing: true,
+            thinkingOpen: false,
         }) - 1;
 
     let currentText = '';
@@ -581,8 +605,12 @@ const getXsrfToken = (): string | null => {
 
 const sendMessageNonStreaming = async (userMessage: string) => {
     const messageIndex =
-        messages.value.push({ role: 'assistant', content: '', typing: true }) -
-        1;
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
 
     const controller = new AbortController();
     streamAbortController = controller;
@@ -609,7 +637,7 @@ const sendMessageNonStreaming = async (userMessage: string) => {
             return;
         }
 
-        messages.value = response.data.history;
+        messages.value = normalizeHistoryMessages(response.data.history);
     } catch (error) {
         const aborted =
             isAbortError(error) ||
@@ -649,8 +677,12 @@ const streamMessage = async (
     // Show Echo's bubble (with typing dots) up front so the reply streams into
     // a single bubble instead of a separate loading indicator in between.
     const assistantIndex =
-        messages.value.push({ role: 'assistant', content: '', typing: true }) -
-        1;
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
 
     const controller = new AbortController();
     streamAbortController = controller;
@@ -731,10 +763,37 @@ const streamMessage = async (
 
                     try {
                         const event = JSON.parse(payload);
-                        if (event.type === 'text_delta' && event.delta) {
+                        const target = messages.value[assistantIndex];
+
+                        if (event.type === 'reasoning_delta' && event.delta) {
+                            // The model is thinking — stream its reasoning
+                            // into the collapsible above the reply bubble.
+                            if (!target.thinking) {
+                                target.thinking = '';
+                                target.thinkingOpen = true;
+                                target.thinkingStartedAt = Date.now();
+                            }
+                            target.thinking += event.delta;
+                            scrollToBottom();
+                        } else if (event.type === 'text_delta' && event.delta) {
+                            // The answer started — freeze the thinking timer
+                            // and collapse the reasoning out of the way.
+                            if (
+                                target.thinkingStartedAt &&
+                                !target.thinkingMs
+                            ) {
+                                target.thinkingMs = Math.max(
+                                    1,
+                                    Math.round(
+                                        (Date.now() -
+                                            target.thinkingStartedAt) /
+                                            1000,
+                                    ),
+                                );
+                                target.thinkingOpen = false;
+                            }
                             assistantText += event.delta;
-                            messages.value[assistantIndex].content =
-                                assistantText;
+                            target.content = assistantText;
                             scrollToBottom();
                         }
                     } catch {
@@ -762,14 +821,14 @@ const streamMessage = async (
     } catch (error) {
         if (isAbortError(error)) {
             // User pressed stop — keep whatever streamed so far (or drop the
-            // placeholder if nothing arrived yet).
-            const content = messages.value[assistantIndex].content;
-            if (!content) {
+            // placeholder if neither answer nor thinking arrived yet).
+            const target = messages.value[assistantIndex];
+            if (!target.content && !target.thinking) {
                 messages.value.splice(assistantIndex, 1);
             } else {
-                messages.value[assistantIndex].typing = false;
+                target.typing = false;
             }
-            return content;
+            return target.content;
         }
         // Remove the placeholder bubble so the non-streaming fallback can
         // present the reply cleanly instead of leaving an empty bubble stuck.
@@ -995,86 +1054,138 @@ watch(inputMessage, () => {
                                 />
                                 <Bot v-else class="h-3.5 w-3.5 text-primary" />
                             </div>
+                            <!-- User bubble -->
                             <div
+                                v-if="msg.role === 'user'"
                                 :class="[
                                     'rounded-2xl px-3 py-2 text-xs leading-relaxed shadow-xs',
-                                    msg.role === 'user'
-                                        ? 'rounded-tr-sm bg-primary text-primary-foreground'
-                                        : 'rounded-tl-sm border border-border/40 bg-muted/40 text-foreground',
+                                    'rounded-tr-sm bg-primary text-primary-foreground',
                                 ]"
                             >
-                                <template v-if="msg.role === 'user'">
+                                <div
+                                    v-if="msg.attachments?.length"
+                                    class="mb-1.5 flex flex-wrap gap-1"
+                                >
                                     <div
-                                        v-if="msg.attachments?.length"
-                                        class="mb-1.5 flex flex-wrap gap-1"
+                                        v-for="(
+                                            att, attIndex
+                                        ) in msg.attachments"
+                                        :key="attIndex"
+                                        class="flex items-center gap-1 rounded-md bg-primary-foreground/10 px-1.5 py-0.5"
                                     >
-                                        <div
-                                            v-for="(
-                                                att, attIndex
-                                            ) in msg.attachments"
-                                            :key="attIndex"
-                                            class="flex items-center gap-1 rounded-md bg-primary-foreground/10 px-1.5 py-0.5"
+                                        <img
+                                            v-if="
+                                                att.kind === 'image' && att.url
+                                            "
+                                            :src="att.url"
+                                            :alt="att.name"
+                                            class="h-4 w-4 rounded object-cover"
+                                        />
+                                        <FileText
+                                            v-else-if="att.kind === 'document'"
+                                            class="h-3 w-3 shrink-0"
+                                        />
+                                        <ImageIcon
+                                            v-else
+                                            class="h-3 w-3 shrink-0"
+                                        />
+                                        <span
+                                            class="max-w-[90px] truncate text-[10px] font-medium"
                                         >
-                                            <img
-                                                v-if="
-                                                    att.kind === 'image' &&
-                                                    att.url
-                                                "
-                                                :src="att.url"
-                                                :alt="att.name"
-                                                class="h-4 w-4 rounded object-cover"
-                                            />
-                                            <FileText
-                                                v-else-if="
-                                                    att.kind === 'document'
-                                                "
-                                                class="h-3 w-3 shrink-0"
-                                            />
-                                            <ImageIcon
-                                                v-else
-                                                class="h-3 w-3 shrink-0"
-                                            />
-                                            <span
-                                                class="max-w-[90px] truncate text-[10px] font-medium"
-                                            >
-                                                {{ att.name }}
-                                            </span>
-                                        </div>
+                                            {{ att.name }}
+                                        </span>
                                     </div>
-                                    {{ msg.content }}
-                                </template>
-                                <!-- While the reply is pending, show typing
-                                dots; raw text while it streams in; snap to
-                                rendered markdown when done. Chained to the
-                                user template above so user messages don't
-                                also render the markdown copy. -->
-                                <div
-                                    v-else-if="msg.typing && !msg.content"
-                                    class="flex items-center gap-1.5 py-0.5"
-                                >
-                                    <span
-                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                        style="animation-delay: 0ms"
-                                    ></span>
-                                    <span
-                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                        style="animation-delay: 150ms"
-                                    ></span>
-                                    <span
-                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                        style="animation-delay: 300ms"
-                                    ></span>
                                 </div>
-                                <span
-                                    v-else-if="msg.typing"
-                                    class="whitespace-pre-wrap"
-                                    >{{ msg.content }}</span
+                                {{ msg.content }}
+                            </div>
+
+                            <!-- Assistant side: an optional thinking
+                                 collapsible stacked above the reply bubble. -->
+                            <div
+                                v-else
+                                class="flex min-w-0 flex-1 flex-col items-start gap-1"
+                            >
+                                <Collapsible
+                                    v-if="msg.thinking"
+                                    v-model:open="msg.thinkingOpen"
+                                    class="w-full"
                                 >
+                                    <CollapsibleTrigger
+                                        class="flex cursor-pointer items-center gap-1 rounded-md py-0.5 pr-1 text-[10px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        <Sparkles
+                                            class="h-3 w-3 shrink-0 text-primary/70"
+                                            :class="{
+                                                'animate-pulse':
+                                                    msg.typing && !msg.content,
+                                            }"
+                                        />
+                                        <span>{{ thinkingLabel(msg) }}</span>
+                                        <ChevronDown
+                                            class="h-3 w-3 shrink-0 transition-transform duration-200"
+                                            :class="{
+                                                'rotate-180': msg.thinkingOpen,
+                                            }"
+                                        />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <!-- flex-col-reverse keeps the scroll
+                                             pinned to the newest reasoning
+                                             lines while they stream in. -->
+                                        <div
+                                            class="flex max-h-36 scrollbar-thin flex-col-reverse overflow-y-auto border-l-2 border-border/60 pl-2"
+                                        >
+                                            <div
+                                                class="text-[10px] leading-relaxed whitespace-pre-wrap text-muted-foreground/90"
+                                            >
+                                                {{ msg.thinking }}
+                                            </div>
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+
+                                <!-- The reply bubble: typing dots while Echo
+                                     is thinking, raw text while the answer
+                                     streams in, rendered markdown when done. -->
                                 <div
-                                    v-else
-                                    class="chat-markdown"
-                                    v-html="renderMarkdown(msg.content)"
-                                ></div>
+                                    v-if="
+                                        msg.content ||
+                                        (msg.typing && !msg.thinking)
+                                    "
+                                    class="max-w-full rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3 py-2 text-xs leading-relaxed text-foreground shadow-xs"
+                                >
+                                    <div
+                                        v-if="msg.typing && !msg.content"
+                                        class="flex items-center gap-1.5 py-0.5"
+                                    >
+                                        <span
+                                            class="text-[10px] font-medium text-muted-foreground/80"
+                                            >Thinking</span
+                                        >
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                            style="animation-delay: 0ms"
+                                        ></span>
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                            style="animation-delay: 150ms"
+                                        ></span>
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                            style="animation-delay: 300ms"
+                                        ></span>
+                                    </div>
+                                    <span
+                                        v-else-if="msg.typing"
+                                        class="whitespace-pre-wrap"
+                                        >{{ msg.content }}</span
+                                    >
+                                    <div
+                                        v-else
+                                        class="chat-markdown"
+                                        v-html="renderMarkdown(msg.content)"
+                                    ></div>
+                                </div>
                             </div>
                         </div>
                     </template>

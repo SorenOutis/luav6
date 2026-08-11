@@ -8,6 +8,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -20,6 +21,7 @@ use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Messages\UserMessage;
 use Laravel\Ai\Responses\Data\Meta;
 use Laravel\Ai\Responses\StreamableAgentResponse;
+use Laravel\Ai\Streaming\Events\ReasoningDelta;
 use Laravel\Ai\Streaming\Events\TextDelta;
 
 /**
@@ -131,6 +133,23 @@ class ChatService
             },
             new Meta,
         );
+    }
+
+    /**
+     * Combine the reasoning (thinking) deltas from a streamed response into a
+     * single string. Multi-step generations carry one reasoning id per step;
+     * each step's text is joined separately, mirroring TextDelta::combine.
+     *
+     * @param  Collection<int, mixed>  $events
+     */
+    public function combineReasoning(Collection $events): string
+    {
+        return $events->whereInstanceOf(ReasoningDelta::class)
+            ->groupBy(fn (ReasoningDelta $event) => $event->reasoningId)
+            ->map(fn (Collection $deltas) => $deltas->map(fn (ReasoningDelta $event) => $event->delta)->join(''))
+            ->filter(fn (string $text) => trim($text) !== '')
+            ->values()
+            ->join("\n\n");
     }
 
     /**

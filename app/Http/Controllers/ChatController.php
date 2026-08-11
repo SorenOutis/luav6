@@ -139,6 +139,7 @@ class ChatController extends Controller
                         $this->persistExchange((int) $sessionId, [
                             'role' => 'assistant',
                             'content' => $text,
+                            'thinking' => $this->chatService->combineReasoning($response->events),
                         ]);
                     }
                 });
@@ -234,16 +235,20 @@ class ChatController extends Controller
             ->map(fn ($msg) => collect([
                 'role' => $msg->role,
                 'content' => $msg->content,
-            ])->when($msg->attachments, fn ($row) => $row->put('attachments', $msg->attachments))->all())
+            ])
+                ->when($msg->thinking, fn ($row) => $row->put('thinking', $msg->thinking))
+                ->when($msg->attachments, fn ($row) => $row->put('attachments', $msg->attachments))
+                ->all())
             ->all();
     }
 
     /**
      * Persist one or more messages into the DB session, auto-titling the
      * session from its first user message. Each message supports an optional
-     * `attachments` array of serializable metadata.
+     * `attachments` array of serializable metadata and optional `thinking`
+     * (the assistant's streamed reasoning, shown in a collapsible).
      *
-     * @param  array<int, array{role: string, content: string, attachments?: array<int, array<string, mixed>>}>  ...$messages
+     * @param  array<int, array{role: string, content: string, attachments?: array<int, array<string, mixed>>, thinking?: ?string}>  ...$messages
      */
     private function persistExchange(?int $sessionId, ...$messages): void
     {
@@ -266,7 +271,10 @@ class ChatController extends Controller
         $session->messages()->createMany(collect($messages)->map(fn ($msg) => collect([
             'role' => $msg['role'],
             'content' => $msg['content'],
-        ])->when($msg['attachments'] ?? [], fn ($row, $attachments) => $row->put('attachments', $attachments))->all())->all());
+        ])
+            ->when($msg['thinking'] ?? null, fn ($row, $thinking) => $row->put('thinking', $thinking))
+            ->when($msg['attachments'] ?? [], fn ($row, $attachments) => $row->put('attachments', $attachments))
+            ->all())->all());
     }
 
     /**
