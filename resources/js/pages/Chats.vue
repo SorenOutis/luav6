@@ -39,6 +39,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
+import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { renderMarkdown } from '@/lib/markdown';
 import { dashboard } from '@/routes';
@@ -83,6 +84,7 @@ const props = defineProps<{
 }>();
 
 const page = usePage();
+const { isCoarsePointer } = useMobile();
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard() },
@@ -134,6 +136,7 @@ const inputMessage = ref('');
 const isLoading = ref(false);
 const sessionToDelete = ref<ChatSession | null>(null);
 const scrollContainer = ref<HTMLElement | null>(null);
+const welcomeInputRef = ref<{ $el?: HTMLTextAreaElement | null } | null>(null);
 
 // Attachment drag & drop / picker state
 const attachments = ref<ChatAttachment[]>([]);
@@ -217,6 +220,37 @@ const showSuggestions = computed(() => {
 
 const currentTitle = computed(() => activeSession.value?.title || 'New chat');
 
+const isNewChat = computed(
+    () => Boolean(activeSession.value) && messages.value.length === 0,
+);
+
+const firstName = computed(() => {
+    const user = page.props.auth.user;
+    if (user?.first_name) return user.first_name;
+    const fallback = user?.name?.trim().split(/\s+/)[0];
+    return fallback || '';
+});
+
+const timeGreeting = computed(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 17) return 'Good afternoon';
+    return 'Good evening';
+});
+
+const greetingLine = computed(() =>
+    firstName.value
+        ? `${timeGreeting.value}, ${firstName.value}`
+        : timeGreeting.value,
+);
+
+const activeSubtitle = computed(() => {
+    if (isAdmin.value) return 'Teacher mode — workspace tools enabled';
+    return isNewChat.value
+        ? 'Start a new conversation with Echo'
+        : 'Continued conversation with Echo';
+});
+
 /* ──────────────── Chat actions ──────────────── */
 
 const scrollToBottom = async () => {
@@ -231,6 +265,22 @@ const scrollToBottom = async () => {
 };
 
 watch(messages, () => scrollToBottom(), { deep: true });
+
+// Focus the centered input whenever a brand-new chat opens so the user can
+// start typing immediately — except on touch devices (coarse pointer), where
+// auto-focus would pop open the on-screen keyboard as soon as the chat is
+// created. Coarse pointer covers phones in any orientation (landscape phones
+// are wider than the 640px mobile breakpoint) plus tablets.
+watch(
+    isNewChat,
+    async (newChat) => {
+        if (!newChat) return;
+        await nextTick();
+        if (isCoarsePointer.value) return;
+        welcomeInputRef.value?.$el?.focus();
+    },
+    { immediate: true },
+);
 
 const typeMessage = async (fullText: string) => {
     messages.value.push({ role: 'assistant', content: '' });
@@ -354,6 +404,7 @@ onFilesChanged((files) => addFiles(files));
 
 // Drag & drop state (depth counter handles nested dragenter/leave events)
 const onDragEnter = (event: DragEvent) => {
+    if (isNewChat.value) return;
     if (!event.dataTransfer?.types.includes('Files')) return;
     event.preventDefault();
     dragDepth.value++;
@@ -361,6 +412,7 @@ const onDragEnter = (event: DragEvent) => {
 };
 
 const onDragOver = (event: DragEvent) => {
+    if (isNewChat.value) return;
     if (!event.dataTransfer?.types.includes('Files')) return;
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
@@ -373,6 +425,10 @@ const onDragLeave = (event: DragEvent) => {
 };
 
 const onDrop = (event: DragEvent) => {
+    // No drag & drop while the welcome view is showing — the footer where
+    // attachment chips render is hidden, so dropped files would silently
+    // attach to the first message with no visual confirmation.
+    if (isNewChat.value) return;
     event.preventDefault();
     dragDepth.value = 0;
     isDragging.value = false;
@@ -810,11 +866,7 @@ onBeforeUnmount(() => {
                                 v-if="activeSession"
                                 class="text-[11px] text-muted-foreground"
                             >
-                                {{
-                                    isAdmin
-                                        ? 'Teacher mode — workspace tools enabled'
-                                        : 'Continued conversation with Echo'
-                                }}
+                                {{ activeSubtitle }}
                             </p>
                             <p v-else class="text-[11px] text-muted-foreground">
                                 Pick a conversation from your history
@@ -846,15 +898,111 @@ onBeforeUnmount(() => {
                         </p>
                     </div>
 
-                    <template v-if="activeSession">
+                    <template v-else-if="isNewChat">
+                        <!-- The inner wrapper centers itself with auto margins,
+                             so the welcome content can't be clipped at the top
+                             on short viewports (unlike justify-center). -->
+                        <div
+                            class="flex h-full flex-col items-center px-4 py-8 text-center"
+                        >
+                            <div
+                                class="m-auto flex w-full max-w-xl flex-col items-center"
+                            >
+                                <!-- System logo -->
+                                <div
+                                    class="welcome-logo mb-6 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-primary/10 shadow-lg ring-1 shadow-primary/10 ring-primary/20"
+                                >
+                                    <img
+                                        v-if="branding.logoUrl"
+                                        :src="branding.logoUrl"
+                                        alt="Echo"
+                                        class="h-12 w-12 object-contain"
+                                    />
+                                    <AppLogoIcon
+                                        v-else
+                                        class="h-10 w-10 text-primary"
+                                    />
+                                </div>
+
+                                <!-- Greeting -->
+                                <div class="welcome-greeting">
+                                    <p
+                                        class="text-sm font-medium tracking-wide text-primary"
+                                    >
+                                        {{ greetingLine }}
+                                    </p>
+                                    <h2
+                                        class="mt-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+                                    >
+                                        How can I help you today?
+                                    </h2>
+                                </div>
+
+                                <!-- Centered input -->
+                                <form
+                                    class="welcome-input mt-8 w-full max-w-xl"
+                                    @submit.prevent="sendMessage"
+                                >
+                                    <div class="group relative">
+                                        <Textarea
+                                            ref="welcomeInputRef"
+                                            v-model="inputMessage"
+                                            placeholder="Ask about assignments, exams, or your study progress..."
+                                            class="min-h-[64px] resize-none rounded-2xl border-border/40 bg-background/70 py-3.5 pr-14 pl-4 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30"
+                                            @keydown.enter.prevent="sendMessage"
+                                        />
+                                        <Button
+                                            type="submit"
+                                            size="icon"
+                                            class="absolute right-2.5 bottom-2.5 h-9 w-9 rounded-xl shadow-md transition-transform duration-200 group-focus-within:scale-105"
+                                            :disabled="
+                                                !inputMessage.trim() ||
+                                                isLoading
+                                            "
+                                        >
+                                            <Send class="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                    <p
+                                        class="mt-3 text-[11px] text-muted-foreground/60"
+                                    >
+                                        Echo can make mistakes — double-check
+                                        important answers.
+                                    </p>
+                                </form>
+
+                                <!-- Suggestions -->
+                                <div
+                                    class="welcome-suggestions mt-6 flex flex-wrap justify-center gap-1.5"
+                                >
+                                    <button
+                                        v-for="(chip, i) in suggestions"
+                                        :key="i"
+                                        @click="useSuggestion(chip.message)"
+                                        class="cursor-pointer rounded-full border border-border/50 bg-muted/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-foreground active:scale-95"
+                                    >
+                                        {{ chip.label }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <!-- Keyed by index (not id): chat messages only ever
+                             append, and the non-streaming fallback replaces
+                             the locally-pushed messages with persisted server
+                             messages after each reply. A stable index key keeps
+                             the same DOM node, so bubbles don't replay their
+                             entrance animation when the server data arrives. -->
                         <div
                             v-for="(msg, index) in messages"
-                            :key="msg.id ?? index"
-                            class="animate-fade-in flex w-full max-w-[88%] gap-2"
+                            :key="index"
+                            class="message-enter flex w-full max-w-[88%] gap-2"
                             :class="[
                                 msg.role === 'user'
-                                    ? 'ml-auto flex-row-reverse'
-                                    : '',
+                                    ? 'message-enter-user ml-auto flex-row-reverse'
+                                    : 'message-enter-assistant',
                             ]"
                         >
                             <div
@@ -929,7 +1077,7 @@ onBeforeUnmount(() => {
 
                         <div
                             v-if="showSuggestions"
-                            class="animate-fade-in flex flex-wrap gap-1.5"
+                            class="message-enter flex flex-wrap gap-1.5"
                         >
                             <button
                                 v-for="(chip, i) in suggestions"
@@ -943,7 +1091,7 @@ onBeforeUnmount(() => {
 
                         <div
                             v-if="isLoading"
-                            class="animate-fade-in flex max-w-[88%] gap-2"
+                            class="message-enter flex max-w-[88%] gap-2"
                         >
                             <div
                                 class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/80"
@@ -977,7 +1125,10 @@ onBeforeUnmount(() => {
                     </template>
                 </CardContent>
 
-                <CardFooter class="border-t border-border/40 bg-muted/20 p-3">
+                <CardFooter
+                    v-if="!isNewChat"
+                    class="border-t border-border/40 bg-muted/20 p-3"
+                >
                     <!-- Attachment validation error -->
                     <transition
                         enter-active-class="transition duration-300 ease-out"
@@ -1167,10 +1318,26 @@ onBeforeUnmount(() => {
     }
 }
 
-@keyframes fade-in {
+/* Entrance animation for chat elements — new message bubbles, the suggestion
+   chips and the loading indicator fade in and slide up. Bubbles are
+   directional: user messages slide in from the right, assistant replies from
+   the left. */
+.message-enter {
+    animation: message-enter 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.message-enter-user {
+    animation-name: message-enter-user;
+}
+
+.message-enter-assistant {
+    animation-name: message-enter-assistant;
+}
+
+@keyframes message-enter {
     from {
         opacity: 0;
-        transform: translateY(4px);
+        transform: translateY(6px);
     }
     to {
         opacity: 1;
@@ -1178,8 +1345,106 @@ onBeforeUnmount(() => {
     }
 }
 
-.animate-fade-in {
-    animation: fade-in 0.25s ease-out both;
+@keyframes message-enter-user {
+    from {
+        opacity: 0;
+        transform: translate(14px, 6px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes message-enter-assistant {
+    from {
+        opacity: 0;
+        transform: translate(-14px, 6px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes message-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .message-enter {
+        animation: message-fade 0.15s ease-out both;
+    }
+}
+
+/* Staggered entrance for the new-chat welcome view (claude.ai-style).
+   Each block fades up in sequence; the logo pops in with a subtle scale. */
+.welcome-logo,
+.welcome-greeting,
+.welcome-input,
+.welcome-suggestions {
+    animation: welcome-enter 0.3s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.welcome-logo {
+    animation-name: welcome-logo-in;
+}
+
+.welcome-greeting {
+    animation-delay: 70ms;
+}
+
+.welcome-input {
+    animation-delay: 140ms;
+}
+
+.welcome-suggestions {
+    animation-delay: 210ms;
+}
+
+@keyframes welcome-enter {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes welcome-logo-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes welcome-fade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-logo,
+    .welcome-greeting,
+    .welcome-input,
+    .welcome-suggestions {
+        animation: welcome-fade 0.2s ease-out both;
+    }
 }
 
 /* Rendered markdown inside Echo's assistant messages (v-html content needs
