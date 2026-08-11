@@ -41,8 +41,7 @@ interface ResolvedChatError {
     cause?: unknown;
 }
 
-const FALLBACK =
-    'Sorry, something went wrong. Please try again in a moment.';
+const FALLBACK = 'Sorry, something went wrong. Please try again in a moment.';
 
 /**
  * Turn any thrown error into a safe, user-facing message plus diagnostics.

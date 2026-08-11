@@ -44,10 +44,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
-import {
-    resolveChatError,
-    withErrorReference,
-} from '@/lib/chatErrors';
+import { resolveChatError, withErrorReference } from '@/lib/chatErrors';
 import { renderMarkdown } from '@/lib/markdown';
 import { dashboard } from '@/routes';
 import {
@@ -635,7 +632,10 @@ const streamMessage = async (
             const streamError = new Error(
                 `Stream request failed with status ${response.status}`,
             ) as Error & { response?: { status: number; data?: unknown } };
-            streamError.response = { status: response.status, data: streamErrorData };
+            streamError.response = {
+                status: response.status,
+                data: streamErrorData,
+            };
             throw streamError;
         }
 
