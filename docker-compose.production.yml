@@ -66,6 +66,10 @@ x-app-prod: &app-prod
     <<: *r2-env
 
 services:
+  # Web server + queue worker: Laravel Octane on FrankenPHP. The `octane`
+  # role also starts the queue consumer in this same container (Laravel
+  # Horizon when QUEUE_CONNECTION=redis, otherwise a queue:work worker) under
+  # Supervisor.
   app:
     <<: *app-prod
     environment:
@@ -122,7 +126,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "if [ \"$${QUEUE_CONNECTION:-database}\" = redis ]; then php artisan horizon:status | grep -q 'is running'; else supervisorctl -c /tmp/supervisord-worker.conf status | grep -q RUNNING; fi",
+          "curl -f --silent http://127.0.0.1:8000/up >/dev/null && if [ -d vendor/laravel/horizon ]; then php artisan horizon:status | grep -q 'is running'; else supervisorctl -c /tmp/supervisord-octane.conf status | grep -q RUNNING; fi",
         ]
       interval: 30s
       timeout: 10s
@@ -131,8 +135,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 384M
+          cpus: "2.0"
+          memory: 512M
 
   scheduler:
     <<: *app-prod

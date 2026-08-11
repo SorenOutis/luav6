@@ -1,13 +1,13 @@
 #!/bin/sh
 # ── Container entrypoint ───────────────────────────────────────────────
 # A single image serves every runtime role. The role is resolved from the
-# CONTAINER_ROLE environment variable (or the first CLI argument) so one
-# compose stack can run the Octane/FrankenPHP web server, the AI queue
-# worker, and the scheduler as separate, independently restarted processes.
+# CONTAINER_ROLE environment variable (or the first CLI argument). The
+# `octane` role runs the FrankenPHP web server AND the queue consumer
+# (Laravel Horizon on Redis, otherwise queue:work) together under Supervisor;
+# the `scheduler` and `migrate` roles run as separate, independently
+# restarted processes.
 set -e
 
-# An explicit role argument must win so internal dispatches such as
-# `start.sh queue` cannot be overridden by the container's original role.
 ROLE="${1:-${CONTAINER_ROLE:-octane}}"
 
 # The runtime user is non-root, so make sure Laravel's writable directories
@@ -22,7 +22,7 @@ touch database/database.sqlite 2>/dev/null || true
 
 case "$ROLE" in
     octane|web|server|app)
-        echo "[start] role=octane — warming caches and starting FrankenPHP..."
+        echo "[start] role=octane — warming caches and starting FrankenPHP + queue worker..."
         # Refresh package discovery first because production may persist the
         # bootstrap/cache volume across deploys. This adds/removes Horizon's
         # provider when QUEUE_CONNECTION changes between image builds.
@@ -41,32 +41,36 @@ case "$ROLE" in
         export XDG_DATA_HOME="${XDG_DATA_HOME:-/tmp}"
         export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-/tmp}"
 
-        # exec so Octane becomes PID 1 and receives SIGTERM cleanly on deploy.
-        exec php artisan octane:start \
-            --server=frankenphp \
-            --host=0.0.0.0 \
-            --port="${PORT:-8000}" \
-            --admin-port="${OCTANE_ADMIN_PORT:-2019}" \
-            --workers="${OCTANE_WORKERS:-4}" \
-            --max-requests="${OCTANE_MAX_REQUESTS:-500}"
-        ;;
+        # ── Queue-consumer selection ───────────────────────────────────────────
+        # The web server and the queue consumer now share this one container.
+        #   * QUEUE_CONNECTION=redis  -> Laravel Horizon supervises the workers
+        #     (queues come from config/horizon.php; HORIZON_* env tunables).
+        #   * any other connection    -> a persistent queue:work worker for the
+        #     $QUEUE_NAME queue, restarted by Supervisor. The hourly --max-time
+        #     recycle keeps memory bounded.
+        # If Redis is configured but this image was built without Horizon
+        # (shouldn't happen with Compose, which forwards the build arg), degrade
+        # to queue:work rather than crash-looping on Horizon's Redis error.
+        QUEUE_CONNECTION="${QUEUE_CONNECTION:-database}"
+        if [ "$QUEUE_CONNECTION" = "redis" ] && [ -d vendor/laravel/horizon ]; then
+            QUEUE_PROGRAM=horizon
+        else
+            QUEUE_PROGRAM=queue-worker
+            if [ "$QUEUE_CONNECTION" = "redis" ]; then
+                echo "[start] WARNING: QUEUE_CONNECTION=redis but Horizon is not installed in this image; falling back to queue:work." >&2
+            fi
+        fi
 
-    queue|worker|queue-worker)
-        # Laravel 12 removed the --processes flag on queue:work/queue:listen, so
-        # N parallel workers are run under the Supervisor process manager, which
-        # restarts them on crash, reaps them gracefully on shutdown, and the
-        # hourly --max-time recycle keeps memory bounded. The on-demand spawner
-        # (AiQueueWorker) is a local-dev fallback — a duplicate worker is
-        # harmless because the database queue driver atomically reserves jobs.
-        COUNT="${QUEUE_WORKER_PROCESSES:-4}"
-        [ "$COUNT" -lt 1 ] && COUNT=1
         NAME="${QUEUE_NAME:-ai}"
         TRIES="${QUEUE_TRIES:-3}"
         TIMEOUT="${QUEUE_TIMEOUT:-300}"
         MEMORY="${QUEUE_MEMORY:-128}"
-        echo "[start] role=queue — starting ${COUNT} AI queue worker process(es) via Supervisor..."
 
-        SUPERVISORD_CONF=/tmp/supervisord-worker.conf
+        # ── Supervisor config: run Octane + the queue consumer together ───────
+        # Supervisor becomes PID 1 and forwards SIGTERM to both programs
+        # (stopasgroup/killasgroup + stopwaitsecs) so the container shuts down
+        # gracefully on deploy.
+        SUPERVISORD_CONF=/tmp/supervisord-octane.conf
         cat > "$SUPERVISORD_CONF" <<EOF
 [supervisord]
 nodaemon=true
@@ -74,24 +78,22 @@ logfile=/dev/fd/2
 logfile_maxbytes=0
 logfile_backups=0
 loglevel=info
-pidfile=/tmp/supervisord.pid
+pidfile=/tmp/supervisord-octane.pid
 childlogdir=/tmp
 
 [unix_http_server]
-file=/tmp/supervisord.sock
+file=/tmp/supervisord-octane.sock
 
 [supervisorctl]
-serverurl=unix:///tmp/supervisord.sock
+serverurl=unix:///tmp/supervisord-octane.sock
 
 [rpcinterface:supervisor]
 supervisor.rpcinterface_factory=supervisor.rpcinterface:make_main_rpcinterface
 
-[program:queue-worker]
-command=php artisan queue:work --queue=$NAME --sleep=2 --tries=$TRIES --timeout=$TIMEOUT --memory=$MEMORY --max-time=3600
+[program:octane]
+command=php artisan octane:start --server=frankenphp --host=0.0.0.0 --port=${PORT:-8000} --admin-port=${OCTANE_ADMIN_PORT:-2019} --workers=${OCTANE_WORKERS:-4} --max-requests=${OCTANE_MAX_REQUESTS:-500}
 directory=/app
 user=www-data
-process_name=%(program_name)s_%(process_num)02d
-numprocs=$COUNT
 autostart=true
 autorestart=true
 startretries=10
@@ -104,31 +106,46 @@ stdout_logfile=/dev/fd/1
 stdout_logfile_maxbytes=0
 EOF
 
-        # exec so Supervisor becomes PID 1 and forwards SIGTERM to the workers,
-        # shutting them down gracefully on deploy.
-        exec supervisord -n -c "$SUPERVISORD_CONF"
-        ;;
+        if [ "$QUEUE_PROGRAM" = "horizon" ]; then
+            cat >> "$SUPERVISORD_CONF" <<EOF
 
-    horizon)
-        # Horizon only works with the Redis queue driver. If the stack was
-        # configured with a different driver, degrade to the Supervisor-based
-        # queue worker instead of crash-looping on Horizon's Redis error —
-        # the healthcheck still reports this container unhealthy as a signal.
-        if [ "${QUEUE_CONNECTION:-database}" != "redis" ]; then
-            echo "[start] WARNING: QUEUE_CONNECTION='${QUEUE_CONNECTION:-database}' — Horizon requires the Redis queue driver." >&2
-            echo "[start] Falling back to the Supervisor-based 'queue' role instead." >&2
-            exec sh start.sh queue
+[program:horizon]
+command=php artisan horizon
+directory=/app
+user=www-data
+autostart=true
+autorestart=true
+startretries=10
+startsecs=1
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=30
+redirect_stderr=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
+EOF
+        else
+            cat >> "$SUPERVISORD_CONF" <<EOF
+
+[program:queue-worker]
+command=php artisan queue:work --queue=$NAME --sleep=2 --tries=$TRIES --timeout=$TIMEOUT --memory=$MEMORY --max-time=3600
+directory=/app
+user=www-data
+autostart=true
+autorestart=true
+startretries=10
+startsecs=1
+stopasgroup=true
+killasgroup=true
+stopwaitsecs=30
+redirect_stderr=true
+stdout_logfile=/dev/fd/1
+stdout_logfile_maxbytes=0
+EOF
         fi
-        if [ ! -d vendor/laravel/horizon ]; then
-            echo "[start] ERROR: Redis is enabled, but this image was built without Laravel Horizon." >&2
-            echo "[start] Rebuild with --build-arg QUEUE_CONNECTION=redis (Compose does this automatically)." >&2
-            exit 1
-        fi
-        # Laravel Horizon supervises the queue workers itself — no Supervisor
-        # setup needed; the process stays in the foreground as PID 1 and
-        # gracefully stops its workers on SIGTERM.
-        echo "[start] role=horizon — starting Laravel Horizon (Redis queue supervisor)..."
-        exec php artisan horizon
+
+        echo "[start] queue program=$QUEUE_PROGRAM — web server and queue consumer starting under Supervisor..."
+        exec supervisord -n -c "$SUPERVISORD_CONF"
         ;;
 
     scheduler|schedule|cron)
@@ -143,7 +160,7 @@ EOF
 
     *)
         echo "[start] ERROR: unknown CONTAINER_ROLE '${ROLE}'." >&2
-        echo "[start] Valid roles: octane | queue | horizon | scheduler | migrate" >&2
+        echo "[start] Valid roles: octane | scheduler | migrate" >&2
         exit 1
         ;;
 esac

@@ -106,8 +106,9 @@ COPY database ./database
 RUN npm run build
 
 # ── Final application image ──────────────────────────────────────────────
-# All roles (octane web server, queue worker, scheduler, migrations) share
-# this image; the container entrypoint (start.sh) dispatches on CONTAINER_ROLE.
+# All roles (octane [web server + queue consumer], scheduler, migrations)
+# share this image; the container entrypoint (start.sh) dispatches on
+# CONTAINER_ROLE.
 FROM base AS app
 WORKDIR /app
 

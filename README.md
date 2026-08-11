@@ -183,10 +183,12 @@ php artisan test
 ## Production Deployment (Docker)
 
 The repo ships a `docker-compose.yml` (base/local stack) plus a
-`docker-compose.production.yml` overlay. The production stack runs four
-services — `app` (Laravel Octane on **FrankenPHP**), `queue`, `scheduler`,
-and `db` (Postgres) — all built from the same image and differentiated by the
-`CONTAINER_ROLE` environment variable (see `start.sh`).
+`docker-compose.production.yml` overlay. The production stack runs three
+services — `app`, `scheduler`, and `db` (Postgres) — all built from the same
+image and differentiated by the `CONTAINER_ROLE` environment variable (see
+`start.sh`). The `app` service runs Laravel Octane on **FrankenPHP** and the
+queue consumer together: **Laravel Horizon** when `QUEUE_CONNECTION=redis`,
+otherwise a `queue:work` worker.
 
 1. **Copy the production env template and fill in secrets:**
    ```bash
