@@ -1,5 +1,6 @@
 <?php
 
+use Laravel\Nightwatch\Factories\Logger as NightwatchLogger;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -121,6 +122,14 @@ return [
         'null' => [
             'driver' => 'monolog',
             'handler' => NullHandler::class,
+        ],
+
+        // Keep the channel available when LOG_CHANNEL=nightwatch is cached
+        // before Nightwatch's provider can dynamically register it.
+        'nightwatch' => [
+            'driver' => 'custom',
+            'via' => NightwatchLogger::class,
+            'level' => 'debug',
         ],
 
         'emergency' => [

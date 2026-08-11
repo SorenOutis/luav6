@@ -11,6 +11,7 @@
 use App\Ai\Tools\CreateAssignmentTool;
 use App\Ai\Tools\CreateExamTool;
 use App\Ai\Tools\ExamsAdminTool;
+use App\Ai\Tools\GenerateExamQuestionsTool;
 use App\Ai\Tools\PostAnnouncementTool;
 use App\Ai\Tools\StudentsTool;
 use App\Ai\Tools\SubmissionsToGradeTool;
@@ -162,6 +163,26 @@ it('only creates an exam after explicit confirmation', function () {
         ->and($exam->admin_id)->toBe($admin->id)
         ->and($exam->section_id)->toBe($section->id)
         ->and($exam->duration_minutes)->toBe(45);
+});
+
+it('safely refuses write tools when confirmation is omitted', function () {
+    $this->actingAs(User::factory()->admin()->create());
+
+    $tools = [
+        new CreateAssignmentTool,
+        new CreateExamTool,
+        new GenerateExamQuestionsTool,
+        new PostAnnouncementTool,
+        new UpdateExamTool,
+    ];
+
+    foreach ($tools as $tool) {
+        expect($tool->handle(new Request([])))->toContain('NOT EXECUTED');
+    }
+
+    expect(Assignment::count())->toBe(0)
+        ->and(Announcement::count())->toBe(0)
+        ->and(Exam::count())->toBe(0);
 });
 
 it('rejects a section from another workspace when creating an exam', function () {

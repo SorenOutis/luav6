@@ -30,7 +30,7 @@ class PostAnnouncementTool implements Tool
             return 'Only admins can use this tool.';
         }
 
-        if (! $request['confirm']) {
+        if (! filter_var($request['confirm'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             return 'NOT EXECUTED — confirmation missing. Present the announcement to the admin and ask them to confirm; then call this tool again with confirm=true.';
         }
 
