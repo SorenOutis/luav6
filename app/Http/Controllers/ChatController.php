@@ -5,9 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Services\ChatService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Laravel\Ai\Files\File;
+use Laravel\Ai\Responses\StreamableAgentResponse;
+use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class ChatController extends Controller
 {
@@ -27,6 +32,7 @@ class ChatController extends Controller
 
         $request->validate([
             'message' => 'required|string',
+            'attachments.*' => $this->attachmentValidationRules(),
         ]);
 
         $user = $request->user();
@@ -51,11 +57,17 @@ class ChatController extends Controller
             // Build user context with real data for personalization
             $userContext = $this->chatService->buildUserContext();
 
-            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user);
+            [$sdkAttachments, $attachmentMeta] = $this->buildAttachments($request);
 
-            $this->persistExchange($sessionId, $request->message, $response);
+            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments);
 
-            $historyData[] = ['role' => 'user', 'content' => $request->message];
+            $this->persistExchange($sessionId, [
+                'role' => 'user',
+                'content' => $request->message,
+                'attachments' => $attachmentMeta,
+            ], ['role' => 'assistant', 'content' => $response]);
+
+            $historyData[] = ['role' => 'user', 'content' => $request->message, 'attachments' => $attachmentMeta];
             $historyData[] = ['role' => 'assistant', 'content' => $response];
 
             return response()->json([
@@ -63,13 +75,134 @@ class ChatController extends Controller
                 'history' => $historyData,
                 'session_id' => $sessionId,
             ]);
-        } catch (\Exception $e) {
+        } catch (Throwable $e) {
             Log::error('Chat Controller Error: '.$e->getMessage());
 
             return response()->json([
                 'response' => 'Sorry, something went wrong. Please try again in a moment.',
             ], 500);
         }
+    }
+
+    /**
+     * Stream an Echo response as Server-Sent Events. Accepts the same message
+     * plus optional files, resolves the conversation, persists the exchange,
+     * and returns the Laravel AI SDK's streamable response (a uniform SSE body
+     * even for providers that can't stream natively).
+     */
+    public function stream(Request $request): JsonResponse|StreamableAgentResponse|Response
+    {
+        if (! Setting::get('ai_chat_enabled', true)) {
+            return $this->chatService->streamText(Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.'));
+        }
+
+        $request->validate([
+            'message' => 'required|string',
+            'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
+            'attachments.*' => $this->attachmentValidationRules(),
+        ]);
+
+        $user = $request->user();
+
+        // ── Server-side toxicity guardrail ──
+        if ($this->chatService->isToxic($request->message)) {
+            return $this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?");
+        }
+
+        // ── Student daily message cap (cost/abuse guard; admins exempt) ──
+        if ($blocked = $this->chatService->dailyLimitMessage($user)) {
+            return $this->chatService->streamText($blocked);
+        }
+
+        try {
+            [$historyData, $sessionId] = $this->resolveConversation($request, $user);
+
+            $userContext = $this->chatService->buildUserContext();
+
+            [$sdkAttachments, $attachmentMeta] = $this->buildAttachments($request);
+
+            // Persist the user turn up front so history reflects it even if
+            // the stream is interrupted part-way through.
+            $this->persistExchange($sessionId, [
+                'role' => 'user',
+                'content' => $request->message,
+                'attachments' => $attachmentMeta,
+            ]);
+
+            $sessionId = $this->resolveSessionId($sessionId);
+
+            return $this->chatService
+                ->stream($request->message, $historyData, $userContext, $user, $sdkAttachments)
+                ->then(function ($response) use ($sessionId) {
+                    $text = (string) $response->text;
+
+                    if ($sessionId && trim($text) !== '') {
+                        $this->persistExchange((int) $sessionId, [
+                            'role' => 'assistant',
+                            'content' => $text,
+                        ]);
+                    }
+                });
+        } catch (Throwable $e) {
+            Log::error('Chat Stream Error: '.$e->getMessage());
+
+            return $this->chatService->streamText('Sorry, something went wrong. Please try again in a moment.');
+        }
+    }
+
+    /**
+     * Validation rules shared by the streaming and non-streaming chat endpoints
+     * for each individual uploaded attachment.
+     *
+     * @return array<int, string>
+     */
+    private function attachmentValidationRules(): array
+    {
+        return ['file', 'mimes:png,jpg,jpeg,webp,gif,pdf,txt,csv,md,html,doc,docx,xls,xlsx,ppt,pptx', 'max:'.ChatService::MAX_ATTACHMENT_KB];
+    }
+
+    /**
+     * Convert uploaded files into SDK attachments (to send to the provider)
+     * and serializable metadata (to persist on the message).
+     *
+     * @return array{0: array<int, File>, 1: array<int, array<string, mixed>>}
+     */
+    private function buildAttachments(Request $request): array
+    {
+        $sdkAttachments = [];
+        $attachmentMeta = [];
+
+        foreach ($request->file('attachments', []) as $file) {
+            $sdkAttachments[] = $this->chatService->attachmentFromUpload($file);
+            $attachmentMeta[] = $this->chatService->attachmentMeta($file);
+        }
+
+        return [$sdkAttachments, $attachmentMeta];
+    }
+
+    /**
+     * Resolve the persisted session id, auto-creating one when the widget has
+     * sent no explicit id yet. The non-streaming path auto-creates it inside
+     * resolveConversation; streaming does the same work here so the user turn
+     * is captured even when the AI call is deferred to the stream.
+     */
+    private function resolveSessionId(?int $sessionId): ?int
+    {
+        if ($sessionId) {
+            return (int) $sessionId;
+        }
+
+        $user = auth()->user();
+
+        if ($user && ! session()->has($this->sessionIdKey)) {
+            $session = $user->chatSessions()->create(['title' => 'New chat']);
+            session()->put($this->sessionIdKey, (int) $session->id);
+            session()->save();
+
+            return (int) $session->id;
+        }
+
+        return (int) session()->get($this->sessionIdKey);
     }
 
     /**
@@ -124,20 +257,26 @@ class ChatController extends Controller
     }
 
     /**
-     * @return array<int, array{role: string, content: string}>
+     * @return array<int, array{role: string, content: string, attachments?: array<int, array<string, mixed>>}>
      */
     private function historyData(ChatSession $session): array
     {
         return $session->messages
-            ->map(fn ($msg) => ['role' => $msg->role, 'content' => $msg->content])
+            ->map(fn ($msg) => collect([
+                'role' => $msg->role,
+                'content' => $msg->content,
+            ])->when($msg->attachments, fn ($row) => $row->put('attachments', $msg->attachments))->all())
             ->all();
     }
 
     /**
-     * Persist a user/assistant exchange into the DB session, auto-titling
-     * the session from its first user message.
+     * Persist one or more messages into the DB session, auto-titling the
+     * session from its first user message. Each message supports an optional
+     * `attachments` array of serializable metadata.
+     *
+     * @param  array<int, array{role: string, content: string, attachments?: array<int, array<string, mixed>>}>  ...$messages
      */
-    private function persistExchange(?int $sessionId, string $userMessage, string $response): void
+    private function persistExchange(?int $sessionId, ...$messages): void
     {
         if (! $sessionId) {
             return;
@@ -149,14 +288,16 @@ class ChatController extends Controller
             return;
         }
 
-        if (! $session->title || $session->title === 'New chat') {
-            $session->update(['title' => Str::limit($userMessage, 60)]);
+        $firstUser = collect($messages)->firstWhere('role', 'user');
+
+        if ($firstUser && (! $session->title || $session->title === 'New chat')) {
+            $session->update(['title' => Str::limit($firstUser['content'], 60)]);
         }
 
-        $session->messages()->createMany([
-            ['role' => 'user', 'content' => $userMessage],
-            ['role' => 'assistant', 'content' => $response],
-        ]);
+        $session->messages()->createMany(collect($messages)->map(fn ($msg) => collect([
+            'role' => $msg['role'],
+            'content' => $msg['content'],
+        ])->when($msg['attachments'] ?? [], fn ($row, $attachments) => $row->put('attachments', $attachments))->all())->all());
     }
 
     /**

@@ -113,6 +113,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->name('api.claim-xp.prompt-shown');
 
     Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
+    Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:60,1')->name('chat.stream');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
     Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:60,1')->name('chat.clear');
 
