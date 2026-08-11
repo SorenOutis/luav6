@@ -227,7 +227,6 @@ class AIService
                     ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'], $includeFeedback)
                     : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
 
-                $numPredict = ($feedbackOnly || $includeFeedback) ? 200 : 35;
                 $pool->as((string) $index)->timeout(45)->post("{$this->ollamaUrl}/api/generate", [
                     'model' => $this->ollamaModel,
                     'prompt' => $prompt,
@@ -236,8 +235,8 @@ class AIService
                     'keep_alive' => -1,
                     'options' => [
                         'temperature' => 0,
-                        'num_predict' => $numPredict,
-                        'num_ctx' => 1024,
+                        'num_predict' => 1000,
+                        'num_ctx' => 2048,
                         'top_k' => 5,
                         'top_p' => 0.1,
                     ],
@@ -256,8 +255,9 @@ class AIService
             $result = ['score' => 0.0];
 
             if ($response instanceof Response && $response->successful()) {
-                $data = json_decode($response->json('response'), true);
-                $result = $this->buildResultFromData($data, $essay);
+                $rawText = $response->json('response');
+                $parsed = $this->extractJsonFromResponse($rawText);
+                $result = $this->buildResultFromData($parsed ?: [], $essay);
             } elseif ($response) {
                 $errorMsg = $response instanceof Response ? $response->body() : get_class($response);
                 Log::error("AI Ollama assessment failed for index $index: $errorMsg");
@@ -317,7 +317,7 @@ class AIService
                 $data = $response->json();
                 $rawText = $data['result']['response'] ?? $data['response'] ?? null;
                 if ($rawText) {
-                    $parsed = json_decode($rawText, true);
+                    $parsed = $this->extractJsonFromResponse($rawText);
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
@@ -356,8 +356,6 @@ class AIService
                     ['role' => 'user', 'content' => $prompt],
                 ];
 
-                $numTokens = ($feedbackOnly || $includeFeedback) ? 200 : 60;
-
                 $pool->as((string) $index)
                     ->withHeaders([
                         'Authorization' => 'Bearer '.$this->groqApiKey,
@@ -368,7 +366,8 @@ class AIService
                         'model' => $this->groqModel,
                         'messages' => $messages,
                         'temperature' => 0,
-                        'max_tokens' => $numTokens,
+                        'max_tokens' => 1000,
+                        'response_format' => ['type' => 'json_object'],
                     ]);
             }
         });
@@ -387,7 +386,7 @@ class AIService
                 $data = $response->json();
                 $rawText = $data['choices'][0]['message']['content'] ?? null;
                 if ($rawText) {
-                    $parsed = json_decode($rawText, true);
+                    $parsed = $this->extractJsonFromResponse($rawText);
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
@@ -437,9 +436,7 @@ class AIService
                 $response = agent(instructions: 'You are a strict academic examiner. Always respond with valid JSON only.')
                     ->prompt($prompt, provider: $this->provider, model: $sdkProvider->model());
 
-                // Strip markdown code fences if present
-                $rawText = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', trim((string) $response->text));
-                $parsed = json_decode($rawText, true);
+                $parsed = $this->extractJsonFromResponse((string) $response->text);
                 $result = $this->buildResultFromData($parsed ?: [], $essay);
             } catch (\Throwable $e) {
                 Log::error("AI {$this->provider} assessment failed for index $index: ".$e->getMessage());
@@ -470,8 +467,6 @@ class AIService
                     ? $this->buildFeedbackOnlyPrompt($essay['essayText'], $essay['questionText'], $includeFeedback)
                     : $this->buildPrompt($essay['essayText'], $essay['questionText'], $includeFeedback);
 
-                $maxTokens = ($feedbackOnly || $includeFeedback) ? 200 : 60;
-
                 $pool->as((string) $index)
                     ->timeout(45)
                     ->post("https://generativelanguage.googleapis.com/v1beta/models/{$this->geminiModel}:generateContent?key={$this->geminiApiKey}", [
@@ -484,7 +479,8 @@ class AIService
                         ],
                         'generationConfig' => [
                             'temperature' => 0,
-                            'maxOutputTokens' => $maxTokens,
+                            'maxOutputTokens' => 1000,
+                            'responseMimeType' => 'application/json',
                             'topK' => 5,
                             'topP' => 0.1,
                         ],
@@ -506,9 +502,7 @@ class AIService
                 $data = $response->json();
                 $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
                 if ($rawText) {
-                    // Strip markdown code fences if present
-                    $rawText = preg_replace('/^```(?:json)?\s*|\s*```$/m', '', trim($rawText));
-                    $parsed = json_decode($rawText, true);
+                    $parsed = $this->extractJsonFromResponse($rawText);
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
@@ -529,6 +523,65 @@ class AIService
     // ──────────────────────────────────────────────
 
     /**
+     * Resilient JSON extractor that parses JSON objects from LLM outputs.
+     */
+    private function extractJsonFromResponse(?string $rawText): ?array
+    {
+        if ($rawText === null || trim($rawText) === '') {
+            return null;
+        }
+
+        $text = trim($rawText);
+
+        // 1. Direct decode attempt
+        $data = json_decode($text, true);
+        if (is_array($data)) {
+            return $data;
+        }
+
+        // 2. Strip markdown code fences (```json ... ```)
+        $stripped = preg_replace('/^```(?:json)?\s*/i', '', $text);
+        $stripped = preg_replace('/\s*```$/', '', $stripped);
+        $data = json_decode(trim($stripped), true);
+        if (is_array($data)) {
+            return $data;
+        }
+
+        // 3. Extract the outermost JSON object { ... }
+        if (preg_match('/\{[\s\S]*\}/', $text, $matches)) {
+            $jsonCandidate = $matches[0];
+            $data = json_decode($jsonCandidate, true);
+            if (is_array($data)) {
+                return $data;
+            }
+
+            // 4. Strip trailing commas before closing braces/brackets
+            $cleaned = preg_replace('/,\s*([\}\]])/', '$1', $jsonCandidate);
+            $data = json_decode($cleaned, true);
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+
+        // 5. Regex fallback for score and feedback if JSON syntax was invalid
+        if (preg_match('/["\']?score["\']?\s*:\s*["\']?(\d+(?:\.\d+)?)%?["\']?/i', $text, $scoreMatch)) {
+            $feedback = null;
+            if (preg_match('/["\']?feedback["\']?\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/i', $text, $fbMatch)) {
+                $feedback = stripcslashes($fbMatch[1]);
+            } elseif (preg_match('/["\']?feedback["\']?\s*:\s*\'([^\'\\]*(?:\\.[^\'\\]*)*)\'/i', $text, $fbMatch)) {
+                $feedback = stripcslashes($fbMatch[1]);
+            }
+
+            return [
+                'score' => (float) $scoreMatch[1],
+                'feedback' => $feedback,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
      * Build a result array from parsed JSON data and the essay config.
      */
     private function buildResultFromData(?array $data, array $essay): array
@@ -538,13 +591,30 @@ class AIService
         $includeFeedback = (bool) ($essay['includeFeedback'] ?? false);
 
         if ($data && isset($data['score'])) {
-            $percentage = (float) $data['score'];
+            $rawScore = $data['score'];
+            $percentage = null;
+
+            if (is_string($rawScore)) {
+                if (preg_match('/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/', trim($rawScore), $fraction)) {
+                    $num = (float) $fraction[1];
+                    $denom = (float) $fraction[2];
+                    $percentage = $denom > 0 ? ($num / $denom) * 100 : 0.0;
+                } else {
+                    $percentage = (float) rtrim(trim($rawScore), '%');
+                }
+            } else {
+                $percentage = (float) $rawScore;
+            }
+
             $scaledScore = ($percentage / 100) * $maxPoints;
-            $result['score'] = (int) round($scaledScore);
+            $scaledScore = max(0.0, min((float) $maxPoints, $scaledScore));
+
+            $rounded = round($scaledScore, 2);
+            $result['score'] = ($rounded == (int) $rounded) ? (int) $rounded : $rounded;
         }
 
-        if ($includeFeedback && isset($data['feedback'])) {
-            $result['feedback'] = (string) $data['feedback'];
+        if ($includeFeedback && isset($data['feedback']) && trim((string) $data['feedback']) !== '') {
+            $result['feedback'] = trim((string) $data['feedback']);
         }
 
         return $result;
