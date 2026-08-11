@@ -45,6 +45,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { renderMarkdown } from '@/lib/markdown';
+import { readSseStream } from '@/lib/sse';
 import { dashboard } from '@/routes';
 import {
     destroy as chatsDestroy,
@@ -503,7 +504,11 @@ const normalizeMessages = (incoming: ChatMessage[]): ChatMessage[] => {
     }));
 };
 
-const sendMessageNonStreaming = async (userMessage: string) => {
+const sendMessageNonStreaming = async (
+    userMessage: string,
+    userAttachments: ChatAttachment[],
+    retryAcceptedStream: boolean,
+) => {
     const messageIndex =
         messages.value.push({
             role: 'assistant',
@@ -516,11 +521,22 @@ const sendMessageNonStreaming = async (userMessage: string) => {
     streamAbortController = controller;
 
     try {
+        const formData = new FormData();
+        formData.append('message', userMessage);
+        if (retryAcceptedStream) formData.append('stream_retry', '1');
+        for (const attachment of userAttachments) {
+            if (attachment.file) {
+                formData.append(
+                    'attachments[]',
+                    attachment.file,
+                    attachment.name,
+                );
+            }
+        }
+
         const response = await axios.post(
             chatsMessage({ session: activeSession.value!.id }).url,
-            {
-                message: userMessage,
-            },
+            formData,
             { signal: controller.signal },
         );
 
@@ -587,6 +603,7 @@ const streamMessage = async (
 
     const controller = new AbortController();
     streamAbortController = controller;
+    let streamAccepted = false;
 
     try {
         const formData = new FormData();
@@ -627,97 +644,81 @@ const streamMessage = async (
             throw new Error('Streaming is not available right now.');
         }
 
-        const reader = response.body?.getReader();
-        if (!reader) {
+        if (!response.body) {
             throw new Error('Streaming is not supported by this browser.');
         }
 
-        const decoder = new TextDecoder();
-        let buffer = '';
+        streamAccepted = true;
         let assistantText = '';
+        let malformedFrameError: Error | null = null;
 
-        try {
-            let streamDone = false;
+        await readSseStream(response.body, ({ data, event: eventName }) => {
+            const payload = data.trim();
+            if (payload === '[DONE]') return;
 
-            while (!streamDone) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-
-                let boundary;
-                while ((boundary = buffer.indexOf('\n\n')) !== -1) {
-                    const chunk = buffer.slice(0, boundary);
-                    buffer = buffer.slice(boundary + 2);
-
-                    const line = chunk
-                        .split('\n')
-                        .find((l) => l.startsWith('data: '));
-
-                    if (!line) continue;
-
-                    const payload = line.slice(6);
-                    if (payload === '[DONE]') {
-                        streamDone = true;
-                        break;
-                    }
-
-                    try {
-                        const event = JSON.parse(payload);
-                        const target = messages.value[assistantIndex];
-
-                        if (event.type === 'reasoning_delta' && event.delta) {
-                            // The model is thinking — stream its reasoning
-                            // into the collapsible above the reply bubble.
-                            if (!target.thinking) {
-                                target.thinking = '';
-                                target.thinkingOpen = true;
-                                target.thinkingStartedAt = Date.now();
-                            }
-                            target.thinking += event.delta;
-                            scrollToBottom();
-                        } else if (event.type === 'text_delta' && event.delta) {
-                            // The answer started — freeze the thinking timer
-                            // and collapse the reasoning out of the way.
-                            if (
-                                target.thinkingStartedAt &&
-                                !target.thinkingMs
-                            ) {
-                                target.thinkingMs = Math.max(
-                                    1,
-                                    Math.round(
-                                        (Date.now() -
-                                            target.thinkingStartedAt) /
-                                            1000,
-                                    ),
-                                );
-                                target.thinkingOpen = false;
-                            }
-                            assistantText += event.delta;
-                            target.content = assistantText;
-                            scrollToBottom();
-                        }
-                    } catch {
-                        // Ignore malformed frames.
-                    }
-                }
+            if (eventName === 'error') {
+                throw new Error(payload || 'The response stream failed.');
             }
-        } finally {
-            reader.releaseLock();
-        }
+
+            try {
+                const event = JSON.parse(data) as {
+                    type?: string;
+                    delta?: string;
+                    message?: string;
+                };
+                const target = messages.value[assistantIndex];
+
+                if (event.type === 'error') {
+                    throw new Error(
+                        event.message || 'The response stream failed.',
+                    );
+                }
+
+                if (event.type === 'reasoning_delta' && event.delta) {
+                    // The model is thinking — stream its reasoning into the
+                    // collapsible above the reply bubble.
+                    if (!target.thinking) {
+                        target.thinking = '';
+                        target.thinkingOpen = true;
+                        target.thinkingStartedAt = Date.now();
+                    }
+                    target.thinking += event.delta;
+                    scrollToBottom();
+                } else if (event.type === 'text_delta' && event.delta) {
+                    // The answer started — freeze the thinking timer and
+                    // collapse the reasoning out of the way.
+                    if (target.thinkingStartedAt && !target.thinkingMs) {
+                        target.thinkingMs = Math.max(
+                            1,
+                            Math.round(
+                                (Date.now() - target.thinkingStartedAt) / 1000,
+                            ),
+                        );
+                        target.thinkingOpen = false;
+                    }
+                    assistantText += event.delta;
+                    target.content = assistantText;
+                    scrollToBottom();
+                }
+            } catch (error) {
+                // Keep reading in case only one frame was damaged, but retain
+                // the parse error so an entirely unreadable stream can use the
+                // reliable JSON fallback instead of failing silently.
+                malformedFrameError =
+                    error instanceof Error
+                        ? error
+                        : new Error('The response stream could not be parsed.');
+            }
+        });
 
         if (!assistantText) {
-            // The stream ended without any content. Instead of silently
-            // removing the placeholder (which made Echo's reply appear to
-            // never arrive), type a soft error into the same bubble.
-            await typeMessage(
-                'Sorry, something went wrong. Please try again in a moment.',
-                assistantIndex,
+            throw (
+                malformedFrameError ??
+                new Error('The response stream ended before Echo replied.')
             );
-        } else {
-            messages.value[assistantIndex].typing = false;
         }
 
+        messages.value[assistantIndex].typing = false;
         return assistantText;
     } catch (error) {
         if (isAbortError(error)) {
@@ -734,7 +735,12 @@ const streamMessage = async (
         // Remove the placeholder bubble so the non-streaming fallback can
         // present the reply cleanly instead of leaving an empty bubble stuck.
         messages.value.splice(assistantIndex, 1);
-        throw error;
+        const failure =
+            error instanceof Error
+                ? error
+                : new Error('The response stream failed.');
+        Object.assign(failure, { streamAccepted });
+        throw failure;
     } finally {
         if (streamAbortController === controller) {
             streamAbortController = null;
@@ -806,7 +812,11 @@ const sendMessage = async () => {
         await streamMessage(userMessage, sessionId, userAttachments);
     } catch (error) {
         console.warn('Streaming failed, falling back to non-streaming:', error);
-        await sendMessageNonStreaming(userMessage);
+        await sendMessageNonStreaming(
+            userMessage,
+            userAttachments,
+            (error as { streamAccepted?: boolean }).streamAccepted === true,
+        );
     } finally {
         isLoading.value = false;
         await scrollToBottom();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
@@ -61,6 +62,7 @@ class ChatHistoryController extends Controller
 
         $request->validate([
             'message' => 'required|string',
+            'stream_retry' => 'sometimes|boolean',
             'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
             'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
@@ -74,8 +76,27 @@ class ChatHistoryController extends Controller
             ], 200);
         }
 
+        // If a browser accepted the SSE response but could not parse or finish
+        // it, the streaming action may already have persisted this turn. Reuse
+        // that work instead of charging the limit twice or duplicating rows.
+        $streamRetry = $request->boolean('stream_retry')
+            ? $this->streamRetry($session, $request->message)
+            : null;
+
+        if (($streamRetry['state'] ?? null) === 'completed') {
+            /** @var ChatMessage $assistant */
+            $assistant = $streamRetry['assistant'];
+            $session->load('messages');
+
+            return response()->json([
+                'response' => $assistant->content,
+                'session' => $this->sessionPayload($session),
+            ]);
+        }
+
         // ── Student daily message cap (cost/abuse guard; admins exempt) ──
-        if ($blocked = $this->chatService->dailyLimitMessage($user)) {
+        // A matched retry already consumed its slot in the streaming action.
+        if ($streamRetry === null && ($blocked = $this->chatService->dailyLimitMessage($user))) {
             return response()->json(['response' => $blocked]);
         }
 
@@ -83,6 +104,11 @@ class ChatHistoryController extends Controller
             $userContext = $this->chatService->buildUserContext();
 
             $historyData = $this->sessionHistory($session);
+            if (($streamRetry['state'] ?? null) === 'pending') {
+                // The current user turn is already the final history row; the
+                // SDK receives it separately as the new prompt.
+                array_pop($historyData);
+            }
 
             [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
 
@@ -92,14 +118,20 @@ class ChatHistoryController extends Controller
                 $session->update(['title' => Str::limit($request->message, 60)]);
             }
 
-            $session->messages()->createMany([
-                [
+            $messagesToPersist = [];
+            if (($streamRetry['state'] ?? null) !== 'pending') {
+                $messagesToPersist[] = [
                     'role' => 'user',
                     'content' => $request->message,
                     'attachments' => $attachmentMeta,
-                ],
-                ['role' => 'assistant', 'content' => $response],
-            ]);
+                ];
+            }
+            $messagesToPersist[] = [
+                'role' => 'assistant',
+                'content' => $response,
+            ];
+
+            $session->messages()->createMany($messagesToPersist);
 
             $session->touch();
 
@@ -183,6 +215,43 @@ class ChatHistoryController extends Controller
 
             return $this->chatService->streamText('Sorry, something went wrong. Please try again in a moment.');
         }
+    }
+
+    /**
+     * Match a JSON fallback to the turn already handled by the accepted SSE
+     * request. A completed turn can be returned immediately; a pending user
+     * turn can be reused while the non-streaming provider call is retried.
+     *
+     * @return array{state: 'completed', assistant: ChatMessage}|array{state: 'pending'}|null
+     */
+    private function streamRetry(ChatSession $session, string $message): ?array
+    {
+        $latest = $session->messages()
+            ->reorder('id', 'desc')
+            ->limit(2)
+            ->get();
+
+        /** @var ChatMessage|null $last */
+        $last = $latest->get(0);
+        if (! $last) {
+            return null;
+        }
+
+        if ($last->role === 'user' && $last->content === $message) {
+            return ['state' => 'pending'];
+        }
+
+        /** @var ChatMessage|null $previous */
+        $previous = $latest->get(1);
+        if (
+            $last->role === 'assistant'
+            && $previous?->role === 'user'
+            && $previous->content === $message
+        ) {
+            return ['state' => 'completed', 'assistant' => $last];
+        }
+
+        return null;
     }
 
     /**

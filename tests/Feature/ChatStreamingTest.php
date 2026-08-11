@@ -162,6 +162,65 @@ it('persists user and assistant turns when streaming on the Chats page', functio
     expect($session->messages->where('role', 'assistant')->where('content', 'Chats page reply')->count())->toBe(1);
 });
 
+it('reuses a completed streamed turn when the browser falls back to JSON', function () {
+    Setting::set('ai_chat_daily_limit', 1);
+    AssistantAgent::fake(['Recovered reply']);
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'Retry test']);
+
+    $stream = $this->actingAs($user)
+        ->postJson(route('chats.stream', $session), ['message' => 'Hello']);
+
+    $stream->assertSuccessful();
+    expect($stream->streamedContent())->toContain('[DONE]');
+
+    $this->actingAs($user)
+        ->postJson(route('chats.message', $session), [
+            'message' => 'Hello',
+            'stream_retry' => true,
+        ])
+        ->assertOk()
+        ->assertJsonPath('response', 'Recovered reply');
+
+    $session->refresh();
+    expect($session->messages()->where('role', 'user')->count())->toBe(1)
+        ->and($session->messages()->where('role', 'assistant')->count())->toBe(1);
+});
+
+it('reuses a pending streamed user turn when falling back to JSON', function () {
+    Setting::set('ai_chat_daily_limit', 1);
+    AssistantAgent::fake(['Fallback reply']);
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'Retry test']);
+    $session->messages()->create([
+        'role' => 'user',
+        'content' => 'Please retry',
+        'attachments' => [
+            ['name' => 'notes.txt', 'size' => 5, 'mime' => 'text/plain', 'kind' => 'document'],
+        ],
+    ]);
+
+    $this->actingAs($user);
+    app(\App\Services\ChatService::class)->dailyLimitMessage($user);
+
+    $this->post(route('chats.message', $session), [
+        'message' => 'Please retry',
+        'stream_retry' => true,
+        'attachments' => [
+            UploadedFile::fake()->createWithContent('notes.txt', 'notes'),
+        ],
+    ])
+        ->assertOk()
+        ->assertJsonPath('response', 'Fallback reply');
+
+    $session->refresh();
+    expect($session->messages()->where('role', 'user')->count())->toBe(1)
+        ->and($session->messages()->where('role', 'assistant')->count())->toBe(1)
+        ->and($session->messages()->count())->toBe(2);
+});
+
 it('persists attachments metadata on a Chats page message', function () {
     AssistantAgent::fake(['Got it']);
 
