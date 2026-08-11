@@ -11,6 +11,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -54,7 +55,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
                 if ($request->expectsJson() || $request->is('api/*')) {
                     return response()->json([
-                        'response' => 'Sorry, something went wrong. Please try again in a moment.',
+                        'response' => 'You are sending messages too quickly. Please wait a moment and try again.',
+                        'error' => [
+                            'id' => (string) Str::uuid(),
+                            'type' => $e::class,
+                            'message' => 'Too many requests. Please try again later.',
+                        ],
                     ], 429);
                 }
             }
