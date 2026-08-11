@@ -5,12 +5,14 @@ import axios from 'axios';
 import {
     ArrowLeft,
     Bot,
+    ChevronDown,
     FileText,
     Image as ImageIcon,
     MessageSquare,
     Paperclip,
     Plus,
     Send,
+    Sparkles,
     Square,
     Trash2,
     User,
@@ -61,6 +63,14 @@ interface ChatMessage {
     attachments?: ChatAttachment[];
     /** True while the reply is still streaming/typing into this bubble. */
     typing?: boolean;
+    /** The assistant's reasoning ("thinking") text, if the model emitted it. */
+    thinking?: string;
+    /** Whether the thinking collapsible is currently expanded. */
+    thinkingOpen?: boolean;
+    /** How long the model thought for (seconds), once the reply starts. */
+    thinkingMs?: number;
+    /** Internal: when the first thinking delta arrived (epoch ms). */
+    thinkingStartedAt?: number;
 }
 
 interface ChatAttachment {
@@ -235,9 +245,9 @@ const showSuggestions = computed(() => {
 
 const currentTitle = computed(() => activeSession.value?.title || 'New chat');
 
-const isNewChat = computed(
-    () => Boolean(activeSession.value) && messages.value.length === 0,
-);
+// True whenever the welcome view should be shown — either no conversation is
+// open yet (the Chats index) or the open conversation has no messages.
+const isNewChat = computed(() => messages.value.length === 0);
 
 const firstName = computed(() => {
     const user = page.props.auth.user;
@@ -261,9 +271,7 @@ const greetingLine = computed(() =>
 
 const activeSubtitle = computed(() => {
     if (isAdmin.value) return 'Teacher mode — workspace tools enabled';
-    return isNewChat.value
-        ? 'Start a new conversation with Echo'
-        : 'Continued conversation with Echo';
+    return 'Your intelligent companion';
 });
 
 /* ──────────────── Chat actions ──────────────── */
@@ -297,6 +305,12 @@ watch(
     { immediate: true },
 );
 
+const thinkingLabel = (msg: ChatMessage): string => {
+    if (msg.typing && !msg.content) return 'Thinking…';
+    if (msg.thinkingMs) return `Thought for ${msg.thinkingMs}s`;
+    return 'View thinking';
+};
+
 const typeMessage = async (
     fullText: string,
     index?: number,
@@ -304,8 +318,12 @@ const typeMessage = async (
 ) => {
     const messageIndex =
         index ??
-        messages.value.push({ role: 'assistant', content: '', typing: true }) -
-            1;
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
 
     let currentText = '';
     const speed = 8;
@@ -479,13 +497,20 @@ const normalizeMessages = (incoming: ChatMessage[]): ChatMessage[] => {
                   kind: att.kind === 'image' ? 'image' : 'document',
               }))
             : undefined,
+        thinking: msg.thinking || undefined,
+        thinkingMs: msg.thinkingMs,
+        thinkingOpen: false,
     }));
 };
 
 const sendMessageNonStreaming = async (userMessage: string) => {
     const messageIndex =
-        messages.value.push({ role: 'assistant', content: '', typing: true }) -
-        1;
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
 
     const controller = new AbortController();
     streamAbortController = controller;
@@ -553,8 +578,12 @@ const streamMessage = async (
     // Show Echo's bubble (with typing dots) up front so the reply streams into
     // a single bubble instead of a separate loading indicator in between.
     const assistantIndex =
-        messages.value.push({ role: 'assistant', content: '', typing: true }) -
-        1;
+        messages.value.push({
+            role: 'assistant',
+            content: '',
+            typing: true,
+            thinkingOpen: false,
+        }) - 1;
 
     const controller = new AbortController();
     streamAbortController = controller;
@@ -635,10 +664,37 @@ const streamMessage = async (
 
                     try {
                         const event = JSON.parse(payload);
-                        if (event.type === 'text_delta' && event.delta) {
+                        const target = messages.value[assistantIndex];
+
+                        if (event.type === 'reasoning_delta' && event.delta) {
+                            // The model is thinking — stream its reasoning
+                            // into the collapsible above the reply bubble.
+                            if (!target.thinking) {
+                                target.thinking = '';
+                                target.thinkingOpen = true;
+                                target.thinkingStartedAt = Date.now();
+                            }
+                            target.thinking += event.delta;
+                            scrollToBottom();
+                        } else if (event.type === 'text_delta' && event.delta) {
+                            // The answer started — freeze the thinking timer
+                            // and collapse the reasoning out of the way.
+                            if (
+                                target.thinkingStartedAt &&
+                                !target.thinkingMs
+                            ) {
+                                target.thinkingMs = Math.max(
+                                    1,
+                                    Math.round(
+                                        (Date.now() -
+                                            target.thinkingStartedAt) /
+                                            1000,
+                                    ),
+                                );
+                                target.thinkingOpen = false;
+                            }
                             assistantText += event.delta;
-                            messages.value[assistantIndex].content =
-                                assistantText;
+                            target.content = assistantText;
                             scrollToBottom();
                         }
                     } catch {
@@ -651,9 +707,13 @@ const streamMessage = async (
         }
 
         if (!assistantText) {
-            // The stream ended without any content — remove the placeholder so
-            // an empty bubble doesn't linger.
-            messages.value.splice(assistantIndex, 1);
+            // The stream ended without any content. Instead of silently
+            // removing the placeholder (which made Echo's reply appear to
+            // never arrive), type a soft error into the same bubble.
+            await typeMessage(
+                'Sorry, something went wrong. Please try again in a moment.',
+                assistantIndex,
+            );
         } else {
             messages.value[assistantIndex].typing = false;
         }
@@ -662,14 +722,14 @@ const streamMessage = async (
     } catch (error) {
         if (isAbortError(error)) {
             // User pressed stop — keep whatever streamed so far (or drop the
-            // placeholder if nothing arrived yet).
-            const content = messages.value[assistantIndex].content;
-            if (!content) {
+            // placeholder if neither answer nor thinking arrived yet).
+            const target = messages.value[assistantIndex];
+            if (!target.content && !target.thinking) {
                 messages.value.splice(assistantIndex, 1);
             } else {
-                messages.value[assistantIndex].typing = false;
+                target.typing = false;
             }
-            return content;
+            return target.content;
         }
         // Remove the placeholder bubble so the non-streaming fallback can
         // present the reply cleanly instead of leaving an empty bubble stuck.
@@ -682,13 +742,55 @@ const streamMessage = async (
     }
 };
 
+const truncateTitle = (text: string, length = 60): string =>
+    text.length > length ? `${text.slice(0, length).trimEnd()}…` : text;
+
 const sendMessage = async () => {
     if (!inputMessage.value.trim() || isLoading.value) return;
-    if (!activeSession.value) return;
+    // Claim the loading state up front — session creation below is async, and
+    // without this a quick double-Enter could create two sessions.
+    isLoading.value = true;
+
+    // Sending from the welcome view with no open conversation — create the
+    // persisted session first so the first message lands somewhere.
+    if (!activeSession.value) {
+        try {
+            const response = await axios.post(chatsStore().url);
+            const created = response.data.session as { id: number };
+            activeSession.value = {
+                id: created.id,
+                title: 'New chat',
+                messages: [],
+            };
+        } catch (error) {
+            console.error('Failed to create a new chat:', error);
+            isLoading.value = false;
+            return;
+        }
+    }
 
     const userMessage = inputMessage.value.trim();
     const sessionId = activeSession.value.id;
     const userAttachments = [...attachments.value];
+
+    // Mirror the server's auto-titling (first user message) so the header and
+    // sidebar reflect the real title immediately instead of "New chat".
+    if (
+        !activeSession.value.title ||
+        activeSession.value.title === 'New chat'
+    ) {
+        activeSession.value = {
+            ...activeSession.value,
+            title: truncateTitle(userMessage),
+        };
+        updateSessionInList({
+            ...activeSession.value,
+            messages: [
+                ...messages.value,
+                { role: 'user', content: userMessage },
+            ],
+        });
+    }
 
     messages.value.push({
         role: 'user',
@@ -697,7 +799,6 @@ const sendMessage = async () => {
     });
     inputMessage.value = '';
     attachments.value = [];
-    isLoading.value = true;
     await scrollToBottom();
 
     try {
@@ -811,8 +912,8 @@ onBeforeUnmount(() => {
                         <p
                             class="text-xs leading-relaxed text-muted-foreground"
                         >
-                            Every conversation you have with Echo from the chat
-                            widget will be saved here.
+                            Every conversation you have with Echo will be saved
+                            here.
                         </p>
                         <Button
                             size="sm"
@@ -972,14 +1073,8 @@ onBeforeUnmount(() => {
                             >
                                 {{ currentTitle }}
                             </h1>
-                            <p
-                                v-if="activeSession"
-                                class="text-[11px] text-muted-foreground"
-                            >
+                            <p class="text-[11px] text-muted-foreground">
                                 {{ activeSubtitle }}
-                            </p>
-                            <p v-else class="text-[11px] text-muted-foreground">
-                                Pick a conversation from your history
                             </p>
                         </div>
                     </div>
@@ -989,25 +1084,7 @@ onBeforeUnmount(() => {
                     ref="scrollContainer"
                     class="flex-1 scrollbar-thin space-y-3 overflow-y-auto p-4"
                 >
-                    <div
-                        v-if="!activeSession"
-                        class="flex h-full flex-col items-center justify-center gap-2 text-center"
-                    >
-                        <div
-                            class="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10"
-                        >
-                            <MessageSquare class="h-7 w-7 text-primary" />
-                        </div>
-                        <p class="text-sm font-semibold text-foreground">
-                            Start a conversation with Echo
-                        </p>
-                        <p class="max-w-xs text-xs text-muted-foreground">
-                            Your saved conversations appear in the sidebar —
-                            pick one to continue where you left off.
-                        </p>
-                    </div>
-
-                    <template v-else-if="isNewChat">
+                    <template v-if="isNewChat">
                         <!-- The inner wrapper centers itself with auto margins,
                              so the welcome content can't be clipped at the top
                              on short viewports (unlike justify-center). -->
@@ -1177,34 +1254,90 @@ onBeforeUnmount(() => {
                                 </div>
                                 {{ msg.content }}
                             </div>
-                            <div
-                                v-if="msg.typing && !msg.content"
-                                class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 p-3 shadow-xs"
-                            >
-                                <div class="flex items-center gap-1.5">
-                                    <span
-                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                    ></span>
-                                    <span
-                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                        style="animation-delay: 150ms"
-                                    ></span>
-                                    <span
-                                        class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
-                                        style="animation-delay: 300ms"
-                                    ></span>
-                                </div>
-                            </div>
-                            <span
-                                v-else-if="msg.typing"
-                                class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-foreground shadow-xs"
-                                >{{ msg.content }}</span
-                            >
+                            <!-- Assistant side (chained to the user-bubble
+                                 v-if above — user messages must NEVER fall
+                                 through here): an optional thinking
+                                 collapsible stacked above the reply bubble. -->
                             <div
                                 v-else
-                                class="chat-markdown rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground shadow-xs"
-                                v-html="renderMarkdown(msg.content)"
-                            ></div>
+                                class="flex min-w-0 flex-1 flex-col items-start gap-1.5"
+                            >
+                                <Collapsible
+                                    v-if="msg.thinking"
+                                    v-model:open="msg.thinkingOpen"
+                                    class="w-full"
+                                >
+                                    <CollapsibleTrigger
+                                        class="flex cursor-pointer items-center gap-1.5 rounded-md py-0.5 pr-1 text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        <Sparkles
+                                            class="h-3 w-3 shrink-0 text-primary/70"
+                                            :class="{
+                                                'animate-pulse':
+                                                    msg.typing && !msg.content,
+                                            }"
+                                        />
+                                        <span>{{ thinkingLabel(msg) }}</span>
+                                        <ChevronDown
+                                            class="h-3 w-3 shrink-0 transition-transform duration-200"
+                                            :class="{
+                                                'rotate-180': msg.thinkingOpen,
+                                            }"
+                                        />
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <!-- flex-col-reverse keeps the scroll
+                                             pinned to the newest reasoning
+                                             lines while they stream in. -->
+                                        <div
+                                            class="flex max-h-44 scrollbar-thin flex-col-reverse overflow-y-auto border-l-2 border-border/60 pl-2.5"
+                                        >
+                                            <div
+                                                class="text-[11px] leading-relaxed whitespace-pre-wrap text-muted-foreground/90"
+                                            >
+                                                {{ msg.thinking }}
+                                            </div>
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+
+                                <div
+                                    v-if="
+                                        msg.typing &&
+                                        !msg.content &&
+                                        !msg.thinking
+                                    "
+                                    class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 shadow-xs"
+                                >
+                                    <div class="flex items-center gap-1.5">
+                                        <span
+                                            class="text-[11px] font-medium text-muted-foreground/80"
+                                            >Thinking</span
+                                        >
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                        ></span>
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                            style="animation-delay: 150ms"
+                                        ></span>
+                                        <span
+                                            class="h-1.5 w-1.5 animate-bounce rounded-full bg-foreground/25"
+                                            style="animation-delay: 300ms"
+                                        ></span>
+                                    </div>
+                                </div>
+                                <span
+                                    v-else-if="msg.typing && msg.content"
+                                    class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-foreground shadow-xs"
+                                    >{{ msg.content }}</span
+                                >
+                                <div
+                                    v-else-if="msg.content"
+                                    class="chat-markdown max-w-full rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground shadow-xs"
+                                    v-html="renderMarkdown(msg.content)"
+                                ></div>
+                            </div>
                         </div>
 
                         <div
@@ -1245,7 +1378,6 @@ onBeforeUnmount(() => {
                     </transition>
 
                     <form
-                        v-if="activeSession"
                         class="flex w-full flex-col items-stretch gap-1.5"
                         @submit.prevent="sendMessage"
                     >
@@ -1335,12 +1467,6 @@ onBeforeUnmount(() => {
                             </Button>
                         </div>
                     </form>
-                    <p
-                        v-else
-                        class="w-full py-1 text-center text-[11px] text-muted-foreground/70 italic"
-                    >
-                        Choose a chat from the sidebar to continue
-                    </p>
                 </CardFooter>
             </Card>
         </div>
