@@ -7,6 +7,23 @@ name: luav6
 # resource limits) and exposes the web port only on loopback — a reverse
 # proxy / load balancer on the host terminates TLS and forwards to :8000.
 
+# ── R2 (Cloudflare) object storage env ──────────────────────────────────
+# PUBLIC_DISK=s3 points the public disk (avatars, badges, covers, logo) at R2.
+# Wired through ${VAR} interpolation so the Dokploy UI env vars reach the
+# container — the compose's env_file only reads .env.production from disk, and
+# environment entries override env_file, so these must be set in the Dokploy
+# UI (interpolation source), not just in .env.production.
+x-r2-env: &r2-env
+  FILESYSTEM_DISK: "${FILESYSTEM_DISK:-local}"
+  PUBLIC_DISK: "${PUBLIC_DISK:-local}"
+  AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"
+  AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+  AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-auto}"
+  AWS_BUCKET: "${AWS_BUCKET:-}"
+  AWS_ENDPOINT: "${AWS_ENDPOINT:-}"
+  AWS_URL: "${AWS_URL:-}"
+  AWS_USE_PATH_STYLE_ENDPOINT: "${AWS_USE_PATH_STYLE_ENDPOINT:-false}"
+
 x-app-prod: &app-prod
   build:
     context: .
@@ -43,6 +60,7 @@ x-app-prod: &app-prod
     HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
     HORIZON_TRIES: "${QUEUE_TRIES:-3}"
     HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+    <<: *r2-env
 
 services:
   app:
@@ -52,6 +70,7 @@ services:
       PORT: "${PORT:-8000}"
       OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
       OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
+      <<: *r2-env
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -84,6 +103,7 @@ services:
       HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
       HORIZON_TRIES: "${QUEUE_TRIES:-3}"
       HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+      <<: *r2-env
     volumes:
       - app_storage:/app/storage
       - bootstrap_cache:/app/bootstrap/cache
@@ -110,6 +130,7 @@ services:
     <<: *app-prod
     environment:
       CONTAINER_ROLE: scheduler
+      <<: *r2-env
     volumes:
       - app_storage:/app/storage
       - bootstrap_cache:/app/bootstrap/cache
