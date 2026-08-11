@@ -41,6 +41,31 @@ it('streams an echo response as server-sent events', function () {
         ->and($content)->toContain('[DONE]');
 });
 
+it('emits streamed chat events when running under Octane', function () {
+    AssistantAgent::fake(['Octane streamed reply']);
+
+    $previousOctaneFlag = $_SERVER['LARAVEL_OCTANE'] ?? null;
+    $_SERVER['LARAVEL_OCTANE'] = '1';
+
+    try {
+        $response = $this->actingAs(User::factory()->create())
+            ->postJson(route('chat.stream'), ['message' => 'Hello']);
+
+        $response->assertSuccessful();
+        $content = $response->streamedContent();
+
+        expect($content)
+            ->toContain('text_delta')
+            ->and($content)->toContain('[DONE]');
+    } finally {
+        if ($previousOctaneFlag === null) {
+            unset($_SERVER['LARAVEL_OCTANE']);
+        } else {
+            $_SERVER['LARAVEL_OCTANE'] = $previousOctaneFlag;
+        }
+    }
+});
+
 it('persists the user turn for a streamed exchange', function () {
     AssistantAgent::fake(['Streamed reply']);
 

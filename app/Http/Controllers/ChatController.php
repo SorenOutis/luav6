@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Responses\AiSseResponse;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Services\ChatService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Laravel\Ai\Responses\StreamableAgentResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -125,13 +124,15 @@ class ChatController extends Controller
     /**
      * Stream an Echo response as Server-Sent Events. Accepts the same message
      * plus optional files, resolves the conversation, persists the exchange,
-     * and returns the Laravel AI SDK's streamable response (a uniform SSE body
-     * even for providers that can't stream natively).
+     * and returns a uniform SSE body even for providers that cannot stream
+     * natively.
      */
-    public function stream(Request $request): JsonResponse|StreamableAgentResponse|Response
+    public function stream(Request $request): Response
     {
         if (! Setting::get('ai_chat_enabled', true)) {
-            return $this->chatService->streamText(Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.'));
+            return AiSseResponse::from(
+                $this->chatService->streamText(Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance.')),
+            );
         }
 
         $request->validate([
@@ -144,12 +145,12 @@ class ChatController extends Controller
 
         // ── Server-side toxicity guardrail ──
         if ($this->chatService->isToxic($request->message)) {
-            return $this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?");
+            return AiSseResponse::from($this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?"));
         }
 
         // ── Student daily message cap (cost/abuse guard; admins exempt) ──
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
-            return $this->chatService->streamText($blocked);
+            return AiSseResponse::from($this->chatService->streamText($blocked));
         }
 
         try {
@@ -169,7 +170,7 @@ class ChatController extends Controller
 
             $sessionId = $this->resolveSessionId($sessionId);
 
-            return $this->chatService
+            $stream = $this->chatService
                 ->stream($request->message, $historyData, $userContext, $user, $sdkAttachments)
                 ->then(function ($response) use ($sessionId) {
                     try {
@@ -186,6 +187,8 @@ class ChatController extends Controller
                         $this->logError('Chat Stream Persist Error', $e);
                     }
                 });
+
+            return AiSseResponse::from($stream);
         } catch (Throwable $e) {
             $errorId = $this->logError('Chat Stream Error', $e);
             $payload = $this->errorPayload($e, $errorId);
@@ -202,7 +205,7 @@ class ChatController extends Controller
                 }
             }
 
-            return $this->chatService->streamText($message);
+            return AiSseResponse::from($this->chatService->streamText($message));
         }
     }
 

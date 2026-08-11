@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Responses\AiSseResponse;
 use App\Models\ChatSession;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
@@ -134,7 +135,7 @@ class ChatHistoryController extends Controller
      * Persists the user turn (with attachments) up front and the assistant turn
      * once the stream completes, then returns the uniform SSE body.
      */
-    public function stream(Request $request, ChatSession $session): StreamableAgentResponse|Response
+    public function stream(Request $request, ChatSession $session): Response
     {
         $session = $this->sessionForUser($request, $session);
 
@@ -147,11 +148,11 @@ class ChatHistoryController extends Controller
         $user = $request->user();
 
         if ($this->chatService->isToxic($request->message)) {
-            return $this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?");
+            return AiSseResponse::from($this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?"));
         }
 
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
-            return $this->chatService->streamText($blocked);
+            return AiSseResponse::from($this->chatService->streamText($blocked));
         }
 
         try {
@@ -244,7 +245,7 @@ class ChatHistoryController extends Controller
                 new Meta,
             );
 
-            return $response->then(function ($streamedResponse) use ($session) {
+            $response->then(function ($streamedResponse) use ($session) {
                 try {
                     $text = (string) $streamedResponse->text;
 
@@ -262,6 +263,8 @@ class ChatHistoryController extends Controller
                     $this->logError('Chat History Stream Persist Error', $e, $session);
                 }
             });
+
+            return AiSseResponse::from($response);
         } catch (Throwable $e) {
             $errorId = $this->logError('Chat History Stream Error', $e, $session);
             $payload = $this->errorPayload($e, $errorId);
@@ -275,7 +278,7 @@ class ChatHistoryController extends Controller
                 }
             }
 
-            return $this->chatService->streamText($message);
+            return AiSseResponse::from($this->chatService->streamText($message));
         }
     }
 
