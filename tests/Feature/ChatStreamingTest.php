@@ -10,6 +10,7 @@
 use App\Ai\Agents\AssistantAgent;
 use App\Models\Setting;
 use App\Models\User;
+use App\Services\ChatService;
 use Illuminate\Http\UploadedFile;
 
 beforeEach(function () {
@@ -227,7 +228,7 @@ it('reuses a pending streamed user turn when falling back to JSON', function () 
     ]);
 
     $this->actingAs($user);
-    app(\App\Services\ChatService::class)->dailyLimitMessage($user);
+    app(ChatService::class)->dailyLimitMessage($user);
 
     $this->post(route('chats.message', $session), [
         'message' => 'Please retry',
