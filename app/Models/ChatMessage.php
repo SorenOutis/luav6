@@ -11,7 +11,15 @@ class ChatMessage extends Model
         'session_id',
         'role',
         'content',
+        'attachments',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'attachments' => 'array',
+        ];
+    }
 
     public function session(): BelongsTo
     {
