@@ -6,7 +6,9 @@
 # worker, and the scheduler as separate, independently restarted processes.
 set -e
 
-ROLE="${CONTAINER_ROLE:-${1:-octane}}"
+# An explicit role argument must win so internal dispatches such as
+# `start.sh queue` cannot be overridden by the container's original role.
+ROLE="${1:-${CONTAINER_ROLE:-octane}}"
 
 # The runtime user is non-root, so make sure Laravel's writable directories
 # actually exist before any artisan command runs.
@@ -21,6 +23,11 @@ touch database/database.sqlite 2>/dev/null || true
 case "$ROLE" in
     octane|web|server|app)
         echo "[start] role=octane — warming caches and starting FrankenPHP..."
+        # Refresh package discovery first because production may persist the
+        # bootstrap/cache volume across deploys. This adds/removes Horizon's
+        # provider when QUEUE_CONNECTION changes between image builds.
+        php artisan package:discover --ansi
+
         # Rebuild Laravel's caches so the container boots with the exact
         # config/routes/views baked in for this deploy.
         php artisan config:cache
@@ -111,6 +118,11 @@ EOF
             echo "[start] WARNING: QUEUE_CONNECTION='${QUEUE_CONNECTION:-database}' — Horizon requires the Redis queue driver." >&2
             echo "[start] Falling back to the Supervisor-based 'queue' role instead." >&2
             exec sh start.sh queue
+        fi
+        if [ ! -d vendor/laravel/horizon ]; then
+            echo "[start] ERROR: Redis is enabled, but this image was built without Laravel Horizon." >&2
+            echo "[start] Rebuild with --build-arg QUEUE_CONNECTION=redis (Compose does this automatically)." >&2
+            exit 1
         fi
         # Laravel Horizon supervises the queue workers itself — no Supervisor
         # setup needed; the process stays in the foreground as PID 1 and
