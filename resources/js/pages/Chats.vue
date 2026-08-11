@@ -67,20 +67,36 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const branding = computed<{ logoUrl?: string | null; name?: string }>(
-    () => (page.props.schoolBranding ?? {}) as { logoUrl?: string | null; name?: string },
+    () =>
+        (page.props.schoolBranding ?? {}) as {
+            logoUrl?: string | null;
+            name?: string;
+        },
 );
 
 const suggestions = computed<{ label: string; message: string }[]>(() => {
-    const fromProps = (page.props.aiChat as { suggestions?: { label: string; message: string }[] })
-        ?.suggestions;
+    const fromProps = (
+        page.props.aiChat as {
+            suggestions?: { label: string; message: string }[];
+        }
+    )?.suggestions;
 
     return fromProps?.length
         ? fromProps
         : [
-              { label: '📋 My Assignments', message: 'What are my upcoming assignments?' },
-              { label: '📊 My Progress', message: 'Show me my learning progress' },
+              {
+                  label: '📋 My Assignments',
+                  message: 'What are my upcoming assignments?',
+              },
+              {
+                  label: '📊 My Progress',
+                  message: 'Show me my learning progress',
+              },
               { label: '🏆 My Streak', message: "What's my current streak?" },
-              { label: '📝 Upcoming Exams', message: 'What exams do I have coming up?' },
+              {
+                  label: '📝 Upcoming Exams',
+                  message: 'What exams do I have coming up?',
+              },
           ];
 });
 
@@ -96,7 +112,9 @@ const isLoading = ref(false);
 const sessionToDelete = ref<ChatSession | null>(null);
 const scrollContainer = ref<HTMLElement | null>(null);
 
-const isAdmin = computed(() => Boolean((page.props.aiChat as { isAdmin?: boolean })?.isAdmin));
+const isAdmin = computed(() =>
+    Boolean((page.props.aiChat as { isAdmin?: boolean })?.isAdmin),
+);
 
 interface DateGroup {
     label: string;
@@ -109,9 +127,19 @@ const groupLabel = (iso?: string | null): string => {
 
     const date = new Date(iso);
     const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-    const diffDays = Math.round((startOfToday.getTime() - startOfDate.getTime()) / 86_400_000);
+    const startOfToday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+    );
+    const startOfDate = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+    );
+    const diffDays = Math.round(
+        (startOfToday.getTime() - startOfDate.getTime()) / 86_400_000,
+    );
 
     if (diffDays <= 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
@@ -126,7 +154,9 @@ const groupedSessions = computed<DateGroup[]>(() => {
     return labels.map((label) => ({
         label,
         open: label === 'Today' || label === 'Yesterday',
-        sessions: sessions.value.filter((s) => groupLabel(s.updatedAt) === label),
+        sessions: sessions.value.filter(
+            (s) => groupLabel(s.updatedAt) === label,
+        ),
     }));
 });
 
@@ -135,15 +165,15 @@ const showSuggestions = computed(() => {
     return !messages.value.some((m) => m.role === 'user');
 });
 
-const currentTitle = computed(
-    () => activeSession.value?.title || 'New chat',
-);
+const currentTitle = computed(() => activeSession.value?.title || 'New chat');
 
 /* ──────────────── Chat actions ──────────────── */
 
 const scrollToBottom = async () => {
     await nextTick();
-    const container = scrollContainer.value as (HTMLElement & { $el?: HTMLElement }) | null;
+    const container = scrollContainer.value as
+        | (HTMLElement & { $el?: HTMLElement })
+        | null;
     const el = container?.$el || container;
     if (el) {
         el.scrollTop = el.scrollHeight;
@@ -201,9 +231,12 @@ const sendMessage = async () => {
     await scrollToBottom();
 
     try {
-        const response = await axios.post(chatsMessage({ session: sessionId }).url, {
-            message: userMessage,
-        });
+        const response = await axios.post(
+            chatsMessage({ session: sessionId }).url,
+            {
+                message: userMessage,
+            },
+        );
 
         isLoading.value = false;
 
@@ -306,7 +339,7 @@ onMounted(() => {
                     </Button>
                 </div>
 
-                <div class="scrollbar-thin flex-1 overflow-y-auto p-2">
+                <div class="flex-1 scrollbar-thin overflow-y-auto p-2">
                     <div
                         v-if="sessions.length === 0"
                         class="flex h-full flex-col items-center justify-center gap-2 px-6 text-center"
@@ -319,7 +352,9 @@ onMounted(() => {
                         <p class="text-sm font-semibold text-foreground">
                             No chats yet
                         </p>
-                        <p class="text-xs leading-relaxed text-muted-foreground">
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground"
+                        >
                             Every conversation you have with Echo from the chat
                             widget will be saved here.
                         </p>
@@ -364,7 +399,10 @@ onMounted(() => {
                                     class="group/item relative mb-0.5"
                                 >
                                     <Link
-                                        :href="chatsShow({ session: session.id }).url"
+                                        :href="
+                                            chatsShow({ session: session.id })
+                                                .url
+                                        "
                                         class="flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 transition-colors"
                                         :class="
                                             activeSession?.id === session.id
@@ -395,7 +433,9 @@ onMounted(() => {
                                         type="button"
                                         title="Delete chat"
                                         class="absolute top-1/2 right-1.5 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground/60 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-500 sm:opacity-0 sm:group-hover/item:opacity-100 sm:focus:opacity-100"
-                                        @click.prevent="openDeleteModal(session)"
+                                        @click.prevent="
+                                            openDeleteModal(session)
+                                        "
                                     >
                                         <Trash2 class="h-3.5 w-3.5" />
                                     </button>
@@ -414,7 +454,7 @@ onMounted(() => {
                 ]"
             >
                 <CardHeader
-                    class="flex flex-row items-center justify-between space-y-0 border-b border-border/40 py-3 pl-4 pr-3"
+                    class="flex flex-row items-center justify-between space-y-0 border-b border-border/40 py-3 pr-3 pl-4"
                 >
                     <div class="flex min-w-0 items-center gap-2.5">
                         <Link
@@ -451,10 +491,7 @@ onMounted(() => {
                                         : 'Continued conversation with Echo'
                                 }}
                             </p>
-                            <p
-                                v-else
-                                class="text-[11px] text-muted-foreground"
-                            >
+                            <p v-else class="text-[11px] text-muted-foreground">
                                 Pick a conversation from your history
                             </p>
                         </div>
@@ -463,7 +500,7 @@ onMounted(() => {
 
                 <CardContent
                     ref="scrollContainer"
-                    class="scrollbar-thin flex-1 space-y-3 overflow-y-auto p-4"
+                    class="flex-1 scrollbar-thin space-y-3 overflow-y-auto p-4"
                 >
                     <div
                         v-if="!activeSession"
@@ -490,7 +527,9 @@ onMounted(() => {
                             :key="msg.id ?? index"
                             class="animate-fade-in flex w-full max-w-[88%] gap-2"
                             :class="[
-                                msg.role === 'user' ? 'ml-auto flex-row-reverse' : '',
+                                msg.role === 'user'
+                                    ? 'ml-auto flex-row-reverse'
+                                    : '',
                             ]"
                         >
                             <div
@@ -501,7 +540,10 @@ onMounted(() => {
                                         : 'overflow-hidden border border-border/60 bg-muted/80',
                                 ]"
                             >
-                                <User v-if="msg.role === 'user'" class="h-3.5 w-3.5" />
+                                <User
+                                    v-if="msg.role === 'user'"
+                                    class="h-3.5 w-3.5"
+                                />
                                 <img
                                     v-else-if="branding.logoUrl"
                                     :src="branding.logoUrl"
@@ -599,7 +641,7 @@ onMounted(() => {
                     </form>
                     <p
                         v-else
-                        class="w-full py-1 text-center text-[11px] italic text-muted-foreground/70"
+                        class="w-full py-1 text-center text-[11px] text-muted-foreground/70 italic"
                     >
                         Select a conversation to continue chatting
                     </p>
@@ -614,7 +656,9 @@ onMounted(() => {
             description="This conversation and all of its messages will be permanently deleted."
             @close="sessionToDelete = null"
         >
-            <div class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <div
+                class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+            >
                 <Button
                     variant="outline"
                     class="w-full sm:w-auto"
@@ -624,7 +668,7 @@ onMounted(() => {
                 </Button>
                 <Button
                     variant="destructive"
-                    class="gap-2 w-full sm:w-auto"
+                    class="w-full gap-2 sm:w-auto"
                     @click="confirmDelete"
                 >
                     <Trash2 class="h-4 w-4" />
