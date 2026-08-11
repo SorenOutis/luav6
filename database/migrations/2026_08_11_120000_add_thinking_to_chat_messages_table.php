@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('chat_messages', 'thinking')) {
+            return;
+        }
+
         Schema::table('chat_messages', function (Blueprint $table) {
             $table->longText('thinking')->nullable()->after('content');
         });
@@ -21,6 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasColumn('chat_messages', 'thinking')) {
+            return;
+        }
+
         Schema::table('chat_messages', function (Blueprint $table) {
             $table->dropColumn('thinking');
         });

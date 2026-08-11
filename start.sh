@@ -40,6 +40,12 @@ case "$ROLE" in
         # provider when QUEUE_CONNECTION changes between image builds.
         php artisan package:discover --ansi
 
+        # Apply pending schema changes before Octane begins accepting traffic.
+        # The shared cache lock prevents multiple replicas from running the
+        # same migration batch concurrently during rolling deployments.
+        echo "[start] applying pending database migrations..."
+        php artisan migrate --force --isolated
+
         # Rebuild Laravel's caches so the container boots with the exact
         # config/routes/views baked in for this deploy.
         php artisan config:cache
@@ -193,7 +199,7 @@ EOF
 
     migrate|migration)
         echo "[start] role=migrate — running database migrations..."
-        exec php artisan migrate --force
+        exec php artisan migrate --force --isolated
         ;;
 
     *)
