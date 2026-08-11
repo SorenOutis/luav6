@@ -235,9 +235,9 @@ const showSuggestions = computed(() => {
 
 const currentTitle = computed(() => activeSession.value?.title || 'New chat');
 
-const isNewChat = computed(
-    () => Boolean(activeSession.value) && messages.value.length === 0,
-);
+// True whenever the welcome view should be shown — either no conversation is
+// open yet (the Chats index) or the open conversation has no messages.
+const isNewChat = computed(() => messages.value.length === 0);
 
 const firstName = computed(() => {
     const user = page.props.auth.user;
@@ -261,9 +261,7 @@ const greetingLine = computed(() =>
 
 const activeSubtitle = computed(() => {
     if (isAdmin.value) return 'Teacher mode — workspace tools enabled';
-    return isNewChat.value
-        ? 'Start a new conversation with Echo'
-        : 'Continued conversation with Echo';
+    return 'Your intelligent companion';
 });
 
 /* ──────────────── Chat actions ──────────────── */
@@ -651,9 +649,13 @@ const streamMessage = async (
         }
 
         if (!assistantText) {
-            // The stream ended without any content — remove the placeholder so
-            // an empty bubble doesn't linger.
-            messages.value.splice(assistantIndex, 1);
+            // The stream ended without any content. Instead of silently
+            // removing the placeholder (which made Echo's reply appear to
+            // never arrive), type a soft error into the same bubble.
+            await typeMessage(
+                'Sorry, something went wrong. Please try again in a moment.',
+                assistantIndex,
+            );
         } else {
             messages.value[assistantIndex].typing = false;
         }
@@ -682,13 +684,55 @@ const streamMessage = async (
     }
 };
 
+const truncateTitle = (text: string, length = 60): string =>
+    text.length > length ? `${text.slice(0, length).trimEnd()}…` : text;
+
 const sendMessage = async () => {
     if (!inputMessage.value.trim() || isLoading.value) return;
-    if (!activeSession.value) return;
+    // Claim the loading state up front — session creation below is async, and
+    // without this a quick double-Enter could create two sessions.
+    isLoading.value = true;
+
+    // Sending from the welcome view with no open conversation — create the
+    // persisted session first so the first message lands somewhere.
+    if (!activeSession.value) {
+        try {
+            const response = await axios.post(chatsStore().url);
+            const created = response.data.session as { id: number };
+            activeSession.value = {
+                id: created.id,
+                title: 'New chat',
+                messages: [],
+            };
+        } catch (error) {
+            console.error('Failed to create a new chat:', error);
+            isLoading.value = false;
+            return;
+        }
+    }
 
     const userMessage = inputMessage.value.trim();
     const sessionId = activeSession.value.id;
     const userAttachments = [...attachments.value];
+
+    // Mirror the server's auto-titling (first user message) so the header and
+    // sidebar reflect the real title immediately instead of "New chat".
+    if (
+        !activeSession.value.title ||
+        activeSession.value.title === 'New chat'
+    ) {
+        activeSession.value = {
+            ...activeSession.value,
+            title: truncateTitle(userMessage),
+        };
+        updateSessionInList({
+            ...activeSession.value,
+            messages: [
+                ...messages.value,
+                { role: 'user', content: userMessage },
+            ],
+        });
+    }
 
     messages.value.push({
         role: 'user',
@@ -697,7 +741,6 @@ const sendMessage = async () => {
     });
     inputMessage.value = '';
     attachments.value = [];
-    isLoading.value = true;
     await scrollToBottom();
 
     try {
@@ -811,8 +854,8 @@ onBeforeUnmount(() => {
                         <p
                             class="text-xs leading-relaxed text-muted-foreground"
                         >
-                            Every conversation you have with Echo from the chat
-                            widget will be saved here.
+                            Every conversation you have with Echo will be saved
+                            here.
                         </p>
                         <Button
                             size="sm"
@@ -972,14 +1015,8 @@ onBeforeUnmount(() => {
                             >
                                 {{ currentTitle }}
                             </h1>
-                            <p
-                                v-if="activeSession"
-                                class="text-[11px] text-muted-foreground"
-                            >
+                            <p class="text-[11px] text-muted-foreground">
                                 {{ activeSubtitle }}
-                            </p>
-                            <p v-else class="text-[11px] text-muted-foreground">
-                                Pick a conversation from your history
                             </p>
                         </div>
                     </div>
@@ -989,25 +1026,7 @@ onBeforeUnmount(() => {
                     ref="scrollContainer"
                     class="flex-1 scrollbar-thin space-y-3 overflow-y-auto p-4"
                 >
-                    <div
-                        v-if="!activeSession"
-                        class="flex h-full flex-col items-center justify-center gap-2 text-center"
-                    >
-                        <div
-                            class="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10"
-                        >
-                            <MessageSquare class="h-7 w-7 text-primary" />
-                        </div>
-                        <p class="text-sm font-semibold text-foreground">
-                            Start a conversation with Echo
-                        </p>
-                        <p class="max-w-xs text-xs text-muted-foreground">
-                            Your saved conversations appear in the sidebar —
-                            pick one to continue where you left off.
-                        </p>
-                    </div>
-
-                    <template v-else-if="isNewChat">
+                    <template v-if="isNewChat">
                         <!-- The inner wrapper centers itself with auto margins,
                              so the welcome content can't be clipped at the top
                              on short viewports (unlike justify-center). -->
@@ -1177,8 +1196,12 @@ onBeforeUnmount(() => {
                                 </div>
                                 {{ msg.content }}
                             </div>
+                            <!-- Chained to the user-bubble v-if above: user
+                                 messages must NEVER fall through into the
+                                 assistant branches (a fresh v-if here used to
+                                 double every user bubble). -->
                             <div
-                                v-if="msg.typing && !msg.content"
+                                v-else-if="msg.typing && !msg.content"
                                 class="rounded-2xl rounded-tl-sm border border-border/40 bg-muted/40 p-3 shadow-xs"
                             >
                                 <div class="flex items-center gap-1.5">
@@ -1245,7 +1268,6 @@ onBeforeUnmount(() => {
                     </transition>
 
                     <form
-                        v-if="activeSession"
                         class="flex w-full flex-col items-stretch gap-1.5"
                         @submit.prevent="sendMessage"
                     >
@@ -1335,12 +1357,6 @@ onBeforeUnmount(() => {
                             </Button>
                         </div>
                     </form>
-                    <p
-                        v-else
-                        class="w-full py-1 text-center text-[11px] text-muted-foreground/70 italic"
-                    >
-                        Choose a chat from the sidebar to continue
-                    </p>
                 </CardFooter>
             </Card>
         </div>

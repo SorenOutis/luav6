@@ -747,9 +747,13 @@ const streamMessage = async (
         }
 
         if (!assistantText) {
-            // The stream ended without any content — remove the placeholder so
-            // an empty bubble doesn't linger.
-            messages.value.splice(assistantIndex, 1);
+            // The stream ended without any content. Instead of silently
+            // removing the placeholder (which made Echo's reply appear to
+            // never arrive), type a soft error into the same bubble.
+            await typeMessage(
+                'Sorry, something went wrong. Please try again in a moment.',
+                assistantIndex,
+            );
         } else {
             messages.value[assistantIndex].typing = false;
         }
@@ -1041,9 +1045,11 @@ watch(inputMessage, () => {
                                 </template>
                                 <!-- While the reply is pending, show typing
                                 dots; raw text while it streams in; snap to
-                                rendered markdown when done. -->
+                                rendered markdown when done. Chained to the
+                                user template above so user messages don't
+                                also render the markdown copy. -->
                                 <div
-                                    v-if="msg.typing && !msg.content"
+                                    v-else-if="msg.typing && !msg.content"
                                     class="flex items-center gap-1.5 py-0.5"
                                 >
                                     <span
