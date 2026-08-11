@@ -1,5 +1,20 @@
 name: luav6
 
+# ── R2 (Cloudflare) object storage env ──────────────────────────────────
+# PUBLIC_DISK=s3 points the public disk (avatars, badges, covers, logo) at R2.
+# Wired through ${VAR} interpolation so env vars set in the deploy platform
+# (e.g. Dokploy UI -> .env) reach the container.
+x-r2-env: &r2-env
+  FILESYSTEM_DISK: "${FILESYSTEM_DISK:-local}"
+  PUBLIC_DISK: "${PUBLIC_DISK:-local}"
+  AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"
+  AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY:-}"
+  AWS_DEFAULT_REGION: "${AWS_DEFAULT_REGION:-auto}"
+  AWS_BUCKET: "${AWS_BUCKET:-}"
+  AWS_ENDPOINT: "${AWS_ENDPOINT:-}"
+  AWS_URL: "${AWS_URL:-}"
+  AWS_USE_PATH_STYLE_ENDPOINT: "${AWS_USE_PATH_STYLE_ENDPOINT:-false}"
+
 # ── Shared container runtime settings for every app role ─────────────────
 # All build from the same image; only CONTAINER_ROLE differs.
 x-app: &app
@@ -31,6 +46,7 @@ x-app: &app
     HORIZON_PROCESSES: "${QUEUE_WORKER_PROCESSES:-4}"
     HORIZON_TRIES: "${QUEUE_TRIES:-3}"
     HORIZON_TIMEOUT: "${QUEUE_TIMEOUT:-300}"
+    <<: *r2-env
 
 services:
   # Web server + queue worker: Laravel Octane on FrankenPHP. The `octane`
@@ -42,12 +58,36 @@ services:
     <<: *app
     environment:
       CONTAINER_ROLE: octane
+      <<: *r2-env
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
       - app_storage:/app/storage
     depends_on:
       db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Queue runner: Laravel Horizon manages Redis-backed queues; for every other
+  # queue connection this role automatically falls back to Supervisor-managed
+  # queue:work processes. With Redis, check Horizon status using:
+  #   docker compose exec horizon php artisan horizon:status
+  horizon:
+    <<: *app
+    environment:
+      CONTAINER_ROLE: horizon
+      <<: *r2-env
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      app:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -67,6 +107,7 @@ services:
     <<: *app
     environment:
       CONTAINER_ROLE: scheduler
+      <<: *r2-env
     volumes:
       - app_storage:/app/storage
     depends_on:
