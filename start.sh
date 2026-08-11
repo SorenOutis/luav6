@@ -20,6 +20,18 @@ mkdir -p \
     bootstrap/cache
 touch database/database.sqlite 2>/dev/null || true
 
+# ── Deprecation log channel ──────────────────────────────────────────────
+# Production was throwing "EMERGENCY: Unable to create configured logger. ...
+# Log [deprecations] is not defined." every time a PHP/library deprecation
+# fired (e.g. the guzzlehttp/guzzle "Add-Padding" warning during the pwned-
+# password check). Laravel's HandleExceptions forwards those to the channel
+# named by LOG_DEPRECATIONS_CHANNEL, and if that name isn't a configured
+# channel under logging.channels.* it falls back to the emergency logger.
+# Force it to the built-in "null" (NullHandler) channel so deprecations are
+# silently discarded instead of crashing the logger. Must be exported BEFORE
+# `php artisan config:cache` bakes the value into the cached config.
+export LOG_DEPRECATIONS_CHANNEL=null
+
 case "$ROLE" in
     octane|web|server|app)
         echo "[start] role=octane — warming caches and starting FrankenPHP + queue worker..."
