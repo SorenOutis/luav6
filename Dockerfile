@@ -46,7 +46,7 @@ RUN apt-get update \
 # stages where app/ is present) stay reachable via PSR-4.
 FROM base AS vendor
 WORKDIR /app
-ARG QUEUE_CONNECTION=database
+ARG QUEUE_CONNECTION=redis
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-progress --prefer-dist \
         --optimize-autoloader --no-scripts
