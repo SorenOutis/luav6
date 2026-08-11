@@ -43,13 +43,21 @@ class ChatHistoryController extends Controller
      */
     public function store(Request $request)
     {
-        $session = $request->user()->chatSessions()->create([
-            'title' => 'New chat',
-        ]);
+        try {
+            $session = $request->user()->chatSessions()->create([
+                'title' => 'New chat',
+            ]);
 
-        return response()->json([
-            'session' => ['id' => $session->id],
-        ]);
+            return response()->json([
+                'session' => ['id' => $session->id],
+            ]);
+        } catch (Throwable $e) {
+            $errorId = $this->logError('Chat History Store Error', $e);
+
+            return response()->json([
+                'error' => $this->errorPayload($e, $errorId),
+            ], 500);
+        }
     }
 
     /**
@@ -110,10 +118,11 @@ class ChatHistoryController extends Controller
                 'session' => $this->sessionPayload($session),
             ]);
         } catch (Throwable $e) {
-            Log::error('Chat History Controller Error: '.$e->getMessage());
+            $errorId = $this->logError('Chat History Controller Error', $e, $session);
 
             return response()->json([
                 'response' => 'Sorry, something went wrong. Please try again in a moment.',
+                'error' => $this->errorPayload($e, $errorId),
             ], 500);
         }
     }
@@ -165,23 +174,43 @@ class ChatHistoryController extends Controller
             return $this->chatService
                 ->stream($request->message, $historyData, $userContext, $user, $sdkAttachments)
                 ->then(function ($response) use ($session) {
-                    $text = (string) $response->text;
+                    try {
+                        $text = (string) $response->text;
 
-                    if (trim($text) !== '') {
-                        $thinking = $this->chatService->combineReasoning($response->events);
+                        if (trim($text) !== '') {
+                            $thinking = $this->chatService->combineReasoning($response->events);
 
-                        $session->messages()->create([
-                            'role' => 'assistant',
-                            'content' => $text,
-                            'thinking' => $thinking !== '' ? $thinking : null,
-                        ]);
-                        $session->touch();
+                            $session->messages()->create([
+                                'role' => 'assistant',
+                                'content' => $text,
+                                'thinking' => $thinking !== '' ? $thinking : null,
+                            ]);
+                            $session->touch();
+                        }
+                    } catch (Throwable $e) {
+                        // Persisting the assistant turn after the stream is a
+                        // separate failure from generating the reply — log it
+                        // with its own correlation id so it isn't lost.
+                        $this->logError('Chat History Stream Persist Error', $e, $session);
                     }
                 });
         } catch (Throwable $e) {
-            Log::error('Chat History Stream Error: '.$e->getMessage());
+            $errorId = $this->logError('Chat History Stream Error', $e, $session);
+            $payload = $this->errorPayload($e, $errorId);
 
-            return $this->chatService->streamText('Sorry, something went wrong. Please try again in a moment.');
+            $message = 'Sorry, something went wrong. Please try again in a moment.';
+
+            // Surface the correlation id so the failure can be reported and
+            // matched to a log line; expose the raw detail only to admins or
+            // when APP_DEBUG is enabled.
+            if ($request->user()?->is_admin || config('app.debug')) {
+                $message .= " (Reference: {$payload['id']})";
+                if ($payload['message'] !== 'An unexpected error occurred.') {
+                    $message .= " — {$payload['message']}";
+                }
+            }
+
+            return $this->chatService->streamText($message);
         }
     }
 
@@ -199,9 +228,17 @@ class ChatHistoryController extends Controller
     {
         $session = $this->sessionForUser($request, $session);
 
-        $session->delete();
+        try {
+            $session->delete();
 
-        return response()->json(['ok' => true]);
+            return response()->json(['ok' => true]);
+        } catch (Throwable $e) {
+            $errorId = $this->logError('Chat History Destroy Error', $e, $session);
+
+            return response()->json([
+                'error' => $this->errorPayload($e, $errorId),
+            ], 500);
+        }
     }
 
     private function sessionForUser(Request $request, ChatSession $session): ChatSession
@@ -211,6 +248,46 @@ class ChatHistoryController extends Controller
         }
 
         return $session;
+    }
+
+    /**
+     * Log a thrown exception with full diagnostics and return a correlation id
+     * that the frontend/support can use to find this exact failure in the logs.
+     *
+     * The exception object is passed as the `exception` context key so Monolog
+     * renders the full class, message and stack trace automatically.
+     */
+    private function logError(string $context, Throwable $e, ?ChatSession $session = null): string
+    {
+        $request = request();
+        $errorId = Str::uuid()->toString();
+
+        Log::error($context, [
+            'error_id' => $errorId,
+            'exception' => $e,
+            'user_id' => $request->user()?->id,
+            'session_id' => $session?->id,
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+        ]);
+
+        return $errorId;
+    }
+
+    /**
+     * Build the client-facing error structure. The correlation `id` is always
+     * returned so failures can be referenced; the exception class and raw
+     * message are only exposed when APP_DEBUG is enabled, never to students.
+     *
+     * @return array{id: string, type: string|null, message: string}
+     */
+    private function errorPayload(Throwable $e, string $errorId): array
+    {
+        return [
+            'id' => $errorId,
+            'type' => config('app.debug') ? $e::class : null,
+            'message' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
+        ];
     }
 
     /**

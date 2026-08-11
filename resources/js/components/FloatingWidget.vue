@@ -39,6 +39,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Textarea } from '@/components/ui/textarea';
+import { resolveChatError, withErrorReference } from '@/lib/chatErrors';
 import { renderMarkdown } from '@/lib/markdown';
 
 const page = usePage();
@@ -656,12 +657,17 @@ const sendMessageNonStreaming = async (userMessage: string) => {
         }
 
         messages.value.splice(messageIndex, 1);
-        const err = error as { response?: { data?: { response?: string } } };
-        console.error('Chat error:', error);
-        const errorMessage =
-            err.response?.data?.response ||
-            'Sorry, something went wrong. Please try again in a moment.';
-        await typeMessage(errorMessage, undefined, controller.signal);
+        const resolved = resolveChatError(error);
+        console.error('Chat error:', {
+            reference: resolved.reference,
+            detail: resolved.detail,
+            cause: resolved.cause,
+        });
+        await typeMessage(
+            withErrorReference(resolved.message, resolved.reference),
+            undefined,
+            controller.signal,
+        );
     } finally {
         isLoading.value = false;
         if (streamAbortController === controller) {
@@ -716,9 +722,20 @@ const streamMessage = async (
         });
 
         if (!response.ok) {
-            throw new Error(
+            let streamErrorData: unknown;
+            try {
+                streamErrorData = await response.json();
+            } catch {
+                // Non-JSON error body — fall through with undefined data.
+            }
+            const streamError = new Error(
                 `Stream request failed with status ${response.status}`,
-            );
+            ) as Error & { response?: { status: number; data?: unknown } };
+            streamError.response = {
+                status: response.status,
+                data: streamErrorData,
+            };
+            throw streamError;
         }
 
         const contentType = response.headers.get('content-type') ?? '';
@@ -890,7 +907,12 @@ const sendMessage = async () => {
         // Try streaming first; fall back to the classic JSON endpoint.
         await streamMessage(userMessage, userAttachments);
     } catch (error) {
-        console.warn('Streaming failed, falling back to non-streaming:', error);
+        const resolved = resolveChatError(error);
+        console.warn('Streaming failed, falling back to non-streaming:', {
+            reference: resolved.reference,
+            detail: resolved.detail,
+            cause: resolved.cause,
+        });
         await sendMessageNonStreaming(userMessage);
     } finally {
         isLoading.value = false;

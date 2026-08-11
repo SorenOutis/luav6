@@ -21,6 +21,44 @@ class ChatController extends Controller
 
     public function __construct(protected ChatService $chatService) {}
 
+    /**
+     * Log a thrown exception with full diagnostics and return a correlation id
+     * the frontend/support can use to find this exact failure in the logs.
+     * The exception object renders as a full class + message + stack trace.
+     */
+    private function logError(string $context, Throwable $e): string
+    {
+        $request = request();
+        $errorId = Str::uuid()->toString();
+
+        Log::error($context, [
+            'error_id' => $errorId,
+            'exception' => $e,
+            'user_id' => $request->user()?->id,
+            'session_id' => $request->input('session_id'),
+            'url' => $request->fullUrl(),
+            'method' => $request->method(),
+        ]);
+
+        return $errorId;
+    }
+
+    /**
+     * Build the client-facing error structure. The correlation `id` is always
+     * returned; the exception class and raw message are only exposed when
+     * APP_DEBUG is enabled, never to students.
+     *
+     * @return array{id: string, type: string|null, message: string}
+     */
+    private function errorPayload(Throwable $e, string $errorId): array
+    {
+        return [
+            'id' => $errorId,
+            'type' => config('app.debug') ? $e::class : null,
+            'message' => config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
+        ];
+    }
+
     public function __invoke(Request $request)
     {
         if (! Setting::get('ai_chat_enabled', true)) {
@@ -75,10 +113,11 @@ class ChatController extends Controller
                 'session_id' => $sessionId,
             ]);
         } catch (Throwable $e) {
-            Log::error('Chat Controller Error: '.$e->getMessage());
+            $errorId = $this->logError('Chat Controller Error', $e);
 
             return response()->json([
                 'response' => 'Sorry, something went wrong. Please try again in a moment.',
+                'error' => $this->errorPayload($e, $errorId),
             ], 500);
         }
     }
@@ -133,20 +172,37 @@ class ChatController extends Controller
             return $this->chatService
                 ->stream($request->message, $historyData, $userContext, $user, $sdkAttachments)
                 ->then(function ($response) use ($sessionId) {
-                    $text = (string) $response->text;
+                    try {
+                        $text = (string) $response->text;
 
-                    if ($sessionId && trim($text) !== '') {
-                        $this->persistExchange((int) $sessionId, [
-                            'role' => 'assistant',
-                            'content' => $text,
-                            'thinking' => $this->chatService->combineReasoning($response->events),
-                        ]);
+                        if ($sessionId && trim($text) !== '') {
+                            $this->persistExchange((int) $sessionId, [
+                                'role' => 'assistant',
+                                'content' => $text,
+                                'thinking' => $this->chatService->combineReasoning($response->events),
+                            ]);
+                        }
+                    } catch (Throwable $e) {
+                        $this->logError('Chat Stream Persist Error', $e);
                     }
                 });
         } catch (Throwable $e) {
-            Log::error('Chat Stream Error: '.$e->getMessage());
+            $errorId = $this->logError('Chat Stream Error', $e);
+            $payload = $this->errorPayload($e, $errorId);
 
-            return $this->chatService->streamText('Sorry, something went wrong. Please try again in a moment.');
+            $message = 'Sorry, something went wrong. Please try again in a moment.';
+
+            // Surface the correlation id so the failure can be reported and
+            // matched to a log line; expose the raw detail only to admins or
+            // when APP_DEBUG is enabled.
+            if ($request->user()?->is_admin || config('app.debug')) {
+                $message .= " (Reference: {$payload['id']})";
+                if ($payload['message'] !== 'An unexpected error occurred.') {
+                    $message .= " — {$payload['message']}";
+                }
+            }
+
+            return $this->chatService->streamText($message);
         }
     }
 
