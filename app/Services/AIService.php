@@ -255,9 +255,11 @@ class AIService
             $result = ['score' => 0.0];
 
             if ($response instanceof Response && $response->successful()) {
-                $rawText = $response->json('response');
-                $parsed = $this->extractJsonFromResponse($rawText);
-                $result = $this->buildResultFromData($parsed ?: [], $essay);
+                $rawPayload = $response->json('response') ?? $response->json();
+                if ($rawPayload !== null) {
+                    $parsed = $this->extractJsonFromResponse($rawPayload);
+                    $result = $this->buildResultFromData($parsed ?: [], $essay);
+                }
             } elseif ($response) {
                 $errorMsg = $response instanceof Response ? $response->body() : get_class($response);
                 Log::error("AI Ollama assessment failed for index $index: $errorMsg");
@@ -315,9 +317,9 @@ class AIService
 
             if ($response instanceof Response && $response->successful()) {
                 $data = $response->json();
-                $rawText = $data['result']['response'] ?? $data['response'] ?? null;
-                if ($rawText) {
-                    $parsed = $this->extractJsonFromResponse($rawText);
+                $rawPayload = $data['result']['response'] ?? $data['result'] ?? $data['response'] ?? null;
+                if ($rawPayload !== null) {
+                    $parsed = $this->extractJsonFromResponse($rawPayload);
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
@@ -384,9 +386,9 @@ class AIService
 
             if ($response instanceof Response && $response->successful()) {
                 $data = $response->json();
-                $rawText = $data['choices'][0]['message']['content'] ?? null;
-                if ($rawText) {
-                    $parsed = $this->extractJsonFromResponse($rawText);
+                $rawPayload = $data['choices'][0]['message']['content'] ?? null;
+                if ($rawPayload !== null) {
+                    $parsed = $this->extractJsonFromResponse($rawPayload);
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
@@ -500,9 +502,9 @@ class AIService
 
             if ($response instanceof Response && $response->successful()) {
                 $data = $response->json();
-                $rawText = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
-                if ($rawText) {
-                    $parsed = $this->extractJsonFromResponse($rawText);
+                $rawPayload = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                if ($rawPayload !== null) {
+                    $parsed = $this->extractJsonFromResponse($rawPayload);
                     $result = $this->buildResultFromData($parsed ?: [], $essay);
                 }
             } elseif ($response) {
@@ -524,14 +526,33 @@ class AIService
 
     /**
      * Resilient JSON extractor that parses JSON objects from LLM outputs.
+     * Accepts strings, arrays, or objects returned by different providers.
      */
-    private function extractJsonFromResponse(?string $rawText): ?array
+    private function extractJsonFromResponse(mixed $rawInput): ?array
     {
-        if ($rawText === null || trim($rawText) === '') {
+        if ($rawInput === null) {
             return null;
         }
 
-        $text = trim($rawText);
+        if (is_array($rawInput)) {
+            if (isset($rawInput['response']) && (is_string($rawInput['response']) || is_array($rawInput['response']))) {
+                $nested = $this->extractJsonFromResponse($rawInput['response']);
+                if (is_array($nested)) {
+                    return $nested;
+                }
+            }
+
+            return $rawInput;
+        }
+
+        if (! is_string($rawInput)) {
+            return null;
+        }
+
+        $text = trim($rawInput);
+        if ($text === '') {
+            return null;
+        }
 
         // 1. Direct decode attempt
         $data = json_decode($text, true);
