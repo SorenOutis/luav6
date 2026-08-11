@@ -33,6 +33,11 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- Force a clean cookie path: git-bash/MSYS2 mangles SESSION_PATH=/ into
+             "C:/Program Files/Git/" when spawning native Windows processes, which
+             makes Symfony's Cookie validation throw in every session-backed test.
+             env() reads $_SERVER first, so it must be forced as a <server> entry. -->
+        <server name="SESSION_PATH" value="/" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

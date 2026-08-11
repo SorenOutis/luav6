@@ -1,102 +1,102 @@
 <?php
 
-use App\Http\Controllers\ChatController;
+use App\Services\ChatService;
 
 /**
- * Tests for the server-side toxicity guardrail in ChatController.
+ * Tests for the server-side toxicity guardrail in ChatService.
  *
- * Verifies that the isToxic() and normalizeMessage() private methods
- * correctly detect profanity, insults, harassment, and creative spellings/leetspeak.
+ * Verifies that the isToxic() and normalizeMessage() methods correctly
+ * detect profanity, insults, harassment, and creative spellings/leetspeak.
  */
 
 // ─── normalizeMessage tests ─────────────────────────────────
 
 test('normalizeMessage converts leetspeak 1 → i', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, 'sh1t');
+    $result = $method->invoke($service, 'sh1t');
 
     expect($result)->toBe('shit');
 });
 
 test('normalizeMessage converts leetspeak 4 → a', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, 'b4stard');
+    $result = $method->invoke($service, 'b4stard');
 
     expect($result)->toBe('bastard');
 });
 
 test('normalizeMessage converts leetspeak @ → a', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, 'b@stard');
+    $result = $method->invoke($service, 'b@stard');
 
     expect($result)->toBe('bastard');
 });
 
 test('normalizeMessage converts leetspeak 5 → s', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, '5hit');
+    $result = $method->invoke($service, '5hit');
 
     expect($result)->toBe('shit');
 });
 
 test('normalizeMessage converts leetspeak 0 → o', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, 'hell0');
+    $result = $method->invoke($service, 'hell0');
 
     expect($result)->toBe('hello');
 });
 
 test('normalizeMessage converts leetspeak 3 → e', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, 'cr3ap');
+    $result = $method->invoke($service, 'cr3ap');
 
     expect($result)->toBe('creap');
 });
 
 test('normalizeMessage converts $ → s', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, '$hit');
+    $result = $method->invoke($service, '$hit');
 
     expect($result)->toBe('shit');
 });
 
 test('normalizeMessage converts multiple leetspeak chars in one message', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, 'sh1t 1s n0t g00d');
+    $result = $method->invoke($service, 'sh1t 1s n0t g00d');
 
     expect($result)->toBe('shit is not good');
 });
 
 test('normalizeMessage handles mixed case message', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'normalizeMessage');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
-    $result = $method->invoke($controller, 'What 4 sh1tty d4y');
+    $result = $method->invoke($service, 'What 4 sh1tty d4y');
 
     expect($result)->toBe('What a shitty day');
 });
@@ -104,108 +104,108 @@ test('normalizeMessage handles mixed case message', function () {
 // ─── isToxic tests ───────────────────────────────────────────
 
 test('isToxic detects basic swear words', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'fuck this'))->toBeTrue();
-    expect($method->invoke($controller, 'bullshit'))->toBeTrue();
-    expect($method->invoke($controller, 'asshole'))->toBeTrue();
-    expect($method->invoke($controller, 'bitch'))->toBeTrue();
-    expect($method->invoke($controller, 'cunt'))->toBeTrue();
+    expect($method->invoke($service, 'fuck this'))->toBeTrue();
+    expect($method->invoke($service, 'bullshit'))->toBeTrue();
+    expect($method->invoke($service, 'asshole'))->toBeTrue();
+    expect($method->invoke($service, 'bitch'))->toBeTrue();
+    expect($method->invoke($service, 'cunt'))->toBeTrue();
 });
 
 test('isToxic detects abbreviations', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'wtf'))->toBeTrue();
-    expect($method->invoke($controller, 'stfu'))->toBeTrue();
-    expect($method->invoke($controller, 'fkn'))->toBeTrue();
-    expect($method->invoke($controller, 'kys'))->toBeTrue();
+    expect($method->invoke($service, 'wtf'))->toBeTrue();
+    expect($method->invoke($service, 'stfu'))->toBeTrue();
+    expect($method->invoke($service, 'fkn'))->toBeTrue();
+    expect($method->invoke($service, 'kys'))->toBeTrue();
 });
 
 test('isToxic detects insults', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'you are stupid'))->toBeTrue();
-    expect($method->invoke($controller, 'you idiot'))->toBeTrue();
-    expect($method->invoke($controller, 'dumb'))->toBeTrue();
-    expect($method->invoke($controller, 'loser'))->toBeTrue();
-    expect($method->invoke($controller, 'retard'))->toBeTrue();
+    expect($method->invoke($service, 'you are stupid'))->toBeTrue();
+    expect($method->invoke($service, 'you idiot'))->toBeTrue();
+    expect($method->invoke($service, 'dumb'))->toBeTrue();
+    expect($method->invoke($service, 'loser'))->toBeTrue();
+    expect($method->invoke($service, 'retard'))->toBeTrue();
 });
 
 test('isToxic detects harassment', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'stop bullying'))->toBeTrue();
-    expect($method->invoke($controller, 'harass'))->toBeTrue();
-    expect($method->invoke($controller, 'racist'))->toBeTrue();
-    expect($method->invoke($controller, 'sexist'))->toBeTrue();
+    expect($method->invoke($service, 'stop bullying'))->toBeTrue();
+    expect($method->invoke($service, 'harass'))->toBeTrue();
+    expect($method->invoke($service, 'racist'))->toBeTrue();
+    expect($method->invoke($service, 'sexist'))->toBeTrue();
 });
 
 test('isToxic detects leetspeak creative spellings', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'sh1t'))->toBeTrue();
-    expect($method->invoke($controller, 'b@stard'))->toBeTrue();
-    expect($method->invoke($controller, 'd1ck'))->toBeTrue();
-    expect($method->invoke($controller, 'cr4p'))->toBeTrue();
-    expect($method->invoke($controller, '$lut'))->toBeTrue();
-    expect($method->invoke($controller, '5h1t'))->toBeTrue();
-    expect($method->invoke($controller, 'fck'))->toBeTrue();
+    expect($method->invoke($service, 'sh1t'))->toBeTrue();
+    expect($method->invoke($service, 'b@stard'))->toBeTrue();
+    expect($method->invoke($service, 'd1ck'))->toBeTrue();
+    expect($method->invoke($service, 'cr4p'))->toBeTrue();
+    expect($method->invoke($service, '$lut'))->toBeTrue();
+    expect($method->invoke($service, '5h1t'))->toBeTrue();
+    expect($method->invoke($service, 'fck'))->toBeTrue();
 });
 
 test('isToxic allows clean academic messages', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'What are my upcoming assignments?'))->toBeFalse();
-    expect($method->invoke($controller, 'Can you help me with my math homework?'))->toBeFalse();
-    expect($method->invoke($controller, 'Show me my learning progress'))->toBeFalse();
-    expect($method->invoke($controller, 'What exams do I have coming up?'))->toBeFalse();
-    expect($method->invoke($controller, 'Hello, how are you?'))->toBeFalse();
-    expect($method->invoke($controller, 'Thank you for your help'))->toBeFalse();
+    expect($method->invoke($service, 'What are my upcoming assignments?'))->toBeFalse();
+    expect($method->invoke($service, 'Can you help me with my math homework?'))->toBeFalse();
+    expect($method->invoke($service, 'Show me my learning progress'))->toBeFalse();
+    expect($method->invoke($service, 'What exams do I have coming up?'))->toBeFalse();
+    expect($method->invoke($service, 'Hello, how are you?'))->toBeFalse();
+    expect($method->invoke($service, 'Thank you for your help'))->toBeFalse();
 });
 
 test('isToxic does not flag innocent words with substring matches', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
     // These words contain swear substrings but shouldn't match due to word boundaries
-    expect($method->invoke($controller, 'classification'))->toBeFalse();
-    expect($method->invoke($controller, 'mouse'))->toBeFalse();
-    expect($method->invoke($controller, 'assumption'))->toBeFalse();
-    expect($method->invoke($controller, 'cocktail recipe for my home economics class'))->toBeFalse();
-    expect($method->invoke($controller, 'I need help understanding photosynthesis'))->toBeFalse();
+    expect($method->invoke($service, 'classification'))->toBeFalse();
+    expect($method->invoke($service, 'mouse'))->toBeFalse();
+    expect($method->invoke($service, 'assumption'))->toBeFalse();
+    expect($method->invoke($service, 'cocktail recipe for my home economics class'))->toBeFalse();
+    expect($method->invoke($service, 'I need help understanding photosynthesis'))->toBeFalse();
 });
 
 test('isToxic catches compound/derived words via sloppy pattern', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'fucking'))->toBeTrue();
-    expect($method->invoke($controller, 'motherfucker'))->toBeTrue();
-    expect($method->invoke($controller, 'fucked'))->toBeTrue();
-    expect($method->invoke($controller, 'fucker'))->toBeTrue();
+    expect($method->invoke($service, 'fucking'))->toBeTrue();
+    expect($method->invoke($service, 'motherfucker'))->toBeTrue();
+    expect($method->invoke($service, 'fucked'))->toBeTrue();
+    expect($method->invoke($service, 'fucker'))->toBeTrue();
 });
 
 test('isToxic detects profanity in a longer sentence', function () {
-    $controller = new ChatController;
-    $method = new ReflectionMethod(ChatController::class, 'isToxic');
+    $service = new ChatService;
+    $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
-    expect($method->invoke($controller, 'This is such a bullshit assignment'))->toBeTrue();
-    expect($method->invoke($controller, 'You are a dumb teacher'))->toBeTrue();
-    expect($method->invoke($controller, 'I hate this fucking class'))->toBeTrue();
+    expect($method->invoke($service, 'This is such a bullshit assignment'))->toBeTrue();
+    expect($method->invoke($service, 'You are a dumb teacher'))->toBeTrue();
+    expect($method->invoke($service, 'I hate this fucking class'))->toBeTrue();
 });
