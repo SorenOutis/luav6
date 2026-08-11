@@ -36,6 +36,7 @@ const logoUrl = computed(() => branding.value.logoUrl || null);
 
 const isOpen = ref(false);
 const inputMessage = ref('');
+const currentSessionId = ref<string | number | null>(null);
 const messages = ref<{ role: string; content: string; typing?: boolean }[]>([]);
 const isLoading = ref(false);
 const showBlockedWarning = ref(false);
@@ -279,6 +280,9 @@ const focusTextarea = async () => {
 const fetchHistory = async () => {
     try {
         const response = await axios.get('/api/chat/history');
+        if (response.data.session_id) {
+            currentSessionId.value = response.data.session_id;
+        }
         if (response.data.history && response.data.history.length > 0) {
             messages.value = response.data.history;
         } else {
@@ -321,6 +325,7 @@ const clearChat = async () => {
         console.error('Failed to clear chat:', error);
     }
 
+    currentSessionId.value = null;
     messages.value = [
         {
             role: 'assistant',
@@ -390,10 +395,16 @@ const sendMessage = async () => {
     try {
         const response = await axios.post('/api/chat', {
             message: userMessage,
+            session_id: currentSessionId.value,
         });
 
         // Hide loading indicator before starting the typing effect
         isLoading.value = false;
+
+        // Track the persisted conversation so follow-ups continue it
+        if (response.data.session_id) {
+            currentSessionId.value = response.data.session_id;
+        }
 
         // Don't just replace history, handle the new response with typing effect
         const aiResponse = response.data.response;

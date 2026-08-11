@@ -2,109 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Ai\Agents\AdminAssistantAgent;
-use App\Ai\Agents\AssistantAgent;
+use App\Models\ChatSession;
 use App\Models\Setting;
-use App\Services\AiSdkProviderService;
-use App\Services\AiUsageTracker;
-use App\Services\CloudflareAIService;
-use App\Services\GeminiAIService;
-use App\Services\OllamaAIService;
+use App\Services\ChatService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Laravel\Ai\AiManager;
-use Laravel\Ai\Messages\AssistantMessage;
-use Laravel\Ai\Messages\UserMessage;
+use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
     protected string $sessionKey = 'echo_chat_history';
 
-    /**
-     * Strip leetspeak substitutions from a string so creative spellings
-     * like 'sh1t' or 'b@stard' are caught by the regex patterns.
-     */
-    private function normalizeMessage(string $message): string
-    {
-        $message = str_replace(
-            ['0', '1', '3', '4', '5', '7', '8', '@', '$', '!', '|'],
-            ['o', 'i', 'e', 'a', 's', 't', 'b', 'a', 's', 'i', 'i'],
-            $message
-        );
+    private string $sessionIdKey = 'echo_chat_session_id';
 
-        return $message;
-    }
-
-    /**
-     * Server-side toxicity guardrail – mirrors the client-side patterns.
-     * Blocks profanity, insults, and harassment before the message reaches the AI.
-     */
-    private function isToxic(string $message): bool
-    {
-        // Normalize leetspeak/creative spellings before checking
-        $normalized = $this->normalizeMessage($message);
-
-        $patterns = [
-            // Swear words and abbreviations (word-boundary)
-            '/\b(fuck|fck|fkn|wtf|wth|stfu|shit|bullshit|shitty|ass|asshole|bitch|bastard|damn|goddamn|hell|crap|pissed|dick|dickhead|prick|cunt|whore|slut|hoe|motherfucker|mofo|douche|douchebag|jackass|arse|bloody)\b/i',
-            // Sloppy match — catches fuck/fck anywhere (inside compound words like "fucking", "motherfcker")
-            '/(fuck|fck)/i',
-            // Insults
-            '/\b(stupid|dumb|idiot|moron|retard|useless|trash|suck|kys|kill yourself|shut up|annoying|loser)\b/i',
-            // Harassment / toxicity — match bully and inflected forms like bullying
-            '/\b(bully(?:ing)?|harass|threat|hate speech|racist|sexist|creep|weirdo)\b/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $message) || preg_match($pattern, $normalized)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Build a user context block with the authenticated user's real data,
-     * so Echo can give accurate, personalized responses without needing
-     * to fabricate or guess.
-     */
-    protected function buildUserContext(): string
-    {
-        $user = auth()->user();
-
-        if (! $user) {
-            return 'The user is not logged in.';
-        }
-
-        if ($user->is_admin) {
-            return "=== AUTHENTICATED USER ===\n".
-                "Role: Teacher/Admin (workspace owner)\n".
-                "Name: {$user->name}\n".
-                "Email: {$user->email}\n".
-                "===========================\n".
-                'Address them as a colleague managing their workspace, and use the tools for all workspace data.';
-        }
-
-        $progress = $user->activeSeasonProgress();
-
-        $totalXp = $progress?->exp ?? 0;
-        $level = $progress?->level ?? 1;
-        $points = $progress?->points ?? 0;
-        $streak = $user->current_streak ?? 0;
-        $joined = $user->created_at?->format('M Y') ?? 'Unknown';
-
-        return "=== AUTHENTICATED USER DATA (use this to personalize your response) ===\n".
-            "Name: {$user->name}\n".
-            "Joined: {$joined}\n".
-            "LSI System Level: {$level} (this is the gamification progression level, NOT a school grade)\n".
-            "Total XP: {$totalXp}\n".
-            "Points: {$points}\n".
-            "Current Streak: {$streak} day(s)\n".
-            "Email: {$user->email}\n".
-            '====================================================================';
-    }
+    public function __construct(protected ChatService $chatService) {}
 
     public function __invoke(Request $request)
     {
@@ -118,155 +29,39 @@ class ChatController extends Controller
             'message' => 'required|string',
         ]);
 
+        $user = $request->user();
+
         // ── Server-side toxicity guardrail ──
-        if ($this->isToxic($request->message)) {
+        if ($this->chatService->isToxic($request->message)) {
             return response()->json([
                 'response' => "I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?",
             ], 200);
         }
 
         // ── Student daily message cap (cost/abuse guard; admins exempt) ──
-        $user = $request->user();
-        $dailyLimit = (int) Setting::get('ai_chat_daily_limit', 100);
-
-        if ($user && ! $user->is_admin && $dailyLimit > 0) {
-            $cacheKey = "ai_chat_daily:{$user->id}:".now()->toDateString();
-            $used = (int) Cache::get($cacheKey, 0);
-
-            if ($used >= $dailyLimit) {
-                return response()->json([
-                    'response' => "You've used all {$dailyLimit} of your Echo messages for today — nice dedication! Your limit resets at midnight. In the meantime, your dashboard has your assignments, exams, and lessons.",
-                ]);
-            }
-
-            Cache::put($cacheKey, $used + 1, now()->endOfDay());
+        if ($blocked = $this->chatService->dailyLimitMessage($user)) {
+            return response()->json(['response' => $blocked]);
         }
 
         try {
+            // Resolve which persisted conversation this message belongs to,
+            // migrating any legacy session history into the first DB session.
+            [$historyData, $sessionId] = $this->resolveConversation($request, $user);
+
             // Build user context with real data for personalization
-            $userContext = $this->buildUserContext();
+            $userContext = $this->chatService->buildUserContext();
 
-            // Get history from session
-            $historyData = session()->get($this->sessionKey, []);
+            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user);
 
-            // Map session data to message objects
-            $history = collect($historyData)->map(function ($msg) {
-                if ($msg['role'] === 'user') {
-                    return new UserMessage($msg['content']);
-                }
+            $this->persistExchange($sessionId, $request->message, $response);
 
-                return new AssistantMessage($msg['content']);
-            })->toArray();
-
-            // Select agent based on provider setting; the user's role picks
-            // the agent class (admins get workspace management tools).
-            $provider = Setting::get('ai_provider', 'gemini');
-            $ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
-            $agentClass = $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
-            $response = null;
-            $lastError = null;
-
-            try {
-                if ($provider === 'cloudflare') {
-                    // Cloudflare Workers AI keeps its raw integration — it has
-                    // no tool-calling support, so Echo answers without tools.
-                    $cloudflareService = new CloudflareAIService;
-                    $response = $cloudflareService->prompt($request->message, $historyData, $userContext);
-                } elseif ($provider === 'groq') {
-                    // Groq goes through the Laravel AI SDK so tool calling
-                    // works — the raw GroqAIService integration has none.
-                    $groqApiKey = Setting::get('groq_api_key') ?: config('ai.providers.groq.env_key');
-                    $groqModel = Setting::get('groq_model', 'llama-3.1-8b-instant');
-
-                    if (! $groqApiKey) {
-                        throw new \Exception('Groq is not configured. Paste your API key in Platform Settings.');
-                    }
-
-                    config([
-                        'ai.providers.groq.key' => $groqApiKey,
-                        'ai.providers.groq.models.text.default' => $groqModel,
-                    ]);
-                    app(AiManager::class)->forgetInstance('groq');
-
-                    $response = $this->promptAgent($agentClass, $history, $userContext, $request->message, 'groq', $groqModel);
-
-                    app(AiUsageTracker::class)->record(
-                        'groq',
-                        $groqModel,
-                        'chat',
-                        AiUsageTracker::tokensFromChars(strlen($request->message) + strlen($userContext)),
-                        AiUsageTracker::tokensFromChars(strlen((string) $response)),
-                    );
-                } elseif (AiSdkProviderService::isSdkRouted($provider)) {
-                    // Any other text-capable Laravel AI SDK provider (OpenAI,
-                    // Anthropic, Mistral, DeepSeek, xAI, OpenRouter, Azure,
-                    // Ollama). Credentials and model come from Platform
-                    // Settings; the per-prompt provider/model override beats
-                    // the agent's #[Provider('gemini')] attribute.
-                    $sdkProvider = AiSdkProviderService::for($provider);
-
-                    if (! $sdkProvider->isConfigured()) {
-                        throw new \Exception("{$provider} is not configured. Paste your API key in Platform Settings.");
-                    }
-
-                    $sdkProvider->applyToSdk();
-
-                    $response = $this->promptAgent($agentClass, $history, $userContext, $request->message, $provider, $sdkProvider->model());
-
-                    app(AiUsageTracker::class)->record(
-                        $provider,
-                        $sdkProvider->model(),
-                        'chat',
-                        AiUsageTracker::tokensFromChars(strlen($request->message) + strlen($userContext)),
-                        AiUsageTracker::tokensFromChars(strlen((string) $response)),
-                    );
-                } else {
-                    // Point the Laravel AI SDK at the Gemini key/model stored
-                    // in Platform Settings (falls back to env GEMINI_API_KEY).
-                    $gemini = app(GeminiAIService::class);
-                    if (! $gemini->apiKey()) {
-                        throw new \Exception('Gemini is not configured. Paste your API key in Platform Settings.');
-                    }
-                    $gemini->applyToSdk();
-
-                    $response = $this->promptAgent($agentClass, $history, $userContext, $request->message, 'gemini', $gemini->chatModel());
-
-                    app(AiUsageTracker::class)->record(
-                        'gemini',
-                        $gemini->chatModel(),
-                        'chat',
-                        AiUsageTracker::tokensFromChars(strlen($request->message) + strlen($userContext)),
-                        AiUsageTracker::tokensFromChars(strlen((string) $response)),
-                    );
-                }
-            } catch (\Exception $e) {
-                $lastError = $e->getMessage();
-                Log::error('Primary AI provider failed: '.$lastError);
-
-                // Try Ollama fallback if enabled
-                if ($ollamaEnabled) {
-                    try {
-                        $ollamaService = new OllamaAIService;
-                        $response = $ollamaService->prompt($request->message, $historyData, $userContext);
-                        Log::info('Successfully fell back to Ollama');
-                    } catch (\Exception $ollamaError) {
-                        Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
-                        throw $e; // Throw original error
-                    }
-                } else {
-                    throw $e; // No fallback enabled, throw original error
-                }
-            }
-
-            // Update history in session
             $historyData[] = ['role' => 'user', 'content' => $request->message];
             $historyData[] = ['role' => 'assistant', 'content' => $response];
-            session()->put($this->sessionKey, $historyData);
-            session()->save(); // Explicitly save session
 
             return response()->json([
                 'response' => $response,
                 'history' => $historyData,
+                'session_id' => $sessionId,
             ]);
         } catch (\Exception $e) {
             Log::error('Chat Controller Error: '.$e->getMessage());
@@ -278,27 +73,100 @@ class ChatController extends Controller
     }
 
     /**
-     * Run the role-resolved agent through the Laravel AI SDK and return its
-     * text response.
+     * Find the DB conversation for this widget request.
      *
-     * @param  class-string  $agentClass
-     * @param  array<int, mixed>  $history
+     * Priority: explicit `session_id` from the request, then the session
+     * stored on a previous widget request, then the legacy PHP-session
+     * history (which gets migrated into a fresh DB session).
+     *
+     * @return array{0: array<int, array{role: string, content: string}>, 1: ?int}
      */
-    private function promptAgent(string $agentClass, array $history, string $userContext, string $message, string $provider, ?string $model = null): string
+    private function resolveConversation(Request $request, $user): array
     {
-        $agent = new $agentClass;
-        $agent->setHistory($history);
-        $agent->setUserContext($userContext);
+        $candidates = collect([$request->input('session_id'), session()->get($this->sessionIdKey)])
+            ->filter()
+            ->unique();
 
-        return $agent->prompt($message, provider: $provider, model: $model)->text;
+        foreach ($candidates as $candidateId) {
+            $session = ChatSession::query()
+                ->where('id', $candidateId)
+                ->where('user_id', $user?->id)
+                ->first();
+
+            if ($session) {
+                session()->put($this->sessionIdKey, (int) $session->id);
+                session()->save();
+
+                return [$this->historyData($session), (int) $session->id];
+            }
+        }
+
+        // Legacy PHP-session history → migrate into a fresh DB session so it
+        // becomes part of the persisted Chats history.
+        $historyData = session()->get($this->sessionKey, []);
+        $firstUserMessage = collect($historyData)->firstWhere('role', 'user');
+
+        $session = $user?->chatSessions()->create([
+            'title' => $firstUserMessage ? Str::limit($firstUserMessage['content'], 60) : 'New chat',
+        ]);
+
+        if ($session && ! empty($historyData)) {
+            $session->messages()->createMany(array_map(
+                fn (array $msg) => ['role' => $msg['role'], 'content' => $msg['content']],
+                $historyData
+            ));
+        }
+
+        session()->put($this->sessionIdKey, (int) ($session?->id));
+        session()->save();
+
+        return [$historyData, $session?->id];
     }
 
     /**
-     * Clear the session chat history (the widget's "New chat" button).
+     * @return array<int, array{role: string, content: string}>
+     */
+    private function historyData(ChatSession $session): array
+    {
+        return $session->messages
+            ->map(fn ($msg) => ['role' => $msg->role, 'content' => $msg->content])
+            ->all();
+    }
+
+    /**
+     * Persist a user/assistant exchange into the DB session, auto-titling
+     * the session from its first user message.
+     */
+    private function persistExchange(?int $sessionId, string $userMessage, string $response): void
+    {
+        if (! $sessionId) {
+            return;
+        }
+
+        $session = ChatSession::find($sessionId);
+
+        if (! $session || $session->user_id !== auth()->id()) {
+            return;
+        }
+
+        if (! $session->title || $session->title === 'New chat') {
+            $session->update(['title' => Str::limit($userMessage, 60)]);
+        }
+
+        $session->messages()->createMany([
+            ['role' => 'user', 'content' => $userMessage],
+            ['role' => 'assistant', 'content' => $response],
+        ]);
+    }
+
+    /**
+     * Clear the widget conversation (the widget's "New chat" button).
+     * The persisted DB session is kept — it stays in the Chats history.
      */
     public function clearHistory()
     {
         session()->forget($this->sessionKey);
+        session()->forget($this->sessionIdKey);
         session()->save();
 
         return response()->json(['ok' => true]);
@@ -306,6 +174,22 @@ class ChatController extends Controller
 
     public function getHistory()
     {
+        $storedId = session()->get($this->sessionIdKey);
+
+        if ($storedId) {
+            $session = ChatSession::query()
+                ->where('id', $storedId)
+                ->where('user_id', auth()->id())
+                ->first();
+
+            if ($session) {
+                return response()->json([
+                    'history' => $this->historyData($session),
+                    'session_id' => (int) $session->id,
+                ]);
+            }
+        }
+
         $history = session()->get($this->sessionKey);
 
         if (! $history) {

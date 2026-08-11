@@ -7,6 +7,7 @@ import {
     GraduationCap,
     Gamepad2,
     Award,
+    MessageSquareText,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -69,6 +70,12 @@ const mainNavItems = computed<NavItem[]>(() =>
             href: '/grades',
             icon: Award,
             studentPageKey: 'grades',
+        },
+        {
+            title: 'Chats',
+            href: '/chats',
+            icon: MessageSquareText,
+            studentPageKey: 'chats',
         },
     ].filter((item) => isPageVisibleInNav(item.studentPageKey)),
 );

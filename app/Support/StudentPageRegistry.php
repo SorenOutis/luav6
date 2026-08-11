@@ -57,6 +57,11 @@ class StudentPageRegistry
                 'path' => '/ngl',
                 'description' => 'Anonymous classroom message board.',
             ],
+            'chats' => [
+                'label' => 'Chats',
+                'path' => '/chats',
+                'description' => 'Saved AI chat history and conversation continuation.',
+            ],
             'profile' => [
                 'label' => 'Profile & Settings',
                 'path' => '/settings',

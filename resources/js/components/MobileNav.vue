@@ -15,6 +15,7 @@ import {
     Zap,
     Flame,
     ChevronRight,
+    MessageSquareText,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
@@ -110,6 +111,13 @@ const moreMenuItems = computed(() =>
             icon: Award,
             description: 'View your grades and scores',
             studentPageKey: 'grades',
+        },
+        {
+            label: 'Chats',
+            href: '/chats',
+            icon: MessageSquareText,
+            description: 'Saved conversations with Echo',
+            studentPageKey: 'chats',
         },
         {
             label: 'Profile',

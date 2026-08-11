@@ -314,6 +314,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(GamificationHistory::class);
     }
 
+    public function chatSessions()
+    {
+        return $this->hasMany(ChatSession::class)->orderByDesc('updated_at');
+    }
+
     /**
      * Scope the query to only include users in the current admin's workspace.
      * Super admins see all non-admin users; regular admins only see students

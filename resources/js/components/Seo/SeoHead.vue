@@ -72,12 +72,20 @@ const lang = computed(() => seo.locale ?? 'en_US');
         <meta name="twitter:description" :content="metaDescription" />
         <meta v-if="image" name="twitter:image" :content="image" />
 
-        <script
+        <!--
+            JSON-LD must be rendered via a dynamic <component> because the Vue
+            SFC compiler ignores literal <script> tags inside templates (they are
+            reserved for the <script setup> block). Inertia's <Head> serializes
+            the resulting script element back into <head> as a real
+            <script type="application/ld+json"> node.
+        -->
+        <component
+            :is="'script'"
             v-for="block in jsonldNodes"
             :key="JSON.stringify(block)"
             type="application/ld+json"
         >
             {{ JSON.stringify(block) }}
-        </script>
+        </component>
     </Head>
 </template>

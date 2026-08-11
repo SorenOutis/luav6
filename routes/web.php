@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\LeaderboardToggleBlurController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamController;
@@ -114,6 +115,23 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
     Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:60,1')->name('chat.clear');
+
+    // Chats history (persisted conversations from the AI widget)
+    Route::get('chats', [ChatHistoryController::class, 'index'])
+        ->middleware('student.page:chats')
+        ->name('chats.index');
+    Route::get('chats/{session}', [ChatHistoryController::class, 'show'])
+        ->middleware('student.page:chats')
+        ->name('chats.show');
+    Route::post('api/chats', [ChatHistoryController::class, 'store'])
+        ->middleware('throttle:60,1')
+        ->name('chats.store');
+    Route::post('api/chats/{session}/messages', [ChatHistoryController::class, 'message'])
+        ->middleware('throttle:60,1')
+        ->name('chats.message');
+    Route::delete('api/chats/{session}', [ChatHistoryController::class, 'destroy'])
+        ->middleware('throttle:60,1')
+        ->name('chats.destroy');
 
     // Games hub
     Route::get('games', [GamesController::class, 'index'])->middleware('student.page:games')->name('games.index');
