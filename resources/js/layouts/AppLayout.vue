@@ -15,6 +15,9 @@ withDefaults(defineProps<Props>(), {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs" :hide-sidebar="hideSidebar">
+        <template #sidebar>
+            <slot name="sidebar" />
+        </template>
         <slot />
     </AppLayout>
 </template>

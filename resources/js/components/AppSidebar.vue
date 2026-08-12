@@ -110,6 +110,7 @@ const mainNavItems = computed<NavItem[]>(() =>
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
+            <slot />
         </SidebarContent>
 
         <SidebarFooter>

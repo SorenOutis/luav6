@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { useFileDialog } from '@vueuse/core';
 import axios from 'axios';
 import {
-    ArrowLeft,
     Bot,
     ChevronDown,
     FileText,
     Image as ImageIcon,
-    MessageSquare,
     Paperclip,
-    Plus,
     Send,
     Sparkles,
     Square,
@@ -27,8 +24,8 @@ import {
     watch,
 } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import ChatNavigation from '@/components/ChatNavigation.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -149,6 +146,8 @@ const messages = ref<ChatMessage[]>(props.activeSession?.messages ?? []);
 const inputMessage = ref('');
 const isLoading = ref(false);
 const sessionToDelete = ref<ChatSession | null>(null);
+const isCreatingSession = ref(false);
+const isDeletingSession = ref(false);
 
 // Abort controller for the in-flight reply, so the user can stop generation.
 let streamAbortController: AbortController | null = null;
@@ -194,50 +193,6 @@ const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const isAdmin = computed(() =>
     Boolean((page.props.aiChat as { isAdmin?: boolean })?.isAdmin),
 );
-
-interface DateGroup {
-    label: string;
-    open: boolean;
-    sessions: ChatSession[];
-}
-
-const groupLabel = (iso?: string | null): string => {
-    if (!iso) return 'Earlier';
-
-    const date = new Date(iso);
-    const now = new Date();
-    const startOfToday = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-    );
-    const startOfDate = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-    );
-    const diffDays = Math.round(
-        (startOfToday.getTime() - startOfDate.getTime()) / 86_400_000,
-    );
-
-    if (diffDays <= 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays <= 7) return 'Previous 7 days';
-
-    return 'Earlier';
-};
-
-const groupedSessions = computed<DateGroup[]>(() => {
-    const labels = ['Today', 'Yesterday', 'Previous 7 days', 'Earlier'];
-
-    return labels.map((label) => ({
-        label,
-        open: label === 'Today' || label === 'Yesterday',
-        sessions: sessions.value.filter(
-            (s) => groupLabel(s.updatedAt) === label,
-        ),
-    }));
-});
 
 const showSuggestions = computed(() => {
     if (messages.value.length === 0) return true;
@@ -363,6 +318,13 @@ const useSuggestion = (suggestion: string) => {
     sendMessage();
 };
 
+const handleComposerKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+};
+
 /* ──────────────── Attachment helpers ──────────────── */
 
 const formatFileSize = (bytes: number): string => {
@@ -449,7 +411,6 @@ onFilesChanged((files) => addFiles(files));
 
 // Drag & drop state (depth counter handles nested dragenter/leave events)
 const onDragEnter = (event: DragEvent) => {
-    if (isNewChat.value) return;
     if (!event.dataTransfer?.types.includes('Files')) return;
     event.preventDefault();
     dragDepth.value++;
@@ -457,7 +418,6 @@ const onDragEnter = (event: DragEvent) => {
 };
 
 const onDragOver = (event: DragEvent) => {
-    if (isNewChat.value) return;
     if (!event.dataTransfer?.types.includes('Files')) return;
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
@@ -470,10 +430,6 @@ const onDragLeave = (event: DragEvent) => {
 };
 
 const onDrop = (event: DragEvent) => {
-    // No drag & drop while the welcome view is showing — the footer where
-    // attachment chips render is hidden, so dropped files would silently
-    // attach to the first message with no visual confirmation.
-    if (isNewChat.value) return;
     event.preventDefault();
     dragDepth.value = 0;
     isDragging.value = false;
@@ -836,14 +792,20 @@ const sendMessage = async () => {
 };
 
 const createNewChat = async () => {
-    if (isLoading.value) return;
+    if (isLoading.value || isCreatingSession.value) return;
+
+    isCreatingSession.value = true;
 
     try {
         const response = await axios.post(chatsStore().url);
         const sessionId = (response.data.session as { id: number }).id;
-        router.visit(chatsShow({ session: sessionId }).url);
+        router.visit(chatsShow({ session: sessionId }).url, {
+            preserveScroll: true,
+        });
     } catch (error) {
         console.error('Failed to create a new chat:', error);
+    } finally {
+        isCreatingSession.value = false;
     }
 };
 
@@ -852,22 +814,25 @@ const openDeleteModal = (session: ChatSession) => {
 };
 
 const confirmDelete = async () => {
-    if (!sessionToDelete.value) return;
+    if (!sessionToDelete.value || isDeletingSession.value) return;
 
     const target = sessionToDelete.value;
     const wasActive = activeSession.value?.id === target.id;
-    sessionToDelete.value = null;
+    isDeletingSession.value = true;
 
     try {
         await axios.delete(chatsDestroy({ session: target.id }).url);
 
         sessions.value = sessions.value.filter((s) => s.id !== target.id);
+        sessionToDelete.value = null;
 
         if (wasActive) {
-            router.visit(chatsIndex().url);
+            router.visit(chatsIndex().url, { preserveScroll: true });
         }
     } catch (error) {
         console.error('Failed to delete chat:', error);
+    } finally {
+        isDeletingSession.value = false;
     }
 };
 
@@ -890,147 +855,22 @@ onBeforeUnmount(() => {
 <template>
     <Head title="Chats" />
     <AppLayout :breadcrumbs="breadcrumbs">
+        <template #sidebar>
+            <ChatNavigation
+                :sessions="sessions"
+                :active-session-id="activeSession?.id"
+                :creating="isCreatingSession"
+                @create="createNewChat"
+                @delete="openDeleteModal"
+            />
+        </template>
+
         <div
-            class="flex h-[calc(100vh-7rem)] min-h-[480px] gap-3 md:h-[calc(100vh-6rem)]"
+            class="flex h-[calc(100vh-7rem)] min-h-[480px] md:h-[calc(100vh-6rem)]"
         >
-            <!-- ─── History Panel ─── -->
-            <aside
-                :class="[
-                    activeSession ? 'hidden md:flex' : 'flex',
-                    'w-full flex-col overflow-hidden rounded-xl border border-border/40 bg-card/40 md:w-80 md:shrink-0',
-                ]"
-            >
-                <div
-                    class="flex items-center justify-between border-b border-border/40 px-4 py-3"
-                >
-                    <div class="flex items-center gap-2">
-                        <MessageSquare class="h-4 w-4 text-primary" />
-                        <h2 class="text-sm font-bold tracking-tight">Chats</h2>
-                    </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        class="h-8 gap-1.5"
-                        @click="createNewChat"
-                    >
-                        <Plus class="h-3.5 w-3.5" />
-                        New chat
-                    </Button>
-                </div>
-
-                <div class="flex-1 scrollbar-thin overflow-y-auto p-2">
-                    <div
-                        v-if="sessions.length === 0"
-                        class="flex h-full flex-col items-center justify-center gap-2 px-6 text-center"
-                    >
-                        <div
-                            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10"
-                        >
-                            <MessageSquare class="h-6 w-6 text-primary" />
-                        </div>
-                        <p class="text-sm font-semibold text-foreground">
-                            No chats yet
-                        </p>
-                        <p
-                            class="text-xs leading-relaxed text-muted-foreground"
-                        >
-                            Every conversation you have with Echo will be saved
-                            here.
-                        </p>
-                        <Button
-                            size="sm"
-                            class="mt-2 gap-1.5"
-                            @click="createNewChat"
-                        >
-                            <Plus class="h-3.5 w-3.5" />
-                            Start a chat
-                        </Button>
-                    </div>
-
-                    <Collapsible
-                        v-for="group in groupedSessions"
-                        v-else
-                        :key="group.label"
-                        :default-open="group.open"
-                        class="mb-1"
-                    >
-                        <CollapsibleTrigger
-                            class="group flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-muted/60"
-                        >
-                            <span
-                                class="text-[10px] font-bold tracking-[0.14em] text-muted-foreground uppercase"
-                            >
-                                {{ group.label }}
-                            </span>
-                            <span
-                                v-if="group.sessions.length"
-                                class="text-[10px] font-medium text-muted-foreground/70"
-                            >
-                                {{ group.sessions.length }}
-                            </span>
-                        </CollapsibleTrigger>
-
-                        <CollapsibleContent>
-                            <div class="reka-collapsible-content">
-                                <div
-                                    v-for="session in group.sessions"
-                                    :key="session.id"
-                                    class="group/item relative mb-0.5"
-                                >
-                                    <Link
-                                        :href="
-                                            chatsShow({ session: session.id })
-                                                .url
-                                        "
-                                        class="flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 transition-colors"
-                                        :class="
-                                            activeSession?.id === session.id
-                                                ? 'bg-primary/10'
-                                                : 'hover:bg-muted/60'
-                                        "
-                                    >
-                                        <div class="min-w-0 flex-1">
-                                            <p
-                                                class="truncate text-[13px] font-medium text-foreground"
-                                            >
-                                                {{ session.title }}
-                                            </p>
-                                            <p
-                                                class="truncate text-[11px] text-muted-foreground/80"
-                                            >
-                                                {{ session.updatedAtHuman }}
-                                            </p>
-                                        </div>
-                                        <Badge
-                                            variant="secondary"
-                                            class="h-4 shrink-0 px-1.5 text-[9px] font-semibold"
-                                        >
-                                            {{ session.messageCount ?? 0 }}
-                                        </Badge>
-                                    </Link>
-                                    <button
-                                        type="button"
-                                        title="Delete chat"
-                                        class="absolute top-1/2 right-1.5 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground/60 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-500 sm:opacity-0 sm:group-hover/item:opacity-100 sm:focus:opacity-100"
-                                        @click.prevent="
-                                            openDeleteModal(session)
-                                        "
-                                    >
-                                        <Trash2 class="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-                            </div>
-                        </CollapsibleContent>
-                    </Collapsible>
-                </div>
-            </aside>
-
             <!-- ─── Chat Pane ─── -->
             <Card
-                :class="[
-                    !activeSession ? 'hidden md:flex' : 'flex',
-                    'relative min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-xl border-border/40',
-                ]"
+                class="relative min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-xl border-border/40"
                 @dragenter="onDragEnter"
                 @dragover="onDragOver"
                 @dragleave="onDragLeave"
@@ -1071,13 +911,6 @@ onBeforeUnmount(() => {
                     class="flex flex-row items-center justify-between space-y-0 border-b border-border/40 py-3 pr-3 pl-4"
                 >
                     <div class="flex min-w-0 items-center gap-2.5">
-                        <Link
-                            v-if="activeSession"
-                            :href="chatsIndex().url"
-                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground md:hidden"
-                        >
-                            <ArrowLeft class="h-4 w-4" />
-                        </Link>
                         <div
                             class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10"
                         >
@@ -1151,14 +984,79 @@ onBeforeUnmount(() => {
                                     class="welcome-input mt-8 w-full max-w-xl"
                                     @submit.prevent="sendMessage"
                                 >
+                                    <div
+                                        v-if="attachmentError"
+                                        class="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-left text-xs text-destructive"
+                                    >
+                                        {{ attachmentError }}
+                                    </div>
+                                    <div
+                                        v-if="attachments.length > 0"
+                                        class="mb-3 flex flex-wrap gap-2 text-left"
+                                    >
+                                        <div
+                                            v-for="(att, index) in attachments"
+                                            :key="att.name + index"
+                                            class="group flex max-w-[220px] items-center gap-2 rounded-xl border border-border/50 bg-background/80 p-1.5 shadow-xs"
+                                        >
+                                            <img
+                                                v-if="
+                                                    att.kind === 'image' &&
+                                                    att.url
+                                                "
+                                                :src="att.url"
+                                                :alt="att.name"
+                                                class="h-10 w-10 shrink-0 rounded-lg object-cover"
+                                            />
+                                            <div
+                                                v-else
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                                            >
+                                                <FileText class="h-4 w-4" />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <p
+                                                    class="truncate text-xs font-medium text-foreground"
+                                                >
+                                                    {{ att.name }}
+                                                </p>
+                                                <p
+                                                    class="text-[10px] text-muted-foreground"
+                                                >
+                                                    {{
+                                                        formatFileSize(att.size)
+                                                    }}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                                :aria-label="`Remove ${att.name}`"
+                                                @click="removeAttachment(index)"
+                                            >
+                                                <X class="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div class="group relative">
                                         <Textarea
                                             ref="welcomeInputRef"
                                             v-model="inputMessage"
                                             placeholder="Ask about assignments, exams, or your study progress..."
-                                            class="min-h-[64px] resize-none rounded-2xl border-border/40 bg-background/70 py-3.5 pr-14 pl-4 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30"
-                                            @keydown.enter.prevent="sendMessage"
+                                            class="min-h-[72px] resize-none rounded-2xl border-border/40 bg-background/70 py-3.5 pr-14 pl-14 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30"
+                                            @keydown="handleComposerKeydown"
                                         />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            class="absolute bottom-2.5 left-2.5 h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground"
+                                            title="Attach files"
+                                            :disabled="isLoading"
+                                            @click="openFileDialog"
+                                        >
+                                            <Paperclip class="h-4 w-4" />
+                                        </Button>
                                         <Button
                                             type="submit"
                                             size="icon"
@@ -1174,7 +1072,8 @@ onBeforeUnmount(() => {
                                     <p
                                         class="mt-3 text-[11px] text-muted-foreground/60"
                                     >
-                                        Echo can make mistakes — double-check
+                                        Drag in files or use the paperclip. Echo
+                                        can make mistakes — double-check
                                         important answers.
                                     </p>
                                 </form>
@@ -1465,7 +1364,7 @@ onBeforeUnmount(() => {
                                 v-model="inputMessage"
                                 placeholder="Continue the conversation... (drag & drop files)"
                                 class="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-xl border-border/40 bg-background/60 px-3.5 py-2.5 text-[13px] placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30"
-                                @keydown.enter.prevent="sendMessage"
+                                @keydown="handleComposerKeydown"
                             />
                             <Button
                                 v-if="isLoading"
@@ -1506,6 +1405,7 @@ onBeforeUnmount(() => {
                 <Button
                     variant="outline"
                     class="w-full sm:w-auto"
+                    :disabled="isDeletingSession"
                     @click="sessionToDelete = null"
                 >
                     Cancel
@@ -1513,10 +1413,11 @@ onBeforeUnmount(() => {
                 <Button
                     variant="destructive"
                     class="w-full gap-2 sm:w-auto"
+                    :disabled="isDeletingSession"
                     @click="confirmDelete"
                 >
                     <Trash2 class="h-4 w-4" />
-                    Delete chat
+                    {{ isDeletingSession ? 'Deleting…' : 'Delete chat' }}
                 </Button>
             </div>
         </ResponsiveModal>
@@ -1778,6 +1679,13 @@ onBeforeUnmount(() => {
     font-size: 0.6875rem;
 }
 
+.chat-markdown :deep(img) {
+    margin: 0.375rem 0;
+    max-width: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+}
+
 .chat-markdown :deep(pre) {
     margin: 0.375rem 0;
     overflow-x: auto;
@@ -1788,6 +1696,7 @@ onBeforeUnmount(() => {
         transparent
     );
     padding: 0.5rem 0.625rem;
+    line-height: 1.5;
 }
 
 .chat-markdown :deep(pre code) {
@@ -1809,8 +1718,11 @@ onBeforeUnmount(() => {
 
 .chat-markdown :deep(table) {
     margin: 0.375rem 0;
-    width: 100%;
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
     border-collapse: collapse;
+    white-space: nowrap;
 }
 
 .chat-markdown :deep(th),
@@ -1823,5 +1735,10 @@ onBeforeUnmount(() => {
 .chat-markdown :deep(hr) {
     margin: 0.5rem 0;
     border-color: var(--color-border);
+}
+
+.chat-markdown :deep(input[type='checkbox']) {
+    margin-right: 0.375rem;
+    accent-color: var(--color-primary);
 }
 </style>
