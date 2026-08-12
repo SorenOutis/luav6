@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Responses\AiSseResponse;
 use App\Models\ChatSession;
+use App\Services\AiChatLogger;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Ai\Responses\Data\Meta;
@@ -22,7 +22,10 @@ use Throwable;
  */
 class ChatHistoryController extends Controller
 {
-    public function __construct(protected ChatService $chatService) {}
+    public function __construct(
+        protected ChatService $chatService,
+        protected AiChatLogger $aiChatLogger,
+    ) {}
 
     public function index(Request $request)
     {
@@ -77,9 +80,22 @@ class ChatHistoryController extends Controller
         ]);
 
         $user = $request->user();
+        $loggingContext = $this->aiChatLogger->interaction(
+            $request,
+            $user,
+            'history',
+            'sync',
+            $request->message,
+            $session->id,
+        );
+        $this->aiChatLogger->info('ai_chat.request.received', $loggingContext);
 
         // ── Server-side toxicity guardrail ──
         if ($this->chatService->isToxic($request->message)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'toxicity_guardrail',
+            ]));
+
             return response()->json([
                 'response' => "I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?",
             ], 200);
@@ -87,6 +103,10 @@ class ChatHistoryController extends Controller
 
         // ── Student daily message cap (cost/abuse guard; admins exempt) ──
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'daily_message_limit',
+            ]));
+
             return response()->json(['response' => $blocked]);
         }
 
@@ -96,8 +116,10 @@ class ChatHistoryController extends Controller
             $historyData = $this->sessionHistory($session);
 
             [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
+            $loggingContext = $this->aiChatLogger->withConversation($loggingContext, $session->id, $historyData, $attachmentMeta);
+            $this->aiChatLogger->info('ai_chat.request.dispatched', $loggingContext);
 
-            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments);
+            $response = $this->chatService->prompt($request->message, $historyData, $userContext, $user, $sdkAttachments, $loggingContext);
 
             if (! $session->title || $session->title === 'New chat') {
                 $session->update(['title' => Str::limit($request->message, 60)]);
@@ -115,13 +137,16 @@ class ChatHistoryController extends Controller
             $session->touch();
 
             $session->load('messages');
+            $this->aiChatLogger->info('ai_chat.response.persisted', array_merge($loggingContext, [
+                'response' => $this->aiChatLogger->textMetadata($response),
+            ]));
 
             return response()->json([
                 'response' => $response,
                 'session' => $this->sessionPayload($session),
             ]);
         } catch (Throwable $e) {
-            $errorId = $this->logError('Chat History Controller Error', $e, $session);
+            $errorId = $this->logError('Chat History Controller Error', $e, $session, $loggingContext);
 
             return response()->json([
                 'response' => 'Sorry, something went wrong. Please try again in a moment.',
@@ -146,12 +171,29 @@ class ChatHistoryController extends Controller
         ]);
 
         $user = $request->user();
+        $loggingContext = $this->aiChatLogger->interaction(
+            $request,
+            $user,
+            'history',
+            'stream',
+            $request->message,
+            $session->id,
+        );
+        $this->aiChatLogger->info('ai_chat.request.received', $loggingContext);
 
         if ($this->chatService->isToxic($request->message)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'toxicity_guardrail',
+            ]));
+
             return AiSseResponse::from($this->chatService->streamText("I'm here to help you learn, but I need our conversation to stay respectful. Let's focus on your studies — how can I assist you with your courses or assignments?"));
         }
 
         if ($blocked = $this->chatService->dailyLimitMessage($user)) {
+            $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                'blocked_reason' => 'daily_message_limit',
+            ]));
+
             return AiSseResponse::from($this->chatService->streamText($blocked));
         }
 
@@ -159,6 +201,8 @@ class ChatHistoryController extends Controller
             $userContext = $this->chatService->buildUserContext();
             $historyData = $this->sessionHistory($session);
             [$sdkAttachments, $attachmentMeta] = $this->chatService->buildAttachments($request);
+            $loggingContext = $this->aiChatLogger->withConversation($loggingContext, $session->id, $historyData, $attachmentMeta);
+            $this->aiChatLogger->info('ai_chat.request.dispatched', $loggingContext);
 
             if (! $session->title || $session->title === 'New chat') {
                 $session->update(['title' => Str::limit($request->message, 60)]);
@@ -177,6 +221,7 @@ class ChatHistoryController extends Controller
                 $userContext,
                 $user,
                 $sdkAttachments,
+                $loggingContext,
             );
 
             // StreamableAgentResponse is lazy: provider exceptions can happen
@@ -188,7 +233,7 @@ class ChatHistoryController extends Controller
             // duplicate user message through a second HTTP fallback request.
             $response = new StreamableAgentResponse(
                 (string) Str::uuid7(),
-                function () use ($nativeStream, $request, $historyData, $userContext, $user, $sdkAttachments, $session) {
+                function () use ($nativeStream, $request, $historyData, $userContext, $user, $sdkAttachments, $session, $loggingContext) {
                     $emittedText = false;
 
                     try {
@@ -200,7 +245,7 @@ class ChatHistoryController extends Controller
                             yield $event;
                         }
                     } catch (Throwable $e) {
-                        $this->logError('Chat History Stream Runtime Error', $e, $session);
+                        $this->logError('Chat History Stream Runtime Error', $e, $session, $loggingContext);
 
                         // If text was already delivered, do not append a second
                         // complete answer. The partial answer is still useful and
@@ -221,13 +266,14 @@ class ChatHistoryController extends Controller
                             $userContext,
                             $user,
                             $sdkAttachments,
+                            $loggingContext,
                         );
 
                         foreach ($this->chatService->streamText($fallbackText) as $event) {
                             yield $event;
                         }
                     } catch (Throwable $fallbackError) {
-                        $errorId = $this->logError('Chat History Stream Fallback Error', $fallbackError, $session);
+                        $errorId = $this->logError('Chat History Stream Fallback Error', $fallbackError, $session, $loggingContext);
                         $message = 'Sorry, something went wrong. Please try again in a moment.';
 
                         if ($request->user()?->is_admin || config('app.debug')) {
@@ -245,7 +291,7 @@ class ChatHistoryController extends Controller
                 new Meta,
             );
 
-            $response->then(function ($streamedResponse) use ($session) {
+            $response->then(function ($streamedResponse) use ($session, $loggingContext) {
                 try {
                     $text = (string) $streamedResponse->text;
 
@@ -259,14 +305,18 @@ class ChatHistoryController extends Controller
                         ]);
                         $session->touch();
                     }
+
+                    $this->aiChatLogger->info('ai_chat.response.persisted', array_merge($loggingContext, [
+                        'response' => $this->aiChatLogger->textMetadata($text),
+                    ]));
                 } catch (Throwable $e) {
-                    $this->logError('Chat History Stream Persist Error', $e, $session);
+                    $this->logError('Chat History Stream Persist Error', $e, $session, $loggingContext);
                 }
             });
 
             return AiSseResponse::from($response);
         } catch (Throwable $e) {
-            $errorId = $this->logError('Chat History Stream Error', $e, $session);
+            $errorId = $this->logError('Chat History Stream Error', $e, $session, $loggingContext);
             $payload = $this->errorPayload($e, $errorId);
 
             $message = 'Sorry, something went wrong. Please try again in a moment.';
@@ -325,19 +375,17 @@ class ChatHistoryController extends Controller
      * The exception object is passed as the `exception` context key so Monolog
      * renders the full class, message and stack trace automatically.
      */
-    private function logError(string $context, Throwable $e, ?ChatSession $session = null): string
+    private function logError(string $context, Throwable $e, ?ChatSession $session = null, array $loggingContext = []): string
     {
         $request = request();
         $errorId = Str::uuid()->toString();
 
-        Log::error($context, [
+        $this->aiChatLogger->error('ai_chat.request.failed', $e, array_merge($loggingContext, [
             'error_id' => $errorId,
-            'exception' => $e,
             'user_id' => $request->user()?->id,
             'session_id' => $session?->id,
-            'url' => $request->fullUrl(),
-            'method' => $request->method(),
-        ]);
+            'failure_stage' => $context,
+        ]));
 
         return $errorId;
     }
