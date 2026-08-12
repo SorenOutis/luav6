@@ -21,6 +21,10 @@ import {
     Trophy,
     Grid3x3,
     X,
+    Maximize,
+    HelpCircle,
+    Play,
+    Info,
 } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, computed, reactive, watch } from 'vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
@@ -137,6 +141,10 @@ const hasShownUnansweredWarning = ref(false);
 const isTimeoutSubmission = ref(false);
 const currentPartHasEssay = ref(false);
 const gradingPollTimer = ref<ReturnType<typeof setInterval> | null>(null);
+// Shown when a part submission fails so the student knows the answers were
+// NOT recorded and must retry — previously failures were silent, the part
+// looked unanswered and the student re-answered everything.
+const submitError = ref<string | null>(null);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
@@ -908,6 +916,7 @@ const startPart = () => {
     // Reset state for the new part
     Object.keys(answers).forEach((key) => delete answers[Number(key)]);
     flaggedQuestions.value.clear();
+    submitError.value = null;
     estimatedFinishMinutes.value = null;
     lastSavedAt.value = null;
 
@@ -1044,32 +1053,47 @@ const handleGlobalKeydown = (e: KeyboardEvent) => {
 
     // Numbers 1-9 for picking MCQ options
     if (!isInput && /^[1-9]$/.test(e.key)) {
-        const cards = document.querySelectorAll('.question-card');
+        // Only VISIBLE question cards may be targeted. The mobile carousel
+        // card is always in the DOM (display:none on desktop) and used to be
+        // picked on tall viewports — its id parsed to NaN and the answer was
+        // written to answers[NaN], which the submit payload ignores, so the
+        // question silently stayed unanswered and the student answered again.
+        const cards = Array.from(
+            document.querySelectorAll<HTMLElement>('.question-card'),
+        ).filter((card) => card.getClientRects().length > 0);
         const middle = window.innerHeight / 2;
-        let bestCard = null;
-        let minDistance = Infinity;
 
-        cards.forEach((card) => {
+        // Closest card to the vertical center, picked with reduce so TS can
+        // narrow the result (a closure-assigned `let` collapses to `never`).
+        const bestCard = cards.reduce<{
+            card: HTMLElement;
+            distance: number;
+        } | null>((best, card) => {
             const rect = card.getBoundingClientRect();
             const distance = Math.abs(rect.top + rect.height / 2 - middle);
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestCard = card;
+            if (!best || distance < best.distance) {
+                return { card, distance };
             }
-        });
+            return best;
+        }, null);
 
         if (bestCard) {
-            const idParts = (bestCard as HTMLElement).id.split('-');
-            const qIndex = parseInt(idParts[1]);
-            const optionIndex = parseInt(e.key) - 1;
-            const question = selectedPart.value?.questions?.[qIndex];
-            if (
-                question &&
-                (question.type === 'multiple_choice' ||
-                    question.type === 'true_false')
-            ) {
-                if (question.options && optionIndex < question.options.length) {
-                    answers[qIndex] = optionIndex;
+            const idMatch = /^q-(\d+)$/.exec(bestCard.card.id);
+            if (idMatch) {
+                const qIndex = parseInt(idMatch[1], 10);
+                const optionIndex = parseInt(e.key, 10) - 1;
+                const question = selectedPart.value?.questions?.[qIndex];
+                if (
+                    question &&
+                    (question.type === 'multiple_choice' ||
+                        question.type === 'true_false')
+                ) {
+                    if (
+                        question.options &&
+                        optionIndex < question.options.length
+                    ) {
+                        answers[qIndex] = optionIndex;
+                    }
                 }
             }
         }
@@ -1077,24 +1101,31 @@ const handleGlobalKeydown = (e: KeyboardEvent) => {
 
     // 'F' for Flagging
     if (!isInput && e.key.toLowerCase() === 'f') {
-        const cards = document.querySelectorAll('.question-card');
+        // Same visibility filter as the number shortcut — the hidden mobile
+        // card must never be picked (its id is q-mobile-*, not q-<index>).
+        const cards = Array.from(
+            document.querySelectorAll<HTMLElement>('.question-card'),
+        ).filter((card) => card.getClientRects().length > 0);
         const middle = window.innerHeight / 2;
-        let bestCard = null;
-        let minDistance = Infinity;
 
-        cards.forEach((card) => {
+        // Same closest-card selection as the number shortcut above.
+        const bestCard = cards.reduce<{
+            card: HTMLElement;
+            distance: number;
+        } | null>((best, card) => {
             const rect = card.getBoundingClientRect();
             const distance = Math.abs(rect.top + rect.height / 2 - middle);
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestCard = card;
+            if (!best || distance < best.distance) {
+                return { card, distance };
             }
-        });
+            return best;
+        }, null);
 
         if (bestCard) {
-            const idParts = (bestCard as HTMLElement).id.split('-');
-            const qIndex = parseInt(idParts[1]);
-            toggleFlag(qIndex);
+            const idMatch = /^q-(\d+)$/.exec(bestCard.card.id);
+            if (idMatch) {
+                toggleFlag(parseInt(idMatch[1], 10));
+            }
         }
     }
 };
@@ -1105,7 +1136,17 @@ const goBackToList = () => {
 };
 
 const scrollToQuestion = (index: number) => {
-    const el = document.getElementById(`q-${index}`);
+    // The mobile carousel card (q-mobile-<i>) and the desktop grid card
+    // (q-<i>) are both mounted; only one is visible at a time. Target the
+    // visible one so "jump to question" works on every breakpoint.
+    const el =
+        [
+            document.getElementById(`q-${index}`),
+            document.getElementById(`q-mobile-${index}`),
+        ].filter(
+            (candidate): candidate is HTMLElement =>
+                !!candidate && candidate.getClientRects().length > 0,
+        )[0] ?? null;
     if (!el) return;
 
     // Force reactivity: set to -1 first so clicking an already-highlighted
@@ -1184,7 +1225,7 @@ const submitPart = async () => {
     // If the warning modal is already visible, ignore the click
     if (showUnansweredWarning.value) return;
 
-    locallySubmittedPartIds.value.add(selectedPart.value.id);
+    submitError.value = null;
     isSubmitting.value = true;
     stopTimer(); // Stop countdown during submission to prevent auto-submit race condition
     isTimeoutSubmission.value = false; // Reset timeout flag if we are proceeding with submission
@@ -1216,6 +1257,10 @@ const submitPart = async () => {
         {
             onSuccess: (page) => {
                 const submittedPartId = Number(selectedPart.value?.id);
+                submitError.value = null;
+                // Only mark the part submitted once the server confirms it —
+                // marking it before the request used to leave the UI claiming
+                // "submitted" while the server had nothing recorded.
                 locallySubmittedPartIds.value.add(submittedPartId);
                 localSubmissions.value[submittedPartId] = {
                     status: currentPartHasEssay.value
@@ -1245,9 +1290,17 @@ const submitPart = async () => {
             // can leave isSubmitting stuck true — Inertia may not fire
             // onFinish for a request that never completes. Reset here so the
             // submit button can never spin forever.
-            onError: () => {
+            onError: (errors) => {
                 isFinalSubmitting.value = false;
                 isSubmitting.value = false;
+                // Surface the failure instead of silently resetting: the
+                // student must know their answers were NOT recorded, otherwise
+                // they re-answer the whole part and lose work on retry.
+                const messages = Object.values(errors ?? {}).filter(Boolean);
+                submitError.value =
+                    messages.length > 0
+                        ? String(messages[0])
+                        : 'Your answers could not be submitted. Please try again.';
             },
             onFinish: () => {
                 isFinalSubmitting.value = false;
@@ -2269,7 +2322,7 @@ const feedbackContent = computed(() => {
                                                 mobileQuestionIndex
                                             ]
                                         "
-                                        :id="`q-${mobileQuestionIndex}`"
+                                        :id="`q-mobile-${mobileQuestionIndex}`"
                                         @touchstart="handleTouchStart"
                                         @touchend="handleTouchEnd"
                                         :class="[
@@ -3622,6 +3675,16 @@ const feedbackContent = computed(() => {
                         v-if="examStarted && selectedPart && !showSuccessModal"
                         class="exam-sticky-header fixed right-0 bottom-0 left-0 z-[90] border-t border-border bg-card/95 shadow-[0_-2px_12px_-4px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:bg-zinc-950/90"
                     >
+                        <!-- Submission failure banner: tells the student the
+                             answers were NOT recorded so they can retry instead
+                             of unknowingly re-answering everything. -->
+                        <div
+                            v-if="submitError"
+                            class="flex items-center justify-center gap-2 border-b border-red-500/20 bg-red-500/10 px-4 py-1.5 text-[11px] font-semibold text-red-600 dark:text-red-400"
+                        >
+                            <AlertCircle class="h-3.5 w-3.5 shrink-0" />
+                            <span>{{ submitError }}</span>
+                        </div>
                         <div
                             class="mx-auto flex max-w-screen-2xl items-center gap-3 px-3 py-2.5 md:gap-5 md:px-6"
                         >

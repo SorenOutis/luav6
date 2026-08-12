@@ -368,13 +368,37 @@ class ExamController extends Controller
                 'user_id' => $request->user()->id,
                 'exam_id' => $exam->id,
                 'exam_part_id' => $examPart->id,
-                'answers' => json_encode($enrichedAnswers->values()->toArray()),
+                // JSON_INVALID_UTF8_SUBSTITUTE: a pasted/legacy string with
+                // broken UTF-8 used to make json_encode() return false, which
+                // then crashed the answers cast and lost the ENTIRE part's
+                // answers — the submission never persisted and the student
+                // had to answer everything again. Invalid bytes are now
+                // replaced instead of silently dropping the payload.
+                'answers' => json_encode(
+                    $enrichedAnswers->values()->toArray(),
+                    JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE
+                ),
                 'status' => $hasEssay ? 'pending_review' : 'submitted',
                 'is_late' => $isLate,
-                'score' => $score,
+                'score' => round((float) $score, 2),
             ]);
         } catch (QueryException $e) {
-            abort(409, 'You have already submitted this part.');
+            // Only a genuine duplicate attempt (the unique index) is a 409.
+            // Any other DB failure (e.g. the score exceeding the decimal(5,2)
+            // column range) used to be masked as "already submitted" — the
+            // frontend showed no error, the part stayed open, and the student
+            // had to answer the whole part again. Rethrow real failures so
+            // they surface in the logs and the student sees an error instead.
+            $alreadyRecorded = ExamSubmission::where('user_id', $request->user()->id)
+                ->where('exam_id', $exam->id)
+                ->where('exam_part_id', $examPart->id)
+                ->exists();
+
+            if ($alreadyRecorded) {
+                abort(409, 'You have already submitted this part.');
+            }
+
+            throw $e;
         }
 
         // The clock for this part is done.

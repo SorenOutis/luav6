@@ -11,7 +11,8 @@
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
-        "types:check": "vue-tsc --noEmit"
+        "types:check": "vue-tsc --noEmit",
+        "test:js": "vitest run"
     },
     "devDependencies": {
         "@eslint/js": "^9.39.4",
@@ -20,17 +21,20 @@
         "@types/node": "^22.19.19",
         "@vitejs/plugin-vue": "^6.0.7",
         "@vue/eslint-config-typescript": "^14.8.0",
+        "@vue/test-utils": "^2.4.11",
         "concurrently": "^9.2.1",
         "eslint": "^9.39.4",
         "eslint-config-prettier": "^10.1.8",
         "eslint-import-resolver-typescript": "^4.4.5",
         "eslint-plugin-import": "^2.32.0",
         "eslint-plugin-vue": "^9.33.0",
+        "jsdom": "^30.0.1",
         "prettier": "^3.8.3",
         "prettier-plugin-tailwindcss": "^0.6.14",
         "typescript": "^5.9.3",
         "typescript-eslint": "^8.60.1",
         "vite": "^7.3.5",
+        "vitest": "^4.1.10",
         "vue-tsc": "^2.2.12"
     },
     "dependencies": {
