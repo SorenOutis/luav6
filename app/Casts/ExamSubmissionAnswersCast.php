@@ -48,9 +48,20 @@ class ExamSubmissionAnswersCast implements CastsAttributes
                 return $value;
             }
 
-            return json_encode([]);
+            return json_encode([], JSON_INVALID_UTF8_SUBSTITUTE);
         }
 
-        return json_encode(array_values($value));
+        if (! is_array($value)) {
+            // A failed json_encode() upstream used to deliver `false` here,
+            // which crashed array_values() and took the whole submission down
+            // with it — the student's answers were never recorded. Never throw
+            // from a cast; degrade to an empty list instead.
+            return json_encode([], JSON_INVALID_UTF8_SUBSTITUTE);
+        }
+
+        return json_encode(
+            array_values($value),
+            JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE
+        );
     }
 }
