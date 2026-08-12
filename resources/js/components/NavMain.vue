@@ -27,7 +27,15 @@ const { isCurrentUrl } = useCurrentUrl();
                     :is-active="isCurrentUrl(item.href)"
                     :tooltip="item.title"
                 >
-                    <Link :href="item.href">
+                    <!--
+                        prefetch="hover" warms the Inertia cache while the
+                        pointer is still travelling to the link, so the click
+                        renders from cache instead of waiting on a round trip.
+                        cache-for keeps it for 30s — long enough to cover an
+                        accidental back-and-forth, short enough that XP,
+                        streaks and the leaderboard stay fresh.
+                    -->
+                    <Link :href="item.href" prefetch="hover" cache-for="30s">
                         <component :is="item.icon" />
                         <span>{{ item.title }}</span>
                     </Link>

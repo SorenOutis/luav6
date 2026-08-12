@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
 use App\Services\AiSdkProviderService;
+use App\Support\RequestCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Per-request memo store for values that cannot change mid-request
+        // (the active season, etc). `scoped` — not `singleton` — so Octane
+        // flushes it between requests and one user's data never leaks into
+        // the next response served by the same worker.
+        $this->app->scoped(RequestCache::class);
     }
 
     /**

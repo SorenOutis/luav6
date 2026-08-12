@@ -11,6 +11,15 @@ import { useLoader } from '@/composables/useLoader';
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const { isVisible, show, hide, hideWhenReady } = useLoader();
 
+// Navigation logging is a debugging aid, not a production feature. Writing to
+// the console on every visit costs main-thread time (and in DevTools-open
+// sessions, a lot of it) right at the moment the browser should be rendering
+// the next page. Keep it in dev only.
+const DEV = import.meta.env.DEV;
+const debug = (...args: unknown[]) => {
+    if (DEV) console.log(...args);
+};
+
 // Delay before the global loader appears, so in-button spinners are visible first.
 const GLOBAL_LOADER_DELAY_MS = 250;
 let pendingShowTimer: ReturnType<typeof setTimeout> | null = null;
@@ -113,7 +122,7 @@ router.on('start', (event) => {
     const isAuthFlow = isMutatingVisit && (isAuthPage || isAuthTarget);
     const isLogout = isMutatingVisit && targetPath.includes('/logout');
 
-    console.log(
+    debug(
         `[app.ts] Navigation started to: ${targetPath}. isAuthFlow: ${isAuthFlow}, isLogout: ${isLogout}`,
     );
 
@@ -140,20 +149,18 @@ router.on('finish', (event) => {
         const errors = page?.props?.errors || {};
         const hasErrors = Object.keys(errors).length > 0;
 
-        console.log(
+        debug(
             `[app.ts] Navigation finished. hasErrors: ${hasErrors}, isVisible: ${isVisible.value}`,
         );
 
         if (hasErrors) {
-            console.log(
+            debug(
                 '[app.ts] Validation errors detected — hiding loader immediately',
             );
             hide();
         } else {
             // Normal successful navigation — wait for progress bar to hit 100%
-            console.log(
-                '[app.ts] Successful navigation — calling hideWhenReady',
-            );
+            debug('[app.ts] Successful navigation — calling hideWhenReady');
             hideWhenReady();
         }
     }
@@ -255,7 +262,18 @@ function ensureFormMethod(route: any): void {
 
                 createApp(RootApp).use(plugin).mount(el);
             },
-            progress: false,
+            // The full-screen GlobalLoader is reserved for auth flows, so
+            // ordinary page clicks previously had NO feedback at all — the UI
+            // just sat there until the response landed, which reads as "the
+            // app is frozen" even on a fast request. The top progress bar is
+            // the standard fix: 250ms delay means quick, cached or prefetched
+            // navigations never flash it, while anything slower immediately
+            // tells the user the click registered.
+            progress: {
+                delay: 250,
+                color: '#f59e0b',
+                showSpinner: false,
+            },
         });
 
         initializeTheme();
