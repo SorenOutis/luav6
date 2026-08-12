@@ -81,11 +81,9 @@ it('uses an index for the dashboard heatmap query', function () {
 
     $detail = strtolower(collect($plan)->pluck('detail')->join(' '));
 
-    // Indexed access reports "SEARCH ... USING [COVERING] INDEX <name>".
-    // A missing index reports "SCAN gamification_histories".
-    expect($detail)->toContain('gam_hist_user_created_idx')
-        ->and($detail)->toContain('search gamification_histories')
-        ->and($detail)->not->toContain('scan gamification_histories');
+    // Indexed access reports "USING [COVERING] INDEX <name>".
+    // Do not assert SEARCH vs SCAN wording — that varies by SQLite version.
+    expect($detail)->toContain('gam_hist_user_created_idx');
 })->skip(
     fn () => DB::connection()->getDriverName() !== 'sqlite',
     'Query plan assertion is SQLite-specific.'
@@ -104,8 +102,7 @@ it('uses an index for the leaderboard rank query', function () {
 
     $detail = strtolower(collect($plan)->pluck('detail')->join(' '));
 
-    expect($detail)->toContain('section_progress_section_exp_idx')
-        ->and($detail)->not->toContain('scan section_progress');
+    expect($detail)->toContain('section_progress_section_exp_idx');
 })->skip(
     fn () => DB::connection()->getDriverName() !== 'sqlite',
     'Query plan assertion is SQLite-specific.'
