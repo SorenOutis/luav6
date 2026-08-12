@@ -254,6 +254,10 @@ it('does not issue more queries per navigation as data grows', function () {
     $this->get('/leaderboard')->assertOk();
     $baseline = count(DB::getQueryLog());
     DB::disableQueryLog();
+    // disableQueryLog() only stops logging — it does not clear the log, so
+    // reset it before the next measurement window or this count would include
+    // the baseline's queries.
+    DB::flushQueryLog();
 
     // Add peers and XP history — an N+1 would scale the query count with these.
     User::factory()->count(5)->create()->each(function ($peer) use ($section, $season) {
@@ -309,6 +313,8 @@ it('does not query per section when building the leaderboard', function () {
     app(LeaderboardService::class)->forUserSections($user->fresh(), $season);
     $fourSectionQueries = count(DB::getQueryLog());
     DB::disableQueryLog();
+    // See the note above: disableQueryLog() does not clear the query log.
+    DB::flushQueryLog();
 
     // Now the same thing with a single section.
     $soloUser = User::factory()->create();
