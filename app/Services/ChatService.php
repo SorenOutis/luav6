@@ -297,6 +297,10 @@ class ChatService
         $agentClass = $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
         $lastError = null;
 
+        if (AiSdkProviderService::isRemovedCompatibleProvider($provider)) {
+            throw new \Exception('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
+        }
+
         try {
             if ($provider === 'cloudflare') {
                 // Cloudflare Workers AI keeps its raw integration — it has
@@ -419,6 +423,10 @@ class ChatService
         $provider = Setting::get('ai_provider', 'gemini');
         $ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
         $agentClass = $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
+
+        if (AiSdkProviderService::isRemovedCompatibleProvider($provider)) {
+            throw new \Exception('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
+        }
 
         try {
             if ($provider === 'cloudflare') {

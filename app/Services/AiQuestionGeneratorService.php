@@ -235,6 +235,10 @@ PROMPT;
      */
     protected function ask(string $prompt, bool $jsonMode, int $maxTokens, float $temperature): string
     {
+        if (AiSdkProviderService::isRemovedCompatibleProvider($this->provider)) {
+            throw new \RuntimeException('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
+        }
+
         // Cloudflare and Groq keep their dedicated HTTP integrations and
         // Ollama is called directly; Gemini and every other text-capable
         // provider go through the Laravel AI SDK. Anything unknown falls

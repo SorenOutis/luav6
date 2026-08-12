@@ -10,6 +10,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -20,10 +21,11 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AiSettings extends Page implements HasSchemas
 {
@@ -53,6 +55,17 @@ class AiSettings extends Page implements HasSchemas
     public function mount(): void
     {
         $provider = Setting::get('ai_provider', 'gemini');
+        $compatibleProviders = collect(AiSdkProviderService::compatibleProviders())
+            ->map(fn (array $compatible): array => [
+                'id' => $compatible['id'],
+                'name' => $compatible['name'],
+                'url' => $compatible['url'],
+                'model' => $compatible['model'],
+                'api_key' => $compatible['api_key'],
+                'headers' => $compatible['headers'],
+                'is_default' => $provider === $compatible['provider'],
+            ])
+            ->all();
 
         $this->form->fill(array_merge([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
@@ -97,6 +110,7 @@ class AiSettings extends Page implements HasSchemas
             'ollama_url' => Setting::get('ollama_url', 'http://localhost:11434'),
             'ollama_model' => Setting::get('ollama_model', 'llama3.2:1b'),
             'ollama_enabled' => (bool) Setting::get('ollama_enabled', false),
+            'openai_compatible_providers' => $compatibleProviders,
             'login_enabled' => (bool) Setting::get('login_enabled', true),
             'login_disabled_message' => Setting::get('login_disabled_message', 'Login is currently disabled. Please try again later.'),
             'registration_enabled' => (bool) Setting::get('registration_enabled', true),
@@ -223,7 +237,7 @@ class AiSettings extends Page implements HasSchemas
      */
     private function defaultableProviders(): array
     {
-        return AiSdkProviderService::TEXT_PROVIDER_LABELS;
+        return AiSdkProviderService::textProviderLabels();
     }
 
     /**
@@ -255,23 +269,67 @@ class AiSettings extends Page implements HasSchemas
             ->helperText('Use this provider for the chat widget, essay grading, and AI question generation.')
             ->dehydrated(false)
             ->live()
-            ->afterStateUpdated(function (Set $set, Get $get, ?bool $state) use ($key) {
+            ->afterStateUpdated(function (?bool $state) use ($key): void {
                 if ($state) {
-                    $set('ai_provider', $key);
-
-                    foreach (array_keys($this->defaultableProviders()) as $other) {
-                        if ($other !== $key) {
-                            $set("provider_default_{$other}", false);
-                        }
-                    }
+                    $this->selectDefaultProvider($key);
 
                     return;
                 }
 
-                if ($get('ai_provider') === $key) {
-                    $set("provider_default_{$key}", true);
+                if (($this->data['ai_provider'] ?? null) === $key) {
+                    $this->data["provider_default_{$key}"] = true;
                 }
             });
+    }
+
+    /**
+     * Keep the existing provider-card checkboxes and dynamic provider cards
+     * in radio-button sync.
+     */
+    public function updatedData(mixed $value, string $key): void
+    {
+        if (preg_match('/^openai_compatible_providers\\.([^.]*)\\.is_default$/', $key, $matches) !== 1) {
+            return;
+        }
+
+        $provider = data_get($this->data, "openai_compatible_providers.{$matches[1]}");
+
+        if (! is_array($provider) || blank($provider['id'] ?? null)) {
+            return;
+        }
+
+        $runtimeProvider = AiSdkProviderService::compatibleProviderNameForId((string) $provider['id']);
+
+        if ($value) {
+            $this->selectDefaultProvider($runtimeProvider);
+
+            return;
+        }
+
+        if (($this->data['ai_provider'] ?? null) === $runtimeProvider) {
+            data_set($this->data, "openai_compatible_providers.{$matches[1]}.is_default", true);
+        }
+    }
+
+    private function selectDefaultProvider(string $provider): void
+    {
+        $this->data['ai_provider'] = $provider;
+
+        foreach (array_keys($this->defaultableProviders()) as $other) {
+            $this->data["provider_default_{$other}"] = $other === $provider;
+        }
+
+        foreach ((array) ($this->data['openai_compatible_providers'] ?? []) as $itemKey => $compatible) {
+            if (! is_array($compatible) || blank($compatible['id'] ?? null)) {
+                continue;
+            }
+
+            data_set(
+                $this->data,
+                "openai_compatible_providers.{$itemKey}.is_default",
+                AiSdkProviderService::compatibleProviderNameForId((string) $compatible['id']) === $provider,
+            );
+        }
     }
 
     /**
@@ -447,6 +505,80 @@ class AiSettings extends Page implements HasSchemas
                     ]),
                 ]),
 
+                Section::make('OpenAI-Compatible Providers')
+                    ->description('Add hosted APIs, local gateways, or self-hosted models that implement the OpenAI Chat Completions API. The API key is optional; use custom headers for gateways with another authentication scheme.')
+                    ->collapsible()
+                    ->schema([
+                        Repeater::make('openai_compatible_providers')
+                            ->label('Providers')
+                            ->addActionLabel('Add OpenAI-Compatible Provider')
+                            ->defaultItems(0)
+                            ->collapsible()
+                            ->itemLabel(fn (array $state): ?string => filled($state['name'] ?? null) ? $state['name'] : 'New provider')
+                            ->deleteAction(fn (Action $action): Action => $action->requiresConfirmation())
+                            ->schema([
+                                Hidden::make('id')
+                                    ->default(fn (): string => (string) Str::uuid())
+                                    ->required()
+                                    ->rules(['uuid']),
+
+                                Checkbox::make('is_default')
+                                    ->label('Default provider')
+                                    ->helperText('Use this provider for chat, essay grading, and AI question generation.')
+                                    ->dehydrated(false)
+                                    ->live(),
+
+                                Grid::make(2)->schema([
+                                    TextInput::make('name')
+                                        ->label('Provider Name')
+                                        ->required()
+                                        ->maxLength(80)
+                                        ->distinct()
+                                        ->helperText('A descriptive label shown in AI provider pickers.'),
+
+                                    TextInput::make('model')
+                                        ->label('Model')
+                                        ->required()
+                                        ->maxLength(160)
+                                        ->helperText('The text model used for chat, grading, and question generation.'),
+
+                                    TextInput::make('url')
+                                        ->label('Base URL')
+                                        ->required()
+                                        ->url()
+                                        ->rule('regex:/^https?:\\/\\//i')
+                                        ->maxLength(2048)
+                                        ->placeholder('https://gateway.example.com/v1')
+                                        ->helperText('Include the API version prefix when your gateway requires one.'),
+
+                                    TextInput::make('api_key')
+                                        ->label('Bearer API Key (optional)')
+                                        ->password()
+                                        ->revealable()
+                                        ->helperText('Sent as a Bearer token unless an Authorization header below overrides it.'),
+                                ]),
+
+                                Repeater::make('headers')
+                                    ->label('Custom Request Headers')
+                                    ->addActionLabel('Add Header')
+                                    ->defaultItems(0)
+                                    ->columns(2)
+                                    ->schema([
+                                        TextInput::make('name')
+                                            ->label('Header Name')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->distinct(),
+                                        TextInput::make('value')
+                                            ->label('Header Value')
+                                            ->required()
+                                            ->password()
+                                            ->revealable()
+                                            ->maxLength(2048),
+                                    ]),
+                            ]),
+                    ]),
+
                 $this->providerSection('cloudflare', 'Cloudflare Workers AI', 'Custom integration — not part of the Laravel AI SDK.', [
                     Grid::make(2)->schema([
                         TextInput::make('cloudflare_account_id')
@@ -536,16 +668,51 @@ class AiSettings extends Page implements HasSchemas
                 Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
             }
 
+            $compatibleProviders = collect((array) ($data['openai_compatible_providers'] ?? []))
+                ->filter(fn (mixed $provider): bool => is_array($provider))
+                ->map(function (array $provider): array {
+                    $headers = collect((array) ($provider['headers'] ?? []))
+                        ->filter(fn (mixed $header): bool => is_array($header))
+                        ->map(fn (array $header): array => [
+                            'name' => trim((string) ($header['name'] ?? '')),
+                            'value' => trim((string) ($header['value'] ?? '')),
+                        ])
+                        ->filter(fn (array $header): bool => $header['name'] !== '' && $header['value'] !== '')
+                        ->values()
+                        ->all();
+
+                    return [
+                        'id' => (string) $provider['id'],
+                        'name' => trim((string) $provider['name']),
+                        'url' => trim((string) $provider['url']),
+                        'model' => trim((string) $provider['model']),
+                        'api_key' => filled($provider['api_key'] ?? null) ? (string) $provider['api_key'] : null,
+                        'headers' => $headers,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            $defaultableProviders = AiSdkProviderService::TEXT_PROVIDER_LABELS + collect($compatibleProviders)
+                ->mapWithKeys(fn (array $provider): array => [
+                    AiSdkProviderService::compatibleProviderNameForId($provider['id']) => $provider['name'],
+                ])
+                ->all();
+
             // The hidden ai_provider state is the single source of truth for
             // the default provider. Guard against stale/unknown values (e.g.
             // a provider that was removed or can never serve text).
             $provider = $data['ai_provider'] ?? 'gemini';
 
-            if (! array_key_exists($provider, $this->defaultableProviders())) {
+            if (! array_key_exists($provider, $defaultableProviders)) {
                 $provider = 'gemini';
             }
 
             Setting::set('ai_provider', $provider);
+            Setting::set(
+                AiSdkProviderService::OPENAI_COMPATIBLE_SETTINGS_KEY,
+                json_encode($compatibleProviders, JSON_THROW_ON_ERROR),
+            );
             Setting::set('gemini_api_key', $data['gemini_api_key'] ?? null);
             Setting::set('gemini_chat_model', $data['gemini_chat_model'] ?? 'gemini-3.5-flash');
             Setting::set('gemini_grading_model', $data['gemini_grading_model'] ?? 'gemini-3.5-flash');
@@ -595,6 +762,8 @@ class AiSettings extends Page implements HasSchemas
                 ->title('Settings saved successfully!')
                 ->success()
                 ->send();
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Notification::make()
                 ->title('Error saving settings')

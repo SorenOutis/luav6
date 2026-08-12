@@ -125,6 +125,10 @@ class AIService
             return [];
         }
 
+        if (AiSdkProviderService::isRemovedCompatibleProvider($this->provider)) {
+            throw new \RuntimeException('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
+        }
+
         // Dispatch to the configured AI provider
         try {
             $results = match (true) {
