@@ -9,9 +9,7 @@ import {
 } from '@/components/ui/collapsible';
 import {
     SidebarGroup,
-    SidebarGroupAction,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuAction,
     SidebarMenuButton,
@@ -37,7 +35,7 @@ const emit = defineEmits<{
     delete: [session: ChatSession];
 }>();
 
-const isOpen = ref(true);
+const isOpen = ref(false);
 const visibleSessions = computed(() => props.sessions.slice(0, 12));
 const hiddenCount = computed(() =>
     Math.max(0, props.sessions.length - visibleSessions.value.length),
@@ -45,34 +43,41 @@ const hiddenCount = computed(() =>
 </script>
 
 <template>
-    <SidebarGroup class="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup class="px-2 py-0 group-data-[collapsible=icon]:hidden">
         <Collapsible v-model:open="isOpen" class="group/chats">
-            <SidebarGroupLabel as-child>
-                <div class="flex w-full items-center">
-                    <CollapsibleTrigger
-                        class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
-                    >
-                        <MessageSquareText class="size-3.5 shrink-0" />
-                        <span class="truncate">Recent chats</span>
-                        <ChevronDown
-                            class="ml-auto size-3.5 transition-transform duration-200 group-data-[state=closed]/chats:-rotate-90"
-                        />
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <CollapsibleTrigger as-child>
+                        <SidebarMenuButton
+                            data-testid="chat-history-toggle"
+                            tooltip="Chats"
+                            :is-active="true"
+                            aria-label="Toggle chat history"
+                            aria-controls="chat-history"
+                            :aria-expanded="isOpen"
+                        >
+                            <MessageSquareText />
+                            <span>Chats</span>
+                            <ChevronDown
+                                class="ml-auto transition-transform duration-200 group-data-[state=closed]/chats:-rotate-90"
+                            />
+                        </SidebarMenuButton>
                     </CollapsibleTrigger>
-                </div>
-            </SidebarGroupLabel>
 
-            <SidebarGroupAction
-                as="button"
-                title="New chat"
-                :disabled="creating"
-                @click="emit('create')"
-            >
-                <Plus />
-                <span class="sr-only">New chat</span>
-            </SidebarGroupAction>
+                    <SidebarMenuAction
+                        data-testid="chat-new"
+                        title="New chat"
+                        :disabled="creating"
+                        @click.stop="emit('create')"
+                    >
+                        <Plus />
+                        <span class="sr-only">New chat</span>
+                    </SidebarMenuAction>
+                </SidebarMenuItem>
+            </SidebarMenu>
 
-            <CollapsibleContent>
-                <SidebarGroupContent class="pt-1">
+            <CollapsibleContent id="chat-history" data-testid="chat-history">
+                <SidebarGroupContent class="pt-1 pl-2">
                     <SidebarMenu v-if="visibleSessions.length">
                         <SidebarMenuItem
                             v-for="session in visibleSessions"
@@ -86,6 +91,7 @@ const hiddenCount = computed(() =>
                                 :tooltip="session.title"
                             >
                                 <Link
+                                    :data-testid="`chat-session-${session.id}`"
                                     :href="
                                         chatsShow({ session: session.id }).url
                                     "
@@ -103,7 +109,7 @@ const hiddenCount = computed(() =>
                             <SidebarMenuAction
                                 show-on-hover
                                 title="Delete chat"
-                                @click.prevent="emit('delete', session)"
+                                @click.stop.prevent="emit('delete', session)"
                             >
                                 <Trash2 />
                                 <span class="sr-only">Delete chat</span>

@@ -9,7 +9,7 @@ import {
     Award,
     MessageSquareText,
 } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, useSlots } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -26,6 +26,8 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 const page = usePage();
+const slots = useSlots();
+const hasChatNavigation = computed(() => Boolean(slots['chat-navigation']));
 
 const isPageVisibleInNav = (key?: string) => {
     if (!key) return true;
@@ -77,7 +79,11 @@ const mainNavItems = computed<NavItem[]>(() =>
             icon: MessageSquareText,
             studentPageKey: 'chats',
         },
-    ].filter((item) => isPageVisibleInNav(item.studentPageKey)),
+    ].filter(
+        (item) =>
+            isPageVisibleInNav(item.studentPageKey) &&
+            (item.studentPageKey !== 'chats' || !hasChatNavigation.value),
+    ),
 );
 
 // const footerNavItems: NavItem[] = [
@@ -110,12 +116,11 @@ const mainNavItems = computed<NavItem[]>(() =>
 
         <SidebarContent>
             <NavMain :items="mainNavItems" />
-            <slot />
+            <slot name="chat-navigation" />
         </SidebarContent>
 
         <SidebarFooter>
             <NavUser />
         </SidebarFooter>
     </Sidebar>
-    <slot />
 </template>

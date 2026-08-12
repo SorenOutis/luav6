@@ -855,7 +855,7 @@ onBeforeUnmount(() => {
 <template>
     <Head title="Chats" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <template #sidebar>
+        <template #chat-navigation>
             <ChatNavigation
                 :sessions="sessions"
                 :active-session-id="activeSession?.id"
@@ -870,6 +870,7 @@ onBeforeUnmount(() => {
         >
             <!-- ─── Chat Pane ─── -->
             <Card
+                data-testid="chat-workspace"
                 class="relative min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-xl border-border/40"
                 @dragenter="onDragEnter"
                 @dragover="onDragOver"

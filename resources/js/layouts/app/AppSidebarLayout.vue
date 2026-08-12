@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, useSlots } from 'vue';
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
@@ -19,6 +19,8 @@ const props = withDefaults(defineProps<Props>(), {
     breadcrumbs: () => [],
     hideSidebar: false,
 });
+
+const slots = useSlots();
 
 const page = usePage();
 const currentStudentPage = computed(
@@ -41,7 +43,9 @@ const contentClass = computed(() =>
     <SeoHead noindex />
     <AppShell variant="sidebar">
         <AppSidebar v-if="!props.hideSidebar">
-            <slot name="sidebar" />
+            <template v-if="slots['chat-navigation']" #chat-navigation>
+                <slot name="chat-navigation" />
+            </template>
         </AppSidebar>
         <AppContent variant="sidebar" :class="contentClass">
             <AppSidebarHeader
