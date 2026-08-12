@@ -40,7 +40,9 @@ const contentClass = computed(() =>
 <template>
     <SeoHead noindex />
     <AppShell variant="sidebar">
-        <AppSidebar v-if="!props.hideSidebar" />
+        <AppSidebar v-if="!props.hideSidebar">
+            <slot name="sidebar" />
+        </AppSidebar>
         <AppContent variant="sidebar" :class="contentClass">
             <AppSidebarHeader
                 v-if="!props.hideSidebar"
