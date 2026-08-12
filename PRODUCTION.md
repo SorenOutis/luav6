@@ -120,10 +120,41 @@ production is Postgres, the hot tables (`gamification_histories`,
 `exam_submissions`) were sequentially scanned on every page load, getting
 worse as those tables grow.
 
+### Applying it
+
+Committing the migration changes nothing on its own — it only takes effect
+once it **runs** against the production database. Either:
+
+```bash
+# A) Just deploy. start.sh runs `migrate --force --isolated` on container
+#    start, so the indexes are built before the new container serves traffic.
+docker compose --env-file .env.production -f docker-compose.yml \
+  -f docker-compose.production.yml up -d --build
+
+# B) Recommended for large tables: build the indexes FIRST, against the
+#    running old version, then deploy. CONCURRENTLY does not block reads or
+#    writes, so this is safe with live traffic — and it keeps a slow build
+#    off the deploy's critical path.
+docker compose --env-file .env.production -f docker-compose.yml \
+  -f docker-compose.production.yml run --rm app php artisan migrate --force
+```
+
+Prefer (B) if `gamification_histories` is large. Under (A) the container sits
+in `migrate` before it starts answering `/up`; the healthcheck allows
+`start_period: 30s` + `interval 30s × retries 5`, so a build longer than that
+window can get the container marked unhealthy mid-deploy. (B) removes that
+risk entirely, and the subsequent deploy's `migrate` becomes a no-op.
+
+Verify afterwards:
+
+```bash
+docker compose ... exec db psql -U laravel -d laravel -c "\di gam_hist*"
+```
+
 Deployment specifics:
 
 - On PostgreSQL the migration issues `CREATE INDEX CONCURRENTLY`, which builds
-  **without blocking writes** — safe to run against live traffic.
+  **without blocking reads or writes** — safe to run against live traffic.
 - `CONCURRENTLY` cannot run in a transaction, so the migration sets
   `public $withinTransaction = false`. It is therefore **not atomic**, but it
   is written to be re-runnable (`IF NOT EXISTS` + `hasIndex` guards): if it is
@@ -143,7 +174,7 @@ docker compose ... exec db psql -U laravel -d laravel \
 # Drop each one (non-blocking), then re-run migrations
 docker compose ... exec db psql -U laravel -d laravel \
   -c "DROP INDEX CONCURRENTLY <index_name>;"
-docker compose ... run --rm migrate
+docker compose ... run --rm app php artisan migrate --force
 ```
 
 `tests/Feature/PagePerformanceTest.php` asserts each index exists and, on
@@ -154,8 +185,14 @@ PostgreSQL, that no invalid indexes are left behind.
 - When building the Dockerfile without Compose, pass
   `--build-arg QUEUE_CONNECTION=redis` to include Horizon. Omitting the
   argument produces a non-Redis image without Horizon.
-- **Migrations are manual** (run via the `migrate` role / `run --rm`), not on
-  container start, so you control when schema changes apply.
+- **Migrations run automatically on container start.** The `octane` role in
+  `start.sh` runs `php artisan migrate --force --isolated` before the web
+  server accepts traffic, so a deploy applies pending schema changes by
+  itself. `--isolated` takes a cache lock so only one replica migrates during
+  a rolling deploy. You can still run them ahead of time as a one-off with
+  `run --rm app php artisan migrate --force` (there is no separate `migrate`
+  compose service; `start.sh` does expose a `migrate` *role* via
+  `CONTAINER_ROLE`).
 - The **queue runs on Redis and is supervised by Laravel Horizon** (queues
   `ai` + `default`), running in the same `app` container as the web server.
   Tune concurrency with `HORIZON_PROCESSES` (default `4`; the `QUEUE_*` vars
