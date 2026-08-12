@@ -21,6 +21,7 @@ use App\Services\LeaderboardService;
 use App\Support\RequestCache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 
@@ -237,7 +238,7 @@ it('does not leak the memoized season across requests', function () {
  * expensive in it is multiplied across the whole app. Settings are cached and
  * the notification list is capped at 8 rows with an explicit column list.
  */
-it('keeps the per-navigation shared prop queries bounded', function () {
+it('does not issue more queries per navigation as data grows', function () {
     $season = Season::factory()->active()->create();
     $section = Section::factory()->forSeason($season)->create();
     $user = User::factory()->create();
@@ -245,20 +246,39 @@ it('keeps the per-navigation shared prop queries bounded', function () {
 
     actingAs($user);
 
-    // Warm caches (settings map, season) the way a live worker would be.
-    $this->get('/leaderboard');
-
-    DB::enableQueryLog();
-
+    // Warm anything cached across requests (the settings map) so the counts
+    // below compare like with like.
     $this->get('/leaderboard')->assertOk();
 
-    $queries = count(DB::getQueryLog());
-
+    DB::enableQueryLog();
+    $this->get('/leaderboard')->assertOk();
+    $baseline = count(DB::getQueryLog());
     DB::disableQueryLog();
 
-    // Generous ceiling: the point is to fail loudly if someone reintroduces an
-    // N+1 or an uncached Setting::get() into the shared/global path.
-    expect($queries)->toBeLessThan(40);
+    // Add peers and XP history — an N+1 would scale the query count with these.
+    User::factory()->count(5)->create()->each(function ($peer) use ($section, $season) {
+        $peer->sections()->attach($section->id, ['season_id' => $season->id]);
+
+        DB::table('gamification_histories')->insert([
+            'user_id' => $peer->id,
+            'season_id' => $season->id,
+            'amount_xp' => 10,
+            'amount_points' => 0,
+            'reason' => 'Exam Submission',
+            'created_at' => now()->subDay(),
+            'updated_at' => now()->subDay(),
+        ]);
+    });
+
+    DB::enableQueryLog();
+    $this->get('/leaderboard')->assertOk();
+    $withMoreData = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    // A fixed count is brittle (it moves whenever a feature is added), so the
+    // assertion is on the shape of the cost, not its absolute value: rendering
+    // the page must not get more expensive just because there is more data.
+    expect($withMoreData)->toBe($baseline);
 });
 
 // ─────────────────────────────────────────────
@@ -335,14 +355,33 @@ it('reports each students xp against the correct section', function () {
 it('does not select the notification body columns it never renders', function () {
     $user = User::factory()->create();
 
+    // Give the user a notification so the shared prop actually queries the
+    // table — otherwise this assertion would pass vacuously.
+    DB::table('notifications')->insert([
+        'id' => (string) Str::uuid(),
+        'type' => 'App\\Notifications\\Test',
+        'notifiable_type' => $user::class,
+        'notifiable_id' => $user->id,
+        'data' => json_encode(['title' => 'Hi', 'message' => 'There']),
+        'read_at' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
     actingAs($user);
 
     DB::enableQueryLog();
-    $this->get('/dashboard');
-    $log = collect(DB::getQueryLog())->pluck('query')->join(' ');
+    $this->get('/dashboard')->assertOk();
+    $queries = collect(DB::getQueryLog())->pluck('query');
     DB::disableQueryLog();
 
-    // The shared prop maps only these fields, so it must not `select *` the
-    // notifications table (which carries a TEXT `data` blob per row).
-    expect($log)->not->toContain('select * from "notifications"');
+    $notificationReads = $queries->filter(
+        fn ($q) => str_contains($q, 'from "notifications"') && str_starts_with($q, 'select')
+    );
+
+    // The prop maps a fixed set of fields, so the list query must name its
+    // columns rather than `select *` the TEXT `data` blob for every row.
+    expect($notificationReads)->not->toBeEmpty()
+        ->and($notificationReads->filter(fn ($q) => str_contains($q, 'select * from "notifications"')))
+        ->toBeEmpty();
 });
