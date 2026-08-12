@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\AiChatLogger;
 use App\Services\ChatService;
 
 /**
@@ -9,10 +10,18 @@ use App\Services\ChatService;
  * detect profanity, insults, harassment, and creative spellings/leetspeak.
  */
 
+function chatService(): ChatService
+{
+    // Constructed directly so these unit tests do not need the Laravel
+    // container. ChatService gained an AiChatLogger constructor dependency
+    // for lifecycle logging; the guardrail methods never touch it.
+    return new ChatService(new AiChatLogger);
+}
+
 // ─── normalizeMessage tests ─────────────────────────────────
 
 test('normalizeMessage converts leetspeak 1 → i', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -22,7 +31,7 @@ test('normalizeMessage converts leetspeak 1 → i', function () {
 });
 
 test('normalizeMessage converts leetspeak 4 → a', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -32,7 +41,7 @@ test('normalizeMessage converts leetspeak 4 → a', function () {
 });
 
 test('normalizeMessage converts leetspeak @ → a', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -42,7 +51,7 @@ test('normalizeMessage converts leetspeak @ → a', function () {
 });
 
 test('normalizeMessage converts leetspeak 5 → s', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -52,7 +61,7 @@ test('normalizeMessage converts leetspeak 5 → s', function () {
 });
 
 test('normalizeMessage converts leetspeak 0 → o', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -62,7 +71,7 @@ test('normalizeMessage converts leetspeak 0 → o', function () {
 });
 
 test('normalizeMessage converts leetspeak 3 → e', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -72,7 +81,7 @@ test('normalizeMessage converts leetspeak 3 → e', function () {
 });
 
 test('normalizeMessage converts $ → s', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -82,7 +91,7 @@ test('normalizeMessage converts $ → s', function () {
 });
 
 test('normalizeMessage converts multiple leetspeak chars in one message', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -92,7 +101,7 @@ test('normalizeMessage converts multiple leetspeak chars in one message', functi
 });
 
 test('normalizeMessage handles mixed case message', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'normalizeMessage');
     $method->setAccessible(true);
 
@@ -104,7 +113,7 @@ test('normalizeMessage handles mixed case message', function () {
 // ─── isToxic tests ───────────────────────────────────────────
 
 test('isToxic detects basic swear words', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -116,7 +125,7 @@ test('isToxic detects basic swear words', function () {
 });
 
 test('isToxic detects abbreviations', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -127,7 +136,7 @@ test('isToxic detects abbreviations', function () {
 });
 
 test('isToxic detects insults', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -139,7 +148,7 @@ test('isToxic detects insults', function () {
 });
 
 test('isToxic detects harassment', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -150,7 +159,7 @@ test('isToxic detects harassment', function () {
 });
 
 test('isToxic detects leetspeak creative spellings', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -164,7 +173,7 @@ test('isToxic detects leetspeak creative spellings', function () {
 });
 
 test('isToxic allows clean academic messages', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -177,7 +186,7 @@ test('isToxic allows clean academic messages', function () {
 });
 
 test('isToxic does not flag innocent words with substring matches', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -190,7 +199,7 @@ test('isToxic does not flag innocent words with substring matches', function () 
 });
 
 test('isToxic catches compound/derived words via sloppy pattern', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
@@ -201,7 +210,7 @@ test('isToxic catches compound/derived words via sloppy pattern', function () {
 });
 
 test('isToxic detects profanity in a longer sentence', function () {
-    $service = new ChatService;
+    $service = chatService();
     $method = new ReflectionMethod(ChatService::class, 'isToxic');
     $method->setAccessible(true);
 
