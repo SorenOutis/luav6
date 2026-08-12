@@ -2,12 +2,15 @@
 
 namespace App\Providers;
 
+use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
+use App\Services\AiSdkProviderService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Ai\AiManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +28,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        app(AiManager::class)->extend(
+            AiSdkProviderService::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
+            fn ($app, array $config): HeaderAwareOpenAiCompatibleProvider => new HeaderAwareOpenAiCompatibleProvider(
+                $config,
+                $app->make('events'),
+            ),
+        );
 
         // Laravel Horizon is installed only inside the Docker image (never in
         // the repo's composer.json), so its dashboard gate is defined with a

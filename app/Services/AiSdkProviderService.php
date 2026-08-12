@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Setting;
+use Illuminate\Support\Arr;
 use Laravel\Ai\AiManager;
 
 /**
@@ -23,6 +24,10 @@ use Laravel\Ai\AiManager;
  */
 class AiSdkProviderService
 {
+    public const OPENAI_COMPATIBLE_SETTINGS_KEY = 'openai_compatible_providers';
+
+    public const HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER = 'header-aware-openai-compatible';
+
     /**
      * Providers routed through the Laravel AI SDK, mapped to the model used
      * when the admin has not picked one in Platform Settings.
@@ -94,9 +99,74 @@ class AiSdkProviderService
             $configured[$provider] = self::for($provider)->isConfigured();
         }
 
-        return collect(self::TEXT_PROVIDER_LABELS)
+        foreach (self::compatibleProviders() as $provider) {
+            $configured[$provider['provider']] = self::for($provider['provider'])->isConfigured();
+        }
+
+        return collect(self::textProviderLabels())
             ->filter(fn (string $label, string $key): bool => $configured[$key] ?? false)
             ->all();
+    }
+
+    /**
+     * Every text provider that may be selected in Platform Settings.
+     *
+     * @return array<string, string>
+     */
+    public static function textProviderLabels(): array
+    {
+        return self::TEXT_PROVIDER_LABELS + collect(self::compatibleProviders())
+            ->mapWithKeys(fn (array $provider): array => [
+                $provider['provider'] => $provider['name'].' (OpenAI-compatible)',
+            ])
+            ->all();
+    }
+
+    public static function compatibleProviderNameForId(string $id): string
+    {
+        return self::compatibleProviderName($id);
+    }
+
+    /**
+     * Read the administrator-managed OpenAI-compatible provider records.
+     *
+     * @return array<int, array{id: string, provider: string, name: string, url: ?string, model: ?string, api_key: ?string, headers: array<int, array{name: string, value: string}>}>
+     */
+    public static function compatibleProviders(): array
+    {
+        $stored = Setting::get(self::OPENAI_COMPATIBLE_SETTINGS_KEY, '[]');
+        $providers = is_string($stored) ? json_decode($stored, true) : $stored;
+
+        if (! is_array($providers)) {
+            return [];
+        }
+
+        return collect($providers)
+            ->filter(fn (mixed $provider): bool => is_array($provider) && self::isCompatibleId($provider['id'] ?? null))
+            ->map(function (array $provider): array {
+                $id = (string) $provider['id'];
+
+                return [
+                    'id' => $id,
+                    'provider' => self::compatibleProviderName($id),
+                    'name' => trim((string) ($provider['name'] ?? '')),
+                    'url' => self::nullableString($provider['url'] ?? null),
+                    'model' => self::nullableString($provider['model'] ?? null),
+                    'api_key' => self::nullableString($provider['api_key'] ?? null),
+                    'headers' => self::normalizeHeaders($provider['headers'] ?? []),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array{id: string, provider: string, name: string, url: ?string, model: ?string, api_key: ?string, headers: array<int, array{name: string, value: string}>}|null
+     */
+    public static function findCompatibleProvider(?string $provider): ?array
+    {
+        return collect(self::compatibleProviders())
+            ->firstWhere('provider', $provider);
     }
 
     /**
@@ -104,7 +174,20 @@ class AiSdkProviderService
      */
     public static function isSdkRouted(?string $provider): bool
     {
-        return $provider !== null && array_key_exists($provider, self::DEFAULT_MODELS);
+        return $provider !== null
+            && (array_key_exists($provider, self::DEFAULT_MODELS) || self::findCompatibleProvider($provider) !== null);
+    }
+
+    /**
+     * A saved draft may retain a compatible provider after an administrator
+     * deletes it. Never reinterpret that explicit selection as another
+     * provider or an Ollama fallback.
+     */
+    public static function isRemovedCompatibleProvider(?string $provider): bool
+    {
+        return is_string($provider)
+            && str_starts_with($provider, 'openai-compatible-')
+            && ! self::isSdkRouted($provider);
     }
 
     /**
@@ -112,6 +195,10 @@ class AiSdkProviderService
      */
     public function requiresApiKey(): bool
     {
+        if ($this->isOpenAiCompatible()) {
+            return false;
+        }
+
         return $this->provider !== 'ollama';
     }
 
@@ -121,6 +208,10 @@ class AiSdkProviderService
      */
     public function apiKey(): ?string
     {
+        if ($compatible = $this->compatibleProvider()) {
+            return $compatible['api_key'];
+        }
+
         return Setting::get("{$this->provider}_api_key")
             ?: config("ai.providers.{$this->provider}.env_key");
     }
@@ -131,6 +222,10 @@ class AiSdkProviderService
      */
     public function url(): ?string
     {
+        if ($compatible = $this->compatibleProvider()) {
+            return $compatible['url'];
+        }
+
         if (! in_array($this->provider, self::URL_PROVIDERS, true)) {
             return null;
         }
@@ -151,6 +246,10 @@ class AiSdkProviderService
      */
     public function model(): string
     {
+        if ($compatible = $this->compatibleProvider()) {
+            return $compatible['model'] ?? '';
+        }
+
         if ($this->provider === 'azure') {
             return Setting::get('azure_deployment')
                 ?: config('ai.providers.azure.deployment')
@@ -170,6 +269,12 @@ class AiSdkProviderService
      */
     public function isConfigured(): bool
     {
+        if ($this->isOpenAiCompatible()) {
+            $compatible = $this->compatibleProvider();
+
+            return $compatible !== null && filled($compatible['url']) && filled($compatible['model']);
+        }
+
         return ! $this->requiresApiKey() || filled($this->apiKey());
     }
 
@@ -180,6 +285,26 @@ class AiSdkProviderService
      */
     public function applyToSdk(?string $model = null): void
     {
+        if ($compatible = $this->compatibleProvider()) {
+            config([
+                "ai.providers.{$this->provider}" => [
+                    'driver' => self::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
+                    'key' => $compatible['api_key'],
+                    'url' => $compatible['url'],
+                    'headers' => self::headerMap($compatible['headers']),
+                    'models' => [
+                        'text' => [
+                            'default' => $model ?? $compatible['model'],
+                        ],
+                    ],
+                ],
+            ]);
+
+            app(AiManager::class)->forgetInstance($this->provider);
+
+            return;
+        }
+
         $config = [
             "ai.providers.{$this->provider}.models.text.default" => $model ?? $this->model(),
         ];
@@ -203,5 +328,71 @@ class AiSdkProviderService
         config($config);
 
         app(AiManager::class)->forgetInstance($this->provider);
+    }
+
+    private function isOpenAiCompatible(): bool
+    {
+        return $this->compatibleProvider() !== null;
+    }
+
+    /**
+     * @return array{id: string, provider: string, name: string, url: ?string, model: ?string, api_key: ?string, headers: array<int, array{name: string, value: string}>}|null
+     */
+    private function compatibleProvider(): ?array
+    {
+        return self::findCompatibleProvider($this->provider);
+    }
+
+    private static function compatibleProviderName(string $id): string
+    {
+        return "openai-compatible-{$id}";
+    }
+
+    private static function isCompatibleId(mixed $id): bool
+    {
+        return is_string($id) && preg_match(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+            $id,
+        ) === 1;
+    }
+
+    private static function nullableString(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * @return array<int, array{name: string, value: string}>
+     */
+    private static function normalizeHeaders(mixed $headers): array
+    {
+        if (! is_array($headers)) {
+            return [];
+        }
+
+        return collect(Arr::isAssoc($headers)
+            ? collect($headers)->map(fn (mixed $value, string $name): array => ['name' => $name, 'value' => $value])->all()
+            : $headers)
+            ->filter(fn (mixed $header): bool => is_array($header))
+            ->map(fn (array $header): array => [
+                'name' => trim((string) ($header['name'] ?? '')),
+                'value' => trim((string) ($header['value'] ?? '')),
+            ])
+            ->filter(fn (array $header): bool => $header['name'] !== '' && $header['value'] !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, array{name: string, value: string}>  $headers
+     * @return array<string, string>
+     */
+    private static function headerMap(array $headers): array
+    {
+        return collect($headers)
+            ->mapWithKeys(fn (array $header): array => [$header['name'] => $header['value']])
+            ->all();
     }
 }
