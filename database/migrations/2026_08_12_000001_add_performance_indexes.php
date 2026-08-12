@@ -2,23 +2,31 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Performance — index the columns every page load filters, joins and sorts on.
  *
  * `$table->foreignId(...)->constrained()` creates a foreign KEY, not an index.
- * MySQL happens to add one implicitly; SQLite and Postgres do NOT. This app
- * runs SQLite in dev/Docker and Postgres in production, so the hottest tables
- * (`gamification_histories`, `section_user`, `section_progress`, `course_user`,
- * `assignment_user`, `exam_submissions`) were being full-scanned on every
- * dashboard, leaderboard and navigation request.
+ * MySQL/InnoDB is the one engine that adds one implicitly; PostgreSQL does not:
+ *
+ *   "Because this is not always needed, and there are many choices available on
+ *    how to index, the declaration of a foreign key constraint does not
+ *    automatically create an index on the referencing columns."
+ *   — https://www.postgresql.org/docs/current/ddl-constraints.html
+ *
+ * Production runs PostgreSQL (see .env.production.example), so the hottest
+ * tables were being sequentially scanned on every dashboard, leaderboard and
+ * navigation request. SQLite (dev/Docker) has the same gap.
  *
  * Every index below maps to a query that runs on a page render:
  *
  *  - gamification_histories(user_id, created_at)
  *      DashboardController heatmap  → where user_id = ? and created_at >= ?
  *      LeaderboardService weekStats → whereIn user_id and created_at >= ?
+ *      This table grows fastest of any (one row per XP event), so it degrades
+ *      the most over time.
  *  - gamification_histories(user_id, season_id)
  *      DashboardController xp/points breakdown
  *  - section_user(user_id, season_id) / (section_id, season_id)
@@ -32,14 +40,33 @@ use Illuminate\Support\Facades\Schema;
  *  - notifications(notifiable_type, notifiable_id, read_at)
  *      HandleInertiaRequests unread badge — runs on EVERY navigation.
  *      `morphs()` already indexes the first two columns; appending read_at
- *      makes the `whereNull('read_at')` count a covering index lookup instead
- *      of an index scan plus a row fetch per notification.
+ *      makes the `whereNull('read_at')` count a covering lookup.
  *
- * Guarded with hasTable/hasColumn/hasIndex so it is safe to re-run and safe on
- * MySQL where some of these already exist implicitly.
+ * ⚠️ PostgreSQL locking: a plain CREATE INDEX takes a SHARE lock that blocks
+ * INSERT/UPDATE/DELETE on the table until the build finishes. start.sh runs
+ * `php artisan migrate --force` on every deploy, so on a large table that is a
+ * write stall during rollout. This migration therefore uses
+ * CREATE INDEX CONCURRENTLY on PostgreSQL, which does not block writes.
+ *
+ * CONCURRENTLY cannot run inside a transaction block, so $withinTransaction is
+ * false. That means the migration is NOT atomic: if it fails partway, the
+ * indexes it already created stay. It is written to be safely re-runnable
+ * (IF NOT EXISTS / hasIndex guards), so re-running `migrate` finishes the job.
+ *
+ * ⚠️ A cancelled CONCURRENTLY build can leave an INVALID index behind, which
+ * Postgres will not use. To find and clean those up:
+ *
+ *   SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;
+ *   DROP INDEX CONCURRENTLY <name>;   -- then re-run this migration
  */
 return new class extends Migration
 {
+    /**
+     * CREATE INDEX CONCURRENTLY is rejected inside a transaction block, and
+     * Laravel wraps migrations in one on PostgreSQL by default.
+     */
+    public $withinTransaction = false;
+
     /**
      * @var array<string, array<string, array<int, string>>>
      */
@@ -113,9 +140,7 @@ return new class extends Migration
                     continue;
                 }
 
-                Schema::table($table, function (Blueprint $blueprint) use ($columns, $name) {
-                    $blueprint->index($columns, $name);
-                });
+                $this->createIndex($table, $name, $columns);
             }
         }
     }
@@ -132,11 +157,44 @@ return new class extends Migration
                     continue;
                 }
 
-                Schema::table($table, function (Blueprint $blueprint) use ($name) {
-                    $blueprint->dropIndex($name);
-                });
+                $this->dropIndex($table, $name);
             }
         }
+    }
+
+    /**
+     * @param  array<int, string>  $columns
+     */
+    private function createIndex(string $table, string $name, array $columns): void
+    {
+        if ($this->isPostgres()) {
+            // Non-blocking build so a deploy never stalls writes.
+            DB::statement(sprintf(
+                'CREATE INDEX CONCURRENTLY IF NOT EXISTS %s ON %s (%s)',
+                $this->quote($name),
+                $this->quote($table),
+                collect($columns)->map(fn ($c) => $this->quote($c))->join(', ')
+            ));
+
+            return;
+        }
+
+        Schema::table($table, function (Blueprint $blueprint) use ($columns, $name) {
+            $blueprint->index($columns, $name);
+        });
+    }
+
+    private function dropIndex(string $table, string $name): void
+    {
+        if ($this->isPostgres()) {
+            DB::statement('DROP INDEX CONCURRENTLY IF EXISTS '.$this->quote($name));
+
+            return;
+        }
+
+        Schema::table($table, function (Blueprint $blueprint) use ($name) {
+            $blueprint->dropIndex($name);
+        });
     }
 
     /**
@@ -162,5 +220,15 @@ return new class extends Migration
     {
         return collect(Schema::getIndexes($table))
             ->contains(fn (array $index) => strcasecmp((string) ($index['name'] ?? ''), $name) === 0);
+    }
+
+    private function isPostgres(): bool
+    {
+        return DB::connection()->getDriverName() === 'pgsql';
+    }
+
+    private function quote(string $identifier): string
+    {
+        return '"'.str_replace('"', '""', $identifier).'"';
     }
 };

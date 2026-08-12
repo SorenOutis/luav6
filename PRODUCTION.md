@@ -107,6 +107,48 @@ Three ways to know whether the queue workers are running after a deploy:
    web endpoint (`/up`) and the queue consumer (Horizon status, or Supervisor
    status for `queue:work`), so `docker compose ... ps` reflects both.
 
+## Performance indexes (PostgreSQL)
+
+`database/migrations/2026_08_12_000001_add_performance_indexes.php` adds the
+indexes the dashboard, leaderboard and navigation queries depend on.
+
+Why it exists: `foreignId()->constrained()` creates a foreign **key**, not an
+index. MySQL/InnoDB adds one implicitly — **PostgreSQL does not**, by design
+([docs](https://www.postgresql.org/docs/current/ddl-constraints.html)). Since
+production is Postgres, the hot tables (`gamification_histories`,
+`section_user`, `section_progress`, `course_user`, `assignment_user`,
+`exam_submissions`) were sequentially scanned on every page load, getting
+worse as those tables grow.
+
+Deployment specifics:
+
+- On PostgreSQL the migration issues `CREATE INDEX CONCURRENTLY`, which builds
+  **without blocking writes** — safe to run against live traffic.
+- `CONCURRENTLY` cannot run in a transaction, so the migration sets
+  `public $withinTransaction = false`. It is therefore **not atomic**, but it
+  is written to be re-runnable (`IF NOT EXISTS` + `hasIndex` guards): if it is
+  interrupted, just run `php artisan migrate` again.
+- Concurrent builds take roughly twice as long and use more CPU/IO than a
+  normal `CREATE INDEX`. On large tables run it during a quieter window and
+  watch database load.
+- ⚠️ If a concurrent build is **cancelled** partway, Postgres leaves an
+  `INVALID` index: it consumes disk and slows writes, but the planner ignores
+  it — so the app silently stays slow. Find and clear them:
+
+```bash
+# List invalid indexes
+docker compose ... exec db psql -U laravel -d laravel \
+  -c "SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid;"
+
+# Drop each one (non-blocking), then re-run migrations
+docker compose ... exec db psql -U laravel -d laravel \
+  -c "DROP INDEX CONCURRENTLY <index_name>;"
+docker compose ... run --rm migrate
+```
+
+`tests/Feature/PagePerformanceTest.php` asserts each index exists and, on
+PostgreSQL, that no invalid indexes are left behind.
+
 ## Notes
 
 - When building the Dockerfile without Compose, pass

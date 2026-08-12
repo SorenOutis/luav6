@@ -65,6 +65,10 @@ it('indexes the columns every page load queries', function (string $table, strin
  * against gamification_histories, which grows fastest of any table (one row
  * per XP event). Without the composite index this is a full table scan on
  * every dashboard load.
+ *
+ * The plan format is driver-specific, so the assertion is too. The index
+ * *presence* checks above are what protect PostgreSQL in production; this only
+ * proves the planner actually chooses the index when given the real query.
  */
 it('uses an index for the dashboard heatmap query', function () {
     $user = User::factory()->create();
@@ -104,6 +108,29 @@ it('uses an index for the leaderboard rank query', function () {
 })->skip(
     fn () => DB::connection()->getDriverName() !== 'sqlite',
     'Query plan assertion is SQLite-specific.'
+);
+
+/**
+ * PostgreSQL-only. A CREATE INDEX CONCURRENTLY build that is interrupted
+ * (deploy timeout, cancelled query, server restart) leaves an INVALID index
+ * behind: it occupies disk and slows writes, but the planner refuses to use
+ * it — so the table silently goes back to sequential scans and the app gets
+ * slow again with no obvious cause.
+ *
+ * Recovery is `DROP INDEX CONCURRENTLY <name>` then re-run `php artisan migrate`.
+ */
+it('has no invalid indexes left over from a concurrent build', function () {
+    $invalid = collect(DB::select(
+        'SELECT indexrelid::regclass AS name FROM pg_index WHERE NOT indisvalid'
+    ))->pluck('name');
+
+    expect($invalid)->toBeEmpty(
+        'Invalid indexes found: '.$invalid->join(', ').
+        ' — DROP INDEX CONCURRENTLY each, then re-run migrations.'
+    );
+})->skip(
+    fn () => DB::connection()->getDriverName() !== 'pgsql',
+    'pg_index check is PostgreSQL-specific.'
 );
 
 // ─────────────────────────────────────────────
