@@ -19,7 +19,7 @@ use Closure;
  * This class is registered with `$this->app->scoped()`, which Octane flushes at
  * every request boundary, so the memo lifetime is exactly one request.
  *
- * @see \App\Providers\AppServiceProvider::register()
+ * Registered in AppServiceProvider::register().
  */
 class RequestCache
 {
