@@ -259,10 +259,17 @@ const handleLogout = () => {
                 </button>
 
                 <!-- Regular Link -->
+                <!--
+                    Touch devices never fire hover, so the bottom bar prefetches
+                    on mousedown/touchstart instead — that still buys the
+                    ~100ms between finger-down and finger-up.
+                -->
                 <Link
                     v-else
                     :href="item.href"
                     :ref="(el) => setItemRef(el, index)"
+                    prefetch="click"
+                    cache-for="30s"
                     class="relative z-10 flex flex-1 flex-col items-center justify-center gap-0.5 py-2 transition-all outline-none active:scale-90"
                     @click="handleNavClick(index)"
                 >

@@ -55,6 +55,7 @@ class HandleInertiaRequests extends Middleware
             'notifications' => fn () => $request->user() ? [
                 'unreadCount' => $request->user()->unreadNotifications()->count(),
                 'items' => $request->user()->notifications()
+                    ->select(['id', 'data', 'read_at', 'created_at'])
                     ->latest()
                     ->limit(8)
                     ->get()

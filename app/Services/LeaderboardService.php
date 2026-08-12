@@ -44,6 +44,20 @@ class LeaderboardService
 
         $sectionIds = $userSections->pluck('id');
 
+        // ── Batch-load every section's roster in one round trip ──────
+        // This previously ran inside the foreach below (and again when
+        // building $allUserIds), so a student in 4 sections paid 8 queries
+        // just to assemble the dashboard leaderboard. Eager loading here makes
+        // it 2 queries regardless of how many sections the user is in.
+        //
+        // sectionProgress is scoped to the sections in play so a user enrolled
+        // in many sections doesn't drag in unrelated progress rows; it is then
+        // matched per section in PHP.
+        $userSections->load([
+            'users' => fn ($q) => $q->where('is_admin', false)
+                ->with(['sectionProgress' => fn ($p) => $p->whereIn('section_id', $sectionIds)]),
+        ]);
+
         // ── Single-pass rank query (windowed) ────────────────────────
         // Replaces the per-section foreach subquery with one query using
         // ROW_NUMBER() windowed across sections. SQLite + Postgres both
@@ -77,10 +91,12 @@ class LeaderboardService
         // gamification_histories is the canonical XP log (exams, daily claims,
         // admin adjustments, enrollment). course_user.xp_earned is not kept in
         // sync by the live lesson flow, so it is a poor source for activity.
-        $allUserIds = $userSections->flatMap(fn ($s) => $s->users()
-            ->where('is_admin', false)
-            ->pluck('users.id')
-        )->unique();
+        //
+        // Reuses the rosters eager-loaded above — no extra query per section.
+        $allUserIds = $userSections
+            ->flatMap(fn ($s) => $s->users->pluck('id'))
+            ->unique()
+            ->values();
 
         $thisWeekStart = now()->subDays(7);
         $prevWeekStart = now()->subDays(14);
@@ -105,17 +121,22 @@ class LeaderboardService
         $sectionLeaderboards = [];
 
         foreach ($userSections as $section) {
-            $usersInSection = $section->users()
-                ->where('is_admin', false)
-                ->with(['sectionProgress' => fn ($q) => $q->where('section_id', $section->id)])
-                ->get();
+            // Already in memory from the eager load above.
+            $usersInSection = $section->users;
 
             $sectionRanks = $ranks->get($section->id, collect());
             $userRankRow = $sectionRanks->firstWhere('user_id', $user->id);
             $userRank = $userRankRow ? (int) $userRankRow->rank : 1;
 
-            $leaderboardUsers = $usersInSection->map(function ($u) use ($weekStats, $user) {
-                $progress = $u->sectionProgress->first();
+            $leaderboardUsers = $usersInSection->map(function ($u) use ($weekStats, $user, $section) {
+                // ⚠️ sectionProgress is eager-loaded for ALL of the viewer's
+                // sections at once, so it must be matched to THIS section.
+                // Taking ->first() here would show a student's XP from an
+                // unrelated section.
+                // Cast both sides: section_id has no model cast, and drivers
+                // differ on whether integer columns come back as int or string.
+                $progress = $u->sectionProgress
+                    ->first(fn ($p) => (int) $p->section_id === (int) $section->id);
                 $xp = $progress?->exp ?? 0;
                 $level = $progress?->level ?? 1;
 

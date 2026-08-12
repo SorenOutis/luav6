@@ -178,7 +178,35 @@ composer run test
 Run specific tests:
 ```bash
 php artisan test
+php artisan test --filter=PagePerformanceTest
 ```
+
+### `php artisan test` not working?
+
+The suite needs PHP 8.2+, `vendor/`, and an `APP_KEY`. This checks all three
+and prints the exact fix for whatever is missing, then runs the tests:
+
+```bash
+composer run test:preflight
+# or directly:
+sh bin/test-preflight.sh
+```
+
+Typical first-time setup:
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan test
+```
+
+Notes:
+- Tests do **not** touch your real database. `phpunit.xml` forces
+  `DB_CONNECTION=sqlite` with `DB_DATABASE=:memory:`, plus the `array` cache
+  and session drivers, so no migration runs against `database/database.sqlite`.
+- Required PHP extensions: `pdo_sqlite`, `mbstring`, `openssl`, `tokenizer`,
+  `xml`, `curl`.
+- The JS tests are separate: `npm run test:js`.
 
 ## Production Deployment (Docker)
 
