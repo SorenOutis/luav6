@@ -116,6 +116,9 @@ return new class extends Migration
         'badge_user' => [
             'badge_user_user_idx' => ['user_id'],
         ],
+        // NOTE: seasons.admin_id is already indexed by
+        // 2026_07_15_000002_add_admin_id_to_workspace_tables. Only is_active is
+        // added here, for Season::current().
         'seasons' => [
             'seasons_active_idx' => ['is_active'],
         ],

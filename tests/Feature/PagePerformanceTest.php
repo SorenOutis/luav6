@@ -179,6 +179,23 @@ it('memoizes the absence of an active season without re-querying', function () {
         ->and($queries)->toBe(0);
 });
 
+/**
+ * Invalidation must be surgical. Activating a season used to clear the WHOLE
+ * RequestCache, which would silently discard every other memoized value in the
+ * request and quietly reintroduce the queries this cache exists to remove.
+ */
+it('clears only the season keys when a season is saved', function () {
+    $cache = app(RequestCache::class);
+
+    $cache->remember('unrelated:value', fn () => 'keep me');
+    Season::current();
+
+    Season::factory()->active()->create();
+
+    expect($cache->has('unrelated:value'))->toBeTrue()
+        ->and($cache->has('season:current:guest'))->toBeFalse();
+});
+
 it('re-reads the active season after one is saved', function () {
     expect(Season::current())->toBeNull();
 

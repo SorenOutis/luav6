@@ -59,6 +59,22 @@ class RequestCache
         unset($this->values[$key]);
     }
 
+    /**
+     * Drop every key beginning with the given prefix.
+     *
+     * Lets one subsystem invalidate only its own entries — clearing the whole
+     * store would silently throw away unrelated memoized values and quietly
+     * reintroduce the queries this class exists to remove.
+     */
+    public function forgetPrefix(string $prefix): void
+    {
+        foreach (array_keys($this->values) as $key) {
+            if (str_starts_with((string) $key, $prefix)) {
+                unset($this->values[$key]);
+            }
+        }
+    }
+
     public function has(string $key): bool
     {
         return array_key_exists($key, $this->values);

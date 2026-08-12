@@ -90,6 +90,10 @@
             "@lint:check",
             "@php artisan test"
         ],
+        "test:preflight": [
+            "Composer\\Config::disableProcessTimeout",
+            "sh bin/test-preflight.sh"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi",

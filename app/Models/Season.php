@@ -29,10 +29,14 @@ class Season extends Model
             }
         });
 
-        // The active season just changed — drop the per-request memo so any
-        // later Season::current() in this same request re-reads the database.
-        static::saved(fn () => app(RequestCache::class)->forget());
-        static::deleted(fn () => app(RequestCache::class)->forget());
+        // The active season may have changed — drop the memo so any later
+        // Season::current() in this same request re-reads the database.
+        //
+        // Only the season keys are cleared (not the whole store): saving() above
+        // can flip is_active on OTHER seasons too, so every scope's entry must
+        // go, but unrelated memoized values must survive.
+        static::saved(fn () => static::forgetAllCurrent());
+        static::deleted(fn () => static::forgetAllCurrent());
     }
 
     public function progress()
@@ -59,22 +63,34 @@ class Season extends Model
      */
     public static function current()
     {
-        $scope = auth()->id() ?? 'guest';
-
         return app(RequestCache::class)->remember(
-            "season:current:{$scope}",
+            static::currentCacheKey(),
             fn () => self::where('is_active', true)->first()
         );
     }
 
     /**
-     * Forget the memoized active season.
-     *
-     * Needed when a season is activated/deactivated inside a request that then
-     * goes on to read Season::current() again.
+     * Forget the memoized active season for the current user's scope.
      */
     public static function forgetCurrent(): void
     {
-        app(RequestCache::class)->forget('season:current:'.(auth()->id() ?? 'guest'));
+        app(RequestCache::class)->forget(static::currentCacheKey());
+    }
+
+    /**
+     * Forget the memoized active season for every scope.
+     *
+     * Activating one season deactivates the others, which can change the answer
+     * for admins other than the one performing the write, so all scopes are
+     * invalidated rather than just the acting user's.
+     */
+    public static function forgetAllCurrent(): void
+    {
+        app(RequestCache::class)->forgetPrefix('season:current:');
+    }
+
+    private static function currentCacheKey(): string
+    {
+        return 'season:current:'.(auth()->id() ?? 'guest');
     }
 }
