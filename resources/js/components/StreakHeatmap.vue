@@ -126,9 +126,9 @@ const encouragement = computed<Encouragement>(() => {
 });
 
 const toneClasses: Record<Tone, string> = {
-    amber: 'bg-[#FF9F0A]/10',
-    emerald: 'bg-[#34C759]/10',
-    primary: 'bg-[#007AFF]/10',
+    amber: 'bg-[#D97757]/10',
+    emerald: 'bg-[#4D9375]/10',
+    primary: 'bg-[#D97757]/10',
     muted: 'bg-muted/40',
 };
 
@@ -178,8 +178,8 @@ const dayLabel = (date: Date) =>
                     :class="
                         cell.active
                             ? cell.isToday
-                                ? 'border-[#007AFF] bg-[#007AFF] ring-2 ring-[#007AFF]/25 ring-offset-1 ring-offset-background'
-                                : 'border-[#007AFF]/30 bg-[#007AFF]/70'
+                                ? 'border-[#D97757] bg-[#D97757] ring-2 ring-[#D97757]/25 ring-offset-1 ring-offset-background'
+                                : 'border-[#D97757]/30 bg-[#D97757]/70'
                             : 'border-border/15 bg-muted/20'
                     "
                 >

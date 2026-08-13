@@ -48,7 +48,7 @@ const openCalendar = () => {
 
 <template>
     <div
-        class="surface-card group relative w-full min-w-0 cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:ring-[#007AFF]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
+        class="surface-card group relative w-full min-w-0 cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
         tabindex="0"
         role="button"
         aria-label="Open your streak calendar"
@@ -61,7 +61,7 @@ const openCalendar = () => {
         >
             <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="dash-icon-well bg-[#FF9F0A]/15 text-[#FF9F0A]">
+                    <div class="dash-icon-well bg-[#D97757]/15 text-[#D97757]">
                         <Flame class="h-5 w-5" />
                     </div>
                     <div>
@@ -95,7 +95,7 @@ const openCalendar = () => {
                         class="flex h-7 w-full items-center justify-center rounded-full"
                         :class="
                             day.isActive
-                                ? 'bg-orange-500/15'
+                                ? 'bg-[#D97757]/15'
                                 : 'border border-border/10 bg-muted/20'
                         "
                     >
@@ -104,8 +104,8 @@ const openCalendar = () => {
                             class="h-3 w-3"
                             :class="
                                 day.isToday
-                                    ? 'text-orange-400'
-                                    : 'text-orange-400/60'
+                                    ? 'text-[#D97757]'
+                                    : 'text-[#D97757]/60'
                             "
                         />
                     </div>
@@ -133,7 +133,7 @@ const openCalendar = () => {
                     >
                 </p>
                 <span
-                    class="flex items-center gap-1 text-[13px] font-medium text-[#007AFF]"
+                    class="flex items-center gap-1 text-[13px] font-medium text-[#D97757]"
                 >
                     Calendar
                     <ChevronRight class="h-3 w-3" />

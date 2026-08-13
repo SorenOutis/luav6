@@ -204,26 +204,26 @@ const distributionData = computed(() => {
             {
                 label: 'Excellent (≥85)',
                 count: excellent,
-                color: '#34C759',
-                textColor: 'text-[#34C759]',
+                color: '#4D9375',
+                textColor: 'text-[#4D9375]',
             },
             {
                 label: 'Good (70-84)',
                 count: good,
-                color: '#007AFF',
-                textColor: 'text-[#007AFF]',
+                color: '#D97757',
+                textColor: 'text-[#D97757]',
             },
             {
                 label: 'Satisfactory (60-69)',
                 count: satisfactory,
-                color: '#FF9F0A',
-                textColor: 'text-[#FF9F0A]',
+                color: '#E0AF68',
+                textColor: 'text-[#E0AF68]',
             },
             {
                 label: 'Needs Improvement (<60)',
                 count: needsImprovement,
-                color: '#FF3B30',
-                textColor: 'text-[#FF3B30]',
+                color: '#CB7676',
+                textColor: 'text-[#CB7676]',
             },
         ],
         total: grades.length,
@@ -233,18 +233,18 @@ const distributionData = computed(() => {
 // ── Styling helpers ──────────────────────────────────────────────
 const gradeColor = (percentage: number | null) => {
     if (percentage === null) return 'text-muted-foreground';
-    if (percentage >= 85) return 'text-[#34C759]';
-    if (percentage >= 70) return 'text-[#007AFF]';
-    if (percentage >= 60) return 'text-[#FF9F0A]';
-    return 'text-[#FF3B30]';
+    if (percentage >= 85) return 'text-[#4D9375]';
+    if (percentage >= 70) return 'text-[#D97757]';
+    if (percentage >= 60) return 'text-[#E0AF68]';
+    return 'text-[#CB7676]';
 };
 
 const progressColor = (percentage: number | null) => {
     if (percentage === null) return 'bg-muted';
-    if (percentage >= 85) return 'bg-[#34C759]';
-    if (percentage >= 70) return 'bg-[#007AFF]';
-    if (percentage >= 60) return 'bg-[#FF9F0A]';
-    return 'bg-[#FF3B30]';
+    if (percentage >= 85) return 'bg-[#4D9375]';
+    if (percentage >= 70) return 'bg-[#D97757]';
+    if (percentage >= 60) return 'bg-[#E0AF68]';
+    return 'bg-[#CB7676]';
 };
 
 const gradeLabel = (percentage: number | null) => {
@@ -603,7 +603,7 @@ onMounted(() => {
                 v-if="isLoading"
                 class="animate-section mb-8 flex flex-col items-center justify-center py-16"
             >
-                <Loader2 class="mb-4 h-8 w-8 animate-spin text-[#007AFF]" />
+                <Loader2 class="mb-4 h-8 w-8 animate-spin text-[#D97757]" />
                 <p class="text-[15px] text-muted-foreground">
                     Loading your grades…
                 </p>
@@ -975,7 +975,7 @@ onMounted(() => {
                                                         class="flex items-center gap-3"
                                                     >
                                                         <div
-                                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-[#007AFF]/10 text-[13px] font-semibold text-[#007AFF]"
+                                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-[#D97757]/10 text-[13px] font-semibold text-[#D97757]"
                                                         >
                                                             {{ pIdx + 1 }}
                                                         </div>
@@ -991,7 +991,7 @@ onMounted(() => {
                                                                     period.key,
                                                                 )
                                                             "
-                                                            class="text-[13px] text-[#34C759]"
+                                                            class="text-[13px] text-[#4D9375]"
                                                             >Graded</span
                                                         >
                                                         <span
@@ -1242,7 +1242,7 @@ onMounted(() => {
                                 >
                                     <div class="mb-3 flex items-center gap-2">
                                         <span
-                                            class="inline-flex items-center rounded-full bg-[#007AFF]/10 px-2.5 py-1 text-[13px] font-medium text-[#007AFF]"
+                                            class="inline-flex items-center rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-medium text-[#D97757]"
                                         >
                                             {{ semester.label }}
                                         </span>
@@ -1519,7 +1519,7 @@ onMounted(() => {
                                     >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#007AFF]/10 text-[15px] font-semibold text-[#007AFF]"
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D97757]/10 text-[15px] font-semibold text-[#D97757]"
                                             >
                                                 {{ pIdx + 1 }}
                                             </div>
@@ -1567,7 +1567,7 @@ onMounted(() => {
                                                                     .length >
                                                                     MAX_VISIBLE_ROWS
                                                             "
-                                                            class="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#007AFF]/10 px-2 py-0.5 text-[12px] font-medium text-[#007AFF]"
+                                                            class="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-medium text-[#D97757]"
                                                         >
                                                             <ChevronDown
                                                                 class="h-3 w-3"

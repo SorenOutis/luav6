@@ -50,12 +50,12 @@ let errorTimer: ReturnType<typeof setTimeout> | null = null;
 const activeTweens = new Set<gsap.core.Tween>();
 
 const confettiColors = [
-    'bg-amber-400',
-    'bg-yellow-300',
-    'bg-orange-400',
-    'bg-rose-400',
-    'bg-emerald-400',
-    'bg-sky-400',
+    'bg-[#E0AF68]',
+    'bg-[#D97757]',
+    'bg-[#CB7676]',
+    'bg-[#9D7CD8]',
+    'bg-[#4D9375]',
+    'bg-[#8E93A6]',
 ];
 
 // Open the prompt modal when the parent signals it's ready — immediately for
@@ -427,14 +427,14 @@ onBeforeUnmount(() => {
                             cx="32"
                             cy="32"
                             r="28"
-                            class="text-emerald-400"
+                            class="text-[#4D9375]"
                             stroke-width="5"
                             stroke-linecap="round"
                         />
                         <path
                             ref="checkPathRef"
                             d="M21 33.5 29.5 42 44 25"
-                            class="text-emerald-300"
+                            class="text-[#4D9375]"
                             stroke-width="6"
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -444,7 +444,7 @@ onBeforeUnmount(() => {
 
                 <div ref="successTitleRef" class="space-y-1">
                     <p
-                        class="text-[34px] font-semibold text-[#34C759] tabular-nums"
+                        class="text-[34px] font-semibold text-[#4D9375] tabular-nums"
                     >
                         +{{ claimedAmount || amount }} XP
                     </p>
@@ -462,8 +462,8 @@ onBeforeUnmount(() => {
 
             <!-- Claim prompt -->
             <div v-else class="space-y-5 py-2">
-                <div class="rounded-[1.25rem] bg-[#FF9F0A]/10 p-5 text-center">
-                    <p class="text-[13px] font-medium text-[#FF9F0A]">
+                <div class="rounded-[1.25rem] bg-[#D97757]/10 p-5 text-center">
+                    <p class="text-[13px] font-medium text-[#D97757]">
                         You can claim
                     </p>
                     <p
@@ -476,7 +476,7 @@ onBeforeUnmount(() => {
                         <span v-if="amount > 1">
                             + {{ amount - 1 }} streak bonus</span
                         >
-                        <span class="text-[#FF9F0A]">
+                        <span class="text-[#D97757]">
                             · Streak {{ streak }}</span
                         >
                     </p>
@@ -496,7 +496,7 @@ onBeforeUnmount(() => {
                     </button>
                     <button
                         type="button"
-                        class="dash-btn inline-flex min-w-[9.5rem] items-center justify-center gap-2 bg-[#007AFF] px-4 text-[15px] text-white transition hover:bg-[#007AFF]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="dash-btn inline-flex min-w-[9.5rem] items-center justify-center gap-2 bg-[#D97757] px-4 text-[15px] text-white transition hover:bg-[#D97757]/90 disabled:cursor-not-allowed disabled:opacity-60"
                         :disabled="claimState === 'claiming'"
                         @click="handleClaim"
                     >
@@ -513,7 +513,7 @@ onBeforeUnmount(() => {
                 </div>
                 <p
                     v-if="claimError"
-                    class="pt-1 text-center text-xs font-semibold text-rose-400"
+                    class="pt-1 text-center text-xs font-semibold text-[#CB7676]"
                 >
                     Couldn’t claim — check your connection and try again.
                 </p>
@@ -532,10 +532,10 @@ onBeforeUnmount(() => {
                 class="xp-particle absolute h-2.5 w-2.5 rounded-full"
                 :class="[
                     i % 3 === 0
-                        ? 'bg-amber-400'
+                        ? 'bg-[#E0AF68]'
                         : i % 3 === 1
-                          ? 'bg-yellow-300'
-                          : 'bg-orange-400',
+                          ? 'bg-[#D97757]'
+                          : 'bg-[#CB7676]',
                 ]"
                 :style="{
                     boxShadow:
@@ -551,7 +551,7 @@ onBeforeUnmount(() => {
             class="pointer-events-none absolute inset-x-0 -top-3 z-50 flex justify-center"
         >
             <span
-                class="rounded-full bg-[#007AFF] px-3 py-1 text-sm font-semibold text-white"
+                class="rounded-full bg-[#D97757] px-3 py-1 text-sm font-semibold text-white"
             >
                 +{{ claimedAmount || amount }} XP
             </span>
@@ -563,25 +563,25 @@ onBeforeUnmount(() => {
             ref="buttonRef"
             @click="handleClaim"
             :disabled="claimState === 'claiming'"
-            class="group relative flex min-h-14 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-[1.1rem] bg-[#FF9F0A]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#FF9F0A]/15 disabled:cursor-not-allowed disabled:opacity-70"
+            class="group relative flex min-h-14 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-[1.1rem] bg-[#D97757]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#D97757]/15 disabled:cursor-not-allowed disabled:opacity-70"
         >
             <div class="relative z-10 flex items-center gap-2.5">
                 <!-- Icon -->
                 <div
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-[#FF9F0A]/20"
+                    class="flex h-10 w-10 items-center justify-center rounded-full bg-[#D97757]/20"
                 >
                     <Gift
                         v-if="claimState === 'idle'"
-                        class="h-4 w-4 text-[#FF9F0A]"
+                        class="h-4 w-4 text-[#D97757]"
                     />
                     <div
                         v-else
-                        class="h-4 w-4 animate-spin rounded-full border-2 border-[#FF9F0A] border-t-transparent"
+                        class="h-4 w-4 animate-spin rounded-full border-2 border-[#D97757] border-t-transparent"
                     ></div>
                 </div>
 
                 <div>
-                    <p class="text-[13px] font-medium text-[#FF9F0A]">
+                    <p class="text-[13px] font-medium text-[#D97757]">
                         Daily reward
                     </p>
                     <p class="text-[17px] font-semibold text-foreground">
@@ -605,16 +605,16 @@ onBeforeUnmount(() => {
 
             <!-- Arrow indicator -->
             <div
-                class="relative z-10 ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#FF9F0A]/20"
+                class="relative z-10 ml-auto flex h-8 w-8 items-center justify-center rounded-full bg-[#D97757]/20"
             >
-                <Sparkles class="h-3.5 w-3.5 text-[#FF9F0A]" />
+                <Sparkles class="h-3.5 w-3.5 text-[#D97757]" />
             </div>
         </button>
 
         <!-- Inline error hint -->
         <p
             v-if="claimError && claimState === 'idle'"
-            class="mt-1.5 text-center text-[11px] font-semibold text-rose-400"
+            class="mt-1.5 text-center text-[11px] font-semibold text-[#CB7676]"
         >
             Couldn’t claim — try again.
         </p>
@@ -622,15 +622,15 @@ onBeforeUnmount(() => {
         <!-- Claimed state -->
         <div
             v-else-if="claimState === 'claimed'"
-            class="flex min-h-14 w-full items-center gap-2.5 rounded-[1.1rem] bg-[#34C759]/10 px-3 py-2.5"
+            class="flex min-h-14 w-full items-center gap-2.5 rounded-[1.1rem] bg-[#4D9375]/10 px-3 py-2.5"
         >
             <div
-                class="flex h-10 w-10 items-center justify-center rounded-full bg-[#34C759]/20"
+                class="flex h-10 w-10 items-center justify-center rounded-full bg-[#4D9375]/20"
             >
-                <Check class="h-4 w-4 text-[#34C759]" />
+                <Check class="h-4 w-4 text-[#4D9375]" />
             </div>
             <div class="flex-1">
-                <p class="text-[13px] font-medium text-[#34C759]">Claimed</p>
+                <p class="text-[13px] font-medium text-[#4D9375]">Claimed</p>
                 <p class="text-[17px] font-semibold text-foreground">
                     +{{ claimedAmount || amount }} XP
                     <span class="text-[13px] font-medium text-muted-foreground">
@@ -639,9 +639,9 @@ onBeforeUnmount(() => {
                 </p>
             </div>
             <div
-                class="flex h-8 w-8 items-center justify-center rounded-full bg-[#34C759]/20"
+                class="flex h-8 w-8 items-center justify-center rounded-full bg-[#4D9375]/20"
             >
-                <Clock class="h-3.5 w-3.5 text-[#34C759]" />
+                <Clock class="h-3.5 w-3.5 text-[#4D9375]" />
             </div>
         </div>
     </div>

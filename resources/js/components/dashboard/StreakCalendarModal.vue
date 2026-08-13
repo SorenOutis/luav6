@@ -160,86 +160,86 @@ const motivationalMessage = computed(() => {
         :open="open"
         title="Your Streak"
         description="Daily check-in activity"
-        content-class="sm:max-w-md"
+        content-class="sm:max-w-sm"
         @close="handleClose"
     >
         <!-- ═══ Hero: Streak Counter ═══ -->
-        <div class="mb-4 text-center">
-            <div class="mb-2 flex items-center justify-center">
+        <div class="mb-3 text-center">
+            <div class="mb-1.5 flex items-center justify-center">
                 <div
-                    class="relative flex h-14 w-14 items-center justify-center rounded-2xl"
+                    class="relative flex h-12 w-12 items-center justify-center rounded-2xl"
                     :class="
-                        currentStreak > 0 ? 'bg-orange-500/15' : 'bg-muted/30'
+                        currentStreak > 0 ? 'bg-[#D97757]/15' : 'bg-muted/30'
                     "
                 >
                     <Flame
-                        class="h-7 w-7"
+                        class="h-6 w-6"
                         :class="
                             currentStreak > 0
-                                ? 'text-orange-400'
+                                ? 'text-[#D97757]'
                                 : 'text-muted-foreground/40'
                         "
                     />
                     <div
                         v-if="currentStreak > 0"
-                        class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#FF9F0A] text-[11px] font-semibold text-white"
+                        class="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[#D97757] text-[10px] font-semibold text-white"
                     >
                         {{ currentStreak }}
                     </div>
                 </div>
             </div>
             <p
-                class="text-[28px] font-semibold tracking-tight text-foreground tabular-nums"
+                class="text-2xl font-semibold tracking-tight text-foreground tabular-nums"
             >
                 {{ currentStreak }}
-                <span class="text-[15px] font-medium text-muted-foreground"
+                <span class="text-sm font-medium text-muted-foreground"
                     >day streak</span
                 >
             </p>
-            <p class="mt-1 text-[13px] text-muted-foreground">
+            <p class="mt-0.5 text-[12px] text-muted-foreground">
                 {{ motivationalMessage.emoji }} {{ motivationalMessage.text }}
             </p>
         </div>
 
         <!-- ═══ Quick Stats Row ═══ -->
-        <div class="mb-4 flex items-center justify-center gap-5 text-center">
+        <div class="mb-3 flex items-center justify-center gap-4 text-center">
             <div>
-                <p class="text-[13px] font-medium text-muted-foreground">
+                <p class="text-[12px] font-medium text-muted-foreground">
                     Best
                 </p>
                 <p
-                    class="text-[17px] font-semibold text-foreground tabular-nums"
+                    class="text-[15px] font-semibold text-foreground tabular-nums"
                 >
                     {{ longestStreak }}
-                    <span class="text-[13px] font-medium text-muted-foreground"
+                    <span class="text-[12px] font-medium text-muted-foreground"
                         >days</span
                     >
                 </p>
             </div>
             <div class="h-6 w-px bg-border/15"></div>
             <div>
-                <p class="text-[13px] font-medium text-muted-foreground">
+                <p class="text-[12px] font-medium text-muted-foreground">
                     This Month
                 </p>
                 <p
-                    class="text-[17px] font-semibold text-foreground tabular-nums"
+                    class="text-[15px] font-semibold text-foreground tabular-nums"
                 >
                     {{ activeDaysThisMonth }}
-                    <span class="text-[13px] font-medium text-muted-foreground"
+                    <span class="text-[12px] font-medium text-muted-foreground"
                         >days</span
                     >
                 </p>
             </div>
             <div class="h-6 w-px bg-border/15"></div>
             <div>
-                <p class="text-[13px] font-medium text-muted-foreground">
+                <p class="text-[12px] font-medium text-muted-foreground">
                     Total
                 </p>
                 <p
-                    class="text-[17px] font-semibold text-foreground tabular-nums"
+                    class="text-[15px] font-semibold text-foreground tabular-nums"
                 >
                     {{ loginDateSet.size }}
-                    <span class="text-[13px] font-medium text-muted-foreground"
+                    <span class="text-[12px] font-medium text-muted-foreground"
                         >days</span
                     >
                 </p>
@@ -250,48 +250,48 @@ const motivationalMessage = computed(() => {
         <div class="mb-2 flex items-center justify-between">
             <button
                 @click="prevMonth"
-                class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-muted"
+                class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-muted"
             >
                 <ChevronLeft class="h-4 w-4 text-foreground/60" />
             </button>
-            <p class="text-[17px] font-semibold tracking-tight text-foreground">
+            <p class="text-[15px] font-semibold tracking-tight text-foreground">
                 {{ viewTitle }}
             </p>
             <button
                 @click="nextMonth"
                 :disabled="!canGoForward"
-                class="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
+                class="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
             >
                 <ChevronRight class="h-4 w-4 text-foreground/60" />
             </button>
         </div>
 
         <!-- ═══ Calendar Grid ═══ -->
-        <div class="rounded-xl border border-border/10 bg-card/30 p-3">
+        <div class="rounded-xl border border-border/10 bg-card/30 p-2">
             <!-- Day-of-week header -->
-            <div class="mb-1.5 grid grid-cols-7 gap-1">
+            <div class="mb-1 grid grid-cols-7 gap-0.5">
                 <div
                     v-for="day in dayNames"
                     :key="day"
-                    class="py-1 text-center text-[12px] font-medium text-muted-foreground"
+                    class="py-0.5 text-center text-[11px] font-medium text-muted-foreground"
                 >
                     {{ day }}
                 </div>
             </div>
 
             <!-- Calendar cells -->
-            <div class="grid grid-cols-7 gap-1">
+            <div class="grid grid-cols-7 gap-0.5">
                 <div
                     v-for="(cell, idx) in calendarCells"
                     :key="idx"
-                    class="flex aspect-square items-center justify-center"
+                    class="flex h-8 w-full items-center justify-center sm:h-9"
                 >
                     <div
                         v-if="cell.visible"
                         class="relative flex h-full w-full items-center justify-center rounded-full transition-all duration-200"
                         :class="{
-                            'bg-[#FF9F0A]/15': cell.isActive && !cell.isToday,
-                            'bg-[#FF9F0A]/25 ring-2 ring-[#FF9F0A]/40':
+                            'bg-[#D97757]/15': cell.isActive && !cell.isToday,
+                            'bg-[#D97757]/25 ring-2 ring-[#D97757]/40':
                                 cell.isActive && cell.isToday,
                             'border-2 border-dashed border-muted-foreground/25':
                                 cell.isToday && !cell.isActive,
@@ -301,18 +301,18 @@ const motivationalMessage = computed(() => {
                         <!-- Checkmark for active days -->
                         <Check
                             v-if="cell.isActive"
-                            class="h-3.5 w-3.5"
+                            class="h-3 w-3"
                             :class="
                                 cell.isToday
-                                    ? 'text-[#FF9F0A]'
-                                    : 'text-[#FF9F0A]/80'
+                                    ? 'text-[#D97757]'
+                                    : 'text-[#D97757]/80'
                             "
                             :stroke-width="3"
                         />
                         <!-- Day number for inactive -->
                         <span
                             v-else
-                            class="text-xs font-medium"
+                            class="text-[11px] font-medium"
                             :class="
                                 cell.isToday
                                     ? 'text-foreground'
@@ -328,22 +328,19 @@ const motivationalMessage = computed(() => {
 
         <!-- ═══ Legend ═══ -->
         <div
-            class="mt-3 flex items-center justify-center gap-4 text-muted-foreground/40"
+            class="mt-2.5 flex items-center justify-center gap-4 text-muted-foreground/40"
         >
-            <span class="flex items-center gap-1.5 text-[13px]">
+            <span class="flex items-center gap-1.5 text-[12px]">
                 <span
-                    class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#FF9F0A]/15"
+                    class="flex h-3 w-3 items-center justify-center rounded-full bg-[#D97757]/15"
                 >
-                    <Check
-                        class="h-2.5 w-2.5 text-[#FF9F0A]"
-                        :stroke-width="3"
-                    />
+                    <Check class="h-2 w-2 text-[#D97757]" :stroke-width="3" />
                 </span>
                 Active day
             </span>
-            <span class="flex items-center gap-1.5 text-[13px]">
+            <span class="flex items-center gap-1.5 text-[12px]">
                 <span
-                    class="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-dashed border-muted-foreground/25"
+                    class="flex h-3 w-3 items-center justify-center rounded-full border border-dashed border-muted-foreground/25"
                 >
                 </span>
                 Today

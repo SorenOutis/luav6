@@ -140,27 +140,27 @@ const greetingTheme = computed(() => {
     const streak = props.userStats.streak;
     const overdue = todaySummary.value.overdueCount;
 
-    if (overdue > 0) return 'bg-[#FF3B30]';
-    if (streak >= 7) return 'bg-[#FF9F0A]';
-    if (streak > 0) return 'bg-[#34C759]';
+    if (overdue > 0) return 'bg-[#CB7676]';
+    if (streak >= 7) return 'bg-[#D97757]';
+    if (streak > 0) return 'bg-[#4D9375]';
 
-    if (hour >= 0 && hour < 4) return 'bg-[#5856D6]';
-    if (hour >= 4 && hour < 7) return 'bg-[#5AC8FA]';
-    if (hour >= 7 && hour < 12) return 'bg-[#FF9F0A]';
-    if (hour >= 12 && hour < 17) return 'bg-[#FF9500]';
-    if (hour >= 17 && hour < 21) return 'bg-[#AF52DE]';
-    return 'bg-[#007AFF]';
+    if (hour >= 0 && hour < 4) return 'bg-[#D97757]';
+    if (hour >= 4 && hour < 7) return 'bg-[#D97757]';
+    if (hour >= 7 && hour < 12) return 'bg-[#D97757]';
+    if (hour >= 12 && hour < 17) return 'bg-[#D97757]';
+    if (hour >= 17 && hour < 21) return 'bg-[#D97757]';
+    return 'bg-[#D97757]';
 });
 
 const statusColor = computed(() => {
     const overdue = todaySummary.value.overdueCount;
     const streak = props.userStats.streak;
 
-    if (overdue > 0) return 'bg-[#FF3B30]';
-    if (streak >= 7) return 'bg-[#FF9F0A]';
-    if (streak > 0) return 'bg-[#34C759]';
+    if (overdue > 0) return 'bg-[#CB7676]';
+    if (streak >= 7) return 'bg-[#D97757]';
+    if (streak > 0) return 'bg-[#4D9375]';
 
-    return 'bg-[#34C759]';
+    return 'bg-[#4D9375]';
 });
 
 // Smarter status subtext for the hero
@@ -716,7 +716,7 @@ const handleLogout = () => {
                                 class="flex min-h-11 w-full items-center justify-between gap-3 rounded-[1.25rem] border border-border/50 bg-card px-4 py-3.5 text-left transition-colors active:bg-muted/50"
                             >
                                 <div class="flex min-w-0 items-center gap-3">
-                                    <Trophy class="h-4 w-4 text-[#007AFF]" />
+                                    <Trophy class="h-4 w-4 text-[#D97757]" />
                                     <div class="min-w-0">
                                         <span
                                             class="text-[15px] font-semibold tracking-tight text-foreground"
@@ -737,7 +737,7 @@ const handleLogout = () => {
                                 </div>
                                 <span
                                     v-if="primaryLeaderboard"
-                                    class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#007AFF]/10 px-2.5 py-1 text-[13px] font-semibold text-[#007AFF] tabular-nums"
+                                    class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-semibold text-[#D97757] tabular-nums"
                                 >
                                     #{{ primaryLeaderboard.userRank }}
                                 </span>
@@ -826,7 +826,7 @@ const handleLogout = () => {
             >
                 <div class="p-6 sm:p-8">
                     <div>
-                        <p class="text-[13px] font-medium text-[#FF3B30]">
+                        <p class="text-[13px] font-medium text-[#CB7676]">
                             Access restricted
                         </p>
                         <h2

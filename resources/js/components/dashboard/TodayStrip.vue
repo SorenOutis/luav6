@@ -106,18 +106,18 @@ const nextToneClasses = computed(() => {
     switch (countdown.value?.tone) {
         case 'overdue':
             return {
-                label: 'text-[#FF3B30]',
-                chip: 'bg-[#FF3B30]/10 text-[#FF3B30]',
+                label: 'text-[#CB7676]',
+                chip: 'bg-[#CB7676]/10 text-[#CB7676]',
             };
         case 'now':
             return {
-                label: 'text-[#FF9F0A]',
-                chip: 'bg-[#FF9F0A]/10 text-[#FF9F0A]',
+                label: 'text-[#E0AF68]',
+                chip: 'bg-[#E0AF68]/10 text-[#E0AF68]',
             };
         case 'soon':
             return {
-                label: 'text-[#007AFF]',
-                chip: 'bg-[#007AFF]/10 text-[#007AFF]',
+                label: 'text-[#D97757]',
+                chip: 'bg-[#D97757]/10 text-[#D97757]',
             };
         default:
             return {
@@ -191,21 +191,21 @@ const accentClasses = (accent: string, active: boolean) => {
     switch (accent) {
         case 'destructive':
             return {
-                wrap: 'bg-[#FF3B30]/10',
-                iconWrap: 'bg-[#FF3B30]/15 text-[#FF3B30]',
-                value: 'text-[#FF3B30]',
+                wrap: 'bg-[#CB7676]/10',
+                iconWrap: 'bg-[#CB7676]/15 text-[#CB7676]',
+                value: 'text-[#CB7676]',
             };
         case 'amber':
             return {
-                wrap: 'bg-[#FF9F0A]/10',
-                iconWrap: 'bg-[#FF9F0A]/15 text-[#FF9F0A]',
-                value: 'text-[#FF9F0A]',
+                wrap: 'bg-[#E0AF68]/10',
+                iconWrap: 'bg-[#E0AF68]/15 text-[#E0AF68]',
+                value: 'text-[#E0AF68]',
             };
         default:
             return {
-                wrap: 'bg-[#007AFF]/10',
-                iconWrap: 'bg-[#007AFF]/15 text-[#007AFF]',
-                value: 'text-[#007AFF]',
+                wrap: 'bg-[#D97757]/10',
+                iconWrap: 'bg-[#D97757]/15 text-[#D97757]',
+                value: 'text-[#D97757]',
             };
     }
 };
@@ -219,7 +219,7 @@ const accentClasses = (accent: string, active: boolean) => {
     >
         <div class="relative h-1 w-full bg-muted/50" aria-hidden="true">
             <div
-                class="absolute inset-y-0 left-0 rounded-r-full bg-[#007AFF] transition-[width] duration-500"
+                class="absolute inset-y-0 left-0 rounded-r-full bg-[#D97757] transition-[width] duration-500"
                 :style="{ width: `${dayPercent}%` }"
             />
         </div>

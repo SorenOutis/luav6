@@ -173,11 +173,11 @@ const submitAssignment = () => {
 const getStatusColor = (status: string) => {
     switch (status) {
         case 'Submitted':
-            return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+            return 'bg-[#D97757]/10 text-[#D97757] border-[#D97757]/20';
         case 'Graded':
-            return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+            return 'bg-[#4D9375]/10 text-[#4D9375] border-[#4D9375]/20';
         case 'Pending':
-            return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+            return 'bg-[#E0AF68]/10 text-[#E0AF68] border-[#E0AF68]/20';
         default:
             return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
     }
@@ -415,22 +415,22 @@ declare const route: any;
                                 <div
                                     class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-70"
                                     :class="{
-                                        'bg-orange-500/30':
+                                        'bg-[#D97757]/30':
                                             stat.glowColor === 'orange',
-                                        'bg-emerald-500/30':
+                                        'bg-[#4D9375]/30':
                                             stat.glowColor === 'green',
-                                        'bg-purple-500/30':
+                                        'bg-[#9D7CD8]/30':
                                             stat.glowColor === 'purple',
                                     }"
                                 ></div>
                                 <div
                                     class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-50"
                                     :class="{
-                                        'bg-orange-400/25':
+                                        'bg-[#D97757]/25':
                                             stat.glowColor === 'orange',
-                                        'bg-emerald-400/25':
+                                        'bg-[#4D9375]/25':
                                             stat.glowColor === 'green',
-                                        'bg-purple-400/25':
+                                        'bg-[#9D7CD8]/25':
                                             stat.glowColor === 'purple',
                                     }"
                                 ></div>
@@ -716,7 +716,7 @@ declare const route: any;
                                                 ) &&
                                                 !assignment.submission
                                                     ?.submitted
-                                                    ? 'text-red-500'
+                                                    ? 'text-[#CB7676]'
                                                     : 'text-muted-foreground'
                                             "
                                         >
@@ -759,10 +759,10 @@ declare const route: any;
                                         class="flex items-center gap-3"
                                     >
                                         <div
-                                            class="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-500/10 bg-emerald-500/5"
+                                            class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#4D9375]/10 bg-[#4D9375]/5"
                                         >
                                             <FileText
-                                                class="h-5 w-5 text-emerald-500"
+                                                class="h-5 w-5 text-[#4D9375]"
                                             />
                                         </div>
                                         <div>
@@ -772,7 +772,7 @@ declare const route: any;
                                                 >_SECURE_DATA
                                             </p>
                                             <p
-                                                class="font-mono text-xs font-black text-emerald-500/80"
+                                                class="font-mono text-xs font-black text-[#4D9375]/80"
                                             >
                                                 VERIFIED_TRANSMISSION
                                             </p>
@@ -781,10 +781,10 @@ declare const route: any;
 
                                     <div v-else class="flex items-center gap-2">
                                         <div
-                                            class="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500"
+                                            class="h-1.5 w-1.5 animate-pulse rounded-full bg-[#E0AF68]"
                                         ></div>
                                         <span
-                                            class="font-mono text-[8px] font-black tracking-[0.2em] text-amber-500/80 uppercase"
+                                            class="font-mono text-[8px] font-black tracking-[0.2em] text-[#E0AF68]/80 uppercase"
                                             >>_OBJECTIVE_INCOMPLETE</span
                                         >
                                     </div>
@@ -954,10 +954,10 @@ declare const route: any;
                                                 class="flex items-center gap-2"
                                             >
                                                 <ShieldCheck
-                                                    class="h-3.5 w-3.5 text-emerald-400"
+                                                    class="h-3.5 w-3.5 text-[#4D9375]"
                                                 />
                                                 <span
-                                                    class="text-[9px] font-black tracking-widest text-emerald-400 uppercase"
+                                                    class="text-[9px] font-black tracking-widest text-[#4D9375] uppercase"
                                                     >Secure</span
                                                 >
                                             </div>
@@ -1096,15 +1096,15 @@ declare const route: any;
                                             class="relative z-10 flex flex-col items-center gap-4"
                                         >
                                             <div
-                                                class="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+                                                class="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#4D9375]/20 bg-[#4D9375]/10 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
                                             >
                                                 <FileText
-                                                    class="h-6 w-6 text-emerald-400"
+                                                    class="h-6 w-6 text-[#4D9375]"
                                                 />
                                             </div>
                                             <div class="text-center">
                                                 <p
-                                                    class="max-w-[250px] truncate rounded-lg border border-emerald-500/10 bg-emerald-500/5 px-3 py-1.5 text-[10px] font-black tracking-tight text-emerald-400 uppercase"
+                                                    class="max-w-[250px] truncate rounded-lg border border-[#4D9375]/10 bg-[#4D9375]/5 px-3 py-1.5 text-[10px] font-black tracking-tight text-[#4D9375] uppercase"
                                                 >
                                                     {{
                                                         form.file.name.toUpperCase()
@@ -1114,7 +1114,7 @@ declare const route: any;
                                                     @click.stop="
                                                         form.file = null
                                                     "
-                                                    class="mx-auto mt-3 flex items-center gap-2 text-[8px] font-black tracking-[0.25em] text-red-400/80 uppercase decoration-red-400/40 underline-offset-4 transition-all hover:scale-110 hover:text-red-400 hover:underline"
+                                                    class="mx-auto mt-3 flex items-center gap-2 text-[8px] font-black tracking-[0.25em] text-[#CB7676]/80 uppercase decoration-[#CB7676]/40 underline-offset-4 transition-all hover:scale-110 hover:text-[#CB7676] hover:underline"
                                                 >
                                                     Discard Intelligence
                                                 </button>

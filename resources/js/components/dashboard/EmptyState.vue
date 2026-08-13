@@ -62,7 +62,7 @@ const props = withDefaults(defineProps<Props>(), {
             v-if="ctaLabel && ctaHref"
             :href="ctaHref"
             :class="[
-                'dash-btn mt-1 inline-flex items-center justify-center bg-[#007AFF] px-5 text-white',
+                'dash-btn mt-1 inline-flex items-center justify-center bg-[#D97757] px-5 text-white',
                 compact ? 'text-[14px]' : 'text-[15px]',
             ]"
         >

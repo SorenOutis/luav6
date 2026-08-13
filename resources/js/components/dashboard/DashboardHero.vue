@@ -68,7 +68,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                         class="flex w-full flex-1 items-center gap-3 sm:w-auto"
                     >
                         <div
-                            class="dash-icon-well bg-[#007AFF]/10 text-[#007AFF]"
+                            class="dash-icon-well bg-[#D97757]/10 text-[#D97757]"
                         >
                             <Megaphone class="h-4 w-4" />
                         </div>
@@ -80,7 +80,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                                     {{ item.title }}
                                 </h4>
                                 <span
-                                    class="shrink-0 rounded-full bg-[#007AFF]/10 px-2 py-0.5 text-[12px] font-medium text-[#007AFF]"
+                                    class="shrink-0 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-medium text-[#D97757]"
                                 >
                                     New
                                 </span>
@@ -100,7 +100,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                         <Link
                             v-if="item.link"
                             :href="item.link"
-                            class="dash-btn inline-flex flex-1 items-center justify-center gap-1.5 bg-[#007AFF] px-4 text-[15px] text-white sm:flex-none"
+                            class="dash-btn inline-flex flex-1 items-center justify-center gap-1.5 bg-[#D97757] px-4 text-[15px] text-white sm:flex-none"
                         >
                             Explore
                             <ArrowRight class="h-4 w-4" />
@@ -131,7 +131,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                         <div class="relative">
                             <div
                                 class="absolute -top-1 -right-1 z-30 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-tight text-white tabular-nums shadow-sm"
-                                :class="greetingTheme || 'bg-[#007AFF]'"
+                                :class="greetingTheme || 'bg-[#D97757]'"
                             >
                                 Lvl {{ animatedLevel }}
                             </div>
@@ -141,7 +141,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                             >
                                 <span
                                     class="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
-                                    :class="statusColor || 'bg-[#34C759]'"
+                                    :class="statusColor || 'bg-[#4D9375]'"
                                 ></span>
                             </div>
 

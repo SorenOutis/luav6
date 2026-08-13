@@ -139,7 +139,10 @@ function handleClose() {
             </div>
 
             <!-- Content -->
-            <div ref="contentRef" class="px-2 pb-4">
+            <div
+                ref="contentRef"
+                class="max-h-[70vh] overflow-y-auto overscroll-contain px-2 pb-4"
+            >
                 <slot />
             </div>
         </div>
