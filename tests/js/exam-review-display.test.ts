@@ -16,6 +16,11 @@ vi.mock('@inertiajs/vue3', () => ({
             return () => h('a', { href: props.href }, slots.default?.());
         },
     }),
+    // Exam.vue calls router.reload in refreshExams() on every mount after the
+    // first; keep the mock complete so additional tests can't crash on it.
+    router: {
+        reload: vi.fn(),
+    },
     usePoll: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
 }));
 

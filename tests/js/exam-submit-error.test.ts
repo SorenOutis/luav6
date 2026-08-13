@@ -20,6 +20,8 @@ vi.mock('@inertiajs/vue3', () => ({
             opts?.onError?.({ error: 'You have already submitted this part.' });
             opts?.onFinish?.();
         },
+        // used by submitPart's onSuccess to invalidate the prefetch cache
+        flush: vi.fn(),
     },
 }));
 
