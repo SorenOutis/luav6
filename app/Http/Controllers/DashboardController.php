@@ -158,7 +158,7 @@ class DashboardController extends Controller
 
         $history = $user->gamificationHistories()
             ->when($currentSeason, fn ($query) => $query->where('season_id', $currentSeason->id))
-            ->get(['amount_xp', 'amount_points', 'reason', 'description', 'created_at']);
+            ->get(['id', 'amount_xp', 'amount_points', 'reason', 'description', 'created_at']);
 
         $xpBreakdown = $history->filter(fn ($entry) => (float) $entry->amount_xp !== 0.0)
             ->groupBy(fn ($entry) => $entry->reason ?: 'Other activity')
@@ -176,17 +176,34 @@ class DashboardController extends Controller
                 'count' => $entries->count(),
             ])->values();
 
+        // Per-entry XP ledger (most recent first) for the level card's history
+        // view. Reuses the already-loaded $history collection — no extra query.
+        $xpHistory = $history
+            ->filter(fn ($entry) => (float) $entry->amount_xp !== 0.0)
+            ->sortByDesc('created_at')
+            ->take(30)
+            ->map(fn ($entry) => [
+                'id' => $entry->id,
+                'reason' => $entry->reason,
+                'description' => $entry->description,
+                'amount' => (float) $entry->amount_xp,
+                'createdAt' => $entry->created_at->toIso8601String(),
+                'isClaim' => $entry->reason === 'Daily Claim',
+            ])->values();
+
         return inertia('Dashboard', [
             'claimXp' => [
                 'canClaim' => $canClaim,
                 'amount' => $claimAmount,
                 'nextClaimAt' => $nextClaimAt?->toIso8601String(),
+                'lastClaimedAt' => $user->last_claimed_at?->toIso8601String(),
                 'showPrompt' => $showClaimPrompt,
             ],
             'statsBreakdown' => [
                 'xp' => $xpBreakdown,
                 'points' => $pointsBreakdown,
             ],
+            'xpHistory' => $xpHistory,
             'userStats' => [
                 'totalXP' => $seasonalExp,
                 'level' => $seasonalLevel,

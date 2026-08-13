@@ -56,6 +56,81 @@ const cells = computed(() => {
 });
 
 const activeCount = computed(() => cells.value.filter((c) => c.active).length);
+const last7ActiveCount = computed(
+    () => cells.value.slice(-7).filter((c) => c.active).length,
+);
+const activeToday = computed(() => cells.value[27]?.active ?? false);
+
+type Tone = 'amber' | 'emerald' | 'primary' | 'muted';
+
+interface Encouragement {
+    emoji: string;
+    title: string;
+    sub: string;
+    tone: Tone;
+}
+
+// A warm, student-friendly pep talk that reacts to recent activity. Keeps the
+// gamified, encouraging tone the rest of the dashboard already uses.
+const encouragement = computed<Encouragement>(() => {
+    const total = activeCount.value;
+    const week = last7ActiveCount.value;
+    const today = activeToday.value;
+
+    if (total === 0) {
+        return {
+            emoji: '🌱',
+            title: 'Your journey starts today',
+            sub: 'Log in and finish a task to light up your first square.',
+            tone: 'muted',
+        };
+    }
+    if (today && week >= 5) {
+        return {
+            emoji: '🔥',
+            title: "You're on fire!",
+            sub: `${week} of the last 7 days — incredible consistency.`,
+            tone: 'amber',
+        };
+    }
+    if (today && week >= 3) {
+        return {
+            emoji: '✨',
+            title: 'Great momentum!',
+            sub: `${week} active days this week. Keep it up!`,
+            tone: 'emerald',
+        };
+    }
+    if (today) {
+        return {
+            emoji: '👏',
+            title: 'Nice work today!',
+            sub: "You showed up — that's how streaks begin.",
+            tone: 'emerald',
+        };
+    }
+    if (week >= 4) {
+        return {
+            emoji: '💪',
+            title: 'Strong week!',
+            sub: 'Pop in today to keep your momentum going.',
+            tone: 'amber',
+        };
+    }
+    return {
+        emoji: '🎯',
+        title: 'Ready when you are',
+        sub: 'A quick visit today keeps your streak alive.',
+        tone: 'primary',
+    };
+});
+
+const toneClasses: Record<Tone, string> = {
+    amber: 'border-amber-400/30 bg-amber-400/10',
+    emerald: 'border-emerald-400/30 bg-emerald-400/10',
+    primary: 'border-primary/30 bg-primary/10',
+    muted: 'border-border/20 bg-muted/30',
+};
 
 const dayLabel = (date: Date) =>
     date.toLocaleDateString(undefined, {
@@ -66,28 +141,62 @@ const dayLabel = (date: Date) =>
 </script>
 
 <template>
-    <div class="relative z-10 flex flex-col gap-2 sm:gap-3">
+    <div class="relative z-10 flex flex-col gap-3 sm:gap-4">
+        <!-- Friendly, reactive encouragement banner -->
+        <div
+            class="flex items-center gap-3 rounded-xl border p-2.5 sm:p-3"
+            :class="toneClasses[encouragement.tone]"
+            role="status"
+        >
+            <span
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-background/60 text-lg leading-none shadow-inner sm:h-10 sm:w-10 sm:text-xl"
+                aria-hidden="true"
+            >
+                {{ encouragement.emoji }}
+            </span>
+            <div class="min-w-0">
+                <p
+                    class="truncate text-sm font-bold tracking-tight text-foreground"
+                >
+                    {{ encouragement.title }}
+                </p>
+                <p
+                    class="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-[13px]"
+                >
+                    {{ encouragement.sub }}
+                </p>
+            </div>
+        </div>
+
         <template v-if="activeCount > 0">
             <!-- Grid -->
-            <div class="grid grid-cols-7 gap-1 sm:gap-2">
+            <div class="grid grid-cols-7 gap-1.5 sm:gap-2">
                 <div
                     v-for="cell in cells"
                     :key="cell.key"
-                    class="group/cell relative aspect-square cursor-pointer rounded-sm border transition-all duration-300 hover:scale-110 sm:rounded-md"
+                    class="group/cell relative aspect-square rounded-md border transition-all duration-300 hover:scale-110 sm:rounded-lg"
                     :class="
                         cell.active
                             ? cell.isToday
-                                ? 'border-primary bg-primary shadow-[0_0_14px_rgba(var(--primary-rgb),0.45)]'
-                                : 'border-primary/40 bg-primary/70 shadow-[0_0_10px_rgba(var(--primary-rgb),0.2)]'
-                            : 'border-border/10 bg-muted/10'
+                                ? 'pulse-cell pulse-cell--today border-primary bg-gradient-to-br from-primary to-primary/80 ring-2 ring-primary/30 ring-offset-1 ring-offset-background'
+                                : 'pulse-cell pulse-cell--active border-primary/40 bg-gradient-to-br from-primary/80 to-primary/50'
+                            : 'border-border/15 bg-muted/20'
                     "
                 >
+                    <!-- Today marker dot -->
+                    <span
+                        v-if="cell.isToday && cell.active"
+                        class="absolute top-1/2 left-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/80"
+                        aria-hidden="true"
+                    ></span>
+
                     <!-- Tooltip -->
                     <div
-                        class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded bg-foreground px-2 py-1 text-[8px] font-black tracking-widest whitespace-nowrap text-background uppercase opacity-0 shadow-2xl transition-opacity group-hover/cell:opacity-100 sm:text-[9px]"
+                        class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 rounded-md bg-foreground px-2 py-1 text-[10px] font-semibold whitespace-nowrap text-background opacity-0 shadow-xl transition-opacity group-hover/cell:opacity-100 sm:text-xs"
+                        role="tooltip"
                     >
                         {{ dayLabel(cell.date) }} ·
-                        {{ cell.active ? 'Active' : 'Standby' }}
+                        {{ cell.active ? 'Active' : 'Rest day' }}
                     </div>
                 </div>
             </div>
@@ -96,37 +205,82 @@ const dayLabel = (date: Date) =>
         <!-- First-run / quiet state: honest, not a fake busy grid -->
         <div
             v-else
-            class="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/20 bg-muted/10 py-6 text-center"
+            class="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/30 bg-muted/20 px-4 py-7 text-center"
             role="status"
         >
-            <Flame class="h-5 w-5 text-muted-foreground/40" />
-            <p class="text-[10px] font-black tracking-[0.2em] uppercase">
+            <Flame class="h-6 w-6 text-muted-foreground/50" />
+            <p class="text-sm font-bold tracking-tight text-foreground">
                 No activity yet
             </p>
             <p
-                class="max-w-[26ch] text-[10px] leading-snug text-muted-foreground/70"
+                class="max-w-[30ch] text-xs leading-snug text-muted-foreground sm:text-[13px]"
             >
-                Complete exams, assignments, and daily claims to light up your
-                heatmap.
+                Exams, assignments, and daily claims will light up your grid —
+                one square at a time.
             </p>
         </div>
 
         <!-- Legend -->
         <div
-            class="mt-3 flex items-center justify-between border-t border-border/10 pt-3 text-[8px] font-black tracking-widest text-muted-foreground/40 uppercase sm:mt-4 sm:pt-4 sm:text-[9px]"
+            class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border/15 pt-3 text-xs text-muted-foreground sm:pt-4"
         >
-            <span>{{
-                activeCount > 0 ? `${activeCount} active days` : 'Standby'
-            }}</span>
-            <div class="flex items-center gap-1 sm:gap-2">
-                <div
-                    class="h-2 w-2 rounded-[2px] border border-border/10 bg-muted/10 sm:h-3.5 sm:w-3.5 sm:rounded-sm"
-                ></div>
-                <div
-                    class="h-2 w-2 rounded-[2px] border border-primary/40 bg-primary/70 sm:h-3.5 sm:w-3.5 sm:rounded-sm"
-                ></div>
+            <span class="font-medium">
+                <span class="font-bold text-foreground">{{ activeCount }}</span>
+                of 28 days active
+            </span>
+            <div class="flex items-center gap-2">
+                <span class="flex items-center gap-1.5">
+                    <span
+                        class="h-3 w-3 rounded-sm border border-border/15 bg-muted/20"
+                    ></span>
+                    Rest
+                </span>
+                <span class="flex items-center gap-1.5">
+                    <span
+                        class="h-3 w-3 rounded-sm border border-primary/40 bg-gradient-to-br from-primary/80 to-primary/50"
+                    ></span>
+                    Active
+                </span>
             </div>
-            <span>Active</span>
         </div>
     </div>
 </template>
+
+<style scoped>
+/*
+ * Glows use color-mix against --color-primary so the "lit up" pulse actually
+ * renders AND adapts to every theme (light, dark, and alternate presets).
+ * The old rgba(var(--primary-rgb), …) form relied on a variable that was
+ * never defined anywhere, so the glow silently never showed.
+ */
+.pulse-cell {
+    transition:
+        box-shadow 0.3s ease,
+        transform 0.3s ease,
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.pulse-cell--today {
+    box-shadow: 0 0 14px
+        color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.pulse-cell--active {
+    box-shadow: 0 0 10px
+        color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.pulse-cell--today:hover,
+.pulse-cell--active:hover {
+    box-shadow: 0 0 18px
+        color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+/* Respect users who prefer less motion / lower-end devices */
+@media (prefers-reduced-motion: reduce) {
+    .pulse-cell {
+        transition: none;
+    }
+}
+</style>

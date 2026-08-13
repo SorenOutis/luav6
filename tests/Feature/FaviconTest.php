@@ -9,6 +9,7 @@
  */
 
 use App\Models\Setting;
+use App\Support\FaviconUrl;
 use Illuminate\Support\Facades\Storage;
 
 use function Pest\Laravel\get;
@@ -81,4 +82,35 @@ it('serves the uploaded logo and falls back once it is removed', function () use
     Setting::set('school_logo_path', null);
 
     get(route('favicon'))->assertRedirect('/favicon.ico');
+});
+
+it('reports no logo and a constant version before one is uploaded', function () {
+    expect(FaviconUrl::hasLogo())->toBeFalse()
+        ->and(FaviconUrl::version())->toBe('0');
+
+    $url = FaviconUrl::url();
+    $touch = FaviconUrl::url(180);
+
+    expect($url)->toContain('/favicon.png')->toContain('v=0')
+        ->and($touch)->toContain('size=180')->toContain('v=0');
+});
+
+it('cache-busts the favicon URL against the uploaded logo path', function () use ($testLogoPng) {
+    Storage::disk('public')->put('branding/logo.png', $testLogoPng);
+    Setting::set('school_logo_path', 'branding/logo.png');
+
+    expect(FaviconUrl::hasLogo())->toBeTrue();
+
+    $firstVersion = FaviconUrl::version();
+    $firstUrl = FaviconUrl::url();
+
+    expect($firstVersion)->toHaveLength(8)
+        ->and($firstUrl)->toContain('v='.$firstVersion);
+
+    // Re-uploading under a new path changes the version → browsers re-fetch.
+    Storage::disk('public')->put('branding/new-logo.png', $testLogoPng);
+    Setting::set('school_logo_path', 'branding/new-logo.png');
+
+    expect(FaviconUrl::version())->not->toBe($firstVersion)
+        ->and(FaviconUrl::url())->not->toBe($firstUrl);
 });

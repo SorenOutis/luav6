@@ -16,6 +16,7 @@ use App\Filament\Widgets\SectionComparisonWidget;
 use App\Filament\Widgets\StudentRiskWidget;
 use App\Filament\Widgets\TopStudentsWidget;
 use App\Http\Middleware\SanitizeInput;
+use App\Support\FaviconUrl;
 use Croustibat\FilamentJobsMonitor\FilamentJobsMonitorPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -41,7 +42,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('LuaV6 Admin')
-            ->favicon(fn (): string => route('favicon'))
+            ->favicon(fn (): string => FaviconUrl::url())
             ->sidebarCollapsibleOnDesktop()
             ->spa()
             ->viteTheme('resources/css/filament/admin/theme.css')

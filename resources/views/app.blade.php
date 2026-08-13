@@ -42,10 +42,21 @@
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
         <meta name="description" content="{{ config('seo.description', '') }}">
 
-        {{-- The dynamic route serves the uploaded school logo; it falls back to the bundled static icons below when none is set. --}}
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="{{ route('favicon') }}" type="image/png">
-        <link rel="apple-touch-icon" href="{{ route('favicon', ['size' => 180]) }}">
+        {{--
+            When a school logo is uploaded (admin → AiSettings → School Branding),
+            serve it as the ONLY icon so browsers never fall back to the bundled
+            Laravel logo. The URL is cache-busted (FaviconUrl::version()) so a
+            freshly uploaded/changed logo appears immediately instead of being
+            held back by the browser's aggressive favicon cache. With no logo
+            set, fall back to the bundled static icons directly.
+        --}}
+        @if (\App\Support\FaviconUrl::hasLogo())
+            <link rel="icon" href="{{ \App\Support\FaviconUrl::url() }}">
+            <link rel="apple-touch-icon" href="{{ \App\Support\FaviconUrl::url(180) }}">
+        @else
+            <link rel="icon" href="/favicon.ico" sizes="any">
+            <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        @endif
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link rel="preload" href="https://fonts.bunny.net/inter/files/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
