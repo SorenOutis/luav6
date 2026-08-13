@@ -1,4 +1,5 @@
 import { createInertiaApp, router } from '@inertiajs/vue3';
+import { configureEcho } from '@laravel/echo-vue';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
@@ -7,7 +8,6 @@ import GlobalLoader from '@/components/GlobalLoader.vue';
 import { initializeTheme } from '@/composables/useAppearance';
 import { initLenis, isLowEndDeviceSignal } from '@/composables/useLenis';
 import { useLoader } from '@/composables/useLoader';
-import { configureEcho } from '@laravel/echo-vue';
 
 configureEcho({
     broadcaster: 'pusher',
