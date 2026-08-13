@@ -22,6 +22,7 @@
         "laravel/wayfinder": "^0.1.9",
         "league/flysystem-aws-s3-v3": "^3.0",
         "phpoffice/phpword": "^1.4",
+        "pusher/pusher-php-server": "^7.3",
         "smalot/pdfparser": "^2.12"
     },
     "require-dev": {

@@ -7,6 +7,11 @@ import GlobalLoader from '@/components/GlobalLoader.vue';
 import { initializeTheme } from '@/composables/useAppearance';
 import { initLenis, isLowEndDeviceSignal } from '@/composables/useLenis';
 import { useLoader } from '@/composables/useLoader';
+import { configureEcho } from '@laravel/echo-vue';
+
+configureEcho({
+    broadcaster: 'pusher',
+});
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const { isVisible, show, hide, hideWhenReady } = useLoader();

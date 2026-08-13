@@ -41,6 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('LuaV6 Admin')
+            ->favicon(fn (): string => route('favicon'))
             ->sidebarCollapsibleOnDesktop()
             ->spa()
             ->viteTheme('resources/css/filament/admin/theme.css')

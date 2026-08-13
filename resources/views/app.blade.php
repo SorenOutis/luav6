@@ -35,9 +35,10 @@
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
         <meta name="description" content="{{ config('seo.description', '') }}">
 
+        {{-- The dynamic route serves the uploaded school logo; it falls back to the bundled static icons below when none is set. --}}
         <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" href="{{ route('favicon') }}" type="image/png">
+        <link rel="apple-touch-icon" href="{{ route('favicon', ['size' => 180]) }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link rel="preload" href="https://fonts.bunny.net/inter/files/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>

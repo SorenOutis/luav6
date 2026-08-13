@@ -14,6 +14,7 @@ use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\FaviconController;
 use App\Http\Controllers\Games\GamesController;
 use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\GradeController;
@@ -37,6 +38,12 @@ Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
 
 Route::get('/robots.txt', RobotsController::class);
 Route::get('/sitemap.xml', SitemapController::class);
+
+// ─── Branding ───────────────────────────────────────────────────────────────
+
+// Serves the uploaded school logo as the site favicon (falling back to the
+// bundled /favicon.ico when no logo is set).
+Route::get('/favicon.png', FaviconController::class)->name('favicon');
 
 // ─── Authenticated routes ─────────────────────────────────────────────────
 
