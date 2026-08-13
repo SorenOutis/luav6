@@ -162,7 +162,10 @@ const unansweredWarningRef = ref<HTMLElement | null>(null);
 const hasShownUnansweredWarning = ref(false);
 const isTimeoutSubmission = ref(false);
 const currentPartHasEssay = ref(false);
-const gradingPollTimer = ref<ReturnType<typeof setInterval> | null>(null);
+const gradingPollTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+// Incremented each time the poll is (re)started so a superseded in-flight
+// poll can never re-arm itself and create a second parallel loop.
+const gradingPollEpoch = ref(0);
 // Shown when a part submission fails so the student knows the answers were
 // NOT recorded and must retry — previously failures were silent, the part
 // looked unanswered and the student re-answered everything.
@@ -1583,43 +1586,66 @@ const animateDisplayedScore = (score: number) => {
 };
 
 const startEssayGradingPoll = (partId: number) => {
-    if (gradingPollTimer.value) clearInterval(gradingPollTimer.value);
+    if (gradingPollTimer.value) clearTimeout(gradingPollTimer.value);
+    gradingPollTimer.value = null;
+
+    // Self-scheduling timeout (instead of setInterval) so a slow poll can
+    // never stack overlapping requests, and we can back off on rate limits.
+    const epoch = ++gradingPollEpoch.value;
+    let delayMs = 2000;
 
     const checkStatus = async () => {
         try {
             const { data } = await axios.get(
                 `/exams/${props.exam.id}/parts/${partId}/status`,
+                { timeout: 30_000 },
             );
-            if (data.status === 'not_submitted') return;
 
-            const submission = localSubmissions.value[partId] ?? {
-                status: 'pending_review',
-                score: 0,
-            };
-            submission.status = data.status;
+            // We got a real response — resume the normal cadence in case a
+            // previous rate-limit had us backing off.
+            delayMs = 2000;
 
-            if (data.scored && data.score !== null) {
-                submission.score = Number(data.score);
-                localSubmissions.value[partId] = submission;
-                isCalculatingScore.value = false;
-                animateDisplayedScore(Number(totalScore.value) || 0);
-                if (gradingPollTimer.value)
-                    clearInterval(gradingPollTimer.value);
-                gradingPollTimer.value = null;
-            } else if (data.grading_failed) {
-                localSubmissions.value[partId] = submission;
-                isCalculatingScore.value = false;
-                if (gradingPollTimer.value)
-                    clearInterval(gradingPollTimer.value);
-                gradingPollTimer.value = null;
+            if (data.status !== 'not_submitted') {
+                const submission = localSubmissions.value[partId] ?? {
+                    status: 'pending_review',
+                    score: 0,
+                };
+                submission.status = data.status;
+
+                if (data.scored && data.score !== null) {
+                    submission.score = Number(data.score);
+                    localSubmissions.value[partId] = submission;
+                    isCalculatingScore.value = false;
+                    animateDisplayedScore(Number(totalScore.value) || 0);
+                    return; // Done — grading finished.
+                }
+
+                if (data.grading_failed) {
+                    localSubmissions.value[partId] = submission;
+                    isCalculatingScore.value = false;
+                    return; // Done — the server flagged the submission.
+                }
             }
-        } catch {
-            // Keep polling through transient network failures.
+            // A `not_submitted` response falls through and keeps polling.
+        } catch (error) {
+            // A 429 means we're polling faster than the middleware allows.
+            // Back off instead of hammering: the old code kept firing every
+            // 2s, re-triggering the limit and leaving the "Reviewing your
+            // essay..." spinner stuck forever.
+            if (axios.isAxiosError(error) && error.response?.status === 429) {
+                delayMs = Math.min(delayMs * 2, 30_000);
+            }
+            // Other failures (network blips, worker restarts) keep polling at
+            // the current cadence.
+        }
+
+        // Don't re-arm if this poll was superseded by a newer start.
+        if (epoch === gradingPollEpoch.value) {
+            gradingPollTimer.value = setTimeout(checkStatus, delayMs);
         }
     };
 
     void checkStatus();
-    gradingPollTimer.value = setInterval(checkStatus, 2000);
 };
 
 const triggerSuccessModal = (
@@ -1862,7 +1888,7 @@ onUnmounted(() => {
         monitorHeartbeatInterval.value = null;
     }
     if (gradingPollTimer.value) {
-        clearInterval(gradingPollTimer.value);
+        clearTimeout(gradingPollTimer.value);
         gradingPollTimer.value = null;
     }
     if (saveDraftTimeout) {

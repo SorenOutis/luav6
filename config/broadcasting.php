@@ -63,7 +63,16 @@ return [
                 'useTLS' => env('PUSHER_SCHEME', 'https') === 'https',
             ],
             'client_options' => [
-                // Guzzle client options: https://docs.guzzlephp.org/en/stable/request-options.html
+                // The ExamAnswersSaved event is broadcast synchronously
+                // (ShouldBroadcastNow) inside the answer-autosave request, so a
+                // slow or rate-limited Pusher API would otherwise hold every
+                // save — and the pre-submit flush — for the Guzzle default of
+                // 30s. Bound it tightly: a healthy Pusher round-trips in well
+                // under a second, and a failed broadcast is rescued (the event
+                // implements ShouldRescue), so a fast timeout only skips the
+                // redundant realtime ack and never blocks the exam.
+                'connect_timeout' => 3,
+                'timeout' => 5,
             ],
         ],
 
