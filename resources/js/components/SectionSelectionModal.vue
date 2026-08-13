@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import { Check, GraduationCap, Hash, Loader2, Sparkles } from 'lucide-vue-next';
-import { ref, nextTick, watch } from 'vue';
+import { ref, nextTick, watch, computed } from 'vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,15 @@ import { Input } from '@/components/ui/input';
 const props = defineProps<{
     show: boolean;
 }>();
+
+const page = usePage();
+const branding = computed(
+    () =>
+        (page.props.schoolBranding ?? {}) as {
+            name?: string;
+            logoUrl?: string | null;
+        },
+);
 
 const enterDashboard = () => {
     if (isEnteringDashboard.value) return;
@@ -144,13 +154,21 @@ watch(
                     <div
                         class="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-[22px] bg-gradient-to-b from-primary/25 to-primary/10 shadow-lg ring-1 shadow-primary/15 ring-black/5 ring-inset sm:h-[72px] sm:w-[72px] dark:ring-white/10"
                     >
-                        <div
-                            class="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent"
-                            aria-hidden="true"
-                        ></div>
-                        <GraduationCap
-                            class="relative h-8 w-8 text-primary sm:h-9 sm:w-9"
+                        <img
+                            v-if="branding.logoUrl"
+                            :src="branding.logoUrl"
+                            :alt="`${branding.name || 'School'} logo`"
+                            class="h-full w-full object-contain p-2.5"
                         />
+                        <template v-else>
+                            <div
+                                class="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent"
+                                aria-hidden="true"
+                            ></div>
+                            <GraduationCap
+                                class="relative h-8 w-8 text-primary sm:h-9 sm:w-9"
+                            />
+                        </template>
                     </div>
                 </div>
 
@@ -176,12 +194,12 @@ watch(
                         />
                         <Input
                             v-model="joinCode"
-                            placeholder="9H84-K6B5"
+                            placeholder="Enter your class code"
                             inputmode="text"
                             autocomplete="off"
                             autocapitalize="characters"
                             spellcheck="false"
-                            class="h-14 rounded-2xl border-transparent bg-muted/55 pl-11 text-center font-mono text-lg font-semibold tracking-[0.3em] uppercase shadow-none transition-all focus-visible:border-transparent focus-visible:bg-muted/75 focus-visible:ring-2 focus-visible:ring-primary/50 sm:text-xl dark:bg-white/[0.06] dark:focus-visible:bg-white/[0.09]"
+                            class="h-14 rounded-2xl border-transparent bg-muted/55 pl-11 text-center font-mono text-lg font-semibold tracking-[0.2em] uppercase shadow-none transition-all placeholder:font-sans placeholder:text-base placeholder:tracking-normal placeholder:text-muted-foreground/60 placeholder:normal-case focus-visible:border-transparent focus-visible:bg-muted/75 focus-visible:ring-2 focus-visible:ring-primary/50 sm:text-xl dark:bg-white/[0.06] dark:focus-visible:bg-white/[0.09]"
                             maxlength="9"
                             @input="handleCodeInput"
                             @keyup.enter="submitCode"
@@ -220,9 +238,6 @@ watch(
                         >
                             Not now
                         </button>
-                        <p class="text-[12px] text-muted-foreground/60">
-                            Your code is only used to enroll you in your class.
-                        </p>
                     </div>
                 </div>
             </div>
