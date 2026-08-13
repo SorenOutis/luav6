@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 
 interface ClaimXp {
     canClaim: boolean;
@@ -40,11 +39,10 @@ const onClaimed = () => {
 </script>
 
 <template>
-    <SpotlightCard
+    <section
         v-if="claimXp?.canClaim && !hideClaimCard"
-        customSize
-        glowColor="yellow"
-        className="p-3 sm:p-4 bg-card/40"
+        class="surface-card p-3 sm:p-4"
+        aria-label="Daily reward"
     >
         <ClaimXpButton
             :can-claim="claimXp.canClaim"
@@ -54,5 +52,5 @@ const onClaimed = () => {
             :show-prompt="claimXp.showPrompt"
             @claimed="onClaimed"
         />
-    </SpotlightCard>
+    </section>
 </template>

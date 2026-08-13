@@ -13,7 +13,6 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface UserStats {
@@ -151,13 +150,11 @@ function formatWhen(iso: string): string {
 </script>
 
 <template>
-    <SpotlightCard
-        customSize
-        glowColor="purple"
-        className="surface-card premium-hover group relative w-full min-w-0 cursor-pointer p-5 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none sm:p-6"
-        :tabindex="0"
-        :role="'button'"
-        :aria-label="'Open your XP history'"
+    <div
+        class="surface-card group relative w-full min-w-0 cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:ring-[#007AFF]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
+        tabindex="0"
+        role="button"
+        aria-label="Open your XP history"
         @click="openBreakdown"
         @keydown.enter.prevent="openBreakdown"
         @keydown.space.prevent="openBreakdown"
@@ -168,20 +165,14 @@ function formatWhen(iso: string): string {
             <!-- Header: Level -->
             <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110"
-                    >
+                    <div class="dash-icon-well bg-[#007AFF]/10 text-[#007AFF]">
                         <TrendingUp class="h-5 w-5" />
                     </div>
                     <div>
-                        <p
-                            class="text-[10px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase"
-                        >
-                            Level
-                        </p>
+                        <p class="dash-label">Level</p>
                         <div class="flex items-baseline gap-1.5">
                             <h3
-                                class="premium-gradient-text text-3xl leading-none font-black tracking-tighter tabular-nums sm:text-4xl"
+                                class="dash-metric text-[34px] leading-none text-foreground sm:text-4xl"
                             >
                                 {{ animLevel }}
                             </h3>
@@ -196,15 +187,15 @@ function formatWhen(iso: string): string {
             <!-- XP Bar -->
             <div class="space-y-2">
                 <div
-                    class="relative h-3 w-full overflow-hidden rounded-full border border-white/10 bg-muted/40 shadow-inner sm:h-3.5 dark:bg-black/30"
+                    class="relative h-2 w-full overflow-hidden rounded-full bg-muted"
                 >
                     <div
-                        class="relative h-full rounded-full bg-gradient-to-r from-primary via-primary/90 to-primary/70 shadow-lg shadow-primary/40 transition-[width] duration-1000 ease-out"
+                        class="relative h-full rounded-full bg-[#007AFF] transition-[width] duration-700 ease-out"
                         :style="{ width: `${xpPercent}%` }"
                     />
                 </div>
                 <div
-                    class="flex items-baseline justify-between gap-2 text-[11px] font-bold tabular-nums"
+                    class="flex items-baseline justify-between gap-2 text-[13px] font-medium tabular-nums"
                 >
                     <span class="text-muted-foreground"
                         >{{ Math.round(animXP).toLocaleString() }} /
@@ -222,15 +213,14 @@ function formatWhen(iso: string): string {
                 class="flex items-center justify-between border-t border-border/10 pt-3"
             >
                 <p class="text-xs text-muted-foreground">
-                    <span class="font-black text-foreground"
+                    <span class="font-semibold text-foreground"
                         >{{ xpToNext.toLocaleString() }} XP</span
                     >
                     to Level {{ userStats.level + 1 }}
                 </p>
                 <span
-                    class="flex items-center gap-1 text-[10px] font-black tracking-widest text-primary uppercase"
+                    class="flex items-center gap-1 text-[13px] font-medium text-[#007AFF]"
                 >
-                    <Sparkles class="h-3 w-3" />
                     History
                 </span>
             </div>
@@ -298,7 +288,7 @@ function formatWhen(iso: string): string {
                         </p>
                     </div>
                     <span
-                        class="shrink-0 text-sm font-black tabular-nums"
+                        class="shrink-0 text-sm font-semibold tabular-nums"
                         :class="
                             claimStatus.state === 'claimed'
                                 ? 'text-emerald-500 dark:text-emerald-400'
@@ -376,7 +366,7 @@ function formatWhen(iso: string): string {
                                 </p>
                                 <span
                                     v-if="entry.isClaim"
-                                    class="rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-black tracking-wide text-amber-500 uppercase dark:text-amber-400"
+                                    class="rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[12px] font-medium text-amber-600 dark:text-amber-400"
                                 >
                                     Claimed
                                 </span>
@@ -395,7 +385,7 @@ function formatWhen(iso: string): string {
                             </p>
                         </div>
                         <span
-                            class="shrink-0 text-sm font-black tabular-nums"
+                            class="shrink-0 text-sm font-semibold tabular-nums"
                             :class="
                                 entry.amount >= 0
                                     ? 'text-emerald-500 dark:text-emerald-400'
@@ -431,7 +421,7 @@ function formatWhen(iso: string): string {
                                 {{ entry.count === 1 ? 'entry' : 'entries' }}
                             </p>
                         </div>
-                        <span class="font-black text-purple-400 tabular-nums"
+                        <span class="font-semibold text-[#007AFF] tabular-nums"
                             >+{{ entry.amount.toLocaleString() }} XP</span
                         >
                     </div>
@@ -442,5 +432,5 @@ function formatWhen(iso: string): string {
                 </p>
             </div>
         </ResponsiveModal>
-    </SpotlightCard>
+    </div>
 </template>

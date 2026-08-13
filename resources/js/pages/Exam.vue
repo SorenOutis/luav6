@@ -10,7 +10,6 @@ import {
     ArrowRight,
     Zap,
     Timer,
-    TrendingUp,
     Search,
 } from 'lucide-vue-next';
 import {
@@ -200,7 +199,7 @@ const filteredExamsBySeason = computed(() => {
 const getExamTimeInfo = (exam: Exam) => {
     if (!exam.exam_date && !exam.exam_date_iso) {
         return {
-            label: 'NO_DEADLINE_SET',
+            label: 'No deadline',
             color: 'text-muted-foreground',
             isOverdue: false,
             isUpcoming: false,
@@ -210,7 +209,7 @@ const getExamTimeInfo = (exam: Exam) => {
     const examDate = new Date(dateStr);
     if (Number.isNaN(examDate.getTime())) {
         return {
-            label: 'INVALID_DATE',
+            label: 'Invalid date',
             color: 'text-muted-foreground',
             isOverdue: false,
             isUpcoming: false,
@@ -221,16 +220,16 @@ const getExamTimeInfo = (exam: Exam) => {
 
     if (exam.is_locked) {
         return {
-            label: `COMPLETED ${examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-            color: 'text-emerald-500',
+            label: `Completed ${examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+            color: 'text-[#34C759]',
             isOverdue: false,
             isUpcoming: false,
         };
     }
     if (diff < 0) {
         return {
-            label: 'OVERDUE',
-            color: 'text-red-500',
+            label: 'Overdue',
+            color: 'text-[#FF3B30]',
             isOverdue: true,
             isUpcoming: false,
         };
@@ -239,16 +238,16 @@ const getExamTimeInfo = (exam: Exam) => {
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     if (days > 0) {
         return {
-            label: `${days}D ${hours}H REMAINING`,
-            color: 'text-amber-500',
+            label: `${days}d ${hours}h left`,
+            color: 'text-[#FF9F0A]',
             isOverdue: false,
             isUpcoming: true,
         };
     }
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return {
-        label: `${hours}H ${minutes}M REMAINING`,
-        color: 'text-red-500',
+        label: `${hours}h ${minutes}m left`,
+        color: 'text-[#FF3B30]',
         isOverdue: false,
         isUpcoming: true,
     };
@@ -261,14 +260,14 @@ const getStatusBadgeInfo = (exam: Exam) => {
         exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
     const allPartsDone = totalParts > 0 && submittedParts >= totalParts;
 
-    if (allPartsDone) return { label: 'Completed', color: 'bg-emerald-500' };
+    if (allPartsDone) return { label: 'Completed', color: 'bg-[#34C759]' };
     if (exam.is_locked && exam.status === 'closed')
-        return { label: 'Closed', color: 'bg-red-500' };
-    if (exam.is_locked) return { label: 'In Progress', color: 'bg-amber-500' };
+        return { label: 'Closed', color: 'bg-[#FF3B30]' };
+    if (exam.is_locked) return { label: 'In progress', color: 'bg-[#FF9F0A]' };
     if (exam.status === 'published')
-        return { label: 'Published', color: 'bg-blue-500' };
+        return { label: 'Open', color: 'bg-[#007AFF]' };
     if (exam.status === 'closed')
-        return { label: 'Closed', color: 'bg-red-500' };
+        return { label: 'Closed', color: 'bg-[#FF3B30]' };
     return { label: 'Draft', color: 'bg-muted text-muted-foreground' };
 };
 
@@ -311,6 +310,18 @@ const openReview = (exam: Exam) => {
     selectedExamForReview.value = exam;
     selectedPartId.value = exam.parts.length > 0 ? exam.parts[0].id : null;
     showReviewModal.value = true;
+};
+
+const openExam = (exam: Exam) => {
+    if (exam.is_locked) {
+        openReview(exam);
+        return;
+    }
+    if (exam.url) {
+        window.open(exam.url, '_blank', 'noopener');
+        return;
+    }
+    router.visit(examsShow(exam.id).url);
 };
 
 const getSubmissionForPart = (exam: Exam, partId: number) => {
@@ -414,7 +425,7 @@ function showScrollbar() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="examContainer"
-            class="exam-theme-page relative flex h-full flex-1 flex-col gap-5 overflow-hidden bg-background p-4 perspective-[1000px] md:p-8"
+            class="student-ui exam-theme-page relative flex h-full flex-1 flex-col gap-5 overflow-hidden bg-background p-4 perspective-[1000px] sm:p-6 md:p-8"
         >
             <!-- Header Section -->
             <Motion
@@ -423,18 +434,17 @@ function showScrollbar() {
                 :transition="{ duration: 0.8, easing: [0.16, 1, 0.3, 1] }"
                 class="space-y-2"
             >
-                <div class="flex items-center gap-4">
-                    <div
-                        class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10"
+                <div>
+                    <h1
+                        class="dash-title text-[28px] text-foreground sm:text-[34px]"
                     >
-                        <TrendingUp class="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold tracking-tight">Exams</h1>
-                        <p class="text-sm text-muted-foreground">
-                            View and take your assessments.
-                        </p>
-                    </div>
+                        Activities
+                    </h1>
+                    <p
+                        class="mt-1 text-[15px] text-muted-foreground sm:text-[17px]"
+                    >
+                        View and take your assessments.
+                    </p>
                 </div>
             </Motion>
 
@@ -446,8 +456,8 @@ function showScrollbar() {
                 <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Search exams by title or description..."
-                    class="w-full rounded-xl border border-border/50 bg-card py-3.5 pr-4 pl-12 text-base transition-all outline-none placeholder:text-muted-foreground/40 focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
+                    placeholder="Search exams"
+                    class="min-h-11 w-full rounded-full border border-border/50 bg-card py-3 pr-4 pl-12 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-[#007AFF]/40 focus:ring-2 focus:ring-[#007AFF]/20"
                 />
             </div>
 
@@ -460,28 +470,28 @@ function showScrollbar() {
                     v-for="section in sectionTabs"
                     :key="section.key"
                     @click="activeSection = section.key"
-                    class="flex shrink-0 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all duration-200"
+                    class="dash-btn flex shrink-0 items-center gap-2 border px-4 text-left"
                     :class="
                         activeSection === section.key
-                            ? 'border-primary/30 bg-primary/5 shadow-sm'
-                            : 'border-border/40 bg-card hover:border-primary/20 hover:bg-muted/30'
+                            ? 'border-transparent bg-[#007AFF] text-white'
+                            : 'border-border/50 bg-card text-muted-foreground hover:bg-muted'
                     "
                 >
                     <span
                         class="text-sm font-medium"
                         :class="
                             activeSection === section.key
-                                ? 'text-primary'
+                                ? 'text-white'
                                 : 'text-muted-foreground'
                         "
                     >
                         {{ section.label }}
                     </span>
                     <span
-                        class="flex h-6 min-w-6 items-center justify-center rounded-md px-2 text-xs font-semibold"
+                        class="flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-[13px] font-semibold"
                         :class="
                             activeSection === section.key
-                                ? 'bg-primary text-primary-foreground'
+                                ? 'bg-white/20 text-white'
                                 : 'bg-muted/50 text-muted-foreground'
                         "
                     >
@@ -509,7 +519,9 @@ function showScrollbar() {
                     <div class="mb-1 flex items-center gap-3">
                         <div class="flex items-center gap-2">
                             <Calendar class="h-5 w-5 text-primary" />
-                            <h2 class="text-lg font-semibold tracking-tight">
+                            <h2
+                                class="dash-title text-[17px] text-foreground sm:text-[20px]"
+                            >
                                 {{ seasonGroup.seasonName }}
                             </h2>
                         </div>
@@ -543,13 +555,17 @@ function showScrollbar() {
                                 easing: [0.16, 1, 0.3, 1],
                                 delay: eIdx * 0.05,
                             }"
-                            class="exam-card flex min-w-0 flex-col justify-between rounded-none border-l-[3px] p-4 transition-all duration-300 sm:flex-col sm:rounded-xl sm:border-t sm:border-r sm:border-b sm:border-l-[3px] sm:p-5"
+                            class="exam-card flex min-h-[7.5rem] min-w-0 flex-col justify-between rounded-[1.25rem] border border-l-[3px] p-4 transition-colors duration-200 sm:p-5"
                             :class="[
                                 exam.is_locked
-                                    ? 'cursor-not-allowed opacity-60'
-                                    : 'cursor-pointer hover:bg-muted/30 sm:hover:-translate-y-0.5 sm:hover:shadow-md',
+                                    ? 'cursor-pointer opacity-80'
+                                    : 'cursor-pointer hover:bg-muted/30',
                                 getCardStatusClass(exam),
                             ]"
+                            role="button"
+                            tabindex="0"
+                            @click="openExam(exam)"
+                            @keydown.enter.prevent="openExam(exam)"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex-1">
@@ -558,7 +574,7 @@ function showScrollbar() {
                                         class="mb-2 flex items-start justify-between gap-2"
                                     >
                                         <span
-                                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-sm sm:px-3 sm:py-1 sm:text-xs"
+                                            class="inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold text-white sm:text-[13px]"
                                             :class="
                                                 getStatusBadgeInfo(exam).color
                                             "
@@ -567,7 +583,7 @@ function showScrollbar() {
                                         </span>
                                         <span
                                             v-if="exam.is_locked"
-                                            class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary tabular-nums sm:px-3 sm:py-1 sm:text-xs"
+                                            class="inline-flex items-center rounded-full bg-[#007AFF]/10 px-2.5 py-1 text-[13px] font-semibold text-[#007AFF] tabular-nums"
                                         >
                                             {{
                                                 exam.submissions
@@ -586,20 +602,20 @@ function showScrollbar() {
                                         <!-- Section Label -->
                                         <div
                                             v-if="exam.section_name"
-                                            class="text-[10px] font-medium text-muted-foreground/60 sm:text-xs"
+                                            class="text-[13px] font-medium text-muted-foreground"
                                         >
                                             {{ exam.section_name }}
                                         </div>
 
                                         <!-- Title -->
                                         <h2
-                                            class="text-sm leading-tight font-semibold text-foreground sm:text-base"
+                                            class="text-[16px] leading-tight font-semibold tracking-tight text-foreground sm:text-[17px]"
                                         >
                                             {{ exam.title }}
                                         </h2>
 
                                         <p
-                                            class="line-clamp-2 text-xs leading-relaxed text-muted-foreground sm:text-sm"
+                                            class="line-clamp-2 text-[14px] leading-relaxed text-muted-foreground sm:text-[15px]"
                                         >
                                             {{ exam.description }}
                                         </p>
@@ -613,12 +629,12 @@ function showScrollbar() {
                                             class="space-y-1.5 pt-1.5 sm:space-y-2 sm:pt-2"
                                         >
                                             <div
-                                                class="flex items-center justify-between text-[10px] font-medium sm:text-xs"
+                                                class="flex items-center justify-between text-[13px] font-medium"
                                             >
                                                 <span
                                                     :class="
                                                         exam.is_locked
-                                                            ? 'text-emerald-600'
+                                                            ? 'text-[#34C759]'
                                                             : 'text-muted-foreground'
                                                     "
                                                 >
@@ -690,7 +706,7 @@ function showScrollbar() {
                                                         getExamTimeInfo(exam)
                                                             .color
                                                     "
-                                                    class="text-[10px] font-medium sm:text-xs"
+                                                    class="text-[13px] font-medium"
                                                 >
                                                     {{
                                                         getExamTimeInfo(exam)
@@ -712,16 +728,19 @@ function showScrollbar() {
                             <div class="mt-3 hidden sm:block">
                                 <button
                                     v-if="exam.is_locked"
-                                    @click="openReview(exam)"
-                                    class="w-full rounded-xl bg-primary/10 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/20 active:scale-[0.98]"
+                                    type="button"
+                                    class="dash-btn w-full bg-[#007AFF]/10 text-[15px] text-[#007AFF] hover:bg-[#007AFF]/15"
+                                    @click.stop="openReview(exam)"
                                 >
-                                    Review Results
+                                    Review results
                                 </button>
                                 <a
                                     v-else-if="exam.url"
                                     :href="exam.url"
                                     target="_blank"
-                                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                    rel="noopener"
+                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#007AFF] text-[15px] text-white hover:bg-[#007AFF]/90"
+                                    @click.stop
                                 >
                                     Start
                                     <ArrowRight class="h-4 w-4" />
@@ -729,7 +748,8 @@ function showScrollbar() {
                                 <Link
                                     v-else
                                     :href="examsShow(exam.id).url"
-                                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#007AFF] text-[15px] text-white hover:bg-[#007AFF]/90"
+                                    @click.stop
                                 >
                                     Start
                                     <ArrowRight class="h-4 w-4" />
@@ -752,18 +772,20 @@ function showScrollbar() {
                     <Calendar class="h-12 w-12 text-muted-foreground/40" />
                 </div>
                 <div class="space-y-1">
-                    <h3 class="text-xl font-semibold text-foreground">
+                    <h3
+                        class="text-[20px] font-semibold tracking-tight text-foreground"
+                    >
                         No exams found
                     </h3>
                     <p
                         v-if="activeSection !== 'all'"
-                        class="text-sm text-muted-foreground"
+                        class="text-[15px] text-muted-foreground"
                     >
                         Try selecting a different section to see more exams.
                     </p>
                     <p
                         v-else-if="searchQuery"
-                        class="text-sm text-muted-foreground"
+                        class="text-[15px] text-muted-foreground"
                     >
                         No exams match your search. Try a different keyword.
                     </p>

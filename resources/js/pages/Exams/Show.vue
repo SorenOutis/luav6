@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import { Motion } from '@motionone/vue';
 import axios from 'axios';
@@ -1947,7 +1947,7 @@ const feedbackContent = computed(() => {
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
             <div
-                class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8"
+                class="student-ui exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8"
             >
                 <PageSkeleton
                     :hero="true"
@@ -1978,7 +1978,7 @@ const feedbackContent = computed(() => {
         <template v-if="isBooted">
             <div
                 ref="container"
-                class="exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
+                class="student-ui exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
             >
                 <div
                     class="relative z-10 flex flex-1 flex-col gap-6 p-4 md:p-8"
@@ -2028,12 +2028,12 @@ const feedbackContent = computed(() => {
                             <Link
                                 v-if="!selectedPart"
                                 href="/exams"
-                                class="inline-flex items-center gap-2 rounded-lg border border-border/40 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/40 hover:text-primary"
+                                class="dash-btn inline-flex items-center gap-2 border border-border/50 bg-card px-4 text-[15px] text-foreground hover:bg-muted"
                             >
                                 <ChevronLeft
                                     class="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1"
                                 />
-                                All Assessments
+                                All activities
                             </Link>
                         </div>
 
@@ -2125,7 +2125,7 @@ const feedbackContent = computed(() => {
                             easing: [0.16, 1, 0.3, 1],
                             delay: 0.1,
                         }"
-                        class="exam-hero relative rounded-lg border border-border bg-card p-6 shadow-sm md:p-8"
+                        class="exam-hero relative rounded-[1.25rem] border border-border/50 bg-card p-5 shadow-sm sm:p-6 md:p-8"
                     >
                         <div
                             class="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center"
@@ -2133,12 +2133,9 @@ const feedbackContent = computed(() => {
                             <div class="max-w-3xl space-y-4">
                                 <div class="flex items-center gap-4">
                                     <div class="space-y-0.5">
-                                        <span
-                                            class="text-xs font-medium text-muted-foreground"
-                                            >Exam</span
-                                        >
+                                        <span class="dash-label">Exam</span>
                                         <h1
-                                            class="text-2xl font-bold tracking-tight text-foreground md:text-4xl"
+                                            class="dash-title text-[26px] text-foreground sm:text-[32px] md:text-[36px]"
                                         >
                                             {{ exam.title }}
                                         </h1>
@@ -2250,13 +2247,13 @@ const feedbackContent = computed(() => {
                                     "
                                 >
                                     <span
-                                        class="text-[10px] font-medium transition-colors"
+                                        class="text-[13px] font-medium transition-colors"
                                         :class="
                                             isDyslexiaFriendly
-                                                ? 'text-primary'
+                                                ? 'text-[#007AFF]'
                                                 : 'text-muted-foreground'
                                         "
-                                        >ACCESSIBILITY</span
+                                        >Accessibility</span
                                     >
                                     <div class="flex items-center gap-2">
                                         <div
@@ -2300,9 +2297,9 @@ const feedbackContent = computed(() => {
                                     >Progress</span
                                 >
                                 <span
-                                    class="text-[9px] font-black text-primary/60"
+                                    class="text-[13px] font-medium text-[#007AFF]"
                                     >{{ Math.round(overallProgress) }}%
-                                    COMPLETED</span
+                                    complete</span
                                 >
                             </div>
                             <div
@@ -2380,7 +2377,7 @@ const feedbackContent = computed(() => {
                                         class="absolute inset-0 animate-pulse bg-primary/5"
                                     ></div>
                                     <div
-                                        class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-[10px] font-medium text-primary-foreground shadow-sm"
+                                        class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-full bg-[#007AFF] px-3 py-1 text-[12px] font-medium text-white shadow-sm"
                                     >
                                         Recommended
                                     </div>
@@ -2473,7 +2470,7 @@ const feedbackContent = computed(() => {
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <span
-                                                class="text-xs font-black text-amber-500"
+                                                class="text-[13px] font-semibold text-[#FF9F0A]"
                                                 >{{
                                                     part.questions?.reduce(
                                                         (sum, q) =>
@@ -2494,7 +2491,7 @@ const feedbackContent = computed(() => {
 
                                     <div
                                         v-if="!isPartSubmitted(part.id)"
-                                        class="flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-all hover:bg-primary hover:text-primary-foreground"
+                                        class="dash-btn flex min-h-10 items-center gap-1.5 bg-[#007AFF] px-4 text-[14px] text-white"
                                         :class="
                                             isPartLocked(index)
                                                 ? 'opacity-20 grayscale'

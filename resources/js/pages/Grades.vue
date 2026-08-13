@@ -204,26 +204,26 @@ const distributionData = computed(() => {
             {
                 label: 'Excellent (≥85)',
                 count: excellent,
-                color: '#10b981',
-                textColor: 'text-emerald-600',
+                color: '#34C759',
+                textColor: 'text-[#34C759]',
             },
             {
                 label: 'Good (70-84)',
                 count: good,
-                color: '#f59e0b',
-                textColor: 'text-amber-600',
+                color: '#007AFF',
+                textColor: 'text-[#007AFF]',
             },
             {
                 label: 'Satisfactory (60-69)',
                 count: satisfactory,
-                color: '#f97316',
-                textColor: 'text-orange-600',
+                color: '#FF9F0A',
+                textColor: 'text-[#FF9F0A]',
             },
             {
                 label: 'Needs Improvement (<60)',
                 count: needsImprovement,
-                color: '#f43f5e',
-                textColor: 'text-rose-600',
+                color: '#FF3B30',
+                textColor: 'text-[#FF3B30]',
             },
         ],
         total: grades.length,
@@ -233,17 +233,18 @@ const distributionData = computed(() => {
 // ── Styling helpers ──────────────────────────────────────────────
 const gradeColor = (percentage: number | null) => {
     if (percentage === null) return 'text-muted-foreground';
-    if (percentage >= 85) return 'text-emerald-500';
-    if (percentage >= 70) return 'text-amber-500';
-    return 'text-rose-500';
+    if (percentage >= 85) return 'text-[#34C759]';
+    if (percentage >= 70) return 'text-[#007AFF]';
+    if (percentage >= 60) return 'text-[#FF9F0A]';
+    return 'text-[#FF3B30]';
 };
 
 const progressColor = (percentage: number | null) => {
     if (percentage === null) return 'bg-muted';
-    if (percentage >= 85) return 'bg-emerald-500';
-    if (percentage >= 70) return 'bg-amber-500';
-    if (percentage >= 60) return 'bg-orange-500';
-    return 'bg-rose-500';
+    if (percentage >= 85) return 'bg-[#34C759]';
+    if (percentage >= 70) return 'bg-[#007AFF]';
+    if (percentage >= 60) return 'bg-[#FF9F0A]';
+    return 'bg-[#FF3B30]';
 };
 
 const gradeLabel = (percentage: number | null) => {
@@ -554,39 +555,46 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="gradesContainer"
-            class="container mx-auto px-4 py-6 perspective-[1000px] lg:px-8 lg:py-8"
+            class="student-ui container mx-auto max-w-full px-4 py-6 perspective-[1000px] sm:px-6 lg:px-8 lg:py-8"
         >
             <!-- Header -->
             <div
                 class="animate-section mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
             >
                 <div>
-                    <h1 class="text-3xl font-bold tracking-tight">My Grades</h1>
-                    <p class="mt-2 text-muted-foreground">
-                        View your academic performance across all Enrolled
-                        Subjects.
+                    <h1
+                        class="dash-title text-[28px] text-foreground sm:text-[34px]"
+                    >
+                        Grades
+                    </h1>
+                    <p
+                        class="mt-1 text-[15px] text-muted-foreground sm:text-[17px]"
+                    >
+                        Your academic performance across enrolled subjects.
                     </p>
                 </div>
-                <div class="flex items-center gap-3">
+                <div
+                    class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center"
+                >
                     <div class="relative w-full sm:w-56 lg:w-72">
                         <Search
-                            class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            class="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
                         <Input
                             v-model="searchQuery"
-                            placeholder="Search subjects..."
-                            class="pl-9"
+                            placeholder="Search subjects"
+                            class="pl-10"
                         />
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
+                    <button
+                        type="button"
+                        class="dash-btn inline-flex shrink-0 items-center justify-center gap-2 border border-border/60 bg-card px-4 text-[15px] text-foreground transition-colors hover:bg-muted disabled:opacity-60"
                         :disabled="isExporting"
                         @click="exportPdf"
                     >
                         <Printer class="h-4 w-4" />
-                        {{ isExporting ? 'Exporting...' : 'Export PDF' }}
-                    </Button>
+                        {{ isExporting ? 'Exporting…' : 'Export PDF' }}
+                    </button>
                 </div>
             </div>
 
@@ -595,10 +603,10 @@ onMounted(() => {
                 v-if="isLoading"
                 class="animate-section mb-8 flex flex-col items-center justify-center py-16"
             >
-                <Loader2
-                    class="mb-4 h-10 w-10 animate-spin text-muted-foreground"
-                />
-                <p class="text-muted-foreground">Loading your grades...</p>
+                <Loader2 class="mb-4 h-8 w-8 animate-spin text-[#007AFF]" />
+                <p class="text-[15px] text-muted-foreground">
+                    Loading your grades…
+                </p>
             </div>
 
             <!-- Error state -->
@@ -608,7 +616,7 @@ onMounted(() => {
                         class="flex flex-col items-center justify-center py-12"
                     >
                         <AlertCircle class="mb-4 h-12 w-12 text-destructive" />
-                        <h3 class="text-lg font-semibold">
+                        <h3 class="text-[17px] font-semibold tracking-tight">
                             Something went wrong
                         </h3>
                         <p
@@ -619,7 +627,7 @@ onMounted(() => {
                         <Button
                             variant="outline"
                             size="sm"
-                            class="mt-4"
+                            class="dash-btn mt-4 px-5"
                             @click="fetchGrades"
                         >
                             <RefreshCw class="h-4 w-4" />
@@ -638,19 +646,19 @@ onMounted(() => {
                     <CardHeader
                         class="flex flex-row items-center justify-between space-y-0 pb-2"
                     >
-                        <CardTitle class="text-sm font-medium"
-                            >Overall Average</CardTitle
+                        <CardTitle class="dash-label"
+                            >Overall average</CardTitle
                         >
                         <TrendingUp class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div
-                            class="text-2xl font-bold"
+                            class="dash-metric text-[32px] leading-none"
                             :class="gradeColor(averageSemesterGrade)"
                         >
                             {{ averageSemesterGrade }}
                         </div>
-                        <p class="mt-1 text-xs text-muted-foreground">
+                        <p class="mt-1 text-[13px] text-muted-foreground">
                             {{ gradeLabel(averageSemesterGrade) }}
                         </p>
                     </CardContent>
@@ -660,17 +668,15 @@ onMounted(() => {
                     <CardHeader
                         class="flex flex-row items-center justify-between space-y-0 pb-2"
                     >
-                        <CardTitle class="text-sm font-medium"
-                            >Total Subjects</CardTitle
-                        >
+                        <CardTitle class="dash-label">Subjects</CardTitle>
                         <BookOpen class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">
+                        <div class="dash-metric text-[32px] leading-none">
                             {{ totalFilteredCount }}
                         </div>
-                        <p class="mt-1 text-xs text-muted-foreground">
-                            Enrolled subjects
+                        <p class="mt-1 text-[13px] text-muted-foreground">
+                            Enrolled this term
                         </p>
                     </CardContent>
                 </Card>
@@ -679,17 +685,15 @@ onMounted(() => {
                     <CardHeader
                         class="flex flex-row items-center justify-between space-y-0 pb-2"
                     >
-                        <CardTitle class="text-sm font-medium"
-                            >Completed</CardTitle
-                        >
+                        <CardTitle class="dash-label">Completed</CardTitle>
                         <GraduationCap class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div class="text-2xl font-bold">
+                        <div class="dash-metric text-[32px] leading-none">
                             {{ completedCount }}
                         </div>
-                        <p class="mt-1 text-xs text-muted-foreground">
-                            With semester grades
+                        <p class="mt-1 text-[13px] text-muted-foreground">
+                            With a final grade
                         </p>
                     </CardContent>
                 </Card>
@@ -698,9 +702,7 @@ onMounted(() => {
                     <CardHeader
                         class="flex flex-row items-center justify-between space-y-0 pb-2"
                     >
-                        <CardTitle class="text-sm font-medium"
-                            >Grade Distribution</CardTitle
-                        >
+                        <CardTitle class="dash-label">Distribution</CardTitle>
                         <BarChart3 class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -725,7 +727,9 @@ onMounted(() => {
                     class="flex flex-col items-center justify-center py-12"
                 >
                     <AlertCircle class="mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 class="text-lg font-semibold">No subjects enrolled</h3>
+                    <h3 class="text-[17px] font-semibold tracking-tight">
+                        No subjects enrolled
+                    </h3>
                     <p class="mt-2 max-w-md text-center text-muted-foreground">
                         You are not enrolled in any sections yet. Contact your
                         instructor to get enrolled.
@@ -742,7 +746,9 @@ onMounted(() => {
                     class="flex flex-col items-center justify-center py-12"
                 >
                     <Search class="mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 class="text-lg font-semibold">No subjects found</h3>
+                    <h3 class="text-[17px] font-semibold tracking-tight">
+                        No subjects found
+                    </h3>
                     <p class="mt-2 max-w-md text-center text-muted-foreground">
                         No subjects match "{{ searchQuery }}". Try a different
                         search term.
@@ -764,17 +770,17 @@ onMounted(() => {
                                     <GraduationCap
                                         class="h-5 w-5 text-primary"
                                     />
-                                    {{ group.label }} Performance
+                                    {{ group.label }}
                                 </CardTitle>
                                 <CardDescription>
-                                    Grades by subject across all grading periods
+                                    Grades by subject and period
                                 </CardDescription>
                             </div>
                             <Button
                                 v-if="!group.isSeniorHigh"
                                 variant="outline"
                                 size="sm"
-                                class="shrink-0"
+                                class="dash-btn shrink-0 px-4"
                                 @click="toggleAllCollege(group)"
                             >
                                 <ChevronDown
@@ -796,8 +802,8 @@ onMounted(() => {
                                     >
                                         {{
                                             isGroupAllExpanded(group)
-                                                ? 'Collapse All'
-                                                : 'Expand All'
+                                                ? 'Collapse all'
+                                                : 'Expand all'
                                         }}
                                     </span>
                                 </Transition>
@@ -825,7 +831,7 @@ onMounted(() => {
                                         </CardTitle>
                                         <Badge
                                             variant="outline"
-                                            class="text-[10px]"
+                                            class="rounded-full text-[12px] font-medium"
                                         >
                                             {{ subjectGrade.section?.name }}
                                         </Badge>
@@ -840,7 +846,7 @@ onMounted(() => {
                                             class="px-4 py-3"
                                         >
                                             <div
-                                                class="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                                                class="mb-2 text-[13px] font-medium text-muted-foreground"
                                             >
                                                 {{ semester.label }}
                                             </div>
@@ -872,7 +878,7 @@ onMounted(() => {
                                                         "
                                                     />
                                                     <span
-                                                        class="w-10 text-right text-sm font-bold tabular-nums"
+                                                        class="w-10 text-right text-[15px] font-semibold tabular-nums"
                                                         :class="
                                                             gradeColor(
                                                                 quarter.grade
@@ -908,7 +914,7 @@ onMounted(() => {
                                                         semester.finalGrade !==
                                                         null
                                                     "
-                                                    class="font-bold"
+                                                    class="font-semibold"
                                                     :class="
                                                         gradeColor(
                                                             semester.finalGrade,
@@ -963,13 +969,13 @@ onMounted(() => {
                                                                 period.key,
                                                         )
                                                     "
-                                                    class="flex w-full items-center justify-between px-4 py-2.5 text-left transition-colors hover:bg-muted/30"
+                                                    class="flex min-h-11 w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30"
                                                 >
                                                     <div
                                                         class="flex items-center gap-3"
                                                     >
                                                         <div
-                                                            class="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-xs font-bold text-primary"
+                                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-[#007AFF]/10 text-[13px] font-semibold text-[#007AFF]"
                                                         >
                                                             {{ pIdx + 1 }}
                                                         </div>
@@ -985,12 +991,12 @@ onMounted(() => {
                                                                     period.key,
                                                                 )
                                                             "
-                                                            class="text-[10px] text-emerald-500"
+                                                            class="text-[13px] text-[#34C759]"
                                                             >Graded</span
                                                         >
                                                         <span
                                                             v-else
-                                                            class="text-[10px] text-muted-foreground"
+                                                            class="text-[13px] text-muted-foreground"
                                                             >Pending</span
                                                         >
                                                     </div>
@@ -1103,7 +1109,7 @@ onMounted(() => {
                                                                     "
                                                                 />
                                                                 <span
-                                                                    class="text-sm font-bold tabular-nums"
+                                                                    class="text-[15px] font-semibold tabular-nums"
                                                                     :class="
                                                                         gradeColor(
                                                                             getPeriodGrade(
@@ -1172,9 +1178,7 @@ onMounted(() => {
                                     <div
                                         class="flex items-center justify-between bg-muted/20 px-4 py-3"
                                     >
-                                        <span
-                                            class="text-xs font-semibold tracking-wider uppercase"
-                                        >
+                                        <span class="text-[13px] font-semibold">
                                             {{
                                                 group.isSeniorHigh
                                                     ? 'Final Grade'
@@ -1200,7 +1204,7 @@ onMounted(() => {
                                                 "
                                             />
                                             <span
-                                                class="text-sm font-bold"
+                                                class="text-[15px] font-semibold"
                                                 :class="
                                                     gradeColor(
                                                         subjectGrade.semesterGrade,
@@ -1238,7 +1242,7 @@ onMounted(() => {
                                 >
                                     <div class="mb-3 flex items-center gap-2">
                                         <span
-                                            class="inline-flex items-center rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary"
+                                            class="inline-flex items-center rounded-full bg-[#007AFF]/10 px-2.5 py-1 text-[13px] font-medium text-[#007AFF]"
                                         >
                                             {{ semester.label }}
                                         </span>
@@ -1293,7 +1297,7 @@ onMounted(() => {
                                                         class="flex flex-col items-center gap-1"
                                                     >
                                                         <div
-                                                            class="text-base font-bold"
+                                                            class="text-[17px] font-semibold tabular-nums"
                                                             :class="
                                                                 gradeColor(
                                                                     getSubjectQuarterGrade(
@@ -1334,7 +1338,7 @@ onMounted(() => {
                                                             "
                                                         />
                                                         <div
-                                                            class="text-[10px] text-muted-foreground"
+                                                            class="text-[13px] text-muted-foreground"
                                                         >
                                                             {{
                                                                 getSubjectQuarterGrade(
@@ -1376,7 +1380,7 @@ onMounted(() => {
                                                         class="flex flex-col items-center"
                                                     >
                                                         <div
-                                                            class="text-lg font-bold"
+                                                            class="text-[22px] font-semibold tabular-nums"
                                                             :class="
                                                                 gradeColor(
                                                                     getSubjectFinalGrade(
@@ -1413,7 +1417,7 @@ onMounted(() => {
                                                             "
                                                         />
                                                         <div
-                                                            class="mt-1 text-[10px] text-muted-foreground"
+                                                            class="mt-1 text-[13px] text-muted-foreground"
                                                         >
                                                             {{
                                                                 gradeLabel(
@@ -1450,7 +1454,7 @@ onMounted(() => {
                                         class="flex items-center justify-between"
                                     >
                                         <span
-                                            class="text-sm font-semibold tracking-wider uppercase"
+                                            class="text-[15px] font-semibold tracking-tight"
                                         >
                                             Overall {{ group.finalGradeLabel }}
                                         </span>
@@ -1473,7 +1477,7 @@ onMounted(() => {
                                                         subjectGrade.semesterGrade !==
                                                         null
                                                     "
-                                                    class="text-sm font-bold"
+                                                    class="text-[15px] font-semibold"
                                                     :class="
                                                         gradeColor(
                                                             subjectGrade.semesterGrade,
@@ -1511,11 +1515,11 @@ onMounted(() => {
                                         :aria-expanded="
                                             expandedPeriods.includes(period.key)
                                         "
-                                        class="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30"
+                                        class="flex min-h-14 w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
                                     >
                                         <div class="flex items-center gap-3">
                                             <div
-                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-bold text-primary"
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#007AFF]/10 text-[15px] font-semibold text-[#007AFF]"
                                             >
                                                 {{ pIdx + 1 }}
                                             </div>
@@ -1544,7 +1548,7 @@ onMounted(() => {
                                                                 .length >
                                                                 MAX_VISIBLE_ROWS
                                                         "
-                                                        class="ml-1.5 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                                                        class="ml-1.5 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[12px] font-medium text-muted-foreground"
                                                     >
                                                         +{{
                                                             group.subjects
@@ -1563,7 +1567,7 @@ onMounted(() => {
                                                                     .length >
                                                                     MAX_VISIBLE_ROWS
                                                             "
-                                                            class="ml-1.5 inline-flex animate-bounce items-center gap-0.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
+                                                            class="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#007AFF]/10 px-2 py-0.5 text-[12px] font-medium text-[#007AFF]"
                                                         >
                                                             <ChevronDown
                                                                 class="h-3 w-3"
@@ -1691,7 +1695,7 @@ onMounted(() => {
                                                             class="flex flex-col items-center gap-1"
                                                         >
                                                             <span
-                                                                class="text-base font-bold tabular-nums"
+                                                                class="text-[17px] font-semibold tabular-nums"
                                                                 :class="
                                                                     gradeColor(
                                                                         getPeriodGrade(
@@ -1781,7 +1785,7 @@ onMounted(() => {
                                         class="flex items-center justify-between"
                                     >
                                         <span
-                                            class="text-sm font-semibold tracking-wider uppercase"
+                                            class="text-[15px] font-semibold tracking-tight"
                                         >
                                             {{ group.finalGradeLabel }}
                                         </span>
@@ -1804,7 +1808,7 @@ onMounted(() => {
                                                         subjectGrade.semesterGrade !==
                                                         null
                                                     "
-                                                    class="text-sm font-bold tabular-nums"
+                                                    class="text-[15px] font-semibold tabular-nums"
                                                     :class="
                                                         gradeColor(
                                                             subjectGrade.semesterGrade,

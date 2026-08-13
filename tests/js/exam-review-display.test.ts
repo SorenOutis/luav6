@@ -203,8 +203,8 @@ describe('Exam.vue review modal answer display', () => {
         // Open the review modal
         const reviewBtn = wrapper
             .findAll('button')
-            .find((b: any) => b.text().includes('Review Results'));
-        expect(reviewBtn, 'Review Results button should exist').toBeTruthy();
+            .find((b: any) => b.text().includes('Review results'));
+        expect(reviewBtn, 'Review results button should exist').toBeTruthy();
         await reviewBtn!.trigger('click');
         await flushPromises();
         await new Promise((r) => setTimeout(r, 50));

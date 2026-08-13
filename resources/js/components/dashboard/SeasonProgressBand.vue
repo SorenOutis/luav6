@@ -73,25 +73,16 @@ const formatDate = (iso?: string | null) => {
         class="surface-card relative flex h-full w-full min-w-0 flex-col justify-between gap-4 overflow-hidden p-5 sm:p-6"
         aria-label="Current season progress"
     >
-        <div
-            class="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-primary/10 blur-3xl"
-            aria-hidden="true"
-        />
-
         <div class="relative z-10 flex items-start justify-between gap-3">
             <div class="flex min-w-0 items-center gap-3">
-                <div
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary"
-                >
+                <div class="dash-icon-well bg-[#AF52DE]/15 text-[#AF52DE]">
                     <Sparkles class="h-5 w-5" />
                 </div>
                 <div class="min-w-0">
-                    <p
-                        class="text-[10px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase"
+                    <p class="dash-label">Season</p>
+                    <h3
+                        class="truncate text-[17px] font-semibold tracking-tight text-foreground"
                     >
-                        Season
-                    </p>
-                    <h3 class="truncate text-base font-bold text-foreground">
                         {{ name }}
                     </h3>
                 </div>
@@ -100,24 +91,19 @@ const formatDate = (iso?: string | null) => {
 
         <div class="relative z-10 flex items-end justify-between gap-3">
             <div>
+                <p class="dash-label">Time left</p>
                 <p
-                    class="text-[10px] font-black tracking-[0.2em] text-muted-foreground/60 uppercase"
-                >
-                    Time left
-                </p>
-                <p
-                    class="mt-0.5 flex items-baseline gap-1 text-3xl leading-none font-black tracking-tighter tabular-nums"
+                    class="dash-metric mt-0.5 flex items-baseline gap-1 text-[34px] leading-none"
                 >
                     {{ seasonTimeline.daysRemaining }}
-                    <span
-                        class="text-[10px] font-bold text-muted-foreground/60 uppercase"
+                    <span class="text-[13px] font-medium text-muted-foreground"
                         >days</span
                     >
                 </p>
             </div>
             <span
                 v-if="pacing"
-                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black tracking-widest uppercase"
+                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-medium"
                 :class="[
                     pacing.tone,
                     pacing.tone === 'text-primary'
@@ -134,7 +120,7 @@ const formatDate = (iso?: string | null) => {
 
         <div class="relative z-10 space-y-1.5">
             <div
-                class="flex items-center justify-between text-[10px] font-bold text-muted-foreground tabular-nums"
+                class="flex items-center justify-between text-[13px] font-medium text-muted-foreground tabular-nums"
             >
                 <span class="inline-flex items-center gap-1">
                     <CalendarDays class="h-3 w-3" />
@@ -144,7 +130,7 @@ const formatDate = (iso?: string | null) => {
                     >XP {{ xpPercent }}%</span
                 >
             </div>
-            <div class="relative h-2 overflow-hidden rounded-full bg-muted/40">
+            <div class="relative h-2 overflow-hidden rounded-full bg-muted">
                 <!-- Elapsed time -->
                 <div
                     class="absolute inset-y-0 left-0 bg-muted-foreground/25 transition-[width] duration-1000 ease-out"
@@ -154,7 +140,7 @@ const formatDate = (iso?: string | null) => {
                 <!-- XP progress -->
                 <div
                     v-if="xpPercent !== null"
-                    class="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/80 to-primary transition-[width] duration-1000 ease-out"
+                    class="absolute inset-y-0 left-0 bg-[#007AFF] transition-[width] duration-700 ease-out"
                     :style="{ width: `${xpPercent}%` }"
                 />
                 <!-- Pace marker -->

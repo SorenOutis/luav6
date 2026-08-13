@@ -88,12 +88,15 @@ const isEmpty = computed(() => props.total === 0);
             <!-- Center text -->
             <div class="absolute inset-0 flex items-center justify-center">
                 <div class="text-center">
-                    <div v-if="!isEmpty" class="text-lg leading-none font-bold">
+                    <div
+                        v-if="!isEmpty"
+                        class="text-[17px] leading-none font-semibold tabular-nums"
+                    >
                         {{ total }}
                     </div>
                     <div v-else class="text-sm text-muted-foreground">—</div>
                     <div
-                        class="text-[10px] leading-tight text-muted-foreground"
+                        class="text-[12px] leading-tight text-muted-foreground"
                     >
                         Total
                     </div>
@@ -105,7 +108,7 @@ const isEmpty = computed(() => props.total === 0);
             <div
                 v-for="(segment, i) in segments"
                 :key="i"
-                class="flex items-center gap-2 text-xs"
+                class="flex items-center gap-2 text-[13px]"
             >
                 <span
                     class="h-2.5 w-2.5 shrink-0 rounded-full"

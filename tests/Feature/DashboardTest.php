@@ -18,6 +18,21 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
+test('dashboard page component uses the student dashboard shell', function () {
+    $source = file_get_contents(resource_path('js/pages/Dashboard.vue'));
+
+    expect($source)->toContain('dashboard-ui')
+        ->and($source)->not->toContain('SpotlightCard');
+});
+
+test('grades page component uses the student page shell', function () {
+    $source = file_get_contents(resource_path('js/pages/Grades.vue'));
+
+    expect($source)->toContain('student-ui')
+        ->and($source)->toContain('dash-btn')
+        ->and($source)->not->toContain('tracking-wider');
+});
+
 test('dashboard awards eligible lifetime badges and keeps the earning season', function () {
     $season = Season::create([
         'name' => 'Season Alpha',

@@ -149,14 +149,14 @@ const trendMeta: Record<
     up: {
         icon: TrendingUp,
         label: 'Up',
-        chip: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-400',
-        iconColor: 'text-emerald-400',
+        chip: 'bg-[#34C759]/10 text-[#34C759]',
+        iconColor: 'text-[#34C759]',
     },
     down: {
         icon: TrendingDown,
         label: 'Down',
-        chip: 'border-rose-400/25 bg-rose-400/10 text-rose-400',
-        iconColor: 'text-rose-400',
+        chip: 'bg-[#FF3B30]/10 text-[#FF3B30]',
+        iconColor: 'text-[#FF3B30]',
     },
     stable: {
         icon: Minus,
@@ -204,11 +204,11 @@ const rankMeta = [
     {
         label: '1st',
         icon: Crown,
-        ring: 'ring-amber-400/60',
-        glow: 'shadow-amber-400/30',
-        accent: 'text-amber-400',
-        bg: 'from-amber-400/20 via-amber-400/5 to-transparent',
-        badge: 'bg-amber-400 text-black',
+        ring: 'ring-[#FFD60A]/50',
+        glow: 'shadow-none',
+        accent: 'text-[#C7A000]',
+        bg: 'from-[#FFD60A]/15 via-transparent to-transparent',
+        badge: 'bg-[#FFD60A] text-black',
     },
     {
         label: '2nd',
@@ -371,16 +371,16 @@ const changeSeason = async (seasonId: number) => {
         >
             <div>
                 <div class="mb-1 flex items-center gap-2">
-                    <Trophy class="h-4 w-4 text-amber-400" />
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-amber-400 uppercase"
-                    >
+                    <Trophy class="h-4 w-4 text-[#007AFF]" />
+                    <span class="text-[13px] font-medium text-muted-foreground">
                         {{
                             sectionName ? `${sectionName} Rankings` : 'Rankings'
                         }}
                     </span>
                 </div>
-                <h2 class="text-2xl font-black tracking-tight sm:text-3xl">
+                <h2
+                    class="text-[28px] font-semibold tracking-tight sm:text-[34px]"
+                >
                     Leaderboard
                 </h2>
             </div>
@@ -388,7 +388,7 @@ const changeSeason = async (seasonId: number) => {
                 <Link
                     v-if="showViewButton"
                     href="/leaderboard"
-                    class="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[10px] font-black tracking-[0.08em] text-amber-300 uppercase transition hover:border-amber-400/50 hover:bg-amber-400/20"
+                    class="dash-btn inline-flex shrink-0 items-center gap-2 bg-[#007AFF]/10 px-4 text-[14px] text-[#007AFF] transition hover:bg-[#007AFF]/15"
                 >
                     <Trophy class="h-3.5 w-3.5" />
                     View Leaderboard
@@ -432,7 +432,7 @@ const changeSeason = async (seasonId: number) => {
                     />
                 </div>
                 <div v-else class="lb-season-pill">
-                    <Terminal class="h-3 w-3 text-amber-400" />
+                    <Terminal class="h-3 w-3 text-[#007AFF]" />
                     <span>{{ currentSeasonName }}</span>
                 </div>
 
@@ -456,32 +456,29 @@ const changeSeason = async (seasonId: number) => {
 
         <!-- Your Rank Row -->
         <div v-if="currentUser && totalPlayers > 0" class="lb-rank-row">
-            <div
-                class="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-amber-400/10 blur-2xl"
-                aria-hidden="true"
-            ></div>
+            <div class="hidden" aria-hidden="true"></div>
             <div
                 class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div class="flex min-w-0 items-center gap-3 sm:gap-4">
                     <div
-                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-400/25 bg-amber-400/10 text-amber-400"
+                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#007AFF]/10 text-[#007AFF]"
                     >
                         <Trophy class="h-5 w-5" />
                     </div>
                     <div class="min-w-0">
                         <p
-                            class="text-[10px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase"
+                            class="text-[13px] font-medium text-muted-foreground"
                         >
-                            Your Rank
+                            Your rank
                         </p>
                         <div class="flex items-baseline gap-2">
                             <span
-                                class="text-2xl leading-none font-black tracking-tighter tabular-nums sm:text-3xl"
+                                class="text-[28px] leading-none font-semibold tracking-tight tabular-nums sm:text-[32px]"
                                 >#{{ userRank }}</span
                             >
                             <span
-                                class="text-xs font-bold text-muted-foreground"
+                                class="text-[13px] font-medium text-muted-foreground"
                                 >of {{ totalPlayers }} players</span
                             >
                         </div>
@@ -496,7 +493,7 @@ const changeSeason = async (seasonId: number) => {
                 </div>
                 <div class="flex items-center gap-2 sm:flex-col sm:items-end">
                     <span
-                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-black tracking-widest uppercase"
+                        class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-medium"
                         :class="trendOf(currentUser).chip"
                     >
                         <component
@@ -506,7 +503,7 @@ const changeSeason = async (seasonId: number) => {
                         {{ trendOf(currentUser).label }}
                     </span>
                     <span
-                        class="text-[10px] font-bold text-muted-foreground tabular-nums"
+                        class="text-[13px] font-medium text-muted-foreground tabular-nums"
                     >
                         +{{ currentUser.weeklyXp.toLocaleString() }} XP this
                         week
@@ -520,13 +517,15 @@ const changeSeason = async (seasonId: number) => {
             v-if="isSwitchingSeason"
             class="flex items-center justify-center py-12"
         >
-            <Loader2 class="h-8 w-8 animate-spin text-amber-400" />
+            <Loader2 class="h-8 w-8 animate-spin text-[#007AFF]" />
         </div>
 
         <!-- Empty State -->
         <div v-else-if="users.length === 0" class="lb-empty">
             <Trophy class="mb-4 h-10 w-10 text-muted-foreground/30" />
-            <h3 class="mb-1 text-xl font-black">No Rankings Yet</h3>
+            <h3 class="mb-1 text-[20px] font-semibold tracking-tight">
+                No rankings yet
+            </h3>
             <p class="text-xs text-muted-foreground">
                 Be the first to earn XP!
             </p>
@@ -541,7 +540,7 @@ const changeSeason = async (seasonId: number) => {
                 </p>
                 <button
                     @click="searchQuery = ''"
-                    class="mt-3 text-xs font-bold text-amber-400 hover:underline"
+                    class="mt-3 text-[13px] font-medium text-[#007AFF] hover:underline"
                 >
                     Clear search
                 </button>
@@ -667,7 +666,7 @@ const changeSeason = async (seasonId: number) => {
                                 v-if="!user.blurred"
                                 :href="`/u/${user.id}`"
                                 :class="[
-                                    'mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words transition-colors hover:text-amber-400',
+                                    'mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words transition-colors hover:text-[#007AFF]',
                                     getNameSize(user.name, origIdx === 0),
                                 ]"
                             >
@@ -676,7 +675,7 @@ const changeSeason = async (seasonId: number) => {
                             <span
                                 v-else
                                 :class="[
-                                    'lb-blurred lb-blurred-text mt-3 max-w-full text-center leading-snug font-black tracking-tight break-words',
+                                    'lb-blurred lb-blurred-text mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words',
                                     getNameSize(user.name, origIdx === 0),
                                 ]"
                                 @contextmenu.prevent
@@ -685,11 +684,11 @@ const changeSeason = async (seasonId: number) => {
                             </span>
                             <span
                                 v-if="user.isCurrentUser"
-                                class="mt-1 rounded-full bg-amber-400 px-2 py-0.5 text-[8px] font-black text-black uppercase"
+                                class="mt-1 rounded-full bg-[#007AFF] px-2 py-0.5 text-[11px] font-semibold text-white"
                                 >You</span
                             >
                             <span
-                                class="mt-1 text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
+                                class="mt-1 text-[13px] font-medium text-muted-foreground"
                                 :class="rankMeta[origIdx].accent"
                             >
                                 {{ rankMeta[origIdx].label }}
@@ -703,7 +702,7 @@ const changeSeason = async (seasonId: number) => {
                                             ? 'text-3xl sm:text-4xl'
                                             : 'text-2xl sm:text-3xl',
                                     ]"
-                                    class="font-black tracking-tighter tabular-nums"
+                                    class="font-semibold tracking-tight tabular-nums"
                                 >
                                     {{
                                         getAnimXP(
@@ -712,14 +711,14 @@ const changeSeason = async (seasonId: number) => {
                                     }}
                                 </span>
                                 <span
-                                    class="text-[10px] font-bold text-amber-400 uppercase"
+                                    class="text-[13px] font-medium text-muted-foreground"
                                     >XP</span
                                 >
                             </div>
 
                             <!-- Stats row -->
                             <div
-                                class="mt-3 flex items-center gap-3 text-[9px] text-muted-foreground"
+                                class="mt-3 flex items-center gap-3 text-[13px] text-muted-foreground"
                             >
                                 <div class="flex items-center gap-1">
                                     <Flame class="h-3 w-3 text-orange-400" />
@@ -729,7 +728,7 @@ const changeSeason = async (seasonId: number) => {
                                 </div>
                                 <div class="h-3 w-px bg-border/60"></div>
                                 <div class="flex items-center gap-1">
-                                    <Sparkles class="h-3 w-3 text-amber-400" />
+                                    <Sparkles class="h-3 w-3 text-[#007AFF]" />
                                     <span class="font-bold"
                                         >{{ user.xpProgress }}%</span
                                     >
@@ -741,7 +740,7 @@ const changeSeason = async (seasonId: number) => {
                                 class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/30"
                             >
                                 <div
-                                    class="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all duration-1000"
+                                    class="h-full rounded-full bg-[#007AFF] transition-all duration-700"
                                     :style="{ width: `${user.xpProgress}%` }"
                                 ></div>
                             </div>
@@ -753,10 +752,10 @@ const changeSeason = async (seasonId: number) => {
                 <div v-if="filteredUsers.length > 3" class="space-y-2">
                     <div class="mb-3 flex items-center justify-between px-1">
                         <div class="flex items-center gap-2">
-                            <Activity class="h-3.5 w-3.5 text-amber-400" />
+                            <Activity class="h-3.5 w-3.5 text-[#007AFF]" />
                             <span
-                                class="text-[10px] font-black tracking-[0.2em] uppercase"
-                                >All Rankings</span
+                                class="text-[13px] font-medium text-muted-foreground"
+                                >Rankings</span
                             >
                         </div>
                         <span
@@ -781,7 +780,7 @@ const changeSeason = async (seasonId: number) => {
                         >
                             <div class="lb-row-rank shrink-0">
                                 <span
-                                    class="text-xs font-black tabular-nums sm:text-sm"
+                                    class="text-[13px] font-semibold tabular-nums sm:text-sm"
                                     >#{{ i + 4 }}</span
                                 >
                             </div>
@@ -843,7 +842,7 @@ const changeSeason = async (seasonId: number) => {
                                     >
                                     <span
                                         v-if="user.isCurrentUser"
-                                        class="shrink-0 rounded-full bg-amber-400 px-1.5 py-0.5 text-[7px] font-black text-black uppercase"
+                                        class="shrink-0 rounded-full bg-[#007AFF] px-1.5 py-0.5 text-[11px] font-semibold text-white"
                                         >YOU</span
                                     >
                                 </div>
@@ -852,7 +851,7 @@ const changeSeason = async (seasonId: number) => {
                                         class="h-2.5 w-2.5 text-orange-400/70"
                                     />
                                     <span
-                                        class="text-[9px] font-medium text-muted-foreground"
+                                        class="text-[13px] font-medium text-muted-foreground"
                                         >{{ user.streak }}d streak</span
                                     >
                                 </div>
@@ -865,11 +864,11 @@ const changeSeason = async (seasonId: number) => {
                             <div class="text-right">
                                 <div class="flex items-baseline gap-0.5">
                                     <span
-                                        class="text-sm font-black tracking-tight tabular-nums sm:text-base"
+                                        class="text-[15px] font-semibold tracking-tight tabular-nums sm:text-base"
                                         >{{ user.xp.toLocaleString() }}</span
                                     >
                                     <span
-                                        class="text-[8px] font-bold text-amber-400 uppercase"
+                                        class="text-[12px] font-medium text-muted-foreground"
                                         >XP</span
                                     >
                                 </div>
@@ -882,10 +881,10 @@ const changeSeason = async (seasonId: number) => {
                                         :class="trendOf(user).iconColor"
                                     />
                                     <Sparkles
-                                        class="h-2 w-2 text-amber-400/60"
+                                        class="h-2 w-2 text-[#007AFF]/70"
                                     />
                                     <span
-                                        class="text-[8px] text-muted-foreground"
+                                        class="text-[12px] text-muted-foreground"
                                         >+{{
                                             user.weeklyXp >= 1000
                                                 ? (
@@ -947,18 +946,18 @@ const changeSeason = async (seasonId: number) => {
         <!-- XP History Modal -->
         <Dialog v-model:open="isHistoryOpen">
             <DialogContent
-                class="overflow-hidden border-amber-400/20 bg-card/95 p-0 backdrop-blur-2xl sm:max-w-[420px]"
+                class="overflow-hidden border-border/50 bg-card p-0 sm:max-w-[420px]"
             >
                 <div class="border-b border-border/20 p-6 pb-4">
                     <div class="flex items-center gap-4">
                         <div
-                            class="flex h-11 w-11 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-400/10"
+                            class="flex h-11 w-11 items-center justify-center rounded-full bg-[#007AFF]/10"
                         >
-                            <History class="h-5 w-5 text-amber-400" />
+                            <History class="h-5 w-5 text-[#007AFF]" />
                         </div>
                         <div>
                             <DialogTitle
-                                class="text-lg font-black tracking-tight"
+                                class="text-[17px] font-semibold tracking-tight"
                                 >{{
                                     selectedUser?.blurred
                                         ? BLURRED_NAME
@@ -966,7 +965,7 @@ const changeSeason = async (seasonId: number) => {
                                 }}</DialogTitle
                             >
                             <span
-                                class="text-[9px] font-bold tracking-widest text-muted-foreground uppercase"
+                                class="text-[13px] font-medium text-muted-foreground"
                                 >XP History</span
                             >
                         </div>
@@ -978,9 +977,9 @@ const changeSeason = async (seasonId: number) => {
                         v-if="isLoadingHistory"
                         class="flex flex-col items-center gap-3 py-16"
                     >
-                        <Loader2 class="h-8 w-8 animate-spin text-amber-400" />
+                        <Loader2 class="h-8 w-8 animate-spin text-[#007AFF]" />
                         <p
-                            class="animate-pulse text-[10px] font-bold tracking-widest text-muted-foreground uppercase"
+                            class="text-[13px] font-medium text-muted-foreground"
                         >
                             Loading...
                         </p>
@@ -1037,7 +1036,7 @@ const changeSeason = async (seasonId: number) => {
                                 </div>
                             </div>
                             <span
-                                class="shrink-0 pl-3 text-sm font-black tabular-nums"
+                                class="shrink-0 pl-3 text-sm font-semibold tabular-nums"
                                 :class="
                                     item.amount_xp >= 0
                                         ? 'text-emerald-400'
@@ -1054,7 +1053,7 @@ const changeSeason = async (seasonId: number) => {
                 <div class="flex justify-center border-t border-border/20 p-4">
                     <button
                         @click="isHistoryOpen = false"
-                        class="rounded-lg px-6 py-2 text-[10px] font-black tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:bg-muted/30 hover:text-foreground"
+                        class="dash-btn px-6 text-[15px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                         Close
                     </button>
@@ -1067,30 +1066,32 @@ const changeSeason = async (seasonId: number) => {
 <style scoped>
 @reference "../../css/app.css";
 .lb-tab {
-    @apply shrink-0 rounded-xl border border-border/30 bg-card/40 px-4 py-2 text-[10px] font-bold tracking-widest text-muted-foreground uppercase transition-all duration-300;
+    @apply shrink-0 rounded-full border border-border/50 bg-card px-4 py-2 text-[13px] font-medium text-muted-foreground transition-colors;
+    min-height: 44px;
 }
 .lb-tab--active {
-    @apply border-amber-400 bg-amber-400 text-black shadow-[0_4px_20px_-4px_rgba(251,191,36,0.5)];
+    @apply border-transparent bg-[#007AFF] text-white;
 }
 .lb-search {
-    @apply rounded-xl border border-border/30 bg-card/50 text-xs font-medium transition-all focus:border-amber-400/40 focus:ring-2 focus:ring-amber-400/30 focus:outline-none;
+    @apply rounded-full border border-border/50 bg-muted/40 text-[15px] font-normal transition-colors focus:border-[#007AFF]/40 focus:ring-2 focus:ring-[#007AFF]/20 focus:outline-none;
+    min-height: 44px;
 }
 .lb-season-pill {
-    @apply flex shrink-0 items-center gap-1.5 rounded-xl border border-border/30 bg-card/40 px-3 py-2 text-[10px] font-bold tracking-widest text-muted-foreground uppercase;
+    @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border/50 bg-card px-3 py-2 text-[13px] font-medium text-muted-foreground;
+    min-height: 44px;
 }
 .lb-season-select {
-    @apply rounded-xl border border-border/30 bg-card/40 px-3 py-2 text-[10px] font-bold tracking-widest text-muted-foreground uppercase transition-all focus:border-amber-400/40 focus:ring-2 focus:ring-amber-400/30 focus:outline-none;
+    @apply rounded-full border border-border/50 bg-card px-3 py-2 text-[13px] font-medium text-muted-foreground transition-colors focus:border-[#007AFF]/40 focus:ring-2 focus:ring-[#007AFF]/20 focus:outline-none;
+    min-height: 44px;
 }
 .lb-empty {
-    @apply flex flex-col items-center justify-center rounded-2xl border border-border/30 bg-card/20 px-6 py-16 text-center;
+    @apply flex flex-col items-center justify-center rounded-[1.25rem] border border-border/40 bg-card px-6 py-16 text-center;
 }
 
-/* ═══ Your Rank Row ═══ */
 .lb-rank-row {
-    @apply relative overflow-hidden rounded-2xl border border-amber-400/25 bg-gradient-to-r from-amber-400/10 via-card/40 to-transparent p-4 sm:p-5;
+    @apply relative overflow-hidden rounded-[1.25rem] border border-border/40 bg-card p-4 sm:p-5;
 }
 
-/* ═══ Podium ═══ */
 .lb-podium {
     display: grid;
     grid-template-columns: 1fr;
@@ -1104,14 +1105,13 @@ const changeSeason = async (seasonId: number) => {
     }
 }
 .lb-podium-card {
-    @apply relative rounded-2xl border border-border/30 bg-card/30 p-5 backdrop-blur-sm transition-all duration-500 sm:p-6;
+    @apply relative rounded-[1.25rem] border border-border/40 bg-card p-5 transition-colors sm:p-6;
 }
 .lb-podium-card:hover {
-    @apply border-border/60 bg-card/50;
-    transform: translateY(-2px);
+    @apply bg-muted/30;
 }
 .lb-podium-card--champ {
-    @apply border-amber-400/30 bg-card/40;
+    @apply border-[#007AFF]/20;
 }
 @media (min-width: 640px) {
     .lb-podium-card--champ {
@@ -1120,41 +1120,42 @@ const changeSeason = async (seasonId: number) => {
     }
 }
 .lb-rank-badge {
-    @apply mb-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black;
+    @apply mb-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold;
 }
 .lb-avatar {
-    @apply block flex items-center justify-center overflow-hidden rounded-xl bg-muted/30 transition-transform duration-500;
+    @apply block flex items-center justify-center overflow-hidden rounded-full bg-muted/40 transition-transform duration-300;
 }
 .lb-avatar:hover {
-    transform: scale(1.05);
+    transform: scale(1.03);
 }
 
-/* ═══ List rows ═══ */
 .lb-row {
-    @apply flex items-center justify-between rounded-xl border border-border/20 bg-card/20 px-3 py-2.5 transition-all duration-300 hover:border-border/40 hover:bg-card/40 sm:px-4 sm:py-3;
+    @apply flex items-center justify-between rounded-[1.1rem] border border-border/30 bg-card px-3 py-3 transition-colors hover:bg-muted/30 sm:px-4 sm:py-3.5;
 }
 .lb-row--you {
-    @apply border-amber-400/30 bg-amber-400/[0.03];
+    @apply border-[#007AFF]/20 bg-[#007AFF]/[0.04];
 }
 .lb-row-rank {
-    @apply flex h-8 w-8 items-center justify-center rounded-lg border border-border/20 bg-muted/20 sm:h-9 sm:w-9;
+    @apply flex h-9 w-9 items-center justify-center rounded-full bg-muted/50 sm:h-10 sm:w-10;
 }
 .lb-row-avatar {
-    @apply flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-border/20 bg-muted/20 sm:h-10 sm:w-10;
+    @apply flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border/30 bg-muted/30 sm:h-10 sm:w-10;
 }
 .lb-action-btn {
-    @apply rounded-lg p-2 text-muted-foreground transition-all hover:bg-amber-400/10 hover:text-amber-400;
+    @apply rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground;
+    min-height: 36px;
+    min-width: 36px;
 }
 .lb-show-more {
-    @apply flex items-center gap-2 rounded-xl border border-border/30 bg-card/30 px-6 py-2.5 text-[10px] font-bold tracking-widest text-muted-foreground uppercase transition-all hover:border-amber-400/30 hover:text-amber-400;
+    @apply flex items-center gap-2 rounded-full border border-border/50 bg-card px-6 py-2.5 text-[14px] font-medium text-muted-foreground transition-colors hover:bg-muted;
+    min-height: 44px;
 }
 
-/* ═══ Blur Toggle ═══ */
 .lb-blur-toggle {
-    @apply flex items-center gap-1.5 rounded-xl border border-border/30 bg-card/40 px-2.5 py-2 text-[10px] font-bold tracking-widest uppercase transition-all hover:border-amber-400/30 hover:text-amber-400 disabled:opacity-50;
+    @apply flex items-center gap-1.5 rounded-full border border-border/50 bg-card px-3 py-2 text-[13px] font-medium transition-colors hover:bg-muted disabled:opacity-50;
+    min-height: 44px;
 }
 
-/* ═══ Blurred user styling ═══ */
 .lb-blurred {
     @apply overflow-hidden;
 }

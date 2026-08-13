@@ -126,10 +126,10 @@ const encouragement = computed<Encouragement>(() => {
 });
 
 const toneClasses: Record<Tone, string> = {
-    amber: 'border-amber-400/30 bg-amber-400/10',
-    emerald: 'border-emerald-400/30 bg-emerald-400/10',
-    primary: 'border-primary/30 bg-primary/10',
-    muted: 'border-border/20 bg-muted/30',
+    amber: 'bg-[#FF9F0A]/10',
+    emerald: 'bg-[#34C759]/10',
+    primary: 'bg-[#007AFF]/10',
+    muted: 'bg-muted/40',
 };
 
 const dayLabel = (date: Date) =>
@@ -144,7 +144,7 @@ const dayLabel = (date: Date) =>
     <div class="relative z-10 flex flex-col gap-3 sm:gap-4">
         <!-- Friendly, reactive encouragement banner -->
         <div
-            class="flex items-center gap-3 rounded-xl border p-2.5 sm:p-3"
+            class="flex items-center gap-3 rounded-[1.1rem] p-2.5 sm:p-3"
             :class="toneClasses[encouragement.tone]"
             role="status"
         >
@@ -156,7 +156,7 @@ const dayLabel = (date: Date) =>
             </span>
             <div class="min-w-0">
                 <p
-                    class="truncate text-sm font-bold tracking-tight text-foreground"
+                    class="truncate text-[15px] font-semibold tracking-tight text-foreground"
                 >
                     {{ encouragement.title }}
                 </p>
@@ -174,12 +174,12 @@ const dayLabel = (date: Date) =>
                 <div
                     v-for="cell in cells"
                     :key="cell.key"
-                    class="group/cell relative aspect-square rounded-md border transition-all duration-300 hover:scale-110 sm:rounded-lg"
+                    class="group/cell relative aspect-square rounded-md border transition-colors sm:rounded-lg"
                     :class="
                         cell.active
                             ? cell.isToday
-                                ? 'pulse-cell pulse-cell--today border-primary bg-gradient-to-br from-primary to-primary/80 ring-2 ring-primary/30 ring-offset-1 ring-offset-background'
-                                : 'pulse-cell pulse-cell--active border-primary/40 bg-gradient-to-br from-primary/80 to-primary/50'
+                                ? 'border-[#007AFF] bg-[#007AFF] ring-2 ring-[#007AFF]/25 ring-offset-1 ring-offset-background'
+                                : 'border-[#007AFF]/30 bg-[#007AFF]/70'
                             : 'border-border/15 bg-muted/20'
                     "
                 >
@@ -205,11 +205,11 @@ const dayLabel = (date: Date) =>
         <!-- First-run / quiet state: honest, not a fake busy grid -->
         <div
             v-else
-            class="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/30 bg-muted/20 px-4 py-7 text-center"
+            class="flex flex-col items-center justify-center gap-2 rounded-[1.1rem] border border-dashed border-border/40 bg-muted/20 px-4 py-7 text-center"
             role="status"
         >
             <Flame class="h-6 w-6 text-muted-foreground/50" />
-            <p class="text-sm font-bold tracking-tight text-foreground">
+            <p class="text-[15px] font-semibold tracking-tight text-foreground">
                 No activity yet
             </p>
             <p
