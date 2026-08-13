@@ -82,22 +82,22 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('exams', [ExamController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->middleware('student.page:exams')->name('exams.show');
     Route::post('exams/pre-warm-ai', [ExamController::class, 'preWarmAI'])->middleware('student.page:exams')->name('exams.preWarmAI');
-    Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->middleware(['student.page:exams', 'throttle:60,1'])->name('exams.monitorProgress');
+    Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->middleware(['student.page:exams', 'throttle:exams.progress'])->name('exams.monitorProgress');
     // ℹ️ Scope binding via explicit controller check rather than
     // ->scopeBindings(), because the route parameter `{examPart}` does not
     // match the relationship name (`parts`) and Laravel's automatic scoping
     // would call the non-existent method Exam::examParts().
     Route::post('exams/{exam}/parts/{examPart}/start', [ExamController::class, 'startPart'])
-        ->middleware(['student.page:exams', 'throttle:60,1'])
+        ->middleware(['student.page:exams', 'throttle:exams.start'])
         ->name('exams.startPart');
     Route::put('exams/{exam}/parts/{examPart}/answers', [ExamController::class, 'saveAnswers'])
-        ->middleware(['student.page:exams', 'throttle:240,1'])
+        ->middleware(['student.page:exams', 'throttle:exams.answers'])
         ->name('exams.saveAnswers');
     Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])
-        ->middleware(['student.page:exams', 'throttle:10,1'])
+        ->middleware(['student.page:exams', 'throttle:exams.submit'])
         ->name('exams.submitPart');
     Route::get('exams/{exam}/parts/{examPart}/status', [ExamController::class, 'partStatus'])
-        ->middleware(['student.page:exams', 'throttle:120,1'])
+        ->middleware(['student.page:exams', 'throttle:exams.status'])
         ->name('exams.partStatus');
 
     Route::get('ngl', [AnonymousMessageController::class, 'index'])->middleware('student.page:ngl')->name('ngl.index');
@@ -115,17 +115,17 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
     // Daily XP Claim
     Route::post('api/claim-xp', ClaimXpController::class)
-        ->middleware(['auth', 'verified', 'throttle:10,1'])
+        ->middleware(['auth', 'verified', 'throttle:claim-xp'])
         ->name('api.claim-xp');
 
     Route::post('api/claim-xp/prompt-shown', [ClaimXpController::class, 'promptShown'])
-        ->middleware(['auth', 'verified', 'throttle:10,1'])
+        ->middleware(['auth', 'verified', 'throttle:claim-xp'])
         ->name('api.claim-xp.prompt-shown');
 
-    Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
-    Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:60,1')->name('chat.stream');
-    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
-    Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:60,1')->name('chat.clear');
+    Route::post('api/chat', ChatController::class)->middleware('throttle:chat')->name('chat');
+    Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:chat')->name('chat.stream');
+    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:chat')->name('chat.history');
+    Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:chat')->name('chat.clear');
 
     // Chats history (persisted conversations from the AI widget)
     Route::get('chats', [ChatHistoryController::class, 'index'])
@@ -135,16 +135,16 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->middleware('student.page:chats')
         ->name('chats.show');
     Route::post('api/chats', [ChatHistoryController::class, 'store'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.store');
     Route::post('api/chats/{session}/messages', [ChatHistoryController::class, 'message'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.message');
     Route::post('api/chats/{session}/stream', [ChatHistoryController::class, 'stream'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.stream');
     Route::delete('api/chats/{session}', [ChatHistoryController::class, 'destroy'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.destroy');
 
     // Games hub

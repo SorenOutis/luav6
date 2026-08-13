@@ -6,10 +6,13 @@ use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
 use App\Services\AiSdkProviderService;
 use App\Support\RequestCache;
 use Carbon\CarbonImmutable;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Ai\AiManager;
@@ -34,6 +37,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureRateLimiting();
 
         app(AiManager::class)->extend(
             AiSdkProviderService::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
@@ -77,5 +81,52 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Named rate limiters that give independent buckets to each
+     * request-heavy feature.
+     *
+     * Previously these routes used the string form `throttle:N,1`, which
+     * Laravel keys by the authenticated user only — the route is NOT part
+     * of the key — so every throttled route shared ONE per-user counter.
+     * That caused two real bugs:
+     *
+     *  1. Exams: autosave, the 5-second monitor-progress heartbeat, the
+     *     2-second essay-grading poll and the final submit all shared one
+     *     bucket. Typing an essay drove that counter past the submit
+     *     route's 10-per-minute allowance, so submitting returned 429
+     *     "Too many requests. Please try again later."
+     *
+     *  2. Chat + daily XP: the floating chat widget's traffic (and the
+     *     persisted-chats endpoints) shared the same bucket as the daily
+     *     XP claim, so a chatty session made the 10-per-minute claim
+     *     intermittently return 429.
+     *
+     * Named limiters hash the limiter name into the key, so each group
+     * below gets its own bucket. Routes within a group still share one
+     * combined allowance (e.g. all chat endpoints together are capped at
+     * 60/minute), preserving the original per-user limits.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('exams.progress', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
+        RateLimiter::for('exams.start', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
+        RateLimiter::for('exams.answers', fn (Request $request) => Limit::perMinute(240)->by($this->rateLimitKey($request)));
+        RateLimiter::for('exams.submit', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
+        RateLimiter::for('exams.status', fn (Request $request) => Limit::perMinute(120)->by($this->rateLimitKey($request)));
+
+        RateLimiter::for('chat', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
+        RateLimiter::for('chats', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
+        RateLimiter::for('claim-xp', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
+    }
+
+    /**
+     * Bucket key shared by every exam limiter: the authenticated user,
+     * falling back to the IP for unauthenticated requests.
+     */
+    private function rateLimitKey(Request $request): string
+    {
+        return (string) ($request->user()?->getAuthIdentifier() ?? $request->ip());
     }
 }
