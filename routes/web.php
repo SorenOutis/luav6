@@ -115,17 +115,17 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
     // Daily XP Claim
     Route::post('api/claim-xp', ClaimXpController::class)
-        ->middleware(['auth', 'verified', 'throttle:10,1'])
+        ->middleware(['auth', 'verified', 'throttle:claim-xp'])
         ->name('api.claim-xp');
 
     Route::post('api/claim-xp/prompt-shown', [ClaimXpController::class, 'promptShown'])
-        ->middleware(['auth', 'verified', 'throttle:10,1'])
+        ->middleware(['auth', 'verified', 'throttle:claim-xp'])
         ->name('api.claim-xp.prompt-shown');
 
-    Route::post('api/chat', ChatController::class)->middleware('throttle:60,1')->name('chat');
-    Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:60,1')->name('chat.stream');
-    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:60,1')->name('chat.history');
-    Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:60,1')->name('chat.clear');
+    Route::post('api/chat', ChatController::class)->middleware('throttle:chat')->name('chat');
+    Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:chat')->name('chat.stream');
+    Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:chat')->name('chat.history');
+    Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:chat')->name('chat.clear');
 
     // Chats history (persisted conversations from the AI widget)
     Route::get('chats', [ChatHistoryController::class, 'index'])
@@ -135,16 +135,16 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->middleware('student.page:chats')
         ->name('chats.show');
     Route::post('api/chats', [ChatHistoryController::class, 'store'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.store');
     Route::post('api/chats/{session}/messages', [ChatHistoryController::class, 'message'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.message');
     Route::post('api/chats/{session}/stream', [ChatHistoryController::class, 'stream'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.stream');
     Route::delete('api/chats/{session}', [ChatHistoryController::class, 'destroy'])
-        ->middleware('throttle:60,1')
+        ->middleware('throttle:chats')
         ->name('chats.destroy');
 
     // Games hub

@@ -84,16 +84,29 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Named per-route rate limiters for the exam flow.
+     * Named rate limiters that give independent buckets to each
+     * request-heavy feature.
      *
-     * Previously every exam route used the string form `throttle:N,1`.
-     * Laravel keys that form by the authenticated user only — the route is
-     * NOT part of the key — so autosave, the 5-second progress heartbeat,
-     * the 2-second essay-grading poll and the final submit all shared ONE
-     * per-user counter. Typing an essay drove that shared counter past the
-     * submit route's 10-per-minute allowance, so clicking submit returned
-     * 429 "Too many requests. Please try again later." Named limiters hash
-     * the limiter name into the key, giving each route its own bucket.
+     * Previously these routes used the string form `throttle:N,1`, which
+     * Laravel keys by the authenticated user only — the route is NOT part
+     * of the key — so every throttled route shared ONE per-user counter.
+     * That caused two real bugs:
+     *
+     *  1. Exams: autosave, the 5-second monitor-progress heartbeat, the
+     *     2-second essay-grading poll and the final submit all shared one
+     *     bucket. Typing an essay drove that counter past the submit
+     *     route's 10-per-minute allowance, so submitting returned 429
+     *     "Too many requests. Please try again later."
+     *
+     *  2. Chat + daily XP: the floating chat widget's traffic (and the
+     *     persisted-chats endpoints) shared the same bucket as the daily
+     *     XP claim, so a chatty session made the 10-per-minute claim
+     *     intermittently return 429.
+     *
+     * Named limiters hash the limiter name into the key, so each group
+     * below gets its own bucket. Routes within a group still share one
+     * combined allowance (e.g. all chat endpoints together are capped at
+     * 60/minute), preserving the original per-user limits.
      */
     protected function configureRateLimiting(): void
     {
@@ -102,6 +115,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('exams.answers', fn (Request $request) => Limit::perMinute(240)->by($this->rateLimitKey($request)));
         RateLimiter::for('exams.submit', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
         RateLimiter::for('exams.status', fn (Request $request) => Limit::perMinute(120)->by($this->rateLimitKey($request)));
+
+        RateLimiter::for('chat', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
+        RateLimiter::for('chats', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
+        RateLimiter::for('claim-xp', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
     }
 
     /**
