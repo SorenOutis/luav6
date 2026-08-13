@@ -5,7 +5,13 @@
  * exporting it, so this union is replicated here.
  */
 export type FormMethod =
-    'get' | 'post' | 'put' | 'delete' | 'patch' | 'head' | 'options';
+    | 'get'
+    | 'post'
+    | 'put'
+    | 'delete'
+    | 'patch'
+    | 'head'
+    | 'options';
 
 /**
  * The HTTP methods accepted by Inertia's `<Form>` component (`Method`).

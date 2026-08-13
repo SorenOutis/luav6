@@ -121,8 +121,8 @@ const roles = [
         ],
     },
 ];
-const currentRole = computed(() =>
-    roles.find((r) => r.key === activeRole.value)!,
+const currentRole = computed(
+    () => roles.find((r) => r.key === activeRole.value)!,
 );
 
 // Interactive: mini quiz demo

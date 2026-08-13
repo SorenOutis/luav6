@@ -6,7 +6,8 @@ export const LOADER_MESSAGES = {
 } as const;
 
 export type LoaderMessage =
-    (typeof LOADER_MESSAGES)[keyof typeof LOADER_MESSAGES] | string;
+    | (typeof LOADER_MESSAGES)[keyof typeof LOADER_MESSAGES]
+    | string;
 
 const DEV = import.meta.env.DEV;
 const log = (...args: unknown[]) => {

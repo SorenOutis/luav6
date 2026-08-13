@@ -67,7 +67,12 @@ const upcoming = [
 ];
 
 const gameGlowColors: (
-    'orange' | 'green' | 'purple' | 'blue' | 'red' | 'emerald'
+    | 'orange'
+    | 'green'
+    | 'purple'
+    | 'blue'
+    | 'red'
+    | 'emerald'
 )[] = ['orange', 'green', 'purple', 'blue', 'red', 'emerald'];
 
 const handleMouseMove = (e: MouseEvent) => {

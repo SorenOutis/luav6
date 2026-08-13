@@ -293,7 +293,10 @@ const getAnsweredCount = () =>
 
 const sendMonitorProgress = async (
     status:
-        'starting' | 'in_progress' | 'submitting' | 'finished' = 'in_progress',
+        | 'starting'
+        | 'in_progress'
+        | 'submitting'
+        | 'finished' = 'in_progress',
 ) => {
     if (!examStarted.value && status === 'in_progress') {
         return;
