@@ -7,13 +7,7 @@ import type { RouteDefinition } from '@/wayfinder';
  * exporting it, so this union is replicated here for type augmentation.
  */
 export type FormMethod =
-    | 'get'
-    | 'post'
-    | 'put'
-    | 'delete'
-    | 'patch'
-    | 'head'
-    | 'options';
+    'get' | 'post' | 'put' | 'delete' | 'patch' | 'head' | 'options';
 
 /**
  * Augment route definitions with form() method for Inertia.js compatibility

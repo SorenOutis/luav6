@@ -30,6 +30,9 @@ vi.mock('axios', () => ({
         post: vi.fn(async () => ({
             data: { deadline: new Date(Date.now() + 3600_000).toISOString() },
         })),
+        put: vi.fn(async () => ({
+            data: { saved_at: new Date().toISOString() },
+        })),
     },
 }));
 
@@ -89,13 +92,15 @@ const makeExam = () => ({
     ],
 });
 
-const mountShow = async () => {
+const mountShow = async (answerDrafts: Record<number, unknown> = {}) => {
     const wrapper = mount(Show, {
         props: {
             exam: makeExam() as any,
             submissions: {},
             submittedPartId: null,
             partDeadlines: {},
+            answerDrafts: answerDrafts as any,
+            realtimeChannel: 'exam.1.student.1',
         },
         global: {
             stubs: {
@@ -213,5 +218,55 @@ describe('Exams/Show.vue answer recording', () => {
         // Identification answer recorded as typed text
         expect(byNumber[3].answer).toBe('Jose Rizal');
         expect(byNumber[3].question_type).toBe('identification');
+
+        // The same answers are durably auto-saved before final submission.
+        const axiosMod = await import('axios');
+        const autosaveCall = vi
+            .mocked(axiosMod.default.put)
+            .mock.calls.find((call: any[]) =>
+                String(call[0]).includes('/parts/101/answers'),
+            );
+        expect(autosaveCall).toBeTruthy();
+        expect(autosaveCall?.[1]).toMatchObject({
+            answers: expect.arrayContaining([
+                { question_number: 1, answer: 1 },
+                { question_number: 2, answer: 0 },
+                { question_number: 3, answer: 'Jose Rizal' },
+            ]),
+        });
+    });
+
+    it('restores database-backed answers when a part is reopened after reload', async () => {
+        const wrapper = await mountShow({
+            101: {
+                answers: [
+                    { question_number: 1, answer: 1 },
+                    { question_number: 2, answer: 0 },
+                    { question_number: 3, answer: 'Jose Rizal' },
+                ],
+                saved_at: new Date().toISOString(),
+            },
+        });
+        await startPart(wrapper);
+
+        const selectedMc = wrapper
+            .findAll('input[type="radio"]')
+            .find(
+                (input: any) =>
+                    input.attributes('name') === 'q-0' && input.element.checked,
+            );
+        const selectedTrueFalse = wrapper
+            .findAll('input[type="radio"]')
+            .find(
+                (input: any) =>
+                    input.attributes('name') === 'q-1' && input.element.checked,
+            );
+
+        expect(selectedMc?.attributes('value')).toBe('1');
+        expect(selectedTrueFalse?.attributes('value')).toBe('0');
+        expect(
+            (wrapper.find('input[type="text"]').element as HTMLInputElement)
+                .value,
+        ).toBe('Jose Rizal');
     });
 });

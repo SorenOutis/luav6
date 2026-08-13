@@ -235,8 +235,7 @@ const activeSubtitle = computed(() => {
 const scrollToBottom = async () => {
     await nextTick();
     const container = scrollContainer.value as
-        | (HTMLElement & { $el?: HTMLElement })
-        | null;
+        (HTMLElement & { $el?: HTMLElement }) | null;
     const el = container?.$el || container;
     if (el) {
         el.scrollTop = el.scrollHeight;

@@ -2,18 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ExamStatus;
+use App\Events\ExamAnswersSaved;
+use App\Http\Requests\SaveExamAnswersRequest;
 use App\Http\Requests\SubmitExamPartRequest;
 use App\Jobs\GradeExamSubmissionEssays;
 use App\Models\Exam;
+use App\Models\ExamAnswerDraft;
 use App\Models\ExamLiveSession;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Services\AIService;
+use App\Services\ExamAnswerDraftService;
 use App\Support\AiQueueWorker;
 use App\Support\ExamPartSerializer;
 use Carbon\CarbonInterface as Carbon;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -113,9 +119,11 @@ class ExamController extends Controller
         });
 
         $userId = auth()->id();
-        $submissions = ExamSubmission::where('user_id', $userId)
+        $userSubmissions = ExamSubmission::where('user_id', $userId)
             ->where('exam_id', $exam->id)
-            ->get(['exam_part_id', 'status', 'score'])
+            ->get(['exam_part_id', 'status', 'score']);
+        $submittedPartIds = $userSubmissions->pluck('exam_part_id');
+        $submissions = $userSubmissions
             ->mapWithKeys(function ($item) {
                 return [(string) $item['exam_part_id'] => $item];
             })
@@ -128,14 +136,26 @@ class ExamController extends Controller
             ->where('exam_id', $exam->id)
             ->whereNotNull('exam_part_id')
             ->whereNotNull('started_at')
-            ->whereNotIn('exam_part_id', ExamSubmission::where('user_id', $userId)
-                ->where('exam_id', $exam->id)
-                ->select('exam_part_id'))
+            ->whereNotIn('exam_part_id', $submittedPartIds)
             ->get()
             ->mapWithKeys(fn (ExamLiveSession $session) => [
                 (string) $session->exam_part_id => $this->deadlineFor($exam, $session)?->toIso8601String(),
             ])
             ->filter()
+            ->toArray();
+
+        // Database-backed drafts survive reloads, browser storage clearing, and
+        // device crashes. Only the authenticated student's own drafts are sent.
+        $answerDrafts = ExamAnswerDraft::where('user_id', $userId)
+            ->where('exam_id', $exam->id)
+            ->whereNotIn('exam_part_id', $submittedPartIds)
+            ->get(['exam_part_id', 'answers', 'saved_at'])
+            ->mapWithKeys(fn (ExamAnswerDraft $draft) => [
+                (string) $draft->exam_part_id => [
+                    'answers' => $draft->answers ?? [],
+                    'saved_at' => $draft->saved_at?->toIso8601String(),
+                ],
+            ])
             ->toArray();
 
         // Check if we just submitted a part (from flash session)
@@ -150,6 +170,69 @@ class ExamController extends Controller
             'submissions' => $submissions,
             'submittedPartId' => $submittedPartId,
             'partDeadlines' => $partDeadlines,
+            'answerDrafts' => $answerDrafts,
+            'realtimeChannel' => "exam.{$exam->id}.student.{$userId}",
+        ]);
+    }
+
+    /**
+     * Persist changed answers before the student submits the part.
+     *
+     * The HTTP write is the durable operation. Pusher broadcasts a private,
+     * answer-free acknowledgement after the database commit so the UI can
+     * update in real time without exposing response text over the channel.
+     */
+    public function saveAnswers(
+        SaveExamAnswersRequest $request,
+        Exam $exam,
+        ExamPart $examPart,
+        ExamAnswerDraftService $draftService,
+    ): JsonResponse {
+        abort_if($examPart->exam_id !== $exam->id, 404);
+
+        $this->assertCanAccess($exam);
+        abort_unless(
+            ExamStatus::tryFrom($exam->status)?->acceptsSubmissions(),
+            403,
+            'This exam is not accepting answers.',
+        );
+
+        $alreadySubmitted = ExamSubmission::where('user_id', $request->user()->id)
+            ->where('exam_id', $exam->id)
+            ->where('exam_part_id', $examPart->id)
+            ->exists();
+
+        abort_if($alreadySubmitted, 409, 'You have already submitted this part.');
+
+        $validated = $request->validated();
+        $changedAnswers = $validated['answers'];
+        $draft = $draftService->save(
+            $request->user(),
+            $exam,
+            $examPart,
+            $changedAnswers,
+        );
+        $answeredCount = $draftService->answeredCount($draft);
+        $savedAt = $draft->saved_at->toIso8601String();
+        $questionNumbers = collect($changedAnswers)
+            ->pluck('question_number')
+            ->map(fn (mixed $questionNumber): int => (int) $questionNumber)
+            ->values()
+            ->all();
+
+        ExamAnswersSaved::dispatch(
+            $request->user()->id,
+            $exam->id,
+            $examPart->id,
+            $questionNumbers,
+            $answeredCount,
+            $savedAt,
+        );
+
+        return response()->json([
+            'saved_at' => $savedAt,
+            'question_numbers' => $questionNumbers,
+            'answered_count' => $answeredCount,
         ]);
     }
 
@@ -403,6 +486,10 @@ class ExamController extends Controller
 
         // The clock for this part is done.
         ExamLiveSession::where('user_id', $request->user()->id)
+            ->where('exam_id', $exam->id)
+            ->where('exam_part_id', $examPart->id)
+            ->delete();
+        ExamAnswerDraft::where('user_id', $request->user()->id)
             ->where('exam_id', $exam->id)
             ->where('exam_part_id', $examPart->id)
             ->delete();

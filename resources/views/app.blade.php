@@ -3,8 +3,15 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="#f5f0e8">
         <meta name="color-scheme" content="light dark">
+
+        @if (config('broadcasting.connections.pusher.key'))
+            {{-- The Pusher app key and cluster are public client identifiers. The secret is never rendered. --}}
+            <meta name="pusher-key" content="{{ config('broadcasting.connections.pusher.key') }}">
+            <meta name="pusher-cluster" content="{{ config('broadcasting.connections.pusher.options.cluster', 'mt1') }}">
+        @endif
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>

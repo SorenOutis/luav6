@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
 import { Motion } from '@motionone/vue';
 import axios from 'axios';
 import gsap from 'gsap';
@@ -73,6 +74,22 @@ interface ExamSubmissionSummary {
     score: number;
 }
 
+interface ExamAnswerDraft {
+    answers: Array<{
+        question_number: number;
+        answer: string | number | null;
+    }>;
+    saved_at: string | null;
+}
+
+interface ExamAnswersSavedEvent {
+    exam_id: number;
+    exam_part_id: number;
+    question_numbers: number[];
+    answered_count: number;
+    saved_at: string;
+}
+
 const props = defineProps<{
     exam: Exam;
     submissions: Record<number, ExamSubmissionSummary>;
@@ -81,6 +98,10 @@ const props = defineProps<{
     // but not yet submitted, keyed by part id. Used to resume the countdown
     // after a reload instead of resetting to a fresh `duration_minutes`.
     partDeadlines?: Record<number, string>;
+    // Durable server drafts, keyed by part id. localStorage remains a fallback,
+    // but these drafts survive a cleared cache or a different browser session.
+    answerDrafts?: Record<number, ExamAnswerDraft>;
+    realtimeChannel: string;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -93,7 +114,7 @@ const selectedPart = ref<ExamPart | null>(null);
 const examStarted = ref(false);
 const container = ref<HTMLElement | null>(null);
 
-const answers = reactive<Record<number, string | number>>({}); // Store answers by question index
+const answers = reactive<Record<number, string | number | null>>({}); // Store answers by question index
 // Track submitted part IDs locally to handle stale server data after redirect
 const locallySubmittedPartIds = ref(
     new Set<number>(Object.keys(props.submissions).map(Number)),
@@ -129,6 +150,7 @@ const flaggedQuestions = ref<Set<number>>(new Set());
 const partStartTime = ref<number | null>(null);
 const estimatedFinishMinutes = ref<number | null>(null);
 const lastSavedAt = ref<string | null>(null);
+const answerSaveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle');
 const pendingUnlockIndex = ref<number | null>(null);
 
 const typedSequence = ref('');
@@ -145,6 +167,36 @@ const gradingPollTimer = ref<ReturnType<typeof setInterval> | null>(null);
 // NOT recorded and must retry — previously failures were silent, the part
 // looked unanswered and the student re-answered everything.
 const submitError = ref<string | null>(null);
+
+const markAnswersSaved = (savedAt: string) => {
+    const date = new Date(savedAt);
+    lastSavedAt.value = Number.isNaN(date.getTime())
+        ? savedAt
+        : date.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+          });
+
+    if (answerSaveState.value !== 'saving') {
+        answerSaveState.value = 'saved';
+    }
+};
+
+// Pusher sends a private acknowledgement after each database commit. No
+// answer text is included in the event payload.
+useEcho<ExamAnswersSavedEvent>(
+    props.realtimeChannel,
+    'ExamAnswersSaved',
+    (event) => {
+        if (
+            event.exam_id === props.exam.id &&
+            event.exam_part_id === selectedPart.value?.id
+        ) {
+            markAnswersSaved(event.saved_at);
+        }
+    },
+);
 
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
@@ -241,10 +293,7 @@ const getAnsweredCount = () =>
 
 const sendMonitorProgress = async (
     status:
-        | 'starting'
-        | 'in_progress'
-        | 'submitting'
-        | 'finished' = 'in_progress',
+        'starting' | 'in_progress' | 'submitting' | 'finished' = 'in_progress',
 ) => {
     if (!examStarted.value && status === 'in_progress') {
         return;
@@ -568,13 +617,9 @@ const saveDraft = () => {
         timestamp: Date.now(),
     };
     localStorage.setItem(getDraftKey(), JSON.stringify(draft));
-    lastSavedAt.value = new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-    });
 
-    // Pulse animation for sync heartbeat
+    // Pulse animation for the local safety copy. The visible "saved" time is
+    // only updated after the server confirms a durable database write.
     gsap.fromTo(
         '.sync-heartbeat',
         { scale: 1, opacity: 0.5 },
@@ -601,28 +646,168 @@ const jumpToNextFlagged = () => {
     scrollToQuestion(flagged[nextIdx]);
 };
 
+const answerFingerprint = (answer: string | number | null) =>
+    JSON.stringify(answer);
+const queuedAnswerFingerprints = new Map<number, string>();
+const pendingAnswerChanges = new Map<
+    number,
+    { question_number: number; answer: string | number | null }
+>();
+let answerSaveRequest: Promise<void> | null = null;
+let answerSaveRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+
 const loadDraft = () => {
     if (!selectedPart.value) return;
+
+    const serverDraft = props.answerDrafts?.[selectedPart.value.id];
+    const serverSavedAt = serverDraft?.saved_at
+        ? new Date(serverDraft.saved_at).getTime()
+        : 0;
+
+    for (const savedAnswer of serverDraft?.answers ?? []) {
+        const questionIndex = Number(savedAnswer.question_number) - 1;
+        if (questionIndex < 0) continue;
+
+        answers[questionIndex] = savedAnswer.answer;
+        queuedAnswerFingerprints.set(
+            questionIndex,
+            answerFingerprint(savedAnswer.answer),
+        );
+    }
+
+    if (serverDraft?.saved_at) {
+        markAnswersSaved(serverDraft.saved_at);
+    }
+
     const saved = localStorage.getItem(getDraftKey());
     if (saved) {
         try {
-            const draft = JSON.parse(saved);
-            // Only load if recent (e.g., within the last 2 hours)
-            if (Date.now() - draft.timestamp < 2 * 60 * 60 * 1000) {
-                Object.assign(answers, draft.answers);
-                flaggedQuestions.value = new Set(draft.flagged || []);
-                // Remaining time is intentionally NOT restored from the draft —
-                // the server-anchored deadline (startServerClock) is the
-                // authority and survives a reload.
+            const draft = JSON.parse(saved) as {
+                answers?: Record<number, string | number | null>;
+                flagged?: number[];
+                timestamp?: number;
+            };
+            const localSavedAt = Number(draft.timestamp ?? 0);
+            const isRecent = Date.now() - localSavedAt < 2 * 60 * 60 * 1000;
+
+            if (isRecent) {
+                // Server data is authoritative unless the local safety copy was
+                // written later (for example, while the network was offline).
+                if (!serverSavedAt || localSavedAt > serverSavedAt) {
+                    Object.assign(answers, draft.answers ?? {});
+                }
+                flaggedQuestions.value = new Set(draft.flagged ?? []);
             }
-        } catch (e) {
-            console.error('Failed to load draft', e);
+        } catch (error) {
+            console.error('Failed to load draft', error);
         }
     }
+
+    // Remaining time is intentionally NOT restored from either draft. The
+    // server-anchored deadline remains authoritative across reloads.
 };
 
 const clearDraft = () => {
     localStorage.removeItem(getDraftKey());
+};
+
+const collectChangedAnswers = () => {
+    if (!selectedPart.value || !examStarted.value) return;
+
+    for (const [rawIndex, answer] of Object.entries(answers)) {
+        const questionIndex = Number(rawIndex);
+        const fingerprint = answerFingerprint(answer);
+        if (queuedAnswerFingerprints.get(questionIndex) === fingerprint) {
+            continue;
+        }
+
+        queuedAnswerFingerprints.set(questionIndex, fingerprint);
+        pendingAnswerChanges.set(questionIndex, {
+            question_number: questionIndex + 1,
+            answer,
+        });
+    }
+};
+
+const persistQueuedAnswers = (): Promise<void> => {
+    if (answerSaveRequest) return answerSaveRequest;
+    if (!selectedPart.value || pendingAnswerChanges.size === 0) {
+        return Promise.resolve();
+    }
+
+    const partId = selectedPart.value.id;
+    const batch = Array.from(pendingAnswerChanges.values());
+    pendingAnswerChanges.clear();
+    answerSaveState.value = 'saving';
+
+    answerSaveRequest = (async () => {
+        try {
+            const { data } = await axios.put(
+                `/exams/${props.exam.id}/parts/${partId}/answers`,
+                { answers: batch },
+                { timeout: 10_000 },
+            );
+
+            if (data?.saved_at) {
+                markAnswersSaved(data.saved_at);
+            }
+            answerSaveState.value = 'saved';
+        } catch {
+            // Keep the newest value for each question queued. The local draft
+            // remains an immediate fallback while a transient outage recovers.
+            for (const changedAnswer of batch) {
+                const questionIndex = changedAnswer.question_number - 1;
+                if (!pendingAnswerChanges.has(questionIndex)) {
+                    pendingAnswerChanges.set(questionIndex, changedAnswer);
+                }
+            }
+            answerSaveState.value = 'error';
+
+            if (!answerSaveRetryTimeout) {
+                answerSaveRetryTimeout = setTimeout(() => {
+                    answerSaveRetryTimeout = null;
+                    void persistQueuedAnswers();
+                }, 3000);
+            }
+        }
+    })().finally(() => {
+        answerSaveRequest = null;
+
+        if (
+            pendingAnswerChanges.size > 0 &&
+            answerSaveState.value !== 'error'
+        ) {
+            void persistQueuedAnswers();
+        }
+    });
+
+    return answerSaveRequest;
+};
+
+const flushAnswerAutosave = async () => {
+    if (saveDraftTimeout) {
+        clearTimeout(saveDraftTimeout);
+        saveDraftTimeout = null;
+    }
+    if (answerSaveRetryTimeout) {
+        clearTimeout(answerSaveRetryTimeout);
+        answerSaveRetryTimeout = null;
+    }
+
+    saveDraft();
+    collectChangedAnswers();
+
+    // A successful request may immediately start a second batch that arrived
+    // while it was in flight. Wait until both the active request and queue are
+    // empty so final submission cannot race the last autosave.
+    while (answerSaveRequest || pendingAnswerChanges.size > 0) {
+        const request = answerSaveRequest ?? persistQueuedAnswers();
+        await request;
+
+        if (answerSaveState.value === 'error') {
+            break;
+        }
+    }
 };
 
 // ─── AUTO-SAVE ON ANSWER CHANGE ─────────────────────────────
@@ -630,11 +815,20 @@ let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 watch(
     answers,
     () => {
+        if (!selectedPart.value || !examStarted.value) return;
+
+        // Queue changes immediately, then batch the database write after the
+        // student pauses briefly. Requests are serialized to prevent an older
+        // response from overwriting a newer answer.
+        collectChangedAnswers();
+
         if (saveDraftTimeout) {
             clearTimeout(saveDraftTimeout);
         }
         saveDraftTimeout = setTimeout(() => {
+            saveDraftTimeout = null;
             saveDraft();
+            void persistQueuedAnswers();
         }, 500);
     },
     { deep: true },
@@ -645,6 +839,15 @@ const integrityWarnings = ref(0);
 const showIntegrityAlert = ref(false);
 
 const handleVisibilityChange = () => {
+    if (
+        (document.visibilityState === 'hidden' || !document.hasFocus()) &&
+        examStarted.value
+    ) {
+        saveDraft();
+        collectChangedAnswers();
+        void persistQueuedAnswers();
+    }
+
     if (isAdminBypass.value) return;
 
     if (
@@ -919,6 +1122,13 @@ const startPart = () => {
     submitError.value = null;
     estimatedFinishMinutes.value = null;
     lastSavedAt.value = null;
+    answerSaveState.value = 'idle';
+    queuedAnswerFingerprints.clear();
+    pendingAnswerChanges.clear();
+    if (answerSaveRetryTimeout) {
+        clearTimeout(answerSaveRetryTimeout);
+        answerSaveRetryTimeout = null;
+    }
 
     // Halt any countdown left over from a previous part before anchoring this
     // part's clock.
@@ -1230,6 +1440,11 @@ const submitPart = async () => {
     stopTimer(); // Stop countdown during submission to prevent auto-submit race condition
     isTimeoutSubmission.value = false; // Reset timeout flag if we are proceeding with submission
     void sendMonitorProgress('submitting');
+
+    // Flush the latest answer batch before final submission. A failed autosave
+    // never blocks the normal submit request; localStorage and the submit
+    // payload remain independent safety paths.
+    await flushAnswerAutosave();
 
     // Check if current part has essay
     currentPartHasEssay.value =
@@ -1618,6 +1833,12 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    if (examStarted.value && selectedPart.value && !isSubmitting.value) {
+        saveDraft();
+        collectChangedAnswers();
+        void persistQueuedAnswers();
+    }
+
     window.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('blur', handleVisibilityChange);
     window.removeEventListener('contextmenu', preventCheatingActions);
@@ -1644,6 +1865,10 @@ onUnmounted(() => {
     if (saveDraftTimeout) {
         clearTimeout(saveDraftTimeout);
         saveDraftTimeout = null;
+    }
+    if (answerSaveRetryTimeout) {
+        clearTimeout(answerSaveRetryTimeout);
+        answerSaveRetryTimeout = null;
     }
 
     // Kill any lingering submit button pulse animations
@@ -2274,8 +2499,9 @@ const feedbackContent = computed(() => {
                             <p
                                 class="text-xs leading-relaxed text-muted-foreground/70"
                             >
-                                Parts unlock sequentially. Work is auto-saved
-                                locally.
+                                Parts unlock sequentially. Answers are
+                                auto-saved to the server, with a local backup
+                                for outages.
                             </p>
                         </Motion>
                     </template>
@@ -3733,6 +3959,33 @@ const feedbackContent = computed(() => {
                                     class="text-[10px] font-bold whitespace-nowrap text-primary tabular-nums"
                                     >{{ Math.round(partProgress) }}%</span
                                 >
+                            </div>
+
+                            <!-- Durable answer sync status -->
+                            <div
+                                data-testid="exam-answer-save-status"
+                                class="sync-heartbeat hidden shrink-0 items-center gap-1.5 text-[10px] font-semibold sm:flex"
+                                :class="
+                                    answerSaveState === 'error'
+                                        ? 'text-amber-500'
+                                        : 'text-emerald-500'
+                                "
+                            >
+                                <AlertCircle
+                                    v-if="answerSaveState === 'error'"
+                                    class="h-3.5 w-3.5"
+                                />
+                                <CheckCircle2 v-else class="h-3.5 w-3.5" />
+                                <span v-if="answerSaveState === 'saving'"
+                                    >Saving answers...</span
+                                >
+                                <span v-else-if="answerSaveState === 'error'"
+                                    >Local backup — reconnecting</span
+                                >
+                                <span v-else-if="lastSavedAt"
+                                    >Server saved {{ lastSavedAt }}</span
+                                >
+                                <span v-else>Server autosave ready</span>
                             </div>
 
                             <!-- Timer (right) -->
