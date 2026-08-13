@@ -1,11 +1,3 @@
-<script lang="ts">
-// Module-scoped (outside `<script setup>`, which re-runs per component
-// instance): persists across Inertia remounts — back/forward navigation and
-// prefetch-cache restores both create a *new* instance, so a flag declared in
-// setup would reset to false and the mount-time refresh would never fire.
-let hasMountedOnce = false;
-</script>
-
 <script setup lang="ts">
 import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
@@ -39,6 +31,7 @@ import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { logout } from '@/routes';
 import { index as assignmentsIndex } from '@/routes/assignments';
 import { show as examsShow } from '@/routes/exams';
@@ -472,10 +465,9 @@ onMounted(() => {
     // cards would keep showing the pre-submission state — so sync immediately
     // instead of waiting for the next poll tick. Skipped while the tab is
     // hidden — the visibility handler refreshes as soon as it becomes visible.
-    if (hasMountedOnce && !document.hidden) {
+    if (hasPageMountedBefore('dashboard') && !document.hidden) {
         manualRefresh();
     }
-    hasMountedOnce = true;
 
     // If user has no sections, show the selection modal immediately but after initial dashboard animations start
     if (!props.sectionName) {

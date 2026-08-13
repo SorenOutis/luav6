@@ -1,11 +1,3 @@
-<script lang="ts">
-// Module-scoped (outside `<script setup>`, which re-runs per component
-// instance): persists across Inertia remounts — back/forward navigation and
-// prefetch-cache restores both create a *new* instance, so a flag declared in
-// setup would reset to false and the mount-time refresh would never fire.
-let hasMountedOnce = false;
-</script>
-
 <script setup lang="ts">
 import { Head, Link, router, usePoll } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
@@ -34,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getLenis } from '@/composables/useLenis';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { show as examsShow } from '@/routes/exams';
 import type { BreadcrumbItem } from '@/types';
 
@@ -69,10 +62,9 @@ onMounted(() => {
     // back-nav), so fetch fresh data right away instead of waiting for the
     // first poll tick. Skipped while the tab is hidden — the visibility
     // handler refreshes as soon as it becomes visible again.
-    if (hasMountedOnce && !document.hidden) {
+    if (hasPageMountedBefore('exams') && !document.hidden) {
         refreshExams();
     }
-    hasMountedOnce = true;
     document.addEventListener('visibilitychange', handleVisibilityChange);
 });
 
