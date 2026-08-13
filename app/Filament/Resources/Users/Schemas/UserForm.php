@@ -2,8 +2,12 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Models\SectionProgress;
+use App\Models\User;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -13,6 +17,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Image;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -116,90 +121,103 @@ class UserForm
                                                     ->alignCenter(),
                                             ]),
                                     ]),
+                            ]),
+
+                        Tabs\Tab::make('Gamification')
+                            ->icon('heroicon-o-trophy')
+                            ->schema([
                                 Section::make('Section Progress')
-                                    ->description('Stats for each enrolled section')
+                                    ->description(fn (?User $record): string => $record && $record->sections->isNotEmpty()
+                                        ? 'Level, XP, and points for each section this student is enrolled in. 100 XP = 1 Level.'
+                                        : 'This student is not enrolled in any sections yet. Assign sections in the Relationships tab, then edit their per-section stats here.')
                                     ->schema([
-                                        Repeater::make('sectionProgress')
-                                            ->relationship('sectionProgress')
+                                        Repeater::make('section_progress_rows')
                                             ->label('')
                                             ->schema([
+                                                Hidden::make('section_id')
+                                                    ->required(),
                                                 Grid::make(4)
                                                     ->schema([
-                                                        Select::make('section_id')
-                                                            ->relationship('section', 'name')
-                                                            ->disabled()
+                                                        TextInput::make('section_name')
                                                             ->label('Section')
+                                                            ->disabled()
+                                                            ->dehydrated(false)
                                                             ->columnSpan(1),
                                                         TextInput::make('level')
                                                             ->numeric()
-                                                            ->disabled()
-                                                            ->label('Level')
+                                                            ->minValue(1)
+                                                            ->default(1)
+                                                            ->live(onBlur: true)
+                                                            ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                                                $level = max(1, (int) $state);
+                                                                $set('level', $level);
+                                                                $set('exp', SectionProgress::expFloorForLevel($level));
+                                                            })
                                                             ->columnSpan(1),
                                                         TextInput::make('points')
                                                             ->numeric()
+                                                            ->minValue(0)
                                                             ->default(0)
                                                             ->columnSpan(1),
                                                         TextInput::make('exp')
                                                             ->label('XP')
                                                             ->hint('100 XP = 1 Level')
                                                             ->numeric()
+                                                            ->minValue(0)
                                                             ->default(0)
+                                                            ->live(onBlur: true)
+                                                            ->afterStateUpdated(function (Set $set, mixed $state): void {
+                                                                $set('level', SectionProgress::levelFromExp((float) $state));
+                                                            })
                                                             ->columnSpan(1),
                                                     ]),
                                             ])
                                             ->columnSpanFull()
                                             ->addable(false)
                                             ->deletable(false)
+                                            ->reorderable(false)
+                                            ->defaultItems(0)
+                                            ->itemLabel(fn (array $state): ?string => $state['section_name'] ?? 'Section')
                                             ->collapsible(),
                                     ]),
-                            ]),
-
-                        Tabs\Tab::make('Gamification')
-                            ->icon('heroicon-o-trophy')
-                            ->schema([
                                 Grid::make(3)
                                     ->schema([
-                                        TextInput::make('level')
-                                            ->numeric()
-                                            ->default(1)
-                                            ->prefixIcon('heroicon-m-sparkles'),
-                                        TextInput::make('points')
-                                            ->numeric()
-                                            ->default(0)
-                                            ->prefixIcon('heroicon-m-currency-dollar'),
-                                        TextInput::make('exp')
-                                            ->label('XP')
-                                            ->hint('100 XP = 1 Level')
-                                            ->numeric()
-                                            ->default(0)
-                                            ->prefixIcon('heroicon-m-bolt'),
+                                        Placeholder::make('total_level')
+                                            ->label('Total Level')
+                                            ->content(fn (?User $record): string => (string) ($record?->level ?? 1)),
+                                        Placeholder::make('total_points')
+                                            ->label('Total Points')
+                                            ->content(fn (?User $record): string => (string) ($record?->points ?? 0)),
+                                        Placeholder::make('total_exp')
+                                            ->label('Total XP')
+                                            ->content(fn (?User $record): string => (string) ($record?->exp ?? 0)),
                                         TextInput::make('current_streak')
                                             ->numeric()
                                             ->disabled()
+                                            ->dehydrated(false)
                                             ->label('Current Streak')
                                             ->prefixIcon('heroicon-m-fire'),
                                         TextInput::make('longest_streak')
                                             ->numeric()
                                             ->disabled()
+                                            ->dehydrated(false)
                                             ->label('Longest Streak')
                                             ->prefixIcon('heroicon-m-star'),
                                     ]),
                                 Section::make('Seasonal Progress')
-                                    ->description('Stats for the currently active season')
-                                    ->relationship('currentSeasonProgress')
+                                    ->description('Totals for the currently active season. Updated automatically when section stats change.')
                                     ->schema([
-                                        Grid::make(2)
+                                        Grid::make(3)
                                             ->schema([
-                                                TextInput::make('points')
-                                                    ->numeric()
-                                                    ->default(0)
-                                                    ->prefixIcon('heroicon-m-currency-dollar'),
-                                                TextInput::make('exp')
-                                                    ->label('XP')
-                                                    ->hint('100 XP = 1 Level')
-                                                    ->numeric()
-                                                    ->default(0)
-                                                    ->prefixIcon('heroicon-m-bolt'),
+                                                Placeholder::make('season_level')
+                                                    ->label('Season Level')
+                                                    ->content(fn (?User $record): string => (string) ($record?->currentSeasonProgress?->level ?? '—')),
+                                                Placeholder::make('season_points')
+                                                    ->label('Season Points')
+                                                    ->content(fn (?User $record): string => (string) ($record?->currentSeasonProgress?->points ?? '—')),
+                                                Placeholder::make('season_exp')
+                                                    ->label('Season XP')
+                                                    ->content(fn (?User $record): string => (string) ($record?->currentSeasonProgress?->exp ?? '—')),
                                             ]),
                                     ]),
                             ]),

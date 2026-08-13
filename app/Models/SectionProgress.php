@@ -12,12 +12,22 @@ class SectionProgress extends Model
 
     protected $fillable = ['user_id', 'section_id', 'exp', 'points', 'level'];
 
+    public static function levelFromExp(float|int $exp): int
+    {
+        return (int) floor(max(0, (float) $exp) / 100) + 1;
+    }
+
+    public static function expFloorForLevel(int $level): float
+    {
+        return (float) ((max(1, $level) - 1) * 100);
+    }
+
     protected static function booted()
     {
         static::saving(function (SectionProgress $progress) {
             // Level 1: 0-99 XP
             // Level 2: 100-199 XP
-            $progress->level = floor($progress->exp / 100) + 1;
+            $progress->level = self::levelFromExp($progress->exp);
         });
 
         static::updated(function (SectionProgress $progress) {
