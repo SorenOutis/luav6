@@ -1602,7 +1602,7 @@ const startEssayGradingPoll = (partId: number) => {
                 submission.score = Number(data.score);
                 localSubmissions.value[partId] = submission;
                 isCalculatingScore.value = false;
-                animateDisplayedScore(submission.score);
+                animateDisplayedScore(Number(totalScore.value) || 0);
                 if (gradingPollTimer.value)
                     clearInterval(gradingPollTimer.value);
                 gradingPollTimer.value = null;
