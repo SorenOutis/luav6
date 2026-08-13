@@ -105,7 +105,7 @@ it('cache-busts the favicon URL against the uploaded logo path', function () use
     $firstUrl = FaviconUrl::url();
 
     expect($firstVersion)->toHaveLength(8)
-        ->and($firstUrl)->toContain('v=' . $firstVersion);
+        ->and($firstUrl)->toContain('v='.$firstVersion);
 
     // Re-uploading under a new path changes the version → browsers re-fetch.
     Storage::disk('public')->put('branding/new-logo.png', $testLogoPng);
