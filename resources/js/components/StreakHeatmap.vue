@@ -178,14 +178,14 @@ const dayLabel = (date: Date) =>
                     :class="
                         cell.active
                             ? cell.isToday
-                                ? 'border-primary bg-gradient-to-br from-primary to-primary/80 shadow-[0_0_14px_rgba(var(--primary-rgb),0.45)] ring-2 ring-primary/30 ring-offset-1 ring-offset-background'
-                                : 'border-primary/40 bg-gradient-to-br from-primary/80 to-primary/50 shadow-[0_0_10px_rgba(var(--primary-rgb),0.2)]'
+                                ? 'pulse-cell pulse-cell--today border-primary bg-gradient-to-br from-primary to-primary/80 ring-2 ring-primary/30 ring-offset-1 ring-offset-background'
+                                : 'pulse-cell pulse-cell--active border-primary/40 bg-gradient-to-br from-primary/80 to-primary/50'
                             : 'border-border/15 bg-muted/20'
                     "
                 >
                     <!-- Today marker dot -->
                     <span
-                        v-if="cell.isToday"
+                        v-if="cell.isToday && cell.active"
                         class="absolute top-1/2 left-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/80"
                         aria-hidden="true"
                     ></span>
@@ -245,3 +245,42 @@ const dayLabel = (date: Date) =>
         </div>
     </div>
 </template>
+
+<style scoped>
+/*
+ * Glows use color-mix against --color-primary so the "lit up" pulse actually
+ * renders AND adapts to every theme (light, dark, and alternate presets).
+ * The old rgba(var(--primary-rgb), …) form relied on a variable that was
+ * never defined anywhere, so the glow silently never showed.
+ */
+.pulse-cell {
+    transition:
+        box-shadow 0.3s ease,
+        transform 0.3s ease,
+        background-color 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.pulse-cell--today {
+    box-shadow: 0 0 14px
+        color-mix(in srgb, var(--color-primary) 45%, transparent);
+}
+
+.pulse-cell--active {
+    box-shadow: 0 0 10px
+        color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.pulse-cell--today:hover,
+.pulse-cell--active:hover {
+    box-shadow: 0 0 18px
+        color-mix(in srgb, var(--color-primary) 55%, transparent);
+}
+
+/* Respect users who prefer less motion / lower-end devices */
+@media (prefers-reduced-motion: reduce) {
+    .pulse-cell {
+        transition: none;
+    }
+}
+</style>
