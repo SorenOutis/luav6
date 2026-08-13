@@ -9,9 +9,28 @@ import { initializeTheme } from '@/composables/useAppearance';
 import { initLenis, isLowEndDeviceSignal } from '@/composables/useLenis';
 import { useLoader } from '@/composables/useLoader';
 
-configureEcho({
-    broadcaster: 'pusher',
-});
+const metaContent = (name: string): string | undefined =>
+    document
+        .querySelector<HTMLMetaElement>(`meta[name="${name}"]`)
+        ?.content.trim() || undefined;
+
+const pusherKey = metaContent('pusher-key');
+const pusherCluster = metaContent('pusher-cluster');
+
+// Read Pusher's public client identifiers from runtime-rendered meta tags.
+// This works with container/runtime environment variables; Vite does not need
+// production credentials while compiling the frontend image.
+if (pusherKey) {
+    configureEcho({
+        broadcaster: 'pusher',
+        key: pusherKey,
+        cluster: pusherCluster ?? 'mt1',
+        forceTLS: true,
+    });
+} else {
+    // Keep local/test environments without Pusher credentials functional.
+    configureEcho({ broadcaster: 'null' });
+}
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const { isVisible, show, hide, hideWhenReady } = useLoader();

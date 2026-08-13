@@ -90,6 +90,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('exams/{exam}/parts/{examPart}/start', [ExamController::class, 'startPart'])
         ->middleware(['student.page:exams', 'throttle:60,1'])
         ->name('exams.startPart');
+    Route::put('exams/{exam}/parts/{examPart}/answers', [ExamController::class, 'saveAnswers'])
+        ->middleware(['student.page:exams', 'throttle:240,1'])
+        ->name('exams.saveAnswers');
     Route::post('exams/{exam}/parts/{examPart}/submit', [ExamController::class, 'submitPart'])
         ->middleware(['student.page:exams', 'throttle:10,1'])
         ->name('exams.submitPart');

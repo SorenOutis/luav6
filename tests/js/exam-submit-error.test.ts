@@ -30,6 +30,9 @@ vi.mock('axios', () => ({
         post: vi.fn(async () => ({
             data: { deadline: new Date(Date.now() + 3600_000).toISOString() },
         })),
+        put: vi.fn(async () => ({
+            data: { saved_at: new Date().toISOString() },
+        })),
     },
 }));
 
@@ -85,6 +88,8 @@ describe('Exams/Show.vue failed submission', () => {
                 submissions: {},
                 submittedPartId: null,
                 partDeadlines: {},
+                answerDrafts: {},
+                realtimeChannel: 'exam.1.student.1',
             },
             global: {
                 stubs: {
