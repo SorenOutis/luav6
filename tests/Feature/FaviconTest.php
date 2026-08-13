@@ -82,3 +82,37 @@ it('serves the uploaded logo and falls back once it is removed', function () use
 
     get(route('favicon'))->assertRedirect('/favicon.ico');
 });
+
+describe('FaviconUrl helper', function () {
+    it('reports no logo and a constant version before one is uploaded', function () {
+        expect(\App\Support\FaviconUrl::hasLogo())->toBeFalse()
+            ->and(\App\Support\FaviconUrl::version())->toBe('0');
+
+        $url = \App\Support\FaviconUrl::url();
+        $touch = \App\Support\FaviconUrl::url(180);
+
+        expect($url)->toContain('/favicon.png')->toContain('v=0')
+            ->and($touch)->toContain('size=180')->toContain('v=0');
+    });
+
+    it('cache-busts the favicon URL against the uploaded logo path', function () use ($testLogoPng) {
+        Storage::disk('public')->put('branding/logo.png', $testLogoPng);
+        Setting::set('school_logo_path', 'branding/logo.png');
+
+        expect(\App\Support\FaviconUrl::hasLogo())->toBeTrue();
+
+        $firstVersion = \App\Support\FaviconUrl::version();
+        $firstUrl = \App\Support\FaviconUrl::url();
+
+        expect($firstVersion)->toHaveLength(8)
+            ->and($firstUrl)->toContain('v=' . $firstVersion);
+
+        // Re-uploading under a new path changes the version → browsers re-fetch.
+        Storage::disk('public')->put('branding/new-logo.png', $testLogoPng);
+        Setting::set('school_logo_path', 'branding/new-logo.png');
+
+        expect(\App\Support\FaviconUrl::version())->not->toBe($firstVersion)
+            ->and(\App\Support\FaviconUrl::url())->not->toBe($firstUrl);
+    });
+});
+
