@@ -221,7 +221,7 @@ const getExamTimeInfo = (exam: Exam) => {
     if (exam.is_locked) {
         return {
             label: `Completed ${examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-            color: 'text-[#34C759]',
+            color: 'text-[#4D9375]',
             isOverdue: false,
             isUpcoming: false,
         };
@@ -229,7 +229,7 @@ const getExamTimeInfo = (exam: Exam) => {
     if (diff < 0) {
         return {
             label: 'Overdue',
-            color: 'text-[#FF3B30]',
+            color: 'text-[#CB7676]',
             isOverdue: true,
             isUpcoming: false,
         };
@@ -239,7 +239,7 @@ const getExamTimeInfo = (exam: Exam) => {
     if (days > 0) {
         return {
             label: `${days}d ${hours}h left`,
-            color: 'text-[#FF9F0A]',
+            color: 'text-[#E0AF68]',
             isOverdue: false,
             isUpcoming: true,
         };
@@ -247,7 +247,7 @@ const getExamTimeInfo = (exam: Exam) => {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return {
         label: `${hours}h ${minutes}m left`,
-        color: 'text-[#FF3B30]',
+        color: 'text-[#CB7676]',
         isOverdue: false,
         isUpcoming: true,
     };
@@ -260,14 +260,14 @@ const getStatusBadgeInfo = (exam: Exam) => {
         exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
     const allPartsDone = totalParts > 0 && submittedParts >= totalParts;
 
-    if (allPartsDone) return { label: 'Completed', color: 'bg-[#34C759]' };
+    if (allPartsDone) return { label: 'Completed', color: 'bg-[#4D9375]' };
     if (exam.is_locked && exam.status === 'closed')
-        return { label: 'Closed', color: 'bg-[#FF3B30]' };
-    if (exam.is_locked) return { label: 'In progress', color: 'bg-[#FF9F0A]' };
+        return { label: 'Closed', color: 'bg-[#CB7676]' };
+    if (exam.is_locked) return { label: 'In progress', color: 'bg-[#E0AF68]' };
     if (exam.status === 'published')
-        return { label: 'Open', color: 'bg-[#007AFF]' };
+        return { label: 'Open', color: 'bg-[#D97757]' };
     if (exam.status === 'closed')
-        return { label: 'Closed', color: 'bg-[#FF3B30]' };
+        return { label: 'Closed', color: 'bg-[#CB7676]' };
     return { label: 'Draft', color: 'bg-muted text-muted-foreground' };
 };
 
@@ -286,12 +286,12 @@ const getCardStatusClass = (exam: Exam) => {
             !Number.isNaN(examDate.getTime()) &&
             examDate.getTime() < Date.now()
         ) {
-            return 'border-l-red-400/40 hover:border-l-red-400/60';
+            return 'border-l-[#CB7676]/40 hover:border-l-[#CB7676]/60';
         }
     }
 
     if (allPartsDone)
-        return 'border-l-emerald-400/40 hover:border-l-emerald-400/60';
+        return 'border-l-[#4D9375]/40 hover:border-l-[#4D9375]/60';
     if (exam.is_locked) return '';
     return 'border-l-primary/20 hover:border-l-primary/40';
 };
@@ -457,7 +457,7 @@ function showScrollbar() {
                     v-model="searchQuery"
                     type="text"
                     placeholder="Search exams"
-                    class="min-h-11 w-full rounded-full border border-border/50 bg-card py-3 pr-4 pl-12 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-[#007AFF]/40 focus:ring-2 focus:ring-[#007AFF]/20"
+                    class="min-h-11 w-full rounded-full border border-border/50 bg-card py-3 pr-4 pl-12 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20"
                 />
             </div>
 
@@ -473,7 +473,7 @@ function showScrollbar() {
                     class="dash-btn flex shrink-0 items-center gap-2 border px-4 text-left"
                     :class="
                         activeSection === section.key
-                            ? 'border-transparent bg-[#007AFF] text-white'
+                            ? 'border-transparent bg-[#D97757] text-white'
                             : 'border-border/50 bg-card text-muted-foreground hover:bg-muted'
                     "
                 >
@@ -583,7 +583,7 @@ function showScrollbar() {
                                         </span>
                                         <span
                                             v-if="exam.is_locked"
-                                            class="inline-flex items-center rounded-full bg-[#007AFF]/10 px-2.5 py-1 text-[13px] font-semibold text-[#007AFF] tabular-nums"
+                                            class="inline-flex items-center rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-semibold text-[#D97757] tabular-nums"
                                         >
                                             {{
                                                 exam.submissions
@@ -634,7 +634,7 @@ function showScrollbar() {
                                                 <span
                                                     :class="
                                                         exam.is_locked
-                                                            ? 'text-[#34C759]'
+                                                            ? 'text-[#4D9375]'
                                                             : 'text-muted-foreground'
                                                     "
                                                 >
@@ -664,7 +664,7 @@ function showScrollbar() {
                                                     class="h-full rounded-full transition-all duration-700"
                                                     :class="
                                                         exam.is_locked
-                                                            ? 'bg-emerald-500'
+                                                            ? 'bg-[#4D9375]'
                                                             : 'bg-primary'
                                                     "
                                                     :style="{
@@ -729,7 +729,7 @@ function showScrollbar() {
                                 <button
                                     v-if="exam.is_locked"
                                     type="button"
-                                    class="dash-btn w-full bg-[#007AFF]/10 text-[15px] text-[#007AFF] hover:bg-[#007AFF]/15"
+                                    class="dash-btn w-full bg-[#D97757]/10 text-[15px] text-[#D97757] hover:bg-[#D97757]/15"
                                     @click.stop="openReview(exam)"
                                 >
                                     Review results
@@ -739,7 +739,7 @@ function showScrollbar() {
                                     :href="exam.url"
                                     target="_blank"
                                     rel="noopener"
-                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#007AFF] text-[15px] text-white hover:bg-[#007AFF]/90"
+                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#D97757] text-[15px] text-white hover:bg-[#D97757]/90"
                                     @click.stop
                                 >
                                     Start
@@ -748,7 +748,7 @@ function showScrollbar() {
                                 <Link
                                     v-else
                                     :href="examsShow(exam.id).url"
-                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#007AFF] text-[15px] text-white hover:bg-[#007AFF]/90"
+                                    class="dash-btn flex w-full items-center justify-center gap-2 bg-[#D97757] text-[15px] text-white hover:bg-[#D97757]/90"
                                     @click.stop
                                 >
                                     Start
@@ -863,7 +863,7 @@ function showScrollbar() {
                 <span>{{ part.title }}</span>
                 <span
                     v-if="getSubmissionForPart(selectedExamForReview, part.id)"
-                    class="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                    class="h-1.5 w-1.5 rounded-full bg-[#4D9375]"
                 />
             </button>
         </div>
@@ -947,8 +947,8 @@ function showScrollbar() {
                                                 qIndex + 1,
                                             ),
                                         )
-                                      ? 'border-emerald-500/30 bg-emerald-500/[0.02]'
-                                      : 'border-red-500/30 bg-red-500/[0.02]'
+                                      ? 'border-[#4D9375]/30 bg-[#4D9375]/[0.02]'
+                                      : 'border-[#CB7676]/30 bg-[#CB7676]/[0.02]'
                             "
                         >
                             <!-- Privacy Overlay: visible by default, fades on hover to reveal content -->
@@ -1010,11 +1010,11 @@ function showScrollbar() {
                                                         ),
                                                     )
                                                 "
-                                                class="h-3.5 w-3.5 text-emerald-500"
+                                                class="h-3.5 w-3.5 text-[#4D9375]"
                                             />
                                             <XCircle
                                                 v-else
-                                                class="h-3.5 w-3.5 text-red-500"
+                                                class="h-3.5 w-3.5 text-[#CB7676]"
                                             />
                                             <span
                                                 :class="
@@ -1035,8 +1035,8 @@ function showScrollbar() {
                                                             qIndex + 1,
                                                         ),
                                                     )
-                                                        ? 'text-emerald-600'
-                                                        : 'text-red-600'
+                                                        ? 'text-[#4D9375]'
+                                                        : 'text-[#CB7676]'
                                                 "
                                             >
                                                 {{
@@ -1110,7 +1110,7 @@ function showScrollbar() {
                                                     ? 'border-border/60 bg-muted/40'
                                                     : 'border-border/40 bg-muted/10 opacity-50'
                                                 : option.is_correct
-                                                  ? 'border-emerald-500/50 bg-emerald-500/10'
+                                                  ? 'border-[#4D9375]/50 bg-[#4D9375]/10'
                                                   : parseInt(
                                                           getAnswerForQuestion(
                                                               getSubmissionForPart(
@@ -1120,7 +1120,7 @@ function showScrollbar() {
                                                               qIndex + 1,
                                                           ),
                                                       ) === oIndex
-                                                    ? 'border-red-500/50 bg-red-500/10'
+                                                    ? 'border-[#CB7676]/50 bg-[#CB7676]/10'
                                                     : 'border-border/50 bg-muted/20 opacity-60'
                                         "
                                     >
@@ -1174,7 +1174,7 @@ function showScrollbar() {
                                                         qIndex + 1,
                                                     ),
                                                 )
-                                                    ? 'text-emerald-600'
+                                                    ? 'text-[#4D9375]'
                                                     : 'text-foreground'
                                             "
                                         >
@@ -1194,14 +1194,14 @@ function showScrollbar() {
                                             answersRevealed &&
                                             question.correct_answer
                                         "
-                                        class="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3"
+                                        class="rounded-lg border border-[#4D9375]/30 bg-[#4D9375]/5 p-3"
                                     >
                                         <span
-                                            class="text-[10px] font-medium text-emerald-600"
+                                            class="text-[10px] font-medium text-[#4D9375]"
                                             >Correct answer</span
                                         >
                                         <p
-                                            class="mt-1 text-sm font-semibold text-emerald-600"
+                                            class="mt-1 text-sm font-semibold text-[#4D9375]"
                                         >
                                             {{ question.correct_answer }}
                                         </p>
@@ -1312,10 +1312,10 @@ function showScrollbar() {
                                         class="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/20 p-3"
                                     >
                                         <Timer
-                                            class="h-3.5 w-3.5 text-amber-500"
+                                            class="h-3.5 w-3.5 text-[#E0AF68]"
                                         />
                                         <span
-                                            class="text-xs font-medium text-amber-600"
+                                            class="text-xs font-medium text-[#E0AF68]"
                                             >Feedback pending</span
                                         >
                                     </div>

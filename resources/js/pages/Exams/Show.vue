@@ -439,13 +439,13 @@ const stopTimer = () => {
 const burstConfetti = () => {
     const colors = [
         'var(--color-primary)',
-        '#22c55e', // emerald-500
-        '#f59e0b', // amber-500
-        '#a78bfa', // violet-400
-        '#f472b6', // pink-400
-        '#60a5fa', // blue-400
-        '#34d399', // emerald-400
-        '#fb923c', // orange-400
+        '#4D9375', // [#4D9375]
+        '#E0AF68', // [#E0AF68]
+        '#9D7CD8', // violet-400
+        '#CB7676', // pink-400
+        '#D97757', // [#D97757]
+        '#4D9375', // [#4D9375]
+        '#D97757', // [#D97757]
     ];
 
     const container = progressBoxRef.value;
@@ -1933,9 +1933,9 @@ const feedbackContent = computed(() => {
     return {
         text: 'Keep Pushing Forward',
         icon: Zap,
-        color: 'text-amber-500',
-        border: 'border-amber-500/50',
-        bg: 'bg-amber-500/5',
+        color: 'text-[#E0AF68]',
+        border: 'border-[#E0AF68]/50',
+        bg: 'bg-[#E0AF68]/5',
     };
 });
 </script>
@@ -1990,7 +1990,7 @@ const feedbackContent = computed(() => {
                             class="pointer-events-none fixed top-24 left-1/2 z-[100] w-full max-w-md -translate-x-1/2 px-4"
                         >
                             <div
-                                class="flex animate-bounce items-center gap-4 rounded-2xl border border-white/20 bg-red-500/90 p-4 text-white shadow-2xl backdrop-blur-xl"
+                                class="flex animate-bounce items-center gap-4 rounded-2xl border border-white/20 bg-[#CB7676]/90 p-4 text-white shadow-2xl backdrop-blur-xl"
                             >
                                 <div
                                     class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/20"
@@ -2053,7 +2053,7 @@ const feedbackContent = computed(() => {
                                 class="hidden items-center gap-2 border-r border-white/10 pr-6 text-xs text-muted-foreground/60 lg:flex"
                             >
                                 <div
-                                    class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"
+                                    class="h-1.5 w-1.5 animate-pulse rounded-full bg-[#4D9375]"
                                 ></div>
                                 {{ lastSavedAt }}
                             </div>
@@ -2064,10 +2064,10 @@ const feedbackContent = computed(() => {
                                     estimatedFinishMinutes !== null &&
                                     estimatedFinishMinutes > 0
                                 "
-                                class="hidden items-center gap-2 text-xs text-amber-500 md:flex"
+                                class="hidden items-center gap-2 text-xs text-[#E0AF68] md:flex"
                             >
                                 <Zap
-                                    class="h-4 w-4 fill-amber-400/20 transition-transform group-hover/timer:scale-110"
+                                    class="h-4 w-4 fill-[#E0AF68]/20 transition-transform group-hover/timer:scale-110"
                                 />
                                 <span class="hidden lg:inline"></span>
                                 {{ estimatedFinishMinutes }}M
@@ -2077,7 +2077,7 @@ const feedbackContent = computed(() => {
                                 class="relative z-10 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1"
                                 :class="
                                     timeLeftSeconds < 300
-                                        ? 'animate-pulse border-red-500/50 bg-red-500/10 text-red-500'
+                                        ? 'animate-pulse border-[#CB7676]/50 bg-[#CB7676]/10 text-[#CB7676]'
                                         : 'text-primary'
                                 "
                             >
@@ -2164,12 +2164,12 @@ const feedbackContent = computed(() => {
 
                                 <div
                                     v-if="selectedPart && lastSavedAt"
-                                    class="sync-heartbeat flex w-fit items-center gap-2 border border-emerald-500/20 bg-emerald-500/10 px-4 py-2"
+                                    class="sync-heartbeat flex w-fit items-center gap-2 border border-[#4D9375]/20 bg-[#4D9375]/10 px-4 py-2"
                                 >
                                     <CheckCircle2
-                                        class="h-4 w-4 text-emerald-500"
+                                        class="h-4 w-4 text-[#4D9375]"
                                     />
-                                    <span class="text-xs text-emerald-600"
+                                    <span class="text-xs text-[#4D9375]"
                                         >Auto-saved at
                                         {{
                                             lastSavedAt.replace(/:/g, '_')
@@ -2250,7 +2250,7 @@ const feedbackContent = computed(() => {
                                         class="text-[13px] font-medium transition-colors"
                                         :class="
                                             isDyslexiaFriendly
-                                                ? 'text-[#007AFF]'
+                                                ? 'text-[#D97757]'
                                                 : 'text-muted-foreground'
                                         "
                                         >Accessibility</span
@@ -2297,7 +2297,7 @@ const feedbackContent = computed(() => {
                                     >Progress</span
                                 >
                                 <span
-                                    class="text-[13px] font-medium text-[#007AFF]"
+                                    class="text-[13px] font-medium text-[#D97757]"
                                     >{{ Math.round(overallProgress) }}%
                                     complete</span
                                 >
@@ -2377,7 +2377,7 @@ const feedbackContent = computed(() => {
                                         class="absolute inset-0 animate-pulse bg-primary/5"
                                     ></div>
                                     <div
-                                        class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-full bg-[#007AFF] px-3 py-1 text-[12px] font-medium text-white shadow-sm"
+                                        class="absolute top-0 right-0 z-20 flex items-center gap-1.5 rounded-full bg-[#D97757] px-3 py-1 text-[12px] font-medium text-white shadow-sm"
                                     >
                                         Recommended
                                     </div>
@@ -2403,7 +2403,7 @@ const feedbackContent = computed(() => {
                                         </div>
                                         <div
                                             v-else-if="isPartSubmitted(part.id)"
-                                            class="rounded-md bg-emerald-500 px-2.5 py-1 text-xs font-medium text-white"
+                                            class="rounded-md bg-[#4D9375] px-2.5 py-1 text-xs font-medium text-white"
                                         >
                                             {{
                                                 localSubmissions[part.id]
@@ -2470,7 +2470,7 @@ const feedbackContent = computed(() => {
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <span
-                                                class="text-[13px] font-semibold text-[#FF9F0A]"
+                                                class="text-[13px] font-semibold text-[#E0AF68]"
                                                 >{{
                                                     part.questions?.reduce(
                                                         (sum, q) =>
@@ -2491,7 +2491,7 @@ const feedbackContent = computed(() => {
 
                                     <div
                                         v-if="!isPartSubmitted(part.id)"
-                                        class="dash-btn flex min-h-10 items-center gap-1.5 bg-[#007AFF] px-4 text-[14px] text-white"
+                                        class="dash-btn flex min-h-10 items-center gap-1.5 bg-[#D97757] px-4 text-[14px] text-white"
                                         :class="
                                             isPartLocked(index)
                                                 ? 'opacity-20 grayscale'
@@ -2649,7 +2649,7 @@ const feedbackContent = computed(() => {
                                                         flaggedQuestions.has(
                                                             mobileQuestionIndex,
                                                         )
-                                                            ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
+                                                            ? 'border-[#E0AF68]/60 bg-[#E0AF68]/20 text-[#E0AF68]'
                                                             : 'text-muted-foreground/30'
                                                     "
                                                 >
@@ -2659,7 +2659,7 @@ const feedbackContent = computed(() => {
                                                             flaggedQuestions.has(
                                                                 mobileQuestionIndex,
                                                             )
-                                                                ? 'fill-amber-500'
+                                                                ? 'fill-[#E0AF68]'
                                                                 : ''
                                                         "
                                                     />
@@ -2852,12 +2852,12 @@ const feedbackContent = computed(() => {
                                                 </div>
                                                 <button
                                                     @click="toggleFlag(qIndex)"
-                                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-border/40 transition-all hover:border-amber-500/50 hover:bg-amber-500/10"
+                                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-border/40 transition-all hover:border-[#E0AF68]/50 hover:bg-[#E0AF68]/10"
                                                     :class="
                                                         flaggedQuestions.has(
                                                             qIndex,
                                                         )
-                                                            ? 'border-amber-500/60 bg-amber-500/20 text-amber-500'
+                                                            ? 'border-[#E0AF68]/60 bg-[#E0AF68]/20 text-[#E0AF68]'
                                                             : 'text-muted-foreground/30'
                                                     "
                                                 >
@@ -2867,7 +2867,7 @@ const feedbackContent = computed(() => {
                                                             flaggedQuestions.has(
                                                                 qIndex,
                                                             )
-                                                                ? 'fill-amber-500'
+                                                                ? 'fill-[#E0AF68]'
                                                                 : ''
                                                         "
                                                     />
@@ -3065,7 +3065,7 @@ const feedbackContent = computed(() => {
                                                           : getQuestionStatus(
                                                                   qIndex,
                                                               ) === 'flagged'
-                                                            ? 'border-amber-500 bg-amber-500/20 text-amber-600 shadow-sm'
+                                                            ? 'border-[#E0AF68] bg-[#E0AF68]/20 text-[#E0AF68] shadow-sm'
                                                             : 'bg-muted/30 text-muted-foreground hover:border-primary/50 hover:bg-muted/50',
                                                 ]"
                                             >
@@ -3078,7 +3078,7 @@ const feedbackContent = computed(() => {
                                                             qIndex,
                                                         )
                                                     "
-                                                    class="absolute -top-1 -right-1 h-2.5 w-2.5 border border-card bg-red-600 shadow-sm"
+                                                    class="absolute -top-1 -right-1 h-2.5 w-2.5 border border-card bg-[#CB7676] shadow-sm"
                                                 ></div>
                                             </button>
                                         </div>
@@ -3101,7 +3101,7 @@ const feedbackContent = computed(() => {
                                                             unansweredCount ===
                                                             0
                                                         "
-                                                        class="progress-pct mb-1 inline-flex items-center gap-1.5 text-[10px] font-black tracking-widest text-emerald-500 uppercase"
+                                                        class="progress-pct mb-1 inline-flex items-center gap-1.5 text-[10px] font-black tracking-widest text-[#4D9375] uppercase"
                                                     >
                                                         <CheckCircle2
                                                             class="h-3 w-3"
@@ -3149,10 +3149,10 @@ const feedbackContent = computed(() => {
                                                     >Flagged</span
                                                 >
                                                 <span
-                                                    class="flex items-center gap-2 text-xs font-black text-amber-500"
+                                                    class="flex items-center gap-2 text-xs font-black text-[#E0AF68]"
                                                 >
                                                     <Flag
-                                                        class="h-3 w-3 fill-amber-500/20"
+                                                        class="h-3 w-3 fill-[#E0AF68]/20"
                                                     />
                                                     {{ flaggedQuestions.size }}
                                                     Units
@@ -3198,7 +3198,7 @@ const feedbackContent = computed(() => {
                                                 >Answered</span
                                             >
                                             <span
-                                                class="font-mono text-xs font-black text-emerald-500"
+                                                class="font-mono text-xs font-black text-[#4D9375]"
                                                 >{{ getAnsweredCount() }}
                                                 /
                                                 {{
@@ -3220,8 +3220,8 @@ const feedbackContent = computed(() => {
                                                 class="font-mono text-xs font-black"
                                                 :class="
                                                     unansweredCount > 0
-                                                        ? 'text-rose-500'
-                                                        : 'text-emerald-500'
+                                                        ? 'text-[#CB7676]'
+                                                        : 'text-[#4D9375]'
                                                 "
                                                 >{{
                                                     unansweredCount > 0
@@ -3240,7 +3240,7 @@ const feedbackContent = computed(() => {
                                                 >Flagged</span
                                             >
                                             <span
-                                                class="font-mono text-xs font-black text-amber-500"
+                                                class="font-mono text-xs font-black text-[#E0AF68]"
                                                 >{{
                                                     flaggedQuestions.size > 0
                                                         ? flaggedQuestions.size
@@ -3261,7 +3261,7 @@ const feedbackContent = computed(() => {
                                                 class="font-mono text-xs font-black"
                                                 :class="
                                                     timeLeftSeconds < 300
-                                                        ? 'text-rose-500'
+                                                        ? 'text-[#CB7676]'
                                                         : 'text-primary'
                                                 "
                                                 >{{ formattedTime }}</span
@@ -3278,7 +3278,7 @@ const feedbackContent = computed(() => {
                                                     firstUnansweredIndex,
                                                 )
                                             "
-                                            class="flex w-full items-center justify-center gap-2 border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-rose-500 uppercase transition-all hover:bg-rose-500/20"
+                                            class="flex w-full items-center justify-center gap-2 border border-[#CB7676]/30 bg-[#CB7676]/10 px-3 py-2 text-[9px] font-black tracking-widest text-[#CB7676] uppercase transition-all hover:bg-[#CB7676]/20"
                                         >
                                             <ArrowRight class="h-3 w-3" />
                                             Jump to Unanswered
@@ -3309,10 +3309,10 @@ const feedbackContent = computed(() => {
                                         <button
                                             v-if="firstFlaggedIndex >= 0"
                                             @click.prevent="jumpToNextFlagged"
-                                            class="flex w-full items-center justify-center gap-2 border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[9px] font-black tracking-widest text-amber-500 uppercase transition-all hover:bg-amber-500/20"
+                                            class="flex w-full items-center justify-center gap-2 border border-[#E0AF68]/30 bg-[#E0AF68]/10 px-3 py-2 text-[9px] font-black tracking-widest text-[#E0AF68] uppercase transition-all hover:bg-[#E0AF68]/20"
                                         >
                                             <Flag
-                                                class="h-3 w-3 fill-amber-500/20"
+                                                class="h-3 w-3 fill-[#E0AF68]/20"
                                             />
                                             Jump to Next Flagged
                                         </button>
@@ -3344,14 +3344,14 @@ const feedbackContent = computed(() => {
                                             ? 'bg-primary text-primary-foreground'
                                             : getQuestionStatus(qIndex) ===
                                                 'flagged'
-                                              ? 'bg-amber-500 text-white'
+                                              ? 'bg-[#E0AF68] text-white'
                                               : 'bg-white/5 text-white/40',
                                     ]"
                                 >
                                     {{ qIndex + 1 }}
                                     <div
                                         v-if="flaggedQuestions.has(qIndex)"
-                                        class="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-black bg-red-500 shadow-sm"
+                                        class="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-black bg-[#CB7676] shadow-sm"
                                     ></div>
                                 </div>
                             </div>
@@ -3452,14 +3452,14 @@ const feedbackContent = computed(() => {
                                               ? 'border-primary/60 bg-primary/10 text-primary'
                                               : getQuestionStatus(qIndex) ===
                                                   'flagged'
-                                                ? 'border-amber-500 bg-amber-500/20 text-amber-600'
+                                                ? 'border-[#E0AF68] bg-[#E0AF68]/20 text-[#E0AF68]'
                                                 : 'border-border/40 bg-muted/20 text-muted-foreground hover:border-primary/40 hover:bg-muted/40',
                                     ]"
                                 >
                                     {{ qIndex + 1 }}
                                     <div
                                         v-if="flaggedQuestions.has(qIndex)"
-                                        class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500 shadow-sm"
+                                        class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#E0AF68] shadow-sm"
                                     />
                                 </button>
                             </div>
@@ -3471,7 +3471,7 @@ const feedbackContent = computed(() => {
                                 <div
                                     class="flex items-center gap-2 text-[10px] text-muted-foreground"
                                 >
-                                    <Flag class="h-3 w-3 text-amber-500" />
+                                    <Flag class="h-3 w-3 text-[#E0AF68]" />
                                     Flagged: {{ flaggedQuestions.size }}
                                 </div>
                                 <div
@@ -3515,10 +3515,10 @@ const feedbackContent = computed(() => {
                                 class="flex flex-col items-center gap-6 text-center"
                             >
                                 <div
-                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
+                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-[#E0AF68]/10"
                                 >
                                     <HelpCircle
-                                        class="h-6 w-6 text-amber-500"
+                                        class="h-6 w-6 text-[#E0AF68]"
                                     />
                                 </div>
 
@@ -3549,7 +3549,7 @@ const feedbackContent = computed(() => {
                                         You have
 
                                         <span
-                                            class="font-semibold text-amber-600"
+                                            class="font-semibold text-[#E0AF68]"
                                             >{{ unansweredCount }}</span
                                         >
 
@@ -3715,10 +3715,10 @@ const feedbackContent = computed(() => {
                                 class="flex flex-col items-center gap-6 text-center"
                             >
                                 <div
-                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10"
+                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-[#E0AF68]/10"
                                 >
                                     <AlertCircle
-                                        class="h-6 w-6 text-amber-500"
+                                        class="h-6 w-6 text-[#E0AF68]"
                                     />
                                 </div>
 
@@ -3770,10 +3770,10 @@ const feedbackContent = computed(() => {
                                 class="flex flex-col items-center gap-6 text-center"
                             >
                                 <div
-                                    class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10"
+                                    class="flex h-16 w-16 items-center justify-center rounded-full bg-[#4D9375]/10"
                                 >
                                     <CheckCircle2
-                                        class="h-8 w-8 text-emerald-500"
+                                        class="h-8 w-8 text-[#4D9375]"
                                     />
                                 </div>
 
@@ -3856,14 +3856,14 @@ const feedbackContent = computed(() => {
 
                                         <div
                                             v-if="isExamPendingReview"
-                                            class="flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-2"
+                                            class="flex items-center justify-center gap-2 rounded-lg border border-[#E0AF68]/30 bg-[#E0AF68]/5 px-4 py-2"
                                         >
                                             <Clock
-                                                class="h-4 w-4 text-amber-500"
+                                                class="h-4 w-4 text-[#E0AF68]"
                                             />
 
                                             <span
-                                                class="text-sm font-medium text-amber-600"
+                                                class="text-sm font-medium text-[#E0AF68]"
                                                 >Awaiting review</span
                                             >
                                         </div>
@@ -3938,7 +3938,7 @@ const feedbackContent = computed(() => {
                              of unknowingly re-answering everything. -->
                         <div
                             v-if="submitError"
-                            class="flex items-center justify-center gap-2 border-b border-red-500/20 bg-red-500/10 px-4 py-1.5 text-[11px] font-semibold text-red-600 dark:text-red-400"
+                            class="flex items-center justify-center gap-2 border-b border-[#CB7676]/20 bg-[#CB7676]/10 px-4 py-1.5 text-[11px] font-semibold text-[#CB7676] dark:text-[#CB7676]"
                         >
                             <AlertCircle class="h-3.5 w-3.5 shrink-0" />
                             <span>{{ submitError }}</span>
@@ -3993,8 +3993,8 @@ const feedbackContent = computed(() => {
                                 class="sync-heartbeat hidden shrink-0 items-center gap-1.5 text-[10px] font-semibold sm:flex"
                                 :class="
                                     answerSaveState === 'error'
-                                        ? 'text-amber-500'
-                                        : 'text-emerald-500'
+                                        ? 'text-[#E0AF68]'
+                                        : 'text-[#4D9375]'
                                 "
                             >
                                 <AlertCircle
@@ -4019,9 +4019,9 @@ const feedbackContent = computed(() => {
                                 class="flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors"
                                 :class="
                                     timeLeftSeconds < 60
-                                        ? 'animate-pulse border-red-500/40 bg-red-500/15 text-red-500'
+                                        ? 'animate-pulse border-[#CB7676]/40 bg-[#CB7676]/15 text-[#CB7676]'
                                         : timeLeftSeconds < 300
-                                          ? 'border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                          ? 'border-[#E0AF68]/40 bg-[#E0AF68]/15 text-[#E0AF68] dark:text-[#E0AF68]'
                                           : 'border-primary/30 bg-primary/10 text-primary'
                                 "
                             >

@@ -75,7 +75,7 @@ const formatDate = (iso?: string | null) => {
     >
         <div class="relative z-10 flex items-start justify-between gap-3">
             <div class="flex min-w-0 items-center gap-3">
-                <div class="dash-icon-well bg-[#AF52DE]/15 text-[#AF52DE]">
+                <div class="dash-icon-well bg-[#D97757]/15 text-[#D97757]">
                     <Sparkles class="h-5 w-5" />
                 </div>
                 <div class="min-w-0">
@@ -140,7 +140,7 @@ const formatDate = (iso?: string | null) => {
                 <!-- XP progress -->
                 <div
                     v-if="xpPercent !== null"
-                    class="absolute inset-y-0 left-0 bg-[#007AFF] transition-[width] duration-700 ease-out"
+                    class="absolute inset-y-0 left-0 bg-[#D97757] transition-[width] duration-700 ease-out"
                     :style="{ width: `${xpPercent}%` }"
                 />
                 <!-- Pace marker -->

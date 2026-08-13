@@ -359,7 +359,7 @@ const rightNavItems: NavItem[] = [
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                     align="end"
-                                    class="w-80 border-border/80 bg-background/95 p-0 shadow-2xl backdrop-blur-xl supports-[backdrop-filter]:bg-background/90"
+                                    class="w-80 overscroll-contain border-border/80 bg-background/95 p-0 shadow-2xl backdrop-blur-xl supports-[backdrop-filter]:bg-background/90"
                                 >
                                     <div
                                         class="flex items-center justify-between border-b border-border/60 px-3 py-2"
@@ -386,7 +386,7 @@ const rightNavItems: NavItem[] = [
 
                                     <div
                                         v-if="notifications.items.length > 0"
-                                        class="max-h-96 overflow-y-auto p-2"
+                                        class="max-h-[min(24rem,50vh)] overflow-y-auto overscroll-contain p-2"
                                     >
                                         <button
                                             v-for="notification in notifications.items"

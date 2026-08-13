@@ -1222,10 +1222,10 @@
 
 .dashboard-ui,
 .student-ui {
-    --dash-blue: #007aff;
-    --dash-green: #34c759;
-    --dash-orange: #ff9f0a;
-    --dash-red: #ff3b30;
+    --dash-accent: #d97757;
+    --dash-green: #4d9375;
+    --dash-amber: #e0af68;
+    --dash-red: #cb7676;
     --dash-gray: #8e8e93;
     font-family:
         system-ui,

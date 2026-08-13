@@ -129,10 +129,10 @@ const reasonMeta = (reason: string): ReasonMeta => {
 };
 
 const toneChip: Record<Tone, string> = {
-    amber: 'bg-amber-500/15 text-amber-500 dark:text-amber-400',
-    sky: 'bg-sky-500/15 text-sky-500 dark:text-sky-400',
-    emerald: 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400',
-    violet: 'bg-violet-500/15 text-violet-500 dark:text-violet-400',
+    amber: 'bg-[#E0AF68]/15 text-[#E0AF68] dark:text-[#E0AF68]',
+    sky: 'bg-[#D97757]/15 text-[#D97757] dark:text-[#D97757]',
+    emerald: 'bg-[#4D9375]/15 text-[#4D9375] dark:text-[#4D9375]',
+    violet: 'bg-[#9D7CD8]/15 text-[#9D7CD8] dark:text-[#9D7CD8]',
     zinc: 'bg-zinc-500/15 text-zinc-500 dark:text-zinc-400',
     primary: 'bg-primary/15 text-primary',
 };
@@ -151,7 +151,7 @@ function formatWhen(iso: string): string {
 
 <template>
     <div
-        class="surface-card group relative w-full min-w-0 cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:ring-[#007AFF]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
+        class="surface-card group relative w-full min-w-0 cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
         tabindex="0"
         role="button"
         aria-label="Open your XP history"
@@ -165,7 +165,7 @@ function formatWhen(iso: string): string {
             <!-- Header: Level -->
             <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="dash-icon-well bg-[#007AFF]/10 text-[#007AFF]">
+                    <div class="dash-icon-well bg-[#D97757]/10 text-[#D97757]">
                         <TrendingUp class="h-5 w-5" />
                     </div>
                     <div>
@@ -190,7 +190,7 @@ function formatWhen(iso: string): string {
                     class="relative h-2 w-full overflow-hidden rounded-full bg-muted"
                 >
                     <div
-                        class="relative h-full rounded-full bg-[#007AFF] transition-[width] duration-700 ease-out"
+                        class="relative h-full rounded-full bg-[#D97757] transition-[width] duration-700 ease-out"
                         :style="{ width: `${xpPercent}%` }"
                     />
                 </div>
@@ -219,7 +219,7 @@ function formatWhen(iso: string): string {
                     to Level {{ userStats.level + 1 }}
                 </p>
                 <span
-                    class="flex items-center gap-1 text-[13px] font-medium text-[#007AFF]"
+                    class="flex items-center gap-1 text-[13px] font-medium text-[#D97757]"
                 >
                     History
                 </span>
@@ -241,8 +241,8 @@ function formatWhen(iso: string): string {
                     class="flex items-center gap-3 rounded-xl border p-3"
                     :class="
                         claimStatus.state === 'claimed'
-                            ? 'border-emerald-500/30 bg-emerald-500/10'
-                            : 'border-amber-500/30 bg-amber-500/10'
+                            ? 'border-[#4D9375]/30 bg-[#4D9375]/10'
+                            : 'border-[#E0AF68]/30 bg-[#E0AF68]/10'
                     "
                     role="status"
                 >
@@ -250,8 +250,8 @@ function formatWhen(iso: string): string {
                         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                         :class="
                             claimStatus.state === 'claimed'
-                                ? 'bg-emerald-500/15 text-emerald-500 dark:text-emerald-400'
-                                : 'bg-amber-500/15 text-amber-500 dark:text-amber-400'
+                                ? 'bg-[#4D9375]/15 text-[#4D9375] dark:text-[#4D9375]'
+                                : 'bg-[#E0AF68]/15 text-[#E0AF68] dark:text-[#E0AF68]'
                         "
                     >
                         <Check
@@ -291,8 +291,8 @@ function formatWhen(iso: string): string {
                         class="shrink-0 text-sm font-semibold tabular-nums"
                         :class="
                             claimStatus.state === 'claimed'
-                                ? 'text-emerald-500 dark:text-emerald-400'
-                                : 'text-amber-500 dark:text-amber-400'
+                                ? 'text-[#4D9375] dark:text-[#4D9375]'
+                                : 'text-[#E0AF68] dark:text-[#E0AF68]'
                         "
                     >
                         +{{ claimStatus.amount }}
@@ -334,7 +334,7 @@ function formatWhen(iso: string): string {
                 <!-- History tab: per-entry ledger -->
                 <div
                     v-if="activeTab === 'history'"
-                    class="max-h-[50vh] space-y-2 overflow-y-auto pr-1"
+                    class="max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1"
                 >
                     <div
                         v-if="xpHistory.length === 0"
@@ -366,7 +366,7 @@ function formatWhen(iso: string): string {
                                 </p>
                                 <span
                                     v-if="entry.isClaim"
-                                    class="rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[12px] font-medium text-amber-600 dark:text-amber-400"
+                                    class="rounded-full border border-[#E0AF68]/30 bg-[#E0AF68]/10 px-1.5 py-0.5 text-[12px] font-medium text-[#E0AF68] dark:text-[#E0AF68]"
                                 >
                                     Claimed
                                 </span>
@@ -388,8 +388,8 @@ function formatWhen(iso: string): string {
                             class="shrink-0 text-sm font-semibold tabular-nums"
                             :class="
                                 entry.amount >= 0
-                                    ? 'text-emerald-500 dark:text-emerald-400'
-                                    : 'text-rose-500 dark:text-rose-400'
+                                    ? 'text-[#4D9375] dark:text-[#4D9375]'
+                                    : 'text-[#CB7676] dark:text-[#CB7676]'
                             "
                         >
                             {{ signedAmount(entry.amount) }}
@@ -421,7 +421,7 @@ function formatWhen(iso: string): string {
                                 {{ entry.count === 1 ? 'entry' : 'entries' }}
                             </p>
                         </div>
-                        <span class="font-semibold text-[#007AFF] tabular-nums"
+                        <span class="font-semibold text-[#D97757] tabular-nums"
                             >+{{ entry.amount.toLocaleString() }} XP</span
                         >
                     </div>
