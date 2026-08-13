@@ -12,6 +12,15 @@ const postMock = vi.fn();
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: defineComponent({ render: () => null }),
+    Link: defineComponent({
+        props: { href: { type: String, default: '#' } },
+        setup(
+            props: { href?: string },
+            { slots }: { slots: { default?: () => any } },
+        ) {
+            return () => h('a', { href: props.href }, slots.default?.());
+        },
+    }),
     router: {
         post: (...args: unknown[]) => {
             postMock(...args);

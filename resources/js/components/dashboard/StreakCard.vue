@@ -2,7 +2,6 @@
 import { ChevronRight, Flame } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import StreakCalendarModal from '@/components/dashboard/StreakCalendarModal.vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface Props {
@@ -48,13 +47,11 @@ const openCalendar = () => {
 </script>
 
 <template>
-    <SpotlightCard
-        customSize
-        glowColor="orange"
-        className="surface-card premium-hover group relative w-full min-w-0 cursor-pointer p-5 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none sm:p-6"
-        :tabindex="0"
-        :role="'button'"
-        :aria-label="'Open your streak calendar'"
+    <div
+        class="surface-card group relative w-full min-w-0 cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:ring-[#007AFF]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
+        tabindex="0"
+        role="button"
+        aria-label="Open your streak calendar"
         @click="openCalendar"
         @keydown.enter.prevent="openCalendar"
         @keydown.space.prevent="openCalendar"
@@ -64,25 +61,19 @@ const openCalendar = () => {
         >
             <div class="flex items-start justify-between gap-3">
                 <div class="flex items-center gap-3">
-                    <div
-                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-400 transition-transform duration-300 group-hover:scale-110"
-                    >
+                    <div class="dash-icon-well bg-[#FF9F0A]/15 text-[#FF9F0A]">
                         <Flame class="h-5 w-5" />
                     </div>
                     <div>
-                        <p
-                            class="text-[10px] font-black tracking-[0.2em] text-muted-foreground/70 uppercase"
-                        >
-                            Day Streak
-                        </p>
+                        <p class="dash-label">Streak</p>
                         <div class="flex items-baseline gap-1.5">
                             <h3
-                                class="text-3xl leading-none font-black tracking-tighter tabular-nums sm:text-4xl"
+                                class="dash-metric text-[34px] leading-none text-foreground sm:text-4xl"
                             >
                                 {{ animStreak }}
                             </h3>
                             <span
-                                class="text-[10px] font-bold text-muted-foreground/60 uppercase"
+                                class="text-[13px] font-medium text-muted-foreground"
                                 >{{ animStreak === 1 ? 'day' : 'days' }}</span
                             >
                         </div>
@@ -101,7 +92,7 @@ const openCalendar = () => {
                     class="flex flex-1 flex-col items-center gap-1"
                 >
                     <div
-                        class="flex h-6 w-full items-center justify-center rounded-md"
+                        class="flex h-7 w-full items-center justify-center rounded-full"
                         :class="
                             day.isActive
                                 ? 'bg-orange-500/15'
@@ -119,7 +110,7 @@ const openCalendar = () => {
                         />
                     </div>
                     <span
-                        class="text-[8px] leading-none font-bold"
+                        class="text-[11px] leading-none font-medium"
                         :class="
                             day.isToday
                                 ? 'text-foreground/70'
@@ -137,12 +128,12 @@ const openCalendar = () => {
             >
                 <p class="text-xs text-muted-foreground">
                     Best:
-                    <span class="font-black text-foreground"
+                    <span class="font-semibold text-foreground"
                         >{{ longestStreak }} days</span
                     >
                 </p>
                 <span
-                    class="flex items-center gap-1 text-[10px] font-black tracking-widest text-primary uppercase"
+                    class="flex items-center gap-1 text-[13px] font-medium text-[#007AFF]"
                 >
                     Calendar
                     <ChevronRight class="h-3 w-3" />
@@ -157,5 +148,5 @@ const openCalendar = () => {
             :longest-streak="longestStreak"
             @close="showCalendar = false"
         />
-    </SpotlightCard>
+    </div>
 </template>

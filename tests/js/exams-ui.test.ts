@@ -1,0 +1,40 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+describe('exams and parts student shell', () => {
+    it('applies the student shell to the activities list', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Exam.vue'),
+            'utf8',
+        );
+
+        expect(page).toContain('student-ui');
+        expect(page).toContain('Activities');
+        expect(page).toContain('dash-btn');
+        expect(page).toContain('min-h-11');
+        expect(page).toContain('openExam');
+        expect(page).toContain('Review results');
+        expect(page).not.toContain('OVERDUE');
+        expect(page).not.toContain('REMAINING');
+    });
+
+    it('applies the student shell to the exam parts page', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Exams/Show.vue'),
+            'utf8',
+        );
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+
+        expect(page).toContain('student-ui');
+        expect(page).toContain('exam-part-card');
+        expect(page).toContain('All activities');
+        expect(page).toContain('dash-title');
+        expect(page).toContain("'Start'");
+        expect(css).toContain('.student-ui.exam-theme-page');
+        expect(css).toContain('env(safe-area-inset-left)');
+    });
+});

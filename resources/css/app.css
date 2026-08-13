@@ -1215,6 +1215,128 @@
     }
 }
 
+/* ════════════════════════════════════════════════════
+   Student pages (dashboard, grades, activities)
+   Quiet type, grouped widgets, 44px hit targets.
+   ════════════════════════════════════════════════════ */
+
+.dashboard-ui,
+.student-ui {
+    --dash-blue: #007aff;
+    --dash-green: #34c759;
+    --dash-orange: #ff9f0a;
+    --dash-red: #ff3b30;
+    --dash-gray: #8e8e93;
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Helvetica Neue',
+        sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.01em;
+}
+
+.dashboard-ui .surface-card,
+.student-ui .surface-card {
+    border-radius: 1.25rem;
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.04),
+        0 10px 28px -18px rgb(0 0 0 / 0.14);
+    backdrop-filter: none;
+}
+
+.dashboard-ui .dash-label,
+.student-ui .dash-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    text-transform: none;
+    color: var(--color-muted-foreground);
+}
+
+.dashboard-ui .dash-title,
+.student-ui .dash-title {
+    font-weight: 600;
+    letter-spacing: -0.03em;
+}
+
+.dashboard-ui .dash-metric,
+.student-ui .dash-metric {
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+}
+
+.dashboard-ui .dash-btn,
+.student-ui .dash-btn {
+    min-height: 44px;
+    min-width: 44px;
+    border-radius: 980px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    text-transform: none;
+}
+
+.dashboard-ui .dash-icon-well {
+    display: flex;
+    height: 2.5rem;
+    width: 2.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+}
+
+.dashboard-ui [data-slot='card'],
+.student-ui [data-slot='card'] {
+    border-radius: 1.25rem;
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.04),
+        0 10px 28px -18px rgb(0 0 0 / 0.14);
+}
+
+.dashboard-ui [data-slot='input'],
+.student-ui [data-slot='input'] {
+    min-height: 44px;
+    border-radius: 980px;
+    font-size: 1rem;
+}
+
+.student-ui.exam-theme-page .exam-hero,
+.student-ui.exam-theme-page .exam-part-card,
+.student-ui.exam-theme-page .exam-card {
+    border-radius: 1.25rem;
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.04),
+        0 10px 28px -18px rgb(0 0 0 / 0.14);
+}
+
+.student-ui.exam-theme-page .exam-part-card {
+    min-height: 13.5rem;
+}
+
+.student-ui.exam-theme-page [class*='tracking-[0.4em]'],
+.student-ui.exam-theme-page [class*='tracking-widest'] {
+    letter-spacing: -0.01em !important;
+    text-transform: none !important;
+    font-weight: 500 !important;
+    font-size: 0.8125rem !important;
+}
+
+.student-ui.exam-theme-page .font-black {
+    font-weight: 600 !important;
+}
+
+@media (max-width: 640px) {
+    .dashboard-ui,
+    .student-ui {
+        padding-left: max(0.75rem, env(safe-area-inset-left));
+        padding-right: max(0.75rem, env(safe-area-inset-right));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+}
+
 @keyframes fadeUp {
     from {
         opacity: 0;

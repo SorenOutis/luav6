@@ -47,121 +47,106 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
 </script>
 
 <template>
-    <div class="space-y-6 lg:space-y-8">
-        <!-- Integrated Announcement -->
+    <div class="space-y-5 lg:space-y-6">
         <TransitionGroup
-            enter-active-class="transition duration-500 ease-out"
-            enter-from-class="opacity-0 -translate-y-4"
+            enter-active-class="transition duration-400 ease-out"
+            enter-from-class="opacity-0 -translate-y-2"
             enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition duration-300 ease-in"
-            leave-from-class="opacity-100 scale-100"
-            leave-to-class="opacity-0 scale-95"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
         >
             <div
                 v-for="item in announcements.slice(0, 1)"
                 :key="item.id"
-                class="group relative mb-4 overflow-hidden rounded-2xl border border-border/40 border-primary/10 bg-card/30 p-3 shadow-2xl shadow-primary/5 backdrop-blur-xl transition-all duration-500 hover:border-primary/30 sm:rounded-3xl sm:p-5"
+                class="relative overflow-hidden rounded-[1.25rem] border border-border/50 bg-card p-4 sm:p-5"
             >
                 <div
-                    class="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent"
-                ></div>
-                <div
-                    class="relative flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4"
+                    class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
                 >
                     <div
-                        class="flex w-full flex-1 items-center gap-3 sm:w-auto sm:gap-4"
+                        class="flex w-full flex-1 items-center gap-3 sm:w-auto"
                     >
                         <div
-                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-inner transition-all duration-500 group-hover:bg-primary group-hover:text-primary-foreground sm:h-12 sm:w-12 sm:rounded-2xl"
+                            class="dash-icon-well bg-[#007AFF]/10 text-[#007AFF]"
                         >
-                            <Megaphone class="h-5 w-5 sm:h-6 sm:w-6" />
+                            <Megaphone class="h-4 w-4" />
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h4
-                                    class="truncate text-xs font-black tracking-tight tracking-widest text-foreground uppercase sm:text-sm"
+                                    class="truncate text-[15px] font-semibold tracking-tight text-foreground"
                                 >
                                     {{ item.title }}
                                 </h4>
                                 <span
-                                    class="shrink-0 animate-pulse rounded-md bg-primary/10 px-1.5 py-0.5 text-[7px] font-black tracking-widest text-primary uppercase sm:text-[8px]"
-                                    >New</span
+                                    class="shrink-0 rounded-full bg-[#007AFF]/10 px-2 py-0.5 text-[12px] font-medium text-[#007AFF]"
                                 >
+                                    New
+                                </span>
                             </div>
                             <p
                                 v-if="item.description"
-                                class="mt-0.5 line-clamp-1 text-[10px] font-medium text-muted-foreground italic opacity-70 sm:text-xs"
+                                class="mt-0.5 line-clamp-2 text-[13px] leading-snug text-muted-foreground"
                             >
-                                "{{ item.description }}"
+                                {{ item.description }}
                             </p>
                         </div>
                     </div>
 
                     <div
-                        class="flex w-full items-center justify-between gap-2 border-t border-primary/5 pt-2 sm:w-auto sm:justify-end sm:border-0 sm:pt-0"
+                        class="flex w-full items-center justify-between gap-2 border-t border-border/40 pt-3 sm:w-auto sm:justify-end sm:border-0 sm:pt-0"
                     >
                         <Link
                             v-if="item.link"
                             :href="item.link"
-                            class="group/link flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary/10 px-3 py-1.5 text-[9px] font-black tracking-widest text-primary uppercase transition-all duration-300 hover:bg-primary hover:text-primary-foreground sm:flex-none sm:rounded-xl sm:px-4 sm:py-2 sm:text-[10px]"
+                            class="dash-btn inline-flex flex-1 items-center justify-center gap-1.5 bg-[#007AFF] px-4 text-[15px] text-white sm:flex-none"
                         >
                             Explore
-                            <ArrowRight
-                                class="h-3 w-3 transition-transform group-hover/link:translate-x-1"
-                            />
+                            <ArrowRight class="h-4 w-4" />
                         </Link>
                         <button
-                            @click="emit('close-announcement', item.id)"
-                            class="group/close shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive sm:rounded-xl sm:p-2"
+                            type="button"
+                            class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
                             title="Dismiss"
+                            @click="emit('close-announcement', item.id)"
                         >
-                            <X
-                                class="h-3.5 h-4 w-3.5 transition-transform group-hover/close:rotate-90 sm:w-4"
-                            />
+                            <X class="h-4 w-4" />
                         </button>
                     </div>
                 </div>
             </div>
         </TransitionGroup>
 
-        <!-- Bespoke Hero Section - Open Layout -->
-        <div class="relative flex flex-col justify-center sm:px-2 lg:px-4">
+        <div class="relative flex flex-col justify-center">
             <div
-                class="relative flex flex-col justify-between gap-3 lg:flex-row lg:items-end lg:gap-10"
+                class="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-end lg:gap-8"
             >
-                <!-- Left side: Greetings + Integrated Progress | Right: Profile Picture (mobile) -->
                 <div
-                    class="flex w-full flex-row items-center gap-2 sm:gap-6 lg:w-auto lg:items-center lg:gap-10"
+                    class="flex w-full flex-row items-center gap-3 sm:gap-5 lg:w-auto"
                 >
-                    <!-- Profile Picture with Integrated Level Badge -->
                     <div
                         class="group/avatar relative order-2 shrink-0 lg:order-1"
                     >
                         <div class="relative">
-                            <!-- Level Badge integrated into Avatar -->
                             <div
-                                class="absolute -top-1 -right-1 z-30 rounded-md border border-background bg-gradient-to-br px-1.5 py-0.5 text-[8px] font-black tracking-tighter text-primary-foreground uppercase tabular-nums shadow-lg sm:-top-1 sm:-right-1 sm:px-1.5 sm:py-0.5 sm:text-[8px] lg:-top-1 lg:-right-1 lg:px-1.5 lg:py-0.5 lg:text-[9px]"
-                                :class="
-                                    greetingTheme || 'from-primary to-primary'
-                                "
+                                class="absolute -top-1 -right-1 z-30 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-tight text-white tabular-nums shadow-sm"
+                                :class="greetingTheme || 'bg-[#007AFF]'"
                             >
                                 Lvl {{ animatedLevel }}
                             </div>
 
                             <div
-                                class="absolute -right-1.5 -bottom-1.5 z-20 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background bg-background shadow-lg sm:h-4 sm:w-4 lg:h-5 lg:w-5"
+                                class="absolute -right-0.5 -bottom-0.5 z-20 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background bg-background sm:h-5 sm:w-5"
                             >
                                 <span
-                                    class="h-2 w-2 rounded-full sm:h-2 sm:w-2 lg:h-2.5 lg:w-2.5"
-                                    :class="
-                                        statusColor ||
-                                        'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'
-                                    "
+                                    class="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
+                                    :class="statusColor || 'bg-[#34C759]'"
                                 ></span>
                             </div>
 
                             <Avatar
-                                class="relative size-14 overflow-hidden rounded-xl border border-primary/20 bg-card/40 shadow-lg backdrop-blur-md transition-all duration-700 group-hover/avatar:scale-105 group-hover/avatar:rotate-2 sm:size-16 sm:rounded-xl lg:size-24 lg:rounded-2xl"
+                                class="relative size-14 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
                             >
                                 <AvatarImage
                                     v-if="userAvatar"
@@ -170,7 +155,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                                     class="aspect-square object-cover"
                                 />
                                 <AvatarFallback
-                                    class="flex items-center justify-center bg-primary/5 text-sm font-black text-primary sm:text-xl lg:text-2xl"
+                                    class="flex items-center justify-center bg-muted text-sm font-semibold text-foreground sm:text-lg lg:text-xl"
                                 >
                                     {{ getInitials(userName) }}
                                 </AvatarFallback>
@@ -179,110 +164,58 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                     </div>
 
                     <div class="order-1 min-w-0 flex-1 lg:order-2">
-                        <div
-                            class="flex flex-wrap items-center gap-1.5 text-[7px] font-black tracking-[0.1em] text-muted-foreground/40 uppercase sm:text-[10px] sm:tracking-[0.2em] lg:text-xs lg:tracking-[0.3em]"
-                        >
+                        <div class="mb-1 flex items-center gap-1.5">
                             <button
-                                class="group/sync flex cursor-pointer items-center rounded-full border border-primary/10 bg-primary/5 p-1.5 text-primary/60 transition-colors hover:bg-primary/10 active:scale-95"
-                                @click="emit('refresh')"
+                                type="button"
+                                class="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted active:scale-95"
                                 aria-label="Refresh dashboard"
                                 title="Refresh"
+                                @click="emit('refresh')"
                             >
                                 <RefreshCw
-                                    class="h-2.5 w-2.5 sm:h-3 sm:w-3"
+                                    class="h-4 w-4"
                                     :class="{ 'animate-spin': isRefreshing }"
                                 />
                             </button>
                         </div>
 
-                        <div class="space-y-0.5 sm:space-y-1">
+                        <div class="space-y-1">
                             <h1
-                                class="truncate text-base leading-tight font-bold tracking-tight text-foreground sm:text-2xl lg:text-4xl"
+                                class="dash-title truncate text-[26px] leading-[1.15] text-foreground sm:text-[32px] lg:text-[40px]"
                             >
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
                             <p
-                                class="line-clamp-1 text-[8px] leading-relaxed font-medium text-muted-foreground/60 sm:text-sm lg:mt-1 lg:text-lg"
-                                v-html="smarterStatus"
-                            ></p>
+                                class="line-clamp-2 text-[15px] leading-snug text-muted-foreground sm:text-[17px]"
+                            >
+                                {{ smarterStatus }}
+                            </p>
                         </div>
 
-                        <!-- Mobile: Add Section CTA (compact pill) -->
-                        <div class="mt-1.5 lg:hidden">
+                        <div class="mt-3 lg:hidden">
                             <button
+                                type="button"
+                                class="dash-btn inline-flex items-center gap-1.5 border border-border/60 bg-card px-4 text-[15px] text-foreground active:scale-[0.98]"
                                 @click="emit('open-section-modal')"
-                                class="group inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[8px] font-black tracking-widest text-primary uppercase backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm active:scale-95"
                             >
-                                <Plus
-                                    class="h-3 w-3 shrink-0 transition-transform duration-300 group-hover:rotate-90"
-                                />
-                                Join Section
+                                <Plus class="h-4 w-4 shrink-0" />
+                                Join section
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Desktop: Add Section CTA -->
                 <div class="mb-1 hidden shrink-0 self-end lg:block">
                     <button
+                        type="button"
+                        class="dash-btn inline-flex items-center gap-2 border border-border/60 bg-card px-5 text-[15px] text-foreground transition-colors hover:bg-muted"
                         @click="emit('open-section-modal')"
-                        class="group relative flex items-center gap-2 overflow-hidden rounded-xl border border-primary/20 bg-primary/5 px-4 py-2 text-[10px] font-black tracking-widest text-primary uppercase backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/10 hover:shadow-sm active:scale-95"
                     >
-                        <!-- Shine effect -->
-                        <div
-                            class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent transition-transform duration-700 group-hover:translate-x-full"
-                        ></div>
-
-                        <Plus
-                            class="h-3.5 w-3.5 shrink-0 transition-transform duration-300 group-hover:rotate-90"
-                        />
-                        Join Section
+                        <Plus class="h-4 w-4 shrink-0" />
+                        Join section
                     </button>
                 </div>
             </div>
         </div>
     </div>
 </template>
-
-<style scoped>
-@keyframes slow-drift {
-    0%,
-    100% {
-        transform: translate(0, 0) scale(1);
-    }
-    50% {
-        transform: translate(5%, 5%) scale(1.1);
-    }
-}
-
-@keyframes slow-drift-reverse {
-    0%,
-    100% {
-        transform: translate(0, 0) scale(1.1);
-    }
-    50% {
-        transform: translate(-5%, -5%) scale(1);
-    }
-}
-
-@keyframes shimmer {
-    0% {
-        transform: translateX(-200%) skew-x(-45deg);
-    }
-    100% {
-        transform: translateX(200%) skew-x(-45deg);
-    }
-}
-
-.animate-slow-drift {
-    animation: slow-drift 20s infinite ease-in-out;
-}
-
-.animate-slow-drift-reverse {
-    animation: slow-drift-reverse 25s infinite ease-in-out;
-}
-
-.animate-shimmer {
-    animation: shimmer 3s infinite ease-in-out;
-}
-</style>

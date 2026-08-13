@@ -2,7 +2,7 @@
 import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
-import { Calendar, ChevronDown, ChevronUp, Trophy } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, Trophy } from 'lucide-vue-next';
 import {
     onMounted,
     onBeforeUnmount,
@@ -27,7 +27,6 @@ import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useLoader } from '@/composables/useLoader';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -141,37 +140,27 @@ const greetingTheme = computed(() => {
     const streak = props.userStats.streak;
     const overdue = todaySummary.value.overdueCount;
 
-    if (overdue > 0)
-        return 'from-rose-500 to-red-600 dark:from-rose-400 dark:to-red-500';
-    if (streak >= 7)
-        return 'from-amber-400 to-orange-500 dark:from-amber-300 dark:to-orange-400';
-    if (streak > 0)
-        return 'from-emerald-400 to-teal-500 dark:from-emerald-300 dark:to-teal-400';
+    if (overdue > 0) return 'bg-[#FF3B30]';
+    if (streak >= 7) return 'bg-[#FF9F0A]';
+    if (streak > 0) return 'bg-[#34C759]';
 
-    if (hour >= 0 && hour < 4)
-        return 'from-indigo-400 to-purple-600 dark:from-indigo-300 dark:to-purple-500'; // Late night
-    if (hour >= 4 && hour < 7)
-        return 'from-sky-400 to-blue-500 dark:from-sky-300 dark:to-blue-400'; // Early bird
-    if (hour >= 7 && hour < 12)
-        return 'from-amber-300 to-yellow-500 dark:from-amber-200 dark:to-yellow-400'; // Morning
-    if (hour >= 12 && hour < 17)
-        return 'from-orange-400 to-rose-500 dark:from-orange-300 dark:to-rose-400'; // Afternoon
-    if (hour >= 17 && hour < 21)
-        return 'from-violet-500 to-fuchsia-600 dark:from-violet-400 dark:to-fuchsia-500'; // Evening
-    return 'from-blue-400 to-indigo-600 dark:from-blue-300 dark:to-indigo-500'; // Winding down
+    if (hour >= 0 && hour < 4) return 'bg-[#5856D6]';
+    if (hour >= 4 && hour < 7) return 'bg-[#5AC8FA]';
+    if (hour >= 7 && hour < 12) return 'bg-[#FF9F0A]';
+    if (hour >= 12 && hour < 17) return 'bg-[#FF9500]';
+    if (hour >= 17 && hour < 21) return 'bg-[#AF52DE]';
+    return 'bg-[#007AFF]';
 });
 
 const statusColor = computed(() => {
     const overdue = todaySummary.value.overdueCount;
     const streak = props.userStats.streak;
 
-    if (overdue > 0) return 'bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.4)]';
-    if (streak >= 7)
-        return 'bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.4)]';
-    if (streak > 0)
-        return 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]';
+    if (overdue > 0) return 'bg-[#FF3B30]';
+    if (streak >= 7) return 'bg-[#FF9F0A]';
+    if (streak > 0) return 'bg-[#34C759]';
 
-    return 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.4)]';
+    return 'bg-[#34C759]';
 });
 
 // Smarter status subtext for the hero
@@ -183,15 +172,14 @@ const smarterStatus = computed(() => {
     const dueToday = todaySummary.value.dueTodayCount;
 
     if (overdue > 0)
-        return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} requiring <span class="text-rose-500 dark:text-rose-400 font-semibold drop-shadow-sm">immediate attention</span>.`;
+        return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} that need attention.`;
     if (xpRemaining < 200)
-        return `Only <span class="text-emerald-500 dark:text-emerald-400 font-semibold drop-shadow-sm">${xpRemaining} XP</span> until you reach Level ${props.userStats.level + 1}!`;
-    if (streak >= 3)
-        return `You've maintained a <span class="text-amber-500 dark:text-amber-400 font-semibold drop-shadow-sm">${streak}-day streak</span>. Keep the momentum!`;
+        return `Only ${xpRemaining} XP until Level ${props.userStats.level + 1}.`;
+    if (streak >= 3) return `A ${streak}-day streak. Keep the momentum going.`;
     if (dueToday > 0)
-        return `You have ${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your <span class="text-blue-500 dark:text-blue-400 font-semibold drop-shadow-sm">schedule for today</span>.`;
+        return `${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your schedule today.`;
 
-    return `Your learning engine is performing at <span class="text-primary font-semibold drop-shadow-sm">peak capacity</span>.`;
+    return `You're all caught up for now.`;
 });
 
 const isBooted = ref(false);
@@ -551,7 +539,7 @@ const handleLogout = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="dashboardContainer"
-            class="relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden bg-background p-3 sm:p-5 md:gap-6 md:p-8"
+            class="dashboard-ui relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-5 overflow-hidden bg-background p-4 sm:p-6 md:gap-7 md:p-8"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
@@ -725,18 +713,18 @@ const handleLogout = () => {
                                 "
                                 :aria-expanded="isLeaderboardExpanded"
                                 :aria-controls="'mobile-leaderboard-panel'"
-                                class="flex w-full items-center justify-between gap-3 rounded-xl border border-border/30 bg-card/40 px-4 py-3 text-left transition-all duration-300 hover:border-amber-400/30"
+                                class="flex min-h-11 w-full items-center justify-between gap-3 rounded-[1.25rem] border border-border/50 bg-card px-4 py-3.5 text-left transition-colors active:bg-muted/50"
                             >
                                 <div class="flex min-w-0 items-center gap-3">
-                                    <Trophy class="h-4 w-4 text-amber-400" />
+                                    <Trophy class="h-4 w-4 text-[#007AFF]" />
                                     <div class="min-w-0">
                                         <span
-                                            class="text-xs font-bold text-foreground"
+                                            class="text-[15px] font-semibold tracking-tight text-foreground"
                                             >Leaderboard</span
                                         >
                                         <p
                                             v-if="primaryLeaderboard"
-                                            class="truncate text-[9px] text-muted-foreground"
+                                            class="truncate text-[13px] text-muted-foreground"
                                         >
                                             {{ primaryLeaderboard.sectionName }}
                                             ·
@@ -749,9 +737,8 @@ const handleLogout = () => {
                                 </div>
                                 <span
                                     v-if="primaryLeaderboard"
-                                    class="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-[10px] font-black tracking-wide text-amber-400 uppercase"
+                                    class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#007AFF]/10 px-2.5 py-1 text-[13px] font-semibold text-[#007AFF] tabular-nums"
                                 >
-                                    <Trophy class="h-3 w-3" />
                                     #{{ primaryLeaderboard.userRank }}
                                 </span>
                                 <component
@@ -799,38 +786,24 @@ const handleLogout = () => {
                         class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
                     >
                         <!-- Streak Heatmap Card (compact) -->
-                        <SpotlightCard
-                            customSize
-                            glowColor="blue"
-                            className="surface-card p-0 w-full min-w-0"
+                        <section
+                            class="surface-card w-full min-w-0 p-4 sm:p-5"
+                            aria-label="Activity"
                         >
-                            <div
-                                class="relative flex h-full w-full flex-col p-4 sm:p-5"
-                            >
-                                <div
-                                    class="relative z-10 mb-4 flex items-center justify-between gap-2 sm:mb-5"
+                            <div class="mb-4 min-w-0 sm:mb-5">
+                                <h3
+                                    class="dash-title text-[17px] text-foreground sm:text-lg"
                                 >
-                                    <div class="min-w-0">
-                                        <h3
-                                            class="flex items-center gap-2 text-sm font-bold sm:text-base"
-                                        >
-                                            <Calendar
-                                                class="h-4 w-4 shrink-0 text-primary"
-                                            />
-                                            Activity Pulse
-                                        </h3>
-                                        <p
-                                            class="mt-0.5 text-xs text-muted-foreground sm:text-[13px]"
-                                        >
-                                            Your last 4 weeks at a glance.
-                                        </p>
-                                    </div>
-                                </div>
-                                <StreakHeatmap
-                                    :login-dates="streak.loginDates"
-                                />
+                                    Activity
+                                </h3>
+                                <p
+                                    class="mt-0.5 text-[13px] text-muted-foreground"
+                                >
+                                    Your last 4 weeks at a glance.
+                                </p>
                             </div>
-                        </SpotlightCard>
+                            <StreakHeatmap :login-dates="streak.loginDates" />
+                        </section>
                     </div>
                 </Motion>
             </template>
@@ -849,20 +822,17 @@ const handleLogout = () => {
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-md"
         >
             <div
-                class="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-destructive/30 bg-background/95 shadow-2xl"
+                class="relative w-full max-w-lg overflow-hidden rounded-[1.75rem] border border-border/60 bg-card shadow-2xl"
             >
-                <div
-                    class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-destructive/10 via-destructive to-destructive/10"
-                />
                 <div class="p-6 sm:p-8">
                     <div>
-                        <p class="text-xs font-medium text-destructive/80">
-                            Access Restricted
+                        <p class="text-[13px] font-medium text-[#FF3B30]">
+                            Access restricted
                         </p>
                         <h2
-                            class="mt-1 text-3xl font-semibold tracking-tight text-foreground"
+                            class="mt-1 text-[28px] font-semibold tracking-tight text-foreground"
                         >
-                            Account Suspended
+                            Account suspended
                         </h2>
                         <p
                             class="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base"
@@ -879,7 +849,7 @@ const handleLogout = () => {
                             class="rounded-xl border border-border/80 bg-gradient-to-br from-muted/60 to-muted/30 p-4"
                         >
                             <p
-                                class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                                class="text-[13px] font-medium text-muted-foreground"
                             >
                                 Ban reason
                             </p>
@@ -901,7 +871,7 @@ const handleLogout = () => {
                 >
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center rounded-xl bg-destructive px-5 py-2.5 text-sm font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90"
+                        class="dash-btn inline-flex items-center justify-center bg-destructive px-5 text-[15px] text-destructive-foreground transition-colors hover:bg-destructive/90"
                         @click="handleLogout"
                     >
                         Log out
