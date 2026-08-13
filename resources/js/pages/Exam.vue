@@ -1,5 +1,13 @@
+<script lang="ts">
+// Module-scoped (outside `<script setup>`, which re-runs per component
+// instance): persists across Inertia remounts — back/forward navigation and
+// prefetch-cache restores both create a *new* instance, so a flag declared in
+// setup would reset to false and the mount-time refresh would never fire.
+let hasMountedOnce = false;
+</script>
+
 <script setup lang="ts">
-import { Head, Link, usePoll } from '@inertiajs/vue3';
+import { Head, Link, router, usePoll } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import {
     Calendar,
@@ -13,7 +21,14 @@ import {
     TrendingUp,
     Search,
 } from 'lucide-vue-next';
-import { ref, computed, watch, nextTick } from 'vue';
+import {
+    ref,
+    computed,
+    watch,
+    nextTick,
+    onMounted,
+    onBeforeUnmount,
+} from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -22,8 +37,48 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { show as examsShow } from '@/routes/exams';
 import type { BreadcrumbItem } from '@/types';
 
-usePoll(10000, {
-    only: ['examsBySeason'],
+// The server data behind this page can go stale the moment a student submits
+// an exam elsewhere (success-modal redirect, browser back/forward, or an exam
+// that opens in a new tab). The 10s poll eventually catches up, but we also
+// refresh the instant the page is shown again so the exam cards reflect the
+// latest submission without a hard refresh.
+const { stop: stopPoll, start: startPoll } = usePoll(
+    10000,
+    { only: ['examsBySeason'] },
+    { autoStart: false },
+);
+
+const refreshExams = () => {
+    router.reload({ only: ['examsBySeason'] });
+};
+
+// Covers tab switches back to the Activities tab — e.g. exams that open in a
+// new tab (`target="_blank"`) leave this page mounted underneath with stale
+// props, so returning to the tab must re-fetch immediately.
+const handleVisibilityChange = () => {
+    if (!document.hidden) {
+        refreshExams();
+    }
+};
+
+onMounted(() => {
+    startPoll();
+    // Skip the refresh on the session's very first mount: the server just
+    // rendered fresh props, so a reload would be a wasted request. Every
+    // later remount may be a stale restore (prefetch cache / history state /
+    // back-nav), so fetch fresh data right away instead of waiting for the
+    // first poll tick. Skipped while the tab is hidden — the visibility
+    // handler refreshes as soon as it becomes visible again.
+    if (hasMountedOnce && !document.hidden) {
+        refreshExams();
+    }
+    hasMountedOnce = true;
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+});
+
+onBeforeUnmount(() => {
+    stopPoll();
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
 });
 
 interface ExamSubmission {

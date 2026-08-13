@@ -1258,6 +1258,12 @@ const submitPart = async () => {
             onSuccess: (page) => {
                 const submittedPartId = Number(selectedPart.value?.id);
                 submitError.value = null;
+                // Invalidate any prefetched/cached copies of the exam lists
+                // (the sidebar prefetches /exams and /dashboard with a 30s
+                // cache) so returning to either page reflects this submission
+                // instead of re-serving the pre-submission snapshot.
+                router.flush('/exams');
+                router.flush('/dashboard');
                 // Only mark the part submitted once the server confirms it —
                 // marking it before the request used to leave the UI claiming
                 // "submitted" while the server had nothing recorded.
