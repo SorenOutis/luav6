@@ -793,21 +793,21 @@ const handleLogout = () => {
                                 class="relative flex h-full w-full flex-col p-4 sm:p-5"
                             >
                                 <div
-                                    class="relative z-10 mb-4 flex items-center justify-between"
+                                    class="relative z-10 mb-4 flex items-center justify-between gap-2 sm:mb-5"
                                 >
-                                    <div>
+                                    <div class="min-w-0">
                                         <h3
-                                            class="flex items-center gap-2 text-sm font-bold"
+                                            class="flex items-center gap-2 text-sm font-bold sm:text-base"
                                         >
                                             <Calendar
-                                                class="h-4 w-4 text-primary"
+                                                class="h-4 w-4 shrink-0 text-primary"
                                             />
                                             Activity Pulse
                                         </h3>
                                         <p
-                                            class="mt-0.5 text-[10px] text-muted-foreground"
+                                            class="mt-0.5 text-xs text-muted-foreground sm:text-[13px]"
                                         >
-                                            Consistency builds momentum.
+                                            Your last 4 weeks at a glance.
                                         </p>
                                     </div>
                                 </div>
