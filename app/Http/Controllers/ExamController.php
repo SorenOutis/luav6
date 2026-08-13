@@ -22,7 +22,6 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -541,32 +540,35 @@ class ExamController extends Controller
             return response()->json(['status' => 'not_submitted']);
         }
 
-        // Self-heal: submissions left pending (created before sync grading
+        // Self-heal: submissions left pending (created before async grading
         // shipped, or whenever no queue worker is consuming the "ai" queue)
-        // are graded inline here. The modal polls this endpoint every 2s, so
-        // a stuck "Reviewing your essay..." resolves by itself. A short-lived
-        // cache lock ensures concurrent polls cannot fire the AI provider
-        // twice for the same submission.
+        // are re-queued here. The modal polls this endpoint every 2s, so a
+        // stuck "Reviewing your essay..." resolves by itself.
+        //
+        // ⚠️ This used to run the job inline with dispatchSync(), which held
+        // the poll request (and a worker) open for the entire ≤45s AI call.
+        // Worse, the 60s cache lock expired mid-call for slow providers, so
+        // the next poll acquired it and fired a SECOND concurrent grading run
+        // — duplicate AI calls that could trip the provider's own rate limit,
+        // and a provider that hung left the poll stuck forever. Dispatching to
+        // the "ai" queue keeps the poll non-blocking. The lock is held (not
+        // manually released) for the whole grading window so concurrent polls
+        // can't queue duplicates, and the job itself is idempotent.
         if (in_array($submission->status, ['pending_review', 'pending_ai'], true)
             && ! $submission->grading_failed
             && $this->hasPendingEssayGrading($submission)) {
-            $lock = Cache::lock('essay_grading_'.$submission->id, 60);
+            // Matches GradeExamSubmissionEssays::$timeout (300s) so the lock
+            // can never expire while the job is still running.
+            $lock = Cache::lock('essay_grading_'.$submission->id, 300);
 
             if ($lock->get()) {
-                try {
-                    GradeExamSubmissionEssays::dispatchSync($submission->id);
-                } catch (\Throwable $e) {
-                    Log::warning('Self-heal essay grading failed for submission '.$submission->id.': '.$e->getMessage());
+                GradeExamSubmissionEssays::dispatch($submission->id);
 
-                    ExamSubmission::whereKey($submission->id)->update([
-                        'status' => 'pending_ai',
-                        'grading_failed' => true,
-                    ]);
-                } finally {
-                    $lock->release();
+                if (! app()->isProduction()) {
+                    // Spawn a detached `queue:work --stop-when-empty` so the
+                    // re-queued job actually runs on a local dev machine.
+                    AiQueueWorker::ensureRunning();
                 }
-
-                $submission->refresh();
             }
         }
 

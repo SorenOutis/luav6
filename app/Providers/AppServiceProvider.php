@@ -6,6 +6,7 @@ use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
 use App\Services\AiSdkProviderService;
 use App\Support\RequestCache;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -47,6 +48,13 @@ class AppServiceProvider extends ServiceProvider
         // plain Laravel API — this boots fine whether or not the package is
         // present. Only super admins may inspect queue status.
         Gate::define('viewHorizon', fn ($user = null): bool => (bool) $user?->isSuperAdmin());
+
+        // Register the /broadcasting/auth endpoint. Without this, the
+        // frontend's private-channel subscription (ExamAnswersSaved on
+        // `exam.{id}.student.{userId}`) can never authenticate — pusher-js
+        // posts to /broadcasting/auth, gets a 404, and the realtime "saved"
+        // acknowledgement silently never arrives.
+        Broadcast::routes();
     }
 
     /**
