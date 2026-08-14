@@ -97,7 +97,28 @@ class DashboardController extends Controller
             : $user->sections()->pluck('sections.id');
 
         // ── Announcements ──────────────────────────────────────────
-        $announcements = Announcement::where('is_active', true)->get();
+        // Section-targeted announcements are only shown to students
+        // enrolled in that section; announcements without a section
+        // are shown to everyone.
+        $studentSectionIds = $user->sections->pluck('id');
+
+        $announcements = Announcement::query()
+            ->where('is_active', true)
+            ->where(fn ($query) => $query
+                ->whereNull('section_id')
+                ->orWhereIn('section_id', $studentSectionIds))
+            ->with('section:id,name')
+            ->latest()
+            ->get()
+            ->map(fn (Announcement $announcement) => [
+                'id' => $announcement->id,
+                'title' => $announcement->title,
+                'description' => $announcement->description,
+                'link' => $announcement->link,
+                'sectionName' => $announcement->section?->name,
+                'createdAt' => $announcement->created_at?->diffForHumans(),
+            ])
+            ->values();
 
         // ── Courses ────────────────────────────────────────────────
         $coursesResource = $user->courses();

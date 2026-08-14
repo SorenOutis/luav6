@@ -17,6 +17,11 @@ class AnnouncementsTable
             ->columns([
                 TextColumn::make('title')
                     ->searchable(),
+                TextColumn::make('section.name')
+                    ->label('Section')
+                    ->placeholder('All sections')
+                    ->searchable()
+                    ->sortable(),
                 IconColumn::make('is_active')
                     ->boolean(),
                 TextColumn::make('created_at')
