@@ -567,9 +567,7 @@ const iconForReason = (reason: string) => {
                                                 class="mt-0.5 text-[13px] text-muted-foreground"
                                             >
                                                 {{ course.completedLessons }} of
-                                                {{
-                                                    course.totalLessons
-                                                }}
+                                                {{ course.totalLessons }}
                                                 lessons ·
                                                 {{ course.xpEarned }} XP
                                             </p>
