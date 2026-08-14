@@ -80,7 +80,7 @@ const openCalendar = () => {
                     </div>
                 </div>
                 <ChevronRight
-                    class="h-5 w-5 shrink-0 text-muted-foreground/30 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary"
+                    class="hidden h-5 w-5 shrink-0 text-muted-foreground/30 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary sm:block"
                 />
             </div>
 
@@ -133,7 +133,7 @@ const openCalendar = () => {
                     >
                 </p>
                 <span
-                    class="flex items-center gap-1 text-[13px] font-medium text-[#D97757]"
+                    class="hidden items-center gap-1 text-[13px] font-medium text-[#D97757] sm:flex"
                 >
                     Calendar
                     <ChevronRight class="h-3 w-3" />

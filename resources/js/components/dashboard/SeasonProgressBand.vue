@@ -89,7 +89,9 @@ const formatDate = (iso?: string | null) => {
             </div>
         </div>
 
-        <div class="relative z-10 flex items-end justify-between gap-3">
+        <div
+            class="relative z-10 flex flex-wrap items-end justify-between gap-x-3 gap-y-2"
+        >
             <div>
                 <p class="dash-label">Time left</p>
                 <p
@@ -120,7 +122,7 @@ const formatDate = (iso?: string | null) => {
 
         <div class="relative z-10 space-y-1.5">
             <div
-                class="flex items-center justify-between text-[13px] font-medium text-muted-foreground tabular-nums"
+                class="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[13px] font-medium text-muted-foreground tabular-nums"
             >
                 <span class="inline-flex items-center gap-1">
                     <CalendarDays class="h-3 w-3" />

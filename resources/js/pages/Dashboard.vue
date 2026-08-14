@@ -665,10 +665,10 @@ const handleLogout = () => {
                                   delay: 0.15,
                               }
                     "
-                    class="dashboard-progress grid grid-cols-1 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+                    class="dashboard-progress grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
                 >
                     <LevelProgressCard
-                        class="md:col-span-2 lg:col-span-2"
+                        class="col-span-2"
                         :user-stats="userStats"
                         :breakdown="props.statsBreakdown?.xp ?? []"
                         :xp-history="props.xpHistory ?? []"
