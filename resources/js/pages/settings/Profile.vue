@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Camera, Hash, LogOut, Plus } from 'lucide-vue-next';
+import { Camera, Crop, Hash, LogOut, Plus } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import CoverPhotoCropper from '@/components/CoverPhotoCropper.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -54,16 +55,59 @@ const triggerFileInput = () => {
 
 const coverInput = ref<HTMLInputElement | null>(null);
 const coverPreviewUrl = ref<string | null>(null);
+const coverFileToCrop = ref<File | null>(null);
 
 const handleCoverChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (file) {
-        coverPreviewUrl.value = URL.createObjectURL(file);
+        // Open the cropper first — the input is only populated with the
+        // framed result once the user confirms their positioning.
+        coverFileToCrop.value = file;
+    }
+};
+
+/**
+ * Swap the cropped result into the real file input so the multipart form
+ * uploads the framed image rather than the original upload.
+ */
+const applyCroppedCover = (file: File, previewUrl: string) => {
+    if (coverInput.value) {
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        coverInput.value.files = transfer.files;
+    }
+
+    if (coverPreviewUrl.value) {
+        URL.revokeObjectURL(coverPreviewUrl.value);
+    }
+
+    coverPreviewUrl.value = previewUrl;
+    coverFileToCrop.value = null;
+};
+
+const cancelCoverCrop = () => {
+    coverFileToCrop.value = null;
+
+    // Clear the pending selection so re-picking the same file still fires
+    // a change event.
+    if (coverInput.value && !coverPreviewUrl.value) {
+        coverInput.value.value = '';
     }
 };
 
 const triggerCoverInput = () => {
     coverInput.value?.click();
+};
+
+const reopenCoverCropper = () => {
+    const file = coverInput.value?.files?.[0];
+
+    if (file) {
+        coverFileToCrop.value = file;
+        return;
+    }
+
+    triggerCoverInput();
 };
 
 // ── Section join modal state ────────────────────────────────────────
@@ -189,12 +233,23 @@ const leaveSection = (sectionId: number) => {
                                 <h4 class="text-sm font-bold">Cover Photo</h4>
                                 <p class="text-xs text-muted-foreground">
                                     Recommend: Landscape PNG, JPG, or GIF, max
-                                    10MB.
+                                    10MB. You&apos;ll be able to position it
+                                    before saving.
                                 </p>
                             </div>
                             <div
-                                class="flex flex-col items-center gap-2 sm:items-end"
+                                class="flex flex-col items-center gap-2 sm:flex-row sm:items-end"
                             >
+                                <Button
+                                    v-if="coverPreviewUrl"
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    @click="reopenCoverCropper"
+                                >
+                                    <Crop class="mr-1.5 h-3.5 w-3.5" />
+                                    Reposition
+                                </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -213,8 +268,12 @@ const leaveSection = (sectionId: number) => {
                                 />
                             </div>
                         </div>
+
+                        <!-- Preview rendered at the same 3:1 frame the profile
+                             banner uses, so what you see is what gets saved. -->
                         <div
-                            class="group relative flex h-32 w-full items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border/50 bg-muted sm:h-48"
+                            class="group relative flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-border/50 bg-muted"
+                            style="aspect-ratio: 3"
                             @click="triggerCoverInput"
                         >
                             <!-- Decorative: the surrounding button carries the accessible label. -->
@@ -225,18 +284,28 @@ const leaveSection = (sectionId: number) => {
                                     String(user.cover_photo ?? '')
                                 "
                                 alt=""
-                                class="h-full w-full cursor-pointer object-cover transition-opacity group-hover:opacity-80"
+                                class="h-full w-full object-cover transition-opacity group-hover:opacity-80"
                             />
                             <div
                                 v-else
-                                class="flex cursor-pointer flex-col items-center text-muted-foreground transition-colors group-hover:text-primary"
+                                class="flex flex-col items-center text-muted-foreground transition-colors group-hover:text-primary"
                             >
                                 <Camera class="mb-2 h-8 w-8 opacity-50" />
                                 <span class="text-xs font-medium"
                                     >Click to upload cover photo</span
                                 >
                             </div>
+
+                            <!-- Avatar ghost mirrors the profile page overlap -->
+                            <div
+                                v-if="coverPreviewUrl || user.cover_photo"
+                                class="pointer-events-none absolute bottom-0 left-4 aspect-square h-1/2 translate-y-1/3 rounded-full border-4 border-background/80 bg-background/20 sm:left-6"
+                                aria-hidden="true"
+                            ></div>
                         </div>
+                        <p class="text-[11px] text-muted-foreground">
+                            This is how your cover will appear on your profile.
+                        </p>
                         <InputError :message="errors.cover_photo" />
                     </div>
 
@@ -418,6 +487,12 @@ const leaveSection = (sectionId: number) => {
         <SectionSelectionModal
             :show="showSectionModal"
             @close="closeSectionModal"
+        />
+
+        <CoverPhotoCropper
+            :file="coverFileToCrop"
+            @cropped="applyCroppedCover"
+            @cancel="cancelCoverCrop"
         />
     </AppLayout>
 </template>
