@@ -51,6 +51,7 @@ const profileUser = {
     name: 'Maria Santos',
     avatar: null,
     cover_photo: '/storage/covers/banner.jpg',
+    bio: 'Curious learner and future scientist.',
     sections: ['Grade 11 - Rizal'],
     streak: 6,
     joinedAt: 'Mar 2025',
@@ -63,6 +64,8 @@ const stats = {
     rank: 3,
     totalPlayers: 120,
     badgesCount: 2,
+    followersCount: 12,
+    followingCount: 4,
 };
 
 const history = [
@@ -110,6 +113,9 @@ const mountProfile = (overrides: Record<string, unknown> = {}) =>
             courses,
             history,
             isSameSection: true,
+            isFollowing: false,
+            kudos: { 'great-work': 0, 'on-fire': 0, 'keep-going': 0 },
+            viewerKudo: null,
             ...overrides,
         },
         global: { stubs: { Link: LinkStub } },

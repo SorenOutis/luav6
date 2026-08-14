@@ -21,10 +21,12 @@ use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ProfileKudoController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
@@ -67,6 +69,9 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     Route::get('u/{user}', [PublicProfileController::class, 'show'])->name('users.show');
+    Route::post('u/{user}/follow', [UserFollowController::class, 'store'])->name('users.follow');
+    Route::delete('u/{user}/follow', [UserFollowController::class, 'destroy'])->name('users.unfollow');
+    Route::post('u/{user}/kudos', [ProfileKudoController::class, 'store'])->name('users.kudos');
     Route::get('users/{user}/xp-history', XpHistoryController::class)->name('users.xp-history');
     Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
     Route::post('sections/join-by-code', [ProfileController::class, 'joinByCode'])->name('sections.join-by-code');

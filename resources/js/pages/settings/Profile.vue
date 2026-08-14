@@ -376,6 +376,25 @@ const leaveSection = (sectionId: number) => {
                         <InputError class="mt-2" :message="errors.email" />
                     </div>
 
+                    <div class="grid gap-2">
+                        <div class="flex items-baseline justify-between gap-3">
+                            <Label for="bio">About me</Label>
+                            <span class="text-xs text-muted-foreground">
+                                Up to 280 characters
+                            </span>
+                        </div>
+                        <textarea
+                            id="bio"
+                            name="bio"
+                            rows="3"
+                            maxlength="280"
+                            class="mt-1 block w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            placeholder="Share a little about yourself, your interests, or what you enjoy learning."
+                            :value="String(user.bio ?? '')"
+                        ></textarea>
+                        <InputError class="mt-2" :message="errors.bio" />
+                    </div>
+
                     <div v-if="mustVerifyEmail && !user.email_verified_at">
                         <p class="-mt-4 text-sm text-muted-foreground">
                             Your email address is unverified.
