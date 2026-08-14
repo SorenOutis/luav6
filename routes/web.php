@@ -24,9 +24,9 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileKudoController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
-use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
 use Illuminate\Support\Facades\Route;
 
