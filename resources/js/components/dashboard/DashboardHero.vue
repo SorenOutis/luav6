@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { X, Plus, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
+import {
+    X,
+    Plus,
+    Megaphone,
+    ArrowRight,
+    RefreshCw,
+    ChevronRight,
+} from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
@@ -161,106 +168,141 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                 class="relative flex flex-col justify-between gap-2.5 lg:flex-row lg:items-end lg:gap-8"
             >
                 <div
-                    class="flex w-full flex-row items-center gap-2.5 sm:gap-5 lg:w-auto"
+                    class="flex w-full flex-col gap-2.5 sm:gap-3 lg:w-auto lg:flex-row lg:items-center lg:gap-5"
                 >
+                    <!-- App-style header row: avatar left, greeting right of it, refresh trailing -->
                     <div
-                        class="group/avatar relative order-2 shrink-0 lg:order-1"
+                        class="flex w-full flex-row items-center gap-3 sm:gap-5"
                     >
-                        <div class="relative">
-                            <div
-                                class="absolute -top-1 -right-1 z-30 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-tight text-white tabular-nums shadow-sm"
-                                :class="greetingTheme || 'bg-[#D97757]'"
-                            >
-                                Lvl {{ animatedLevel }}
-                            </div>
-
-                            <div
-                                class="absolute -right-0.5 -bottom-0.5 z-20 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background bg-background sm:h-5 sm:w-5"
-                            >
-                                <span
-                                    class="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
-                                    :class="statusColor || 'bg-[#4D9375]'"
-                                ></span>
-                            </div>
-
-                            <component
-                                :is="profileHref ? Link : 'div'"
-                                v-bind="
-                                    profileHref
-                                        ? {
-                                              href: profileHref,
-                                              'aria-label': `View ${userName}'s profile`,
-                                              title: 'View your profile',
-                                          }
-                                        : {}
-                                "
-                                class="block rounded-full transition-transform duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                                :class="
-                                    profileHref
-                                        ? 'cursor-pointer hover:scale-[1.03] active:scale-[0.98]'
-                                        : ''
-                                "
-                            >
-                                <Avatar
-                                    class="relative size-11 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
+                        <div class="group/avatar relative shrink-0">
+                            <div class="relative">
+                                <div
+                                    class="absolute -top-1 -right-1 z-30 rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-tight text-white tabular-nums shadow-sm"
+                                    :class="greetingTheme || 'bg-[#D97757]'"
                                 >
-                                    <AvatarImage
-                                        v-if="userAvatar"
-                                        :src="userAvatar"
-                                        :alt="userName"
-                                        class="aspect-square object-cover"
-                                    />
-                                    <AvatarFallback
-                                        class="flex items-center justify-center bg-muted text-sm font-semibold text-foreground sm:text-lg lg:text-xl"
+                                    Lvl {{ animatedLevel }}
+                                </div>
+
+                                <div
+                                    class="absolute -right-0.5 -bottom-0.5 z-20 flex h-4 w-4 items-center justify-center rounded-full border-2 border-background bg-background sm:h-5 sm:w-5"
+                                >
+                                    <span
+                                        class="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
+                                        :class="statusColor || 'bg-[#4D9375]'"
+                                    ></span>
+                                </div>
+
+                                <component
+                                    :is="profileHref ? Link : 'div'"
+                                    v-bind="
+                                        profileHref
+                                            ? {
+                                                  href: profileHref,
+                                                  'aria-label': `View ${userName}'s profile`,
+                                                  title: 'View your profile',
+                                              }
+                                            : {}
+                                    "
+                                    class="block rounded-full transition-transform duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                                    :class="
+                                        profileHref
+                                            ? 'cursor-pointer hover:scale-[1.03] active:scale-[0.98]'
+                                            : ''
+                                    "
+                                >
+                                    <Avatar
+                                        class="relative size-12 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
                                     >
-                                        {{ getInitials(userName) }}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </component>
+                                        <AvatarImage
+                                            v-if="userAvatar"
+                                            :src="userAvatar"
+                                            :alt="userName"
+                                            class="aspect-square object-cover"
+                                        />
+                                        <AvatarFallback
+                                            class="flex items-center justify-center bg-muted text-sm font-semibold text-foreground sm:text-lg lg:text-xl"
+                                        >
+                                            {{ getInitials(userName) }}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </component>
+                            </div>
                         </div>
+
+                        <div class="min-w-0 flex-1">
+                            <div class="mb-1 hidden items-center gap-1 lg:flex">
+                                <button
+                                    type="button"
+                                    class="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted active:scale-95"
+                                    aria-label="Refresh dashboard"
+                                    title="Refresh"
+                                    @click="emit('refresh')"
+                                >
+                                    <RefreshCw
+                                        class="h-4 w-4"
+                                        :class="{
+                                            'animate-spin': isRefreshing,
+                                        }"
+                                    />
+                                </button>
+                            </div>
+
+                            <div class="space-y-0.5 sm:space-y-1">
+                                <h1
+                                    class="dash-title truncate text-[20px] leading-[1.15] text-foreground sm:text-[32px] lg:text-[40px]"
+                                >
+                                    {{ timeBasedGreeting }}, {{ userName }}
+                                </h1>
+                                <p
+                                    class="line-clamp-2 text-[13px] leading-snug text-muted-foreground sm:text-[17px]"
+                                >
+                                    {{ smarterStatus }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Mobile-only trailing refresh action (app header pattern) -->
+                        <button
+                            type="button"
+                            class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-muted active:scale-95 lg:hidden"
+                            aria-label="Refresh dashboard"
+                            title="Refresh"
+                            @click="emit('refresh')"
+                        >
+                            <RefreshCw
+                                class="h-4 w-4"
+                                :class="{ 'animate-spin': isRefreshing }"
+                            />
+                        </button>
                     </div>
 
-                    <div class="order-1 min-w-0 flex-1 lg:order-2">
-                        <div class="mb-0.5 flex items-center gap-1 sm:mb-1">
-                            <button
-                                type="button"
-                                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted active:scale-95 sm:h-9 sm:w-9"
-                                aria-label="Refresh dashboard"
-                                title="Refresh"
-                                @click="emit('refresh')"
+                    <!-- Mobile-only app-style "Join section" action row -->
+                    <div class="lg:hidden">
+                        <button
+                            type="button"
+                            class="dash-btn group flex w-full items-center gap-3 border border-border/60 bg-card px-3.5 py-2.5 text-left shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
+                            @click="emit('open-section-modal')"
+                        >
+                            <span
+                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757] sm:h-9 sm:w-9"
                             >
-                                <RefreshCw
-                                    class="h-3.5 w-3.5 sm:h-4 sm:w-4"
-                                    :class="{ 'animate-spin': isRefreshing }"
-                                />
-                            </button>
-                        </div>
-
-                        <div class="space-y-0.5 sm:space-y-1">
-                            <h1
-                                class="dash-title truncate text-[20px] leading-[1.15] text-foreground sm:text-[32px] lg:text-[40px]"
-                            >
-                                {{ timeBasedGreeting }}, {{ userName }}
-                            </h1>
-                            <p
-                                class="line-clamp-2 text-[13px] leading-snug text-muted-foreground sm:text-[17px]"
-                            >
-                                {{ smarterStatus }}
-                            </p>
-                        </div>
-
-                        <div class="mt-2 lg:hidden">
-                            <button
-                                type="button"
-                                class="dash-btn inline-flex h-9 items-center gap-1.5 border border-border/60 bg-card px-3 text-[13px] text-foreground active:scale-[0.98] sm:h-11 sm:px-4 sm:text-[15px]"
-                                @click="emit('open-section-modal')"
-                            >
-                                <Plus
-                                    class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
-                                />
-                                Join section
-                            </button>
-                        </div>
+                                <Plus class="h-4 w-4" />
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span
+                                    class="block truncate text-[15px] font-semibold tracking-tight text-foreground"
+                                    >Join section</span
+                                >
+                                <span
+                                    class="block truncate text-[12.5px] leading-tight text-muted-foreground"
+                                    >Enroll with your section code</span
+                                >
+                            </span>
+                            <ChevronRight
+                                class="h-4 w-4 shrink-0 text-muted-foreground/50 transition-transform group-active:translate-x-0.5"
+                                aria-hidden="true"
+                            />
+                        </button>
                     </div>
                 </div>
 

@@ -2,18 +2,26 @@
 
 <template>
     <div class="flex flex-col gap-3 sm:gap-6">
-        <div class="flex items-center gap-3 py-0.5 sm:gap-4 sm:py-1">
-            <div
-                class="h-11 w-11 shrink-0 animate-pulse rounded-full bg-muted sm:h-16 sm:w-16"
-            ></div>
-            <div class="flex flex-1 flex-col gap-2">
+        <div class="flex flex-col gap-2.5 sm:gap-3">
+            <div class="flex items-center gap-3 py-0.5 sm:gap-4 sm:py-1">
                 <div
-                    class="h-7 w-48 max-w-full animate-pulse rounded-full bg-muted"
+                    class="h-12 w-12 shrink-0 animate-pulse rounded-full bg-muted sm:h-16 sm:w-16"
                 ></div>
+                <div class="flex flex-1 flex-col gap-2">
+                    <div
+                        class="h-7 w-48 max-w-full animate-pulse rounded-full bg-muted"
+                    ></div>
+                    <div
+                        class="h-4 w-72 max-w-full animate-pulse rounded-full bg-muted/70"
+                    ></div>
+                </div>
                 <div
-                    class="h-4 w-72 max-w-full animate-pulse rounded-full bg-muted/70"
+                    class="h-10 w-10 shrink-0 animate-pulse rounded-full border border-border/40 bg-card lg:hidden"
                 ></div>
             </div>
+            <div
+                class="h-12 w-full animate-pulse rounded-full border border-border/40 bg-card lg:hidden"
+            ></div>
         </div>
 
         <div
@@ -46,10 +54,10 @@
         ></div>
 
         <div
-            class="grid grid-cols-1 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+            class="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
         >
             <div
-                class="flex h-36 flex-col justify-between rounded-xl border border-border/40 bg-card p-3.5 sm:h-44 sm:rounded-[1.25rem] sm:p-5 lg:col-span-2"
+                class="col-span-2 flex h-36 flex-col justify-between rounded-xl border border-border/40 bg-card p-3.5 sm:h-44 sm:rounded-[1.25rem] sm:p-5"
             >
                 <div class="flex items-center gap-3">
                     <div
