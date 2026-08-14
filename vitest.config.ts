@@ -7,6 +7,24 @@ export default defineConfig({
     resolve: {
         alias: [
             {
+                find: '@/routes/profile',
+                replacement: fileURLToPath(
+                    new URL(
+                        './tests/js/stubs/routes/profile.ts',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
+                find: /^@\/routes$/,
+                replacement: fileURLToPath(
+                    new URL(
+                        './tests/js/stubs/routes/index.ts',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
                 find: '@/routes/exams',
                 replacement: fileURLToPath(
                     new URL(

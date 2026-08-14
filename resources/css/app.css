@@ -1221,7 +1221,8 @@
    ════════════════════════════════════════════════════ */
 
 .dashboard-ui,
-.student-ui {
+.student-ui,
+.profile-ui {
     --dash-accent: #d97757;
     --dash-green: #4d9375;
     --dash-amber: #e0af68;
@@ -1301,6 +1302,52 @@
     min-height: 44px;
     border-radius: 980px;
     font-size: 1rem;
+}
+
+/* ── Profile (social-style, Apple-flavoured) ───────────────────── */
+.profile-ui .profile-title {
+    font-weight: 600;
+    letter-spacing: -0.03em;
+}
+
+.profile-ui .profile-metric {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+}
+
+.profile-ui .profile-btn {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 980px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+
+.profile-ui .profile-segment {
+    min-height: 34px;
+    border-radius: 980px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+
+.profile-ui .profile-card {
+    border-radius: 1.125rem;
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.04),
+        0 10px 28px -20px rgb(0 0 0 / 0.16);
+}
+
+@media (max-width: 640px) {
+    .profile-ui .profile-btn {
+        min-height: 40px;
+    }
+
+    .profile-ui .profile-card {
+        border-radius: 1rem;
+    }
 }
 
 .student-ui.exam-theme-page .exam-hero,

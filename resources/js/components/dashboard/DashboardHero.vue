@@ -29,6 +29,8 @@ interface UserStats {
 interface Props {
     userName: string;
     userAvatar?: string;
+    /** Link to the user's public profile; makes the greeting avatar tappable. */
+    profileHref?: string;
     userStats: UserStats;
     announcements: Announcement[];
     timeBasedGreeting: string;
@@ -181,21 +183,40 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                                 ></span>
                             </div>
 
-                            <Avatar
-                                class="relative size-11 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
+                            <component
+                                :is="profileHref ? Link : 'div'"
+                                v-bind="
+                                    profileHref
+                                        ? {
+                                              href: profileHref,
+                                              'aria-label': `View ${userName}'s profile`,
+                                              title: 'View your profile',
+                                          }
+                                        : {}
+                                "
+                                class="block rounded-full transition-transform duration-200 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                                :class="
+                                    profileHref
+                                        ? 'cursor-pointer hover:scale-[1.03] active:scale-[0.98]'
+                                        : ''
+                                "
                             >
-                                <AvatarImage
-                                    v-if="userAvatar"
-                                    :src="userAvatar"
-                                    :alt="userName"
-                                    class="aspect-square object-cover"
-                                />
-                                <AvatarFallback
-                                    class="flex items-center justify-center bg-muted text-sm font-semibold text-foreground sm:text-lg lg:text-xl"
+                                <Avatar
+                                    class="relative size-11 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
                                 >
-                                    {{ getInitials(userName) }}
-                                </AvatarFallback>
-                            </Avatar>
+                                    <AvatarImage
+                                        v-if="userAvatar"
+                                        :src="userAvatar"
+                                        :alt="userName"
+                                        class="aspect-square object-cover"
+                                    />
+                                    <AvatarFallback
+                                        class="flex items-center justify-center bg-muted text-sm font-semibold text-foreground sm:text-lg lg:text-xl"
+                                    >
+                                        {{ getInitials(userName) }}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </component>
                         </div>
                     </div>
 

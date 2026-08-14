@@ -101,6 +101,11 @@ const manualRefresh = () => {
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
 const userAvatar = computed(() => page.props.auth.user?.avatar);
+const userProfileHref = computed(() => {
+    const id = page.props.auth.user?.id;
+
+    return id ? `/u/${id}` : undefined;
+});
 const isBanned = computed(() => Boolean(page.props.auth.user?.is_banned));
 const banReason = computed(() => page.props.auth.user?.ban_reason || '');
 const bannedAt = computed(() => {
@@ -574,6 +579,7 @@ const handleLogout = () => {
                         class="dashboard-hero"
                         :user-name="userName"
                         :user-avatar="userAvatar"
+                        :profile-href="userProfileHref"
                         :user-stats="userStats"
                         :announcements="announcements"
                         :time-based-greeting="personalizedGreeting"
