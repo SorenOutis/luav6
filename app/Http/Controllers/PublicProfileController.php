@@ -68,6 +68,8 @@ class PublicProfileController extends Controller
         $userSectionIds = $user->sections()->pluck('sections.id')->toArray();
         $sharedSections = array_intersect($viewerSectionIds, $userSectionIds);
         $isSameSection = ! empty($sharedSections);
+        $isFollowing = ! $user->is($viewer)
+            && $viewer->following()->whereKey($user->id)->exists();
 
         $courses = [];
         if ($isSameSection && $currentSeason) {
@@ -121,6 +123,8 @@ class PublicProfileController extends Controller
                 'rank' => $userRank,
                 'totalPlayers' => $totalPlayers,
                 'badgesCount' => $user->badges->count(),
+                'followersCount' => $user->followers()->count(),
+                'followingCount' => $user->following()->count(),
             ],
             'history' => $history,
             'badges' => $user->badges->map(fn ($b) => [
@@ -135,6 +139,7 @@ class PublicProfileController extends Controller
             ]),
             'courses' => $courses,
             'isSameSection' => $isSameSection,
+            'isFollowing' => $isFollowing,
         ]);
     }
 }

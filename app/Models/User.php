@@ -241,6 +241,20 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsToMany(Badge::class)->withPivot('season_id')->withTimestamps();
     }
 
+    /** Users this student follows. */
+    public function following()
+    {
+        return $this->belongsToMany(self::class, 'user_follows', 'follower_id', 'followed_id')
+            ->withTimestamps();
+    }
+
+    /** Users following this student. */
+    public function followers()
+    {
+        return $this->belongsToMany(self::class, 'user_follows', 'followed_id', 'follower_id')
+            ->withTimestamps();
+    }
+
     /**
      * Get the courses associated with the user.
      */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     BookOpen,
     Calendar,
@@ -12,6 +12,8 @@ import {
     Shield,
     Sparkles,
     Trophy,
+    UserCheck,
+    UserPlus,
     Zap,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -69,11 +71,14 @@ const props = defineProps<{
         rank: number;
         totalPlayers: number;
         badgesCount: number;
+        followersCount: number;
+        followingCount: number;
     };
     badges: Badge[];
     courses: Course[];
     history: HistoryItem[];
     isSameSection: boolean;
+    isFollowing: boolean;
 }>();
 
 const { getInitials } = useInitials();
@@ -84,6 +89,23 @@ const breadcrumbItems = [
 ];
 
 const formatDelta = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
+
+const followPending = ref(false);
+const toggleFollow = () => {
+    if (followPending.value) return;
+
+    followPending.value = true;
+    const options = {
+        preserveScroll: true,
+        onFinish: () => (followPending.value = false),
+    };
+
+    if (props.isFollowing) {
+        router.delete(`/u/${props.profileUser.id}/follow`, options);
+    } else {
+        router.post(`/u/${props.profileUser.id}/follow`, {}, options);
+    }
+};
 
 const formatCount = (value: number) =>
     new Intl.NumberFormat('en-US', { notation: 'compact' }).format(value);
@@ -101,6 +123,8 @@ const handle = computed(() => {
 const countStats = computed(() => [
     { key: 'level', label: 'Level', value: props.stats.level },
     { key: 'xp', label: 'Season XP', value: props.stats.xp },
+    { key: 'followers', label: 'Followers', value: props.stats.followersCount },
+    { key: 'following', label: 'Following', value: props.stats.followingCount },
     { key: 'badges', label: 'Badges', value: props.stats.badgesCount },
     { key: 'streak', label: 'Day streak', value: props.profileUser.streak },
 ]);
@@ -201,7 +225,7 @@ const iconForReason = (reason: string) => {
                 </div>
 
                 <!-- ════════════ Identity row ════════════ -->
-                <div class="mx-auto w-full max-w-5xl px-4 sm:px-6">
+                <div class="w-full px-4 sm:px-6 lg:px-8 2xl:px-12">
                     <div
                         class="-mt-12 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between"
                     >
@@ -246,6 +270,31 @@ const iconForReason = (reason: string) => {
                                 <Pencil class="h-3.5 w-3.5" />
                                 Edit profile
                             </Link>
+                            <button
+                                v-if="!profileUser.isCurrentUser && isSameSection"
+                                type="button"
+                                class="profile-btn inline-flex items-center gap-1.5 px-4 text-[14px] transition-colors"
+                                :class="
+                                    isFollowing
+                                        ? 'border border-border/60 bg-card text-foreground hover:bg-muted'
+                                        : 'bg-foreground text-background hover:bg-foreground/90'
+                                "
+                                :disabled="followPending"
+                                @click="toggleFollow"
+                            >
+                                <UserCheck
+                                    v-if="isFollowing"
+                                    class="h-3.5 w-3.5"
+                                />
+                                <UserPlus v-else class="h-3.5 w-3.5" />
+                                {{
+                                    followPending
+                                        ? 'Saving...'
+                                        : isFollowing
+                                          ? 'Following'
+                                          : 'Follow'
+                                }}
+                            </button>
                             <button
                                 type="button"
                                 class="profile-btn inline-flex items-center gap-1.5 border border-border/60 bg-card px-4 text-[14px] text-foreground transition-colors hover:bg-muted"

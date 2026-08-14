@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
 import {
     BookOpen,
     Folder,
@@ -12,6 +13,7 @@ import {
     Zap,
     Shield,
     TrendingUp,
+    Users,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import AppearanceMenu from '@/components/AppearanceMenu.vue';
@@ -64,6 +66,17 @@ const page = usePage();
 const auth = computed(() => page.props.auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 const { appearance, toggleTheme } = useAppearance();
+
+// Laravel broadcasts notifications on the authenticated user's private model
+// channel. With Pusher configured, the notification bell updates immediately;
+// without Pusher this listener is simply inactive and normal navigation still
+// refreshes the same database-backed inbox.
+const notificationChannel = `App.Models.User.${page.props.auth.user?.id}`;
+useEcho(
+    notificationChannel,
+    'Illuminate\\Notifications\\Events\\BroadcastNotificationCreated',
+    () => router.reload({ only: ['notifications'], preserveScroll: true }),
+);
 
 const sectionName = computed(
     () => (page.props.sectionName as string | undefined) || '',
@@ -127,6 +140,7 @@ const notificationIcon = (icon: string) => {
     if (icon === 'zap') return Zap;
     if (icon === 'shield') return Shield;
     if (icon === 'trending-up') return TrendingUp;
+    if (icon === 'users') return Users;
 
     return Bell;
 };
