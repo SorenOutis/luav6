@@ -8,6 +8,7 @@ import GlobalLoader from '@/components/GlobalLoader.vue';
 import { initializeTheme } from '@/composables/useAppearance';
 import { initLenis, isLowEndDeviceSignal } from '@/composables/useLenis';
 import { useLoader } from '@/composables/useLoader';
+import { formPropsFor } from '@/lib/route-helpers';
 
 const metaContent = (name: string): string | undefined =>
     document
@@ -196,19 +197,23 @@ router.on('error', () => {
 });
 
 /**
- * Ensure all route objects have form() method
+ * Ensure all route objects have a form() method.
+ *
+ * Delegates to the shared helper so the runtime patch and the `withForm()`
+ * wrapper used by pages produce identical attributes. Crucially that means
+ * PATCH/PUT/DELETE routes are spoofed as POST + `_method`, which is what
+ * makes multipart file uploads (avatar, cover photo) reach PHP at all.
  */
 function ensureFormMethod(route: any): void {
     if (!route || typeof route !== 'function') return;
     if (typeof route.form === 'function') return;
+    if (!route.url && !route.definition?.url) return;
 
-    const method = route.method || route.definition?.methods?.[0] || 'post';
-    const urlFunc = route.url;
-    if (!urlFunc) return;
-
-    route.form = () => ({
-        action: typeof urlFunc === 'function' ? urlFunc() : urlFunc,
-        method: method.toUpperCase?.() || method,
+    Object.defineProperty(route, 'form', {
+        value: () => formPropsFor(route),
+        configurable: true,
+        enumerable: false,
+        writable: true,
     });
 }
 

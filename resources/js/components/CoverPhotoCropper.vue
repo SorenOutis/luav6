@@ -3,6 +3,7 @@ import { Loader2, Move, ZoomIn, ZoomOut } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
+import { useMobile } from '@/composables/useMobile';
 
 type Props = {
     /** The raw file the user picked from the file input. */
@@ -15,8 +16,19 @@ type Props = {
 
 const props = withDefaults(defineProps<Props>(), {
     aspectRatio: 3,
+    // A 1600px-wide banner is already retina-sharp for the widths this is
+    // displayed at; low-end devices get a smaller canvas so the export does
+    // not have to allocate and encode a needlessly large bitmap.
     outputWidth: 1600,
 });
+
+const { isLowEndDevice } = useMobile();
+
+const effectiveOutputWidth = computed(() =>
+    isLowEndDevice.value
+        ? Math.min(props.outputWidth, 1200)
+        : props.outputWidth,
+);
 
 const emit = defineEmits<{
     /** Emitted with the cropped file once the user confirms. */
@@ -114,6 +126,7 @@ watch(frame, (element) => {
 onBeforeUnmount(() => {
     resizeObserver?.disconnect();
     revokeSource();
+    cancelDragFrame();
 });
 
 const resetTransform = () => {
@@ -168,18 +181,48 @@ const startDrag = (event: PointerEvent) => {
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
 };
 
+// Pointermove fires far faster than the display refreshes (120–240Hz on many
+// touchscreens). Coalescing to one update per frame means a weak GPU does at
+// most one style recalc + composite per frame instead of several, which is
+// the difference between a smooth drag and a juddering one.
+let dragFrame: number | null = null;
+let pendingX = 0;
+let pendingY = 0;
+
+const applyDrag = () => {
+    dragFrame = null;
+    offsetX.value = pendingX;
+    offsetY.value = pendingY;
+    clampOffsets();
+};
+
 const onDrag = (event: PointerEvent) => {
     if (!isDragging.value) return;
 
-    offsetX.value = originX + (event.clientX - dragStartX);
-    offsetY.value = originY + (event.clientY - dragStartY);
-    clampOffsets();
+    pendingX = originX + (event.clientX - dragStartX);
+    pendingY = originY + (event.clientY - dragStartY);
+
+    if (dragFrame === null) {
+        dragFrame = requestAnimationFrame(applyDrag);
+    }
+};
+
+const cancelDragFrame = () => {
+    if (dragFrame !== null) {
+        cancelAnimationFrame(dragFrame);
+        dragFrame = null;
+    }
 };
 
 const endDrag = (event: PointerEvent) => {
     if (!isDragging.value) return;
 
     isDragging.value = false;
+
+    // Land on the final position rather than dropping the last frame.
+    cancelDragFrame();
+    applyDrag();
+
     (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
 };
 
@@ -189,7 +232,7 @@ const stepZoom = (delta: number) => {
 
 // ── Export ──────────────────────────────────────────────────────────
 const renderToCanvas = (image: HTMLImageElement): HTMLCanvasElement => {
-    const outputWidth = props.outputWidth;
+    const outputWidth = effectiveOutputWidth.value;
     const outputHeight = Math.round(outputWidth / props.aspectRatio);
 
     const canvas = document.createElement('canvas');
