@@ -7,6 +7,7 @@ use App\Models\SeasonProgress;
 use App\Models\User;
 use App\Services\BadgeAwardService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -106,12 +107,23 @@ class PublicProfileController extends Controller
             ->whereIn('id', $user->badges->pluck('pivot.season_id')->filter()->unique())
             ->pluck('name', 'id');
 
+        $kudos = DB::table('profile_kudos')
+            ->where('recipient_id', $user->id)
+            ->selectRaw('type, count(*) as count')
+            ->groupBy('type')
+            ->pluck('count', 'type');
+        $viewerKudo = DB::table('profile_kudos')
+            ->where('sender_id', $viewer->id)
+            ->where('recipient_id', $user->id)
+            ->value('type');
+
         return Inertia::render('User/PublicProfile', [
             'profileUser' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'avatar' => $user->avatar,
                 'cover_photo' => $user->cover_photo,
+                'bio' => $user->bio,
                 'sections' => $user->sections->map(fn ($s) => $s->name)->toArray(),
                 'streak' => $user->current_streak ?? 0,
                 'joinedAt' => $user->created_at ? $user->created_at->format('M Y') : 'Unknown',
@@ -140,6 +152,12 @@ class PublicProfileController extends Controller
             'courses' => $courses,
             'isSameSection' => $isSameSection,
             'isFollowing' => $isFollowing,
+            'kudos' => [
+                'great-work' => (int) ($kudos['great-work'] ?? 0),
+                'on-fire' => (int) ($kudos['on-fire'] ?? 0),
+                'keep-going' => (int) ($kudos['keep-going'] ?? 0),
+            ],
+            'viewerKudo' => $viewerKudo,
         ]);
     }
 }

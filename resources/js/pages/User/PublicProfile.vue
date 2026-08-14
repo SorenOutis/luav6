@@ -60,6 +60,7 @@ const props = defineProps<{
         name: string;
         avatar: string | null;
         cover_photo: string | null;
+        bio: string | null;
         sections: string[];
         streak: number;
         joinedAt: string;
@@ -79,6 +80,8 @@ const props = defineProps<{
     history: HistoryItem[];
     isSameSection: boolean;
     isFollowing: boolean;
+    kudos: Record<'great-work' | 'on-fire' | 'keep-going', number>;
+    viewerKudo: 'great-work' | 'on-fire' | 'keep-going' | null;
 }>();
 
 const { getInitials } = useInitials();
@@ -105,6 +108,27 @@ const toggleFollow = () => {
     } else {
         router.post(`/u/${props.profileUser.id}/follow`, {}, options);
     }
+};
+
+const kudoOptions = [
+    { key: 'great-work', label: '🎉 Great work' },
+    { key: 'on-fire', label: '🔥 On fire' },
+    { key: 'keep-going', label: '💪 Keep going' },
+] as const;
+
+const kudoPending = ref(false);
+const sendKudo = (type: 'great-work' | 'on-fire' | 'keep-going') => {
+    if (kudoPending.value || props.viewerKudo === type) return;
+
+    kudoPending.value = true;
+    router.post(
+        `/u/${props.profileUser.id}/kudos`,
+        { type },
+        {
+            preserveScroll: true,
+            onFinish: () => (kudoPending.value = false),
+        },
+    );
 };
 
 const formatCount = (value: number) =>
@@ -326,6 +350,13 @@ const iconForReason = (reason: string) => {
                             {{ handle }}
                         </p>
 
+                        <p
+                            v-if="profileUser.bio"
+                            class="max-w-3xl text-[15px] leading-relaxed text-foreground/85"
+                        >
+                            {{ profileUser.bio }}
+                        </p>
+
                         <!-- Section chips -->
                         <div class="flex flex-wrap items-center gap-2">
                             <span
@@ -383,6 +414,39 @@ const iconForReason = (reason: string) => {
                             >
                                 {{ stat.label }}
                             </span>
+                        </div>
+                    </div>
+
+                    <!-- ════════════ Positive kudos ════════════ -->
+                    <div
+                        v-if="!profileUser.isCurrentUser && isSameSection"
+                        class="mt-4 flex flex-col gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div>
+                            <p class="text-sm font-semibold">Send a kudo</p>
+                            <p class="text-xs text-muted-foreground">
+                                A small, positive note for a classmate.
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="kudo in kudoOptions"
+                                :key="kudo.key"
+                                type="button"
+                                :disabled="kudoPending || viewerKudo === kudo.key"
+                                class="rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-default"
+                                :class="
+                                    viewerKudo === kudo.key
+                                        ? 'border-foreground bg-foreground text-background'
+                                        : 'border-border bg-background text-foreground hover:bg-muted'
+                                "
+                                @click="sendKudo(kudo.key)"
+                            >
+                                {{ kudo.label }}
+                                <span v-if="kudos[kudo.key]" class="ml-1 opacity-70">
+                                    {{ kudos[kudo.key] }}
+                                </span>
+                            </button>
                         </div>
                     </div>
 

@@ -50,6 +50,7 @@ class User extends Authenticatable implements FilamentUser
         'last_claimed_at',
         'avatar',
         'cover_photo',
+        'bio',
         'blur_leaderboard',
     ];
 
