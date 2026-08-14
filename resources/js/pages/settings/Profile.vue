@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
-import { Camera, Crop, Hash, LogOut, Plus } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { Camera, Crop, Hash, Loader2, LogOut, Plus } from 'lucide-vue-next';
+import { computed, onBeforeUnmount, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import CoverPhotoCropper from '@/components/CoverPhotoCropper.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
+import { compressImage, setInputFile } from '@/lib/image-compression';
 import { withForm } from '@/lib/route-helpers';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
@@ -41,11 +42,40 @@ const { getInitials } = useInitials();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const previewUrl = ref<string | null>(null);
+const avatarName = ref<string | null>(null);
+const isCompressingAvatar = ref(false);
 
-const handleFileChange = (e: Event) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-        previewUrl.value = URL.createObjectURL(file);
+const handleFileChange = async (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    avatarName.value = file.name;
+    isCompressingAvatar.value = true;
+
+    try {
+        // A phone camera shot is far larger than the 96px–160px this is ever
+        // drawn at. Shrink it before it is previewed or uploaded.
+        const optimised = await compressImage(file, {
+            maxSize: 512,
+            quality: 0.86,
+        });
+
+        if (optimised !== file) {
+            setInputFile(input, optimised);
+        }
+
+        // Each pick allocates a blob URL; without revoking the previous one
+        // the old bitmap stays pinned in memory. On a low-RAM phone a few
+        // re-picks of 8–12MP shots is enough to get the tab killed.
+        if (previewUrl.value) {
+            URL.revokeObjectURL(previewUrl.value);
+        }
+
+        previewUrl.value = URL.createObjectURL(optimised);
+        avatarName.value = optimised.name;
+    } finally {
+        isCompressingAvatar.value = false;
     }
 };
 
@@ -121,6 +151,12 @@ const closeSectionModal = () => {
     showSectionModal.value = false;
 };
 
+// Blob URLs outlive the component unless released explicitly.
+onBeforeUnmount(() => {
+    if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+    if (coverPreviewUrl.value) URL.revokeObjectURL(coverPreviewUrl.value);
+});
+
 const leaveSection = (sectionId: number) => {
     const remaining = props.userSections
         .filter((s) => s.id !== sectionId)
@@ -160,13 +196,18 @@ const leaveSection = (sectionId: number) => {
                     v-bind="withForm(ProfileController.update).form()"
                     class="space-y-6"
                     enc-type="multipart/form-data"
-                    v-slot="{ errors, processing, recentlySuccessful }"
+                    v-slot="{
+                        errors,
+                        processing,
+                        progress,
+                        recentlySuccessful,
+                    }"
                 >
                     <!-- Avatar Upload Section -->
                     <div
                         class="flex flex-col items-center gap-6 border-b border-border/40 pb-6 sm:flex-row"
                     >
-                        <div class="group relative">
+                        <div class="group relative shrink-0">
                             <Avatar
                                 class="h-24 w-24 border-2 border-border/50 transition-colors duration-300 group-hover:border-primary/50"
                             >
@@ -183,12 +224,25 @@ const leaveSection = (sectionId: number) => {
                                 </AvatarFallback>
                             </Avatar>
 
+                            <!-- The dimming overlay is hover-only, so on a
+                                 touch screen it never appears; the badge below
+                                 is the always-visible affordance there. -->
                             <button
                                 type="button"
+                                aria-label="Change profile picture"
                                 @click="triggerFileInput"
-                                class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                                class="absolute inset-0 hidden items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:flex"
                             >
                                 <Camera class="h-6 w-6" />
+                            </button>
+
+                            <button
+                                type="button"
+                                aria-label="Change profile picture"
+                                @click="triggerFileInput"
+                                class="absolute right-0 bottom-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-sm active:scale-95 sm:hidden"
+                            >
+                                <Camera class="h-4 w-4" />
                             </button>
                         </div>
 
@@ -209,15 +263,33 @@ const leaveSection = (sectionId: number) => {
                                 >
                                     Change Photo
                                 </Button>
+                                <!-- `accept` is restricted to the formats the
+                                     backend validates, so the picker cannot
+                                     offer a HEIC/AVIF file that would only be
+                                     rejected after a slow mobile upload. -->
                                 <input
                                     type="file"
                                     ref="fileInput"
                                     name="avatar"
-                                    class="hidden"
-                                    accept="image/*"
+                                    class="sr-only"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
                                     @change="handleFileChange"
                                 />
                             </div>
+                            <p
+                                v-if="isCompressingAvatar"
+                                class="flex items-center justify-center gap-1.5 text-xs text-muted-foreground sm:justify-start"
+                            >
+                                <Loader2 class="h-3 w-3 animate-spin" />
+                                Optimising image…
+                            </p>
+                            <p
+                                v-else-if="avatarName"
+                                class="truncate text-xs text-muted-foreground"
+                            >
+                                Selected: {{ avatarName }} — press Save to
+                                apply.
+                            </p>
                             <InputError :message="errors.avatar" />
                         </div>
                     </div>
@@ -262,8 +334,8 @@ const leaveSection = (sectionId: number) => {
                                     type="file"
                                     ref="coverInput"
                                     name="cover_photo"
-                                    class="hidden"
-                                    accept="image/*"
+                                    class="sr-only"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
                                     @change="handleCoverChange"
                                 />
                             </div>
@@ -416,26 +488,63 @@ const leaveSection = (sectionId: number) => {
                         </div>
                     </div>
 
-                    <div class="flex items-center gap-4">
-                        <Button
-                            :disabled="processing"
-                            data-test="update-profile-button"
-                            >Save</Button
+                    <div class="space-y-3">
+                        <div
+                            class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4"
                         >
-
-                        <Transition
-                            enter-active-class="transition ease-in-out"
-                            enter-from-class="opacity-0"
-                            leave-active-class="transition ease-in-out"
-                            leave-to-class="opacity-0"
-                        >
-                            <p
-                                v-show="recentlySuccessful"
-                                class="text-sm text-neutral-600"
+                            <!-- Submitting mid-compression would upload the
+                                 original file the input still holds. -->
+                            <Button
+                                :disabled="processing || isCompressingAvatar"
+                                data-test="update-profile-button"
+                                class="w-full sm:w-auto"
                             >
-                                Saved.
+                                <Loader2
+                                    v-if="processing"
+                                    class="mr-2 h-4 w-4 animate-spin"
+                                />
+                                {{ processing ? 'Saving…' : 'Save' }}
+                            </Button>
+
+                            <Transition
+                                enter-active-class="transition ease-in-out"
+                                enter-from-class="opacity-0"
+                                leave-active-class="transition ease-in-out"
+                                leave-to-class="opacity-0"
+                            >
+                                <p
+                                    v-show="recentlySuccessful"
+                                    class="text-center text-sm text-neutral-600 sm:text-left"
+                                >
+                                    Saved.
+                                </p>
+                            </Transition>
+                        </div>
+
+                        <!-- Uploading a photo over mobile data can take many
+                             seconds. Without a percentage the page looks
+                             frozen and users re-tap Save or navigate away,
+                             which aborts the upload. -->
+                        <div
+                            v-if="processing && progress"
+                            class="space-y-1"
+                            role="status"
+                            aria-live="polite"
+                        >
+                            <div
+                                class="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-primary transition-[width] duration-150 ease-out"
+                                    :style="{
+                                        width: `${progress.percentage ?? 0}%`,
+                                    }"
+                                ></div>
+                            </div>
+                            <p class="text-xs text-muted-foreground">
+                                Uploading… {{ progress.percentage ?? 0 }}%
                             </p>
-                        </Transition>
+                        </div>
                     </div>
                 </Form>
             </div>

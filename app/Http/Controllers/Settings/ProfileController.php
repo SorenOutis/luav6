@@ -10,6 +10,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -39,27 +40,17 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
-        $user->fill($request->validated());
 
-        if ($request->hasFile('avatar')) {
-            // Delete old avatar if it exists
-            if ($user->getRawOriginal('avatar')) {
-                Storage::disk('public')->delete($user->getRawOriginal('avatar'));
-            }
+        // The uploaded files are handled explicitly below. They must never
+        // reach fill(): both columns are mass-assignable, so filling them
+        // would assign an UploadedFile object to a string column and persist
+        // a useless temp path (or throw) when nothing else overwrites it.
+        $user->fill(Arr::except($request->validated(), ['avatar', 'cover_photo']));
 
-            $path = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar = $path;
-        }
-
-        if ($request->hasFile('cover_photo')) {
-            // Delete old cover photo if it exists
-            if ($user->getRawOriginal('cover_photo')) {
-                Storage::disk('public')->delete($user->getRawOriginal('cover_photo'));
-            }
-
-            $path = $request->file('cover_photo')->store('covers', 'public');
-            $user->cover_photo = $path;
-        }
+        $replaced = array_filter([
+            $this->storeUpload($request, 'avatar', 'avatars'),
+            $this->storeUpload($request, 'cover_photo', 'covers'),
+        ]);
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
@@ -67,7 +58,53 @@ class ProfileController extends Controller
 
         $user->save();
 
+        // Only discard the superseded files once the new paths are committed,
+        // so a failed save can never leave the user pointing at a file that
+        // has already been deleted.
+        foreach ($replaced as $path) {
+            Storage::disk('public')->delete($path);
+        }
+
         return to_route('profile.edit');
+    }
+
+    /**
+     * Persist an uploaded image to the public disk and point the column at it.
+     *
+     * Returns the path of the file this upload supersedes (if any) so the
+     * caller can delete it *after* the new path is committed to the database.
+     * A write failure surfaces as a validation error rather than a silent
+     * no-op — the previous version assumed store() always succeeded, which is
+     * how a failed save could look like "nothing happened" to the user.
+     */
+    private function storeUpload(ProfileUpdateRequest $request, string $field, string $directory): ?string
+    {
+        if (! $request->hasFile($field)) {
+            return null;
+        }
+
+        $file = $request->file($field);
+
+        if (! $file->isValid()) {
+            throw ValidationException::withMessages([
+                $field => 'The upload did not complete. Please try again.',
+            ]);
+        }
+
+        $user = $request->user();
+        $previous = $user->getRawOriginal($field);
+
+        $path = $file->store($directory, 'public');
+
+        if (! $path) {
+            throw ValidationException::withMessages([
+                $field => 'We could not save that image. Please try again.',
+            ]);
+        }
+
+        $user->{$field} = $path;
+
+        return $previous && $previous !== $path ? $previous : null;
     }
 
     /**
