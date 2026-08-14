@@ -75,7 +75,7 @@ const notificationChannel = `App.Models.User.${page.props.auth.user?.id}`;
 useEcho(
     notificationChannel,
     'Illuminate\\Notifications\\Events\\BroadcastNotificationCreated',
-    () => router.reload({ only: ['notifications'], preserveScroll: true }),
+    () => router.reload({ only: ['notifications'] }),
 );
 
 const sectionName = computed(

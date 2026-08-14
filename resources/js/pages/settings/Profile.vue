@@ -390,7 +390,8 @@ const leaveSection = (sectionId: number) => {
                             maxlength="280"
                             class="mt-1 block w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                             placeholder="Share a little about yourself, your interests, or what you enjoy learning."
-                        >{{ user.bio ?? '' }}</textarea>
+                            :value="String(user.bio ?? '')"
+                        ></textarea>
                         <InputError class="mt-2" :message="errors.bio" />
                     </div>
 

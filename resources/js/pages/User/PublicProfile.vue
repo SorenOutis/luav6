@@ -295,7 +295,9 @@ const iconForReason = (reason: string) => {
                                 Edit profile
                             </Link>
                             <button
-                                v-if="!profileUser.isCurrentUser && isSameSection"
+                                v-if="
+                                    !profileUser.isCurrentUser && isSameSection
+                                "
                                 type="button"
                                 class="profile-btn inline-flex items-center gap-1.5 px-4 text-[14px] transition-colors"
                                 :class="
@@ -433,7 +435,9 @@ const iconForReason = (reason: string) => {
                                 v-for="kudo in kudoOptions"
                                 :key="kudo.key"
                                 type="button"
-                                :disabled="kudoPending || viewerKudo === kudo.key"
+                                :disabled="
+                                    kudoPending || viewerKudo === kudo.key
+                                "
                                 class="rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-default"
                                 :class="
                                     viewerKudo === kudo.key
@@ -443,7 +447,10 @@ const iconForReason = (reason: string) => {
                                 @click="sendKudo(kudo.key)"
                             >
                                 {{ kudo.label }}
-                                <span v-if="kudos[kudo.key]" class="ml-1 opacity-70">
+                                <span
+                                    v-if="kudos[kudo.key]"
+                                    class="ml-1 opacity-70"
+                                >
                                     {{ kudos[kudo.key] }}
                                 </span>
                             </button>
