@@ -70,7 +70,7 @@ const formatDate = (iso?: string | null) => {
 <template>
     <section
         v-if="name && seasonTimeline"
-        class="surface-card relative flex h-full w-full min-w-0 flex-col justify-between gap-4 overflow-hidden p-5 sm:p-6"
+        class="surface-card relative flex h-full w-full min-w-0 flex-col justify-between gap-3 overflow-hidden p-3.5 sm:gap-4 sm:p-6"
         aria-label="Current season progress"
     >
         <div class="relative z-10 flex items-start justify-between gap-3">
@@ -93,7 +93,7 @@ const formatDate = (iso?: string | null) => {
             <div>
                 <p class="dash-label">Time left</p>
                 <p
-                    class="dash-metric mt-0.5 flex items-baseline gap-1 text-[34px] leading-none"
+                    class="dash-metric mt-0.5 flex items-baseline gap-1 text-[28px] leading-none sm:text-[34px]"
                 >
                     {{ seasonTimeline.daysRemaining }}
                     <span class="text-[13px] font-medium text-muted-foreground"

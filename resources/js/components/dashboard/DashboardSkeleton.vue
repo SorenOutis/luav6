@@ -1,10 +1,10 @@
 <script setup lang="ts"></script>
 
 <template>
-    <div class="flex flex-col gap-5 sm:gap-6">
-        <div class="flex items-center gap-4 py-1">
+    <div class="flex flex-col gap-3 sm:gap-6">
+        <div class="flex items-center gap-3 py-0.5 sm:gap-4 sm:py-1">
             <div
-                class="h-14 w-14 shrink-0 animate-pulse rounded-full bg-muted sm:h-16 sm:w-16"
+                class="h-11 w-11 shrink-0 animate-pulse rounded-full bg-muted sm:h-16 sm:w-16"
             ></div>
             <div class="flex flex-1 flex-col gap-2">
                 <div
@@ -17,13 +17,13 @@
         </div>
 
         <div
-            class="flex flex-col gap-3 rounded-[1.25rem] border border-border/40 bg-card p-4 sm:flex-row sm:items-stretch sm:gap-4 sm:p-5"
+            class="flex flex-col gap-2 rounded-xl border border-border/40 bg-card p-3 sm:flex-row sm:items-stretch sm:gap-4 sm:rounded-[1.25rem] sm:p-5"
         >
-            <div class="grid flex-1 grid-cols-3 gap-2 sm:gap-3">
+            <div class="grid flex-1 grid-cols-3 gap-1.5 sm:gap-3">
                 <div
                     v-for="m in 3"
                     :key="m"
-                    class="flex h-[92px] flex-col justify-between rounded-[1.1rem] bg-muted/40 p-3"
+                    class="flex h-[72px] flex-col justify-between rounded-xl bg-muted/40 p-2 sm:h-[92px] sm:rounded-[1.1rem] sm:p-3"
                 >
                     <div
                         class="h-3 w-12 animate-pulse rounded-full bg-muted"
@@ -45,9 +45,11 @@
             class="h-16 w-full animate-pulse rounded-[1.25rem] border border-border/40 bg-card"
         ></div>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div
+            class="grid grid-cols-1 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+        >
             <div
-                class="flex h-44 flex-col justify-between rounded-[1.25rem] border border-border/40 bg-card p-5 lg:col-span-2"
+                class="flex h-36 flex-col justify-between rounded-xl border border-border/40 bg-card p-3.5 sm:h-44 sm:rounded-[1.25rem] sm:p-5 lg:col-span-2"
             >
                 <div class="flex items-center gap-3">
                     <div
@@ -72,7 +74,7 @@
                 </div>
             </div>
             <div
-                class="flex h-44 flex-col justify-between rounded-[1.25rem] border border-border/40 bg-card p-5"
+                class="flex h-36 flex-col justify-between rounded-xl border border-border/40 bg-card p-3.5 sm:h-44 sm:rounded-[1.25rem] sm:p-5"
             >
                 <div class="flex items-center gap-3">
                     <div
@@ -96,7 +98,7 @@
                 </div>
             </div>
             <div
-                class="flex h-44 flex-col justify-between rounded-[1.25rem] border border-border/40 bg-card p-5"
+                class="flex h-36 flex-col justify-between rounded-xl border border-border/40 bg-card p-3.5 sm:h-44 sm:rounded-[1.25rem] sm:p-5"
             >
                 <div class="flex items-center gap-3">
                     <div

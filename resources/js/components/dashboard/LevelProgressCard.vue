@@ -151,7 +151,7 @@ function formatWhen(iso: string): string {
 
 <template>
     <div
-        class="surface-card group relative w-full min-w-0 cursor-pointer p-5 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
+        class="surface-card group relative w-full min-w-0 cursor-pointer p-3.5 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:p-6"
         tabindex="0"
         role="button"
         aria-label="Open your XP history"
@@ -160,7 +160,7 @@ function formatWhen(iso: string): string {
         @keydown.space.prevent="openBreakdown"
     >
         <div
-            class="relative z-10 flex h-full w-full flex-col justify-between gap-5"
+            class="relative z-10 flex h-full w-full flex-col justify-between gap-3 sm:gap-5"
         >
             <!-- Header: Level -->
             <div class="flex items-start justify-between gap-3">
@@ -172,7 +172,7 @@ function formatWhen(iso: string): string {
                         <p class="dash-label">Level</p>
                         <div class="flex items-baseline gap-1.5">
                             <h3
-                                class="dash-metric text-[34px] leading-none text-foreground sm:text-4xl"
+                                class="dash-metric text-[28px] leading-none text-foreground sm:text-4xl"
                             >
                                 {{ animLevel }}
                             </h3>

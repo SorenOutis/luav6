@@ -596,7 +596,7 @@
         0 1px 2px rgb(0 0 0 / 0.04),
         0 8px 24px -16px
             color-mix(in srgb, var(--color-primary) 25%, transparent) !important;
-    padding: 1.25rem !important;
+    padding: 0.875rem !important;
 }
 
 @media (min-width: 640px) {
@@ -1333,7 +1333,20 @@
     .student-ui {
         padding-left: max(0.75rem, env(safe-area-inset-left));
         padding-right: max(0.75rem, env(safe-area-inset-right));
-        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    }
+
+    .dashboard-ui .dash-icon-well {
+        height: 2rem;
+        width: 2rem;
+        border-radius: 0.625rem;
+    }
+
+    .dashboard-ui .surface-card,
+    .student-ui .surface-card,
+    .dashboard-ui [data-slot='card'],
+    .student-ui [data-slot='card'] {
+        border-radius: 1rem;
     }
 }
 

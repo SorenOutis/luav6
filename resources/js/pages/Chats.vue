@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useFileDialog } from '@vueuse/core';
 import axios from 'axios';
 import {
     Bot,
     ChevronDown,
     FileText,
+    History,
     Image as ImageIcon,
     Paperclip,
+    Plus,
     Send,
     Sparkles,
     Square,
@@ -25,6 +27,7 @@ import {
 } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ChatNavigation from '@/components/ChatNavigation.vue';
+import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -148,6 +151,7 @@ const isLoading = ref(false);
 const sessionToDelete = ref<ChatSession | null>(null);
 const isCreatingSession = ref(false);
 const isDeletingSession = ref(false);
+const isMobileHistoryOpen = ref(false);
 
 // Abort controller for the in-flight reply, so the user can stop generation.
 let streamAbortController: AbortController | null = null;
@@ -866,12 +870,12 @@ onBeforeUnmount(() => {
         </template>
 
         <div
-            class="flex h-[calc(100vh-7rem)] min-h-[480px] md:h-[calc(100vh-6rem)]"
+            class="flex h-[calc(100dvh-7.25rem)] min-h-0 w-full md:h-[calc(100dvh-4.5rem)]"
         >
             <!-- ─── Chat Pane ─── -->
             <Card
                 data-testid="chat-workspace"
-                class="relative min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-xl border-border/40"
+                class="relative min-h-0 min-w-0 flex-1 flex-col gap-0 overflow-hidden rounded-none border-0 py-0 shadow-none md:rounded-xl md:border md:border-border/40"
                 @dragenter="onDragEnter"
                 @dragover="onDragOver"
                 @dragleave="onDragLeave"
@@ -909,9 +913,9 @@ onBeforeUnmount(() => {
                 </transition>
 
                 <CardHeader
-                    class="flex flex-row items-center justify-between space-y-0 border-b border-border/40 py-3 pr-3 pl-4"
+                    class="flex flex-row items-center justify-between space-y-0 border-b border-border/40 px-3 py-2 md:py-3 md:pr-3 md:pl-4"
                 >
-                    <div class="flex min-w-0 items-center gap-2.5">
+                    <div class="flex min-w-0 items-center gap-2">
                         <div
                             class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10"
                         >
@@ -929,52 +933,79 @@ onBeforeUnmount(() => {
                             >
                                 {{ currentTitle }}
                             </h1>
-                            <p class="text-[11px] text-muted-foreground">
+                            <p
+                                class="truncate text-[11px] text-muted-foreground"
+                            >
                                 {{ activeSubtitle }}
                             </p>
                         </div>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1 md:hidden">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            class="h-9 w-9 rounded-xl"
+                            title="New chat"
+                            :disabled="isCreatingSession || isLoading"
+                            @click="createNewChat"
+                        >
+                            <Plus class="h-4 w-4" />
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            class="h-9 w-9 rounded-xl"
+                            title="Chat history"
+                            aria-haspopup="dialog"
+                            :aria-expanded="isMobileHistoryOpen"
+                            @click="isMobileHistoryOpen = true"
+                        >
+                            <History class="h-4 w-4" />
+                        </Button>
                     </div>
                 </CardHeader>
 
                 <CardContent
                     ref="scrollContainer"
-                    class="flex-1 scrollbar-thin space-y-3 overflow-y-auto p-4"
+                    class="min-h-0 flex-1 scrollbar-thin space-y-3 overflow-y-auto p-3 sm:p-4"
                 >
                     <template v-if="isNewChat">
                         <!-- The inner wrapper centers itself with auto margins,
                              so the welcome content can't be clipped at the top
                              on short viewports (unlike justify-center). -->
                         <div
-                            class="flex h-full flex-col items-center px-4 py-8 text-center"
+                            class="flex h-full flex-col items-center px-3 py-4 text-center sm:px-4 sm:py-8"
                         >
                             <div
                                 class="m-auto flex w-full max-w-xl flex-col items-center"
                             >
                                 <!-- System logo -->
                                 <div
-                                    class="welcome-logo mb-6 flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-primary/10 shadow-lg ring-1 shadow-primary/10 ring-primary/20"
+                                    class="welcome-logo mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 shadow-lg ring-1 shadow-primary/10 ring-primary/20 sm:mb-6 sm:h-20 sm:w-20 sm:rounded-3xl"
                                 >
                                     <img
                                         v-if="branding.logoUrl"
                                         :src="branding.logoUrl"
                                         alt="Echo"
-                                        class="h-12 w-12 object-contain"
+                                        class="h-8 w-8 object-contain sm:h-12 sm:w-12"
                                     />
                                     <AppLogoIcon
                                         v-else
-                                        class="h-10 w-10 text-primary"
+                                        class="h-7 w-7 text-primary sm:h-10 sm:w-10"
                                     />
                                 </div>
 
                                 <!-- Greeting -->
                                 <div class="welcome-greeting">
                                     <p
-                                        class="text-sm font-medium tracking-wide text-primary"
+                                        class="text-xs font-medium tracking-wide text-primary sm:text-sm"
                                     >
                                         {{ greetingLine }}
                                     </p>
                                     <h2
-                                        class="mt-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-3xl"
+                                        class="mt-1 text-xl font-bold tracking-tight text-foreground sm:mt-1.5 sm:text-3xl"
                                     >
                                         How can I help you today?
                                     </h2>
@@ -982,7 +1013,7 @@ onBeforeUnmount(() => {
 
                                 <!-- Centered input -->
                                 <form
-                                    class="welcome-input mt-8 w-full max-w-xl"
+                                    class="welcome-input mt-5 w-full max-w-xl sm:mt-8"
                                     @submit.prevent="sendMessage"
                                 >
                                     <div
@@ -1044,7 +1075,7 @@ onBeforeUnmount(() => {
                                             ref="welcomeInputRef"
                                             v-model="inputMessage"
                                             placeholder="Ask about assignments, exams, or your study progress..."
-                                            class="min-h-[72px] resize-none rounded-2xl border-border/40 bg-background/70 py-3.5 pr-14 pl-14 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30"
+                                            class="min-h-[56px] resize-none rounded-2xl border-border/40 bg-background/70 py-3 pr-12 pl-12 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30 sm:min-h-[72px] sm:py-3.5 sm:pr-14 sm:pl-14"
                                             @keydown="handleComposerKeydown"
                                         />
                                         <Button
@@ -1081,7 +1112,7 @@ onBeforeUnmount(() => {
 
                                 <!-- Suggestions -->
                                 <div
-                                    class="welcome-suggestions mt-6 flex flex-wrap justify-center gap-1.5"
+                                    class="welcome-suggestions mt-4 flex flex-wrap justify-center gap-1.5 sm:mt-6"
                                 >
                                     <button
                                         v-for="(chip, i) in suggestions"
@@ -1280,7 +1311,7 @@ onBeforeUnmount(() => {
 
                 <CardFooter
                     v-if="!isNewChat"
-                    class="border-t border-border/40 bg-muted/20 p-3"
+                    class="border-t border-border/40 bg-muted/20 px-2 py-2 pt-2 sm:p-3 sm:pt-3"
                 >
                     <!-- Attachment validation error -->
                     <transition
@@ -1392,6 +1423,94 @@ onBeforeUnmount(() => {
                 </CardFooter>
             </Card>
         </div>
+
+        <!-- ─── Mobile chat history ─── -->
+        <MobileBottomSheet
+            :open="isMobileHistoryOpen"
+            title="Chats"
+            @close="isMobileHistoryOpen = false"
+        >
+            <div class="sheet-section px-1 pb-1">
+                <button
+                    type="button"
+                    class="sheet-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all hover:bg-muted/50 active:scale-[0.98]"
+                    :disabled="isCreatingSession || isLoading"
+                    @click="
+                        isMobileHistoryOpen = false;
+                        createNewChat();
+                    "
+                >
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Plus class="h-4 w-4" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-foreground">
+                            New chat
+                        </p>
+                        <p class="text-[11px] text-muted-foreground">
+                            Start a fresh conversation
+                        </p>
+                    </div>
+                </button>
+            </div>
+
+            <div class="sheet-section mx-3 my-2 h-px bg-border/60" />
+
+            <div class="sheet-section space-y-0.5 px-1 pb-2">
+                <p
+                    v-if="sessions.length === 0"
+                    class="px-3 py-6 text-center text-sm text-muted-foreground"
+                >
+                    Start a chat and it will appear here.
+                </p>
+                <div
+                    v-for="session in sessions"
+                    :key="session.id"
+                    class="sheet-item flex items-center gap-1"
+                >
+                    <Link
+                        :href="chatsShow({ session: session.id }).url"
+                        class="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 transition-all hover:bg-muted/50 active:scale-[0.98]"
+                        :class="
+                            activeSession?.id === session.id
+                                ? 'bg-muted/60'
+                                : ''
+                        "
+                        @click="isMobileHistoryOpen = false"
+                    >
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground"
+                        >
+                            <Bot class="h-4 w-4" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-semibold">
+                                {{ session.title }}
+                            </p>
+                            <p class="text-[11px] text-muted-foreground">
+                                {{ session.updatedAtHuman || 'Recent' }}
+                                <span v-if="session.messageCount">
+                                    · {{ session.messageCount }}
+                                </span>
+                            </p>
+                        </div>
+                    </Link>
+                    <button
+                        type="button"
+                        class="mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        :aria-label="`Delete ${session.title}`"
+                        @click="
+                            isMobileHistoryOpen = false;
+                            openDeleteModal(session);
+                        "
+                    >
+                        <Trash2 class="h-4 w-4" />
+                    </button>
+                </div>
+            </div>
+        </MobileBottomSheet>
 
         <!-- ─── Delete Confirmation ─── -->
         <ResponsiveModal
