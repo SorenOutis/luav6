@@ -230,6 +230,8 @@ interface Announcement {
     title: string;
     description: string;
     link?: string;
+    sectionName?: string | null;
+    createdAt?: string | null;
 }
 
 interface Exam {

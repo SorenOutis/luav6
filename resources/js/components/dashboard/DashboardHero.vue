@@ -10,6 +10,8 @@ interface Announcement {
     title: string;
     description?: string;
     link?: string;
+    sectionName?: string | null;
+    createdAt?: string | null;
 }
 
 interface UserStats {
@@ -49,73 +51,107 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
 <template>
     <div class="space-y-3 sm:space-y-5 lg:space-y-6">
         <TransitionGroup
-            enter-active-class="transition duration-400 ease-out"
-            enter-from-class="opacity-0 -translate-y-2"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition duration-200 ease-in"
-            leave-from-class="opacity-100"
-            leave-to-class="opacity-0"
+            enter-active-class="transition duration-500 ease-out"
+            enter-from-class="opacity-0 -translate-y-3 scale-[0.99]"
+            enter-to-class="opacity-100 translate-y-0 scale-100"
+            leave-active-class="transition duration-300 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-[0.98]"
         >
-            <div
-                v-for="item in announcements.slice(0, 1)"
+            <section
+                v-for="item in announcements.slice(0, 3)"
                 :key="item.id"
-                class="relative overflow-hidden rounded-xl border border-border/50 bg-card p-3 sm:rounded-[1.25rem] sm:p-5"
+                class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#E8895F] via-[#D97757] to-[#B64A2E] p-4 text-white shadow-xl ring-1 shadow-[#D97757]/25 ring-white/10 sm:rounded-[1.75rem] sm:p-7"
+                aria-live="polite"
             >
+                <!-- Decorative depth layers -->
                 <div
-                    class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+                    class="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-white/15 blur-3xl"
+                    aria-hidden="true"
+                />
+                <div
+                    class="pointer-events-none absolute right-1/3 -bottom-28 h-56 w-56 rounded-full bg-black/10 blur-3xl"
+                    aria-hidden="true"
+                />
+                <Megaphone
+                    class="pointer-events-none absolute -right-4 -bottom-8 hidden h-40 w-40 -rotate-12 text-white/10 sm:block"
+                    aria-hidden="true"
+                />
+
+                <div
+                    class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6"
                 >
                     <div
-                        class="flex w-full flex-1 items-center gap-3 sm:w-auto"
+                        class="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 shadow-inner backdrop-blur-sm sm:h-[4.5rem] sm:w-[4.5rem]"
                     >
-                        <div
-                            class="dash-icon-well bg-[#D97757]/10 text-[#D97757]"
-                        >
-                            <Megaphone class="h-4 w-4" />
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <h4
-                                    class="truncate text-[15px] font-semibold tracking-tight text-foreground"
-                                >
-                                    {{ item.title }}
-                                </h4>
-                                <span
-                                    class="shrink-0 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-medium text-[#D97757]"
-                                >
-                                    New
-                                </span>
-                            </div>
-                            <p
-                                v-if="item.description"
-                                class="mt-0.5 line-clamp-2 text-[13px] leading-snug text-muted-foreground"
+                        <span
+                            class="absolute inset-0 animate-ping rounded-2xl bg-white/20 [animation-duration:2.4s]"
+                            aria-hidden="true"
+                        />
+                        <Megaphone class="relative h-6 w-6 sm:h-9 sm:w-9" />
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span
+                                class="text-[11px] font-bold tracking-[0.18em] text-white/80 uppercase sm:text-xs"
                             >
-                                {{ item.description }}
-                            </p>
+                                Announcement
+                            </span>
+                            <span
+                                class="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold tracking-wide text-[#B64A2E] uppercase shadow-sm"
+                            >
+                                New
+                            </span>
+                            <span
+                                v-if="item.sectionName"
+                                class="shrink-0 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm sm:text-xs"
+                            >
+                                {{ item.sectionName }}
+                            </span>
+                            <span
+                                v-if="item.createdAt"
+                                class="text-[11px] font-medium text-white/70 sm:text-xs"
+                            >
+                                {{ item.createdAt }}
+                            </span>
                         </div>
+                        <h2
+                            class="mt-1.5 text-xl leading-tight font-extrabold tracking-tight break-words sm:text-2xl lg:text-3xl"
+                        >
+                            {{ item.title }}
+                        </h2>
+                        <p
+                            v-if="item.description"
+                            class="mt-1.5 max-w-3xl text-[13px] leading-relaxed break-words whitespace-pre-line text-white/90 sm:text-[15px]"
+                        >
+                            {{ item.description }}
+                        </p>
                     </div>
 
                     <div
-                        class="flex w-full items-center justify-between gap-2 border-t border-border/40 pt-3 sm:w-auto sm:justify-end sm:border-0 sm:pt-0"
+                        class="flex items-center gap-2 border-t border-white/20 pt-3 sm:flex-col sm:items-stretch sm:border-0 sm:pt-0"
                     >
                         <Link
                             v-if="item.link"
                             :href="item.link"
-                            class="dash-btn inline-flex flex-1 items-center justify-center gap-1.5 bg-[#D97757] px-4 text-[15px] text-white sm:flex-none"
+                            class="dash-btn inline-flex flex-1 items-center justify-center gap-2 bg-white px-5 text-[15px] font-semibold text-[#B64A2E] shadow-lg transition-colors hover:bg-white/90 sm:flex-none"
                         >
-                            Explore
+                            View details
                             <ArrowRight class="h-4 w-4" />
                         </Link>
                         <button
                             type="button"
-                            class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted"
-                            title="Dismiss"
+                            class="inline-flex h-11 w-11 shrink-0 items-center justify-center self-end rounded-full bg-white/15 text-white backdrop-blur-sm transition-colors hover:bg-white/25"
+                            title="Dismiss announcement"
+                            aria-label="Dismiss announcement"
                             @click="emit('close-announcement', item.id)"
                         >
-                            <X class="h-4 w-4" />
+                            <X class="h-5 w-5" />
                         </button>
                     </div>
                 </div>
-            </div>
+            </section>
         </TransitionGroup>
 
         <div class="relative flex flex-col justify-center">

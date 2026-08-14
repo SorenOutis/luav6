@@ -23,8 +23,16 @@ class AnnouncementsTool implements Tool
      */
     public function handle(Request $request): Stringable|string
     {
+        $user = auth()->user();
+
         $announcements = Announcement::query()
             ->where('is_active', true)
+            // Students only see announcements for their sections (plus
+            // announcements not targeted to any section); admins see all.
+            ->when($user && ! $user->is_admin, fn ($query) => $query
+                ->where(fn ($q) => $q
+                    ->whereNull('section_id')
+                    ->orWhereIn('section_id', $user->sections()->pluck('sections.id'))))
             ->latest()
             ->limit(5)
             ->get(['title', 'description', 'link', 'created_at'])
