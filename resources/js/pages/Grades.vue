@@ -555,28 +555,30 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="gradesContainer"
-            class="student-ui container mx-auto max-w-full px-4 py-6 perspective-[1000px] sm:px-6 lg:px-8 lg:py-8"
+            class="student-ui container mx-auto max-w-full px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
         >
             <!-- Header -->
             <div
-                class="animate-section mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+                class="animate-section mb-4 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
             >
                 <div>
                     <h1
-                        class="dash-title text-[28px] text-foreground sm:text-[34px]"
+                        class="dash-title text-[22px] text-foreground sm:text-[34px]"
                     >
                         Grades
                     </h1>
                     <p
-                        class="mt-1 text-[15px] text-muted-foreground sm:text-[17px]"
+                        class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
                     >
                         Your academic performance across enrolled subjects.
                     </p>
                 </div>
                 <div
-                    class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center"
+                    class="flex w-full flex-row items-center gap-2 sm:w-auto sm:gap-3"
                 >
-                    <div class="relative w-full sm:w-56 lg:w-72">
+                    <div
+                        class="relative min-w-0 flex-1 sm:w-56 sm:flex-none lg:w-72"
+                    >
                         <Search
                             class="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                         />
@@ -588,7 +590,7 @@ onMounted(() => {
                     </div>
                     <button
                         type="button"
-                        class="dash-btn inline-flex shrink-0 items-center justify-center gap-2 border border-border/60 bg-card px-4 text-[15px] text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+                        class="dash-btn inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-border/60 bg-card px-3 text-[13px] text-foreground transition-colors hover:bg-muted disabled:opacity-60 sm:px-4 sm:text-[15px]"
                         :disabled="isExporting"
                         @click="exportPdf"
                     >
@@ -642,70 +644,82 @@ onMounted(() => {
                 v-show="!isLoading && !fetchError"
                 class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             >
-                <Card class="animate-card">
+                <Card class="animate-card gap-2 py-3 sm:gap-6 sm:py-6">
                     <CardHeader
-                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                        class="flex flex-row items-center justify-between space-y-0 px-3 pb-1 sm:px-6 sm:pb-2"
                     >
                         <CardTitle class="dash-label"
                             >Overall average</CardTitle
                         >
                         <TrendingUp class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
+                    <CardContent class="px-3 sm:px-6">
                         <div
-                            class="dash-metric text-[32px] leading-none"
+                            class="dash-metric text-[26px] leading-none sm:text-[32px]"
                             :class="gradeColor(averageSemesterGrade)"
                         >
                             {{ averageSemesterGrade }}
                         </div>
-                        <p class="mt-1 text-[13px] text-muted-foreground">
+                        <p
+                            class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
+                        >
                             {{ gradeLabel(averageSemesterGrade) }}
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card class="animate-card">
+                <Card class="animate-card gap-2 py-3 sm:gap-6 sm:py-6">
                     <CardHeader
-                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                        class="flex flex-row items-center justify-between space-y-0 px-3 pb-1 sm:px-6 sm:pb-2"
                     >
                         <CardTitle class="dash-label">Subjects</CardTitle>
                         <BookOpen class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="dash-metric text-[32px] leading-none">
+                    <CardContent class="px-3 sm:px-6">
+                        <div
+                            class="dash-metric text-[26px] leading-none sm:text-[32px]"
+                        >
                             {{ totalFilteredCount }}
                         </div>
-                        <p class="mt-1 text-[13px] text-muted-foreground">
+                        <p
+                            class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
+                        >
                             Enrolled this term
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card class="animate-card">
+                <Card class="animate-card gap-2 py-3 sm:gap-6 sm:py-6">
                     <CardHeader
-                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                        class="flex flex-row items-center justify-between space-y-0 px-3 pb-1 sm:px-6 sm:pb-2"
                     >
                         <CardTitle class="dash-label">Completed</CardTitle>
                         <GraduationCap class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
-                        <div class="dash-metric text-[32px] leading-none">
+                    <CardContent class="px-3 sm:px-6">
+                        <div
+                            class="dash-metric text-[26px] leading-none sm:text-[32px]"
+                        >
                             {{ completedCount }}
                         </div>
-                        <p class="mt-1 text-[13px] text-muted-foreground">
+                        <p
+                            class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
+                        >
                             With a final grade
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card class="animate-card">
+                <Card
+                    class="animate-card col-span-2 gap-2 py-3 sm:col-span-1 sm:gap-6 sm:py-6"
+                >
                     <CardHeader
-                        class="flex flex-row items-center justify-between space-y-0 pb-2"
+                        class="flex flex-row items-center justify-between space-y-0 px-3 pb-1 sm:px-6 sm:pb-2"
                     >
                         <CardTitle class="dash-label">Distribution</CardTitle>
                         <BarChart3 class="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent>
+                    <CardContent class="px-3 sm:px-6">
                         <GradeDistributionChart
                             :segments="distributionData.segments"
                             :total="distributionData.total"
@@ -761,7 +775,7 @@ onMounted(() => {
                 <Card
                     v-for="group in gradeGroups"
                     :key="group.key"
-                    class="animate-group mb-6"
+                    class="animate-group mb-4 sm:mb-6"
                 >
                     <CardHeader>
                         <div class="flex items-start justify-between gap-4">
@@ -812,7 +826,7 @@ onMounted(() => {
                     </CardHeader>
                     <CardContent>
                         <!-- ===== MOBILE: Card Layout ===== -->
-                        <div class="space-y-3 md:hidden">
+                        <div class="space-y-2 md:hidden">
                             <Card
                                 v-for="subjectGrade in group.subjects"
                                 :key="subjectGrade.subject"

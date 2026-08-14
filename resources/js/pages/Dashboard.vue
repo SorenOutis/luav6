@@ -539,7 +539,7 @@ const handleLogout = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="dashboardContainer"
-            class="dashboard-ui relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-5 overflow-hidden bg-background p-4 sm:p-6 md:gap-7 md:p-8"
+            class="dashboard-ui relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden bg-background p-3 sm:gap-5 sm:p-6 md:gap-7 md:p-8"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
@@ -566,7 +566,7 @@ const handleLogout = () => {
                                   delay: 0.05,
                               }
                     "
-                    class="relative space-y-6"
+                    class="relative space-y-3 sm:space-y-6"
                 >
                     <DashboardHero
                         class="dashboard-hero"
@@ -657,7 +657,7 @@ const handleLogout = () => {
                                   delay: 0.15,
                               }
                     "
-                    class="dashboard-progress grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4"
+                    class="dashboard-progress grid grid-cols-1 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
                 >
                     <LevelProgressCard
                         class="md:col-span-2 lg:col-span-2"
@@ -700,10 +700,10 @@ const handleLogout = () => {
                             ? { duration: 0 }
                             : { duration: 0.8, easing: [0.16, 1, 0.3, 1] }
                     "
-                    class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-3"
+                    class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-3 sm:gap-8 lg:grid-cols-3"
                 >
                     <!-- Main Section: Leaderboard -->
-                    <div class="min-w-0 space-y-8 lg:col-span-2">
+                    <div class="min-w-0 space-y-4 sm:space-y-8 lg:col-span-2">
                         <!-- Mobile: Collapsible Leaderboard -->
                         <div v-if="!isDesktop" class="lg:hidden">
                             <button
@@ -713,7 +713,7 @@ const handleLogout = () => {
                                 "
                                 :aria-expanded="isLeaderboardExpanded"
                                 :aria-controls="'mobile-leaderboard-panel'"
-                                class="flex min-h-11 w-full items-center justify-between gap-3 rounded-[1.25rem] border border-border/50 bg-card px-4 py-3.5 text-left transition-colors active:bg-muted/50"
+                                class="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border/50 bg-card px-3 py-2.5 text-left transition-colors active:bg-muted/50 sm:rounded-[1.25rem] sm:px-4 sm:py-3.5"
                             >
                                 <div class="flex min-w-0 items-center gap-3">
                                     <Trophy class="h-4 w-4 text-[#D97757]" />

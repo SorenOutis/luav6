@@ -19,7 +19,7 @@ withDefaults(defineProps<Props>(), {
     <SeoHead noindex />
     <AppShell class="flex-col">
         <AppHeader :breadcrumbs="breadcrumbs" />
-        <AppContent class="pb-20 md:pb-0">
+        <AppContent class="pb-[4.25rem] md:pb-0">
             <slot />
             <MobileNav />
         </AppContent>

@@ -33,7 +33,10 @@ const blurMessage = computed(
         'This page is temporarily blurred by your teacher.',
 );
 const contentClass = computed(() =>
-    ['overflow-x-hidden pb-20 md:pb-0', props.hideSidebar ? 'w-full ml-0' : '']
+    [
+        'overflow-x-hidden pb-[4.25rem] md:pb-0',
+        props.hideSidebar ? 'w-full ml-0' : '',
+    ]
         .filter(Boolean)
         .join(' '),
 );

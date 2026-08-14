@@ -225,14 +225,14 @@ const accentClasses = (accent: string, active: boolean) => {
         </div>
 
         <div
-            class="flex flex-col gap-3 p-4 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch"
+            class="flex flex-col gap-2 p-3 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch"
         >
-            <div class="grid grid-cols-3 gap-2 sm:gap-3 lg:flex-1">
+            <div class="grid grid-cols-3 gap-1.5 sm:gap-3 lg:flex-1">
                 <div
                     v-for="m in metrics"
                     :key="m.key"
                     :class="[
-                        'flex min-h-[92px] flex-col justify-between rounded-[1.1rem] p-3 sm:min-h-[88px] sm:flex-row sm:items-center sm:gap-3 sm:p-4',
+                        'flex min-h-[72px] flex-col justify-between rounded-xl p-2 sm:min-h-[92px] sm:flex-row sm:items-center sm:gap-3 sm:rounded-[1.1rem] sm:p-4',
                         accentClasses(m.accent, m.active).wrap,
                     ]"
                 >
@@ -246,7 +246,7 @@ const accentClasses = (accent: string, active: boolean) => {
                             <component :is="m.icon" class="h-4 w-4" />
                         </div>
                         <p
-                            class="truncate text-[13px] font-medium text-muted-foreground sm:hidden"
+                            class="truncate text-[11px] font-medium text-muted-foreground sm:hidden"
                         >
                             {{ m.label }}
                         </p>
@@ -261,7 +261,7 @@ const accentClasses = (accent: string, active: boolean) => {
                         <div class="flex items-baseline gap-1.5">
                             <span
                                 :class="[
-                                    'dash-metric text-[28px] leading-none sm:text-[32px]',
+                                    'dash-metric text-[22px] leading-none sm:text-[32px]',
                                     accentClasses(m.accent, m.active).value,
                                 ]"
                             >

@@ -47,7 +47,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
 </script>
 
 <template>
-    <div class="space-y-5 lg:space-y-6">
+    <div class="space-y-3 sm:space-y-5 lg:space-y-6">
         <TransitionGroup
             enter-active-class="transition duration-400 ease-out"
             enter-from-class="opacity-0 -translate-y-2"
@@ -59,7 +59,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
             <div
                 v-for="item in announcements.slice(0, 1)"
                 :key="item.id"
-                class="relative overflow-hidden rounded-[1.25rem] border border-border/50 bg-card p-4 sm:p-5"
+                class="relative overflow-hidden rounded-xl border border-border/50 bg-card p-3 sm:rounded-[1.25rem] sm:p-5"
             >
                 <div
                     class="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
@@ -120,10 +120,10 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
 
         <div class="relative flex flex-col justify-center">
             <div
-                class="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-end lg:gap-8"
+                class="relative flex flex-col justify-between gap-2.5 lg:flex-row lg:items-end lg:gap-8"
             >
                 <div
-                    class="flex w-full flex-row items-center gap-3 sm:gap-5 lg:w-auto"
+                    class="flex w-full flex-row items-center gap-2.5 sm:gap-5 lg:w-auto"
                 >
                     <div
                         class="group/avatar relative order-2 shrink-0 lg:order-1"
@@ -146,7 +146,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                             </div>
 
                             <Avatar
-                                class="relative size-14 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
+                                class="relative size-11 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
                             >
                                 <AvatarImage
                                     v-if="userAvatar"
@@ -164,41 +164,43 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                     </div>
 
                     <div class="order-1 min-w-0 flex-1 lg:order-2">
-                        <div class="mb-1 flex items-center gap-1.5">
+                        <div class="mb-0.5 flex items-center gap-1 sm:mb-1">
                             <button
                                 type="button"
-                                class="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted active:scale-95"
+                                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted active:scale-95 sm:h-9 sm:w-9"
                                 aria-label="Refresh dashboard"
                                 title="Refresh"
                                 @click="emit('refresh')"
                             >
                                 <RefreshCw
-                                    class="h-4 w-4"
+                                    class="h-3.5 w-3.5 sm:h-4 sm:w-4"
                                     :class="{ 'animate-spin': isRefreshing }"
                                 />
                             </button>
                         </div>
 
-                        <div class="space-y-1">
+                        <div class="space-y-0.5 sm:space-y-1">
                             <h1
-                                class="dash-title truncate text-[26px] leading-[1.15] text-foreground sm:text-[32px] lg:text-[40px]"
+                                class="dash-title truncate text-[20px] leading-[1.15] text-foreground sm:text-[32px] lg:text-[40px]"
                             >
                                 {{ timeBasedGreeting }}, {{ userName }}
                             </h1>
                             <p
-                                class="line-clamp-2 text-[15px] leading-snug text-muted-foreground sm:text-[17px]"
+                                class="line-clamp-2 text-[13px] leading-snug text-muted-foreground sm:text-[17px]"
                             >
                                 {{ smarterStatus }}
                             </p>
                         </div>
 
-                        <div class="mt-3 lg:hidden">
+                        <div class="mt-2 lg:hidden">
                             <button
                                 type="button"
-                                class="dash-btn inline-flex items-center gap-1.5 border border-border/60 bg-card px-4 text-[15px] text-foreground active:scale-[0.98]"
+                                class="dash-btn inline-flex h-9 items-center gap-1.5 border border-border/60 bg-card px-3 text-[13px] text-foreground active:scale-[0.98] sm:h-11 sm:px-4 sm:text-[15px]"
                                 @click="emit('open-section-modal')"
                             >
-                                <Plus class="h-4 w-4 shrink-0" />
+                                <Plus
+                                    class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
+                                />
                                 Join section
                             </button>
                         </div>

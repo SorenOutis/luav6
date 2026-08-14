@@ -934,7 +934,7 @@ watch(inputMessage, () => {
 <template>
     <div
         v-if="isVisible"
-        class="fixed right-5 bottom-20 z-[60] flex flex-col items-end gap-3 md:bottom-5"
+        class="fixed right-4 bottom-[4.75rem] z-[60] flex flex-col items-end gap-3 md:right-5 md:bottom-5"
     >
         <!-- Chat Window -->
         <transition

@@ -41,7 +41,7 @@ const onClaimed = () => {
 <template>
     <section
         v-if="claimXp?.canClaim && !hideClaimCard"
-        class="surface-card p-3 sm:p-4"
+        class="surface-card p-2.5 sm:p-4"
         aria-label="Daily reward"
     >
         <ClaimXpButton

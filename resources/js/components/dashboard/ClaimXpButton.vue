@@ -563,7 +563,7 @@ onBeforeUnmount(() => {
             ref="buttonRef"
             @click="handleClaim"
             :disabled="claimState === 'claiming'"
-            class="group relative flex min-h-14 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-[1.1rem] bg-[#D97757]/10 px-3 py-2.5 text-left transition-colors hover:bg-[#D97757]/15 disabled:cursor-not-allowed disabled:opacity-70"
+            class="group relative flex min-h-12 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-[#D97757]/10 px-2.5 py-2 text-left transition-colors hover:bg-[#D97757]/15 disabled:cursor-not-allowed disabled:opacity-70 sm:min-h-14 sm:rounded-[1.1rem] sm:px-3 sm:py-2.5"
         >
             <div class="relative z-10 flex items-center gap-2.5">
                 <!-- Icon -->
@@ -622,7 +622,7 @@ onBeforeUnmount(() => {
         <!-- Claimed state -->
         <div
             v-else-if="claimState === 'claimed'"
-            class="flex min-h-14 w-full items-center gap-2.5 rounded-[1.1rem] bg-[#4D9375]/10 px-3 py-2.5"
+            class="flex min-h-12 w-full items-center gap-2.5 rounded-xl bg-[#4D9375]/10 px-2.5 py-2 sm:min-h-14 sm:rounded-[1.1rem] sm:px-3 sm:py-2.5"
         >
             <div
                 class="flex h-10 w-10 items-center justify-center rounded-full bg-[#4D9375]/20"

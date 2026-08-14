@@ -425,7 +425,7 @@ function showScrollbar() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="examContainer"
-            class="student-ui exam-theme-page relative flex h-full flex-1 flex-col gap-5 overflow-hidden bg-background p-4 perspective-[1000px] sm:p-6 md:p-8"
+            class="student-ui exam-theme-page relative flex h-full flex-1 flex-col gap-3 overflow-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <!-- Header Section -->
             <Motion
@@ -436,12 +436,12 @@ function showScrollbar() {
             >
                 <div>
                     <h1
-                        class="dash-title text-[28px] text-foreground sm:text-[34px]"
+                        class="dash-title text-[22px] text-foreground sm:text-[34px]"
                     >
                         Activities
                     </h1>
                     <p
-                        class="mt-1 text-[15px] text-muted-foreground sm:text-[17px]"
+                        class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
                     >
                         View and take your assessments.
                     </p>
@@ -451,20 +451,20 @@ function showScrollbar() {
             <!-- Search Input -->
             <div class="relative">
                 <Search
-                    class="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-muted-foreground/50"
+                    class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 sm:left-4 sm:h-5 sm:w-5"
                 />
                 <input
                     v-model="searchQuery"
                     type="text"
                     placeholder="Search exams"
-                    class="min-h-11 w-full rounded-full border border-border/50 bg-card py-3 pr-4 pl-12 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20"
+                    class="min-h-11 w-full rounded-full border border-border/50 bg-card py-2 pr-4 pl-10 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20 sm:py-3 sm:pl-12"
                 />
             </div>
 
             <!-- Section Tabs (Sticky) -->
             <div
                 v-if="sectionTabs.length > 1"
-                class="no-scrollbar sticky top-0 z-20 -mx-4 flex items-center gap-3 overflow-x-auto border-b border-transparent bg-background/80 px-4 pt-3 pb-4 backdrop-blur-md md:-mx-8 md:px-8"
+                class="no-scrollbar sticky top-0 z-20 -mx-3 flex items-center gap-2 overflow-x-auto border-b border-transparent bg-background/80 px-3 pt-1.5 pb-2 backdrop-blur-md sm:gap-3 sm:pt-3 sm:pb-4 md:-mx-8 md:px-8"
             >
                 <button
                     v-for="section in sectionTabs"
@@ -513,14 +513,18 @@ function showScrollbar() {
                         easing: [0.16, 1, 0.3, 1],
                         delay: sIdx * 0.1,
                     }"
-                    class="space-y-5"
+                    class="space-y-3 sm:space-y-5"
                 >
                     <!-- Season Header -->
-                    <div class="mb-1 flex items-center gap-3">
+                    <div
+                        class="mb-0.5 flex items-center gap-2 sm:mb-1 sm:gap-3"
+                    >
                         <div class="flex items-center gap-2">
-                            <Calendar class="h-5 w-5 text-primary" />
+                            <Calendar
+                                class="h-4 w-4 text-primary sm:h-5 sm:w-5"
+                            />
                             <h2
-                                class="dash-title text-[17px] text-foreground sm:text-[20px]"
+                                class="dash-title text-[15px] text-foreground sm:text-[20px]"
                             >
                                 {{ seasonGroup.seasonName }}
                             </h2>
@@ -542,7 +546,7 @@ function showScrollbar() {
 
                     <!-- Exam Grid for this season -->
                     <div
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+                        class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
                     >
                         <Motion
                             v-for="(exam, eIdx) in seasonGroup.exams"
@@ -555,7 +559,7 @@ function showScrollbar() {
                                 easing: [0.16, 1, 0.3, 1],
                                 delay: eIdx * 0.05,
                             }"
-                            class="exam-card flex min-h-[7.5rem] min-w-0 flex-col justify-between rounded-[1.25rem] border border-l-[3px] p-4 transition-colors duration-200 sm:p-5"
+                            class="exam-card flex min-h-[6.25rem] min-w-0 flex-col justify-between rounded-xl border border-l-[3px] p-3 transition-colors duration-200 sm:min-h-[7.5rem] sm:rounded-[1.25rem] sm:p-5"
                             :class="[
                                 exam.is_locked
                                     ? 'cursor-pointer opacity-80'
