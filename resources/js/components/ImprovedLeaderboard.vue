@@ -291,6 +291,10 @@ const podiumOrder = computed(() => {
     ];
 });
 
+// Limits for tied users displayed inside podium cards
+const PODIUM_TIED_AVATAR_LIMIT = 8;
+const PODIUM_NAME_LIMIT = 3;
+
 const rankMeta = [
     {
         label: '1st',
@@ -834,12 +838,18 @@ const changeSeason = async (seasonId: number) => {
                                 </div>
                             </div>
 
-                            <!-- Multiple Tied Users: every avatar shown (no +N overflow) -->
+                            <!-- Multiple Tied Users: avatars (limited) -->
                             <div
                                 v-else
                                 class="flex flex-wrap items-center justify-center gap-1.5 py-1"
                             >
-                                <template v-for="u in group.users" :key="u.id">
+                                <template
+                                    v-for="u in group.users.slice(
+                                        0,
+                                        PODIUM_TIED_AVATAR_LIMIT,
+                                    )"
+                                    :key="u.id"
+                                >
                                     <div class="relative">
                                         <Link
                                             v-if="!u.blurred"
@@ -889,6 +899,19 @@ const changeSeason = async (seasonId: number) => {
                                         </div>
                                     </div>
                                 </template>
+                                <button
+                                    v-if="
+                                        group.users.length >
+                                        PODIUM_TIED_AVATAR_LIMIT
+                                    "
+                                    @click.stop="openTiedModal(group, origIdx)"
+                                    class="inline-flex items-center justify-center rounded-full border border-border/40 bg-muted/40 px-2 py-1 text-[11px] font-bold text-muted-foreground transition-colors hover:bg-muted/60"
+                                >
+                                    +{{
+                                        group.users.length -
+                                        PODIUM_TIED_AVATAR_LIMIT
+                                    }}
+                                </button>
                             </div>
 
                             <!-- Single User Name -->
@@ -926,13 +949,16 @@ const changeSeason = async (seasonId: number) => {
                                 >
                             </template>
 
-                            <!-- Multiple Tied Users: Names List (all shown) -->
+                            <!-- Multiple Tied Users: Names List (limited) -->
                             <div
                                 v-else
                                 class="mt-2.5 flex max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-1 px-1 text-center"
                             >
                                 <template
-                                    v-for="(u, uIdx) in group.users"
+                                    v-for="(u, uIdx) in group.users.slice(
+                                        0,
+                                        PODIUM_NAME_LIMIT,
+                                    )"
                                     :key="u.id"
                                 >
                                     <div class="inline-flex items-center gap-1">
@@ -955,12 +981,28 @@ const changeSeason = async (seasonId: number) => {
                                             >YOU</span
                                         >
                                         <span
-                                            v-if="uIdx < group.users.length - 1"
+                                            v-if="
+                                                uIdx <
+                                                Math.min(
+                                                    group.users.length,
+                                                    PODIUM_NAME_LIMIT,
+                                                ) -
+                                                    1
+                                            "
                                             class="text-xs text-muted-foreground/60"
                                             >,</span
                                         >
                                     </div>
                                 </template>
+                                <span
+                                    v-if="
+                                        group.users.length > PODIUM_NAME_LIMIT
+                                    "
+                                    class="text-xs text-muted-foreground"
+                                    >and
+                                    {{ group.users.length - PODIUM_NAME_LIMIT }}
+                                    more</span
+                                >
                             </div>
 
                             <!-- XP -->
@@ -1666,6 +1708,7 @@ const changeSeason = async (seasonId: number) => {
 }
 .lb-podium-card {
     @apply relative rounded-[1.25rem] border border-border/40 bg-card p-5 transition-colors sm:p-6;
+    overflow: hidden;
 }
 .lb-podium-card:hover {
     @apply bg-muted/30;
@@ -1678,8 +1721,21 @@ const changeSeason = async (seasonId: number) => {
 }
 @media (min-width: 640px) {
     .lb-podium-card--champ {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
+        padding-top: 2.25rem;
+        padding-bottom: 2.25rem;
+        min-height: 370px;
+    }
+    .lb-podium-card:not(.lb-podium-card--champ) {
+        min-height: 290px;
+    }
+}
+@media (max-width: 639px) {
+    .lb-podium-card {
+        padding: 1rem;
+    }
+    .lb-podium-card--champ {
+        padding-top: 1.25rem;
+        padding-bottom: 1.25rem;
     }
 }
 .lb-rank-badge {
@@ -1733,5 +1789,25 @@ const changeSeason = async (seasonId: number) => {
 }
 .lb-blurred-text::-moz-selection {
     background: transparent;
+}
+
+/* ── Mobile-specific fixes ── */
+@media (max-width: 639px) {
+    .lb-podium {
+        gap: 0.625rem;
+    }
+
+    .lb-rank-row {
+        padding: 0.875rem;
+    }
+
+    /* Compact the action buttons row on narrow screens */
+    .lb-season-select,
+    .lb-blur-toggle,
+    .lb-season-pill {
+        min-height: 38px;
+        font-size: 0.75rem;
+        padding: 0.375rem 0.625rem;
+    }
 }
 </style>
