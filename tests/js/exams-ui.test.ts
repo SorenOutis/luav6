@@ -34,6 +34,9 @@ describe('exams and parts student shell', () => {
         expect(page).toContain('All activities');
         expect(page).toContain('dash-title');
         expect(page).toContain("'Start'");
+        expect(page).toContain('View XP Earned');
+        expect(page).toContain('Accuracy bonus');
+        expect(page).toContain('Your exam score remains separate');
         expect(css).toContain('.student-ui.exam-theme-page');
         expect(css).toContain('env(safe-area-inset-left)');
     });

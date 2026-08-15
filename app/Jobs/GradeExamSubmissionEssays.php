@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Services\AIService;
+use App\Services\ExamXpAwardService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -99,6 +100,7 @@ class GradeExamSubmissionEssays implements ShouldQueue
         if ($essays === []) {
             // Nothing to score (e.g. every essay left blank).
             $submission->forceFill(['status' => 'graded'])->save();
+            app(ExamXpAwardService::class)->awardIfEligible($submission->user, $submission->exam);
 
             return;
         }
@@ -162,6 +164,8 @@ class GradeExamSubmissionEssays implements ShouldQueue
             'grading_failed' => $gradingFailed,
             'status' => $allEssayFeedbackComplete ? 'graded' : 'pending_ai',
         ])->save();
+
+        app(ExamXpAwardService::class)->awardIfEligible($submission->user, $submission->exam);
     }
 
     /**

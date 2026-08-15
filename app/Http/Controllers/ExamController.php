@@ -15,6 +15,7 @@ use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Services\AIService;
 use App\Services\ExamAnswerDraftService;
+use App\Services\ExamXpAwardService;
 use App\Support\AiQueueWorker;
 use App\Support\ExamPartSerializer;
 use Carbon\CarbonInterface as Carbon;
@@ -27,7 +28,10 @@ use Inertia\Inertia;
 
 class ExamController extends Controller
 {
-    public function __construct(protected AIService $aiService) {}
+    public function __construct(
+        protected AIService $aiService,
+        protected ExamXpAwardService $examXpAwardService,
+    ) {}
 
     /**
      * Phase 3.6 — Fixed N+1: batch-load all user submissions for all visible
@@ -197,6 +201,9 @@ class ExamController extends Controller
             'submittedPartId' => $submittedPartId,
             'partDeadlines' => $partDeadlines,
             'answerDrafts' => $answerDrafts,
+            'xpAward' => $this->examXpAwardService->serialize(
+                $this->examXpAwardService->awardIfEligible(auth()->user(), $exam)
+            ),
             'realtimeChannel' => "exam.{$exam->id}.student.{$userId}",
         ]);
     }
@@ -543,6 +550,10 @@ class ExamController extends Controller
             }
         }
 
+        // This grants completion/on-time XP as soon as the last part exists.
+        // Accuracy XP waits until every essay has finished grading.
+        $this->examXpAwardService->awardIfEligible($request->user(), $exam);
+
         return redirect('/exams/'.$exam->id)->with('submitted_part', $examPart->id);
     }
 
@@ -607,12 +618,15 @@ class ExamController extends Controller
                 ->where('question_type', 'essay')
                 ->every(fn ($answer) => array_key_exists('ai_score', $answer));
 
+        $xpAward = $this->examXpAwardService->awardIfEligible($request->user(), $exam);
+
         return response()->json([
             'status' => $submission->status,
             'scored' => $essaysScored,
             'score' => $essaysScored ? (float) $submission->score : null,
             'is_late' => (bool) $submission->is_late,
             'grading_failed' => (bool) $submission->grading_failed,
+            'xp_award' => $this->examXpAwardService->serialize($xpAward),
         ]);
     }
 

@@ -16,6 +16,10 @@ class Exam extends Model
         'description',
         'exam_date',
         'duration_minutes',
+        'xp_rewards_enabled',
+        'completion_xp',
+        'on_time_xp',
+        'accuracy_xp_enabled',
         'status',
         'ai_feedback_enabled',
         'ai_feedback_enabled_at',
@@ -26,12 +30,22 @@ class Exam extends Model
 
     protected $casts = [
         'exam_date' => 'datetime',
+        'xp_rewards_enabled' => 'boolean',
+        'accuracy_xp_enabled' => 'boolean',
         'ai_feedback_enabled' => 'boolean',
         'ai_feedback_enabled_at' => 'datetime',
     ];
 
     protected static function booted()
     {
+        // The migration leaves historical exams disabled to avoid retroactive
+        // double rewards. Newly created exams opt in unless explicitly disabled.
+        static::creating(function (Exam $exam) {
+            if (! array_key_exists('xp_rewards_enabled', $exam->getAttributes())) {
+                $exam->xp_rewards_enabled = true;
+            }
+        });
+
         static::updated(function ($exam) {
             Cache::forget("exam_structure_{$exam->id}");
         });
@@ -54,5 +68,10 @@ class Exam extends Model
     public function submissions()
     {
         return $this->hasMany(ExamSubmission::class);
+    }
+
+    public function xpAwards()
+    {
+        return $this->hasMany(ExamXpAward::class);
     }
 }
