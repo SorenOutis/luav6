@@ -412,11 +412,6 @@ const nextItem = computed<NextUpItem | null>(() => {
 
 const primaryLeaderboard = computed(() => sectionLeaderboards.value[0] ?? null);
 
-const seasonalXpTarget = computed(() => {
-    // Rough target: fill the currently reached level's XP band; can be tuned later
-    return props.userStats?.maxXPForLevel ?? 100;
-});
-
 let gsapCtx: gsap.Context | null = null;
 
 const showSectionModal = ref(false);
@@ -683,8 +678,6 @@ const handleLogout = () => {
                         :name="activeSeason?.name ?? null"
                         :start-date="activeSeason?.startDate ?? null"
                         :end-date="activeSeason?.endDate ?? null"
-                        :xp-earned="userStats.currentXP"
-                        :xp-target="seasonalXpTarget"
                     />
                 </Motion>
 
