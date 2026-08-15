@@ -247,4 +247,236 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         expect(listRows[0].text()).toContain('P5');
         expect(listRows[0].text()).toContain('1,000');
     });
+
+    it('shows "& # more" button when more than 3 users are tied, and opens modal on click showing 5 circle profiles per layer', async () => {
+        const sevenUsers = [
+            {
+                id: 1,
+                name: 'Student 1',
+                xp: 2000,
+                avatar: '/avatars/1.png',
+                xpProgress: 90,
+                streak: 5,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+                isCurrentUser: true,
+            },
+            {
+                id: 2,
+                name: 'Student 2',
+                xp: 2000,
+                avatar: '/avatars/2.png',
+                xpProgress: 90,
+                streak: 4,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 3,
+                name: 'Student 3',
+                xp: 2000,
+                avatar: '/avatars/3.png',
+                xpProgress: 90,
+                streak: 3,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 4,
+                name: 'Student 4',
+                xp: 2000,
+                avatar: '/avatars/4.png',
+                xpProgress: 90,
+                streak: 2,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 5,
+                name: 'Student 5',
+                xp: 2000,
+                avatar: '/avatars/5.png',
+                xpProgress: 90,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 6,
+                name: 'Student 6',
+                xp: 2000,
+                avatar: '/avatars/6.png',
+                xpProgress: 90,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 7,
+                name: 'Student 7',
+                xp: 2000,
+                avatar: '',
+                xpProgress: 90,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+                blurred: true,
+            },
+            {
+                id: 8,
+                name: 'Rank2 Student',
+                xp: 1500,
+                xpProgress: 50,
+                streak: 2,
+                joinedAt: '2026',
+                weeklyXp: 50,
+                trend: 'stable' as const,
+            },
+            {
+                id: 9,
+                name: 'Rank3 Student',
+                xp: 1000,
+                xpProgress: 30,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 20,
+                trend: 'down' as const,
+            },
+        ];
+
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: [
+                    {
+                        sectionId: 1,
+                        sectionName: 'Section Alpha',
+                        users: sevenUsers,
+                        userRank: 1,
+                        totalPlayers: 9,
+                    },
+                ],
+            },
+        });
+
+        // 1st place champ card
+        const champCard = wrapper.find('.lb-podium-card--champ');
+        expect(champCard.exists()).toBe(true);
+
+        // Check "& 4 more" button exists (since 7 - 3 = 4)
+        expect(champCard.text()).toContain('& 4 more');
+
+        // Check avatar overflow button "+3" exists (since 7 - 4 = 3)
+        expect(champCard.text()).toContain('+3');
+
+        // Find the "& 4 more" button and click it
+        const moreButtons = champCard.findAll('button');
+        const moreBtn = moreButtons.find((b) => b.text().includes('& 4 more'));
+        expect(moreBtn).toBeDefined();
+
+        await moreBtn!.trigger('click');
+
+        // The tied players modal is teleported to document.body
+        const bodyHtml = document.body.innerHTML;
+        expect(bodyHtml).toContain('grid-cols-5');
+        expect(bodyHtml).toContain('1st Place · Tied Players (7)');
+        expect(bodyHtml).toContain('Student 1');
+        expect(bodyHtml).toContain('Student 2');
+        expect(bodyHtml).toContain('Student 3');
+        expect(bodyHtml).toContain('Student 4');
+        expect(bodyHtml).toContain('Student 5');
+        expect(bodyHtml).toContain('Student 6');
+        // Blurred user Student 7 should have obscured name
+        expect(bodyHtml).toContain('████████████████████');
+        // Current user should have YOU badge in modal
+        expect(bodyHtml).toContain('YOU');
+    });
+
+    it('opens tied modal when clicking the +X avatar cluster bubble', async () => {
+        const fiveUsers = [
+            {
+                id: 1,
+                name: 'User A',
+                xp: 2000,
+                xpProgress: 90,
+                streak: 5,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 2,
+                name: 'User B',
+                xp: 2000,
+                xpProgress: 90,
+                streak: 4,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 3,
+                name: 'User C',
+                xp: 2000,
+                xpProgress: 90,
+                streak: 3,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 4,
+                name: 'User D',
+                xp: 2000,
+                xpProgress: 90,
+                streak: 2,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+            {
+                id: 5,
+                name: 'User E',
+                xp: 2000,
+                xpProgress: 90,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 100,
+                trend: 'up' as const,
+            },
+        ];
+
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: [
+                    {
+                        sectionId: 1,
+                        sectionName: 'Section Alpha',
+                        users: fiveUsers,
+                        userRank: 1,
+                        totalPlayers: 5,
+                    },
+                ],
+            },
+        });
+
+        const champCard = wrapper.find('.lb-podium-card--champ');
+        const plusOneBtn = champCard
+            .findAll('button')
+            .find((b) => b.text().includes('+1'));
+        expect(plusOneBtn).toBeDefined();
+
+        await plusOneBtn!.trigger('click');
+
+        const bodyHtml = document.body.innerHTML;
+        expect(bodyHtml).toContain('1st Place · Tied Players (5)');
+        expect(bodyHtml).toContain('User A');
+        expect(bodyHtml).toContain('User E');
+    });
 });

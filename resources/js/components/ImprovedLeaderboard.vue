@@ -25,7 +25,12 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import type { Component } from 'vue';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
@@ -333,6 +338,44 @@ const openHistory = async (user: LeaderboardUser) => {
     }
 };
 
+// Tied Users Modal
+const isTiedModalOpen = ref(false);
+const selectedTiedGroup = ref<RankGroup | null>(null);
+const selectedTiedOrigIdx = ref<number | null>(null);
+
+const openTiedModal = (group: RankGroup, origIdx?: number) => {
+    selectedTiedGroup.value = group;
+    selectedTiedOrigIdx.value = origIdx !== undefined ? origIdx : null;
+    isTiedModalOpen.value = true;
+};
+
+const openCurrentUserTiedModal = () => {
+    if (!currentUser.value) return;
+    const group = rankGroups.value.find((g) => g.hasCurrentUser);
+    if (group) {
+        const podiumIdx = top3Groups.value.findIndex(
+            (g) => g.rank === group.rank,
+        );
+        openTiedModal(group, podiumIdx !== -1 ? podiumIdx : undefined);
+    }
+};
+
+const getGroupRankMeta = (group: RankGroup | null) => {
+    if (!group) return null;
+    if (group.rank === 1) return rankMeta[0];
+    if (group.rank === 2) return rankMeta[1];
+    if (group.rank === 3) return rankMeta[2];
+    return {
+        label: `#${group.rank}`,
+        icon: Trophy,
+        ring: 'ring-muted-foreground/30',
+        glow: '',
+        accent: 'text-muted-foreground',
+        bg: 'from-muted/20 via-transparent to-transparent',
+        badge: 'bg-muted text-muted-foreground',
+    };
+};
+
 // Blur toggle
 const isTogglingBlur = ref(false);
 
@@ -545,15 +588,18 @@ const changeSeason = async (seasonId: number) => {
                                 class="text-[28px] leading-none font-semibold tracking-tight tabular-nums sm:text-[32px]"
                                 >#{{ userRank }}</span
                             >
-                            <span
+                            <button
                                 v-if="tiedWithCount > 0"
-                                class="inline-flex items-center gap-1 rounded-full bg-[#D97757]/15 px-2 py-0.5 text-xs font-semibold text-[#D97757]"
+                                type="button"
+                                @click="openCurrentUserTiedModal"
+                                class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[#D97757]/15 px-2 py-0.5 text-xs font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/25 focus:outline-none"
+                                title="View tied players"
                             >
                                 <Users class="h-3 w-3" />
                                 Tied with {{ tiedWithCount }} other{{
                                     tiedWithCount > 1 ? 's' : ''
                                 }}
-                            </span>
+                            </button>
                             <span
                                 class="text-[13px] font-medium text-muted-foreground"
                                 >of {{ totalPlayers }} players</span
@@ -681,12 +727,15 @@ const changeSeason = async (seasonId: number) => {
                                     class="h-3 w-3"
                                 />
                                 <span>{{ rankMeta[origIdx].label }}</span>
-                                <span
+                                <button
                                     v-if="group.users.length > 1"
-                                    class="ml-1 text-[11px] font-normal opacity-90"
+                                    type="button"
+                                    @click.stop="openTiedModal(group, origIdx)"
+                                    class="ml-1 cursor-pointer text-[11px] font-normal opacity-90 hover:underline focus:outline-none"
+                                    title="View all tied players"
                                 >
                                     • Tied ({{ group.users.length }})
-                                </span>
+                                </button>
                             </div>
 
                             <!-- Single User Avatar -->
@@ -805,18 +854,21 @@ const changeSeason = async (seasonId: number) => {
                                         </div>
                                     </div>
                                 </template>
-                                <div
+                                <button
                                     v-if="group.users.length > 4"
+                                    type="button"
+                                    @click.stop="openTiedModal(group, origIdx)"
                                     :class="[
-                                        'flex items-center justify-center rounded-full border-2 border-background bg-muted text-[11px] font-bold text-muted-foreground ring-2',
+                                        'flex cursor-pointer items-center justify-center rounded-full border-2 border-background bg-muted text-[11px] font-bold text-muted-foreground ring-2 transition-transform hover:scale-110 hover:bg-muted/80 hover:text-foreground focus:outline-none',
                                         origIdx === 0
                                             ? 'h-14 w-14 sm:h-16 sm:w-16'
                                             : 'h-12 w-12 sm:h-14 sm:w-14',
                                         rankMeta[origIdx].ring,
                                     ]"
+                                    title="View all tied players"
                                 >
                                     +{{ group.users.length - 4 }}
-                                </div>
+                                </button>
                             </div>
 
                             <!-- Single User Name -->
@@ -896,12 +948,15 @@ const changeSeason = async (seasonId: number) => {
                                         >
                                     </div>
                                 </template>
-                                <span
+                                <button
                                     v-if="group.users.length > 3"
-                                    class="text-xs font-medium text-muted-foreground"
+                                    type="button"
+                                    @click.stop="openTiedModal(group, origIdx)"
+                                    class="inline-flex cursor-pointer items-center text-xs font-medium text-[#D97757] transition-colors hover:text-[#D97757]/80 hover:underline focus:outline-none"
+                                    title="View all tied players"
                                 >
-                                    & {{ group.users.length - 3 }} more
-                                </span>
+                                    &amp; {{ group.users.length - 3 }} more
+                                </button>
                             </div>
 
                             <span
@@ -1086,13 +1141,16 @@ const changeSeason = async (seasonId: number) => {
                             <template v-else>
                                 <div class="min-w-0 flex-1 py-1">
                                     <div class="mb-1.5 flex items-center gap-2">
-                                        <span
-                                            class="inline-flex items-center gap-1 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D97757]"
+                                        <button
+                                            type="button"
+                                            @click="openTiedModal(group)"
+                                            class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/20 focus:outline-none"
+                                            title="View all tied students"
                                         >
                                             <Users class="h-3 w-3" />
                                             Tied ({{ group.users.length }}
                                             students)
-                                        </span>
+                                        </button>
                                     </div>
                                     <div
                                         class="flex flex-wrap items-center gap-2"
@@ -1295,9 +1353,9 @@ const changeSeason = async (seasonId: number) => {
                                         : selectedUser?.name
                                 }}</DialogTitle
                             >
-                            <span
+                            <DialogDescription
                                 class="text-[13px] font-medium text-muted-foreground"
-                                >XP History</span
+                                >XP History</DialogDescription
                             >
                         </div>
                     </div>
@@ -1385,6 +1443,180 @@ const changeSeason = async (seasonId: number) => {
                     <button
                         @click="isHistoryOpen = false"
                         class="dash-btn px-6 text-[15px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                        Close
+                    </button>
+                </div>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Tied Players Modal -->
+        <Dialog v-model:open="isTiedModalOpen">
+            <DialogContent
+                class="overflow-hidden border-border/50 bg-card p-0 sm:max-w-[540px]"
+            >
+                <div class="border-b border-border/20 p-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex items-center gap-3 sm:gap-4">
+                        <div
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+                            :class="
+                                selectedTiedGroup?.rank === 1
+                                    ? 'bg-[#D97757]/15 text-[#D97757]'
+                                    : selectedTiedGroup?.rank === 2
+                                      ? 'bg-slate-300/15 text-slate-300'
+                                      : selectedTiedGroup?.rank === 3
+                                        ? 'bg-[#E0AF68]/15 text-[#E0AF68]'
+                                        : 'bg-muted text-muted-foreground'
+                            "
+                        >
+                            <component
+                                :is="
+                                    getGroupRankMeta(selectedTiedGroup)?.icon ||
+                                    Trophy
+                                "
+                                class="h-5 w-5"
+                            />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <DialogTitle
+                                class="truncate text-[17px] font-semibold tracking-tight"
+                            >
+                                {{
+                                    selectedTiedGroup?.rank === 1
+                                        ? '1st Place'
+                                        : selectedTiedGroup?.rank === 2
+                                          ? '2nd Place'
+                                          : selectedTiedGroup?.rank === 3
+                                            ? '3rd Place'
+                                            : `Rank #${selectedTiedGroup?.rank}`
+                                }}
+                                · Tied Players ({{
+                                    selectedTiedGroup?.users.length || 0
+                                }})
+                            </DialogTitle>
+                            <DialogDescription
+                                class="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground"
+                            >
+                                <span
+                                    class="font-semibold text-foreground tabular-nums"
+                                >
+                                    {{ selectedTiedGroup?.xp.toLocaleString() }}
+                                    XP
+                                </span>
+                                <span>•</span>
+                                <span>
+                                    {{ selectedTiedGroup?.users.length }}
+                                    students sharing this score
+                                </span>
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5 Profiles per Layer (Row) Grid -->
+                <div
+                    class="max-h-[60vh] scrollbar-none overflow-y-auto px-4 py-5 sm:px-6"
+                >
+                    <div
+                        class="grid grid-cols-5 justify-items-center gap-x-2 gap-y-5 sm:gap-x-4 sm:gap-y-6"
+                    >
+                        <div
+                            v-for="u in selectedTiedGroup?.users"
+                            :key="u.id"
+                            class="group flex w-full max-w-[80px] flex-col items-center text-center sm:max-w-[90px]"
+                        >
+                            <!-- Circle Profile Avatar -->
+                            <div class="relative">
+                                <Link
+                                    v-if="!u.blurred"
+                                    :href="`/u/${u.id}`"
+                                    :title="u.name"
+                                    :class="[
+                                        'lb-avatar h-12 w-12 ring-2 transition-transform duration-200 group-hover:scale-105 sm:h-14 sm:w-14',
+                                        getGroupRankMeta(selectedTiedGroup)
+                                            ?.ring,
+                                        u.isCurrentUser && 'ring-[#D97757]',
+                                    ]"
+                                >
+                                    <img
+                                        v-if="u.avatar"
+                                        :src="u.avatar"
+                                        :alt="`${u.name} avatar`"
+                                        loading="lazy"
+                                        decoding="async"
+                                        class="h-full w-full object-cover"
+                                    />
+                                    <User
+                                        v-else
+                                        class="h-6 w-6 text-muted-foreground/40"
+                                    />
+                                </Link>
+                                <div
+                                    v-else
+                                    :class="[
+                                        'lb-avatar lb-blurred h-12 w-12 ring-2 sm:h-14 sm:w-14',
+                                        getGroupRankMeta(selectedTiedGroup)
+                                            ?.ring,
+                                    ]"
+                                >
+                                    <User
+                                        class="h-6 w-6 text-muted-foreground/40"
+                                    />
+                                    <div
+                                        class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-primary/[0.03] backdrop-blur-[2px]"
+                                    >
+                                        <EyeOff
+                                            class="h-4 w-4 text-muted-foreground/40"
+                                        />
+                                    </div>
+                                </div>
+
+                                <!-- Current User Badge -->
+                                <span
+                                    v-if="u.isCurrentUser"
+                                    class="py-0.2 absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-[#D97757] px-1.5 text-[8px] font-bold text-white shadow-sm ring-1 ring-background"
+                                >
+                                    YOU
+                                </span>
+                            </div>
+
+                            <!-- Name below circle profile -->
+                            <Link
+                                v-if="!u.blurred"
+                                :href="`/u/${u.id}`"
+                                class="mt-2 line-clamp-2 w-full text-center text-[11px] leading-tight font-semibold break-words transition-colors hover:text-[#D97757] sm:text-xs"
+                                :title="u.name"
+                            >
+                                {{ u.name }}
+                            </Link>
+                            <span
+                                v-else
+                                class="lb-blurred-text mt-2 line-clamp-1 w-full text-center text-[11px] leading-tight font-semibold sm:text-xs"
+                                @contextmenu.prevent
+                            >
+                                {{ BLURRED_NAME }}
+                            </span>
+
+                            <!-- Streak / XP Info -->
+                            <div
+                                class="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground"
+                            >
+                                <Flame class="h-2.5 w-2.5 text-[#D97757]" />
+                                <span>{{ u.streak }}d</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="flex items-center justify-between border-t border-border/20 px-5 py-3.5 sm:px-6"
+                >
+                    <span class="text-xs text-muted-foreground">
+                        {{ selectedTiedGroup?.users.length }} players listed
+                    </span>
+                    <button
+                        @click="isTiedModalOpen = false"
+                        class="dash-btn px-5 py-1.5 text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
                         Close
                     </button>
