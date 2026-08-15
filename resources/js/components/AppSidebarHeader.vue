@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { router, usePage } from '@inertiajs/vue3';
 import { Bell, Moon, Shield, Sun, TrendingUp, Zap } from 'lucide-vue-next';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import AppearanceMenu from '@/components/AppearanceMenu.vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import UserMenuContent from '@/components/UserMenuContent.vue';
 import { useAppearance } from '@/composables/useAppearance';
-import type { BreadcrumbItem } from '@/types';
+import { getInitials } from '@/composables/useInitials';
+import type { BreadcrumbItem, User } from '@/types';
 
 withDefaults(
     defineProps<{
@@ -24,6 +27,7 @@ withDefaults(
 
 const { appearance, toggleTheme } = useAppearance();
 const page = usePage();
+const user = computed<User>(() => page.props.auth.user);
 
 interface HeaderNotification {
     id: string;
@@ -277,7 +281,34 @@ const markAllNotificationsAsRead = () => {
                 <Moon v-else class="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
 
-            <AppearanceMenu />
+            <DropdownMenu>
+                <DropdownMenuTrigger :as-child="true">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        class="relative size-8 w-auto rounded-full p-1 focus-visible:ring-2 focus-visible:ring-primary sm:size-9"
+                        aria-label="Open user menu"
+                    >
+                        <Avatar
+                            class="size-7 overflow-hidden rounded-full sm:size-8"
+                        >
+                            <AvatarImage
+                                v-if="user?.avatar"
+                                :src="user.avatar"
+                                :alt="user.name"
+                            />
+                            <AvatarFallback
+                                class="rounded-lg bg-neutral-200 font-semibold text-black dark:bg-neutral-700 dark:text-white"
+                            >
+                                {{ getInitials(user?.name) }}
+                            </AvatarFallback>
+                        </Avatar>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="w-56">
+                    <UserMenuContent :user="user" />
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
     </header>
 </template>

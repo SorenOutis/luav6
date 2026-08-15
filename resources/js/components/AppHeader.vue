@@ -16,7 +16,6 @@ import {
     Users,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
-import AppearanceMenu from '@/components/AppearanceMenu.vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
@@ -519,8 +518,6 @@ const rightNavItems: NavItem[] = [
                                 />
                                 <Moon v-else class="h-4 w-4 sm:h-5 sm:w-5" />
                             </button>
-
-                            <AppearanceMenu />
                         </div>
 
                         <div class="hidden space-x-1 lg:flex">
