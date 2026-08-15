@@ -388,10 +388,10 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
 
         await tiedButtons[0].trigger('click');
 
-        // The tied players modal should show ALL 7 players
+        // The tied students modal should show ALL 7 students
         const bodyHtml = document.body.innerHTML;
         expect(bodyHtml).toContain('grid-cols-5');
-        expect(bodyHtml).toContain('1st Place · Tied Players (7)');
+        expect(bodyHtml).toContain('1st Place · Tied Students (7)');
         expect(bodyHtml).toContain('Student 1');
         expect(bodyHtml).toContain('Student 2');
         expect(bodyHtml).toContain('Student 3');
@@ -492,7 +492,7 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         await tiedBadge!.trigger('click');
 
         const bodyHtml = document.body.innerHTML;
-        expect(bodyHtml).toContain('1st Place · Tied Players (5)');
+        expect(bodyHtml).toContain('1st Place · Tied Students (5)');
         expect(bodyHtml).toContain('User A');
         expect(bodyHtml).toContain('User D');
         expect(bodyHtml).toContain('User E');

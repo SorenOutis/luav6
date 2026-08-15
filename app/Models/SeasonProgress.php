@@ -64,13 +64,17 @@ class SeasonProgress extends Model
                             app(StudentNotificationService::class)->sendLevelUp($user, (int) $progress->level);
                         }
 
+                        // Recorded for audit, but not shown to the student
+                        // (filtered from feeds) and no XP notification sent.
                         $user->recordGamificationHistory(
                             $expDelta,
                             $pointsDelta,
                             'Admin Adjustment',
                             'Manual adjustment for Season: '.($progress->season?->name ?? 'Unknown'),
                             null,
-                            $progress->season_id
+                            $progress->season_id,
+                            null,
+                            false
                         );
                     }
                 }

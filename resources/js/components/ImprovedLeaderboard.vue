@@ -155,7 +155,6 @@ const filteredUsers = computed(() => {
         (u) => !u.blurred && u.name.toLowerCase().includes(q),
     );
 });
-const userRank = computed(() => activeLeaderboard.value?.userRank || 0);
 const totalPlayers = computed(() => activeLeaderboard.value?.totalPlayers || 0);
 const sectionName = computed(() => activeLeaderboard.value?.sectionName || '');
 const currentUser = computed(
@@ -185,6 +184,16 @@ const trueRankById = computed<Record<number, number>>(() => {
         prevXp = u.xp;
     });
     return map;
+});
+
+// The "Your rank" shown in the header must agree with the rank the student
+// actually has in the ranking list. We derive it from the same
+// trueRankById mapping used to render the list, so the two can never
+// disagree (the server's userRank can drift if its ranking algorithm
+// differs from the one used to draw the list).
+const userRank = computed(() => {
+    if (!currentUser.value) return 0;
+    return trueRankById.value[currentUser.value.id] ?? 0;
 });
 
 // Group filtered users by XP score so tied students share a single rank card.
@@ -652,7 +661,7 @@ const changeSeason = async (seasonId: number) => {
                                 type="button"
                                 @click="openCurrentUserTiedModal"
                                 class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-[#D97757]/15 px-2 py-0.5 text-xs font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/25 focus:outline-none"
-                                title="View tied players"
+                                title="View tied students"
                             >
                                 <Users class="h-3 w-3" />
                                 Tied with {{ tiedWithCount }} other{{
@@ -661,7 +670,7 @@ const changeSeason = async (seasonId: number) => {
                             </button>
                             <span
                                 class="text-[13px] font-medium text-muted-foreground"
-                                >of {{ totalPlayers }} players</span
+                                >of {{ totalPlayers }} students</span
                             >
                         </div>
                         <p class="mt-1 truncate text-xs text-muted-foreground">
@@ -718,7 +727,7 @@ const changeSeason = async (seasonId: number) => {
             <div v-if="filteredUsers.length === 0" class="lb-empty">
                 <Search class="mb-3 h-8 w-8 text-muted-foreground/30" />
                 <p class="text-sm font-bold">
-                    No users found for "{{ searchQuery }}"
+                    No students found for "{{ searchQuery }}"
                 </p>
                 <button
                     @click="searchQuery = ''"
@@ -793,7 +802,7 @@ const changeSeason = async (seasonId: number) => {
                                     type="button"
                                     @click.stop="openTiedModal(group, origIdx)"
                                     class="ml-1 cursor-pointer text-[11px] font-normal opacity-90 hover:underline focus:outline-none"
-                                    title="View all tied players"
+                                    title="View all tied students"
                                 >
                                     • Tied ({{ group.users.length }})
                                 </button>
@@ -1090,7 +1099,7 @@ const changeSeason = async (seasonId: number) => {
                         </div>
                         <span
                             class="font-mono text-[10px] text-muted-foreground"
-                            >{{ filteredUsers.length }} players ·
+                            >{{ filteredUsers.length }} students ·
                             {{ rankGroups.length }} ranks</span
                         >
                     </div>
@@ -1508,7 +1517,7 @@ const changeSeason = async (seasonId: number) => {
             </DialogContent>
         </Dialog>
 
-        <!-- Tied Players Modal -->
+        <!-- Tied Students Modal -->
         <Dialog v-model:open="isTiedModalOpen">
             <DialogContent
                 class="overflow-hidden border-border/50 bg-card p-0 sm:max-w-[540px]"
@@ -1548,7 +1557,7 @@ const changeSeason = async (seasonId: number) => {
                                             ? '3rd Place'
                                             : `Rank #${selectedTiedGroup?.rank}`
                                 }}
-                                · Tied Players ({{
+                                · Tied Students ({{
                                     selectedTiedGroup?.users.length || 0
                                 }})
                             </DialogTitle>
@@ -1670,7 +1679,7 @@ const changeSeason = async (seasonId: number) => {
                     class="flex items-center justify-between border-t border-border/20 px-5 py-3.5 sm:px-6"
                 >
                     <span class="text-xs text-muted-foreground">
-                        {{ selectedTiedGroup?.users.length }} players listed
+                        {{ selectedTiedGroup?.users.length }} students listed
                     </span>
                     <button
                         @click="isTiedModalOpen = false"

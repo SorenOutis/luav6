@@ -179,6 +179,9 @@ class DashboardController extends Controller
 
         $history = $user->gamificationHistories()
             ->when($currentSeason, fn ($query) => $query->where('season_id', $currentSeason->id))
+            // Back-office manual XP/point adjustments are audit-only and
+            // aren't surfaced on the student's dashboard.
+            ->where('reason', '!=', 'Admin Adjustment')
             ->get(['id', 'amount_xp', 'amount_points', 'reason', 'description', 'created_at']);
 
         $xpBreakdown = $history->filter(fn ($entry) => (float) $entry->amount_xp !== 0.0)

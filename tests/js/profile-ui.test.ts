@@ -88,8 +88,19 @@ const badges = [
         description: 'Completed the first lesson',
         image: null,
         requiredLevel: 1,
+        earned: true,
         earnedSeason: 'Season 1',
         earnedAt: 'Mar 02, 2025',
+    },
+    {
+        id: 2,
+        name: 'Scholar',
+        description: 'Reach a high level',
+        image: null,
+        requiredLevel: 20,
+        earned: false,
+        earnedSeason: null,
+        earnedAt: null,
     },
 ];
 
@@ -129,10 +140,25 @@ describe('public profile — social layout', () => {
         expect(text).toContain('Maria Santos');
         expect(text).toContain('@mariasantos');
         expect(text).toContain('Level');
-        expect(text).toContain('Season XP');
         expect(text).toContain('Badges');
-        expect(text).toContain('Day streak');
         expect(text).toContain('Grade 11 - Rizal');
+        // Season XP and Day streak are not shown in the counts bar.
+        expect(text).not.toContain('Season XP');
+        expect(text).not.toContain('Day streak');
+    });
+
+    it('shows earned + locked achievements with unlock dates', async () => {
+        const wrapper = mountProfile();
+        const tabs = wrapper.findAll('[role="tab"]');
+        await tabs[1].trigger('click');
+
+        const html = wrapper.html();
+        // Earned badge shows its unlock date.
+        expect(html).toContain('First Steps');
+        expect(html).toContain('Unlocked Mar 02, 2025');
+        // Locked badge is present but greyed out.
+        expect(html).toContain('Scholar');
+        expect(html).toContain('Level 20');
     });
 
     it('scopes the Apple-style profile tokens to the profile shell', () => {

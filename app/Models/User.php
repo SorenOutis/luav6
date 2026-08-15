@@ -352,7 +352,7 @@ class User extends Authenticatable implements FilamentUser
         return $query->whereHas('sections', fn ($q) => $q->where('admin_id', $user->id));
     }
 
-    public function recordGamificationHistory($amountXp, $amountPoints, $reason, $description = null, $sectionId = null, $seasonId = null, $awardedBy = null)
+    public function recordGamificationHistory($amountXp, $amountPoints, $reason, $description = null, $sectionId = null, $seasonId = null, $awardedBy = null, $notify = true)
     {
         if (abs($amountXp) < 0.001 && abs($amountPoints) < 0.001) {
             return null;
@@ -372,12 +372,17 @@ class User extends Authenticatable implements FilamentUser
             'season_id' => $seasonId,
         ]);
 
-        app(StudentNotificationService::class)->sendXpEarned(
-            $this,
-            (float) $amountXp,
-            (string) $reason,
-            $description
-        );
+        // Back-office adjustments (admin/teacher manual tweaks) are recorded
+        // for audit but are not surfaced to the student, so we don't push an
+        // XP notification for them.
+        if ($notify) {
+            app(StudentNotificationService::class)->sendXpEarned(
+                $this,
+                (float) $amountXp,
+                (string) $reason,
+                $description
+            );
+        }
 
         return $history;
     }

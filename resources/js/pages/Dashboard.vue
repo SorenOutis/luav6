@@ -811,7 +811,7 @@ const handleLogout = () => {
                                             {{
                                                 primaryLeaderboard.totalPlayers
                                             }}
-                                            players
+                                            students
                                         </p>
                                     </div>
                                 </div>
