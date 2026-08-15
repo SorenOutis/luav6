@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import { CalendarDays, Flag, Sparkles } from 'lucide-vue-next';
+import { CalendarDays, Sparkles } from 'lucide-vue-next';
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
 
 interface Props {
     name?: string | null;
     startDate?: string | null;
     endDate?: string | null;
-    xpEarned?: number;
-    xpTarget?: number | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     name: null,
     startDate: null,
     endDate: null,
-    xpEarned: 0,
-    xpTarget: null,
 });
 
 const now = ref(new Date());
@@ -31,31 +27,11 @@ onBeforeUnmount(() => {
     if (tickId !== null) window.clearInterval(tickId);
 });
 
-const seasonTimeline = computed(() => {
-    if (!props.startDate || !props.endDate) return null;
-    const start = new Date(props.startDate).getTime();
+// Keep only the countdown: how many days remain until the season ends.
+const daysRemaining = computed(() => {
+    if (!props.endDate) return null;
     const end = new Date(props.endDate).getTime();
-    const current = now.value.getTime();
-    const totalMs = Math.max(1, end - start);
-    const elapsedMs = Math.min(totalMs, Math.max(0, current - start));
-    const percentElapsed = Math.round((elapsedMs / totalMs) * 100);
-    const daysRemaining = Math.max(0, Math.ceil((end - current) / 86_400_000));
-    return { percentElapsed, daysRemaining, start, end };
-});
-
-const xpPercent = computed(() => {
-    if (!props.xpTarget || props.xpTarget <= 0) return null;
-    return Math.min(100, Math.round((props.xpEarned / props.xpTarget) * 100));
-});
-
-const pacing = computed(() => {
-    const t = seasonTimeline.value;
-    const xp = xpPercent.value;
-    if (!t || xp === null) return null;
-    const delta = xp - t.percentElapsed;
-    if (delta > 5) return { label: 'Ahead of pace', tone: 'text-primary' };
-    if (delta < -5) return { label: 'Behind pace', tone: 'text-destructive' };
-    return { label: 'On pace', tone: 'text-muted-foreground' };
+    return Math.max(0, Math.ceil((end - now.value.getTime()) / 86_400_000));
 });
 
 const formatDate = (iso?: string | null) => {
@@ -69,7 +45,7 @@ const formatDate = (iso?: string | null) => {
 
 <template>
     <section
-        v-if="name && seasonTimeline"
+        v-if="name && daysRemaining !== null"
         class="surface-card relative flex h-full w-full min-w-0 flex-col justify-between gap-3 overflow-hidden p-3.5 sm:gap-4 sm:p-6"
         aria-label="Current season progress"
     >
@@ -89,69 +65,22 @@ const formatDate = (iso?: string | null) => {
             </div>
         </div>
 
-        <div
-            class="relative z-10 flex flex-wrap items-end justify-between gap-x-3 gap-y-2"
-        >
-            <div>
-                <p class="dash-label">Time left</p>
-                <p
-                    class="dash-metric mt-0.5 flex items-baseline gap-1 text-[28px] leading-none sm:text-[34px]"
-                >
-                    {{ seasonTimeline.daysRemaining }}
-                    <span class="text-[13px] font-medium text-muted-foreground"
-                        >days</span
-                    >
-                </p>
-            </div>
-            <span
-                v-if="pacing"
-                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-medium"
-                :class="[
-                    pacing.tone,
-                    pacing.tone === 'text-primary'
-                        ? 'border-primary/25 bg-primary/10'
-                        : pacing.tone === 'text-destructive'
-                          ? 'border-destructive/25 bg-destructive/10'
-                          : 'border-border/30 bg-muted/30',
-                ]"
+        <div class="relative z-10">
+            <p
+                class="dash-metric flex items-baseline gap-1.5 text-[28px] leading-none text-foreground sm:text-[34px]"
             >
-                <Flag class="h-3 w-3" />
-                {{ pacing.label }}
-            </span>
+                {{ daysRemaining }}
+                <span class="text-[13px] font-medium text-muted-foreground"
+                    >days left</span
+                >
+            </p>
         </div>
 
-        <div class="relative z-10 space-y-1.5">
-            <div
-                class="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[13px] font-medium text-muted-foreground tabular-nums"
-            >
-                <span class="inline-flex items-center gap-1">
-                    <CalendarDays class="h-3 w-3" />
-                    {{ formatDate(startDate) }} – {{ formatDate(endDate) }}
-                </span>
-                <span v-if="xpPercent !== null" class="text-primary"
-                    >XP {{ xpPercent }}%</span
-                >
-            </div>
-            <div class="relative h-2 overflow-hidden rounded-full bg-muted">
-                <!-- Elapsed time -->
-                <div
-                    class="absolute inset-y-0 left-0 bg-muted-foreground/25 transition-[width] duration-1000 ease-out"
-                    :style="{ width: `${seasonTimeline.percentElapsed}%` }"
-                    aria-hidden="true"
-                />
-                <!-- XP progress -->
-                <div
-                    v-if="xpPercent !== null"
-                    class="absolute inset-y-0 left-0 bg-[#D97757] transition-[width] duration-700 ease-out"
-                    :style="{ width: `${xpPercent}%` }"
-                />
-                <!-- Pace marker -->
-                <div
-                    class="absolute top-[-3px] bottom-[-3px] w-0.5 rounded-full bg-foreground/60 transition-[left] duration-1000 ease-out"
-                    :style="{ left: `${seasonTimeline.percentElapsed}%` }"
-                    aria-hidden="true"
-                />
-            </div>
+        <div
+            class="relative z-10 flex items-center gap-1.5 border-t border-border/10 pt-3 text-xs text-muted-foreground tabular-nums"
+        >
+            <CalendarDays class="h-3 w-3 shrink-0" />
+            <span>{{ formatDate(startDate) }} – {{ formatDate(endDate) }}</span>
         </div>
     </section>
 </template>

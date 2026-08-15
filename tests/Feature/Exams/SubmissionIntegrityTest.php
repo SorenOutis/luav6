@@ -9,7 +9,8 @@
  *   - Single attempt per part (no retakes).
  *   - Late submissions are ACCEPTED and FLAGGED, not rejected.
  *   - Timer is per-part.
- *   - Answer keys revealed only once the exam is closed.
+ *   - Answer keys revealed only once the exam is closed AND the student has
+ *     actually participated (no review for students who never answered).
  */
 
 use App\Models\Exam;

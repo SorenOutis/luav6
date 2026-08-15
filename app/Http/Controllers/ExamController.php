@@ -60,21 +60,35 @@ class ExamController extends Controller
             ->get()
             ->groupBy('exam_id');
 
-        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions) {
+        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions, $user) {
             $submissions = $allSubmissions->get($exam->id, collect());
 
             $submittedPartsCount = $submissions->unique('exam_part_id')->count();
+            $hasSubmissions = $submissions->isNotEmpty();
 
             $seasonName = $exam->section?->season?->name;
 
-            // ⚠️ Answer keys are only serialized once the exam is closed.
-            $reveal = ExamPartSerializer::mayRevealAnswers($exam);
+            // ⚠️ Answer keys are only serialized once the exam is closed AND the
+            // student has actually participated. A student who never answered a
+            // closed exam must not be able to open "review results" and read the
+            // questions (or the key) after the fact.
+            $reveal = ExamPartSerializer::mayRevealAnswers(
+                $exam,
+                (bool) $user->is_admin,
+                $hasSubmissions,
+            );
+
+            // For a closed exam the student never took, drop the questions
+            // entirely — there is nothing of their own to review, so the
+            // payload must not carry the question text/options either.
+            $includeQuestions = $exam->status !== 'closed' || $reveal;
 
             return array_merge($exam->withoutRelations()->toArray(), [
-                'parts' => ExamPartSerializer::many($exam->parts, $reveal),
+                'parts' => ExamPartSerializer::many($exam->parts, $reveal, $includeQuestions),
                 'submitted_parts_count' => $submittedPartsCount,
                 'total_parts' => $exam->parts->count(),
                 'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
+                'has_submissions' => $hasSubmissions,
                 'submissions' => $submissions->toArray(),
                 'section_name' => $exam->section?->name,
                 'season_name' => $seasonName,
@@ -160,11 +174,24 @@ class ExamController extends Controller
         // Check if we just submitted a part (from flash session)
         $submittedPartId = session()->pull('submitted_part');
 
-        $reveal = ExamPartSerializer::mayRevealAnswers($exam);
+        // ⚠️ Answer keys are only serialized once the exam is closed AND the
+        // student has actually participated. A student who never answered a
+        // closed exam must not be able to open "review results" and read the
+        // questions (or the key) after the fact.
+        $hasSubmissions = $userSubmissions->isNotEmpty();
+        $reveal = ExamPartSerializer::mayRevealAnswers(
+            $exam,
+            (bool) auth()->user()->is_admin,
+            $hasSubmissions,
+        );
+
+        // For a closed exam the student never took, drop the questions entirely
+        // so the payload carries nothing for them to review.
+        $includeQuestions = $exam->status !== 'closed' || $reveal;
 
         return Inertia::render('Exams/Show', [
             'exam' => array_merge($exam->withoutRelations()->toArray(), [
-                'parts' => ExamPartSerializer::many($parts, $reveal),
+                'parts' => ExamPartSerializer::many($parts, $reveal, $includeQuestions),
             ]),
             'submissions' => $submissions,
             'submittedPartId' => $submittedPartId,

@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
 import EmptyState from '@/components/dashboard/EmptyState.vue';
+import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
+import StreakCard from '@/components/dashboard/StreakCard.vue';
 import TodayStrip from '@/components/dashboard/TodayStrip.vue';
 
 vi.mock('@inertiajs/vue3', () => ({
@@ -12,6 +14,19 @@ vi.mock('@inertiajs/vue3', () => ({
         props: { href: { type: String, default: '#' } },
         setup(props, { slots }) {
             return () => h('a', { href: props.href }, slots.default?.());
+        },
+    }),
+}));
+
+// Number animation is a visual nicety; tests only care about the final value.
+vi.mock('@/composables/useNumberAnimation', () => ({
+    useNumberAnimation: (getter: () => number) => getter(),
+}));
+
+vi.mock('@/components/dashboard/StreakCalendarModal.vue', () => ({
+    default: defineComponent({
+        setup() {
+            return () => h('div');
         },
     }),
 }));
@@ -127,5 +142,51 @@ describe('dashboard student shell', () => {
         expect(wrapper.get('h4').classes()).toContain('font-semibold');
         expect(wrapper.get('h4').classes()).not.toContain('uppercase');
         expect(wrapper.get('a').classes()).toContain('dash-btn');
+    });
+
+    it('keeps the streak card compact (no 7-day strip)', () => {
+        const wrapper = mount(StreakCard, {
+            props: {
+                currentStreak: 5,
+                longestStreak: 30,
+                loginDates: [],
+            },
+        });
+
+        const text = wrapper.text();
+
+        expect(text).toContain('Streak');
+        expect(text).toContain('5');
+        expect(text).toContain('Best:');
+        expect(text).toContain('30 days');
+        // Compact card: one metric row, no leftover 7-day weekday strip.
+        expect(wrapper.findAll('.dash-metric')).toHaveLength(1);
+        expect(text).not.toContain('Mo');
+        expect(text).not.toContain('Tu');
+    });
+
+    it('shows only days left and the date on the season card', () => {
+        const end = new Date(Date.now() + 10 * 86_400_000).toISOString();
+        const start = new Date(Date.now() - 5 * 86_400_000).toISOString();
+
+        const wrapper = mount(SeasonProgressBand, {
+            props: {
+                name: 'Season 1',
+                startDate: start,
+                endDate: end,
+            },
+        });
+
+        const text = wrapper.text();
+
+        expect(text).toContain('Season');
+        expect(text).toContain('Season 1');
+        expect(text).toContain('days left');
+        // Roughly ten days remain; the countdown is the card's only metric.
+        expect(text).toContain('10');
+        expect(text).toContain('–');
+        // XP progress / pacing clutter was removed.
+        expect(text).not.toContain('XP');
+        expect(text).not.toContain('pace');
     });
 });
