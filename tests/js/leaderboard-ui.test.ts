@@ -248,7 +248,7 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         expect(listRows[0].text()).toContain('1,000');
     });
 
-    it('shows every tied avatar (no +N / "& N more" overflow) and opens modal on click showing 5 circle profiles per layer', async () => {
+    it('limits tied avatars/names in podium card and opens modal on click showing all profiles', async () => {
         const sevenUsers = [
             {
                 id: 1,
@@ -369,16 +369,16 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         const champCard = wrapper.find('.lb-podium-card--champ');
         expect(champCard.exists()).toBe(true);
 
-        // No "+N" avatar overflow or "& N more" name overflow should exist
-        expect(champCard.text()).not.toContain('+');
-        expect(champCard.text()).not.toContain('more');
+        // 7 avatars ≤ PODIUM_TIED_AVATAR_LIMIT (8), so all avatars render
+        // but 7 names > PODIUM_NAME_LIMIT (3), so only 3 names + "and 4 more"
+        expect(champCard.text()).toContain('Student 1');
+        expect(champCard.text()).toContain('Student 2');
+        expect(champCard.text()).toContain('Student 3');
+        expect(champCard.text()).toContain('and 4 more');
 
-        // All 6 un-blurred tied students should be rendered directly in the card
-        for (let i = 1; i <= 6; i++) {
-            expect(champCard.text()).toContain(`Student ${i}`);
-        }
-        // The 7th tied student is blurred, so their name is obscured in the card
-        expect(champCard.text()).toContain('████████████████████');
+        // Only the first 3 names shown (PODIUM_NAME_LIMIT); the blurred
+        // Student 7 is beyond that limit so their ████████ doesn't appear in the card
+        expect(champCard.text()).toContain('and 4 more');
 
         // Find the "Tied (7)" badge button and click it to open the modal
         const tiedButtons = champCard
@@ -388,7 +388,7 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
 
         await tiedButtons[0].trigger('click');
 
-        // The tied players modal is teleported to document.body
+        // The tied players modal should show ALL 7 players
         const bodyHtml = document.body.innerHTML;
         expect(bodyHtml).toContain('grid-cols-5');
         expect(bodyHtml).toContain('1st Place · Tied Players (7)');
@@ -398,9 +398,7 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         expect(bodyHtml).toContain('Student 4');
         expect(bodyHtml).toContain('Student 5');
         expect(bodyHtml).toContain('Student 6');
-        // Blurred user Student 7 should have obscured name
         expect(bodyHtml).toContain('████████████████████');
-        // Current user should have YOU badge in modal
         expect(bodyHtml).toContain('YOU');
     });
 
@@ -473,17 +471,19 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         });
 
         const champCard = wrapper.find('.lb-podium-card--champ');
-        // No "+1" overflow bubble should exist — all 5 avatars are shown
+
+        // 5 avatars ≤ PODIUM_TIED_AVATAR_LIMIT (8), so no "+N" overflow button
         expect(
             champCard.findAll('button').find((b) => b.text().includes('+1')),
         ).toBeUndefined();
 
-        // All 5 tied users' names should be visible in the card
-        for (const n of ['User A', 'User B', 'User C', 'User D', 'User E']) {
-            expect(champCard.text()).toContain(n);
-        }
+        // Only the first 3 names shown in card (PODIUM_NAME_LIMIT), plus "and 2 more"
+        expect(champCard.text()).toContain('User A');
+        expect(champCard.text()).toContain('User B');
+        expect(champCard.text()).toContain('User C');
+        expect(champCard.text()).toContain('and 2 more');
 
-        // Open the modal via the "Tied (5)" badge
+        // Open the modal via the "Tied (5)" badge — modal shows ALL names
         const tiedBadge = champCard
             .findAll('button')
             .find((b) => b.text().includes('Tied (5)'));
@@ -494,6 +494,7 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         const bodyHtml = document.body.innerHTML;
         expect(bodyHtml).toContain('1st Place · Tied Players (5)');
         expect(bodyHtml).toContain('User A');
+        expect(bodyHtml).toContain('User D');
         expect(bodyHtml).toContain('User E');
     });
 
