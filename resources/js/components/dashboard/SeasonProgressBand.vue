@@ -46,18 +46,18 @@ const formatDate = (iso?: string | null) => {
 <template>
     <section
         v-if="name && daysRemaining !== null"
-        class="surface-card relative flex h-full w-full min-w-0 flex-col justify-between gap-3 overflow-hidden p-3.5 sm:gap-4 sm:p-6"
+        class="surface-card relative flex h-full w-full min-w-0 flex-col justify-between gap-2.5 overflow-hidden p-3 sm:gap-4 sm:p-5"
         aria-label="Current season progress"
     >
         <div class="relative z-10 flex items-start justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-3">
+            <div class="flex min-w-0 items-center gap-2.5">
                 <div class="dash-icon-well bg-[#D97757]/15 text-[#D97757]">
                     <Sparkles class="h-5 w-5" />
                 </div>
                 <div class="min-w-0">
                     <p class="dash-label">Season</p>
                     <h3
-                        class="truncate text-[17px] font-semibold tracking-tight text-foreground"
+                        class="text-[15px] leading-tight font-semibold tracking-tight break-words text-foreground"
                     >
                         {{ name }}
                     </h3>
@@ -67,7 +67,7 @@ const formatDate = (iso?: string | null) => {
 
         <div class="relative z-10">
             <p
-                class="dash-metric flex items-baseline gap-1.5 text-[28px] leading-none text-foreground sm:text-[34px]"
+                class="dash-metric flex items-baseline gap-1.5 text-[24px] leading-none text-foreground sm:text-[34px]"
             >
                 {{ daysRemaining }}
                 <span class="text-[13px] font-medium text-muted-foreground"
@@ -77,10 +77,12 @@ const formatDate = (iso?: string | null) => {
         </div>
 
         <div
-            class="relative z-10 flex items-center gap-1.5 border-t border-border/10 pt-3 text-xs text-muted-foreground tabular-nums"
+            class="relative z-10 flex min-w-0 items-center gap-1.5 border-t border-border/10 pt-3 text-xs text-muted-foreground tabular-nums"
         >
             <CalendarDays class="h-3 w-3 shrink-0" />
-            <span>{{ formatDate(startDate) }} – {{ formatDate(endDate) }}</span>
+            <span class="truncate"
+                >{{ formatDate(startDate) }} – {{ formatDate(endDate) }}</span
+            >
         </div>
     </section>
 </template>

@@ -165,19 +165,37 @@ const tiedWithCount = computed(() => {
     ).length;
 });
 
-// Group filtered users by XP score so tied students share a single rank card
+// True 1-based rank for every user (ties share a rank), computed over the
+// FULL list. This is used so that search results keep their real position
+// instead of being renumbered to the top of the filtered set.
+const trueRankById = computed<Record<number, number>>(() => {
+    const map: Record<number, number> = {};
+    let rank = 1;
+    let prevXp: number | null = null;
+    users.value.forEach((u, i) => {
+        if (prevXp === null || u.xp !== prevXp) {
+            rank = i + 1;
+        }
+        map[u.id] = rank;
+        prevXp = u.xp;
+    });
+    return map;
+});
+
+// Group filtered users by XP score so tied students share a single rank card.
+// The group's rank comes from its members' true rank (not the filtered index),
+// so a searched user keeps their actual placement.
 const rankGroups = computed<RankGroup[]>(() => {
     const list = filteredUsers.value;
     if (!list.length) return [];
 
     const groups: RankGroup[] = [];
     let currentGroup: RankGroup | null = null;
-    let currentRank = 1;
 
     for (const u of list) {
         if (!currentGroup || currentGroup.xp !== u.xp) {
             currentGroup = {
-                rank: currentRank++,
+                rank: trueRankById.value[u.id],
                 xp: u.xp,
                 xpProgress: u.xpProgress,
                 users: [u],
@@ -495,16 +513,11 @@ const changeSeason = async (seasonId: number) => {
                     Leaderboard
                 </h2>
             </div>
-            <div class="flex flex-wrap items-center justify-end gap-2">
-                <Link
-                    v-if="showViewButton"
-                    href="/leaderboard"
-                    class="dash-btn inline-flex shrink-0 items-center gap-2 bg-[#D97757]/10 px-4 text-[14px] text-[#D97757] transition hover:bg-[#D97757]/15"
-                >
-                    <Trophy class="h-3.5 w-3.5" />
-                    View Leaderboard
-                </Link>
-                <div class="relative flex-1 sm:flex-none">
+            <div
+                class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end"
+            >
+                <!-- Search: full-width row on mobile, fixed width on sm+ -->
+                <div class="relative w-full sm:w-52">
                     <Search
                         class="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
                     />
@@ -515,53 +528,76 @@ const changeSeason = async (seasonId: number) => {
                         class="lb-search w-full py-2 pr-4 pl-9 sm:w-52"
                     />
                 </div>
-                <!-- Season Dropdown -->
-                <div v-if="availableSeasons.length > 1" class="relative">
-                    <select
-                        :value="selectedSeasonId || availableSeasons[0]?.id"
-                        @change="
-                            (e) =>
-                                changeSeason(
-                                    Number(
-                                        (e.target as HTMLSelectElement).value,
-                                    ),
-                                )
-                        "
-                        :disabled="isSwitchingSeason"
-                        class="lb-season-select cursor-pointer appearance-none pr-8"
-                    >
-                        <option
-                            v-for="s in availableSeasons"
-                            :key="s.id"
-                            :value="s.id"
-                        >
-                            {{ s.name }}
-                        </option>
-                    </select>
-                    <ChevronDown
-                        class="pointer-events-none absolute top-1/2 right-3 h-3 w-3 -translate-y-1/2 text-muted-foreground"
-                    />
-                </div>
-                <div v-else class="lb-season-pill">
-                    <Terminal class="h-3 w-3 text-[#D97757]" />
-                    <span>{{ currentSeasonName }}</span>
-                </div>
 
-                <!-- Blur toggle -->
-                <button
-                    @click="toggleBlur"
-                    :disabled="isTogglingBlur"
-                    class="lb-blur-toggle shrink-0"
-                    :title="
-                        currentUserBlurred
-                            ? 'You are hidden — click to appear'
-                            : 'You are visible — click to hide'
-                    "
+                <!-- Action controls share an equal-width row beneath search on mobile -->
+                <div
+                    class="flex w-full gap-2 sm:w-auto sm:flex-none sm:justify-end"
                 >
-                    <EyeOff v-if="currentUserBlurred" class="h-3.5 w-3.5" />
-                    <Eye v-else class="h-3.5 w-3.5" />
-                    <span>{{ currentUserBlurred ? 'Hidden' : 'Visible' }}</span>
-                </button>
+                    <Link
+                        v-if="showViewButton"
+                        href="/leaderboard"
+                        class="dash-btn flex flex-1 items-center justify-center gap-2 bg-[#D97757]/10 px-4 text-[14px] text-[#D97757] transition hover:bg-[#D97757]/15 sm:flex-none"
+                    >
+                        <Trophy class="h-3.5 w-3.5" />
+                        View Leaderboard
+                    </Link>
+                    <!-- Season Dropdown -->
+                    <div
+                        v-if="availableSeasons.length > 1"
+                        class="relative flex-1 sm:flex-none"
+                    >
+                        <select
+                            :value="selectedSeasonId || availableSeasons[0]?.id"
+                            @change="
+                                (e) =>
+                                    changeSeason(
+                                        Number(
+                                            (e.target as HTMLSelectElement)
+                                                .value,
+                                        ),
+                                    )
+                            "
+                            :disabled="isSwitchingSeason"
+                            class="lb-season-select w-full cursor-pointer appearance-none pr-8"
+                        >
+                            <option
+                                v-for="s in availableSeasons"
+                                :key="s.id"
+                                :value="s.id"
+                            >
+                                {{ s.name }}
+                            </option>
+                        </select>
+                        <ChevronDown
+                            class="pointer-events-none absolute top-1/2 right-3 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+                        />
+                    </div>
+                    <div
+                        v-else
+                        class="lb-season-pill flex flex-1 items-center justify-center gap-1.5 sm:flex-none"
+                    >
+                        <Terminal class="h-3 w-3 text-[#D97757]" />
+                        <span>{{ currentSeasonName }}</span>
+                    </div>
+
+                    <!-- Blur toggle -->
+                    <button
+                        @click="toggleBlur"
+                        :disabled="isTogglingBlur"
+                        class="lb-blur-toggle flex flex-1 items-center justify-center gap-1.5 sm:flex-none"
+                        :title="
+                            currentUserBlurred
+                                ? 'You are hidden — click to appear'
+                                : 'You are visible — click to hide'
+                        "
+                    >
+                        <EyeOff v-if="currentUserBlurred" class="h-3.5 w-3.5" />
+                        <Eye v-else class="h-3.5 w-3.5" />
+                        <span>{{
+                            currentUserBlurred ? 'Hidden' : 'Visible'
+                        }}</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -719,14 +755,16 @@ const changeSeason = async (seasonId: number) => {
                             <div
                                 :class="[
                                     'lb-rank-badge',
-                                    rankMeta[origIdx].badge,
+                                    getGroupRankMeta(group)?.badge,
                                 ]"
                             >
                                 <component
-                                    :is="rankMeta[origIdx].icon"
+                                    :is="getGroupRankMeta(group)?.icon"
                                     class="h-3 w-3"
                                 />
-                                <span>{{ rankMeta[origIdx].label }}</span>
+                                <span>{{
+                                    getGroupRankMeta(group)?.label
+                                }}</span>
                                 <button
                                     v-if="group.users.length > 1"
                                     type="button"
@@ -796,15 +834,12 @@ const changeSeason = async (seasonId: number) => {
                                 </div>
                             </div>
 
-                            <!-- Multiple Tied Users: Overlapping Avatar Cluster -->
+                            <!-- Multiple Tied Users: every avatar shown (no +N overflow) -->
                             <div
                                 v-else
-                                class="relative flex items-center justify-center -space-x-2 py-1 sm:-space-x-3"
+                                class="flex flex-wrap items-center justify-center gap-1.5 py-1"
                             >
-                                <template
-                                    v-for="u in group.users.slice(0, 4)"
-                                    :key="u.id"
-                                >
+                                <template v-for="u in group.users" :key="u.id">
                                     <div class="relative">
                                         <Link
                                             v-if="!u.blurred"
@@ -813,8 +848,8 @@ const changeSeason = async (seasonId: number) => {
                                             :class="[
                                                 'lb-avatar ring-2 ring-background transition-transform hover:z-20 hover:scale-110',
                                                 origIdx === 0
-                                                    ? 'h-14 w-14 sm:h-16 sm:w-16'
-                                                    : 'h-12 w-12 sm:h-14 sm:w-14',
+                                                    ? 'h-10 w-10 sm:h-12 sm:w-12'
+                                                    : 'h-9 w-9 sm:h-10 sm:w-10',
                                                 rankMeta[origIdx].ring,
                                             ]"
                                         >
@@ -828,7 +863,7 @@ const changeSeason = async (seasonId: number) => {
                                             />
                                             <User
                                                 v-else
-                                                class="h-6 w-6 text-muted-foreground/40"
+                                                class="h-5 w-5 text-muted-foreground/40"
                                             />
                                         </Link>
                                         <div
@@ -836,39 +871,24 @@ const changeSeason = async (seasonId: number) => {
                                             :class="[
                                                 'lb-avatar lb-blurred ring-2 ring-background',
                                                 origIdx === 0
-                                                    ? 'h-14 w-14 sm:h-16 sm:w-16'
-                                                    : 'h-12 w-12 sm:h-14 sm:w-14',
+                                                    ? 'h-10 w-10 sm:h-12 sm:w-12'
+                                                    : 'h-9 w-9 sm:h-10 sm:w-10',
                                                 rankMeta[origIdx].ring,
                                             ]"
                                         >
                                             <User
-                                                class="h-6 w-6 text-muted-foreground/40"
+                                                class="h-5 w-5 text-muted-foreground/40"
                                             />
                                             <div
-                                                class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/[0.03] backdrop-blur-[2px]"
+                                                class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-full bg-primary/[0.03] backdrop-blur-[2px]"
                                             >
                                                 <EyeOff
-                                                    class="h-4 w-4 text-muted-foreground/40"
+                                                    class="h-3.5 w-3.5 text-muted-foreground/40"
                                                 />
                                             </div>
                                         </div>
                                     </div>
                                 </template>
-                                <button
-                                    v-if="group.users.length > 4"
-                                    type="button"
-                                    @click.stop="openTiedModal(group, origIdx)"
-                                    :class="[
-                                        'flex cursor-pointer items-center justify-center rounded-full border-2 border-background bg-muted text-[11px] font-bold text-muted-foreground ring-2 transition-transform hover:scale-110 hover:bg-muted/80 hover:text-foreground focus:outline-none',
-                                        origIdx === 0
-                                            ? 'h-14 w-14 sm:h-16 sm:w-16'
-                                            : 'h-12 w-12 sm:h-14 sm:w-14',
-                                        rankMeta[origIdx].ring,
-                                    ]"
-                                    title="View all tied players"
-                                >
-                                    +{{ group.users.length - 4 }}
-                                </button>
                             </div>
 
                             <!-- Single User Name -->
@@ -906,13 +926,13 @@ const changeSeason = async (seasonId: number) => {
                                 >
                             </template>
 
-                            <!-- Multiple Tied Users: Names List -->
+                            <!-- Multiple Tied Users: Names List (all shown) -->
                             <div
                                 v-else
-                                class="mt-2.5 flex max-w-full flex-wrap items-center justify-center gap-1.5 px-1 text-center"
+                                class="mt-2.5 flex max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-1 px-1 text-center"
                             >
                                 <template
-                                    v-for="(u, uIdx) in group.users.slice(0, 3)"
+                                    v-for="(u, uIdx) in group.users"
                                     :key="u.id"
                                 >
                                     <div class="inline-flex items-center gap-1">
@@ -935,36 +955,13 @@ const changeSeason = async (seasonId: number) => {
                                             >YOU</span
                                         >
                                         <span
-                                            v-if="
-                                                uIdx <
-                                                Math.min(
-                                                    group.users.length,
-                                                    3,
-                                                ) -
-                                                    1
-                                            "
+                                            v-if="uIdx < group.users.length - 1"
                                             class="text-xs text-muted-foreground/60"
                                             >,</span
                                         >
                                     </div>
                                 </template>
-                                <button
-                                    v-if="group.users.length > 3"
-                                    type="button"
-                                    @click.stop="openTiedModal(group, origIdx)"
-                                    class="inline-flex cursor-pointer items-center text-xs font-medium text-[#D97757] transition-colors hover:text-[#D97757]/80 hover:underline focus:outline-none"
-                                    title="View all tied players"
-                                >
-                                    &amp; {{ group.users.length - 3 }} more
-                                </button>
                             </div>
-
-                            <span
-                                class="mt-1 text-[13px] font-medium text-muted-foreground"
-                                :class="rankMeta[origIdx].accent"
-                            >
-                                {{ rankMeta[origIdx].label }}
-                            </span>
 
                             <!-- XP -->
                             <div class="mt-3 flex items-baseline gap-1">

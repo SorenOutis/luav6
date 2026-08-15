@@ -117,27 +117,17 @@ const bannedAt = computed(() => {
 });
 const showBanModal = ref(false);
 
-// Smarter, context-aware greeting
+// Short, time-based greeting so the heading fits on both mobile and desktop.
+// The smarter, context-aware detail lives in `smarterStatus` below.
 const personalizedGreeting = computed(() => {
     const hour = new Date().getHours();
-    const streak = props.userStats.streak;
-    const overdue = todaySummary.value.overdueCount;
 
-    // Time-based base greeting
-    let greeting = 'Good Evening';
-    if (hour >= 0 && hour < 4) greeting = 'Late night session';
-    else if (hour >= 4 && hour < 7) greeting = 'Early bird vibes';
-    else if (hour >= 7 && hour < 12) greeting = 'Good Morning';
-    else if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
-    else if (hour >= 17 && hour < 21) greeting = 'Good Evening';
-    else greeting = 'Winding down';
-
-    // Add flair based on state
-    if (overdue > 0) return `${greeting}, let's catch up`;
-    if (streak >= 7) return `${greeting}, Legend`;
-    if (streak > 0) return `${greeting}, keep it up`;
-
-    return greeting;
+    if (hour >= 0 && hour < 4) return 'Late night';
+    if (hour >= 4 && hour < 7) return 'Early bird';
+    if (hour >= 7 && hour < 12) return 'Good morning';
+    if (hour >= 12 && hour < 17) return 'Good afternoon';
+    if (hour >= 17 && hour < 21) return 'Good evening';
+    return 'Winding down';
 });
 
 const greetingTheme = computed(() => {
@@ -168,7 +158,7 @@ const statusColor = computed(() => {
     return 'bg-[#4D9375]';
 });
 
-// Smarter status subtext for the hero
+// Concise, context-aware subtext for the hero (the "smart" part of the greeting)
 const smarterStatus = computed(() => {
     const xpRemaining =
         props.userStats.maxXPForLevel - props.userStats.currentXP;
@@ -177,14 +167,14 @@ const smarterStatus = computed(() => {
     const dueToday = todaySummary.value.dueTodayCount;
 
     if (overdue > 0)
-        return `You have ${overdue} ${overdue === 1 ? 'task' : 'tasks'} that need attention.`;
+        return `You have ${overdue} task${overdue === 1 ? '' : 's'} to catch up on.`;
     if (xpRemaining < 200)
-        return `Only ${xpRemaining} XP until Level ${props.userStats.level + 1}.`;
-    if (streak >= 3) return `A ${streak}-day streak. Keep the momentum going.`;
+        return `Almost there — ${xpRemaining} XP to Level ${props.userStats.level + 1}.`;
+    if (streak >= 3) return `${streak}-day streak — keep it going!`;
     if (dueToday > 0)
-        return `${dueToday} ${dueToday === 1 ? 'item' : 'items'} on your schedule today.`;
+        return `${dueToday} item${dueToday === 1 ? '' : 's'} due today.`;
 
-    return `You're all caught up for now.`;
+    return `All caught up. Nice work!`;
 });
 
 const isBooted = ref(false);
@@ -541,7 +531,7 @@ const handleLogout = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="dashboardContainer"
-            class="dashboard-ui relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-3 overflow-hidden bg-background p-3 sm:gap-5 sm:p-6 md:gap-7 md:p-8"
+            class="dashboard-ui relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden bg-background p-3 sm:gap-5 sm:p-6 md:gap-7 md:p-8"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"
@@ -660,7 +650,7 @@ const handleLogout = () => {
                                   delay: 0.15,
                               }
                     "
-                    class="dashboard-progress grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+                    class="dashboard-progress grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
                 >
                     <LevelProgressCard
                         class="col-span-2"

@@ -60,14 +60,17 @@ describe('dashboard hero mobile layout', () => {
         expect(desktopRow.exists()).toBe(true);
     });
 
-    it('renders the join-section CTA as a full-width app row on mobile', () => {
+    it('renders the join-section CTA as a right-aligned button in the greeting row', () => {
         const wrapper = mount(DashboardHero, { props: baseProps });
 
         const join = wrapper
             .findAll('button')
             .find((button) => button.text().includes('Join section'));
 
+        expect(join?.exists()).toBe(true);
         expect(join?.classes()).toContain('dash-btn');
-        expect(join?.classes()).toContain('w-full');
+        expect(join?.classes()).toContain('shrink-0');
+        // It lives on the right side of the greeting, no longer a full-width row.
+        expect(join?.classes()).not.toContain('w-full');
     });
 });

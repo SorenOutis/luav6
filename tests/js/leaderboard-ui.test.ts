@@ -248,7 +248,7 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         expect(listRows[0].text()).toContain('1,000');
     });
 
-    it('shows "& # more" button when more than 3 users are tied, and opens modal on click showing 5 circle profiles per layer', async () => {
+    it('shows every tied avatar (no +N / "& N more" overflow) and opens modal on click showing 5 circle profiles per layer', async () => {
         const sevenUsers = [
             {
                 id: 1,
@@ -369,18 +369,24 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         const champCard = wrapper.find('.lb-podium-card--champ');
         expect(champCard.exists()).toBe(true);
 
-        // Check "& 4 more" button exists (since 7 - 3 = 4)
-        expect(champCard.text()).toContain('& 4 more');
+        // No "+N" avatar overflow or "& N more" name overflow should exist
+        expect(champCard.text()).not.toContain('+');
+        expect(champCard.text()).not.toContain('more');
 
-        // Check avatar overflow button "+3" exists (since 7 - 4 = 3)
-        expect(champCard.text()).toContain('+3');
+        // All 6 un-blurred tied students should be rendered directly in the card
+        for (let i = 1; i <= 6; i++) {
+            expect(champCard.text()).toContain(`Student ${i}`);
+        }
+        // The 7th tied student is blurred, so their name is obscured in the card
+        expect(champCard.text()).toContain('████████████████████');
 
-        // Find the "& 4 more" button and click it
-        const moreButtons = champCard.findAll('button');
-        const moreBtn = moreButtons.find((b) => b.text().includes('& 4 more'));
-        expect(moreBtn).toBeDefined();
+        // Find the "Tied (7)" badge button and click it to open the modal
+        const tiedButtons = champCard
+            .findAll('button')
+            .filter((b) => b.text().includes('Tied (7)'));
+        expect(tiedButtons.length).toBeGreaterThan(0);
 
-        await moreBtn!.trigger('click');
+        await tiedButtons[0].trigger('click');
 
         // The tied players modal is teleported to document.body
         const bodyHtml = document.body.innerHTML;
@@ -398,7 +404,7 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         expect(bodyHtml).toContain('YOU');
     });
 
-    it('opens tied modal when clicking the +X avatar cluster bubble', async () => {
+    it('opens tied modal when clicking the "Tied (N)" badge on a multi-avatar podium card', async () => {
         const fiveUsers = [
             {
                 id: 1,
@@ -467,16 +473,62 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         });
 
         const champCard = wrapper.find('.lb-podium-card--champ');
-        const plusOneBtn = champCard
-            .findAll('button')
-            .find((b) => b.text().includes('+1'));
-        expect(plusOneBtn).toBeDefined();
+        // No "+1" overflow bubble should exist — all 5 avatars are shown
+        expect(
+            champCard.findAll('button').find((b) => b.text().includes('+1')),
+        ).toBeUndefined();
 
-        await plusOneBtn!.trigger('click');
+        // All 5 tied users' names should be visible in the card
+        for (const n of ['User A', 'User B', 'User C', 'User D', 'User E']) {
+            expect(champCard.text()).toContain(n);
+        }
+
+        // Open the modal via the "Tied (5)" badge
+        const tiedBadge = champCard
+            .findAll('button')
+            .find((b) => b.text().includes('Tied (5)'));
+        expect(tiedBadge).toBeDefined();
+
+        await tiedBadge!.trigger('click');
 
         const bodyHtml = document.body.innerHTML;
         expect(bodyHtml).toContain('1st Place · Tied Players (5)');
         expect(bodyHtml).toContain('User A');
         expect(bodyHtml).toContain('User E');
+    });
+
+    it("keeps a searched user's true rank instead of relabeling them as 1st", async () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: [
+                    {
+                        sectionId: 1,
+                        sectionName: 'Section Alpha',
+                        users: createMockUsers(),
+                        userRank: 1,
+                        totalPlayers: 5,
+                    },
+                ],
+            },
+        });
+
+        // David is rank 4 in the full list (tied with Emma at 800 XP).
+        const input = wrapper.find('input');
+        await input.setValue('David');
+
+        const podiumCards = wrapper.findAll('.lb-podium-card');
+        // Only the single match is shown in the podium.
+        expect(podiumCards).toHaveLength(1);
+
+        const card = podiumCards[0];
+        // The badge must show the true placement (#4), not "1st".
+        expect(card.text()).toContain('#4');
+        expect(card.text()).not.toContain('1st');
+        expect(card.text()).toContain('David');
+
+        // And the redundant place label below the name is gone entirely.
+        expect(card.text()).not.toContain('1st');
+        expect(card.text()).not.toContain('2nd');
+        expect(card.text()).not.toContain('3rd');
     });
 });
