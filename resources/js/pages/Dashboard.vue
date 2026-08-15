@@ -117,17 +117,106 @@ const bannedAt = computed(() => {
 });
 const showBanModal = ref(false);
 
-// Short, time-based greeting so the heading fits on both mobile and desktop.
-// The smarter, context-aware detail lives in `smarterStatus` below.
+// A friendlier, context-aware greeting that keeps the dashboard from feeling
+// canned. It varies by time of day, day of the week, and the user's current
+// momentum (streak / overdue / due-today). The pick is seeded by the calendar
+// day so it stays stable all day but feels fresh each morning — no generic
+// "Good morning" every single visit.
+const GREETING_POOLS = {
+    night: [
+        'Late night grind',
+        'Burning the midnight oil',
+        'Night owl mode',
+        'Quiet hours',
+        'After dark',
+    ],
+    early: [
+        'Early bird',
+        'Rise and shine',
+        'Up and at them',
+        'Morning light',
+        'Daybreak hustle',
+    ],
+    morning: [
+        'Good morning',
+        'Hello! What’s cooking',
+        'Morning superstar',
+        'Rise and grind',
+        'Fresh XP today',
+        'Top of the morning',
+        'Ready to shine',
+    ],
+    afternoon: [
+        'Good afternoon',
+        'Hello! What’s cooking',
+        'Midday momentum',
+        'Afternoon grind',
+        'Afternoon energy',
+        'Crushing it',
+    ],
+    evening: [
+        'Good evening',
+        'Hello! What’s cooking',
+        'Evening check-in',
+        'Finishing strong',
+        'Home stretch',
+        'Wind-down wisdom',
+    ],
+    streak: [
+        'On fire',
+        'Unstoppable',
+        'Streak mode',
+        'On a roll',
+        'No breaks, no brakes',
+    ],
+    champion: [
+        'Legend in the making',
+        'Elite status',
+        'Straight dominating',
+        'Top-tier form',
+        'Unmatched energy',
+    ],
+    overdue: [
+        'Let’s catch up',
+        'Back in the saddle',
+        'Squashing it',
+        'We got this',
+        'No sweat',
+        'Let’s power through',
+    ],
+    dueToday: [
+        'Let’s make it count',
+        'Game time',
+        'Let’s get after it',
+        'Tackling the day',
+        'Showtime',
+    ],
+};
+
+const daySeedFor = (poolLength: number) =>
+    Math.floor(Date.now() / 86_400_000) % poolLength;
+
 const personalizedGreeting = computed(() => {
     const hour = new Date().getHours();
+    const streak = props.userStats.streak;
+    const overdue = todaySummary.value.overdueCount;
+    const dueToday = todaySummary.value.dueTodayCount;
 
-    if (hour >= 0 && hour < 4) return 'Late night';
-    if (hour >= 4 && hour < 7) return 'Early bird';
-    if (hour >= 7 && hour < 12) return 'Good morning';
-    if (hour >= 12 && hour < 17) return 'Good afternoon';
-    if (hour >= 17 && hour < 21) return 'Good evening';
-    return 'Winding down';
+    const pick = (pool: string[]): string =>
+        pool[daySeedFor(pool.length)] ?? pool[0];
+
+    // Context takes priority over the clock: overdue > streak > due-today.
+    if (overdue > 0) return pick(GREETING_POOLS.overdue);
+    if (streak >= 7) return pick(GREETING_POOLS.champion);
+    if (streak >= 3) return pick(GREETING_POOLS.streak);
+    if (dueToday > 0) return pick(GREETING_POOLS.dueToday);
+
+    if (hour >= 0 && hour < 4) return pick(GREETING_POOLS.night);
+    if (hour >= 4 && hour < 7) return pick(GREETING_POOLS.early);
+    if (hour >= 7 && hour < 12) return pick(GREETING_POOLS.morning);
+    if (hour >= 12 && hour < 17) return pick(GREETING_POOLS.afternoon);
+    if (hour >= 17 && hour < 21) return pick(GREETING_POOLS.evening);
+    return pick(GREETING_POOLS.night);
 });
 
 const greetingTheme = computed(() => {
@@ -768,6 +857,8 @@ const handleLogout = () => {
                                     props.availableSeasons ?? []
                                 "
                                 show-view-button
+                                show-join-button
+                                @open-section-modal="showSectionModal = true"
                             />
                         </div>
                     </div>

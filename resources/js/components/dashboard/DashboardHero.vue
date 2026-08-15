@@ -254,10 +254,11 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                             </div>
                         </div>
 
-                        <!-- Join Section: button on the right side of the greeting card -->
+                        <!-- Join Section: mobile only — on desktop it lives in the
+                             leaderboard's section tabs, aligned to the right. -->
                         <button
                             type="button"
-                            class="dash-btn inline-flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-[13px] font-semibold text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-muted active:scale-95 sm:rounded-xl sm:px-4 sm:text-[15px]"
+                            class="dash-btn inline-flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-[13px] font-semibold text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-muted active:scale-95 sm:rounded-xl sm:px-4 sm:text-[15px] lg:hidden"
                             @click="emit('open-section-modal')"
                         >
                             <Plus class="h-4 w-4 shrink-0" />

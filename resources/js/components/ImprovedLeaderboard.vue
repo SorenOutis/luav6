@@ -22,6 +22,7 @@ import {
     TrendingDown,
     Minus,
     Users,
+    Plus,
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import type { Component } from 'vue';
@@ -76,15 +77,19 @@ interface Props {
     activeSeasonName?: string;
     availableSeasons?: Season[];
     showViewButton?: boolean;
+    /** Show a "Join Section" button in the section-tabs row (used on the dashboard). */
+    showJoinButton?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     availableSeasons: () => [],
     showViewButton: false,
+    showJoinButton: false,
 });
 
 const emit = defineEmits<{
     'update:activeSeasonName': [name: string];
+    'open-section-modal': [];
 }>();
 
 /** Fixed-length obscured string for blurred users — prevents
@@ -482,11 +487,11 @@ const changeSeason = async (seasonId: number) => {
 </script>
 
 <template>
-    <div class="lb-root space-y-6">
+    <div class="lb-root max-w-full min-w-0 space-y-6">
         <!-- Section Tabs -->
         <div
-            v-if="localLeaderboards.length > 1"
-            class="flex scrollbar-none gap-2 overflow-x-auto pb-2"
+            v-if="localLeaderboards.length > 1 || showJoinButton"
+            class="flex scrollbar-none items-center gap-2 overflow-x-auto pb-2"
         >
             <button
                 v-for="(section, idx) in localLeaderboards"
@@ -495,6 +500,17 @@ const changeSeason = async (seasonId: number) => {
                 :class="['lb-tab', activeTabIndex === idx && 'lb-tab--active']"
             >
                 {{ section.sectionName }}
+            </button>
+
+            <!-- Join Section: aligned to the right of the section tabs (desktop) -->
+            <button
+                v-if="showJoinButton"
+                type="button"
+                class="dash-btn ml-auto hidden shrink-0 items-center gap-2 self-center rounded-full border border-border/60 bg-card px-4 py-2 text-[13px] font-semibold text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-muted active:scale-95 lg:inline-flex lg:text-[15px]"
+                @click="emit('open-section-modal')"
+            >
+                <Plus class="h-4 w-4 shrink-0" />
+                <span>Join Section</span>
             </button>
         </div>
 
@@ -548,7 +564,7 @@ const changeSeason = async (seasonId: number) => {
                     <!-- Season Dropdown -->
                     <div
                         v-if="availableSeasons.length > 1"
-                        class="relative flex-1 sm:flex-none"
+                        class="relative max-w-full min-w-0 flex-1 sm:flex-none"
                     >
                         <select
                             :value="selectedSeasonId || availableSeasons[0]?.id"
@@ -562,7 +578,7 @@ const changeSeason = async (seasonId: number) => {
                                     )
                             "
                             :disabled="isSwitchingSeason"
-                            class="lb-season-select w-full cursor-pointer appearance-none pr-8"
+                            class="lb-season-select w-full min-w-0 cursor-pointer appearance-none truncate pr-8"
                         >
                             <option
                                 v-for="s in availableSeasons"
@@ -578,26 +594,29 @@ const changeSeason = async (seasonId: number) => {
                     </div>
                     <div
                         v-else
-                        class="lb-season-pill flex flex-1 items-center justify-center gap-1.5 sm:flex-none"
+                        class="lb-season-pill flex min-w-0 flex-1 items-center justify-center gap-1.5 sm:flex-none"
                     >
-                        <Terminal class="h-3 w-3 text-[#D97757]" />
-                        <span>{{ currentSeasonName }}</span>
+                        <Terminal class="h-3 w-3 shrink-0 text-[#D97757]" />
+                        <span class="truncate">{{ currentSeasonName }}</span>
                     </div>
 
                     <!-- Blur toggle -->
                     <button
                         @click="toggleBlur"
                         :disabled="isTogglingBlur"
-                        class="lb-blur-toggle flex flex-1 items-center justify-center gap-1.5 sm:flex-none"
+                        class="lb-blur-toggle flex min-w-0 flex-1 items-center justify-center gap-1.5 sm:flex-none"
                         :title="
                             currentUserBlurred
                                 ? 'You are hidden — click to appear'
                                 : 'You are visible — click to hide'
                         "
                     >
-                        <EyeOff v-if="currentUserBlurred" class="h-3.5 w-3.5" />
-                        <Eye v-else class="h-3.5 w-3.5" />
-                        <span>{{
+                        <EyeOff
+                            v-if="currentUserBlurred"
+                            class="h-3.5 w-3.5 shrink-0"
+                        />
+                        <Eye v-else class="h-3.5 w-3.5 shrink-0" />
+                        <span class="truncate">{{
                             currentUserBlurred ? 'Hidden' : 'Visible'
                         }}</span>
                     </button>
@@ -711,7 +730,7 @@ const changeSeason = async (seasonId: number) => {
 
             <template v-else>
                 <!-- ═══════ PODIUM ═══════ -->
-                <div class="lb-podium">
+                <div class="lb-podium min-w-0">
                     <SpotlightCard
                         v-for="{ group, origIdx } in podiumOrder"
                         :key="group.rank"
@@ -1679,7 +1698,7 @@ const changeSeason = async (seasonId: number) => {
     min-height: 44px;
 }
 .lb-season-pill {
-    @apply flex shrink-0 items-center gap-1.5 rounded-full border border-border/50 bg-card px-3 py-2 text-[13px] font-medium text-muted-foreground;
+    @apply flex items-center gap-1.5 rounded-full border border-border/50 bg-card px-3 py-2 text-[13px] font-medium text-muted-foreground;
     min-height: 44px;
 }
 .lb-season-select {
