@@ -104,6 +104,7 @@ interface Exam {
     submitted_parts_count?: number;
     total_parts?: number;
     is_locked?: boolean;
+    has_submissions?: boolean;
     submissions?: ExamSubmission[];
     section_name?: string;
     season_name?: string;
@@ -201,6 +202,12 @@ const filteredExamsBySeason = computed(() => {
         .filter((sg) => sg.exams.length > 0);
 });
 
+// A student may only review an exam they actually answered. The server stops
+// serializing the answer key (and the questions) for a closed exam the student
+// never took, so treat "no submissions" as "nothing to review" here too.
+const hasSubmitted = (exam: Exam) =>
+    exam.has_submissions ?? (exam.submissions?.length ?? 0) > 0;
+
 // --- Exam Time Info (countdown/overdue) ---
 const getExamTimeInfo = (exam: Exam) => {
     if (!exam.exam_date && !exam.exam_date_iso) {
@@ -225,6 +232,17 @@ const getExamTimeInfo = (exam: Exam) => {
     const diff = examDate.getTime() - now.getTime();
 
     if (exam.is_locked) {
+        // A closed exam the student never answered is not "Completed" — it is
+        // simply closed and has nothing for them to review.
+        if (exam.status === 'closed' && !hasSubmitted(exam)) {
+            return {
+                label: 'Closed',
+                color: 'text-[#CB7676]',
+                isOverdue: false,
+                isUpcoming: false,
+            };
+        }
+
         return {
             label: `Completed ${examDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
             color: 'text-[#4D9375]',
@@ -309,10 +327,16 @@ const getProgressPercent = (exam: Exam) => {
 };
 
 const answersRevealed = computed(
-    () => selectedExamForReview.value?.status === 'closed',
+    () =>
+        selectedExamForReview.value !== null &&
+        selectedExamForReview.value.status === 'closed' &&
+        hasSubmitted(selectedExamForReview.value),
 );
 
 const openReview = (exam: Exam) => {
+    if (!hasSubmitted(exam)) {
+        return;
+    }
     selectedExamForReview.value = exam;
     selectedPartId.value = exam.parts.length > 0 ? exam.parts[0].id : null;
     selectedQuestionIndex.value = 0;
@@ -321,7 +345,11 @@ const openReview = (exam: Exam) => {
 
 const openExam = (exam: Exam) => {
     if (exam.is_locked) {
-        openReview(exam);
+        // A closed exam the student never answered has no review results —
+        // do not open the modal, or they would see the questions.
+        if (hasSubmitted(exam)) {
+            openReview(exam);
+        }
         return;
     }
     if (exam.url) {
@@ -640,7 +668,10 @@ watch(selectedPartId, () => {
                                             {{ getStatusBadgeInfo(exam).label }}
                                         </span>
                                         <span
-                                            v-if="exam.is_locked"
+                                            v-if="
+                                                exam.is_locked &&
+                                                hasSubmitted(exam)
+                                            "
                                             class="inline-flex items-center rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-semibold text-[#D97757] tabular-nums"
                                         >
                                             {{
@@ -785,13 +816,19 @@ watch(selectedPartId, () => {
                             <!-- Action Button (only show on sm+) -->
                             <div class="mt-3 hidden sm:block">
                                 <button
-                                    v-if="exam.is_locked"
+                                    v-if="exam.is_locked && hasSubmitted(exam)"
                                     type="button"
                                     class="dash-btn w-full bg-[#D97757]/10 text-[15px] text-[#D97757] hover:bg-[#D97757]/15"
                                     @click.stop="openReview(exam)"
                                 >
                                     Review results
                                 </button>
+                                <span
+                                    v-else-if="exam.is_locked"
+                                    class="dash-btn flex w-full cursor-default items-center justify-center bg-muted/20 text-[15px] text-muted-foreground"
+                                >
+                                    Closed
+                                </span>
                                 <a
                                     v-else-if="exam.url"
                                     :href="exam.url"

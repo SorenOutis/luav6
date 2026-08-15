@@ -8,8 +8,10 @@
  *
  *   - Students must never receive is_correct / correct_answer for an exam
  *     they have not completed.
- *   - Answer keys are revealed ONLY once the exam status is 'closed'
- *     (product decision: review after close, not after submit).
+ *   - Answer keys are revealed ONLY once the exam status is 'closed' AND the
+ *     student has actually participated (review after close, not after
+ *     submit). A student who never answered a closed exam must not be able to
+ *     open the review and read the questions at all.
  *
  * The leak exists on BOTH:
  *   ExamController::index() — eager-loads parts for every visible exam
@@ -18,6 +20,7 @@
 
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
@@ -76,10 +79,40 @@ it('still sends the option text students need to answer', function () {
         ->toContain('Option 1');
 })->group('security');
 
-it('reveals the answer key once the exam is closed', function () {
+it('does not reveal a closed exam the student never answered', function () {
     [$student, $section] = leakContext();
     $exam = Exam::factory()->closed()->forSection($section)->create();
     ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
+
+    $response = actingAs($student)->get('/exams');
+
+    // No submission → no answer key AND no question text/options in the payload.
+    expect($response->getContent())
+        ->not->toContain('is_correct')
+        ->not->toContain('correct_answer')
+        ->not->toContain('Manila')
+        ->not->toContain('Identification question');
+})->group('security');
+
+it('does not reveal a closed exam the student never answered on the show page', function () {
+    [$student, $section] = leakContext();
+    $exam = Exam::factory()->closed()->forSection($section)->create();
+    ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
+
+    $response = actingAs($student)->get("/exams/{$exam->id}");
+
+    expect($response->getContent())
+        ->not->toContain('is_correct')
+        ->not->toContain('correct_answer')
+        ->not->toContain('Manila')
+        ->not->toContain('Identification question');
+})->group('security');
+
+it('reveals the answer key once the exam is closed and the student has submitted', function () {
+    [$student, $section] = leakContext();
+    $exam = Exam::factory()->closed()->forSection($section)->create();
+    $part = ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
+    ExamSubmission::factory()->for($student, $exam, $part)->create();
 
     $response = actingAs($student)->get('/exams');
 

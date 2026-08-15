@@ -2,6 +2,9 @@
  * Interaction test for Exam.vue review modal — verifies that recorded MC /
  * true-false / identification answers are actually DISPLAYED in the student's
  * "Review Results" modal after the exam is closed.
+ *
+ * Also verifies the opposite: a student who never answered a closed exam gets
+ * NO "Review results" affordance, so the questions cannot be opened.
  */
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -65,6 +68,43 @@ vi.mock('@/components/ResponsiveModal.vue', () => ({
     }),
 }));
 
+const stubs = {
+    Head: { render: () => null },
+    Link: {
+        props: ['href'],
+        setup(props: any, { slots }: any) {
+            return () => h('a', { href: props.href }, slots.default?.());
+        },
+    },
+    Motion: {
+        setup(_: any, { slots }: any) {
+            return () => h('div', slots.default?.());
+        },
+    },
+    AppLayout: {
+        setup(_: any, { slots }: any) {
+            return () => h('div', slots.default?.());
+        },
+    },
+    ResponsiveModal: {
+        props: ['open'],
+        setup(props: any, { slots }: any) {
+            return () => (props.open ? h('div', slots.default?.()) : null);
+        },
+    },
+    Button: { render: () => null },
+    DialogDescription: { render: () => null },
+    DialogTitle: { render: () => null },
+};
+
+const mountExamPage = (exams: any[]) =>
+    mount(ExamPage, {
+        props: {
+            examsBySeason: [{ seasonName: 'Season 1', exams }],
+        },
+        global: { stubs },
+    });
+
 // The review renders a "Review Results" button on each exam card
 const closedExam = {
     id: 7,
@@ -78,6 +118,7 @@ const closedExam = {
     submitted_parts_count: 1,
     total_parts: 1,
     is_locked: true,
+    has_submissions: true,
     submissions: [
         {
             id: 1,
@@ -150,6 +191,33 @@ const closedExam = {
     ],
 };
 
+// A closed exam the student never answered: no submissions, no review.
+const closedExamNoSubmission = {
+    id: 8,
+    title: 'Final Exam',
+    description: 'desc',
+    exam_date: '2026-08-01',
+    exam_date_iso: '2026-08-01T00:00:00+08:00',
+    duration_minutes: 60,
+    status: 'closed',
+    url: null,
+    submitted_parts_count: 0,
+    total_parts: 1,
+    is_locked: true,
+    has_submissions: false,
+    submissions: [],
+    parts: [
+        {
+            id: 102,
+            title: 'Part I',
+            instructions: null,
+            type: 'section',
+            points: 1,
+            questions: [],
+        },
+    ],
+};
+
 describe('Exam.vue review modal answer display', () => {
     beforeEach(() => {
         localStorage.clear();
@@ -159,45 +227,7 @@ describe('Exam.vue review modal answer display', () => {
     });
 
     it('shows recorded MC / TF / identification answers', async () => {
-        const wrapper = mount(ExamPage, {
-            props: {
-                examsBySeason: [
-                    { seasonName: 'Season 1', exams: [closedExam as any] },
-                ],
-            },
-            global: {
-                stubs: {
-                    Head: { render: () => null },
-                    Link: {
-                        props: ['href'],
-                        setup(props: any, { slots }: any) {
-                            return () =>
-                                h('a', { href: props.href }, slots.default?.());
-                        },
-                    },
-                    Motion: {
-                        setup(_: any, { slots }: any) {
-                            return () => h('div', slots.default?.());
-                        },
-                    },
-                    AppLayout: {
-                        setup(_: any, { slots }: any) {
-                            return () => h('div', slots.default?.());
-                        },
-                    },
-                    ResponsiveModal: {
-                        props: ['open'],
-                        setup(props: any, { slots }: any) {
-                            return () =>
-                                props.open ? h('div', slots.default?.()) : null;
-                        },
-                    },
-                    Button: { render: () => null },
-                    DialogDescription: { render: () => null },
-                    DialogTitle: { render: () => null },
-                },
-            },
-        });
+        const wrapper = mountExamPage([closedExam as any]);
         await flushPromises();
 
         // Open the review modal
@@ -226,5 +256,25 @@ describe('Exam.vue review modal answer display', () => {
             .findAll('span')
             .filter((s: any) => s.text().trim() === 'Your answer');
         expect(yourAnswerBadges.length).toBe(3);
+    });
+
+    it('does not offer review results for a closed exam the student never answered', async () => {
+        const wrapper = mountExamPage([closedExamNoSubmission as any]);
+        await flushPromises();
+
+        const reviewBtn = wrapper
+            .findAll('button')
+            .find((b: any) => b.text().includes('Review results'));
+        expect(
+            reviewBtn,
+            'Review results button must NOT exist for a non-participant',
+        ).toBeUndefined();
+
+        // The review modal must stay closed, so the questions are not exposed.
+        expect(wrapper.text()).not.toContain('Your Results');
+
+        // The card should still clearly read as closed rather than completed.
+        expect(wrapper.text()).toContain('Closed');
+        expect(wrapper.text()).not.toContain('Completed');
     });
 });

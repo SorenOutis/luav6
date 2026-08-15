@@ -13,9 +13,10 @@ use Illuminate\Support\Collection;
  * and `correct_answer`). Passing the raw model to Inertia publishes that key in
  * the page props, where any student can read it from DevTools.
  *
- * Answers are revealed ONLY when the exam is closed (product decision: review
- * after close, not after submit — otherwise students in the same room can share
- * answers while others are still working).
+ * Answers are revealed ONLY when the exam is closed AND the student actually
+ * has at least one submission (product decision: review after close, not after
+ * submit — otherwise students in the same room can share answers while others
+ * are still working — and never for a student who did not take the exam).
  */
 class ExamPartSerializer
 {
@@ -23,12 +24,15 @@ class ExamPartSerializer
      * Serialize a collection of parts.
      *
      * @param  Collection<int, ExamPart>|iterable<ExamPart>  $parts
+     * @param  bool  $includeQuestions  When false (a closed exam the student
+     *     never answered) the question text/options are omitted entirely so
+     *     the payload carries nothing for them to review.
      * @return array<int, array<string, mixed>>
      */
-    public static function many(iterable $parts, bool $revealAnswers): array
+    public static function many(iterable $parts, bool $revealAnswers, bool $includeQuestions = true): array
     {
         return collect($parts)
-            ->map(fn (ExamPart $part) => self::one($part, $revealAnswers))
+            ->map(fn (ExamPart $part) => self::one($part, $revealAnswers, $includeQuestions))
             ->values()
             ->all();
     }
@@ -38,7 +42,7 @@ class ExamPartSerializer
      *
      * @return array<string, mixed>
      */
-    public static function one(ExamPart $part, bool $revealAnswers): array
+    public static function one(ExamPart $part, bool $revealAnswers, bool $includeQuestions = true): array
     {
         return [
             'id' => $part->id,
@@ -48,20 +52,28 @@ class ExamPartSerializer
             'type' => $part->type,
             'sort_order' => $part->sort_order,
             'points' => $part->points,
-            'questions' => self::questions($part, $revealAnswers),
+            'questions' => $includeQuestions
+                ? self::questions($part, $revealAnswers)
+                : [],
         ];
     }
 
     /**
      * Whether the answer key may be shown for this exam.
      *
-     * Admins always see it. Students only once the exam is closed.
+     * Admins always see it. Students only once the exam is closed AND they
+     * have at least one submission — a student who never answered a closed
+     * exam must not be able to open "review results" and read the questions
+     * (or the key) after the fact.
      */
-    public static function mayRevealAnswers(Exam $exam, ?bool $isAdmin = null): bool
-    {
+    public static function mayRevealAnswers(
+        Exam $exam,
+        ?bool $isAdmin = null,
+        bool $hasSubmitted = false,
+    ): bool {
         $isAdmin ??= (bool) auth()->user()?->is_admin;
 
-        return $isAdmin || $exam->status === 'closed';
+        return $isAdmin || ($exam->status === 'closed' && $hasSubmitted);
     }
 
     /**
