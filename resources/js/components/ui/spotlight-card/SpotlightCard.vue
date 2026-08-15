@@ -102,7 +102,9 @@ const inlineStyles = computed(() => {
     backgroundPosition: '50% 50%',
     border: 'var(--border-size) solid var(--backup-border)',
     position: 'relative',
-    touchAction: 'none',
+    // Allow vertical touch scrolling (otherwise the card traps scroll on
+    // mobile when it fills the viewport — e.g. leaderboard podium cards).
+    touchAction: 'pan-y',
   };
 
   if (props.width !== undefined) {

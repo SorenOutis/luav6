@@ -23,7 +23,7 @@ const openCalendar = () => {
 
 <template>
     <div
-        class="surface-card group relative flex h-full w-full min-w-0 cursor-pointer flex-col justify-between gap-3 p-3.5 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:gap-4 sm:p-6"
+        class="surface-card group relative flex h-full w-full min-w-0 cursor-pointer flex-col justify-between gap-2.5 p-3 transition-colors focus-visible:ring-2 focus-visible:ring-[#D97757]/40 focus-visible:outline-none active:bg-muted/30 sm:gap-4 sm:p-5"
         tabindex="0"
         role="button"
         aria-label="Open your streak calendar"
@@ -32,7 +32,7 @@ const openCalendar = () => {
         @keydown.space.prevent="openCalendar"
     >
         <div class="relative z-10 flex items-start justify-between gap-3">
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2.5">
                 <div class="dash-icon-well bg-[#D97757]/15 text-[#D97757]">
                     <Flame class="h-5 w-5" />
                 </div>
@@ -45,7 +45,7 @@ const openCalendar = () => {
 
         <div class="relative z-10">
             <p
-                class="dash-metric flex items-baseline gap-1.5 text-[28px] leading-none text-foreground sm:text-4xl"
+                class="dash-metric flex items-baseline gap-1.5 text-[24px] leading-none text-foreground sm:text-4xl"
             >
                 {{ animStreak }}
                 <span class="text-[13px] font-medium text-muted-foreground">{{

@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import {
-    X,
-    Plus,
-    Megaphone,
-    ArrowRight,
-    RefreshCw,
-    ChevronRight,
-} from 'lucide-vue-next';
+import { X, Plus, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
@@ -261,6 +254,17 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                             </div>
                         </div>
 
+                        <!-- Join Section: button on the right side of the greeting card -->
+                        <button
+                            type="button"
+                            class="dash-btn inline-flex shrink-0 items-center gap-2 rounded-full border border-border/60 bg-card px-3 py-2 text-[13px] font-semibold text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-muted active:scale-95 sm:rounded-xl sm:px-4 sm:text-[15px]"
+                            @click="emit('open-section-modal')"
+                        >
+                            <Plus class="h-4 w-4 shrink-0" />
+                            <span class="hidden sm:inline">Join section</span>
+                            <span class="sm:hidden">Join</span>
+                        </button>
+
                         <!-- Mobile-only trailing refresh action (app header pattern) -->
                         <button
                             type="button"
@@ -275,46 +279,6 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                             />
                         </button>
                     </div>
-
-                    <!-- Mobile-only app-style "Join section" action row -->
-                    <div class="lg:hidden">
-                        <button
-                            type="button"
-                            class="dash-btn group flex w-full items-center gap-3 border border-border/60 bg-card px-3.5 py-2.5 text-left shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-colors hover:bg-muted/50 active:bg-muted/70 sm:px-4 sm:py-3"
-                            @click="emit('open-section-modal')"
-                        >
-                            <span
-                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757] sm:h-9 sm:w-9"
-                            >
-                                <Plus class="h-4 w-4" />
-                            </span>
-                            <span class="min-w-0 flex-1">
-                                <span
-                                    class="block truncate text-[15px] font-semibold tracking-tight text-foreground"
-                                    >Join section</span
-                                >
-                                <span
-                                    class="block truncate text-[12.5px] leading-tight text-muted-foreground"
-                                    >Enroll with your section code</span
-                                >
-                            </span>
-                            <ChevronRight
-                                class="h-4 w-4 shrink-0 text-muted-foreground/50 transition-transform group-active:translate-x-0.5"
-                                aria-hidden="true"
-                            />
-                        </button>
-                    </div>
-                </div>
-
-                <div class="mb-1 hidden shrink-0 self-end lg:block">
-                    <button
-                        type="button"
-                        class="dash-btn inline-flex items-center gap-2 border border-border/60 bg-card px-5 text-[15px] text-foreground transition-colors hover:bg-muted"
-                        @click="emit('open-section-modal')"
-                    >
-                        <Plus class="h-4 w-4 shrink-0" />
-                        Join section
-                    </button>
                 </div>
             </div>
         </div>
