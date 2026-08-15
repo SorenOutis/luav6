@@ -106,7 +106,31 @@ class GradeController extends Controller
                     ->all();
             }
 
-            $subjectGrades[$subjectName] = [
+            $periodGrades = collect($periods)
+                ->map(fn (string $label, string $key) => [
+                    'key' => $key,
+                    'label' => $label,
+                    'grade' => $gradesBySection[$sectionId][$key] ?? null,
+                ])
+                ->values()
+                ->all();
+
+            $availableScores = collect($periodGrades)
+                ->pluck('grade')
+                ->filter()
+                ->pluck('percentage')
+                ->all();
+            $gradedPeriods = count($availableScores);
+            $totalPeriods = count($periodGrades);
+            $isComplete = $totalPeriods > 0 && $gradedPeriods === $totalPeriods;
+            $currentAverage = $gradedPeriods > 0
+                ? round(array_sum($availableScores) / $gradedPeriods, 2)
+                : null;
+
+            // Keep every enrolled section as its own row. Indexing this array by
+            // section name used to silently overwrite one course when a student
+            // was enrolled in two sections with the same display name.
+            $subjectGrades[] = [
                 'subject' => $subjectName,
                 'section' => [
                     'id' => $section->id,
@@ -121,40 +145,19 @@ class GradeController extends Controller
                     ])
                     ->values()
                     ->all(),
-                'periodGrades' => collect($periods)
-                    ->map(fn (string $label, string $key) => [
-                        'key' => $key,
-                        'label' => $label,
-                        'grade' => $gradesBySection[$sectionId][$key] ?? null,
-                    ])
-                    ->values()
-                    ->all(),
+                'periodGrades' => $periodGrades,
                 'semesterGrades' => $semesterGrades,
+                'gradedPeriods' => $gradedPeriods,
+                'totalPeriods' => $totalPeriods,
+                'isComplete' => $isComplete,
+                // A current average is explicitly provisional and uses only the
+                // periods already entered. An official final grade is exposed
+                // only after every required period has been graded.
+                'currentAverage' => $currentAverage,
+                'semesterGrade' => $isComplete ? $currentAverage : null,
             ];
         }
 
-        // Calculate semester grades
-        foreach ($subjectGrades as &$subjectData) {
-            if (($subjectData['section']['schoolLevel'] ?? null) === Section::SCHOOL_LEVEL_SENIOR_HIGH) {
-                $scores = collect($subjectData['semesterGrades'])
-                    ->pluck('finalGrade')
-                    ->filter(fn ($grade) => $grade !== null)
-                    ->all();
-            } else {
-                $scores = collect($subjectData['periodGrades'])
-                    ->pluck('grade')
-                    ->filter()
-                    ->pluck('percentage')
-                    ->all();
-            }
-
-            if (count($scores) > 0) {
-                $subjectData['semesterGrade'] = round(array_sum($scores) / count($scores), 2);
-            } else {
-                $subjectData['semesterGrade'] = null;
-            }
-        }
-
-        return array_values($subjectGrades);
+        return $subjectGrades;
     }
 }

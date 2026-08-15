@@ -25,7 +25,6 @@ import {
     watch,
 } from 'vue';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
-import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
 import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
@@ -74,6 +73,10 @@ interface SubjectGrade {
     }>;
     periodGrades: GradePeriod[];
     semesterGrades: SemesterGrade[];
+    gradedPeriods?: number;
+    totalPeriods?: number;
+    isComplete?: boolean;
+    currentAverage?: number | null;
     semesterGrade: number | null;
 }
 
@@ -111,41 +114,73 @@ const {
 // module scope with no teardown, so in an Inertia SPA every visit to this page
 // added another listener that stayed for the rest of the session and called
 // fetchGrades() on behalf of a component that no longer existed.
-useEventListener(document, 'visibilitychange', () => {
-    if (!document.hidden) {
-        fetchGrades();
-    }
-});
+if (typeof document !== 'undefined') {
+    useEventListener(document, 'visibilitychange', () => {
+        if (!document.hidden) {
+            fetchGrades();
+        }
+    });
+}
 
 // ── Search / Filter ──────────────────────────────────────────────
 const searchQuery = ref('');
+const hasSearchQuery = computed(() => Boolean(searchQuery.value.trim()));
 
 const filteredSubjectGrades = computed(() => {
     const grades = subjectGrades.value ?? [];
-    if (!searchQuery.value) return grades;
-    const q = searchQuery.value.toLowerCase();
-    return grades.filter((sg) => sg.subject.toLowerCase().includes(q));
+    const query = searchQuery.value.trim().toLowerCase();
+    if (!query) return grades;
+
+    return grades.filter((subject) =>
+        subject.subject.toLowerCase().includes(query),
+    );
 });
 
-// ── Computed Values (from filtered data) ─────────────────────────
-const averageSemesterGrade = computed(() => {
-    const validGrades = filteredSubjectGrades.value
-        .map((sg) => sg.semesterGrade)
+// ── Computed Values ──────────────────────────────────────────────
+// Summary cards always describe the complete gradebook, even while the table is
+// filtered. Older cached payloads do not contain the new progress fields, so the
+// fallbacks keep navigation safe while the background refresh completes.
+const allSubjectGrades = computed(() => subjectGrades.value ?? []);
+
+type SubjectStanding = {
+    readonly isComplete?: boolean;
+    readonly currentAverage?: number | null;
+    readonly semesterGrade: number | null;
+};
+
+const isSubjectComplete = (subject: SubjectStanding): boolean =>
+    subject.isComplete ?? subject.semesterGrade !== null;
+
+const currentGrade = (subject: SubjectStanding): number | null =>
+    subject.currentAverage ?? subject.semesterGrade;
+
+const averageSemesterGrade = computed<number | null>(() => {
+    const validGrades = allSubjectGrades.value
+        .map(currentGrade)
         .filter((grade): grade is number => grade !== null);
 
-    if (validGrades.length === 0) return 0;
+    if (validGrades.length === 0) return null;
+
     return Math.round(
         validGrades.reduce((sum, grade) => sum + grade, 0) / validGrades.length,
     );
 });
 
 const completedCount = computed(
-    () =>
-        filteredSubjectGrades.value.filter((sg) => sg.semesterGrade !== null)
-            .length,
+    () => allSubjectGrades.value.filter(isSubjectComplete).length,
 );
 
-const totalFilteredCount = computed(() => filteredSubjectGrades.value.length);
+const totalSubjectCount = computed(() => allSubjectGrades.value.length);
+
+const latestGradeUpdate = computed(() => {
+    const updates = allSubjectGrades.value
+        .flatMap((subject) => subject.periodGrades)
+        .map((period) => period.grade?.updatedAt)
+        .filter((date): date is string => Boolean(date))
+        .sort((a, b) => Date.parse(b) - Date.parse(a));
+
+    return updates[0] ?? null;
+});
 
 const gradeGroups = computed(() => {
     const groups = new Map<
@@ -190,8 +225,8 @@ const gradeGroups = computed(() => {
 
 // ── Grade Distribution ───────────────────────────────────────────
 const distributionData = computed(() => {
-    const grades = filteredSubjectGrades.value
-        .map((sg) => sg.semesterGrade)
+    const grades = allSubjectGrades.value
+        .map(currentGrade)
         .filter((g): g is number => g !== null);
 
     const excellent = grades.filter((g) => g >= 85).length;
@@ -204,26 +239,26 @@ const distributionData = computed(() => {
             {
                 label: 'Excellent (≥85)',
                 count: excellent,
-                color: '#4D9375',
-                textColor: 'text-[#4D9375]',
+                color: '#059669',
+                textColor: 'text-emerald-700 dark:text-emerald-400',
             },
             {
                 label: 'Good (70-84)',
                 count: good,
-                color: '#D97757',
-                textColor: 'text-[#D97757]',
+                color: '#EA580C',
+                textColor: 'text-orange-700 dark:text-orange-400',
             },
             {
                 label: 'Satisfactory (60-69)',
                 count: satisfactory,
-                color: '#E0AF68',
-                textColor: 'text-[#E0AF68]',
+                color: '#D97706',
+                textColor: 'text-amber-700 dark:text-amber-400',
             },
             {
                 label: 'Needs Improvement (<60)',
                 count: needsImprovement,
-                color: '#CB7676',
-                textColor: 'text-[#CB7676]',
+                color: '#DC2626',
+                textColor: 'text-red-700 dark:text-red-400',
             },
         ],
         total: grades.length,
@@ -233,18 +268,18 @@ const distributionData = computed(() => {
 // ── Styling helpers ──────────────────────────────────────────────
 const gradeColor = (percentage: number | null) => {
     if (percentage === null) return 'text-muted-foreground';
-    if (percentage >= 85) return 'text-[#4D9375]';
-    if (percentage >= 70) return 'text-[#D97757]';
-    if (percentage >= 60) return 'text-[#E0AF68]';
-    return 'text-[#CB7676]';
+    if (percentage >= 85) return 'text-emerald-700 dark:text-emerald-400';
+    if (percentage >= 70) return 'text-orange-700 dark:text-orange-400';
+    if (percentage >= 60) return 'text-amber-700 dark:text-amber-400';
+    return 'text-red-700 dark:text-red-400';
 };
 
 const progressColor = (percentage: number | null) => {
     if (percentage === null) return 'bg-muted';
-    if (percentage >= 85) return 'bg-[#4D9375]';
-    if (percentage >= 70) return 'bg-[#D97757]';
-    if (percentage >= 60) return 'bg-[#E0AF68]';
-    return 'bg-[#CB7676]';
+    if (percentage >= 85) return 'bg-emerald-600 dark:bg-emerald-400';
+    if (percentage >= 70) return 'bg-orange-600 dark:bg-orange-400';
+    if (percentage >= 60) return 'bg-amber-600 dark:bg-amber-400';
+    return 'bg-red-600 dark:bg-red-400';
 };
 
 const gradeLabel = (percentage: number | null) => {
@@ -261,98 +296,65 @@ const formatGrade = (grade: number | null) => {
     return Number.isInteger(grade) ? String(grade) : grade.toFixed(2);
 };
 
-// ── Collapsible Periods (College) ────────────────────────────────
+// ── Collapsible mobile periods (College) ─────────────────────────
 const STORAGE_KEY = 'grades-expanded-periods';
 
 const expandedPeriods = ref<string[]>(
     (() => {
+        if (typeof window === 'undefined') return [];
+
         try {
-            return JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '[]');
+            const stored = JSON.parse(
+                window.sessionStorage.getItem(STORAGE_KEY) ?? '[]',
+            );
+            return Array.isArray(stored) ? stored : [];
         } catch {
             return [];
         }
     })(),
 );
 
-// Persist state changes to sessionStorage across navigation
 watch(expandedPeriods, (keys) => {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
+    if (typeof window === 'undefined') return;
+
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(keys));
 });
 
-// Track which periods are showing the "scroll for more" hint
-const scrollHints = ref<Record<string, boolean>>({});
-const scrollHintTimers = ref<Record<string, ReturnType<typeof setTimeout>>>({});
-
 const togglePeriod = (key: string) => {
-    const wasExpanded = expandedPeriods.value.includes(key);
-
-    if (wasExpanded) {
-        expandedPeriods.value = expandedPeriods.value.filter((k) => k !== key);
-        // Clear any pending hint timer for collapsed periods
-        if (scrollHintTimers.value[key]) {
-            clearTimeout(scrollHintTimers.value[key]);
-            delete scrollHintTimers.value[key];
-        }
-        scrollHints.value[key] = false;
-    } else {
-        expandedPeriods.value = [...expandedPeriods.value, key];
-        // Scroll period content to top on expand so user sees first subjects
-        nextTick(() => {
-            const el = document.querySelector(`[data-period-key="${key}"]`);
-            if (el) el.scrollTop = 0;
-        });
-        // Clear any previous timer before setting a new one
-        if (scrollHintTimers.value[key]) {
-            clearTimeout(scrollHintTimers.value[key]);
-        }
-        scrollHints.value[key] = true;
-        scrollHintTimers.value[key] = setTimeout(() => {
-            scrollHints.value[key] = false;
-            delete scrollHintTimers.value[key];
-        }, 2500);
-    }
+    expandedPeriods.value = expandedPeriods.value.includes(key)
+        ? expandedPeriods.value.filter((storedKey) => storedKey !== key)
+        : [...expandedPeriods.value, key];
 };
 
-// Auto-expand all college periods when searching, collapse when cleared
-watch(searchQuery, (query) => {
-    if (query) {
-        const keys: string[] = [];
-        for (const group of gradeGroups.value) {
-            if (group.isSeniorHigh) continue;
-            // Desktop period keys
-            keys.push(...group.periods.map((p) => p.key));
-            // Mobile period keys (prefixed per subject)
-            for (const subject of group.subjects) {
-                for (const period of group.periods) {
-                    keys.push('m-' + subject.subject + '-' + period.key);
-                }
-            }
-        }
-        expandedPeriods.value = keys;
-        // Show scroll hints for desktop periods in groups with many subjects
-        for (const group of gradeGroups.value) {
-            if (group.isSeniorHigh || group.subjects.length <= MAX_VISIBLE_ROWS)
-                continue;
-            for (const period of group.periods) {
-                const key = period.key;
-                if (scrollHintTimers.value[key]) {
-                    clearTimeout(scrollHintTimers.value[key]);
-                }
-                scrollHints.value[key] = true;
-                scrollHintTimers.value[key] = setTimeout(() => {
-                    scrollHints.value[key] = false;
-                    delete scrollHintTimers.value[key];
-                }, 2500);
-            }
-        }
-    } else {
-        expandedPeriods.value = [];
-        // Clear any lingering scroll hints
-        for (const key of Object.keys(scrollHintTimers.value)) {
-            clearTimeout(scrollHintTimers.value[key]);
-        }
-        scrollHintTimers.value = {};
-        scrollHints.value = {};
+const mobilePeriodKeys = (group: {
+    periods: Array<{ key: string }>;
+    subjects: SubjectGrade[];
+}): string[] =>
+    group.subjects.flatMap((subject) =>
+        group.periods.map(
+            (period) =>
+                `m-${subject.section?.id ?? subject.subject}-${period.key}`,
+        ),
+    );
+
+// Searching opens matching mobile cards but clearing the query restores the
+// student's previous accordion state rather than unexpectedly erasing it.
+let expandedBeforeSearch: string[] | null = null;
+watch(searchQuery, (query, previousQuery) => {
+    const hasQuery = Boolean(query.trim());
+    const hadQuery = Boolean(previousQuery.trim());
+
+    if (hasQuery && !hadQuery) {
+        expandedBeforeSearch = [...expandedPeriods.value];
+        const searchKeys = gradeGroups.value
+            .filter((group) => !group.isSeniorHigh)
+            .flatMap(mobilePeriodKeys);
+        expandedPeriods.value = Array.from(
+            new Set([...expandedPeriods.value, ...searchKeys]),
+        );
+    } else if (!hasQuery && hadQuery && expandedBeforeSearch) {
+        expandedPeriods.value = expandedBeforeSearch;
+        expandedBeforeSearch = null;
     }
 });
 
@@ -390,162 +392,151 @@ const getSubjectFinalGrade = (
     return semester?.finalGrade ?? null;
 };
 
-const HEADER_H = 40;
-const ROW_H = 44;
-const MAX_VISIBLE_ROWS = 8;
+const periodMobileHeight = (): number => 280;
 
-const periodDesktopHeight = (subjectsCount: number): number => {
-    const totalH = HEADER_H + subjectsCount * ROW_H;
-    const cappedH = HEADER_H + MAX_VISIBLE_ROWS * ROW_H;
-    return Math.min(totalH, cappedH);
-};
-
-const periodMobileHeight = (): number => {
-    return 280;
-};
-
-const gradedCount = (subjects: SubjectGrade[], periodKey: string): number => {
-    return subjects.filter((s) => {
-        const pg = s.periodGrades.find((p) => p.key === periodKey);
-        return pg?.grade !== null && pg?.grade !== undefined;
-    }).length;
-};
+const mobilePeriodKey = (subject: SubjectGrade, periodKey: string): string =>
+    `m-${subject.section?.id ?? subject.subject}-${periodKey}`;
 
 const isGroupAllExpanded = (group: {
     periods: Array<{ key: string }>;
     subjects: SubjectGrade[];
-}): boolean => {
-    for (const period of group.periods) {
-        if (!expandedPeriods.value.includes(period.key)) return false;
-    }
-    for (const subject of group.subjects) {
-        for (const period of group.periods) {
-            if (
-                !expandedPeriods.value.includes(
-                    'm-' + subject.subject + '-' + period.key,
-                )
-            )
-                return false;
-        }
-    }
-    return true;
-};
+}): boolean =>
+    mobilePeriodKeys(group).every((key) => expandedPeriods.value.includes(key));
 
 const toggleAllCollege = (group: {
     periods: Array<{ key: string }>;
     subjects: SubjectGrade[];
 }): void => {
-    const allKeys: string[] = [];
-    for (const period of group.periods) allKeys.push(period.key);
-    for (const subject of group.subjects) {
-        for (const period of group.periods) {
-            allKeys.push('m-' + subject.subject + '-' + period.key);
-        }
-    }
+    const allKeys = mobilePeriodKeys(group);
 
-    const allExpanded = allKeys.every((key) =>
-        expandedPeriods.value.includes(key),
-    );
-
-    if (allExpanded) {
+    if (isGroupAllExpanded(group)) {
         expandedPeriods.value = expandedPeriods.value.filter(
-            (k) => !allKeys.includes(k),
+            (key) => !allKeys.includes(key),
         );
-    } else {
-        const missing = allKeys.filter(
-            (k) => !expandedPeriods.value.includes(k),
-        );
-        expandedPeriods.value = [...expandedPeriods.value, ...missing];
+        return;
     }
+
+    expandedPeriods.value = Array.from(
+        new Set([...expandedPeriods.value, ...allKeys]),
+    );
 };
 
 // ── PDF Export ───────────────────────────────────────────────────
 const gradesContainer = ref<HTMLElement | null>(null);
 const isExporting = ref(false);
+const exportError = ref<string | null>(null);
 
 const exportPdf = async () => {
     if (!gradesContainer.value) return;
+
+    const element = gradesContainer.value;
+    const previousQuery = searchQuery.value;
+    const previousExpandedPeriods = [...expandedPeriods.value];
+    const previousWidth = element.style.width;
+    const previousMaxWidth = element.style.maxWidth;
+
     isExporting.value = true;
+    exportError.value = null;
 
     try {
-        const html2pdf = (await import('html2pdf.js')).default;
-        const element = gradesContainer.value;
+        // Export is intentionally independent of the student's current search,
+        // accordion state, and viewport. The PDF always contains every subject
+        // in the complete desktop comparison layout.
+        searchQuery.value = '';
+        element.classList.add('grades-export-mode');
+        element.style.width = '1024px';
+        element.style.maxWidth = '1024px';
+        await nextTick();
 
+        const html2pdf = (await import('html2pdf.js')).default;
         await html2pdf()
             .set({
-                margin: [0.4, 0.4, 0.4, 0.4],
-                filename: 'my-grades.pdf',
+                margin: [0.35, 0.35, 0.35, 0.35],
+                filename: `my-grades-${new Date().toISOString().slice(0, 10)}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: 1200,
+                },
                 jsPDF: {
                     unit: 'in',
                     format: 'letter',
-                    orientation: 'portrait',
+                    orientation: 'landscape',
                 },
             })
             .from(element)
             .save();
     } catch (err) {
         console.error('PDF export failed:', err);
+        exportError.value =
+            'We could not create your PDF. Please try again in a moment.';
     } finally {
+        element.classList.remove('grades-export-mode');
+        element.style.width = previousWidth;
+        element.style.maxWidth = previousMaxWidth;
+        searchQuery.value = previousQuery;
+        expandedPeriods.value = previousExpandedPeriods;
         isExporting.value = false;
     }
 };
 
 // ── Animations ───────────────────────────────────────────────────
-// Pending scroll-hint timers would otherwise fire into a destroyed component.
-onBeforeUnmount(() => {
-    Object.values(scrollHintTimers.value).forEach((timer) =>
-        clearTimeout(timer),
-    );
-    scrollHintTimers.value = {};
-});
+let animationContext: ReturnType<typeof gsap.context> | null = null;
+
+onBeforeUnmount(() => animationContext?.revert());
 
 onMounted(() => {
-    // Animations start immediately because the composable already
-    // resolved data from cache or SSR on init.
-    if (!gradesContainer.value) return;
+    // Keep the page still for students who request reduced motion.
+    if (
+        !gradesContainer.value ||
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+        return;
 
-    const tl = gsap.timeline({
-        defaults: { ease: 'power3.out' },
-    });
+    animationContext = gsap.context(() => {
+        const tl = gsap.timeline({
+            defaults: { ease: 'power3.out' },
+        });
 
-    tl.fromTo(
-        '.animate-section',
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.8, stagger: 0.1 },
-    );
+        tl.fromTo(
+            '.animate-section',
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.8, stagger: 0.1 },
+        );
 
-    tl.fromTo(
-        '.animate-card',
-        {
-            opacity: 0,
-            x: -20,
-            scale: 0.98,
-        },
-        {
-            opacity: 1,
-            x: 0,
-            scale: 1,
-            stagger: 0.1,
-            duration: 0.8,
-            ease: 'back.out(1.2)',
-        },
-        '-=0.4',
-    );
+        tl.fromTo(
+            '.animate-card',
+            {
+                opacity: 0,
+                x: -20,
+                scale: 0.98,
+            },
+            {
+                opacity: 1,
+                x: 0,
+                scale: 1,
+                stagger: 0.1,
+                duration: 0.8,
+                ease: 'back.out(1.2)',
+            },
+            '-=0.4',
+        );
 
-    tl.fromTo(
-        '.animate-group',
-        { opacity: 0, y: 30 },
-        {
-            opacity: 1,
-            y: 0,
-            duration: 1,
-            stagger: 0.15,
-            ease: 'expo.out',
-        },
-        '-=0.6',
-    );
+        tl.fromTo(
+            '.animate-group',
+            { opacity: 0, y: 30 },
+            {
+                opacity: 1,
+                y: 0,
+                duration: 1,
+                stagger: 0.15,
+                ease: 'expo.out',
+            },
+            '-=0.6',
+        );
+    }, gradesContainer.value);
 });
 </script>
 
@@ -555,7 +546,7 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="gradesContainer"
-            class="student-ui container mx-auto max-w-full px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
+            class="student-ui container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
         >
             <!-- Header -->
             <div
@@ -575,29 +566,65 @@ onMounted(() => {
                 </div>
                 <div
                     class="flex w-full flex-row items-center gap-2 sm:w-auto sm:gap-3"
+                    data-html2canvas-ignore="true"
                 >
                     <div
                         class="relative min-w-0 flex-1 sm:w-56 sm:flex-none lg:w-72"
                     >
+                        <label for="grade-subject-search" class="sr-only">
+                            Search subjects
+                        </label>
                         <Search
-                            class="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden="true"
                         />
                         <Input
+                            id="grade-subject-search"
                             v-model="searchQuery"
+                            type="search"
                             placeholder="Search subjects"
                             class="pl-10"
                         />
                     </div>
                     <button
                         type="button"
-                        class="dash-btn inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-border/60 bg-card px-3 text-[13px] text-foreground transition-colors hover:bg-muted disabled:opacity-60 sm:px-4 sm:text-[15px]"
+                        class="dash-btn inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-border/60 bg-card px-3 text-[13px] text-foreground transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60 sm:px-4 sm:text-[15px]"
                         :disabled="isExporting"
+                        :aria-busy="isExporting"
+                        :aria-label="
+                            isExporting
+                                ? 'Exporting grades'
+                                : 'Export grades as PDF'
+                        "
                         @click="exportPdf"
                     >
-                        <Printer class="h-4 w-4" />
-                        {{ isExporting ? 'Exporting…' : 'Export PDF' }}
+                        <Loader2
+                            v-if="isExporting"
+                            class="h-4 w-4 animate-spin"
+                            aria-hidden="true"
+                        />
+                        <Printer v-else class="h-4 w-4" aria-hidden="true" />
+                        <span class="hidden min-[380px]:inline">
+                            {{ isExporting ? 'Exporting…' : 'Export PDF' }}
+                        </span>
                     </button>
                 </div>
+            </div>
+
+            <div
+                v-if="exportError"
+                role="alert"
+                class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+                data-html2canvas-ignore="true"
+            >
+                <span>{{ exportError }}</span>
+                <button
+                    type="button"
+                    class="min-h-11 shrink-0 font-semibold"
+                    @click="exportError = null"
+                >
+                    Dismiss
+                </button>
             </div>
 
             <!-- Loading state -->
@@ -605,7 +632,9 @@ onMounted(() => {
                 v-if="isLoading"
                 class="animate-section mb-8 flex flex-col items-center justify-center py-16"
             >
-                <Loader2 class="mb-4 h-8 w-8 animate-spin text-[#D97757]" />
+                <Loader2
+                    class="mb-4 h-8 w-8 animate-spin text-orange-600 dark:text-orange-400"
+                />
                 <p class="text-[15px] text-muted-foreground">
                     Loading your grades…
                 </p>
@@ -641,8 +670,8 @@ onMounted(() => {
 
             <!-- Overview Cards -->
             <div
-                v-show="!isLoading && !fetchError"
-                class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+                v-show="!isLoading && !fetchError && totalSubjectCount > 0"
+                class="mb-4 grid grid-cols-2 gap-3 sm:mb-6 sm:gap-4 lg:grid-cols-4"
             >
                 <Card class="animate-card gap-2 py-3 sm:gap-6 sm:py-6">
                     <CardHeader
@@ -658,17 +687,27 @@ onMounted(() => {
                             class="dash-metric text-[26px] leading-none sm:text-[32px]"
                             :class="gradeColor(averageSemesterGrade)"
                         >
-                            {{ averageSemesterGrade }}
+                            {{
+                                averageSemesterGrade === null
+                                    ? '—'
+                                    : formatGrade(averageSemesterGrade)
+                            }}
                         </div>
                         <p
                             class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
                         >
-                            {{ gradeLabel(averageSemesterGrade) }}
+                            {{
+                                averageSemesterGrade === null
+                                    ? 'Awaiting grades'
+                                    : gradeLabel(averageSemesterGrade)
+                            }}
                         </p>
                     </CardContent>
                 </Card>
 
-                <Card class="animate-card gap-2 py-3 sm:gap-6 sm:py-6">
+                <Card
+                    class="animate-card hidden gap-2 py-3 sm:flex sm:gap-6 sm:py-6"
+                >
                     <CardHeader
                         class="flex flex-row items-center justify-between space-y-0 px-3 pb-1 sm:px-6 sm:pb-2"
                     >
@@ -679,7 +718,7 @@ onMounted(() => {
                         <div
                             class="dash-metric text-[26px] leading-none sm:text-[32px]"
                         >
-                            {{ totalFilteredCount }}
+                            {{ totalSubjectCount }}
                         </div>
                         <p
                             class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
@@ -728,12 +767,33 @@ onMounted(() => {
                 </Card>
             </div>
 
+            <div
+                v-if="!isLoading && !fetchError && totalSubjectCount > 0"
+                class="animate-section mb-4 flex flex-col gap-1 rounded-xl border border-border/60 bg-muted/20 px-4 py-3 text-[12px] leading-5 text-muted-foreground sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:text-[13px]"
+            >
+                <p>
+                    Current averages use the simple mean of available periods.
+                    Final grades appear after all required periods are graded.
+                </p>
+                <p class="flex shrink-0 items-center gap-1.5">
+                    <Clock class="h-3.5 w-3.5" aria-hidden="true" />
+                    <span class="sm:hidden"
+                        >{{ totalSubjectCount }} subjects ·
+                    </span>
+                    {{
+                        latestGradeUpdate
+                            ? `Last updated ${latestGradeUpdate}`
+                            : 'No grades posted yet'
+                    }}
+                </p>
+            </div>
+
             <!-- Empty State -->
             <Card
                 v-if="
                     !isLoading &&
                     filteredSubjectGrades.length === 0 &&
-                    !searchQuery
+                    !hasSearchQuery
                 "
                 class="animate-section border-dashed"
             >
@@ -753,7 +813,7 @@ onMounted(() => {
 
             <!-- No results state -->
             <Card
-                v-else-if="filteredSubjectGrades.length === 0 && searchQuery"
+                v-else-if="filteredSubjectGrades.length === 0 && hasSearchQuery"
                 class="animate-group border-dashed"
             >
                 <CardContent
@@ -764,8 +824,8 @@ onMounted(() => {
                         No subjects found
                     </h3>
                     <p class="mt-2 max-w-md text-center text-muted-foreground">
-                        No subjects match "{{ searchQuery }}". Try a different
-                        search term.
+                        No subjects match "{{ searchQuery.trim() }}". Try a
+                        different search term.
                     </p>
                 </CardContent>
             </Card>
@@ -787,14 +847,18 @@ onMounted(() => {
                                     {{ group.label }}
                                 </CardTitle>
                                 <CardDescription>
-                                    Grades by subject and period
+                                    {{
+                                        hasSearchQuery
+                                            ? `Showing ${filteredSubjectGrades.length} of ${totalSubjectCount} subjects`
+                                            : 'Grades by subject and period'
+                                    }}
                                 </CardDescription>
                             </div>
                             <Button
                                 v-if="!group.isSeniorHigh"
                                 variant="outline"
                                 size="sm"
-                                class="dash-btn shrink-0 px-4"
+                                class="dash-btn shrink-0 px-4 md:hidden"
                                 @click="toggleAllCollege(group)"
                             >
                                 <ChevronDown
@@ -826,30 +890,23 @@ onMounted(() => {
                     </CardHeader>
                     <CardContent>
                         <!-- ===== MOBILE: Card Layout ===== -->
-                        <div class="space-y-2 md:hidden">
+                        <div class="grades-mobile-layout space-y-2 md:hidden">
                             <Card
                                 v-for="subjectGrade in group.subjects"
-                                :key="subjectGrade.subject"
+                                :key="
+                                    subjectGrade.section?.id ??
+                                    subjectGrade.subject
+                                "
                                 class="overflow-hidden border shadow-none"
                             >
                                 <CardHeader
                                     class="border-b bg-muted/30 px-4 py-3"
                                 >
-                                    <div
-                                        class="flex items-center justify-between"
+                                    <CardTitle
+                                        class="min-w-0 text-sm leading-5 font-semibold break-words"
                                     >
-                                        <CardTitle
-                                            class="text-sm font-semibold"
-                                        >
-                                            {{ subjectGrade.subject }}
-                                        </CardTitle>
-                                        <Badge
-                                            variant="outline"
-                                            class="rounded-full text-[12px] font-medium"
-                                        >
-                                            {{ subjectGrade.section?.name }}
-                                        </Badge>
-                                    </div>
+                                        {{ subjectGrade.subject }}
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent class="divide-y p-0">
                                     <!-- Senior High: semesters with quarters -->
@@ -969,18 +1026,18 @@ onMounted(() => {
                                                 <button
                                                     @click="
                                                         togglePeriod(
-                                                            'm-' +
-                                                                subjectGrade.subject +
-                                                                '-' +
+                                                            mobilePeriodKey(
+                                                                subjectGrade,
                                                                 period.key,
+                                                            ),
                                                         )
                                                     "
                                                     :aria-expanded="
                                                         expandedPeriods.includes(
-                                                            'm-' +
-                                                                subjectGrade.subject +
-                                                                '-' +
+                                                            mobilePeriodKey(
+                                                                subjectGrade,
                                                                 period.key,
+                                                            ),
                                                         )
                                                     "
                                                     class="flex min-h-11 w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/30"
@@ -989,7 +1046,7 @@ onMounted(() => {
                                                         class="flex items-center gap-3"
                                                     >
                                                         <div
-                                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-[#D97757]/10 text-[13px] font-semibold text-[#D97757]"
+                                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-[13px] font-semibold text-orange-700 dark:bg-orange-950/60 dark:text-orange-400"
                                                         >
                                                             {{ pIdx + 1 }}
                                                         </div>
@@ -1005,7 +1062,7 @@ onMounted(() => {
                                                                     period.key,
                                                                 )
                                                             "
-                                                            class="text-[13px] text-[#4D9375]"
+                                                            class="text-[13px] text-emerald-700 dark:text-emerald-400"
                                                             >Graded</span
                                                         >
                                                         <span
@@ -1018,30 +1075,31 @@ onMounted(() => {
                                                         class="h-4 w-4 text-muted-foreground transition-transform duration-200"
                                                         :class="
                                                             expandedPeriods.includes(
-                                                                'm-' +
-                                                                    subjectGrade.subject +
-                                                                    '-' +
+                                                                mobilePeriodKey(
+                                                                    subjectGrade,
                                                                     period.key,
+                                                                ),
                                                             )
                                                                 ? 'rotate-180'
                                                                 : ''
                                                         "
+                                                        aria-hidden="true"
                                                     />
                                                 </button>
                                                 <div
                                                     :data-period-key="
-                                                        'm-' +
-                                                        subjectGrade.subject +
-                                                        '-' +
-                                                        period.key
+                                                        mobilePeriodKey(
+                                                            subjectGrade,
+                                                            period.key,
+                                                        )
                                                     "
                                                     :class="[
                                                         'transition-all duration-300 ease-out',
                                                         expandedPeriods.includes(
-                                                            'm-' +
-                                                                subjectGrade.subject +
-                                                                '-' +
+                                                            mobilePeriodKey(
+                                                                subjectGrade,
                                                                 period.key,
+                                                            ),
                                                         )
                                                             ? 'grades-period-scroll relative overflow-y-auto border-t px-4 py-3 opacity-100'
                                                             : 'overflow-hidden border-t-0 px-0 py-0 opacity-0',
@@ -1049,10 +1107,10 @@ onMounted(() => {
                                                     :style="{
                                                         maxHeight:
                                                             expandedPeriods.includes(
-                                                                'm-' +
-                                                                    subjectGrade.subject +
-                                                                    '-' +
+                                                                mobilePeriodKey(
+                                                                    subjectGrade,
                                                                     period.key,
+                                                                ),
                                                             )
                                                                 ? periodMobileHeight() +
                                                                   'px'
@@ -1168,6 +1226,24 @@ onMounted(() => {
                                                                 }}
                                                             </span>
                                                         </div>
+                                                        <div
+                                                            class="flex items-center justify-between"
+                                                        >
+                                                            <span
+                                                                class="text-xs text-muted-foreground"
+                                                                >Updated</span
+                                                            >
+                                                            <span
+                                                                class="text-xs text-muted-foreground"
+                                                            >
+                                                                {{
+                                                                    getPeriodGrade(
+                                                                        subjectGrade,
+                                                                        period.key,
+                                                                    )!.updatedAt
+                                                                }}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <div
                                                         v-else
@@ -1194,26 +1270,30 @@ onMounted(() => {
                                     >
                                         <span class="text-[13px] font-semibold">
                                             {{
-                                                group.isSeniorHigh
-                                                    ? 'Final Grade'
-                                                    : 'Semester Grade'
+                                                isSubjectComplete(subjectGrade)
+                                                    ? group.finalGradeLabel
+                                                    : 'Current Average'
                                             }}
                                         </span>
                                         <div
                                             v-if="
-                                                subjectGrade.semesterGrade !==
+                                                currentGrade(subjectGrade) !==
                                                 null
                                             "
                                             class="flex items-center gap-2"
                                         >
                                             <Progress
                                                 :value="
-                                                    subjectGrade.semesterGrade
+                                                    currentGrade(
+                                                        subjectGrade,
+                                                    ) ?? undefined
                                                 "
                                                 class="h-2 w-20"
                                                 :indicator-class="
                                                     progressColor(
-                                                        subjectGrade.semesterGrade,
+                                                        currentGrade(
+                                                            subjectGrade,
+                                                        ),
                                                     )
                                                 "
                                             />
@@ -1221,13 +1301,17 @@ onMounted(() => {
                                                 class="text-[15px] font-semibold"
                                                 :class="
                                                     gradeColor(
-                                                        subjectGrade.semesterGrade,
+                                                        currentGrade(
+                                                            subjectGrade,
+                                                        ),
                                                     )
                                                 "
                                             >
                                                 {{
                                                     formatGrade(
-                                                        subjectGrade.semesterGrade,
+                                                        currentGrade(
+                                                            subjectGrade,
+                                                        ),
                                                     )
                                                 }}
                                             </span>
@@ -1245,7 +1329,9 @@ onMounted(() => {
                         </div>
 
                         <!-- ===== DESKTOP: Table Layout ===== -->
-                        <div class="hidden overflow-x-auto md:block">
+                        <div
+                            class="grades-desktop-layout hidden overflow-x-auto md:block"
+                        >
                             <!-- Senior High: Separate tables per semester -->
                             <template v-if="group.isSeniorHigh">
                                 <div
@@ -1256,16 +1342,23 @@ onMounted(() => {
                                 >
                                     <div class="mb-3 flex items-center gap-2">
                                         <span
-                                            class="inline-flex items-center rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-medium text-[#D97757]"
+                                            class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-1 text-[13px] font-medium text-orange-700 dark:bg-orange-950/60 dark:text-orange-400"
                                         >
                                             {{ semester.label }}
                                         </span>
                                         <div class="h-px flex-1 bg-border" />
                                     </div>
                                     <table class="w-full">
+                                        <caption class="sr-only">
+                                            {{
+                                                semester.label
+                                            }}
+                                            grades by subject
+                                        </caption>
                                         <thead>
                                             <tr class="border-b">
                                                 <th
+                                                    scope="col"
                                                     class="sticky left-0 z-10 bg-card p-3 text-left text-sm font-semibold"
                                                 >
                                                     Subject
@@ -1273,11 +1366,13 @@ onMounted(() => {
                                                 <th
                                                     v-for="quarter in semester.quarters"
                                                     :key="quarter.key"
+                                                    scope="col"
                                                     class="p-3 text-center text-sm font-semibold"
                                                 >
                                                     {{ quarter.label }}
                                                 </th>
                                                 <th
+                                                    scope="col"
                                                     class="p-3 text-center text-sm font-semibold"
                                                 >
                                                     Final Grade
@@ -1287,14 +1382,18 @@ onMounted(() => {
                                         <tbody>
                                             <tr
                                                 v-for="subjectGrade in group.subjects"
-                                                :key="subjectGrade.subject"
+                                                :key="
+                                                    subjectGrade.section?.id ??
+                                                    subjectGrade.subject
+                                                "
                                                 class="border-b last:border-b-0 hover:bg-muted/50"
                                             >
-                                                <td
-                                                    class="sticky left-0 z-10 bg-card p-3 text-sm font-medium hover:bg-muted/50"
+                                                <th
+                                                    scope="row"
+                                                    class="sticky left-0 z-10 bg-card p-3 text-left text-sm font-medium hover:bg-muted/50"
                                                 >
                                                     {{ subjectGrade.subject }}
-                                                </td>
+                                                </th>
                                                 <td
                                                     v-for="quarter in semester.quarters"
                                                     :key="quarter.key"
@@ -1470,15 +1569,18 @@ onMounted(() => {
                                         <span
                                             class="text-[15px] font-semibold tracking-tight"
                                         >
-                                            Overall {{ group.finalGradeLabel }}
+                                            Current and final standing
                                         </span>
                                         <div
                                             v-if="group.subjects.length > 0"
-                                            class="flex items-center gap-4"
+                                            class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2"
                                         >
                                             <div
                                                 v-for="subjectGrade in group.subjects"
-                                                :key="subjectGrade.subject"
+                                                :key="
+                                                    subjectGrade.section?.id ??
+                                                    subjectGrade.subject
+                                                "
                                                 class="flex items-center gap-2"
                                             >
                                                 <span
@@ -1488,21 +1590,37 @@ onMounted(() => {
                                                 </span>
                                                 <span
                                                     v-if="
-                                                        subjectGrade.semesterGrade !==
-                                                        null
+                                                        currentGrade(
+                                                            subjectGrade,
+                                                        ) !== null
                                                     "
                                                     class="text-[15px] font-semibold"
                                                     :class="
                                                         gradeColor(
-                                                            subjectGrade.semesterGrade,
+                                                            currentGrade(
+                                                                subjectGrade,
+                                                            ),
                                                         )
                                                     "
                                                 >
                                                     {{
                                                         formatGrade(
-                                                            subjectGrade.semesterGrade,
+                                                            currentGrade(
+                                                                subjectGrade,
+                                                            ),
                                                         )
                                                     }}
+                                                    <span
+                                                        class="ml-1 text-[11px] font-normal text-muted-foreground"
+                                                    >
+                                                        {{
+                                                            isSubjectComplete(
+                                                                subjectGrade,
+                                                            )
+                                                                ? 'final'
+                                                                : 'current'
+                                                        }}
+                                                    </span>
                                                 </span>
                                                 <span
                                                     v-else
@@ -1517,335 +1635,215 @@ onMounted(() => {
                                 </div>
                             </template>
 
-                            <!-- College: Collapsible Period Sections -->
-                            <div v-else class="space-y-3">
-                                <div
-                                    v-for="(period, pIdx) in group.periods"
-                                    :key="period.key"
-                                    class="overflow-hidden rounded-lg border transition-shadow duration-200 hover:shadow-sm"
-                                >
-                                    <button
-                                        @click="togglePeriod(period.key)"
-                                        :aria-expanded="
-                                            expandedPeriods.includes(period.key)
-                                        "
-                                        class="flex min-h-14 w-full items-center justify-between px-4 py-3.5 text-left transition-colors hover:bg-muted/30"
-                                    >
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#D97757]/10 text-[15px] font-semibold text-[#D97757]"
+                            <!-- College: subject-first comparison table -->
+                            <div
+                                v-else
+                                class="overflow-hidden rounded-xl border"
+                            >
+                                <table class="w-full min-w-[760px]">
+                                    <caption class="sr-only">
+                                        College grades by subject and period
+                                    </caption>
+                                    <thead class="bg-muted/30">
+                                        <tr class="border-b">
+                                            <th
+                                                scope="col"
+                                                class="sticky left-0 z-20 min-w-48 bg-muted p-3 text-left text-sm font-semibold"
                                             >
-                                                {{ pIdx + 1 }}
-                                            </div>
-                                            <div>
-                                                <div class="font-semibold">
-                                                    {{ period.label }}
-                                                </div>
+                                                Subject
+                                            </th>
+                                            <th
+                                                v-for="period in group.periods"
+                                                :key="period.key"
+                                                scope="col"
+                                                class="min-w-36 p-3 text-center text-sm font-semibold"
+                                            >
+                                                {{ period.label }}
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                class="sticky right-0 z-20 min-w-40 bg-muted p-3 text-center text-sm font-semibold"
+                                            >
+                                                Current / Final
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr
+                                            v-for="subjectGrade in group.subjects"
+                                            :key="
+                                                subjectGrade.section?.id ??
+                                                subjectGrade.subject
+                                            "
+                                            class="border-b last:border-b-0 hover:bg-muted/30"
+                                        >
+                                            <th
+                                                scope="row"
+                                                class="sticky left-0 z-10 bg-card p-3 text-left text-sm font-semibold"
+                                            >
+                                                {{ subjectGrade.subject }}
+                                            </th>
+                                            <td
+                                                v-for="period in group.periods"
+                                                :key="period.key"
+                                                class="p-3 text-center align-top"
+                                            >
                                                 <div
-                                                    class="text-xs text-muted-foreground"
-                                                >
-                                                    {{
-                                                        gradedCount(
-                                                            group.subjects,
+                                                    v-if="
+                                                        getPeriodGrade(
+                                                            subjectGrade,
                                                             period.key,
                                                         )
-                                                    }}
-                                                    /
-                                                    {{ group.subjects.length }}
-                                                    graded
+                                                    "
+                                                    class="flex flex-col items-center gap-1"
+                                                >
                                                     <span
-                                                        v-if="
-                                                            expandedPeriods.includes(
-                                                                period.key,
-                                                            ) &&
-                                                            group.subjects
-                                                                .length >
-                                                                MAX_VISIBLE_ROWS
+                                                        class="text-[17px] font-semibold tabular-nums"
+                                                        :class="
+                                                            gradeColor(
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )!.percentage,
+                                                            )
                                                         "
-                                                        class="ml-1.5 inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[12px] font-medium text-muted-foreground"
-                                                    >
-                                                        +{{
-                                                            group.subjects
-                                                                .length -
-                                                            MAX_VISIBLE_ROWS
-                                                        }}
-                                                        more
-                                                    </span>
-                                                    <Transition name="fade">
-                                                        <span
-                                                            v-if="
-                                                                scrollHints[
-                                                                    period.key
-                                                                ] &&
-                                                                group.subjects
-                                                                    .length >
-                                                                    MAX_VISIBLE_ROWS
-                                                            "
-                                                            class="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-medium text-[#D97757]"
-                                                        >
-                                                            <ChevronDown
-                                                                class="h-3 w-3"
-                                                            />
-                                                            Scroll
-                                                        </span>
-                                                    </Transition>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <ChevronDown
-                                            class="h-5 w-5 text-muted-foreground transition-transform duration-200"
-                                            :class="
-                                                expandedPeriods.includes(
-                                                    period.key,
-                                                )
-                                                    ? 'rotate-180'
-                                                    : ''
-                                            "
-                                        />
-                                    </button>
-                                    <div
-                                        :data-period-key="period.key"
-                                        :class="[
-                                            'transition-all duration-300 ease-out',
-                                            expandedPeriods.includes(period.key)
-                                                ? 'grades-period-scroll relative overflow-y-auto border-t opacity-100'
-                                                : 'overflow-hidden border-t-0 opacity-0',
-                                        ]"
-                                        :style="{
-                                            maxHeight: expandedPeriods.includes(
-                                                period.key,
-                                            )
-                                                ? periodDesktopHeight(
-                                                      group.subjects.length,
-                                                  ) + 'px'
-                                                : '0px',
-                                        }"
-                                    >
-                                        <table class="w-full">
-                                            <thead>
-                                                <tr
-                                                    class="border-b bg-muted/30"
-                                                >
-                                                    <th
-                                                        class="p-3 text-left text-sm font-semibold"
-                                                    >
-                                                        Subject
-                                                    </th>
-                                                    <th
-                                                        class="p-3 text-center text-sm font-semibold"
-                                                    >
-                                                        Score
-                                                    </th>
-                                                    <th
-                                                        class="p-3 text-center text-sm font-semibold"
-                                                    >
-                                                        Percentage
-                                                    </th>
-                                                    <th
-                                                        class="p-3 text-center text-sm font-semibold"
-                                                    >
-                                                        Remarks
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr
-                                                    v-for="subjectGrade in group.subjects"
-                                                    :key="subjectGrade.subject"
-                                                    class="border-b last:border-b-0 hover:bg-muted/50"
-                                                >
-                                                    <td
-                                                        class="p-3 text-sm font-medium"
                                                     >
                                                         {{
-                                                            subjectGrade.subject
+                                                            formatGrade(
+                                                                getPeriodGrade(
+                                                                    subjectGrade,
+                                                                    period.key,
+                                                                )!.percentage,
+                                                            )
                                                         }}
-                                                    </td>
-                                                    <td class="p-3 text-center">
-                                                        <span
-                                                            v-if="
+                                                        <span class="sr-only"
+                                                            >percent</span
+                                                        >
+                                                    </span>
+                                                    <Progress
+                                                        :value="
+                                                            getPeriodGrade(
+                                                                subjectGrade,
+                                                                period.key,
+                                                            )!.percentage
+                                                        "
+                                                        class="h-1 w-16"
+                                                        :indicator-class="
+                                                            progressColor(
                                                                 getPeriodGrade(
                                                                     subjectGrade,
                                                                     period.key,
-                                                                )
-                                                            "
-                                                            class="font-medium tabular-nums"
-                                                        >
-                                                            {{
-                                                                getPeriodGrade(
-                                                                    subjectGrade,
-                                                                    period.key,
-                                                                )?.score
-                                                            }}
-                                                            /
-                                                            {{
-                                                                getPeriodGrade(
-                                                                    subjectGrade,
-                                                                    period.key,
-                                                                )?.maxScore
-                                                            }}
-                                                        </span>
-                                                        <span
-                                                            v-else
-                                                            class="flex items-center justify-center gap-1 text-muted-foreground"
-                                                        >
-                                                            <Clock
-                                                                class="h-3 w-3"
-                                                            />
-                                                            <span
-                                                                class="text-xs"
-                                                                >Pending</span
-                                                            >
-                                                        </span>
-                                                    </td>
-                                                    <td class="p-3 text-center">
-                                                        <div
-                                                            v-if="
-                                                                getPeriodGrade(
-                                                                    subjectGrade,
-                                                                    period.key,
-                                                                )
-                                                            "
-                                                            class="flex flex-col items-center gap-1"
-                                                        >
-                                                            <span
-                                                                class="text-[17px] font-semibold tabular-nums"
-                                                                :class="
-                                                                    gradeColor(
-                                                                        getPeriodGrade(
-                                                                            subjectGrade,
-                                                                            period.key,
-                                                                        )!
-                                                                            .percentage,
-                                                                    )
-                                                                "
-                                                            >
-                                                                {{
-                                                                    getPeriodGrade(
-                                                                        subjectGrade,
-                                                                        period.key,
-                                                                    )!
-                                                                        .percentage
-                                                                }}
-                                                            </span>
-                                                            <Progress
-                                                                :value="
-                                                                    getPeriodGrade(
-                                                                        subjectGrade,
-                                                                        period.key,
-                                                                    )!
-                                                                        .percentage
-                                                                "
-                                                                class="h-1 w-14"
-                                                                :indicator-class="
-                                                                    progressColor(
-                                                                        getPeriodGrade(
-                                                                            subjectGrade,
-                                                                            period.key,
-                                                                        )!
-                                                                            .percentage,
-                                                                    )
-                                                                "
-                                                            />
-                                                        </div>
-                                                        <span
-                                                            v-else
-                                                            class="flex items-center justify-center gap-1 text-muted-foreground"
-                                                        >
-                                                            <Clock
-                                                                class="h-3 w-3"
-                                                            />
-                                                            <span
-                                                                class="text-xs"
-                                                                >Pending</span
-                                                            >
-                                                        </span>
-                                                    </td>
-                                                    <td class="p-3 text-center">
-                                                        <span
-                                                            v-if="
-                                                                getPeriodGrade(
-                                                                    subjectGrade,
-                                                                    period.key,
-                                                                )?.remarks
-                                                            "
-                                                            class="text-xs text-muted-foreground"
-                                                        >
-                                                            {{
-                                                                getPeriodGrade(
-                                                                    subjectGrade,
-                                                                    period.key,
-                                                                )?.remarks
-                                                            }}
-                                                        </span>
-                                                        <span
-                                                            v-else
-                                                            class="text-xs text-muted-foreground"
-                                                            >—</span
-                                                        >
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        <div
-                                            class="pointer-events-none sticky bottom-0 h-6 bg-gradient-to-t from-card to-transparent"
-                                        ></div>
-                                    </div>
-                                </div>
-
-                                <!-- Overall Semester Grade summary -->
-                                <div class="rounded-lg border bg-muted/20 p-4">
-                                    <div
-                                        class="flex items-center justify-between"
-                                    >
-                                        <span
-                                            class="text-[15px] font-semibold tracking-tight"
-                                        >
-                                            {{ group.finalGradeLabel }}
-                                        </span>
-                                        <div
-                                            v-if="group.subjects.length > 0"
-                                            class="flex flex-wrap items-center gap-x-4 gap-y-2"
-                                        >
-                                            <div
-                                                v-for="subjectGrade in group.subjects"
-                                                :key="subjectGrade.subject"
-                                                class="flex items-center gap-2"
-                                            >
-                                                <span
-                                                    class="text-xs text-muted-foreground"
-                                                >
-                                                    {{ subjectGrade.subject }}:
-                                                </span>
-                                                <span
-                                                    v-if="
-                                                        subjectGrade.semesterGrade !==
-                                                        null
-                                                    "
-                                                    class="text-[15px] font-semibold tabular-nums"
-                                                    :class="
-                                                        gradeColor(
-                                                            subjectGrade.semesterGrade,
-                                                        )
-                                                    "
-                                                >
-                                                    {{
-                                                        formatGrade(
-                                                            subjectGrade.semesterGrade,
-                                                        )
-                                                    }}
-                                                </span>
+                                                                )!.percentage,
+                                                            )
+                                                        "
+                                                    />
+                                                    <span
+                                                        class="text-[12px] text-muted-foreground tabular-nums"
+                                                    >
+                                                        {{
+                                                            getPeriodGrade(
+                                                                subjectGrade,
+                                                                period.key,
+                                                            )!.score
+                                                        }}
+                                                        /
+                                                        {{
+                                                            getPeriodGrade(
+                                                                subjectGrade,
+                                                                period.key,
+                                                            )!.maxScore
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        v-if="
+                                                            getPeriodGrade(
+                                                                subjectGrade,
+                                                                period.key,
+                                                            )?.remarks
+                                                        "
+                                                        class="max-w-32 truncate text-[12px] text-muted-foreground"
+                                                        :title="
+                                                            getPeriodGrade(
+                                                                subjectGrade,
+                                                                period.key,
+                                                            )?.remarks ??
+                                                            undefined
+                                                        "
+                                                    >
+                                                        {{
+                                                            getPeriodGrade(
+                                                                subjectGrade,
+                                                                period.key,
+                                                            )?.remarks
+                                                        }}
+                                                    </span>
+                                                </div>
                                                 <span
                                                     v-else
-                                                    class="flex items-center gap-1 text-xs text-muted-foreground"
+                                                    class="inline-flex min-h-11 items-center justify-center gap-1 text-xs text-muted-foreground"
                                                 >
-                                                    <Clock class="h-3 w-3" />
+                                                    <Clock
+                                                        class="h-3.5 w-3.5"
+                                                        aria-hidden="true"
+                                                    />
                                                     Pending
                                                 </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                            </td>
+                                            <td
+                                                class="sticky right-0 z-10 bg-card p-3 text-center align-top"
+                                            >
+                                                <div
+                                                    v-if="
+                                                        currentGrade(
+                                                            subjectGrade,
+                                                        ) !== null
+                                                    "
+                                                    class="flex flex-col items-center gap-1"
+                                                >
+                                                    <span
+                                                        class="text-[20px] font-semibold tabular-nums"
+                                                        :class="
+                                                            gradeColor(
+                                                                currentGrade(
+                                                                    subjectGrade,
+                                                                ),
+                                                            )
+                                                        "
+                                                    >
+                                                        {{
+                                                            formatGrade(
+                                                                currentGrade(
+                                                                    subjectGrade,
+                                                                ),
+                                                            )
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        class="text-[12px] text-muted-foreground"
+                                                    >
+                                                        {{
+                                                            isSubjectComplete(
+                                                                subjectGrade,
+                                                            )
+                                                                ? group.finalGradeLabel
+                                                                : 'Current average'
+                                                        }}
+                                                    </span>
+                                                </div>
+                                                <span
+                                                    v-else
+                                                    class="inline-flex min-h-11 items-center gap-1 text-xs text-muted-foreground"
+                                                >
+                                                    <Clock
+                                                        class="h-3.5 w-3.5"
+                                                        aria-hidden="true"
+                                                    />
+                                                    Awaiting grades
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </CardContent>
@@ -1882,5 +1880,39 @@ onMounted(() => {
 }
 .grades-period-scroll::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground));
+}
+
+/* PDF export always uses the complete comparison tables, regardless of the
+   phone/desktop viewport or the student's current accordion state. */
+.grades-export-mode .grades-mobile-layout {
+    display: none !important;
+}
+
+.grades-export-mode .grades-desktop-layout {
+    display: block !important;
+    overflow: visible !important;
+}
+
+.grades-export-mode .animate-section,
+.grades-export-mode .animate-card,
+.grades-export-mode .animate-group {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+.grades-export-mode [data-slot='card'],
+.grades-export-mode table {
+    break-inside: avoid;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .student-ui *,
+    .student-ui *::before,
+    .student-ui *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 </style>
