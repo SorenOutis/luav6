@@ -112,7 +112,7 @@ it('reveals the answer key once the exam is closed and the student has submitted
     [$student, $section] = leakContext();
     $exam = Exam::factory()->closed()->forSection($section)->create();
     $part = ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
-    ExamSubmission::factory()->for($student, $exam, $part)->create();
+    ExamSubmission::factory()->forSubmission($student, $exam, $part)->create();
 
     $response = actingAs($student)->get('/exams');
 
@@ -125,7 +125,7 @@ it('shows every part to a student who submitted only one of them', function () {
     $exam = Exam::factory()->closed()->forSection($section)->create();
     $submittedPart = ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
     ExamPart::factory()->forExam($exam)->identification(['Cebu'])->create();
-    ExamSubmission::factory()->for($student, $exam, $submittedPart)->create();
+    ExamSubmission::factory()->forSubmission($student, $exam, $submittedPart)->create();
 
     $response = actingAs($student)->get('/exams');
 
