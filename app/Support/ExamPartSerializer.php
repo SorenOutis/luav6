@@ -25,8 +25,8 @@ class ExamPartSerializer
      *
      * @param  Collection<int, ExamPart>|iterable<ExamPart>  $parts
      * @param  bool  $includeQuestions  When false (a closed exam the student
-     *     never answered) the question text/options are omitted entirely so
-     *     the payload carries nothing for them to review.
+     *                                  never answered) the question text/options are omitted entirely so
+     *                                  the payload carries nothing for them to review.
      * @return array<int, array<string, mixed>>
      */
     public static function many(iterable $parts, bool $revealAnswers, bool $includeQuestions = true): array
