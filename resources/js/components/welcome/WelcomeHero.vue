@@ -4,7 +4,7 @@ import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
-import { ArrowRight, CalendarCheck, LayoutDashboard } from 'lucide-vue-next';
+import { ArrowRight, LayoutDashboard, Play } from 'lucide-vue-next';
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
@@ -281,43 +281,57 @@ onUnmounted(() => {
                     easing: [0.16, 1, 0.3, 1],
                     delay: 0.4,
                 }"
-                class="hero-cta flex flex-col gap-3 sm:flex-row sm:gap-4 lg:gap-5"
+                class="hero-cta flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 lg:gap-5"
             >
                 <Link
                     v-if="auth.user"
                     :href="dashboard()"
                     @mousemove="handleMagnetic"
                     @mouseleave="resetMagnetic"
-                    class="group relative flex -skew-x-[12deg] items-center justify-center bg-primary px-8 py-4 text-primary-foreground shadow-[0_8px_40px_-12px] shadow-primary/30 transition-all hover:bg-primary/90 active:scale-[0.98] sm:px-10"
+                    class="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary px-8 py-4 text-sm font-bold tracking-wide text-primary-foreground shadow-[0_10px_40px_-12px] shadow-primary/40 transition-all duration-300 hover:shadow-[0_16px_50px_-12px] hover:shadow-primary/50 active:scale-[0.98] sm:w-auto sm:px-10 sm:text-base"
                 >
-                    <span
-                        class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase sm:text-base"
-                    >
+                    <span class="relative z-10 flex items-center gap-2.5">
                         System Dashboard
                         <LayoutDashboard
-                            class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                            class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
                         />
                     </span>
-                    <div
-                        class="absolute inset-0 bg-white/10 opacity-0 transition-opacity group-hover:opacity-100"
-                    ></div>
+                    <span
+                        class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+                    ></span>
                 </Link>
 
                 <template v-else>
+                    <Link
+                        v-if="canRegister"
+                        :href="register()"
+                        @mousemove="handleMagnetic"
+                        @mouseleave="resetMagnetic"
+                        class="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-full bg-primary px-8 py-4 text-sm font-bold tracking-wide text-primary-foreground shadow-[0_10px_40px_-12px] shadow-primary/40 transition-all duration-300 hover:shadow-[0_16px_50px_-12px] hover:shadow-primary/50 hover:brightness-105 active:scale-[0.98] sm:w-auto sm:px-10 sm:text-base"
+                    >
+                        <span class="relative z-10 flex items-center gap-2.5">
+                            Start for free
+                            <ArrowRight
+                                class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                            />
+                        </span>
+                        <span
+                            class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+                        ></span>
+                    </Link>
+
                     <button
                         type="button"
                         @click="watchDemo"
                         @mousemove="handleMagnetic"
                         @mouseleave="resetMagnetic"
-                        class="group relative flex -skew-x-[12deg] items-center justify-center bg-foreground px-8 py-4 text-background transition-all hover:bg-primary hover:text-primary-foreground active:scale-[0.98] sm:px-10"
+                        class="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-full bg-foreground px-8 py-4 text-sm font-bold tracking-wide text-background transition-all duration-300 hover:bg-primary hover:text-primary-foreground active:scale-[0.98] sm:w-auto sm:px-10 sm:text-base"
                     >
-                        <span
-                            class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase sm:text-base"
-                        >
-                            Watch Demo
-                            <CalendarCheck
-                                class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                        <span class="relative z-10 flex items-center gap-2.5">
+                            <Play
+                                class="h-4 w-4 fill-current transition-transform duration-300 group-hover:scale-110 sm:h-5 sm:w-5"
                             />
+                            Watch Demo
                         </span>
                     </button>
 
@@ -325,29 +339,13 @@ onUnmounted(() => {
                         :href="login()"
                         @mousemove="handleMagnetic"
                         @mouseleave="resetMagnetic"
-                        class="group relative flex -skew-x-[12deg] items-center justify-center border border-border bg-background/50 px-8 py-4 text-foreground backdrop-blur-sm transition-all hover:bg-muted/50 active:scale-[0.98] sm:px-10"
+                        class="group relative inline-flex w-full items-center justify-center gap-2.5 overflow-hidden rounded-full border border-border bg-background/50 px-8 py-4 text-sm font-semibold tracking-wide text-foreground backdrop-blur-sm transition-all duration-300 hover:border-primary/40 hover:bg-primary/5 active:scale-[0.98] sm:w-auto sm:px-10 sm:text-base"
                     >
-                        <span
-                            class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase sm:text-base"
-                        >
+                        <span class="relative z-10 flex items-center gap-2.5">
                             Login
                             <ArrowRight
-                                class="h-4 w-4 transition-transform duration-500 group-hover:translate-x-1 sm:h-5 sm:w-5"
+                                class="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 sm:h-5 sm:w-5"
                             />
-                        </span>
-                    </Link>
-
-                    <Link
-                        v-if="canRegister"
-                        :href="register()"
-                        @mousemove="handleMagnetic"
-                        @mouseleave="resetMagnetic"
-                        class="group relative flex -skew-x-[12deg] items-center justify-center border border-primary/30 bg-primary/5 px-8 py-4 text-foreground backdrop-blur-sm transition-all hover:bg-primary/10 active:scale-[0.98] sm:hidden"
-                    >
-                        <span
-                            class="relative z-10 flex skew-x-[12deg] items-center gap-2.5 text-sm font-bold tracking-[0.22em] uppercase"
-                        >
-                            Join
                         </span>
                     </Link>
                 </template>
