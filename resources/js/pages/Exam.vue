@@ -5,6 +5,8 @@ import {
     Calendar,
     Clock,
     CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
     XCircle,
     Shield,
     ArrowRight,
@@ -24,6 +26,7 @@ import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getLenis } from '@/composables/useLenis';
+import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { show as examsShow } from '@/routes/exams';
@@ -119,6 +122,9 @@ const props = defineProps<{
 const showReviewModal = ref(false);
 const selectedExamForReview = ref<Exam | null>(null);
 const selectedPartId = ref<number | null>(null);
+// One-question-at-a-time review on mobile, mirroring the exam-taking carousel.
+const selectedQuestionIndex = ref(0);
+const { isMobile } = useMobile();
 
 // --- Filter State ---
 const activeFilter = ref<'all' | 'active' | 'completed'>('all');
@@ -309,6 +315,7 @@ const answersRevealed = computed(
 const openReview = (exam: Exam) => {
     selectedExamForReview.value = exam;
     selectedPartId.value = exam.parts.length > 0 ? exam.parts[0].id : null;
+    selectedQuestionIndex.value = 0;
     showReviewModal.value = true;
 };
 
@@ -417,6 +424,53 @@ function showScrollbar() {
         scrollRef.value?.classList.remove('scrolling');
     }, 1500);
 }
+
+// ─── Mobile: one-question-at-a-time review navigation ─────────────
+// Mirrors the mobile carousel in the exam-taking screen so reviewing results
+// feels consistent: a single question card with Prev / Next controls plus the
+// part tab bar for jumping between sections.
+const selectedPartQuestions = computed(
+    () =>
+        selectedExamForReview.value?.parts.find(
+            (part) => part.id === selectedPartId.value,
+        )?.questions ?? [],
+);
+
+const canGoToPrevQuestion = computed(() => selectedQuestionIndex.value > 0);
+
+const canGoToNextQuestion = computed(
+    () => selectedQuestionIndex.value < selectedPartQuestions.value.length - 1,
+);
+
+const scrollReviewToTop = () => {
+    nextTick(() => {
+        // On desktop `scrollRef` is the scroll container; on mobile the bottom
+        // sheet wraps it in another scrollable div, so reset both.
+        scrollRef.value?.scrollTo({ top: 0, behavior: 'smooth' });
+        const wrapper = scrollRef.value?.parentElement;
+        if (wrapper && wrapper !== scrollRef.value) {
+            wrapper.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    });
+};
+
+const goToPrevQuestion = () => {
+    if (!canGoToPrevQuestion.value) return;
+    selectedQuestionIndex.value--;
+    scrollReviewToTop();
+};
+
+const goToNextQuestion = () => {
+    if (!canGoToNextQuestion.value) return;
+    selectedQuestionIndex.value++;
+    scrollReviewToTop();
+};
+
+// Keep the question index in bounds when switching parts (tabs / footer nav).
+watch(selectedPartId, () => {
+    selectedQuestionIndex.value = 0;
+    scrollReviewToTop();
+});
 </script>
 
 <template>
@@ -923,6 +977,9 @@ function showScrollbar() {
                         <Motion
                             v-for="(question, qIndex) in part.questions"
                             :key="qIndex"
+                            v-show="
+                                !isMobile || qIndex === selectedQuestionIndex
+                            "
                             :initial="{ opacity: 0, y: 15 }"
                             :animate="{ opacity: 1, y: 0 }"
                             :transition="{
@@ -957,7 +1014,7 @@ function showScrollbar() {
                         >
                             <!-- Privacy Overlay: visible by default, fades on hover to reveal content -->
                             <div
-                                class="question-reveal-overlay pointer-events-none absolute inset-0 z-20 flex items-center justify-center opacity-100 transition-opacity duration-300"
+                                class="question-reveal-overlay pointer-events-none absolute inset-0 z-20 hidden items-center justify-center opacity-100 transition-opacity duration-300 md:flex"
                             >
                                 <div
                                     class="flex items-center gap-2 rounded-xl border border-primary/20 bg-background/90 px-4 py-2 shadow-lg backdrop-blur-sm"
@@ -971,7 +1028,7 @@ function showScrollbar() {
                             </div>
 
                             <div
-                                class="question-reveal-content space-y-3 blur-sm transition-all duration-500 select-none"
+                                class="question-reveal-content space-y-3 transition-all duration-500 select-none md:blur-sm"
                             >
                                 <div
                                     class="flex items-start justify-between gap-3"
@@ -1327,6 +1384,37 @@ function showScrollbar() {
                             </div>
                         </Motion>
                     </div>
+
+                    <!-- Mobile: Prev / Next question navigation -->
+                    <div
+                        v-if="isMobile && selectedPartQuestions.length > 1"
+                        class="mt-5 flex items-center justify-between gap-2"
+                    >
+                        <button
+                            @click="goToPrevQuestion"
+                            :disabled="!canGoToPrevQuestion"
+                            class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[11px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
+                        >
+                            <ChevronLeft class="h-3.5 w-3.5" />
+                            Prev
+                        </button>
+
+                        <span
+                            class="text-[11px] font-black tracking-widest text-muted-foreground/60 uppercase"
+                        >
+                            {{ selectedQuestionIndex + 1 }} /
+                            {{ selectedPartQuestions.length }}
+                        </span>
+
+                        <button
+                            @click="goToNextQuestion"
+                            :disabled="!canGoToNextQuestion"
+                            class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[11px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
+                        >
+                            Next
+                            <ChevronRight class="h-3.5 w-3.5" />
+                        </button>
+                    </div>
                 </Motion>
             </div>
         </div>
@@ -1343,6 +1431,7 @@ function showScrollbar() {
 
             <div
                 v-if="
+                    !isMobile &&
                     selectedExamForReview &&
                     selectedExamForReview.parts.length > 1
                 "
