@@ -8,6 +8,7 @@ class GamificationHistory extends Model
 {
     protected $fillable = [
         'user_id',
+        'awarded_by',
         'section_id',
         'season_id',
         'amount_xp',
@@ -19,6 +20,11 @@ class GamificationHistory extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function awardedBy()
+    {
+        return $this->belongsTo(User::class, 'awarded_by');
     }
 
     public function section()

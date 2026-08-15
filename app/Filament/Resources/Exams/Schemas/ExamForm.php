@@ -53,6 +53,37 @@ class ExamForm
                     ->url()
                     ->maxLength(255)
                     ->columnSpan(1),
+                Section::make('XP Rewards')
+                    ->description('Academic points remain the exam score. These separate XP rewards are granted once, after the final part is submitted.')
+                    ->columnSpanFull()
+                    ->columns(3)
+                    ->schema([
+                        Checkbox::make('xp_rewards_enabled')
+                            ->label('Enable XP rewards')
+                            ->helperText('Enabled by default for new exams. Turn this on manually for older exams.')
+                            ->default(true)
+                            ->columnSpanFull(),
+                        TextInput::make('completion_xp')
+                            ->label('Completion XP')
+                            ->helperText('Granted for completing every part.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(10)
+                            ->required(),
+                        TextInput::make('on_time_xp')
+                            ->label('On-time XP')
+                            ->helperText('Granted when no part was submitted late.')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(5)
+                            ->required(),
+                        Checkbox::make('accuracy_xp_enabled')
+                            ->label('Enable accuracy XP')
+                            ->helperText('70% = 5 XP, 85% = 10 XP, 95% = 15 XP (highest tier only).')
+                            ->default(true),
+                    ]),
                 Section::make('Exam Parts')
                     ->description('Add parts/sections to this exam. Each part can contain multiple questions.')
                     ->columnSpanFull()

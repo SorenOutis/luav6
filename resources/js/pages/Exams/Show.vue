@@ -74,6 +74,15 @@ interface ExamSubmissionSummary {
     score: number;
 }
 
+interface ExamXpAward {
+    completion_xp: number;
+    accuracy_xp: number;
+    on_time_xp: number;
+    total_xp: number;
+    accuracy_percentage: number | null;
+    accuracy_pending: boolean;
+}
+
 interface ExamAnswerDraft {
     answers: Array<{
         question_number: number;
@@ -101,6 +110,7 @@ const props = defineProps<{
     // Durable server drafts, keyed by part id. localStorage remains a fallback,
     // but these drafts survive a cleared cache or a different browser session.
     answerDrafts?: Record<number, ExamAnswerDraft>;
+    xpAward?: ExamXpAward | null;
     realtimeChannel: string;
 }>();
 
@@ -133,6 +143,8 @@ const localSubmissions = ref<Record<number, ExamSubmissionSummary>>(
 const isSubmitting = ref(false);
 const isFinalSubmitting = ref(false);
 const showSuccessModal = ref(false);
+const showXpModal = ref(false);
+const xpAward = ref<ExamXpAward | null>(props.xpAward ?? null);
 const isCalculatingScore = ref(false);
 const successModalRef = ref<HTMLElement | null>(null);
 
@@ -1502,6 +1514,8 @@ const submitPart = async () => {
                         locallySubmittedPartIds.value.add(Number(id));
                     },
                 );
+                xpAward.value =
+                    (page.props.xpAward as ExamXpAward | null) ?? xpAward.value;
 
                 const effectiveCount = Object.keys(
                     localSubmissions.value,
@@ -1604,6 +1618,10 @@ const startEssayGradingPoll = (partId: number) => {
             // We got a real response — resume the normal cadence in case a
             // previous rate-limit had us backing off.
             delayMs = 2000;
+
+            if (data.xp_award) {
+                xpAward.value = data.xp_award as ExamXpAward;
+            }
 
             if (data.status !== 'not_submitted') {
                 const submission = localSubmissions.value[partId] ?? {
@@ -1737,6 +1755,22 @@ const triggerSuccessModal = (
             );
         }
     }, 10);
+};
+
+const continueFromSuccess = () => {
+    if (partsPendingCount.value === 0 && xpAward.value) {
+        showSuccessModal.value = false;
+        showXpModal.value = true;
+        currentPartHasEssay.value = false;
+        return;
+    }
+
+    closeSuccessModal();
+};
+
+const closeXpModal = () => {
+    showXpModal.value = false;
+    router.visit('/exams');
 };
 
 const closeSuccessModal = () => {
@@ -3899,7 +3933,7 @@ const feedbackContent = computed(() => {
                                 </div>
 
                                 <button
-                                    @click="closeSuccessModal"
+                                    @click="continueFromSuccess"
                                     class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <span>{{
@@ -3909,7 +3943,9 @@ const feedbackContent = computed(() => {
                                                 : 'Calculating...'
                                             : partsPendingCount > 0
                                               ? 'Continue to Next Part'
-                                              : 'Back to Exams'
+                                              : xpAward
+                                                ? 'View XP Earned'
+                                                : 'Back to Exams'
                                     }}</span>
 
                                     <ArrowRight
@@ -3921,6 +3957,119 @@ const feedbackContent = computed(() => {
                                         v-else
                                         class="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/20 border-t-primary-foreground"
                                     ></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+
+                <!-- XP reward breakdown shown after the final score. Academic
+                     points stay in the score modal; this modal only shows XP. -->
+                <transition name="modal-fade">
+                    <div
+                        v-if="showXpModal && xpAward"
+                        class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
+                    >
+                        <div class="surface-card w-full max-w-md p-8 md:p-10">
+                            <div
+                                class="flex flex-col items-center gap-6 text-center"
+                            >
+                                <div
+                                    class="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10"
+                                >
+                                    <Zap class="h-8 w-8 text-primary" />
+                                </div>
+                                <div class="space-y-2">
+                                    <p class="dash-label">Progress reward</p>
+                                    <h3
+                                        class="text-2xl font-semibold tracking-tight text-foreground"
+                                    >
+                                        +{{ xpAward.total_xp }} XP earned
+                                    </h3>
+                                    <p class="text-sm text-muted-foreground">
+                                        Your exam score remains separate from
+                                        these level-up rewards.
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="w-full divide-y divide-border/50 rounded-lg border border-border/60 bg-muted/20 text-left"
+                                >
+                                    <div
+                                        class="flex items-center justify-between px-4 py-3"
+                                    >
+                                        <span
+                                            class="text-sm text-muted-foreground"
+                                            >Completed all parts</span
+                                        >
+                                        <strong class="text-sm text-primary"
+                                            >+{{
+                                                xpAward.completion_xp
+                                            }}
+                                            XP</strong
+                                        >
+                                    </div>
+                                    <div
+                                        class="flex items-center justify-between px-4 py-3"
+                                    >
+                                        <span
+                                            class="text-sm text-muted-foreground"
+                                            >Submitted on time</span
+                                        >
+                                        <strong
+                                            class="text-sm"
+                                            :class="
+                                                xpAward.on_time_xp > 0
+                                                    ? 'text-primary'
+                                                    : 'text-muted-foreground'
+                                            "
+                                        >
+                                            +{{ xpAward.on_time_xp }} XP
+                                        </strong>
+                                    </div>
+                                    <div
+                                        class="flex items-center justify-between px-4 py-3"
+                                    >
+                                        <span
+                                            class="text-sm text-muted-foreground"
+                                        >
+                                            Accuracy bonus
+                                            <span
+                                                v-if="
+                                                    xpAward.accuracy_percentage !==
+                                                    null
+                                                "
+                                            >
+                                                ({{
+                                                    xpAward.accuracy_percentage
+                                                }}%)
+                                            </span>
+                                        </span>
+                                        <strong
+                                            v-if="!xpAward.accuracy_pending"
+                                            class="text-sm"
+                                            :class="
+                                                xpAward.accuracy_xp > 0
+                                                    ? 'text-primary'
+                                                    : 'text-muted-foreground'
+                                            "
+                                        >
+                                            +{{ xpAward.accuracy_xp }} XP
+                                        </strong>
+                                        <span
+                                            v-else
+                                            class="text-xs font-medium text-[#E0AF68]"
+                                            >Pending grading</span
+                                        >
+                                    </div>
+                                </div>
+
+                                <button
+                                    @click="closeXpModal"
+                                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 active:scale-[0.98]"
+                                >
+                                    Back to Exams
+                                    <ArrowRight class="h-4 w-4" />
                                 </button>
                             </div>
                         </div>

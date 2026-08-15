@@ -352,7 +352,7 @@ class User extends Authenticatable implements FilamentUser
         return $query->whereHas('sections', fn ($q) => $q->where('admin_id', $user->id));
     }
 
-    public function recordGamificationHistory($amountXp, $amountPoints, $reason, $description = null, $sectionId = null, $seasonId = null)
+    public function recordGamificationHistory($amountXp, $amountPoints, $reason, $description = null, $sectionId = null, $seasonId = null, $awardedBy = null)
     {
         if (abs($amountXp) < 0.001 && abs($amountPoints) < 0.001) {
             return null;
@@ -363,6 +363,7 @@ class User extends Authenticatable implements FilamentUser
         }
 
         $history = $this->gamificationHistories()->create([
+            'awarded_by' => $awardedBy,
             'amount_xp' => $amountXp,
             'amount_points' => $amountPoints,
             'reason' => $reason,

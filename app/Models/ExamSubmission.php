@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Casts\ExamSubmissionAnswersCast;
-use App\Support\LevelCurve;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -78,24 +77,28 @@ class ExamSubmission extends Model
 
         if ($exam && $exam->section_id) {
             $sectionProgress = $user->activeSectionProgress($exam->section_id);
+            $wasSyncing = SectionProgress::$isSyncing;
+            SectionProgress::$isSyncing = true;
             $sectionProgress->increment('points', $delta);
-            $sectionProgress->increment('exp', $delta);
             $sectionProgress->save(); // Trigger sync
+            SectionProgress::$isSyncing = $wasSyncing;
 
-            $user->recordGamificationHistory($delta, $delta, $reason, $description, $exam->section_id);
+            // Academic marks and progression XP are intentionally separate.
+            // Exam XP is granted once per completed exam by ExamXpAwardService.
+            $user->recordGamificationHistory(0, $delta, $reason, $description, $exam->section_id);
         } elseif ($progress = $user->activeSeasonProgress()) {
+            $wasSyncing = SectionProgress::$isSyncing;
+            SectionProgress::$isSyncing = true;
             $progress->increment('points', $delta);
-            $progress->increment('exp', $delta);
             $progress->save(); // Trigger sync
+            SectionProgress::$isSyncing = $wasSyncing;
 
-            $user->recordGamificationHistory($delta, $delta, $reason, $description, null, $progress->season_id);
+            $user->recordGamificationHistory(0, $delta, $reason, $description, null, $progress->season_id);
         } else {
             $user->increment('points', $delta);
-            $user->increment('exp', $delta);
-            $user->level = LevelCurve::levelForXp((int) $user->exp);
             $user->save();
 
-            $user->recordGamificationHistory($delta, $delta, $reason, $description);
+            $user->recordGamificationHistory(0, $delta, $reason, $description);
         }
     }
 
