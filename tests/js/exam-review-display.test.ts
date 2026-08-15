@@ -218,6 +218,80 @@ const closedExamNoSubmission = {
     ],
 };
 
+// A closed exam where the student submitted part 101 but never answered part
+// 103. They saw every part while the exam was open, so the review must still
+// show the unsubmitted part (its questions render with a "No answer" fallback).
+const closedExamPartialSubmission = {
+    id: 9,
+    title: 'Quarterly Exam',
+    description: 'desc',
+    exam_date: '2026-08-01',
+    exam_date_iso: '2026-08-01T00:00:00+08:00',
+    duration_minutes: 60,
+    status: 'closed',
+    url: null,
+    submitted_parts_count: 1,
+    total_parts: 2,
+    is_locked: true,
+    has_submissions: true,
+    submissions: [
+        {
+            id: 2,
+            user_id: 2,
+            exam_id: 9,
+            exam_part_id: 101,
+            answers: [
+                {
+                    question_number: 1,
+                    answer: 1,
+                    question_type: 'multiple_choice',
+                    question_text: 'Capital of France?',
+                    points: 1,
+                },
+            ],
+            status: 'submitted',
+            score: '1.00',
+        },
+    ],
+    parts: [
+        {
+            id: 101,
+            title: 'Part I',
+            instructions: null,
+            type: 'multiple_choice',
+            points: 1,
+            questions: [
+                {
+                    text: 'Capital of France?',
+                    type: 'multiple_choice',
+                    points: 1,
+                    options: [
+                        { text: 'Berlin', is_correct: false },
+                        { text: 'Paris', is_correct: true },
+                        { text: 'Rome', is_correct: false },
+                    ],
+                },
+            ],
+        },
+        {
+            id: 103,
+            title: 'Part II',
+            instructions: null,
+            type: 'identification',
+            points: 2,
+            questions: [
+                {
+                    text: 'Who wrote Noli Me Tangere?',
+                    type: 'identification',
+                    points: 2,
+                    options: null,
+                    correct_answer: 'Jose Rizal',
+                },
+            ],
+        },
+    ],
+};
+
 describe('Exam.vue review modal answer display', () => {
     beforeEach(() => {
         localStorage.clear();
@@ -276,5 +350,28 @@ describe('Exam.vue review modal answer display', () => {
         // The card should still clearly read as closed rather than completed.
         expect(wrapper.text()).toContain('Closed');
         expect(wrapper.text()).not.toContain('Completed');
+    });
+
+    it('still shows an unsubmitted part for a student who answered other parts', async () => {
+        const wrapper = mountExamPage([closedExamPartialSubmission as any]);
+        await flushPromises();
+
+        const reviewBtn = wrapper
+            .findAll('button')
+            .find((b: any) => b.text().includes('Review results'));
+        expect(reviewBtn, 'Review results button should exist').toBeTruthy();
+        await reviewBtn!.trigger('click');
+        await flushPromises();
+        await new Promise((r) => setTimeout(r, 50));
+
+        const text = wrapper.text();
+
+        // Both parts are present in the modal, even the one never submitted.
+        expect(text).toContain('Part I');
+        expect(text).toContain('Part II');
+        // The unsubmitted part's question is still shown (they saw it during
+        // the exam) and falls back to "No answer".
+        expect(text).toContain('Who wrote Noli Me Tangere?');
+        expect(text).toContain('No answer');
     });
 });

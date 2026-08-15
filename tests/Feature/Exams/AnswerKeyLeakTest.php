@@ -119,3 +119,19 @@ it('reveals the answer key once the exam is closed and the student has submitted
     // Review mode: Exam.vue needs the key to render "correct answer" feedback.
     expect($response->getContent())->toContain('Manila');
 })->group('security');
+
+it('shows every part to a student who submitted only one of them', function () {
+    [$student, $section] = leakContext();
+    $exam = Exam::factory()->closed()->forSection($section)->create();
+    $submittedPart = ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
+    ExamPart::factory()->forExam($exam)->identification(['Cebu'])->create();
+    ExamSubmission::factory()->for($student, $exam, $submittedPart)->create();
+
+    $response = actingAs($student)->get('/exams');
+
+    // The student saw every part while the exam was open, so the review must
+    // still include the part they never submitted — questions and all.
+    expect($response->getContent())
+        ->toContain('Manila')
+        ->toContain('Cebu');
+})->group('security');
