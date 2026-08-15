@@ -141,6 +141,7 @@ function handleClose() {
             <!-- Content -->
             <div
                 ref="contentRef"
+                data-lenis-prevent
                 class="max-h-[70vh] overflow-y-auto overscroll-contain px-2 pb-4"
             >
                 <slot />
