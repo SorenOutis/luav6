@@ -54,14 +54,29 @@ const chartData = computed(() => {
 });
 
 const isEmpty = computed(() => props.total === 0);
+const chartLabel = computed(() => {
+    if (isEmpty.value) return 'No grades available for distribution';
+
+    const summary = props.segments
+        .filter((segment) => segment.count > 0)
+        .map((segment) => `${segment.label}: ${segment.count}`)
+        .join(', ');
+
+    return `Grade distribution for ${props.total} subjects. ${summary}`;
+});
 </script>
 
 <template>
-    <div :class="cn('flex items-center gap-4', props.class)">
+    <div
+        role="img"
+        :aria-label="chartLabel"
+        :class="cn('flex items-center gap-4', props.class)"
+    >
         <div class="relative shrink-0">
             <svg
                 viewBox="0 0 100 100"
                 class="h-16 w-16 -rotate-90 sm:h-24 sm:w-24"
+                aria-hidden="true"
             >
                 <!-- Background circle -->
                 <circle
