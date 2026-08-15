@@ -69,7 +69,7 @@ class ExamPartSerializer
     public static function mayRevealAnswers(
         Exam $exam,
         ?bool $isAdmin = null,
-        bool $hasSubmitted = false,
+        bool $hasSubmitted = false
     ): bool {
         $isAdmin ??= (bool) auth()->user()?->is_admin;
 
