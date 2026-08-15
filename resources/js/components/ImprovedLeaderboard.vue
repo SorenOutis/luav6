@@ -640,7 +640,10 @@ const changeSeason = async (seasonId: number) => {
                         :className="
                             [
                                 'lb-podium-card animate-fade-up',
-                                origIdx === 0 && 'lb-podium-card--champ',
+                                origIdx === 0 &&
+                                    'lb-podium-card--champ order-1 sm:order-2',
+                                origIdx === 1 && 'order-2 sm:order-1',
+                                origIdx === 2 && 'order-3 sm:order-3',
                                 group.hasCurrentUser && 'lb-podium-card--you',
                             ]
                                 .filter(Boolean)
@@ -1101,7 +1104,7 @@ const changeSeason = async (seasonId: number) => {
                                                 ? group.users
                                                 : group.users.slice(0, 3)"
                                             :key="u.id"
-                                            class="inline-flex items-center gap-1.5 rounded-lg border border-border/40 bg-muted/30 px-2 py-1 transition-colors hover:bg-muted/50"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-border/40 bg-muted/30 px-2.5 py-1.5 transition-colors hover:bg-muted/50"
                                         >
                                             <div
                                                 class="lb-row-avatar h-6 w-6 shrink-0"
@@ -1142,10 +1145,11 @@ const changeSeason = async (seasonId: number) => {
                                             <button
                                                 v-if="!u.blurred"
                                                 @click="openHistory(u)"
-                                                class="p-0.5 text-muted-foreground hover:text-foreground"
+                                                class="inline-flex items-center justify-center rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
                                                 title="XP History"
+                                                aria-label="XP History"
                                             >
-                                                <History class="h-3 w-3" />
+                                                <History class="h-3.5 w-3.5" />
                                             </button>
                                         </div>
 
@@ -1155,7 +1159,7 @@ const changeSeason = async (seasonId: number) => {
                                             @click="
                                                 toggleExpandGroup(group.rank)
                                             "
-                                            class="rounded-lg border border-border/40 bg-muted/20 px-2 py-1 text-xs font-medium text-[#D97757] transition-colors hover:bg-muted/40"
+                                            class="rounded-lg border border-border/40 bg-muted/20 px-3 py-1.5 text-xs font-medium text-[#D97757] transition-colors hover:bg-muted/40"
                                         >
                                             {{
                                                 isGroupExpanded(group.rank)

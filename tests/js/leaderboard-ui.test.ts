@@ -116,6 +116,35 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         expect(podiumCards[2].text()).toContain('800');
     });
 
+    it('orders podium correctly on mobile (1st place at top) and desktop (2nd, 1st, 3rd)', () => {
+        const wrapper = mount(ImprovedLeaderboard, {
+            props: {
+                sectionLeaderboards: [
+                    {
+                        sectionId: 1,
+                        sectionName: 'Section Alpha',
+                        users: createMockUsers(),
+                        userRank: 1,
+                        totalPlayers: 5,
+                    },
+                ],
+            },
+        });
+
+        const podiumCards = wrapper.findAll('.lb-podium-card');
+        // Card index 0 is 2nd place in DOM order: order-2 on mobile, sm:order-1 on desktop
+        expect(podiumCards[0].classes()).toContain('order-2');
+        expect(podiumCards[0].classes()).toContain('sm:order-1');
+
+        // Card index 1 is 1st place in DOM order: order-1 on mobile, sm:order-2 on desktop
+        expect(podiumCards[1].classes()).toContain('order-1');
+        expect(podiumCards[1].classes()).toContain('sm:order-2');
+
+        // Card index 2 is 3rd place in DOM order: order-3 on mobile, sm:order-3 on desktop
+        expect(podiumCards[2].classes()).toContain('order-3');
+        expect(podiumCards[2].classes()).toContain('sm:order-3');
+    });
+
     it('displays tied status in "Your rank" row when the current user is tied', () => {
         const wrapper = mount(ImprovedLeaderboard, {
             props: {
@@ -139,11 +168,56 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
 
     it('groups tied students in list rankings (4th rank and below) into the same row card', () => {
         const manyUsers = [
-            { id: 1, name: 'P1', xp: 2000, xpProgress: 0, streak: 1, joinedAt: '2026', weeklyXp: 0, trend: 'stable' as const },
-            { id: 2, name: 'P2', xp: 1800, xpProgress: 0, streak: 1, joinedAt: '2026', weeklyXp: 0, trend: 'stable' as const },
-            { id: 3, name: 'P3', xp: 1600, xpProgress: 0, streak: 1, joinedAt: '2026', weeklyXp: 0, trend: 'stable' as const },
-            { id: 4, name: 'P4', xp: 1000, xpProgress: 0, streak: 1, joinedAt: '2026', weeklyXp: 0, trend: 'stable' as const },
-            { id: 5, name: 'P5', xp: 1000, xpProgress: 0, streak: 1, joinedAt: '2026', weeklyXp: 0, trend: 'stable' as const },
+            {
+                id: 1,
+                name: 'P1',
+                xp: 2000,
+                xpProgress: 0,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 0,
+                trend: 'stable' as const,
+            },
+            {
+                id: 2,
+                name: 'P2',
+                xp: 1800,
+                xpProgress: 0,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 0,
+                trend: 'stable' as const,
+            },
+            {
+                id: 3,
+                name: 'P3',
+                xp: 1600,
+                xpProgress: 0,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 0,
+                trend: 'stable' as const,
+            },
+            {
+                id: 4,
+                name: 'P4',
+                xp: 1000,
+                xpProgress: 0,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 0,
+                trend: 'stable' as const,
+            },
+            {
+                id: 5,
+                name: 'P5',
+                xp: 1000,
+                xpProgress: 0,
+                streak: 1,
+                joinedAt: '2026',
+                weeklyXp: 0,
+                trend: 'stable' as const,
+            },
         ];
 
         const wrapper = mount(ImprovedLeaderboard, {
