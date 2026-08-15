@@ -60,8 +60,8 @@ class LeaderboardService
 
         // ── Single-pass rank query (windowed) ────────────────────────
         // Replaces the per-section foreach subquery with one query using
-        // ROW_NUMBER() windowed across sections. SQLite + Postgres both
-        // support this.
+        // DENSE_RANK() windowed across sections so students with equal XP share the same rank.
+        // SQLite + Postgres both support this.
         $ranks = DB::table('section_progress')
             ->join('section_user', function ($join) {
                 $join->on('section_progress.user_id', '=', 'section_user.user_id')
@@ -74,7 +74,7 @@ class LeaderboardService
                 'section_progress.section_id',
                 'section_progress.user_id',
                 'section_progress.exp',
-                DB::raw('ROW_NUMBER() OVER (PARTITION BY section_progress.section_id ORDER BY section_progress.exp DESC) as rank')
+                DB::raw('DENSE_RANK() OVER (PARTITION BY section_progress.section_id ORDER BY section_progress.exp DESC) as rank')
             )
             ->get()
             ->groupBy('section_id');
