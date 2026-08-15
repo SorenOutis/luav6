@@ -21,6 +21,7 @@ import {
     TrendingUp,
     TrendingDown,
     Minus,
+    Users,
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import type { Component } from 'vue';
@@ -53,6 +54,16 @@ interface LeaderboardData {
 interface Season {
     id: number;
     name: string;
+}
+
+interface RankGroup {
+    rank: number;
+    xp: number;
+    xpProgress: number;
+    users: LeaderboardUser[];
+    hasCurrentUser: boolean;
+    totalWeeklyXp: number;
+    maxStreak: number;
 }
 
 interface Props {
@@ -141,6 +152,50 @@ const currentUser = computed(
     () => users.value.find((u) => u.isCurrentUser) || null,
 );
 
+// Count how many peers share the current user's exact XP score
+const tiedWithCount = computed(() => {
+    if (!currentUser.value) return 0;
+    return users.value.filter(
+        (u) => u.id !== currentUser.value?.id && u.xp === currentUser.value?.xp,
+    ).length;
+});
+
+// Group filtered users by XP score so tied students share a single rank card
+const rankGroups = computed<RankGroup[]>(() => {
+    const list = filteredUsers.value;
+    if (!list.length) return [];
+
+    const groups: RankGroup[] = [];
+    let currentGroup: RankGroup | null = null;
+    let currentRank = 1;
+
+    for (const u of list) {
+        if (!currentGroup || currentGroup.xp !== u.xp) {
+            currentGroup = {
+                rank: currentRank++,
+                xp: u.xp,
+                xpProgress: u.xpProgress,
+                users: [u],
+                hasCurrentUser: Boolean(u.isCurrentUser),
+                totalWeeklyXp: u.weeklyXp,
+                maxStreak: u.streak,
+            };
+            groups.push(currentGroup);
+        } else {
+            currentGroup.users.push(u);
+            if (u.isCurrentUser) {
+                currentGroup.hasCurrentUser = true;
+            }
+            currentGroup.totalWeeklyXp += u.weeklyXp;
+            if (u.streak > currentGroup.maxStreak) {
+                currentGroup.maxStreak = u.streak;
+            }
+        }
+    }
+
+    return groups;
+});
+
 // Weekly trend indicators (computed server-side from real XP history)
 const trendMeta: Record<
     'up' | 'down' | 'stable',
@@ -172,31 +227,44 @@ const currentSeasonName = computed(() => {
     return props.activeSeasonName || 'Season 1';
 });
 
-const top3 = computed(() => filteredUsers.value.slice(0, 3));
+const top3Groups = computed(() => rankGroups.value.slice(0, 3));
 const showAllRankings = ref(false);
-const restUsers = computed(() => {
-    const rest = filteredUsers.value.slice(3);
+const restGroups = computed(() => {
+    const rest = rankGroups.value.slice(3);
     return showAllRankings.value ? rest : rest.slice(0, 7);
 });
 
-const animXP1 = useNumberAnimation(() => top3.value[0]?.xp || 0);
-const animXP2 = useNumberAnimation(() => top3.value[1]?.xp || 0);
-const animXP3 = useNumberAnimation(() => top3.value[2]?.xp || 0);
+// Expanded states for tied list row cards (> 3 students)
+const expandedGroupRanks = ref<number[]>([]);
+const isGroupExpanded = (rank: number) =>
+    expandedGroupRanks.value.includes(rank);
+const toggleExpandGroup = (rank: number) => {
+    const idx = expandedGroupRanks.value.indexOf(rank);
+    if (idx === -1) {
+        expandedGroupRanks.value.push(rank);
+    } else {
+        expandedGroupRanks.value.splice(idx, 1);
+    }
+};
+
+const animXP1 = useNumberAnimation(() => top3Groups.value[0]?.xp || 0);
+const animXP2 = useNumberAnimation(() => top3Groups.value[1]?.xp || 0);
+const animXP3 = useNumberAnimation(() => top3Groups.value[2]?.xp || 0);
 const getAnimXP = (i: number) => {
     if (i === 0) return animXP1;
     if (i === 1) return animXP2;
     if (i === 2) return animXP3;
-    return { value: top3.value[i]?.xp || 0 };
+    return { value: top3Groups.value[i]?.xp || 0 };
 };
 
 // Podium ordering: on desktop, show 2nd-1st-3rd
 const podiumOrder = computed(() => {
-    const t = top3.value;
-    if (t.length < 3) return t.map((u, i) => ({ user: u, origIdx: i }));
+    const t = top3Groups.value;
+    if (t.length < 3) return t.map((group, i) => ({ group, origIdx: i }));
     return [
-        { user: t[1], origIdx: 1 },
-        { user: t[0], origIdx: 0 },
-        { user: t[2], origIdx: 2 },
+        { group: t[1], origIdx: 1 },
+        { group: t[0], origIdx: 0 },
+        { group: t[2], origIdx: 2 },
     ];
 });
 
@@ -276,7 +344,7 @@ const currentUserBlurred = computed(() => {
 const toggleBlur = async () => {
     if (isTogglingBlur.value) return;
 
-    // Compute the new optimisitic state
+    // Compute the new optimistic state
     const newBlurred = !currentUserBlurred.value;
 
     // Optimistically update the UI immediately
@@ -472,11 +540,20 @@ const changeSeason = async (seasonId: number) => {
                         >
                             Your rank
                         </p>
-                        <div class="flex items-baseline gap-2">
+                        <div class="flex flex-wrap items-baseline gap-2">
                             <span
                                 class="text-[28px] leading-none font-semibold tracking-tight tabular-nums sm:text-[32px]"
                                 >#{{ userRank }}</span
                             >
+                            <span
+                                v-if="tiedWithCount > 0"
+                                class="inline-flex items-center gap-1 rounded-full bg-[#D97757]/15 px-2 py-0.5 text-xs font-semibold text-[#D97757]"
+                            >
+                                <Users class="h-3 w-3" />
+                                Tied with {{ tiedWithCount }} other{{
+                                    tiedWithCount > 1 ? 's' : ''
+                                }}
+                            </span>
                             <span
                                 class="text-[13px] font-medium text-muted-foreground"
                                 >of {{ totalPlayers }} players</span
@@ -550,8 +627,8 @@ const changeSeason = async (seasonId: number) => {
                 <!-- ═══════ PODIUM ═══════ -->
                 <div class="lb-podium">
                     <SpotlightCard
-                        v-for="{ user, origIdx } in podiumOrder"
-                        :key="user.id"
+                        v-for="{ group, origIdx } in podiumOrder"
+                        :key="group.rank"
                         customSize
                         :glowColor="
                             origIdx === 0
@@ -564,6 +641,7 @@ const changeSeason = async (seasonId: number) => {
                             [
                                 'lb-podium-card animate-fade-up',
                                 origIdx === 0 && 'lb-podium-card--champ',
+                                group.hasCurrentUser && 'lb-podium-card--you',
                             ]
                                 .filter(Boolean)
                                 .join(' ')
@@ -599,14 +677,23 @@ const changeSeason = async (seasonId: number) => {
                                     :is="rankMeta[origIdx].icon"
                                     class="h-3 w-3"
                                 />
-                                <span>{{ origIdx + 1 }}</span>
+                                <span>{{ rankMeta[origIdx].label }}</span>
+                                <span
+                                    v-if="group.users.length > 1"
+                                    class="ml-1 text-[11px] font-normal opacity-90"
+                                >
+                                    • Tied ({{ group.users.length }})
+                                </span>
                             </div>
 
-                            <!-- Avatar -->
-                            <div class="relative">
+                            <!-- Single User Avatar -->
+                            <div
+                                v-if="group.users.length === 1"
+                                class="relative"
+                            >
                                 <Link
-                                    v-if="!user.blurred"
-                                    :href="`/u/${user.id}`"
+                                    v-if="!group.users[0].blurred"
+                                    :href="`/u/${group.users[0].id}`"
                                     :class="[
                                         'lb-avatar',
                                         origIdx === 0
@@ -617,9 +704,12 @@ const changeSeason = async (seasonId: number) => {
                                     ]"
                                 >
                                     <img
-                                        v-if="user.avatar && !user.blurred"
-                                        :src="user.avatar"
-                                        :alt="`${user.name} avatar`"
+                                        v-if="
+                                            group.users[0].avatar &&
+                                            !group.users[0].blurred
+                                        "
+                                        :src="group.users[0].avatar"
+                                        :alt="`${group.users[0].name} avatar`"
                                         loading="lazy"
                                         decoding="async"
                                         class="h-full w-full object-cover"
@@ -641,14 +731,7 @@ const changeSeason = async (seasonId: number) => {
                                         rankMeta[origIdx].ring,
                                     ]"
                                 >
-                                    <img
-                                        v-if="user.avatar && !user.blurred"
-                                        :src="user.avatar"
-                                        :alt="`${user.name} avatar`"
-                                        class="h-full w-full object-cover blur-sm"
-                                    />
                                     <User
-                                        v-else
                                         class="h-8 w-8 text-muted-foreground/40"
                                     />
                                     <div
@@ -661,32 +744,163 @@ const changeSeason = async (seasonId: number) => {
                                 </div>
                             </div>
 
-                            <!-- Name -->
-                            <Link
-                                v-if="!user.blurred"
-                                :href="`/u/${user.id}`"
-                                :class="[
-                                    'mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words transition-colors hover:text-[#D97757]',
-                                    getNameSize(user.name, origIdx === 0),
-                                ]"
-                            >
-                                {{ user.name }}
-                            </Link>
-                            <span
+                            <!-- Multiple Tied Users: Overlapping Avatar Cluster -->
+                            <div
                                 v-else
-                                :class="[
-                                    'lb-blurred lb-blurred-text mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words',
-                                    getNameSize(user.name, origIdx === 0),
-                                ]"
-                                @contextmenu.prevent
+                                class="relative flex items-center justify-center -space-x-2 py-1 sm:-space-x-3"
                             >
-                                <span>{{ BLURRED_NAME }}</span>
-                            </span>
-                            <span
-                                v-if="user.isCurrentUser"
-                                class="mt-1 rounded-full bg-[#D97757] px-2 py-0.5 text-[11px] font-semibold text-white"
-                                >You</span
+                                <template
+                                    v-for="u in group.users.slice(0, 4)"
+                                    :key="u.id"
+                                >
+                                    <div class="relative">
+                                        <Link
+                                            v-if="!u.blurred"
+                                            :href="`/u/${u.id}`"
+                                            :title="u.name"
+                                            :class="[
+                                                'lb-avatar ring-2 ring-background transition-transform hover:z-20 hover:scale-110',
+                                                origIdx === 0
+                                                    ? 'h-14 w-14 sm:h-16 sm:w-16'
+                                                    : 'h-12 w-12 sm:h-14 sm:w-14',
+                                                rankMeta[origIdx].ring,
+                                            ]"
+                                        >
+                                            <img
+                                                v-if="u.avatar"
+                                                :src="u.avatar"
+                                                :alt="`${u.name} avatar`"
+                                                loading="lazy"
+                                                decoding="async"
+                                                class="h-full w-full object-cover"
+                                            />
+                                            <User
+                                                v-else
+                                                class="h-6 w-6 text-muted-foreground/40"
+                                            />
+                                        </Link>
+                                        <div
+                                            v-else
+                                            :class="[
+                                                'lb-avatar lb-blurred ring-2 ring-background',
+                                                origIdx === 0
+                                                    ? 'h-14 w-14 sm:h-16 sm:w-16'
+                                                    : 'h-12 w-12 sm:h-14 sm:w-14',
+                                                rankMeta[origIdx].ring,
+                                            ]"
+                                        >
+                                            <User
+                                                class="h-6 w-6 text-muted-foreground/40"
+                                            />
+                                            <div
+                                                class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-primary/[0.03] backdrop-blur-[2px]"
+                                            >
+                                                <EyeOff
+                                                    class="h-4 w-4 text-muted-foreground/40"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div
+                                    v-if="group.users.length > 4"
+                                    :class="[
+                                        'flex items-center justify-center rounded-full border-2 border-background bg-muted text-[11px] font-bold text-muted-foreground ring-2',
+                                        origIdx === 0
+                                            ? 'h-14 w-14 sm:h-16 sm:w-16'
+                                            : 'h-12 w-12 sm:h-14 sm:w-14',
+                                        rankMeta[origIdx].ring,
+                                    ]"
+                                >
+                                    +{{ group.users.length - 4 }}
+                                </div>
+                            </div>
+
+                            <!-- Single User Name -->
+                            <template v-if="group.users.length === 1">
+                                <Link
+                                    v-if="!group.users[0].blurred"
+                                    :href="`/u/${group.users[0].id}`"
+                                    :class="[
+                                        'mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words transition-colors hover:text-[#D97757]',
+                                        getNameSize(
+                                            group.users[0].name,
+                                            origIdx === 0,
+                                        ),
+                                    ]"
+                                >
+                                    {{ group.users[0].name }}
+                                </Link>
+                                <span
+                                    v-else
+                                    :class="[
+                                        'lb-blurred lb-blurred-text mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words',
+                                        getNameSize(
+                                            group.users[0].name,
+                                            origIdx === 0,
+                                        ),
+                                    ]"
+                                    @contextmenu.prevent
+                                >
+                                    <span>{{ BLURRED_NAME }}</span>
+                                </span>
+                                <span
+                                    v-if="group.users[0].isCurrentUser"
+                                    class="mt-1 rounded-full bg-[#D97757] px-2 py-0.5 text-[11px] font-semibold text-white"
+                                    >You</span
+                                >
+                            </template>
+
+                            <!-- Multiple Tied Users: Names List -->
+                            <div
+                                v-else
+                                class="mt-2.5 flex max-w-full flex-wrap items-center justify-center gap-1.5 px-1 text-center"
                             >
+                                <template
+                                    v-for="(u, uIdx) in group.users.slice(0, 3)"
+                                    :key="u.id"
+                                >
+                                    <div class="inline-flex items-center gap-1">
+                                        <Link
+                                            v-if="!u.blurred"
+                                            :href="`/u/${u.id}`"
+                                            class="text-xs font-semibold tracking-tight transition-colors hover:text-[#D97757] sm:text-sm"
+                                        >
+                                            {{ u.name }}
+                                        </Link>
+                                        <span
+                                            v-else
+                                            class="lb-blurred-text text-xs font-semibold sm:text-sm"
+                                        >
+                                            {{ BLURRED_NAME }}
+                                        </span>
+                                        <span
+                                            v-if="u.isCurrentUser"
+                                            class="py-0.2 rounded-full bg-[#D97757] px-1.5 text-[10px] font-semibold text-white"
+                                            >YOU</span
+                                        >
+                                        <span
+                                            v-if="
+                                                uIdx <
+                                                Math.min(
+                                                    group.users.length,
+                                                    3,
+                                                ) -
+                                                    1
+                                            "
+                                            class="text-xs text-muted-foreground/60"
+                                            >,</span
+                                        >
+                                    </div>
+                                </template>
+                                <span
+                                    v-if="group.users.length > 3"
+                                    class="text-xs font-medium text-muted-foreground"
+                                >
+                                    & {{ group.users.length - 3 }} more
+                                </span>
+                            </div>
+
                             <span
                                 class="mt-1 text-[13px] font-medium text-muted-foreground"
                                 :class="rankMeta[origIdx].accent"
@@ -723,14 +937,14 @@ const changeSeason = async (seasonId: number) => {
                                 <div class="flex items-center gap-1">
                                     <Flame class="h-3 w-3 text-[#D97757]" />
                                     <span class="font-bold"
-                                        >{{ user.streak }}d</span
+                                        >{{ group.maxStreak }}d</span
                                     >
                                 </div>
                                 <div class="h-3 w-px bg-border/60"></div>
                                 <div class="flex items-center gap-1">
                                     <Sparkles class="h-3 w-3 text-[#D97757]" />
                                     <span class="font-bold"
-                                        >{{ user.xpProgress }}%</span
+                                        >{{ group.xpProgress }}%</span
                                     >
                                 </div>
                             </div>
@@ -741,7 +955,7 @@ const changeSeason = async (seasonId: number) => {
                             >
                                 <div
                                     class="h-full rounded-full bg-[#D97757] transition-all duration-700"
-                                    :style="{ width: `${user.xpProgress}%` }"
+                                    :style="{ width: `${group.xpProgress}%` }"
                                 ></div>
                             </div>
                         </div>
@@ -749,7 +963,7 @@ const changeSeason = async (seasonId: number) => {
                 </div>
 
                 <!-- ═══════ LIST RANKINGS ═══════ -->
-                <div v-if="filteredUsers.length > 3" class="space-y-2">
+                <div v-if="rankGroups.length > 3" class="space-y-2">
                     <div class="mb-3 flex items-center justify-between px-1">
                         <div class="flex items-center gap-2">
                             <Activity class="h-3.5 w-3.5 text-[#D97757]" />
@@ -760,112 +974,212 @@ const changeSeason = async (seasonId: number) => {
                         </div>
                         <span
                             class="font-mono text-[10px] text-muted-foreground"
-                            >{{ filteredUsers.length }} players</span
+                            >{{ filteredUsers.length }} players ·
+                            {{ rankGroups.length }} ranks</span
                         >
                     </div>
 
                     <div
-                        v-for="(user, i) in restUsers"
-                        :key="user.id"
+                        v-for="(group, i) in restGroups"
+                        :key="group.rank"
                         class="lb-row group animate-fade-up"
                         :class="{
-                            'lb-row--you': user.isCurrentUser,
-                            'lb-row--blurred': user.blurred,
+                            'lb-row--you': group.hasCurrentUser,
                         }"
                         :style="{ animationDelay: `${(i + 3) * 60}ms` }"
                     >
-                        <!-- Rank -->
+                        <!-- Left: Rank Number & Details -->
                         <div
                             class="flex min-w-0 flex-1 items-center gap-3 sm:gap-4"
                         >
                             <div class="lb-row-rank shrink-0">
                                 <span
                                     class="text-[13px] font-semibold tabular-nums sm:text-sm"
-                                    >#{{ i + 4 }}</span
+                                    >#{{ group.rank }}</span
                                 >
                             </div>
 
-                            <!-- Avatar -->
-                            <div class="relative shrink-0">
-                                <Link
-                                    v-if="!user.blurred"
-                                    :href="`/u/${user.id}`"
-                                    class="lb-row-avatar"
-                                >
-                                    <img
-                                        v-if="user.avatar && !user.blurred"
-                                        :src="user.avatar"
-                                        :alt="`${user.name} avatar`"
-                                        loading="lazy"
-                                        decoding="async"
-                                        class="h-full w-full object-cover"
-                                    />
-                                    <User
-                                        v-else
-                                        class="h-4 w-4 text-muted-foreground/40"
-                                    />
-                                </Link>
-                                <div v-else class="lb-row-avatar lb-blurred">
-                                    <img
-                                        v-if="user.avatar && !user.blurred"
-                                        :src="user.avatar"
-                                        :alt="`${user.name} avatar`"
-                                        class="h-full w-full object-cover blur-sm"
-                                    />
-                                    <User
-                                        v-else
-                                        class="h-4 w-4 text-muted-foreground/40"
-                                    />
-                                    <div
-                                        class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-primary/[0.03] backdrop-blur-[1px]"
+                            <!-- Single User Case -->
+                            <template v-if="group.users.length === 1">
+                                <!-- Avatar -->
+                                <div class="relative shrink-0">
+                                    <Link
+                                        v-if="!group.users[0].blurred"
+                                        :href="`/u/${group.users[0].id}`"
+                                        class="lb-row-avatar"
                                     >
-                                        <EyeOff
-                                            class="h-3 w-3 text-muted-foreground/30"
+                                        <img
+                                            v-if="
+                                                group.users[0].avatar &&
+                                                !group.users[0].blurred
+                                            "
+                                            :src="group.users[0].avatar"
+                                            :alt="`${group.users[0].name} avatar`"
+                                            loading="lazy"
+                                            decoding="async"
+                                            class="h-full w-full object-cover"
                                         />
+                                        <User
+                                            v-else
+                                            class="h-4 w-4 text-muted-foreground/40"
+                                        />
+                                    </Link>
+                                    <div
+                                        v-else
+                                        class="lb-row-avatar lb-blurred"
+                                    >
+                                        <User
+                                            class="h-4 w-4 text-muted-foreground/40"
+                                        />
+                                        <div
+                                            class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-primary/[0.03] backdrop-blur-[1px]"
+                                        >
+                                            <EyeOff
+                                                class="h-3 w-3 text-muted-foreground/30"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Info -->
-                            <div class="min-w-0 flex-1">
-                                <div
-                                    class="flex flex-wrap items-center gap-1.5"
-                                >
-                                    <span
-                                        class="lb-blurred-text text-xs font-bold tracking-tight break-words sm:text-sm"
-                                        @contextmenu.prevent
-                                        >{{
-                                            user.blurred
-                                                ? BLURRED_NAME
-                                                : user.name
-                                        }}</span
+                                <!-- Info -->
+                                <div class="min-w-0 flex-1">
+                                    <div
+                                        class="flex flex-wrap items-center gap-1.5"
                                     >
-                                    <span
-                                        v-if="user.isCurrentUser"
-                                        class="shrink-0 rounded-full bg-[#D97757] px-1.5 py-0.5 text-[11px] font-semibold text-white"
-                                        >YOU</span
-                                    >
+                                        <Link
+                                            v-if="!group.users[0].blurred"
+                                            :href="`/u/${group.users[0].id}`"
+                                            class="text-xs font-bold tracking-tight break-words transition-colors hover:text-[#D97757] sm:text-sm"
+                                        >
+                                            {{ group.users[0].name }}
+                                        </Link>
+                                        <span
+                                            v-else
+                                            class="lb-blurred-text text-xs font-bold tracking-tight break-words sm:text-sm"
+                                            @contextmenu.prevent
+                                        >
+                                            {{ BLURRED_NAME }}
+                                        </span>
+                                        <span
+                                            v-if="group.users[0].isCurrentUser"
+                                            class="shrink-0 rounded-full bg-[#D97757] px-1.5 py-0.5 text-[11px] font-semibold text-white"
+                                            >YOU</span
+                                        >
+                                    </div>
+                                    <div class="mt-0.5 flex items-center gap-2">
+                                        <Flame
+                                            class="h-2.5 w-2.5 text-[#D97757]/70"
+                                        />
+                                        <span
+                                            class="text-[13px] font-medium text-muted-foreground"
+                                            >{{ group.users[0].streak }}d
+                                            streak</span
+                                        >
+                                    </div>
                                 </div>
-                                <div class="mt-0.5 flex items-center gap-2">
-                                    <Flame
-                                        class="h-2.5 w-2.5 text-[#D97757]/70"
-                                    />
-                                    <span
-                                        class="text-[13px] font-medium text-muted-foreground"
-                                        >{{ user.streak }}d streak</span
+                            </template>
+
+                            <!-- Multiple Tied Users Case -->
+                            <template v-else>
+                                <div class="min-w-0 flex-1 py-1">
+                                    <div class="mb-1.5 flex items-center gap-2">
+                                        <span
+                                            class="inline-flex items-center gap-1 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D97757]"
+                                        >
+                                            <Users class="h-3 w-3" />
+                                            Tied ({{ group.users.length }}
+                                            students)
+                                        </span>
+                                    </div>
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
                                     >
+                                        <div
+                                            v-for="u in isGroupExpanded(
+                                                group.rank,
+                                            )
+                                                ? group.users
+                                                : group.users.slice(0, 3)"
+                                            :key="u.id"
+                                            class="inline-flex items-center gap-1.5 rounded-lg border border-border/40 bg-muted/30 px-2 py-1 transition-colors hover:bg-muted/50"
+                                        >
+                                            <div
+                                                class="lb-row-avatar h-6 w-6 shrink-0"
+                                            >
+                                                <img
+                                                    v-if="
+                                                        u.avatar && !u.blurred
+                                                    "
+                                                    :src="u.avatar"
+                                                    :alt="`${u.name} avatar`"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    class="h-full w-full object-cover"
+                                                />
+                                                <User
+                                                    v-else
+                                                    class="h-3.5 w-3.5 text-muted-foreground/40"
+                                                />
+                                            </div>
+                                            <Link
+                                                v-if="!u.blurred"
+                                                :href="`/u/${u.id}`"
+                                                class="text-xs font-semibold hover:text-[#D97757]"
+                                            >
+                                                {{ u.name }}
+                                            </Link>
+                                            <span
+                                                v-else
+                                                class="lb-blurred-text text-xs font-semibold"
+                                            >
+                                                {{ BLURRED_NAME }}
+                                            </span>
+                                            <span
+                                                v-if="u.isCurrentUser"
+                                                class="py-0.2 rounded-full bg-[#D97757] px-1 text-[9px] font-bold text-white"
+                                                >YOU</span
+                                            >
+                                            <button
+                                                v-if="!u.blurred"
+                                                @click="openHistory(u)"
+                                                class="p-0.5 text-muted-foreground hover:text-foreground"
+                                                title="XP History"
+                                            >
+                                                <History class="h-3 w-3" />
+                                            </button>
+                                        </div>
+
+                                        <!-- Expand/Collapse toggle if more than 3 students -->
+                                        <button
+                                            v-if="group.users.length > 3"
+                                            @click="
+                                                toggleExpandGroup(group.rank)
+                                            "
+                                            class="rounded-lg border border-border/40 bg-muted/20 px-2 py-1 text-xs font-medium text-[#D97757] transition-colors hover:bg-muted/40"
+                                        >
+                                            {{
+                                                isGroupExpanded(group.rank)
+                                                    ? 'Show less'
+                                                    : `+${group.users.length - 3} more`
+                                            }}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            </template>
                         </div>
 
                         <!-- Right side -->
-                        <div class="flex shrink-0 items-center gap-2 sm:gap-4">
+                        <div
+                            class="flex shrink-0 items-center gap-2 pl-2 sm:gap-4"
+                        >
                             <!-- XP -->
                             <div class="text-right">
-                                <div class="flex items-baseline gap-0.5">
+                                <div
+                                    class="flex items-baseline justify-end gap-0.5"
+                                >
                                     <span
                                         class="text-[15px] font-semibold tracking-tight tabular-nums sm:text-base"
-                                        >{{ user.xp.toLocaleString() }}</span
+                                        >{{ group.xp.toLocaleString() }}</span
                                     >
                                     <span
                                         class="text-[12px] font-medium text-muted-foreground"
@@ -873,12 +1187,15 @@ const changeSeason = async (seasonId: number) => {
                                     >
                                 </div>
                                 <div
+                                    v-if="group.users.length === 1"
                                     class="flex items-center justify-end gap-1"
                                 >
                                     <component
-                                        :is="trendOf(user).icon"
+                                        :is="trendOf(group.users[0]).icon"
                                         class="h-2.5 w-2.5"
-                                        :class="trendOf(user).iconColor"
+                                        :class="
+                                            trendOf(group.users[0]).iconColor
+                                        "
                                     />
                                     <Sparkles
                                         class="h-2 w-2 text-[#D97757]/70"
@@ -886,30 +1203,40 @@ const changeSeason = async (seasonId: number) => {
                                     <span
                                         class="text-[12px] text-muted-foreground"
                                         >+{{
-                                            user.weeklyXp >= 1000
+                                            group.users[0].weeklyXp >= 1000
                                                 ? (
-                                                      user.weeklyXp / 1000
+                                                      group.users[0].weeklyXp /
+                                                      1000
                                                   ).toFixed(1) + 'k'
-                                                : user.weeklyXp
+                                                : group.users[0].weeklyXp
                                         }}</span
                                     >
                                 </div>
+                                <div
+                                    v-else
+                                    class="text-[11px] font-medium text-muted-foreground"
+                                >
+                                    Same score
+                                </div>
                             </div>
 
-                            <!-- Actions (hover) -->
+                            <!-- Actions (hover) for single user -->
                             <div
-                                v-if="!user.blurred"
+                                v-if="
+                                    group.users.length === 1 &&
+                                    !group.users[0].blurred
+                                "
                                 class="hidden items-center gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:flex"
                             >
                                 <Link
-                                    :href="`/u/${user.id}`"
+                                    :href="`/u/${group.users[0].id}`"
                                     class="lb-action-btn"
                                     title="View Profile"
                                 >
                                     <Eye class="h-3.5 w-3.5" />
                                 </Link>
                                 <button
-                                    @click="openHistory(user)"
+                                    @click="openHistory(group.users[0])"
                                     class="lb-action-btn"
                                     title="XP History"
                                 >
@@ -921,7 +1248,7 @@ const changeSeason = async (seasonId: number) => {
 
                     <!-- Show more -->
                     <div
-                        v-if="filteredUsers.length > 10"
+                        v-if="rankGroups.length > 10"
                         class="flex justify-center pt-3"
                     >
                         <button
@@ -935,7 +1262,7 @@ const changeSeason = async (seasonId: number) => {
                             <span>{{
                                 showAllRankings
                                     ? 'Show Less'
-                                    : `Show All (${filteredUsers.length - 3})`
+                                    : `Show All (${rankGroups.length - 3} more ranks)`
                             }}</span>
                         </button>
                     </div>
@@ -1113,6 +1440,9 @@ const changeSeason = async (seasonId: number) => {
 .lb-podium-card--champ {
     @apply border-[#D97757]/20;
 }
+.lb-podium-card--you {
+    @apply ring-1 ring-[#D97757]/30;
+}
 @media (min-width: 640px) {
     .lb-podium-card--champ {
         padding-top: 2rem;
@@ -1164,9 +1494,6 @@ const changeSeason = async (seasonId: number) => {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-}
-.lb-row--blurred {
-    @apply border-muted/20 bg-muted/[0.02];
 }
 .lb-blurred-text::selection {
     background: transparent;
