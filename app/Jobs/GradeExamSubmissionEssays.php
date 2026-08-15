@@ -48,7 +48,7 @@ class GradeExamSubmissionEssays implements ShouldQueue
         return [10, 30];
     }
 
-    public function handle(AIService $aiService, ExamXpAwardService $examXpAwardService): void
+    public function handle(AIService $aiService): void
     {
         $submission = ExamSubmission::query()->find($this->submissionId);
 
@@ -100,7 +100,7 @@ class GradeExamSubmissionEssays implements ShouldQueue
         if ($essays === []) {
             // Nothing to score (e.g. every essay left blank).
             $submission->forceFill(['status' => 'graded'])->save();
-            $examXpAwardService->awardIfEligible($submission->user, $submission->exam);
+            app(ExamXpAwardService::class)->awardIfEligible($submission->user, $submission->exam);
 
             return;
         }
@@ -165,7 +165,7 @@ class GradeExamSubmissionEssays implements ShouldQueue
             'status' => $allEssayFeedbackComplete ? 'graded' : 'pending_ai',
         ])->save();
 
-        $examXpAwardService->awardIfEligible($submission->user, $submission->exam);
+        app(ExamXpAwardService::class)->awardIfEligible($submission->user, $submission->exam);
     }
 
     /**

@@ -3,10 +3,12 @@
 use App\Models\Exam;
 use App\Models\ExamLiveSession;
 use App\Models\ExamPart;
+use App\Models\ExamSubmission;
 use App\Models\ExamXpAward;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
+use App\Services\ExamXpAwardService;
 
 use function Pest\Laravel\actingAs;
 
@@ -75,7 +77,7 @@ it('uses only the highest accuracy tier', function (float $scorePercent, int $ex
 
     // Create the desired percentage directly so this data set checks all tier
     // boundaries without requiring 100 one-point questions.
-    \App\Models\ExamSubmission::create([
+    ExamSubmission::create([
         'user_id' => $student->id,
         'exam_id' => $exam->id,
         'exam_part_id' => $part->id,
@@ -84,7 +86,7 @@ it('uses only the highest accuracy tier', function (float $scorePercent, int $ex
         'score' => $scorePercent,
     ]);
 
-    $award = app(\App\Services\ExamXpAwardService::class)->awardIfEligible($student, $exam);
+    $award = app(ExamXpAwardService::class)->awardIfEligible($student, $exam);
 
     expect((int) $award->accuracy_xp)->toBe($expectedXp);
 })->with([
@@ -118,7 +120,7 @@ it('is idempotent when eligibility is checked repeatedly', function () {
     $part = ExamPart::factory()->forExam($exam)->multipleChoice(count: 1, correctIndex: 1, points: 10)->create();
     submitXpPart($student, $exam, $part);
 
-    $service = app(\App\Services\ExamXpAwardService::class);
+    $service = app(ExamXpAwardService::class);
     $service->awardIfEligible($student, $exam);
     $service->awardIfEligible($student, $exam);
 
