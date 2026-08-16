@@ -17,8 +17,9 @@ use Illuminate\Support\Facades\DB;
  * weeklyXp cast, missing xpProgress/trend in the API version).
  *
  * This service uses the dashboard version's shape as canonical (it's the
- * superset) and computes ranks with a single windowed query instead of the
- * per-section correlated subquery.
+ * superset) and computes each user's rank from the exact roster that gets
+ * rendered, using the same "ties share a rank" logic as the frontend so the
+ * rank shown in the "Your rank" widget always matches the ranking list.
  */
 class LeaderboardService
 {
@@ -58,35 +59,6 @@ class LeaderboardService
                 ->with(['sectionProgress' => fn ($p) => $p->whereIn('section_id', $sectionIds)]),
         ]);
 
-        // ── Single-pass rank query (windowed) ────────────────────────
-        // Replaces the per-section foreach subquery with one query using
-        // DENSE_RANK() windowed across sections so students with equal XP share the same rank.
-        // SQLite + Postgres both support this.
-        $ranks = DB::table('section_progress')
-            ->join('section_user', function ($join) {
-                $join->on('section_progress.user_id', '=', 'section_user.user_id')
-                    ->on('section_progress.section_id', '=', 'section_user.section_id');
-            })
-            ->join('users', 'section_progress.user_id', '=', 'users.id')
-            ->whereIn('section_progress.section_id', $sectionIds)
-            ->where('users.is_admin', false)
-            ->select(
-                'section_progress.section_id',
-                'section_progress.user_id',
-                'section_progress.exp',
-                DB::raw('DENSE_RANK() OVER (PARTITION BY section_progress.section_id ORDER BY section_progress.exp DESC) as rank')
-            )
-            ->get()
-            ->groupBy('section_id');
-
-        $totalCounts = DB::table('section_progress')
-            ->join('users', 'section_progress.user_id', '=', 'users.id')
-            ->whereIn('section_progress.section_id', $sectionIds)
-            ->where('users.is_admin', false)
-            ->select('section_id', DB::raw('COUNT(*) as total'))
-            ->groupBy('section_id')
-            ->pluck('total', 'section_id');
-
         // ── Weekly XP + trend — one query over the last 14 days of XP ──
         // gamification_histories is the canonical XP log (exams, daily claims,
         // admin adjustments, enrollment). course_user.xp_earned is not kept in
@@ -124,10 +96,6 @@ class LeaderboardService
             // Already in memory from the eager load above.
             $usersInSection = $section->users;
 
-            $sectionRanks = $ranks->get($section->id, collect());
-            $userRankRow = $sectionRanks->firstWhere('user_id', $user->id);
-            $userRank = $userRankRow ? (int) $userRankRow->rank : 1;
-
             $leaderboardUsers = $usersInSection->map(function ($u) use ($weekStats, $user, $section) {
                 // ⚠️ sectionProgress is eager-loaded for ALL of the viewer's
                 // sections at once, so it must be matched to THIS section.
@@ -160,12 +128,35 @@ class LeaderboardService
                 ];
             })->sortByDesc('xp')->values();
 
+            // The user's rank is computed from the exact roster being
+            // rendered, using the same "ties share a rank, then the position
+            // jumps by the number of tied students" logic the frontend uses
+            // (trueRankById in ImprovedLeaderboard.vue). A SQL DENSE_RANK()
+            // window disagreed with that algorithm whenever a tie preceded the
+            // user — DENSE_RANK yields 1,2,2,3 while the list shows 1,2,2,4 —
+            // which made the "Your rank" widget report a better rank than the
+            // ranking list actually showed.
+            $rank = 1;
+            $prevXp = null;
+            $userRank = $leaderboardUsers->count();
+            foreach ($leaderboardUsers as $i => $u) {
+                $xp = (float) $u['xp'];
+                if ($prevXp === null || $xp !== $prevXp) {
+                    $rank = $i + 1;
+                }
+                if ($u['id'] === $user->id) {
+                    $userRank = $rank;
+                    break;
+                }
+                $prevXp = $xp;
+            }
+
             $sectionLeaderboards[] = [
                 'sectionId' => $section->id,
                 'sectionName' => $section->name,
                 'users' => $leaderboardUsers,
                 'userRank' => $userRank,
-                'totalPlayers' => (int) ($totalCounts[$section->id] ?? $usersInSection->count()),
+                'totalPlayers' => $leaderboardUsers->count(),
             ];
         }
 

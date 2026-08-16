@@ -6,6 +6,7 @@ import {
     Camera,
     Flame,
     LayoutGrid,
+    Lock,
     Medal,
     Pencil,
     Share2,
@@ -14,10 +15,13 @@ import {
     Trophy,
     UserCheck,
     UserPlus,
+    Users,
+    X,
     Zap,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { dashboard } from '@/routes';
@@ -39,8 +43,30 @@ interface Badge {
     image?: string | null;
     iconUrl?: string | null;
     requiredLevel?: number | null;
+    earned?: boolean;
     earnedSeason?: string | null;
     earnedAt?: string | null;
+}
+
+interface SocialUser {
+    id: number;
+    name: string;
+    avatar: string | null;
+}
+
+interface RecentKudo {
+    id: number;
+    name: string;
+    avatar: string | null;
+    type: 'great-work' | 'on-fire' | 'keep-going';
+    date: string | null;
+}
+
+interface SectionRank {
+    id: number;
+    name: string;
+    rank: number;
+    total: number;
 }
 
 interface HistoryItem {
@@ -69,6 +95,7 @@ const props = defineProps<{
     stats: {
         level: number;
         xp: number;
+        xpProgress?: number;
         rank: number;
         totalPlayers: number;
         badgesCount: number;
@@ -76,12 +103,16 @@ const props = defineProps<{
         followingCount: number;
     };
     badges: Badge[];
+    sectionRanks?: SectionRank[];
     courses: Course[];
     history: HistoryItem[];
     isSameSection: boolean;
     isFollowing: boolean;
     kudos: Record<'great-work' | 'on-fire' | 'keep-going', number>;
     viewerKudo: 'great-work' | 'on-fire' | 'keep-going' | null;
+    recentKudos?: RecentKudo[];
+    followers?: SocialUser[];
+    following?: SocialUser[];
 }>();
 
 const { getInitials } = useInitials();
@@ -146,12 +177,51 @@ const handle = computed(() => {
 
 const countStats = computed(() => [
     { key: 'level', label: 'Level', value: props.stats.level },
-    { key: 'xp', label: 'Season XP', value: props.stats.xp },
     { key: 'followers', label: 'Followers', value: props.stats.followersCount },
     { key: 'following', label: 'Following', value: props.stats.followingCount },
     { key: 'badges', label: 'Badges', value: props.stats.badgesCount },
-    { key: 'streak', label: 'Day streak', value: props.profileUser.streak },
 ]);
+
+// XP progress toward the next level, used to draw the ring around the avatar.
+const levelProgress = computed(() => {
+    const xp = props.stats.xp || 0;
+    const inLevel = xp % 100;
+    return Math.min(100, Math.max(0, (inLevel / 100) * 100));
+});
+const ringStyle = computed(() => ({
+    background: `conic-gradient(#D97757 ${levelProgress.value}%, rgba(217,119,87,0.18) ${levelProgress.value}%)`,
+}));
+
+const earnedBadgesCount = computed(
+    () => props.badges.filter((b) => b.earned).length,
+);
+
+const kudoLabel: Record<string, string> = {
+    'great-work': '🎉 Great work',
+    'on-fire': '🔥 On fire',
+    'keep-going': '💪 Keep going',
+};
+
+// Followers / Following modals
+const activeSocialList = ref<'followers' | 'following' | null>(null);
+const socialModalOpen = computed(() => activeSocialList.value !== null);
+const socialListTitle = computed(() =>
+    activeSocialList.value === 'followers'
+        ? 'Followers'
+        : activeSocialList.value === 'following'
+          ? 'Following'
+          : '',
+);
+const socialListItems = computed<SocialUser[]>(() =>
+    activeSocialList.value === 'followers'
+        ? (props.followers ?? [])
+        : activeSocialList.value === 'following'
+          ? (props.following ?? [])
+          : [],
+);
+const openSocialList = (which: 'followers' | 'following') => {
+    activeSocialList.value = which;
+};
 
 // ── Tabs ────────────────────────────────────────────────────────────
 type TabKey = 'activity' | 'achievements' | 'courses';
@@ -162,7 +232,7 @@ const tabs = computed(() => {
         {
             key: 'achievements',
             label: 'Achievements',
-            count: props.badges.length,
+            count: earnedBadgesCount.value,
         },
     ];
 
@@ -254,21 +324,30 @@ const iconForReason = (reason: string) => {
                         class="-mt-12 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between"
                     >
                         <div class="flex items-end gap-4">
-                            <Avatar
-                                class="size-24 shrink-0 border-4 border-background bg-muted shadow-lg sm:size-32"
+                            <!-- XP progress ring around the (larger) avatar -->
+                            <div
+                                class="relative shrink-0 rounded-full p-[5px] sm:p-[6px]"
+                                :style="ringStyle"
+                                :title="`${Math.round(levelProgress)}% to the next level`"
                             >
-                                <AvatarImage
-                                    v-if="profileUser.avatar"
-                                    :src="profileUser.avatar"
-                                    :alt="profileUser.name"
-                                    class="object-cover"
-                                />
-                                <AvatarFallback
-                                    class="bg-muted text-2xl font-semibold text-foreground sm:text-3xl"
-                                >
-                                    {{ getInitials(profileUser.name) }}
-                                </AvatarFallback>
-                            </Avatar>
+                                <div class="rounded-full bg-background p-[3px]">
+                                    <Avatar
+                                        class="size-28 shrink-0 bg-muted shadow-lg sm:size-36"
+                                    >
+                                        <AvatarImage
+                                            v-if="profileUser.avatar"
+                                            :src="profileUser.avatar"
+                                            :alt="profileUser.name"
+                                            class="object-cover"
+                                        />
+                                        <AvatarFallback
+                                            class="bg-muted text-3xl font-semibold text-foreground sm:text-4xl"
+                                        >
+                                            {{ getInitials(profileUser.name) }}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                </div>
+                            </div>
 
                             <div class="min-w-0 pb-1">
                                 <div
@@ -285,7 +364,7 @@ const iconForReason = (reason: string) => {
                         </div>
 
                         <!-- Actions -->
-                        <div class="flex items-center gap-2 pb-1">
+                        <div class="flex flex-wrap items-center gap-2 pb-1">
                             <Link
                                 v-if="profileUser.isCurrentUser"
                                 :href="editProfile()"
@@ -399,12 +478,38 @@ const iconForReason = (reason: string) => {
 
                     <!-- ════════════ Follower-style counts ════════════ -->
                     <div
-                        class="mt-5 flex items-center gap-6 border-y border-border/50 py-3.5 sm:gap-9"
+                        class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-border/50 py-3.5 sm:gap-9"
                     >
-                        <div
+                        <button
                             v-for="stat in countStats"
                             :key="stat.key"
-                            class="flex items-baseline gap-1.5"
+                            type="button"
+                            :disabled="
+                                (stat.key === 'followers' ||
+                                    stat.key === 'following') &&
+                                stat.value === 0
+                            "
+                            class="flex items-baseline gap-1.5 disabled:cursor-default"
+                            :class="
+                                stat.key === 'followers' ||
+                                stat.key === 'following'
+                                    ? 'cursor-pointer hover:opacity-80'
+                                    : 'cursor-default'
+                            "
+                            :title="
+                                stat.key === 'followers'
+                                    ? 'See followers'
+                                    : stat.key === 'following'
+                                      ? 'See following'
+                                      : undefined
+                            "
+                            @click="
+                                stat.key === 'followers'
+                                    ? openSocialList('followers')
+                                    : stat.key === 'following'
+                                      ? openSocialList('following')
+                                      : undefined
+                            "
                         >
                             <span
                                 class="profile-metric text-[17px] text-foreground sm:text-[19px]"
@@ -416,7 +521,39 @@ const iconForReason = (reason: string) => {
                             >
                                 {{ stat.label }}
                             </span>
-                        </div>
+                        </button>
+                    </div>
+
+                    <!-- ════════════ Section ranking cards ════════════ -->
+                    <div
+                        v-if="sectionRanks && sectionRanks.length > 0"
+                        class="mt-4 grid gap-2 sm:grid-cols-2"
+                    >
+                        <Link
+                            v-for="section in sectionRanks"
+                            :key="section.id"
+                            href="/leaderboard"
+                            class="profile-card flex items-center gap-3 bg-card px-4 py-3 transition-colors hover:bg-muted/40"
+                        >
+                            <div
+                                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757]"
+                            >
+                                <Trophy class="h-4 w-4" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p
+                                    class="truncate text-[13px] font-semibold text-foreground"
+                                >
+                                    Rank #{{ section.rank }} of
+                                    {{ section.total }}
+                                </p>
+                                <p
+                                    class="truncate text-[12px] text-muted-foreground"
+                                >
+                                    {{ section.name }}
+                                </p>
+                            </div>
+                        </Link>
                     </div>
 
                     <!-- ════════════ Positive kudos ════════════ -->
@@ -454,6 +591,46 @@ const iconForReason = (reason: string) => {
                                     {{ kudos[kudo.key] }}
                                 </span>
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- ════════════ Recent kudos feed ════════════ -->
+                    <div
+                        v-if="recentKudos && recentKudos.length > 0"
+                        class="mt-4 rounded-2xl border border-border/60 bg-card px-4 py-3"
+                    >
+                        <p class="text-sm font-semibold">Cheered on by</p>
+                        <div
+                            class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2"
+                        >
+                            <div
+                                v-for="kudo in recentKudos"
+                                :key="kudo.id"
+                                class="flex items-center gap-2"
+                            >
+                                <Avatar class="size-7 rounded-full bg-muted">
+                                    <AvatarImage
+                                        v-if="kudo.avatar"
+                                        :src="kudo.avatar"
+                                        :alt="kudo.name"
+                                        class="object-cover"
+                                    />
+                                    <AvatarFallback
+                                        class="bg-muted text-[10px] font-semibold text-foreground"
+                                    >
+                                        {{ getInitials(kudo.name) }}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span class="text-[13px] text-foreground">
+                                    {{ kudo.name }}
+                                </span>
+                                <span
+                                    class="text-[11px] text-muted-foreground"
+                                    :title="kudo.date ?? undefined"
+                                >
+                                    {{ kudoLabel[kudo.type] }}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -603,9 +780,17 @@ const iconForReason = (reason: string) => {
                                     v-for="badge in badges"
                                     :key="badge.id"
                                     class="profile-card flex flex-col items-center gap-2.5 bg-card p-5 text-center transition-transform duration-200 hover:-translate-y-0.5"
+                                    :class="!badge.earned && 'opacity-60'"
+                                    :title="
+                                        badge.earned
+                                            ? 'Unlocked'
+                                            : badge.requiredLevel
+                                              ? `Reach Level ${badge.requiredLevel} to unlock`
+                                              : 'Locked'
+                                    "
                                 >
                                     <div
-                                        class="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-muted"
+                                        class="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-muted"
                                     >
                                         <img
                                             v-if="badge.image"
@@ -617,6 +802,15 @@ const iconForReason = (reason: string) => {
                                             v-else
                                             class="h-6 w-6 text-muted-foreground"
                                         />
+                                        <!-- Lock badge on locked achievements -->
+                                        <div
+                                            v-if="!badge.earned"
+                                            class="absolute inset-0 flex items-center justify-center rounded-full bg-background/60"
+                                        >
+                                            <Lock
+                                                class="h-4 w-4 text-muted-foreground"
+                                            />
+                                        </div>
                                     </div>
 
                                     <div class="space-y-0.5">
@@ -626,7 +820,19 @@ const iconForReason = (reason: string) => {
                                             {{ badge.name }}
                                         </p>
                                         <p
-                                            v-if="badge.earnedSeason"
+                                            v-if="
+                                                badge.earned && badge.earnedAt
+                                            "
+                                            class="text-[12px] font-medium text-[#4D9375]"
+                                        >
+                                            Unlocked
+                                            {{ badge.earnedAt }}
+                                        </p>
+                                        <p
+                                            v-else-if="
+                                                badge.earned &&
+                                                badge.earnedSeason
+                                            "
                                             class="text-[12px] text-muted-foreground"
                                         >
                                             {{ badge.earnedSeason }}
@@ -731,5 +937,94 @@ const iconForReason = (reason: string) => {
                 </div>
             </div>
         </div>
+
+        <!-- ════════════ Followers / Following modal ════════════ -->
+        <Dialog
+            :open="socialModalOpen"
+            @update:open="
+                (open) => {
+                    if (!open) activeSocialList = null;
+                }
+            "
+        >
+            <DialogContent
+                class="overflow-hidden border-border/50 bg-card p-0 sm:max-w-[420px]"
+            >
+                <div
+                    class="flex items-center justify-between border-b border-border/20 px-5 py-4"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-9 w-9 items-center justify-center rounded-full bg-[#D97757]/10 text-[#D97757]"
+                        >
+                            <Users class="h-4 w-4" />
+                        </div>
+                        <DialogTitle
+                            class="text-[16px] font-semibold tracking-tight"
+                        >
+                            {{ socialListTitle }}
+                        </DialogTitle>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
+                        aria-label="Close"
+                        @click="activeSocialList = null"
+                    >
+                        <X class="h-4 w-4" />
+                    </button>
+                </div>
+
+                <div class="max-h-[55vh] scrollbar-none overflow-y-auto p-3">
+                    <template v-if="socialListItems.length > 0">
+                        <div
+                            v-for="person in socialListItems"
+                            :key="person.id"
+                            class="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-muted/40"
+                        >
+                            <Link
+                                :href="`/u/${person.id}`"
+                                class="flex min-w-0 flex-1 items-center gap-3"
+                            >
+                                <Avatar class="size-9 rounded-full bg-muted">
+                                    <AvatarImage
+                                        v-if="person.avatar"
+                                        :src="person.avatar"
+                                        :alt="person.name"
+                                        class="object-cover"
+                                    />
+                                    <AvatarFallback
+                                        class="bg-muted text-xs font-semibold text-foreground"
+                                    >
+                                        {{ getInitials(person.name) }}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span
+                                    class="truncate text-[14px] font-medium text-foreground"
+                                >
+                                    {{ person.name }}
+                                </span>
+                            </Link>
+                        </div>
+                    </template>
+                    <div
+                        v-else
+                        class="flex flex-col items-center gap-2 px-6 py-12 text-center"
+                    >
+                        <Users class="h-6 w-6 text-muted-foreground/50" />
+                        <p class="text-[14px] font-medium text-foreground">
+                            Nothing here yet
+                        </p>
+                        <p class="text-[13px] text-muted-foreground">
+                            {{
+                                socialListTitle === 'Followers'
+                                    ? 'No one is following this student yet.'
+                                    : 'Not following anyone yet.'
+                            }}
+                        </p>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

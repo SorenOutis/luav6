@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Badge;
 use App\Models\Season;
 use App\Models\SeasonProgress;
 use App\Models\User;
 use App\Services\BadgeAwardService;
+use App\Support\PublicFileUrl;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -72,6 +75,33 @@ class PublicProfileController extends Controller
         $isFollowing = ! $user->is($viewer)
             && $viewer->following()->whereKey($user->id)->exists();
 
+        // ── Per-section ranking (for the "Rank #N in Section" card) ──
+        // Matches the leaderboard's "ties share a rank" logic: the rank is the
+        // number of non-admin students in the same section with strictly more
+        // XP, plus one.
+        $sectionRanks = [];
+        foreach ($user->sections as $section) {
+            $userExp = DB::table('section_progress')
+                ->where('user_id', $user->id)
+                ->where('section_id', $section->id)
+                ->value('exp') ?? 0;
+
+            $sectionBase = DB::table('section_progress')
+                ->join('users', 'users.id', '=', 'section_progress.user_id')
+                ->where('section_progress.section_id', $section->id)
+                ->where('users.is_admin', false);
+
+            $total = (clone $sectionBase)->count();
+            $better = (clone $sectionBase)->where('section_progress.exp', '>', $userExp)->count();
+
+            $sectionRanks[] = [
+                'id' => $section->id,
+                'name' => $section->name,
+                'rank' => $better + 1,
+                'total' => $total,
+            ];
+        }
+
         $courses = [];
         if ($isSameSection && $currentSeason) {
             $courses = $user->courses()
@@ -89,6 +119,9 @@ class PublicProfileController extends Controller
 
         $history = $user->gamificationHistories()
             ->with(['section', 'season'])
+            // Back-office manual XP/point adjustments are audit-only and
+            // aren't surfaced on the student's profile.
+            ->where('reason', '!=', 'Admin Adjustment')
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get()
@@ -103,10 +136,39 @@ class PublicProfileController extends Controller
                 'section' => $h->section?->name,
             ]);
 
+        // ── Achievements catalog ─────────────────────────────────────
+        // Show the full set of badges (earned + locked) so students can see
+        // what's next. Locked badges are greyed out in the UI.
+        $earnedByBadge = $user->badges->keyBy('id');
         $badgeSeasonNames = Season::query()
             ->whereIn('id', $user->badges->pluck('pivot.season_id')->filter()->unique())
             ->pluck('name', 'id');
 
+        $badges = Badge::query()
+            ->orderByRaw('required_level IS NULL, required_level ASC, name ASC')
+            ->get()
+            ->map(function ($b) use ($earnedByBadge, $badgeSeasonNames) {
+                $earned = $earnedByBadge->has($b->id);
+                $pivot = $earnedByBadge->get($b->id)?->pivot;
+
+                return [
+                    'id' => $b->id,
+                    'name' => $b->name,
+                    'description' => $b->description,
+                    'requiredLevel' => $b->required_level,
+                    'image' => $b->image_path ? Storage::disk('public')->url($b->image_path) : null,
+                    'iconUrl' => $b->icon_url,
+                    'earned' => $earned,
+                    'earnedSeason' => $earned && $pivot?->season_id
+                        ? ($badgeSeasonNames[$pivot->season_id] ?? 'Unknown Season')
+                        : null,
+                    'earnedAt' => $earned && $pivot?->created_at
+                        ? $pivot->created_at->format('M d, Y')
+                        : null,
+                ];
+            })->values()->all();
+
+        // ── Kudos ────────────────────────────────────────────────────
         $kudos = DB::table('profile_kudos')
             ->where('recipient_id', $user->id)
             ->selectRaw('type, count(*) as count')
@@ -116,6 +178,40 @@ class PublicProfileController extends Controller
             ->where('sender_id', $viewer->id)
             ->where('recipient_id', $user->id)
             ->value('type');
+
+        $recentKudos = DB::table('profile_kudos')
+            ->join('users', 'users.id', '=', 'profile_kudos.sender_id')
+            ->where('profile_kudos.recipient_id', $user->id)
+            ->orderBy('profile_kudos.updated_at', 'desc')
+            ->limit(6)
+            ->get(['users.id', 'users.name', 'users.avatar', 'profile_kudos.type', 'profile_kudos.updated_at'])
+            ->map(fn ($k) => [
+                'id' => $k->id,
+                'name' => $k->name,
+                'avatar' => PublicFileUrl::resolve($k->avatar),
+                'type' => $k->type,
+                'date' => $k->updated_at ? Carbon::parse($k->updated_at)->diffForHumans() : null,
+            ])->values()->all();
+
+        // ── Followers / following lists (for the follower modals) ──
+        $followers = $user->followers()
+            ->orderBy('user_follows.created_at', 'desc')
+            ->limit(30)
+            ->get(['users.id', 'users.name', 'users.avatar'])
+            ->map(fn ($f) => [
+                'id' => $f->id,
+                'name' => $f->name,
+                'avatar' => $f->avatar,
+            ])->values()->all();
+        $following = $user->following()
+            ->orderBy('user_follows.created_at', 'desc')
+            ->limit(30)
+            ->get(['users.id', 'users.name', 'users.avatar'])
+            ->map(fn ($f) => [
+                'id' => $f->id,
+                'name' => $f->name,
+                'avatar' => $f->avatar,
+            ])->values()->all();
 
         return Inertia::render('User/PublicProfile', [
             'profileUser' => [
@@ -132,6 +228,7 @@ class PublicProfileController extends Controller
             'stats' => [
                 'level' => $seasonalLevel,
                 'xp' => $seasonalExp,
+                'xpProgress' => (int) ($seasonalExp % 100),
                 'rank' => $userRank,
                 'totalPlayers' => $totalPlayers,
                 'badgesCount' => $user->badges->count(),
@@ -139,16 +236,8 @@ class PublicProfileController extends Controller
                 'followingCount' => $user->following()->count(),
             ],
             'history' => $history,
-            'badges' => $user->badges->map(fn ($b) => [
-                'id' => $b->id,
-                'name' => $b->name,
-                'description' => $b->description,
-                'requiredLevel' => $b->required_level,
-                'image' => $b->image_path ? Storage::disk('public')->url($b->image_path) : null,
-                'iconUrl' => $b->icon_url,
-                'earnedSeason' => $b->pivot->season_id ? ($badgeSeasonNames[$b->pivot->season_id] ?? 'Unknown Season') : null,
-                'earnedAt' => optional($b->pivot->created_at)?->format('M d, Y'),
-            ]),
+            'badges' => $badges,
+            'sectionRanks' => $sectionRanks,
             'courses' => $courses,
             'isSameSection' => $isSameSection,
             'isFollowing' => $isFollowing,
@@ -158,6 +247,9 @@ class PublicProfileController extends Controller
                 'keep-going' => (int) ($kudos['keep-going'] ?? 0),
             ],
             'viewerKudo' => $viewerKudo,
+            'recentKudos' => $recentKudos,
+            'followers' => $followers,
+            'following' => $following,
         ]);
     }
 }

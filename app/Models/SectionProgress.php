@@ -55,12 +55,17 @@ class SectionProgress extends Model
 
                         // Only record history if NOT syncing from elsewhere (e.g., admin manual edit)
                         if (! $wasAlreadySyncing) {
+                            // Recorded for audit, but not shown to the student
+                            // (filtered from feeds) and no XP notification sent.
                             $user->recordGamificationHistory(
                                 $expDelta,
                                 $pointsDelta,
                                 'Admin Adjustment',
                                 'Manual adjustment for Section: '.($progress->section?->name ?? 'Unknown'),
-                                $progress->section_id
+                                $progress->section_id,
+                                null,
+                                null,
+                                false
                             );
                         }
 
