@@ -7,6 +7,7 @@ use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Services\AiChatLogger;
 use App\Services\ChatService;
+use App\Support\StudentPageRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -48,17 +49,12 @@ class ChatHistoryController extends Controller
             return $this->chatsMaintenanceMessage();
         }
 
-        $control = \App\Support\StudentPageRegistry::controlFor('chats');
-        if (($control['mode'] ?? null) === \App\Support\StudentPageRegistry::MODE_DISABLED) {
+        $control = StudentPageRegistry::controlFor('chats');
+        if (($control['mode'] ?? null) === StudentPageRegistry::MODE_DISABLED) {
             return $control['message'] ?: $this->chatsMaintenanceMessage();
         }
 
         return null;
-    }
-
-    private function shouldBlockChats(Request $request): bool
-    {
-        return $this->chatsBlockedMessage($request) !== null;
     }
 
     public function index(Request $request)
