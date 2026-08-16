@@ -2,6 +2,11 @@ import type { AiChatSettings } from '@/types/aiChat';
 import type { Auth } from '@/types/auth';
 import type { StudentPageControls } from '@/types/studentPageControls';
 
+export interface ChatsSettings {
+    enabled: boolean;
+    maintenanceMessage: string;
+}
+
 // Extend ImportMeta interface for Vite...
 declare module 'vite/client' {
     interface ImportMetaEnv {
@@ -21,6 +26,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             aiChat: AiChatSettings;
+            chats: ChatsSettings;
             studentPageControls: StudentPageControls;
             sidebarOpen: boolean;
             [key: string]: unknown;
