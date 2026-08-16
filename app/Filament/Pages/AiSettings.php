@@ -70,6 +70,8 @@ class AiSettings extends Page implements HasSchemas
         $this->form->fill(array_merge([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
+            'chats_enabled' => (bool) Setting::get('chats_enabled', true),
+            'chats_maintenance_message' => Setting::get('chats_maintenance_message', 'Chats are currently under maintenance. Please try again later.'),
             'ai_provider' => $provider,
             'gemini_api_key' => Setting::get('gemini_api_key'),
             'gemini_chat_model' => Setting::get('gemini_chat_model', 'gemini-3.5-flash'),
@@ -176,6 +178,21 @@ class AiSettings extends Page implements HasSchemas
                             ->placeholder('Enter the message to display when the AI is disabled...')
                             ->required()
                             ->visible(fn ($get) => ! $get('ai_chat_enabled')),
+                    ]),
+
+                Section::make('Chats')
+                    ->description('Manage the availability of the saved chats history page.')
+                    ->schema([
+                        Toggle::make('chats_enabled')
+                            ->label('Enable Chats')
+                            ->helperText('If disabled, students will not be able to access the chats history page and its API.')
+                            ->reactive(),
+
+                        Textarea::make('chats_maintenance_message')
+                            ->label('Maintenance Message')
+                            ->placeholder('Enter the message to display when chats are disabled...')
+                            ->required()
+                            ->visible(fn ($get) => ! $get('chats_enabled')),
                     ]),
 
                 Section::make('Welcome Demo Video')
@@ -666,6 +683,11 @@ class AiSettings extends Page implements HasSchemas
             Setting::set('ai_chat_enabled', ($data['ai_chat_enabled'] ?? true) ? '1' : '0');
             if (isset($data['ai_chat_maintenance_message'])) {
                 Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
+            }
+
+            Setting::set('chats_enabled', ($data['chats_enabled'] ?? true) ? '1' : '0');
+            if (isset($data['chats_maintenance_message'])) {
+                Setting::set('chats_maintenance_message', $data['chats_maintenance_message']);
             }
 
             $compatibleProviders = collect((array) ($data['openai_compatible_providers'] ?? []))

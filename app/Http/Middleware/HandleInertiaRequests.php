@@ -94,7 +94,28 @@ class HandleInertiaRequests extends Middleware
                         ['label' => '🎯 Claim Daily XP', 'message' => 'Claim my daily XP reward'],
                     ],
             ],
-            'studentPageControls' => fn () => StudentPageRegistry::sharedForPath($request->path()),
+            'chats' => fn () => [
+                'enabled' => (bool) Setting::get('chats_enabled', true),
+                'maintenanceMessage' => Setting::get('chats_maintenance_message', 'Chats are currently under maintenance. Please try again later.'),
+            ],
+            'studentPageControls' => function () use ($request) {
+                $shared = StudentPageRegistry::sharedForPath($request->path());
+                $chatsEnabled = (bool) Setting::get('chats_enabled', true);
+
+                if (! $chatsEnabled && ! ($request->user()?->is_admin)) {
+                    if (isset($shared['pages']['chats'])) {
+                        $shared['pages']['chats']['mode'] = StudentPageRegistry::MODE_DISABLED;
+                        $shared['pages']['chats']['message'] = Setting::get('chats_maintenance_message', 'Chats are currently under maintenance. Please try again later.');
+                    }
+
+                    if (($shared['current']['key'] ?? null) === 'chats') {
+                        $shared['current']['mode'] = StudentPageRegistry::MODE_DISABLED;
+                        $shared['current']['message'] = Setting::get('chats_maintenance_message', 'Chats are currently under maintenance. Please try again later.');
+                    }
+                }
+
+                return $shared;
+            },
             'schoolBranding' => fn () => [
                 'name' => Setting::get('school_name', 'LSI Engine'),
                 'tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),

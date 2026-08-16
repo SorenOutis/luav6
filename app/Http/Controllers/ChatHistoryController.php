@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Responses\AiSseResponse;
 use App\Models\ChatSession;
+use App\Models\Setting;
 use App\Services\AiChatLogger;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
@@ -27,8 +28,48 @@ class ChatHistoryController extends Controller
         protected AiChatLogger $aiChatLogger,
     ) {}
 
+    private function chatsEnabled(): bool
+    {
+        return (bool) Setting::get('chats_enabled', true);
+    }
+
+    private function chatsMaintenanceMessage(): string
+    {
+        return Setting::get('chats_maintenance_message', 'Chats are currently under maintenance. Please try again later.');
+    }
+
+    private function chatsBlockedMessage(Request $request): ?string
+    {
+        if ($request->user()?->is_admin) {
+            return null;
+        }
+
+        if (! $this->chatsEnabled()) {
+            return $this->chatsMaintenanceMessage();
+        }
+
+        $control = \App\Support\StudentPageRegistry::controlFor('chats');
+        if (($control['mode'] ?? null) === \App\Support\StudentPageRegistry::MODE_DISABLED) {
+            return $control['message'] ?: $this->chatsMaintenanceMessage();
+        }
+
+        return null;
+    }
+
+    private function shouldBlockChats(Request $request): bool
+    {
+        return $this->chatsBlockedMessage($request) !== null;
+    }
+
     public function index(Request $request)
     {
+        if ($message = $this->chatsBlockedMessage($request)) {
+            return Inertia::render('StudentPageUnavailable', [
+                'pageTitle' => 'Chats',
+                'message' => $message,
+            ])->toResponse($request)->setStatusCode(423);
+        }
+
         return Inertia::render('Chats', [
             'sessions' => $this->sessionList($request->user()),
         ]);
@@ -36,6 +77,13 @@ class ChatHistoryController extends Controller
 
     public function show(Request $request, ChatSession $session)
     {
+        if ($message = $this->chatsBlockedMessage($request)) {
+            return Inertia::render('StudentPageUnavailable', [
+                'pageTitle' => 'Chats',
+                'message' => $message,
+            ])->toResponse($request)->setStatusCode(423);
+        }
+
         $session = $this->sessionForUser($request, $session);
 
         return Inertia::render('Chats', [
@@ -49,6 +97,12 @@ class ChatHistoryController extends Controller
      */
     public function store(Request $request)
     {
+        if ($message = $this->chatsBlockedMessage($request)) {
+            return response()->json([
+                'response' => $message,
+            ], 503);
+        }
+
         try {
             $session = $request->user()->chatSessions()->create([
                 'title' => 'New chat',
@@ -71,6 +125,12 @@ class ChatHistoryController extends Controller
      */
     public function message(Request $request, ChatSession $session)
     {
+        if ($message = $this->chatsBlockedMessage($request)) {
+            return response()->json([
+                'response' => $message,
+            ], 503);
+        }
+
         $session = $this->sessionForUser($request, $session);
 
         $request->validate([
@@ -162,6 +222,10 @@ class ChatHistoryController extends Controller
      */
     public function stream(Request $request, ChatSession $session): Response
     {
+        if ($message = $this->chatsBlockedMessage($request)) {
+            return AiSseResponse::from($this->chatService->streamText($message));
+        }
+
         $session = $this->sessionForUser($request, $session);
 
         $request->validate([
@@ -344,6 +408,12 @@ class ChatHistoryController extends Controller
 
     public function destroy(Request $request, ChatSession $session)
     {
+        if ($message = $this->chatsBlockedMessage($request)) {
+            return response()->json([
+                'response' => $message,
+            ], 503);
+        }
+
         $session = $this->sessionForUser($request, $session);
 
         try {
