@@ -70,8 +70,6 @@ class AiSettings extends Page implements HasSchemas
         $this->form->fill(array_merge([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
-            'chats_enabled' => (bool) Setting::get('chats_enabled', true),
-            'chats_maintenance_message' => Setting::get('chats_maintenance_message', 'Chats are currently under maintenance. Please try again later.'),
             'ai_provider' => $provider,
             'gemini_api_key' => Setting::get('gemini_api_key'),
             'gemini_chat_model' => Setting::get('gemini_chat_model', 'gemini-3.5-flash'),
@@ -165,34 +163,19 @@ class AiSettings extends Page implements HasSchemas
 
                 $this->aiProviderSection(),
 
-                Section::make('AI Chat Widget')
-                    ->description('Manage the availability of the AI floating widget.')
+                Section::make('AI Chat')
+                    ->description('Manage AI chat availability in both the floating widget and the Chats page.')
                     ->schema([
                         Toggle::make('ai_chat_enabled')
-                            ->label('Enable AI Chat Widget')
-                            ->helperText('If disabled, the floating widget will show a maintenance message and prevent chatting.')
+                            ->label('Enable AI Chat')
+                            ->helperText('If disabled, the floating widget and Chats page composer will show the maintenance message. Students can still open the Chats page and read their history.')
                             ->reactive(),
 
                         Textarea::make('ai_chat_maintenance_message')
                             ->label('Maintenance Message')
-                            ->placeholder('Enter the message to display when the AI is disabled...')
+                            ->placeholder('Enter the message to display when AI chat is disabled...')
                             ->required()
                             ->visible(fn ($get) => ! $get('ai_chat_enabled')),
-                    ]),
-
-                Section::make('Chats')
-                    ->description('Manage the availability of the saved chats history page.')
-                    ->schema([
-                        Toggle::make('chats_enabled')
-                            ->label('Enable Chats')
-                            ->helperText('If disabled, students will not be able to access the chats history page and its API.')
-                            ->reactive(),
-
-                        Textarea::make('chats_maintenance_message')
-                            ->label('Maintenance Message')
-                            ->placeholder('Enter the message to display when chats are disabled...')
-                            ->required()
-                            ->visible(fn ($get) => ! $get('chats_enabled')),
                     ]),
 
                 Section::make('Welcome Demo Video')
@@ -683,11 +666,6 @@ class AiSettings extends Page implements HasSchemas
             Setting::set('ai_chat_enabled', ($data['ai_chat_enabled'] ?? true) ? '1' : '0');
             if (isset($data['ai_chat_maintenance_message'])) {
                 Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
-            }
-
-            Setting::set('chats_enabled', ($data['chats_enabled'] ?? true) ? '1' : '0');
-            if (isset($data['chats_maintenance_message'])) {
-                Setting::set('chats_maintenance_message', $data['chats_maintenance_message']);
             }
 
             $compatibleProviders = collect((array) ($data['openai_compatible_providers'] ?? []))
