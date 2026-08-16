@@ -29,37 +29,40 @@ class ChatHistoryController extends Controller
         protected AiChatLogger $aiChatLogger,
     ) {}
 
-    private function chatsEnabled(): bool
+    private function aiChatMaintenanceMessage(): string
     {
-        return (bool) Setting::get('chats_enabled', true);
+        return Setting::get('ai_chat_maintenance_message', 'Echo is currently under maintenance. Please try again later.');
     }
 
-    private function chatsMaintenanceMessage(): string
-    {
-        return Setting::get('chats_maintenance_message', 'Chats are currently under maintenance. Please try again later.');
-    }
-
-    private function chatsBlockedMessage(Request $request): ?string
+    /**
+     * The student-page control is the only switch that closes the Chats page.
+     * Disabling AI chat leaves history readable and only blocks its composer.
+     */
+    private function pageBlockedMessage(Request $request): ?string
     {
         if ($request->user()?->is_admin) {
             return null;
         }
 
-        if (! $this->chatsEnabled()) {
-            return $this->chatsMaintenanceMessage();
-        }
-
         $control = StudentPageRegistry::controlFor('chats');
-        if (($control['mode'] ?? null) === StudentPageRegistry::MODE_DISABLED) {
-            return $control['message'] ?: $this->chatsMaintenanceMessage();
+
+        return ($control['mode'] ?? null) === StudentPageRegistry::MODE_DISABLED
+            ? ($control['message'] ?: 'The Chats page is currently unavailable.')
+            : null;
+    }
+
+    private function composerBlockedMessage(Request $request): ?string
+    {
+        if (! (bool) Setting::get('ai_chat_enabled', true)) {
+            return $this->aiChatMaintenanceMessage();
         }
 
-        return null;
+        return $this->pageBlockedMessage($request);
     }
 
     public function index(Request $request)
     {
-        if ($message = $this->chatsBlockedMessage($request)) {
+        if ($message = $this->pageBlockedMessage($request)) {
             return Inertia::render('StudentPageUnavailable', [
                 'pageTitle' => 'Chats',
                 'message' => $message,
@@ -73,7 +76,7 @@ class ChatHistoryController extends Controller
 
     public function show(Request $request, ChatSession $session)
     {
-        if ($message = $this->chatsBlockedMessage($request)) {
+        if ($message = $this->pageBlockedMessage($request)) {
             return Inertia::render('StudentPageUnavailable', [
                 'pageTitle' => 'Chats',
                 'message' => $message,
@@ -93,7 +96,7 @@ class ChatHistoryController extends Controller
      */
     public function store(Request $request)
     {
-        if ($message = $this->chatsBlockedMessage($request)) {
+        if ($message = $this->composerBlockedMessage($request)) {
             return response()->json([
                 'response' => $message,
             ], 503);
@@ -121,7 +124,7 @@ class ChatHistoryController extends Controller
      */
     public function message(Request $request, ChatSession $session)
     {
-        if ($message = $this->chatsBlockedMessage($request)) {
+        if ($message = $this->composerBlockedMessage($request)) {
             return response()->json([
                 'response' => $message,
             ], 503);
@@ -218,7 +221,7 @@ class ChatHistoryController extends Controller
      */
     public function stream(Request $request, ChatSession $session): Response
     {
-        if ($message = $this->chatsBlockedMessage($request)) {
+        if ($message = $this->composerBlockedMessage($request)) {
             return AiSseResponse::from($this->chatService->streamText($message));
         }
 
@@ -404,7 +407,7 @@ class ChatHistoryController extends Controller
 
     public function destroy(Request $request, ChatSession $session)
     {
-        if ($message = $this->chatsBlockedMessage($request)) {
+        if ($message = $this->pageBlockedMessage($request)) {
             return response()->json([
                 'response' => $message,
             ], 503);

@@ -51,6 +51,62 @@ it('renders the chats page with the user sessions', function () {
             ->where('sessions.0.messageCount', 2));
 });
 
+it('keeps chat history accessible while AI chat is under maintenance', function () {
+    Setting::set('ai_chat_enabled', '0');
+    Setting::set('ai_chat_maintenance_message', 'Echo is getting an upgrade. Please try again soon.');
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'Readable history']);
+    $session->messages()->createMany([
+        ['role' => 'user', 'content' => 'An earlier question'],
+        ['role' => 'assistant', 'content' => 'An earlier answer'],
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('chats.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Chats')
+            ->has('sessions', 1)
+            ->where('aiChat.enabled', false)
+            ->where('aiChat.maintenanceMessage', 'Echo is getting an upgrade. Please try again soon.'));
+
+    $this->actingAs($user)
+        ->get(route('chats.show', $session))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Chats')
+            ->where('activeSession.id', $session->id)
+            ->has('activeSession.messages', 2));
+});
+
+it('blocks only chat composition while AI chat is under maintenance', function () {
+    Setting::set('ai_chat_enabled', '0');
+    Setting::set('ai_chat_maintenance_message', 'Echo is getting an upgrade. Please try again soon.');
+
+    $user = User::factory()->create();
+    $session = $user->chatSessions()->create(['title' => 'Existing chat']);
+
+    $this->actingAs($user)
+        ->postJson(route('chats.store'))
+        ->assertStatus(503)
+        ->assertJsonPath('response', 'Echo is getting an upgrade. Please try again soon.');
+
+    $this->actingAs($user)
+        ->postJson(route('chats.message', $session), ['message' => 'Should not be sent'])
+        ->assertStatus(503)
+        ->assertJsonPath('response', 'Echo is getting an upgrade. Please try again soon.');
+
+    $this->assertDatabaseCount('chat_sessions', 1);
+    $this->assertDatabaseCount('chat_messages', 0);
+
+    // Reading and managing saved history remain available during AI downtime.
+    $this->actingAs($user)
+        ->deleteJson(route('chats.destroy', $session))
+        ->assertOk()
+        ->assertJson(['ok' => true]);
+});
+
 it('lists only the authenticated users sessions on the chats page', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();

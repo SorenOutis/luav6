@@ -194,6 +194,15 @@ const ALLOWED_MIMES = [
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 
+const aiChatEnabled = computed(
+    () => (page.props.aiChat as { enabled?: boolean })?.enabled !== false,
+);
+const maintenanceMessage = computed(
+    () =>
+        (page.props.aiChat as { maintenanceMessage?: string })
+            ?.maintenanceMessage ||
+        'Echo is currently under maintenance. Please try again later.',
+);
 const isAdmin = computed(() =>
     Boolean((page.props.aiChat as { isAdmin?: boolean })?.isAdmin),
 );
@@ -257,7 +266,7 @@ watch(messages, () => scrollToBottom(), { deep: true });
 watch(
     isNewChat,
     async (newChat) => {
-        if (!newChat) return;
+        if (!newChat || !aiChatEnabled.value) return;
         await nextTick();
         if (isCoarsePointer.value) return;
         welcomeInputRef.value?.$el?.focus();
@@ -318,11 +327,13 @@ const updateSessionInList = (session: ChatSession) => {
 };
 
 const useSuggestion = (suggestion: string) => {
+    if (!aiChatEnabled.value) return;
     inputMessage.value = suggestion;
     sendMessage();
 };
 
 const handleComposerKeydown = (event: KeyboardEvent) => {
+    if (!aiChatEnabled.value) return;
     if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         sendMessage();
@@ -348,7 +359,7 @@ const showAttachmentError = (message: string) => {
 };
 
 const addFiles = (fileList: FileList | File[] | null) => {
-    if (!fileList) return;
+    if (!aiChatEnabled.value || !fileList) return;
 
     const files = Array.from(fileList);
     if (files.length === 0) return;
@@ -415,14 +426,16 @@ onFilesChanged((files) => addFiles(files));
 
 // Drag & drop state (depth counter handles nested dragenter/leave events)
 const onDragEnter = (event: DragEvent) => {
-    if (!event.dataTransfer?.types.includes('Files')) return;
+    if (!aiChatEnabled.value || !event.dataTransfer?.types.includes('Files'))
+        return;
     event.preventDefault();
     dragDepth.value++;
     isDragging.value = true;
 };
 
 const onDragOver = (event: DragEvent) => {
-    if (!event.dataTransfer?.types.includes('Files')) return;
+    if (!aiChatEnabled.value || !event.dataTransfer?.types.includes('Files'))
+        return;
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
 };
@@ -434,6 +447,7 @@ const onDragLeave = (event: DragEvent) => {
 };
 
 const onDrop = (event: DragEvent) => {
+    if (!aiChatEnabled.value) return;
     event.preventDefault();
     dragDepth.value = 0;
     isDragging.value = false;
@@ -723,7 +737,8 @@ const truncateTitle = (text: string, length = 60): string =>
     text.length > length ? `${text.slice(0, length).trimEnd()}…` : text;
 
 const sendMessage = async () => {
-    if (!inputMessage.value.trim() || isLoading.value) return;
+    if (!aiChatEnabled.value || !inputMessage.value.trim() || isLoading.value)
+        return;
     // Claim the loading state up front — session creation below is async, and
     // without this a quick double-Enter could create two sessions.
     isLoading.value = true;
@@ -796,7 +811,8 @@ const sendMessage = async () => {
 };
 
 const createNewChat = async () => {
-    if (isLoading.value || isCreatingSession.value) return;
+    if (!aiChatEnabled.value || isLoading.value || isCreatingSession.value)
+        return;
 
     isCreatingSession.value = true;
 
@@ -863,7 +879,7 @@ onBeforeUnmount(() => {
             <ChatNavigation
                 :sessions="sessions"
                 :active-session-id="activeSession?.id"
-                :creating="isCreatingSession"
+                :creating="isCreatingSession || !aiChatEnabled"
                 @create="createNewChat"
                 @delete="openDeleteModal"
             />
@@ -947,7 +963,9 @@ onBeforeUnmount(() => {
                             size="icon"
                             class="h-9 w-9 rounded-xl"
                             title="New chat"
-                            :disabled="isCreatingSession || isLoading"
+                            :disabled="
+                                !aiChatEnabled || isCreatingSession || isLoading
+                            "
                             @click="createNewChat"
                         >
                             <Plus class="h-4 w-4" />
@@ -1013,6 +1031,7 @@ onBeforeUnmount(() => {
 
                                 <!-- Centered input -->
                                 <form
+                                    v-if="aiChatEnabled"
                                     class="welcome-input mt-5 w-full max-w-xl sm:mt-8"
                                     @submit.prevent="sendMessage"
                                 >
@@ -1109,9 +1128,18 @@ onBeforeUnmount(() => {
                                         important answers.
                                     </p>
                                 </form>
+                                <div
+                                    v-else
+                                    data-testid="chat-maintenance-message"
+                                    class="welcome-input mt-5 w-full max-w-xl rounded-2xl border border-dashed border-border/60 bg-muted/30 px-5 py-4 text-sm leading-relaxed text-muted-foreground sm:mt-8"
+                                    role="status"
+                                >
+                                    {{ maintenanceMessage }}
+                                </div>
 
                                 <!-- Suggestions -->
                                 <div
+                                    v-if="aiChatEnabled"
                                     class="welcome-suggestions mt-4 flex flex-wrap justify-center gap-1.5 sm:mt-6"
                                 >
                                     <button
@@ -1323,7 +1351,7 @@ onBeforeUnmount(() => {
                         leave-to-class="translate-y-2 opacity-0"
                     >
                         <div
-                            v-if="attachmentError"
+                            v-if="aiChatEnabled && attachmentError"
                             class="w-full rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[11px] text-red-700/80 dark:text-red-300/70"
                         >
                             ⚠ {{ attachmentError }}
@@ -1331,6 +1359,7 @@ onBeforeUnmount(() => {
                     </transition>
 
                     <form
+                        v-if="aiChatEnabled"
                         class="flex w-full flex-col items-stretch gap-1.5"
                         @submit.prevent="sendMessage"
                     >
@@ -1420,6 +1449,14 @@ onBeforeUnmount(() => {
                             </Button>
                         </div>
                     </form>
+                    <div
+                        v-else
+                        data-testid="chat-maintenance-message"
+                        class="w-full rounded-xl border border-dashed border-border/60 bg-muted/30 px-4 py-3 text-center text-xs leading-relaxed text-muted-foreground"
+                        role="status"
+                    >
+                        {{ maintenanceMessage }}
+                    </div>
                 </CardFooter>
             </Card>
         </div>
@@ -1434,7 +1471,7 @@ onBeforeUnmount(() => {
                 <button
                     type="button"
                     class="sheet-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-all hover:bg-muted/50 active:scale-[0.98]"
-                    :disabled="isCreatingSession || isLoading"
+                    :disabled="!aiChatEnabled || isCreatingSession || isLoading"
                     @click="
                         isMobileHistoryOpen = false;
                         createNewChat();
