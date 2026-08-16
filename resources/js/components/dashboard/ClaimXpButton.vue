@@ -16,10 +16,15 @@ import { useMobile } from '@/composables/useMobile';
 const props = defineProps<{
     canClaim: boolean;
     amount: number;
+    baseXp?: number;
     nextClaimAt: string | null;
     streak: number;
     showPrompt?: boolean;
 }>();
+
+// Configurable base XP (Platform Settings); anything above it is streak bonus.
+const base = computed(() => props.baseXp ?? 1);
+const streakBonus = computed(() => Math.max(0, props.amount - base.value));
 
 const emit = defineEmits<{
     claimed: [amount: number, totalXp: number];
@@ -453,8 +458,8 @@ onBeforeUnmount(() => {
                     </p>
                     <p class="text-xs font-medium text-muted-foreground">
                         Streak {{ streak }}
-                        <span v-if="amount > 1">
-                            · {{ amount - 1 }} streak bonus
+                        <span v-if="streakBonus > 0">
+                            · {{ streakBonus }} streak bonus
                         </span>
                     </p>
                 </div>
@@ -472,9 +477,9 @@ onBeforeUnmount(() => {
                         +{{ amount }} XP
                     </p>
                     <p class="mt-2 text-sm text-muted-foreground">
-                        1 base XP
-                        <span v-if="amount > 1">
-                            + {{ amount - 1 }} streak bonus</span
+                        {{ base }} base XP
+                        <span v-if="streakBonus > 0">
+                            + {{ streakBonus }} streak bonus</span
                         >
                         <span class="text-[#D97757]">
                             · Streak {{ streak }}</span

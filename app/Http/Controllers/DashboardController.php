@@ -217,8 +217,10 @@ class DashboardController extends Controller
 
         return inertia('Dashboard', [
             'claimXp' => [
+                'enabled' => $this->claimXpService->isEnabled(),
                 'canClaim' => $canClaim,
                 'amount' => $claimAmount,
+                'baseXp' => $this->claimXpService->baseXp(),
                 'nextClaimAt' => $nextClaimAt?->toIso8601String(),
                 'lastClaimedAt' => $user->last_claimed_at?->toIso8601String(),
                 'showPrompt' => $showClaimPrompt,

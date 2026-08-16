@@ -37,8 +37,10 @@ interface XpHistoryEntry {
 }
 
 interface ClaimInfo {
+    enabled?: boolean;
     canClaim: boolean;
     amount: number;
+    baseXp?: number;
     nextClaimAt?: string | null;
     lastClaimedAt?: string | null;
 }
@@ -89,6 +91,8 @@ interface ClaimStatus {
 const claimStatus = computed<ClaimStatus | null>(() => {
     const c = props.claimXp;
     if (!c) return null;
+    // Feature turned off in Platform Settings — no claim status at all.
+    if (c.enabled === false) return null;
     if (c.canClaim) {
         if (!c.lastClaimedAt) {
             return { state: 'never', amount: c.amount };

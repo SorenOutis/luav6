@@ -31,6 +31,13 @@ class ClaimDailyXpTool implements Tool
 
         $service = app(ClaimXpService::class);
 
+        if (! $service->isEnabled()) {
+            return json_encode([
+                'claimed' => false,
+                'message' => 'The daily XP claim feature is currently disabled by the administrators.',
+            ]);
+        }
+
         if (! $service->canClaim($user)) {
             return json_encode([
                 'claimed' => false,

@@ -333,8 +333,10 @@ interface Exam {
 
 const props = defineProps<{
     claimXp: {
+        enabled?: boolean;
         canClaim: boolean;
         amount: number;
+        baseXp?: number;
         nextClaimAt: string | null;
         lastClaimedAt?: string | null;
         showPrompt?: boolean;
