@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\GamificationHistory;
 use App\Models\SectionProgress;
+use App\Models\Setting;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
@@ -11,7 +12,10 @@ use Illuminate\Support\Facades\DB;
 /**
  * Daily Claim XP — Streak-scaled rewards for checking in each day.
  *
- * Formula: 1 + floor(current_streak / 5)
+ * Formula: base + floor(current_streak / 5), capped at base + 4.
+ * The base XP is configurable via the `daily_claim_base_xp` platform
+ * setting (default 1), and the whole feature can be turned off with
+ * `daily_claim_enabled`. With the default base of 1:
  *   Streak 1–4  → 1 XP
  *   Streak 5–9  → 2 XP
  *   Streak 10–14 → 3 XP
@@ -20,11 +24,34 @@ use Illuminate\Support\Facades\DB;
  */
 class ClaimXpService
 {
+    /** Max streak bonus on top of the base XP (streak 20+). */
+    private const MAX_STREAK_BONUS = 4;
+
+    /**
+     * Is the daily claim feature enabled? (Platform Settings)
+     */
+    public function isEnabled(): bool
+    {
+        return (bool) Setting::get('daily_claim_enabled', true);
+    }
+
+    /**
+     * Configurable base XP per claim (Platform Settings, default 1).
+     */
+    public function baseXp(): int
+    {
+        return max(1, (int) Setting::get('daily_claim_base_xp', 1));
+    }
+
     /**
      * Can the user claim today?
      */
     public function canClaim(User $user): bool
     {
+        if (! $this->isEnabled()) {
+            return false;
+        }
+
         if (! $user->last_claimed_at) {
             return true;
         }
@@ -39,7 +66,9 @@ class ClaimXpService
     {
         $streak = max(0, (int) ($user->current_streak ?? 0));
 
-        return min(5, 1 + (int) floor($streak / 5));
+        $bonus = min(self::MAX_STREAK_BONUS, (int) floor($streak / 5));
+
+        return $this->baseXp() + $bonus;
     }
 
     /**

@@ -3,8 +3,10 @@ import { ref, watch } from 'vue';
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 
 interface ClaimXp {
+    enabled?: boolean;
     canClaim: boolean;
     amount: number;
+    baseXp?: number;
     nextClaimAt: string | null;
     showPrompt?: boolean;
 }
@@ -47,6 +49,7 @@ const onClaimed = () => {
         <ClaimXpButton
             :can-claim="claimXp.canClaim"
             :amount="claimXp.amount"
+            :base-xp="claimXp.baseXp"
             :next-claim-at="claimXp.nextClaimAt"
             :streak="streak"
             :show-prompt="claimXp.showPrompt"

@@ -9,6 +9,7 @@
 
 use App\Models\Season;
 use App\Models\Section;
+use App\Models\Setting;
 use App\Models\User;
 use App\Services\ClaimXpService;
 use Illuminate\Testing\TestResponse;
@@ -78,6 +79,76 @@ it('caps at 5 XP for very high streaks', function () {
     expect(app(ClaimXpService::class)->claimAmount(
         User::factory()->create(['current_streak' => 100])
     ))->toBe(5);
+});
+
+// ─────────────────────────────────────────────
+//  Platform Settings — configurable daily claim
+// ─────────────────────────────────────────────
+
+it('uses the configurable base XP from platform settings', function () {
+    Setting::set('daily_claim_base_xp', '10');
+
+    // Streak 0 → just the base
+    expect(app(ClaimXpService::class)->claimAmount(
+        User::factory()->create(['current_streak' => 0])
+    ))->toBe(10);
+
+    // Streak 7 → base + floor(7/5) = 11
+    expect(app(ClaimXpService::class)->claimAmount(
+        User::factory()->create(['current_streak' => 7])
+    ))->toBe(11);
+
+    // Streak 100 → base + max bonus of 4 = 14
+    expect(app(ClaimXpService::class)->claimAmount(
+        User::factory()->create(['current_streak' => 100])
+    ))->toBe(14);
+});
+
+it('clamps a non-positive configured base XP to 1', function () {
+    Setting::set('daily_claim_base_xp', '0');
+
+    expect(app(ClaimXpService::class)->claimAmount(
+        User::factory()->create(['current_streak' => 0])
+    ))->toBe(1);
+});
+
+it('awards the configured base XP when claiming via the API', function () {
+    Setting::set('daily_claim_base_xp', '3');
+
+    [$student] = claimContext();
+
+    actingAs($student)->postJson('/api/claim-xp')
+        ->assertOk()
+        ->assertJson([
+            'claimed' => true,
+            'amount' => 3,
+        ]);
+});
+
+it('blocks claiming when the daily claim feature is disabled', function () {
+    Setting::set('daily_claim_enabled', '0');
+
+    [$student] = claimContext();
+
+    expect(app(ClaimXpService::class)->canClaim($student))->toBeFalse();
+
+    actingAs($student)->postJson('/api/claim-xp')
+        ->assertOk()
+        ->assertJson([
+            'claimed' => false,
+        ]);
+
+    expect($student->gamificationHistories()
+        ->where('reason', 'Daily Claim')
+        ->count()
+    )->toBe(0);
+});
+
+it('keeps claiming enabled by default when the setting is absent', function () {
+    [$student] = claimContext();
+
+    expect(app(ClaimXpService::class)->isEnabled())->toBeTrue();
+    expect(app(ClaimXpService::class)->canClaim($student))->toBeTrue();
 });
 
 // ─────────────────────────────────────────────
