@@ -11,14 +11,12 @@
  */
 
 use App\Jobs\GradeExamSubmissionEssays;
-use App\Models\AiEssayFeedbackDraft;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
-use App\Services\AiReviewService;
 use App\Services\AIService;
 use Illuminate\Support\Facades\Queue;
 
@@ -152,41 +150,30 @@ it('rejects a genuinely different identification answer', function () {
 //  Essay
 // ─────────────────────────────────────────────
 
-it('takes the essay score from the AI service', function () {
-    // Queue::fake() prevents the sync driver from running the queued job
-    // during the web request — we want to verify the score is 0 until the
-    // job is manually processed below.
+it('takes the essay score from the AI service and applies it immediately', function () {
     Queue::fake();
 
-    [$student, $exam, , $admin] = examContext();
+    [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
     fakeEssayScores([1 => 7.5]);
 
     submitAnswers($student, $exam, $part, [1 => 'A thoughtful essay answer.']);
 
-    // Phase 1.0.2: the request persists a 0 score, the queued job adds the marks.
     $submission = ExamSubmission::first();
-    expect($submission->score)->toEqual('0.00');
+    expect($submission->score)->toEqual('0.00')
+        ->and($submission->status)->toBe('pending_ai');
 
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
 
-    expect($submission->fresh()->score)->toEqual('0.00')
-        ->and(AiEssayFeedbackDraft::first()->proposed_score)->toEqual('7.50')
-        ->and(AiEssayFeedbackDraft::first()->review_status)->toBe('awaiting_review');
-
-    actingAs($admin);
-    app(AiReviewService::class)->approveEssayFeedback(AiEssayFeedbackDraft::first(), $admin);
-
-    expect($submission->fresh()->score)->toEqual('7.50');
+    expect($submission->fresh()->score)->toEqual('7.50')
+        ->and($submission->fresh()->status)->toBe('graded');
 });
 
 it('persists the submission before contacting the AI provider', function () {
     [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
-    // Any call to the provider during the web request is a regression: it would
-    // block a worker and risk losing the student's answers.
     $mock = Mockery::mock(AIService::class);
     $mock->shouldNotReceive('batchAssessEssays');
     app()->instance(AIService::class, $mock);
@@ -199,8 +186,8 @@ it('persists the submission before contacting the AI provider', function () {
     Queue::assertPushed(GradeExamSubmissionEssays::class);
 });
 
-it('keeps AI essay feedback private until a teacher approves it', function () {
-    [$student, $exam, , $admin] = examContext();
+it('automatically publishes AI essay feedback without teacher approval', function () {
+    [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
     fakeEssayScores([1 => 6.0]);
@@ -208,20 +195,15 @@ it('keeps AI essay feedback private until a teacher approves it', function () {
     submitAnswers($student, $exam, $part, [1 => 'Essay body.']);
     $submission = ExamSubmission::first();
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
-
-    expect($submission->fresh()->status)->toBe('pending_review')
-        ->and(array_key_exists('ai_feedback', $submission->fresh()->answers[0]))->toBeFalse()
-        ->and(AiEssayFeedbackDraft::first()->proposed_feedback)->toBe('Automatic AI feedback for this essay.');
-
-    actingAs($admin);
-    app(AiReviewService::class)->approveEssayFeedback(AiEssayFeedbackDraft::first(), $admin);
 
     expect($submission->fresh()->status)->toBe('graded')
-        ->and($submission->fresh()->answers[0]['ai_feedback'])->toBe('Automatic AI feedback for this essay.');
+        ->and($submission->fresh()->answers[0]['ai_score'])->toEqual(6.0)
+        ->and($submission->fresh()->answers[0]['ai_feedback'])->toBe('Automatic AI feedback for this essay.')
+        ->and($submission->fresh()->answers[0]['ai_feedback_source'])->toBe('automatic');
 });
 
-it('does not duplicate drafts or scores when the grading job runs twice', function () {
-    [$student, $exam, , $admin] = examContext();
+it('does not double-score essays when the automatic grading job runs twice', function () {
+    [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
     fakeEssayScores([1 => 6.0]);
@@ -230,21 +212,34 @@ it('does not duplicate drafts or scores when the grading job runs twice', functi
     $submission = ExamSubmission::first();
 
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
-    (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
-
-    expect($submission->fresh()->score)->toEqual('0.00')
-        ->and(AiEssayFeedbackDraft::count())->toBe(1);
-
-    actingAs($admin);
-    app(AiReviewService::class)->approveEssayFeedback(AiEssayFeedbackDraft::first(), $admin);
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
 
     expect($submission->fresh()->score)->toEqual('6.00')
-        ->and(AiEssayFeedbackDraft::count())->toBe(1);
+        ->and($submission->fresh()->status)->toBe('graded');
 });
 
-it('applies reviewed feedback with an audit reference', function () {
-    [$student, $exam, , $admin] = examContext();
+it('replaces rather than duplicates the score when an essay is automatically regraded', function () {
+    [$student, $exam] = examContext();
+    $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
+
+    fakeEssayScores([1 => 6.0]);
+    submitAnswers($student, $exam, $part, [1 => 'Essay body.']);
+    $submission = ExamSubmission::first();
+    (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
+
+    fakeEssayScores([1 => 8.0]);
+    (new GradeExamSubmissionEssays(
+        submissionId: $submission->id,
+        forceRegenerate: true,
+        onlyQuestionNumber: 1,
+    ))->handle(app(AIService::class));
+
+    expect($submission->fresh()->score)->toEqual('8.00')
+        ->and($submission->fresh()->answers[0]['ai_score'])->toEqual(8.0);
+});
+
+it('preserves the answer metadata used by automatic feedback', function () {
+    [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
 
     fakeEssayScores([1 => 6.0]);
@@ -252,14 +247,62 @@ it('applies reviewed feedback with an audit reference', function () {
     submitAnswers($student, $exam, $part, [1 => 'Essay body.']);
     $submission = ExamSubmission::first();
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
-    actingAs($admin);
-    $draft = AiEssayFeedbackDraft::first();
-    app(AiReviewService::class)->approveEssayFeedback($draft, $admin);
 
     $answer = $submission->fresh()->answers[0];
 
-    expect($answer)->toHaveKeys(['question_number', 'question_type', 'question_text', 'points', 'ai_score', 'ai_feedback', 'ai_feedback_review_id'])
-        ->and($answer['ai_feedback_source'])->toBe('teacher_approved_ai');
+    expect($answer)->toHaveKeys([
+        'question_number',
+        'question_type',
+        'question_text',
+        'points',
+        'grading_method',
+        'ai_score',
+        'ai_feedback',
+    ])->and($answer['grading_method'])->toBe('ai');
+});
+
+it('leaves manually graded essays for the teacher without calling AI', function () {
+    [$student, $exam] = examContext();
+    $part = ExamPart::factory()
+        ->forExam($exam)
+        ->essay(count: 1, points: 10, gradingMethod: 'manual')
+        ->create();
+
+    $mock = Mockery::mock(AIService::class);
+    $mock->shouldNotReceive('batchAssessEssays');
+    app()->instance(AIService::class, $mock);
+    Queue::fake();
+
+    submitAnswers($student, $exam, $part, [1 => 'Essay body for teacher review.']);
+
+    $submission = ExamSubmission::first();
+    expect($submission->status)->toBe('pending_review')
+        ->and($submission->score)->toEqual('0.00')
+        ->and($submission->answers[0]['grading_method'])->toBe('manual')
+        ->and(array_key_exists('ai_score', $submission->answers[0]))->toBeFalse();
+    Queue::assertNotPushed(GradeExamSubmissionEssays::class);
+
+    actingAs($student)
+        ->getJson("/exams/{$exam->id}/parts/{$part->id}/status")
+        ->assertSuccessful()
+        ->assertJsonPath('awaiting_teacher_review', true)
+        ->assertJsonPath('scored', false);
+    Queue::assertNotPushed(GradeExamSubmissionEssays::class);
+});
+
+it('defaults legacy essay questions without a grading method to automatic AI grading', function () {
+    [$student, $exam] = examContext();
+    $part = ExamPart::factory()->forExam($exam)->withQuestions([[
+        'text' => 'Legacy essay question',
+        'type' => 'essay',
+        'points' => 10,
+    ]])->create();
+
+    Queue::fake();
+    submitAnswers($student, $exam, $part, [1 => 'Legacy essay answer.']);
+
+    expect(ExamSubmission::first()->answers[0]['grading_method'])->toBe('ai');
+    Queue::assertPushed(GradeExamSubmissionEssays::class);
 });
 
 it('does not queue a grading job when the part has no essays', function () {
@@ -273,24 +316,38 @@ it('does not queue a grading job when the part has no essays', function () {
     Queue::assertNothingPushed();
 });
 
-it('marks an essay submission graded only after teacher approval', function () {
-    [$student, $exam, , $admin] = examContext();
-    $part = ExamPart::factory()->forExam($exam)->essay(count: 1, points: 10)->create();
+it('keeps a mixed automatic and manual essay submission pending for the teacher', function () {
+    Queue::fake();
 
-    fakeEssayScores([1 => 5.0]);
+    [$student, $exam] = examContext();
+    $part = ExamPart::factory()->forExam($exam)->withQuestions([
+        [
+            'text' => 'AI essay',
+            'type' => 'essay',
+            'points' => 10,
+            'grading_method' => 'ai',
+        ],
+        [
+            'text' => 'Manual essay',
+            'type' => 'essay',
+            'points' => 10,
+            'grading_method' => 'manual',
+        ],
+    ])->create();
 
-    submitAnswers($student, $exam, $part, [1 => 'Essay text.']);
+    fakeEssayScores([1 => 8.0]);
+    submitAnswers($student, $exam, $part, [
+        1 => 'Automatically graded response.',
+        2 => 'Teacher graded response.',
+    ]);
 
-    // The HTTP response remains non-blocking; the queued job completes the grading.
     $submission = ExamSubmission::first();
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
 
-    expect($submission->fresh()->status)->toBe('pending_review');
-
-    actingAs($admin);
-    app(AiReviewService::class)->approveEssayFeedback(AiEssayFeedbackDraft::first(), $admin);
-
-    expect($submission->fresh()->status)->toBe('graded');
+    expect($submission->fresh()->score)->toEqual('8.00')
+        ->and($submission->fresh()->status)->toBe('pending_review')
+        ->and($submission->fresh()->answers[0]['ai_score'])->toEqual(8.0)
+        ->and(array_key_exists('ai_score', $submission->fresh()->answers[1]))->toBeFalse();
 });
 
 it('marks an auto-gradable submission as submitted', function () {
@@ -331,7 +388,7 @@ it('flags the submission when the AI provider returns nothing', function () {
 it('sums scores across mixed question types', function () {
     Queue::fake();
 
-    [$student, $exam, , $admin] = examContext();
+    [$student, $exam] = examContext();
     $part = ExamPart::factory()->forExam($exam)->mixed()->create();
 
     fakeEssayScores([3 => 8.0]);
@@ -346,12 +403,8 @@ it('sums scores across mixed question types', function () {
     $submission = ExamSubmission::first();
     expect($submission->score)->toEqual('5.00');
 
-    // The AI proposal remains outside the score until a teacher approves it.
+    // + q3 essay (8) as soon as the automatic grading job finishes = 13.
     (new GradeExamSubmissionEssays($submission->id))->handle(app(AIService::class));
-    expect($submission->fresh()->score)->toEqual('5.00');
-
-    actingAs($admin);
-    app(AiReviewService::class)->approveEssayFeedback(AiEssayFeedbackDraft::first(), $admin);
 
     expect($submission->fresh()->score)->toEqual('13.00');
 });

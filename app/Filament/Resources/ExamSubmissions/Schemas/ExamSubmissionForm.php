@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\ExamSubmissions\Schemas;
 
+use App\Enums\EssayGradingMethod;
 use App\Support\ExamPartAnswerLabels;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
@@ -31,12 +33,13 @@ class ExamSubmissionForm
                     ->required(),
                 TextInput::make('score')
                     ->numeric()
+                    ->helperText('For manually graded essays, add the awarded essay points to the current score, then set the status to Graded.')
                     ->required(),
                 Select::make('status')
                     ->options([
                         'submitted' => 'Submitted',
-                        'pending_ai' => 'Pending AI Proposal',
-                        'pending_review' => 'Pending Teacher Review',
+                        'pending_ai' => 'Pending Automatic AI Grading',
+                        'pending_review' => 'Pending Teacher Grading',
                         'graded' => 'Graded',
                     ])
                     ->required(),
@@ -52,6 +55,7 @@ class ExamSubmissionForm
                     ->table([
                         TableColumn::make('#'),
                         TableColumn::make('Type'),
+                        TableColumn::make('Grading'),
                         TableColumn::make('Question'),
                         TableColumn::make('Max pts'),
                         TableColumn::make('Answer'),
@@ -71,6 +75,13 @@ class ExamSubmissionForm
                             ])
                             ->required()
                             ->live(),
+                        Select::make('grading_method')
+                            ->label('Grading')
+                            ->options(EssayGradingMethod::options())
+                            ->visible(fn (callable $get): bool => $get('question_type') === 'essay')
+                            ->disabled()
+                            ->dehydrated()
+                            ->required(fn (callable $get): bool => $get('question_type') === 'essay'),
                         Textarea::make('question_text')
                             ->rows(2)
                             ->required(),
@@ -97,7 +108,25 @@ class ExamSubmissionForm
                                     'essay' => 'Student essay response',
                                     default => 'Student answer',
                                 }),
+                            TextInput::make('ai_score')
+                                ->label('Automatic AI score')
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated()
+                                ->visible(fn (callable $get): bool => $get('question_type') === 'essay'
+                                    && $get('grading_method') === EssayGradingMethod::Ai->value
+                                    && $get('ai_score') !== null),
+                            Textarea::make('ai_feedback')
+                                ->label('Automatic AI feedback')
+                                ->rows(3)
+                                ->disabled()
+                                ->dehydrated()
+                                ->visible(fn (callable $get): bool => $get('question_type') === 'essay'
+                                    && $get('grading_method') === EssayGradingMethod::Ai->value
+                                    && filled($get('ai_feedback'))),
                         ]),
+                        Hidden::make('ai_feedback_source'),
+                        Hidden::make('ai_feedback_review_id'),
                     ]),
             ]);
     }

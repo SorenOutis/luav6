@@ -55,8 +55,8 @@ class ExamSubmissionsTable
                     ->label('Grading status')
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending_ai' => 'AI proposal pending',
-                        'pending_review' => 'Pending teacher review',
+                        'pending_ai' => 'Automatic AI grading pending',
+                        'pending_review' => 'Pending teacher grading',
                         'graded' => 'Graded',
                         'submitted' => 'Submitted',
                         default => str($state)->replace('_', ' ')->title()->toString(),
@@ -97,8 +97,8 @@ class ExamSubmissionsTable
                     ->label('Status')
                     ->options([
                         'submitted' => 'Submitted',
-                        'pending_ai' => 'AI Proposal Pending',
-                        'pending_review' => 'Pending Teacher Review',
+                        'pending_ai' => 'Automatic AI Grading Pending',
+                        'pending_review' => 'Pending Teacher Grading',
                         'grading_failed' => 'Grading failed',
                         'graded' => 'Graded',
                     ]),

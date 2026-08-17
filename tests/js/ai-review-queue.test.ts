@@ -6,6 +6,18 @@ const source = (path: string) =>
     readFileSync(join(process.cwd(), path), 'utf8');
 
 describe('teacher AI review queue', () => {
+    it('offers automatic or manual grading for essay questions', () => {
+        const examForm = source(
+            'app/Filament/Resources/Exams/Schemas/ExamForm.php',
+        );
+        const methods = source('app/Enums/EssayGradingMethod.php');
+
+        expect(examForm).toContain("Radio::make('grading_method')");
+        expect(methods).toContain('AI grades automatically');
+        expect(methods).toContain('Teacher grades manually');
+        expect(examForm).toContain("$get('type') === 'essay'");
+    });
+
     it('requires question approval before attach-to-exam is visible', () => {
         const editPage = source(
             'app/Filament/Resources/AiQuestionDrafts/Pages/EditAiQuestionDraft.php',
@@ -33,12 +45,12 @@ describe('teacher AI review queue', () => {
         expect(reviewPage).toContain("Action::make('regenerateFeedback')");
     });
 
-    it('tells students their essay is awaiting teacher approval', () => {
+    it('distinguishes automatic AI grading from manual teacher grading', () => {
         const exam = source('resources/js/pages/Exams/Show.vue');
 
         expect(exam).toContain('isAwaitingTeacherReview');
         expect(exam).toContain('Awaiting teacher review');
-        expect(exam).toContain('feedback remains private until your');
-        expect(exam).toContain('teacher reviews and approves it.');
+        expect(exam).toContain('automatic AI scores are applied as');
+        expect(exam).toContain('soon as grading finishes.');
     });
 });

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AiQuestionDrafts\Pages;
 
+use App\Enums\EssayGradingMethod;
 use App\Filament\Resources\AiQuestionDrafts\AiQuestionDraftResource;
 use App\Filament\Resources\Exams\ExamResource;
 use App\Jobs\GenerateAiQuestions;
@@ -229,6 +230,11 @@ class EditAiQuestionDraft extends EditRecord
                             continue;
                         }
                         $q['points'] = (int) ($q['points'] ?? $default) ?: $default;
+                        if ($type === 'essay') {
+                            $q['grading_method'] = EssayGradingMethod::forQuestion($q)->value;
+                        } else {
+                            unset($q['grading_method']);
+                        }
                         $grouped[$type][] = $q;
                     }
 

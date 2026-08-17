@@ -2,11 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Models\AiEssayFeedbackDraft;
+use App\Enums\EssayGradingMethod;
 use App\Models\Exam;
 use App\Models\ExamAiFeedbackRun;
 use App\Models\ExamSubmission;
-use App\Services\AiReviewService;
 use App\Services\AIService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -15,7 +14,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
 
-/** Generate teacher-reviewable essay feedback drafts for an entire exam. */
+/** Re-run missing automatic essay grades and feedback for an entire exam. */
 class GenerateExamEssayFeedback implements ShouldQueue
 {
     use Dispatchable;
@@ -28,7 +27,7 @@ class GenerateExamEssayFeedback implements ShouldQueue
         $this->onQueue('ai');
     }
 
-    public function handle(AIService $aiService, AiReviewService $reviews): void
+    public function handle(AIService $aiService): void
     {
         $exam = Exam::query()->find($this->examId);
         if (! $exam) {
@@ -49,18 +48,8 @@ class GenerateExamEssayFeedback implements ShouldQueue
                 ->orderBy('id')
                 ->chunkById(200, function ($submissions) use (&$total): void {
                     /** @var Collection<int, ExamSubmission> $submissions */
-                    $draftQuestions = AiEssayFeedbackDraft::query()
-                        ->withoutGlobalScope('workspace')
-                        ->whereIn('exam_submission_id', $submissions->pluck('id'))
-                        ->get(['exam_submission_id', 'question_number'])
-                        ->groupBy('exam_submission_id')
-                        ->map(fn (Collection $drafts) => $drafts->pluck('question_number')->map(fn ($number) => (int) $number)->all());
-
                     foreach ($submissions as $submission) {
-                        $total += $this->candidateCount(
-                            $submission->answers ?? [],
-                            $draftQuestions->get($submission->id, []),
-                        );
+                        $total += $this->candidateCount($submission->answers ?? []);
                     }
                 });
 
@@ -74,7 +63,7 @@ class GenerateExamEssayFeedback implements ShouldQueue
                 ->where('exam_id', $exam->id)
                 ->with(['user:id,name', 'examPart:id,title'])
                 ->orderBy('id')
-                ->chunkById(50, function ($submissions) use ($aiService, $reviews, $run) {
+                ->chunkById(50, function ($submissions) use ($aiService, $run) {
                     foreach ($submissions as $submission) {
                         $latest = ExamAiFeedbackRun::query()->find($run->id);
                         if (! $latest || $latest->status !== 'running') {
@@ -86,23 +75,16 @@ class GenerateExamEssayFeedback implements ShouldQueue
                             'current_part_title' => $submission->examPart?->title,
                         ])->save();
 
-                        $before = AiEssayFeedbackDraft::query()
-                            ->withoutGlobalScope('workspace')
-                            ->where('exam_submission_id', $submission->id)
-                            ->where('review_status', AiEssayFeedbackDraft::STATUS_AWAITING_REVIEW)
-                            ->count();
+                        $before = $this->candidateCount($submission->answers ?? []);
 
-                        (new GradeExamSubmissionEssays($submission->id))->handle($aiService, $reviews);
+                        (new GradeExamSubmissionEssays($submission->id))->handle($aiService);
 
-                        $after = AiEssayFeedbackDraft::query()
-                            ->withoutGlobalScope('workspace')
-                            ->where('exam_submission_id', $submission->id)
-                            ->where('review_status', AiEssayFeedbackDraft::STATUS_AWAITING_REVIEW)
-                            ->count();
-                        $created = max(0, $after - $before);
+                        $submission->refresh();
+                        $after = $this->candidateCount($submission->answers ?? []);
+                        $processed = max(0, $before - $after);
 
-                        if ($created > 0) {
-                            $latest->increment('processed_essays', $created);
+                        if ($processed > 0) {
+                            $latest->increment('processed_essays', $processed);
                         }
                         if ($submission->fresh()->grading_failed) {
                             $latest->increment('skipped_essays');
@@ -140,14 +122,14 @@ class GenerateExamEssayFeedback implements ShouldQueue
         }
     }
 
-    /** @param array<int, int> $existingDraftQuestions */
-    private function candidateCount(array $answers, array $existingDraftQuestions): int
+    /** @param array<int, mixed> $answers */
+    private function candidateCount(array $answers): int
     {
         return collect($answers)
             ->filter(fn ($answer): bool => is_array($answer)
                 && ($answer['question_type'] ?? null) === 'essay'
+                && EssayGradingMethod::forAnswer($answer) === EssayGradingMethod::Ai
                 && trim((string) ($answer['answer'] ?? '')) !== ''
-                && ! in_array((int) ($answer['question_number'] ?? 0), $existingDraftQuestions, true)
                 && ! (
                     array_key_exists('ai_score', $answer)
                     && trim((string) ($answer['ai_feedback'] ?? '')) !== ''

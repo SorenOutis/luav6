@@ -2,9 +2,11 @@
 
 namespace App\Filament\Resources\Exams\Schemas;
 
+use App\Enums\EssayGradingMethod;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -134,6 +136,17 @@ class ExamForm
                                             ->default(fn ($get) => $get('../../points') ?? 1)
                                             ->required()
                                             ->columnSpan(1),
+                                        Radio::make('grading_method')
+                                            ->label('Essay Grading')
+                                            ->options(EssayGradingMethod::options())
+                                            ->default(EssayGradingMethod::Ai->value)
+                                            ->formatStateUsing(fn (?string $state): string => EssayGradingMethod::tryFrom($state)?->value ?? EssayGradingMethod::Ai->value)
+                                            ->helperText('Automatic grades are applied as soon as the AI finishes. Manual essays stay pending until a teacher enters the final score.')
+                                            ->required(fn ($get): bool => $get('type') === 'essay')
+                                            ->visible(fn ($get): bool => $get('type') === 'essay')
+                                            ->dehydrated(fn ($get): bool => $get('type') === 'essay')
+                                            ->inline()
+                                            ->columnSpanFull(),
                                         Repeater::make('options')
                                             ->label('Choices')
                                             ->schema([
