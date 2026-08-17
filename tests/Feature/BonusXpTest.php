@@ -15,6 +15,7 @@ use App\Models\Section;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\BonusXpService;
+use Illuminate\Support\Facades\DB;
 
 use function Pest\Laravel\actingAs;
 
@@ -51,13 +52,18 @@ it('cannot claim twice on the same day', function () {
     Setting::set('daily_claim_bonus_enabled', '1');
     [$student] = bonusClaimContext();
 
-    BonusXpClaim::create([
+    // Seed the ledger exactly the way BonusXpService::claim() writes it
+    // (plain `Y-m-d` string via the query builder) so the same-day
+    // `claim_date` comparison in canClaim() matches on sqlite too.
+    DB::table('bonus_xp_claims')->insert([
         'user_id' => $student->id,
         'season_id' => Season::current()?->id,
         'claim_date' => now()->toDateString(),
         'amount' => 5,
         'streak' => 0,
         'claimed_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
     ]);
 
     expect(app(BonusXpService::class)->canClaim($student))->toBeFalse();
