@@ -121,7 +121,7 @@ class StudentPageRegistry
             })
             ->all();
 
-        Setting::set(static::SETTING_KEY, json_encode($normalized));
+        Setting::setGlobal(static::SETTING_KEY, json_encode($normalized));
     }
 
     public static function controlFor(string $key): array

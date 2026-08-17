@@ -54,6 +54,43 @@ class Setting extends Model
         return $setting;
     }
 
+    /**
+     * Persist a platform-wide setting (workspace_id = null).
+     *
+     * Platform Settings toggles (registration/login, daily & bonus XP claim,
+     * AI chat, provider credentials, school branding, student page controls)
+     * are consumed from contexts that never see an admin's workspace scope:
+     *
+     *  - Public registration/login pages run unauthenticated, so
+     *    WorkspaceContext::id() is null and only the global map is read.
+     *  - Students read settings inside their own workspace scope, then fall
+     *    back to the global map. The tenant migration gave every admin their
+     *    own workspace, so values saved with Setting::set() from Platform
+     *    Settings landed in the admin's workspace and silently did nothing
+     *    for every other consumer.
+     *
+     * Only genuinely tenant-scoped keys (the Workspace AI Budget section)
+     * should go through Setting::set(); everything else on the Platform
+     * Settings page must be written globally with this method.
+     */
+    public static function setGlobal(string $key, $value): self
+    {
+        $setting = static::query()->firstOrNew([
+            'key' => $key,
+            'workspace_id' => null,
+        ]);
+
+        if (! $setting->exists) {
+            $user = auth()->user();
+            $setting->admin_id = $user && $user->is_admin ? $user->id : null;
+        }
+
+        $setting->value = $value;
+        $setting->save();
+
+        return $setting;
+    }
+
     /** @return array<string, mixed> */
     private static function globalMap(): array
     {
