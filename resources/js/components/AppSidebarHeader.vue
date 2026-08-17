@@ -179,7 +179,8 @@ const markAllNotificationsAsRead = () => {
 
                     <div
                         v-if="notifications().items.length > 0"
-                        class="max-h-96 overflow-y-auto p-2"
+                        data-lenis-prevent
+                        class="max-h-96 overflow-y-auto overscroll-contain p-2"
                     >
                         <button
                             v-for="notification in notifications().items"
