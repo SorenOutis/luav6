@@ -24,6 +24,7 @@ import {
     onMounted,
     onBeforeUnmount,
 } from 'vue';
+import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,6 +42,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { resolveChatError, withErrorReference } from '@/lib/chatErrors';
 import { renderMarkdown } from '@/lib/markdown';
+import type { PendingAiAction } from '@/types/aiActions';
 
 const page = usePage();
 
@@ -84,6 +86,7 @@ interface ChatMessage {
 }
 
 const messages = ref<ChatMessage[]>([]);
+const aiActions = ref<PendingAiAction[]>([]);
 const isLoading = ref(false);
 const showBlockedWarning = ref(false);
 
@@ -386,6 +389,35 @@ const thinkingLabel = (msg: ChatMessage): string => {
     return 'View thinking';
 };
 
+const loadAiActions = async () => {
+    if (!isAdmin.value) {
+        aiActions.value = [];
+        return;
+    }
+
+    try {
+        const response = await axios.get('/api/ai-actions', {
+            params: currentSessionId.value
+                ? { session_id: currentSessionId.value }
+                : {},
+        });
+        aiActions.value = (response.data.data ?? []) as PendingAiAction[];
+    } catch (error) {
+        console.error('Failed to load AI approval actions:', error);
+    }
+};
+
+const updateAiAction = (updated: PendingAiAction) => {
+    const index = aiActions.value.findIndex(
+        (action) => action.id === updated.id,
+    );
+    if (index === -1) {
+        aiActions.value.unshift(updated);
+    } else {
+        aiActions.value.splice(index, 1, updated);
+    }
+};
+
 const fetchHistory = async () => {
     try {
         const response = await axios.get('/api/chat/history');
@@ -402,6 +434,7 @@ const fetchHistory = async () => {
                 },
             ];
         }
+        await loadAiActions();
         await scrollToBottom();
     } catch (error) {
         console.error('Failed to fetch chat history:', error);
@@ -439,6 +472,7 @@ const clearChat = async () => {
     }
 
     currentSessionId.value = null;
+    aiActions.value = [];
     messages.value = [
         {
             role: 'assistant',
@@ -721,6 +755,11 @@ const streamMessage = async (
             signal: controller.signal,
         });
 
+        const responseSessionId = response.headers.get('X-Chat-Session-Id');
+        if (responseSessionId) {
+            currentSessionId.value = responseSessionId;
+        }
+
         if (!response.ok) {
             let streamErrorData: unknown;
             try {
@@ -916,6 +955,7 @@ const sendMessage = async () => {
         await sendMessageNonStreaming(userMessage);
     } finally {
         isLoading.value = false;
+        await loadAiActions();
         await scrollToBottom();
         focusTextarea();
     }
@@ -1211,6 +1251,19 @@ watch(inputMessage, () => {
                             </div>
                         </div>
                     </template>
+
+                    <div
+                        v-if="isAdmin && aiActions.length > 0"
+                        class="flex flex-col gap-2"
+                    >
+                        <AiActionApprovalCard
+                            v-for="action in aiActions"
+                            :key="action.id"
+                            :action="action"
+                            compact
+                            @updated="updateAiAction"
+                        />
+                    </div>
 
                     <!-- Suggestion chips -->
                     <div

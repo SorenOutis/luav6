@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ExamSubmissions\Tables;
 
 use App\Models\ExamSubmission;
 use App\Models\Section;
+use App\Models\Workspace;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -21,6 +22,11 @@ class ExamSubmissionsTable
     {
         return $table
             ->columns([
+                TextColumn::make('exam.workspace.name')
+                    ->label('Workspace')
+                    ->badge()
+                    ->placeholder('Platform global')
+                    ->visible(fn (): bool => auth()->user()?->isSuperAdmin() ?? false),
                 TextColumn::make('user.name')
                     ->label('Student')
                     ->searchable()
@@ -48,6 +54,13 @@ class ExamSubmissionsTable
                 TextColumn::make('status')
                     ->label('Grading status')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'pending_ai' => 'AI proposal pending',
+                        'pending_review' => 'Pending teacher review',
+                        'graded' => 'Graded',
+                        'submitted' => 'Submitted',
+                        default => str($state)->replace('_', ' ')->title()->toString(),
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         'graded' => 'success',
                         'pending_ai', 'pending_review' => 'warning',
@@ -69,12 +82,23 @@ class ExamSubmissionsTable
             ])
             ->defaultGroup('user.name')
             ->filters([
+                SelectFilter::make('workspace_id')
+                    ->label('Workspace')
+                    ->options(fn (): array => Workspace::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->visible(fn (): bool => auth()->user()?->isSuperAdmin() ?? false)
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn ($query, $workspaceId) => $query->whereHas(
+                            'exam',
+                            fn ($examQuery) => $examQuery->withoutGlobalScope('workspace')->where('workspace_id', $workspaceId),
+                        ),
+                    )),
                 SelectFilter::make('status')
                     ->label('Status')
                     ->options([
                         'submitted' => 'Submitted',
-                        'pending_ai' => 'Pending AI',
-                        'pending_review' => 'Pending Review',
+                        'pending_ai' => 'AI Proposal Pending',
+                        'pending_review' => 'Pending Teacher Review',
                         'grading_failed' => 'Grading failed',
                         'graded' => 'Graded',
                     ]),

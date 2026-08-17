@@ -194,7 +194,7 @@ it('clears only the season keys when a season is saved', function () {
     Season::factory()->active()->create();
 
     expect($cache->has('unrelated:value'))->toBeTrue()
-        ->and($cache->has('season:current:guest'))->toBeFalse();
+        ->and($cache->has('season:current:global'))->toBeFalse();
 });
 
 it('re-reads the active season after one is saved', function () {
@@ -226,7 +226,7 @@ it('does not leak the memoized season across requests', function () {
 
     actingAs(User::factory()->create());
 
-    expect(app(RequestCache::class)->has("season:current:{$adminA->id}"))->toBeFalse();
+    expect(app(RequestCache::class)->has("season:current:{$adminA->current_workspace_id}"))->toBeFalse();
 });
 
 // ─────────────────────────────────────────────

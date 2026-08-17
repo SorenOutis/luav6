@@ -10,6 +10,7 @@
  */
 
 use App\Filament\Pages\AiSettings;
+use App\Filament\Pages\AiUsageDashboard;
 use App\Models\Setting;
 use App\Models\User;
 use Filament\Forms\Components\Repeater;
@@ -19,12 +20,14 @@ beforeEach(function () {
     Setting::flushAllCaches();
 });
 
-it('restricts access to super admins', function () {
+it('allows every tenant admin to manage their workspace settings', function () {
     $this->actingAs(User::factory()->admin()->create());
-    expect(AiSettings::canAccess())->toBeFalse();
+    expect(AiSettings::canAccess())->toBeTrue()
+        ->and(AiUsageDashboard::canAccess())->toBeTrue();
 
     $this->actingAs(User::factory()->superAdmin()->create());
-    expect(AiSettings::canAccess())->toBeTrue();
+    expect(AiSettings::canAccess())->toBeTrue()
+        ->and(AiUsageDashboard::canAccess())->toBeTrue();
 });
 
 it('shows a card with a default checkbox for every text-capable provider', function () {
@@ -52,6 +55,47 @@ it('shows a card with a default checkbox for every text-capable provider', funct
         ->assertSchemaComponentExists('jina_api_key', 'form')
         ->assertSchemaComponentExists('voyageai_api_key', 'form')
         ->assertSchemaComponentExists('eleven_api_key', 'form');
+});
+
+it('shows and persists workspace budget fallback and cost-rate controls', function () {
+    $this->actingAs(User::factory()->admin()->create());
+
+    Livewire::test(AiSettings::class)
+        ->assertSchemaComponentExists('ai_budget_enabled', 'form')
+        ->assertSchemaComponentExists('ai_budget_daily_tokens', 'form')
+        ->assertSchemaComponentExists('ai_budget_monthly_tokens', 'form')
+        ->assertSchemaComponentExists('ai_budget_daily_cost', 'form')
+        ->assertSchemaComponentExists('ai_budget_monthly_cost', 'form')
+        ->assertSchemaComponentExists('ai_fallback_mode', 'form')
+        ->assertSchemaComponentExists('ai_fallback_provider', 'form')
+        ->assertSchemaComponentExists('ai_budget_cost_rates', 'form')
+        ->set('data.ai_budget_enabled', true)
+        ->set('data.ai_budget_daily_tokens', 50000)
+        ->set('data.ai_budget_monthly_tokens', 1000000)
+        ->set('data.ai_budget_daily_cost', 1.25)
+        ->set('data.ai_budget_monthly_cost', 20)
+        ->set('data.ai_budget_warning_percent', 75)
+        ->set('data.ai_fallback_mode', 'provider_failure_or_budget')
+        ->set('data.ai_fallback_provider', 'ollama')
+        ->set('data.ai_budget_cost_rates', [[
+            'provider' => 'openai',
+            'model' => 'gpt-4o-mini',
+            'input' => 0.15,
+            'output' => 0.6,
+        ]])
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(Setting::get('ai_budget_enabled'))->toBe('1')
+        ->and(Setting::get('ai_budget_daily_tokens'))->toBe('50000')
+        ->and(Setting::get('ai_budget_monthly_tokens'))->toBe('1000000')
+        ->and(Setting::get('ai_budget_daily_cost'))->toBe('1.25')
+        ->and(Setting::get('ai_budget_monthly_cost'))->toBe('20')
+        ->and(Setting::get('ai_budget_warning_percent'))->toBe('75')
+        ->and(Setting::get('ai_fallback_mode'))->toBe('provider_failure_or_budget')
+        ->and(Setting::get('ai_fallback_provider'))->toBe('ollama')
+        ->and(Setting::get('ollama_enabled'))->toBe('1')
+        ->and(json_decode(Setting::get('ai_budget_cost_rates'), true))->toHaveCount(1);
 });
 
 it('checks the stored default provider on mount', function () {

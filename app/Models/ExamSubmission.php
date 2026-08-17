@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\ExamSubmissionAnswersCast;
+use App\Support\GamificationSyncContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -75,23 +76,23 @@ class ExamSubmission extends Model
         $reason = 'Exam Submission';
         $description = 'Earned from Exam: '.($exam?->title ?? 'Unknown');
 
+        $context = app(GamificationSyncContext::class);
+
         if ($exam && $exam->section_id) {
             $sectionProgress = $user->activeSectionProgress($exam->section_id);
-            $wasSyncing = SectionProgress::$isSyncing;
-            SectionProgress::$isSyncing = true;
-            $sectionProgress->increment('points', $delta);
-            $sectionProgress->save(); // Trigger sync
-            SectionProgress::$isSyncing = $wasSyncing;
+            $context->withoutAutomaticHistory(function () use ($sectionProgress, $delta): void {
+                $sectionProgress->points = (float) $sectionProgress->points + $delta;
+                $sectionProgress->save();
+            });
 
             // Academic marks and progression XP are intentionally separate.
             // Exam XP is granted once per completed exam by ExamXpAwardService.
             $user->recordGamificationHistory(0, $delta, $reason, $description, $exam->section_id);
         } elseif ($progress = $user->activeSeasonProgress()) {
-            $wasSyncing = SectionProgress::$isSyncing;
-            SectionProgress::$isSyncing = true;
-            $progress->increment('points', $delta);
-            $progress->save(); // Trigger sync
-            SectionProgress::$isSyncing = $wasSyncing;
+            $context->withoutAutomaticHistory(function () use ($progress, $delta): void {
+                $progress->increment('points', $delta);
+                $progress->save();
+            });
 
             $user->recordGamificationHistory(0, $delta, $reason, $description, null, $progress->season_id);
         } else {
@@ -115,5 +116,10 @@ class ExamSubmission extends Model
     public function examPart()
     {
         return $this->belongsTo(ExamPart::class);
+    }
+
+    public function aiFeedbackDrafts()
+    {
+        return $this->hasMany(AiEssayFeedbackDraft::class);
     }
 }

@@ -9,7 +9,7 @@ class Reward extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['name', 'description', 'points_cost', 'admin_id'];
+    protected $fillable = ['name', 'description', 'points_cost', 'workspace_id', 'admin_id'];
 
     public function users()
     {

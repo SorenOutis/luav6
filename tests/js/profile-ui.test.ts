@@ -9,16 +9,27 @@ import PublicProfile from '@/pages/User/PublicProfile.vue';
 
 vi.mock('@inertiajs/vue3', () => {
     const resolveHref = (href: unknown) =>
-        typeof href === 'string' ? href : ((href as { url?: string })?.url ?? '#');
+        typeof href === 'string'
+            ? href
+            : ((href as { url?: string })?.url ?? '#');
 
     return {
         Link: defineComponent({
             props: { href: { type: [String, Object], default: '#' } },
-            setup: (props, { slots }) => () =>
-                h('a', { href: resolveHref(props.href) }, slots.default?.()),
+            setup:
+                (props, { slots }) =>
+                () =>
+                    h(
+                        'a',
+                        { href: resolveHref(props.href) },
+                        slots.default?.(),
+                    ),
         }),
         Head: defineComponent({
-            setup: (_, { slots }) => () => h('div', slots.default?.()),
+            setup:
+                (_, { slots }) =>
+                () =>
+                    h('div', slots.default?.()),
         }),
     };
 });
@@ -42,12 +53,15 @@ const LinkStub = defineComponent({
 
 vi.mock('@/layouts/AppLayout.vue', () => ({
     default: defineComponent({
-        setup: (_, { slots }) => () => h('div', slots.default?.()),
+        setup:
+            (_, { slots }) =>
+            () =>
+                h('div', slots.default?.()),
     }),
 }));
 
 const profileUser = {
-    id: 42,
+    id: '0198f0a1-7c5a-7000-8000-000000000042',
     name: 'Maria Santos',
     avatar: null,
     cover_photo: '/storage/covers/banner.jpg',
@@ -208,6 +222,26 @@ describe('public profile — social layout', () => {
         expect(wrapper.findAll('[role="tab"]')).toHaveLength(2);
     });
 
+    it('hides private activity social and achievement sections when disabled', () => {
+        const wrapper = mountProfile({
+            profileUser: { ...profileUser, isCurrentUser: false },
+            privacyControlsEnabled: true,
+            canViewActivity: false,
+            canViewPrivateProgress: false,
+            canViewAchievements: false,
+            canViewSocial: false,
+            canInteract: false,
+            history,
+            badges,
+            courses,
+        });
+
+        expect(wrapper.findAll('[role="tab"]')).toHaveLength(0);
+        expect(wrapper.text()).not.toContain('Followers');
+        expect(wrapper.text()).not.toContain('Badges');
+        expect(wrapper.text()).not.toContain('Follow');
+    });
+
     it('renders the cover photo at the same 3:1 frame as the upload preview', () => {
         const wrapper = mountProfile();
         const cover = wrapper.find('img[src="/storage/covers/banner.jpg"]');
@@ -316,7 +350,9 @@ describe('cover photo cropper', () => {
         expect(html).toContain('Position your cover photo');
         expect(html).toContain('blob:cover');
         expect(html).toContain('Drag to reposition');
-        expect(document.body.querySelector('input[type="range"]')).not.toBeNull();
+        expect(
+            document.body.querySelector('input[type="range"]'),
+        ).not.toBeNull();
 
         wrapper.unmount();
     });

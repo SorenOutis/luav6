@@ -10,7 +10,7 @@ class UserFollowedNotification extends Notification
 {
     use Queueable;
 
-    public function __construct(protected int $followerId, protected string $followerName, protected ?string $followerAvatar) {}
+    public function __construct(protected string $followerPublicId, protected string $followerName, protected ?string $followerAvatar) {}
 
     /** @return array<int, string> */
     public function via(object $notifiable): array
@@ -41,7 +41,7 @@ class UserFollowedNotification extends Notification
             'message' => "{$this->followerName} started following you.",
             'meta' => 'Social',
             'image' => $this->followerAvatar,
-            'href' => "/u/{$this->followerId}",
+            'href' => "/u/{$this->followerPublicId}",
         ];
     }
 }

@@ -10,6 +10,7 @@ use App\Filament\Resources\ExamSubmissions\Pages\MonitorExamSessions;
 use App\Filament\Resources\ExamSubmissions\Schemas\ExamSubmissionForm;
 use App\Filament\Resources\ExamSubmissions\Tables\ExamSubmissionsTable;
 use App\Models\ExamSubmission;
+use App\Support\WorkspaceContext;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -27,9 +28,13 @@ class ExamSubmissionResource extends Resource
         $query = parent::getEloquentQuery();
         $user = auth()->user();
 
-        // Regular admins only see submissions from students enrolled in their sections
-        if ($user && $user->is_admin && ! $user->isSuperAdmin()) {
-            $query->whereHas('user.sections', fn (Builder $q) => $q->where('admin_id', $user->id));
+        // Exam's workspace scope is the tenant boundary for submissions.
+        if (
+            $user
+            && $user->is_admin
+            && (! $user->isSuperAdmin() || app(WorkspaceContext::class)->isInspecting())
+        ) {
+            $query->whereHas('exam');
         }
 
         return $query;

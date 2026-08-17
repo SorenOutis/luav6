@@ -34,6 +34,7 @@ class QuickActionsWidget extends Widget
 
         // Compute pending exam submissions (no score yet)
         $pendingSubmissions = ExamSubmission::query()
+            ->whereHas('exam')
             ->whereNull('score')
             ->count();
 

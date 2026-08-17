@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Courses\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -15,6 +16,7 @@ class CoursesTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 ImageColumn::make('cover_photo')
                     ->disk('public')
                     ->toggleable(),
@@ -41,6 +43,7 @@ class CoursesTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 //
             ])
             ->recordActions([

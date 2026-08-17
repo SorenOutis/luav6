@@ -2,19 +2,13 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Setting;
-use App\Services\AiUsageTracker;
+use App\Filament\Pages\AiUsageDashboard;
+use App\Services\AiBudgetReportingService;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
-/**
- * Shows an estimate of today's Cloudflare Workers AI neuron usage against the
- * 10,000/day free cap. The estimate is computed from the calls the app itself
- * makes (chat widget, essay grading, AI question/source generation) — Cloudflare
- * does not expose a public usage API, so treat the numbers as approximate and
- * confirm against the Cloudflare dashboard.
- */
+/** Workspace-scoped AI budget and usage overview. */
 class NeuronUsageWidget extends StatsOverviewWidget
 {
     protected ?string $pollingInterval = '60s';
@@ -23,64 +17,61 @@ class NeuronUsageWidget extends StatsOverviewWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected ?string $heading = 'AI Usage — Cloudflare Neurons (est.)';
+    protected ?string $heading = 'Workspace AI Usage & Budget';
 
-    protected ?string $description = 'Estimated from calls this app has made. Cloudflare only exposes exact usage in its dashboard.';
+    protected ?string $description = 'Atomic token reservations plus estimated provider spend. Open the detailed dashboard for feature, provider, and event breakdowns.';
 
-    /**
-     * @return array<Stat>
-     */
+    /** @return array<Stat> */
     protected function getStats(): array
     {
-        $today = AiUsageTracker::neuronsForDay();
-        $limit = AiUsageTracker::DAILY_NEURON_LIMIT;
-        $percent = (int) round(($today / $limit) * 100);
-
-        $weekSeries = array_values(AiUsageTracker::neuronsForLastDays(7));
-        $requests = AiUsageTracker::requestsTodayBySource();
-        $totalRequests = array_sum($requests);
-
-        $color = $percent >= 80 ? 'danger' : ($percent >= 50 ? 'warning' : 'success');
-
-        // Filament v5.x Stat has no progress() method, so render a compact
-        // text bar (10 blocks) as a version-safe visual.
-        $filled = (int) min(10, round(($percent / 100) * 10));
-        $bar = str_repeat('█', $filled).str_repeat('░', 10 - $filled);
-
-        $provider = Setting::get('ai_provider', 'gemini');
-
-        $callDescription = sprintf(
-            '%s chat · %s grading · %s generation',
-            number_format($requests['chat']),
-            number_format($requests['grading']),
-            number_format($requests['generation']),
+        $report = app(AiBudgetReportingService::class)->dashboard();
+        $daily = $report['daily'];
+        $monthly = $report['monthly'];
+        $trend = array_map(fn (array $day): int => $day['tokens'], $report['trend']);
+        $featureCalls = collect($report['features'])->mapWithKeys(
+            fn (array $feature): array => [$feature['feature'] => $feature['requests']],
         );
-
-        if ($provider === 'cloudflare') {
-            $chatModel = Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash');
-            $gradeModel = Setting::get('cloudflare_grading_model') ?? Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct');
-            $callDescription .= ' · chat: '.$chatModel.' · grade: '.$gradeModel;
-        } elseif ($provider === 'gemini') {
-            $chatModel = Setting::get('gemini_chat_model', 'gemini-3.5-flash');
-            $gradeModel = Setting::get('gemini_grading_model', 'gemini-3.5-flash');
-            $callDescription .= ' · chat: '.$chatModel.' · grade: '.$gradeModel;
-        } else {
-            $callDescription .= ' · provider: '.$provider;
-        }
+        $tokenPercent = $daily['token_percent'];
+        $costPercent = $daily['cost_percent'];
+        $highestPercent = max((float) ($tokenPercent ?? 0), (float) ($costPercent ?? 0));
+        $color = $highestPercent >= 90 ? 'danger' : ($highestPercent >= 70 ? 'warning' : 'success');
+        $url = AiUsageDashboard::getUrl();
 
         return [
-            Stat::make('AI Neurons Today (est.)', number_format(round($today)).' / '.number_format($limit))
-                ->description($bar.' '.$percent.'% used · free cap resets 00:00 UTC')
-                ->descriptionIcon('heroicon-m-cpu-chip', IconPosition::Before)
+            Stat::make(
+                $report['platformMode'] ? 'Platform Tokens Today' : 'Tokens Today',
+                number_format($daily['committed_tokens'])
+                    .($daily['token_limit'] ? ' / '.number_format($daily['token_limit']) : ''),
+            )
+                ->description(number_format($daily['reserved_tokens']).' reserved · '.number_format($daily['blocked_count']).' blocked')
+                ->descriptionIcon('heroicon-m-scale', IconPosition::Before)
                 ->icon('heroicon-o-sparkles')
-                ->chart($weekSeries)
-                ->color($color),
+                ->chart($trend)
+                ->color($color)
+                ->url($url),
 
-            Stat::make('AI Calls Today', number_format($totalRequests))
-                ->description($callDescription)
-                ->descriptionIcon('heroicon-m-chat-bubble-left-right', IconPosition::Before)
+            Stat::make(
+                'Estimated Cost Today',
+                '$'.number_format($daily['committed_cost_micros'] / 1_000_000, 4)
+                    .($daily['cost_limit_micros'] ? ' / $'.number_format($daily['cost_limit_micros'] / 1_000_000, 2) : ''),
+            )
+                ->description('$'.number_format($monthly['committed_cost_micros'] / 1_000_000, 4).' estimated this month')
+                ->descriptionIcon('heroicon-m-banknotes', IconPosition::Before)
+                ->icon('heroicon-o-currency-dollar')
+                ->color($color)
+                ->url($url),
+
+            Stat::make('AI Calls This Month', number_format(array_sum($featureCalls->all())))
+                ->description(sprintf(
+                    '%s chat · %s grading · %s generation',
+                    number_format((int) ($featureCalls['chat'] ?? 0)),
+                    number_format((int) ($featureCalls['grading'] ?? 0)),
+                    number_format((int) ($featureCalls['generation'] ?? 0)),
+                ))
+                ->descriptionIcon('heroicon-m-chart-bar', IconPosition::Before)
                 ->icon('heroicon-o-command-line')
-                ->color('info'),
+                ->color('info')
+                ->url($url),
         ];
     }
 }

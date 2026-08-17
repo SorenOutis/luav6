@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\BadgeAwardService;
 use App\Services\StudentNotificationService;
+use App\Support\GamificationSyncContext;
 use Illuminate\Database\Eloquent\Model;
 
 class SeasonProgress extends Model
@@ -12,112 +13,109 @@ class SeasonProgress extends Model
 
     protected $fillable = ['user_id', 'season_id', 'exp', 'level', 'points'];
 
-    protected static function booted()
+    protected static function booted(): void
     {
-        static::creating(function (SeasonProgress $progress) {
-            if (! $progress->season_id) {
-                $season = Season::where('is_active', true)->first() ?? Season::first();
-
-                if (! $season) {
-                    $season = Season::create([
-                        'name' => 'Season 1',
-                        'start_date' => now(),
-                        'end_date' => now()->addMonths(3),
-                        'is_active' => true,
-                    ]);
-                }
-
-                $progress->season_id = $season->id;
-            }
-        });
-
-        static::saving(function (SeasonProgress $progress) {
-            // Level 1: 0-99 XP
-            // Level 2: 100-199 XP
-            $progress->level = floor($progress->exp / 100) + 1;
-        });
-
-        static::updated(function (SeasonProgress $progress) {
-            if (SectionProgress::$isSyncing) {
+        static::creating(function (SeasonProgress $progress): void {
+            if ($progress->season_id) {
                 return;
             }
 
-            if ($progress->wasChanged('exp') || $progress->wasChanged('points')) {
-                $expDelta = (float) $progress->exp - (float) $progress->getOriginal('exp');
-                $pointsDelta = (float) $progress->points - (float) $progress->getOriginal('points');
+            $season = Season::where('is_active', true)->first() ?? Season::first();
 
-                if (abs($expDelta) > 0.001 || abs($pointsDelta) > 0.001) {
-                    $user = $progress->user;
-                    if ($user) {
-                        $user->increment('exp', $expDelta);
-                        $user->increment('points', $pointsDelta);
-                        $user->level = floor($user->exp / 100) + 1;
-                        $user->save();
-
-                        app(BadgeAwardService::class)->awardEligibleBadges(
-                            $user,
-                            (int) $progress->level,
-                            $progress->season_id
-                        );
-
-                        if ($progress->wasChanged('level') && (int) $progress->level > (int) $progress->getOriginal('level')) {
-                            app(StudentNotificationService::class)->sendLevelUp($user, (int) $progress->level);
-                        }
-
-                        // Recorded for audit, but not shown to the student
-                        // (filtered from feeds) and no XP notification sent.
-                        $user->recordGamificationHistory(
-                            $expDelta,
-                            $pointsDelta,
-                            'Admin Adjustment',
-                            'Manual adjustment for Season: '.($progress->season?->name ?? 'Unknown'),
-                            null,
-                            $progress->season_id,
-                            null,
-                            false
-                        );
-                    }
-                }
+            if (! $season) {
+                $season = Season::create([
+                    'name' => 'Season 1',
+                    'start_date' => now(),
+                    'end_date' => now()->addMonths(3),
+                    'is_active' => true,
+                ]);
             }
+
+            $progress->season_id = $season->id;
         });
 
-        static::created(function (SeasonProgress $progress) {
-            if (SectionProgress::$isSyncing) {
+        static::saving(function (SeasonProgress $progress): void {
+            $progress->level = SectionProgress::levelFromExp($progress->exp);
+        });
+
+        static::updated(function (SeasonProgress $progress): void {
+            if (! $progress->wasChanged('exp') && ! $progress->wasChanged('points')) {
                 return;
             }
 
-            $expDelta = (float) $progress->exp;
-            $pointsDelta = (float) $progress->points;
-
-            if ($expDelta > 0 || $pointsDelta > 0) {
-                $user = $progress->user;
-                if ($user) {
-                    $user->increment('exp', $expDelta);
-                    $user->increment('points', $pointsDelta);
-                    $user->level = floor($user->exp / 100) + 1;
-                    $user->save();
-
-                    app(BadgeAwardService::class)->awardEligibleBadges(
-                        $user,
-                        (int) $progress->level,
-                        $progress->season_id
-                    );
-
-                    if ((int) $progress->level > 1) {
-                        app(StudentNotificationService::class)->sendLevelUp($user, (int) $progress->level);
-                    }
-
-                    $user->recordGamificationHistory(
-                        $expDelta,
-                        $pointsDelta,
-                        'Season Reward',
-                        'Initial progress for Season: '.($progress->season?->name ?? 'Unknown'),
-                        null,
-                        $progress->season_id
-                    );
-                }
-            }
+            self::syncDelta(
+                $progress,
+                (float) $progress->exp - (float) $progress->getOriginal('exp'),
+                (float) $progress->points - (float) $progress->getOriginal('points'),
+                created: false,
+            );
         });
+
+        static::created(function (SeasonProgress $progress): void {
+            self::syncDelta(
+                $progress,
+                (float) $progress->exp,
+                (float) $progress->points,
+                created: true,
+            );
+        });
+    }
+
+    private static function syncDelta(
+        SeasonProgress $progress,
+        float $expDelta,
+        float $pointsDelta,
+        bool $created,
+    ): void {
+        if (abs($expDelta) <= 0.001 && abs($pointsDelta) <= 0.001) {
+            return;
+        }
+
+        $context = app(GamificationSyncContext::class);
+        if ($context->seasonPropagationSuppressed()) {
+            return;
+        }
+
+        $user = $progress->user;
+        if (! $user) {
+            return;
+        }
+
+        $user->increment('exp', $expDelta);
+        $user->increment('points', $pointsDelta);
+        $user->level = SectionProgress::levelFromExp($user->exp);
+        $user->save();
+
+        app(BadgeAwardService::class)->awardEligibleBadges(
+            $user,
+            (int) $progress->level,
+            $progress->season_id,
+        );
+
+        $levelIncreased = $created
+            ? (int) $progress->level > 1
+            : $progress->wasChanged('level')
+                && (int) $progress->level > (int) $progress->getOriginal('level');
+
+        if ($levelIncreased) {
+            app(StudentNotificationService::class)->sendLevelUp($user, (int) $progress->level);
+        }
+
+        if ($context->automaticHistorySuppressed()) {
+            return;
+        }
+
+        $user->recordGamificationHistory(
+            $expDelta,
+            $pointsDelta,
+            $created ? 'Season Reward' : 'Admin Adjustment',
+            ($created ? 'Initial progress for Season: ' : 'Manual adjustment for Season: ')
+                .($progress->season?->name ?? 'Unknown'),
+            null,
+            $progress->season_id,
+            null,
+            $created,
+        );
     }
 
     public function user()

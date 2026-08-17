@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\AnonymousMessage;
+use App\Models\Assignment;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use Filament\Support\Enums\IconPosition;
@@ -39,11 +41,14 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
             ->where('is_banned', true)
             ->count();
         $examSubmissions7d = ExamSubmission::query()
+            ->whereHas('exam')
             ->where('created_at', '>=', now()->subDays(7)->startOfDay())
             ->count();
 
-        $totalAssignmentTargets = DB::table('assignment_user')->count();
-        $submittedAssignments = DB::table('assignment_user')->where('submitted', true)->count();
+        $assignmentTargets = DB::table('assignment_user')
+            ->whereIn('assignment_id', Assignment::query()->select('id'));
+        $totalAssignmentTargets = (clone $assignmentTargets)->count();
+        $submittedAssignments = (clone $assignmentTargets)->where('submitted', true)->count();
         $assignmentSubmissionRate = $totalAssignmentTargets > 0
             ? round(($submittedAssignments / $totalAssignmentTargets) * 100, 1)
             : 0.0;
@@ -68,7 +73,7 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
             ->count();
 
         // Anonymous messages this week (engagement signal)
-        $anonymousMessagesWeek = DB::table('anonymous_messages')
+        $anonymousMessagesWeek = AnonymousMessage::query()
             ->where('created_at', '>=', now()->subDays(7)->startOfDay())
             ->count();
 
@@ -154,6 +159,7 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
     private function dailyAssignmentSubmissions(): array
     {
         $raw = DB::table('assignment_user')
+            ->whereIn('assignment_id', Assignment::query()->select('id'))
             ->where('submitted', true)
             ->whereDate('updated_at', '>=', now()->subDays(6)->toDateString())
             ->selectRaw('DATE(updated_at) as day, COUNT(*) as total')
@@ -171,6 +177,7 @@ class AdminAnalyticsOverview extends StatsOverviewWidget
     private function weeklyXpDistribution(): array
     {
         $raw = DB::table('gamification_histories')
+            ->whereIn('user_id', User::query()->where('is_admin', false)->forWorkspace()->select('id'))
             ->whereDate('created_at', '>=', now()->subDays(6)->toDateString())
             ->selectRaw('DATE(created_at) as day, SUM(amount_xp) as total')
             ->groupBy('day')

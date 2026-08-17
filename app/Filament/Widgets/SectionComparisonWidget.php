@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Assignment;
 use App\Models\Section;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -74,12 +75,14 @@ class SectionComparisonWidget extends BaseWidget
                     ->getStateUsing(function ($record) {
                         $total = DB::table('assignment_user')
                             ->join('users', 'assignment_user.user_id', '=', 'users.id')
+                            ->whereIn('assignment_user.assignment_id', Assignment::query()->select('id'))
                             ->join('section_user', 'users.id', '=', 'section_user.user_id')
                             ->where('section_user.section_id', $record->id)
                             ->count();
 
                         $submitted = DB::table('assignment_user')
                             ->join('users', 'assignment_user.user_id', '=', 'users.id')
+                            ->whereIn('assignment_user.assignment_id', Assignment::query()->select('id'))
                             ->join('section_user', 'users.id', '=', 'section_user.user_id')
                             ->where('section_user.section_id', $record->id)
                             ->where('submitted', true)

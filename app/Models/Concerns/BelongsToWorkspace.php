@@ -3,49 +3,98 @@
 namespace App\Models\Concerns;
 
 use App\Models\User;
+use App\Models\Workspace;
+use App\Support\WorkspaceContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/**
- * Scope a model to the current admin's workspace.
- *
- * - Non-super-admin users: All queries are scoped to `admin_id = auth()->id()`
- * - Super admins: No scope — they see everything
- * - Unauthenticated / students: No scope
- * - On create: `admin_id` is auto-set to the current admin's ID
- */
+/** Scope tenant-owned records by workspace_id, not by the creating admin. */
 trait BelongsToWorkspace
 {
-    /**
-     * Boot the trait.
-     */
     protected static function bootBelongsToWorkspace(): void
     {
-        static::addGlobalScope('workspace', function (Builder $builder) {
+        static::addGlobalScope('workspace', function (Builder $builder): void {
+            $model = $builder->getModel();
             $user = auth()->user();
 
-            // Only scope for regular admins (not super admins, not students)
-            if (! $user || ! $user->is_admin || $user->is_super_admin) {
+            // Legacy game tables intentionally remain on their existing
+            // admin_id ownership model until that feature is removed.
+            if (str_starts_with($model->getTable(), 'td_')) {
+                if ($user && $user->is_admin && ! $user->isSuperAdmin()) {
+                    $builder->where($builder->qualifyColumn('admin_id'), $user->id);
+                }
+
                 return;
             }
 
-            $builder->where($builder->qualifyColumn('admin_id'), $user->id);
+            $context = app(WorkspaceContext::class);
+            $workspaceId = $context->id();
+
+            if ($user?->isSuperAdmin() && ! $context->isInspecting()) {
+                return;
+            }
+            if ($workspaceId) {
+                $builder->where($builder->qualifyColumn('workspace_id'), $workspaceId);
+            } else {
+                // Guests and authenticated users without a tenant may only see
+                // explicitly global records, never an arbitrary tenant's rows.
+                $builder->whereNull($builder->qualifyColumn('workspace_id'));
+            }
         });
 
-        static::creating(function (Model $model) {
+        static::creating(function (Model $model): void {
             $user = auth()->user();
 
-            // Auto-set admin_id for regular admins creating records
-            if ($user && $user->is_admin && ! $user->is_super_admin && is_null($model->admin_id)) {
+            if (str_starts_with($model->getTable(), 'td_')) {
+                if ($user && $user->is_admin && ! $user->isSuperAdmin() && is_null($model->admin_id)) {
+                    $model->admin_id = $user->id;
+                }
+
+                return;
+            }
+
+            $workspaceId = app(WorkspaceContext::class)->id();
+            $hasLegacyAdmin = ! in_array($model->getTable(), [
+                'grades',
+                'ai_usage_logs',
+                'ai_budget_periods',
+                'ai_budget_reservations',
+                'ai_budget_events',
+                'ai_essay_feedback_drafts',
+                'ai_review_events',
+            ], true);
+
+            // Importers and tests may provide only the legacy creator. Resolve
+            // that creator's tenant so old write paths stay safe during rollout.
+            if (! $workspaceId && $hasLegacyAdmin && $model->admin_id) {
+                $admin = User::query()->find($model->admin_id);
+                $workspaceId = $admin?->current_workspace_id
+                    ?: $admin?->workspaces()->value('workspaces.id');
+            }
+
+            if ($workspaceId && is_null($model->workspace_id)) {
+                $model->workspace_id = $workspaceId;
+            }
+
+            // admin_id remains creator/audit metadata, not the tenant boundary.
+            if (
+                $hasLegacyAdmin
+                && $user
+                && $user->is_admin
+                && is_null($model->admin_id)
+            ) {
                 $model->admin_id = $user->id;
             }
         });
     }
 
-    /**
-     * The admin who owns this workspace record.
-     */
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
+    }
+
+    /** The administrator who originally created the record. */
     public function admin(): BelongsTo
     {
         return $this->belongsTo(User::class, 'admin_id');

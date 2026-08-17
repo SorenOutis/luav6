@@ -3,8 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Resources\Admins\AdminResource;
-use App\Models\Exam;
-use App\Models\User;
+use App\Models\Workspace;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -46,56 +45,58 @@ class WorkspaceOverview extends Page implements HasActions, HasTable
     {
         return $table
             ->query(
-                User::query()
-                    ->where('is_admin', true)
-                    ->withCount(['sections', 'courses', 'assignments'])
+                Workspace::query()->withCount([
+                    'admins',
+                    'students',
+                    'sections',
+                    'courses',
+                    'assignments',
+                    'exams',
+                ])
             )
             ->columns([
                 TextColumn::make('name')
-                    ->label('Admin')
+                    ->label('Tenant workspace')
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('email')
-                    ->label('Email')
+                TextColumn::make('slug')
+                    ->label('Slug')
                     ->searchable()
                     ->toggleable(),
 
-                TextColumn::make('is_super_admin')
-                    ->label('Role')
-                    ->badge()
-                    ->formatStateUsing(fn (bool $state): string => $state ? 'Super Admin' : 'Admin')
-                    ->color(fn (bool $state): string => $state ? 'warning' : 'gray'),
-
-                TextColumn::make('sections_count')
-                    ->label('Sections')
-                    ->counts('sections')
+                TextColumn::make('admins_count')
+                    ->label('Admins')
                     ->sortable(),
 
                 TextColumn::make('students_count')
                     ->label('Students')
-                    ->state(fn (User $admin): int => (int) User::whereHas('sections', fn ($q) => $q->whereIn('sections.id', $admin->sections()->pluck('sections.id'))
-                    )->where('is_admin', false)->count()),
+                    ->sortable(),
+
+                TextColumn::make('sections_count')
+                    ->label('Sections')
+                    ->sortable(),
 
                 TextColumn::make('exams_count')
                     ->label('Exams')
-                    ->state(fn (User $admin): int => (int) Exam::whereIn('section_id', $admin->sections()->pluck('sections.id'))->count())
-                    ->sortable(false),
+                    ->sortable(),
 
                 TextColumn::make('courses_count')
                     ->label('Courses')
-                    ->counts('courses')
                     ->sortable(),
 
                 TextColumn::make('assignments_count')
                     ->label('Assignments')
-                    ->counts('assignments')
                     ->sortable(),
             ])
             ->defaultSort('name')
-            ->recordUrl(fn (User $record): string => $record->isSuperAdmin()
-                ? ''
-                : AdminResource::getUrl('edit', ['record' => $record]))
+            ->recordUrl(function (Workspace $workspace): string {
+                $adminId = $workspace->admins()->value('users.id');
+
+                return $adminId
+                    ? AdminResource::getUrl('edit', ['record' => $adminId])
+                    : '';
+            })
             ->recordAction(null);
     }
 

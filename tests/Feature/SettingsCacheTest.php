@@ -89,9 +89,8 @@ it('prefers a workspace setting over the global one', function () {
     $admin = User::factory()->admin()->create();
 
     Setting::create(['key' => 'school_name', 'value' => 'Global School', 'admin_id' => null]);
-    Setting::create(['key' => 'school_name', 'value' => 'Admin School', 'admin_id' => $admin->id]);
-
     actingAs($admin);
+    Setting::set('school_name', 'Admin School');
 
     expect(Setting::get('school_name'))->toBe('Admin School');
 });
@@ -116,8 +115,10 @@ it('does not leak one admins workspace settings to another', function () {
     $adminB = User::factory()->admin()->create();
 
     Setting::create(['key' => 'school_name', 'value' => 'Global', 'admin_id' => null]);
-    Setting::create(['key' => 'school_name', 'value' => 'School A', 'admin_id' => $adminA->id]);
-    Setting::create(['key' => 'school_name', 'value' => 'School B', 'admin_id' => $adminB->id]);
+    actingAs($adminA);
+    Setting::set('school_name', 'School A');
+    actingAs($adminB);
+    Setting::set('school_name', 'School B');
 
     actingAs($adminA);
     expect(Setting::get('school_name'))->toBe('School A');
@@ -135,7 +136,8 @@ it('does not leak workspace settings to a super admin', function () {
     $superAdmin = User::factory()->superAdmin()->create();
 
     Setting::create(['key' => 'school_name', 'value' => 'Global', 'admin_id' => null]);
-    Setting::create(['key' => 'school_name', 'value' => 'Workspace', 'admin_id' => $admin->id]);
+    actingAs($admin);
+    Setting::set('school_name', 'Workspace');
 
     actingAs($superAdmin);
 
@@ -146,8 +148,10 @@ it('busts only the affected workspace cache', function () {
     $adminA = User::factory()->admin()->create();
     $adminB = User::factory()->admin()->create();
 
-    Setting::create(['key' => 'k', 'value' => 'A1', 'admin_id' => $adminA->id]);
-    Setting::create(['key' => 'k', 'value' => 'B1', 'admin_id' => $adminB->id]);
+    actingAs($adminA);
+    Setting::set('k', 'A1');
+    actingAs($adminB);
+    Setting::set('k', 'B1');
 
     actingAs($adminA);
     expect(Setting::get('k'))->toBe('A1');

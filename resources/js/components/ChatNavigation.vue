@@ -28,18 +28,18 @@ const props = defineProps<{
     sessions: ChatSession[];
     activeSessionId?: number | null;
     creating?: boolean;
+    hasMore?: boolean;
+    loadingMore?: boolean;
 }>();
 
 const emit = defineEmits<{
     create: [];
     delete: [session: ChatSession];
+    loadMore: [];
 }>();
 
 const isOpen = ref(false);
-const visibleSessions = computed(() => props.sessions.slice(0, 12));
-const hiddenCount = computed(() =>
-    Math.max(0, props.sessions.length - visibleSessions.value.length),
-);
+const visibleSessions = computed(() => props.sessions);
 </script>
 
 <template>
@@ -78,7 +78,10 @@ const hiddenCount = computed(() =>
 
             <CollapsibleContent id="chat-history" data-testid="chat-history">
                 <SidebarGroupContent class="pt-1 pl-2">
-                    <SidebarMenu v-if="visibleSessions.length">
+                    <SidebarMenu
+                        v-if="visibleSessions.length"
+                        class="max-h-72 overflow-y-auto pr-1"
+                    >
                         <SidebarMenuItem
                             v-for="session in visibleSessions"
                             :key="session.id"
@@ -124,12 +127,15 @@ const hiddenCount = computed(() =>
                         Start a chat and it will appear here.
                     </p>
 
-                    <p
-                        v-if="hiddenCount"
-                        class="px-2 pt-2 text-[11px] text-muted-foreground"
+                    <button
+                        v-if="hasMore"
+                        type="button"
+                        class="mt-1 w-full rounded-lg px-2 py-2 text-left text-[11px] font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground disabled:opacity-50"
+                        :disabled="loadingMore"
+                        @click="emit('loadMore')"
                     >
-                        {{ hiddenCount }} more in your history
-                    </p>
+                        {{ loadingMore ? 'Loading…' : 'Load older chats' }}
+                    </button>
                 </SidebarGroupContent>
             </CollapsibleContent>
         </Collapsible>

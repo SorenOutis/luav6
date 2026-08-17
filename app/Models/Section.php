@@ -16,6 +16,7 @@ class Section extends Model
         'season_id',
         'school_level',
         'join_code',
+        'workspace_id',
         'admin_id',
     ];
 
@@ -90,7 +91,9 @@ class Section extends Model
      */
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('season_id');
+        return $this->belongsToMany(User::class)
+            ->using(SectionUser::class)
+            ->withPivot('season_id');
     }
 
     /**

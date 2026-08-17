@@ -7,11 +7,13 @@
  * streak-scaled XP (1 + floor(streak / 5)).
  */
 
+use App\Models\DailyXpClaim;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\ClaimXpService;
+use App\Support\GamificationSyncContext;
 use Illuminate\Testing\TestResponse;
 
 use function Pest\Laravel\actingAs;
@@ -224,6 +226,82 @@ it('is idempotent under rapid double-clicks', function () {
         ->where('reason', 'Daily Claim')
         ->count()
     )->toBe(1);
+});
+
+it('creates one durable claim ledger row', function () {
+    [$student, , $season] = claimContext();
+
+    actingAs($student)->postJson('/api/claim-xp')->assertOk();
+
+    $claim = DailyXpClaim::query()->where('user_id', $student->id)->firstOrFail();
+
+    expect($claim->claim_date->isToday())->toBeTrue()
+        ->and($claim->amount)->toBe(1)
+        ->and($claim->streak)->toBe(0)
+        ->and($claim->season_id)->toBe($season->id);
+});
+
+it('uses the durable ledger even if the legacy timestamp becomes stale', function () {
+    [$student] = claimContext();
+
+    actingAs($student)->postJson('/api/claim-xp')->assertJsonPath('claimed', true);
+
+    // Simulates stale cache/data or another process reverting the legacy field.
+    $student->forceFill(['last_claimed_at' => null])->save();
+
+    actingAs($student->fresh())
+        ->postJson('/api/claim-xp')
+        ->assertOk()
+        ->assertJsonPath('claimed', false);
+
+    expect(DailyXpClaim::where('user_id', $student->id)->count())->toBe(1)
+        ->and($student->gamificationHistories()->where('reason', 'Daily Claim')->count())->toBe(1)
+        ->and((float) $student->fresh()->exp)->toBe(1.0);
+});
+
+it('mirrors a claim to every section but increments global and season XP once', function () {
+    $season = Season::factory()->active()->create();
+    $student = User::factory()->create(['exp' => 0, 'last_claimed_at' => null]);
+    $sections = Section::factory()->count(3)->forSeason($season)->create();
+
+    foreach ($sections as $section) {
+        $student->sections()->attach($section->id, ['season_id' => $season->id]);
+        // Initialize at zero so this assertion isolates the daily reward.
+        $student->sectionProgress()->create([
+            'section_id' => $section->id,
+            'exp' => 0,
+            'points' => 0,
+            'level' => 1,
+        ]);
+    }
+
+    actingAs($student)->postJson('/api/claim-xp')->assertJson([
+        'claimed' => true,
+        'amount' => 1,
+        'total_xp' => 1,
+    ]);
+
+    expect($student->sectionProgress()->orderBy('section_id')->pluck('exp')->map(fn ($xp) => (float) $xp)->all())
+        ->toBe([1.0, 1.0, 1.0])
+        ->and((float) $student->fresh()->exp)->toBe(1.0)
+        ->and((float) $student->activeSeasonProgress()->exp)->toBe(1.0)
+        ->and($student->gamificationHistories()->where('reason', 'Daily Claim')->count())->toBe(1);
+});
+
+it('starts each Octane-style request with a fresh synchronization context', function () {
+    $first = app(GamificationSyncContext::class);
+
+    $first->withoutAutomaticHistory(function () use ($first): void {
+        expect($first->automaticHistorySuppressed())->toBeTrue();
+    });
+
+    app()->forgetScopedInstances();
+    $second = app(GamificationSyncContext::class);
+
+    expect($second)->not->toBe($first)
+        ->and($second->sectionPropagationSuppressed())->toBeFalse()
+        ->and($second->seasonPropagationSuppressed())->toBeFalse()
+        ->and($second->automaticHistorySuppressed())->toBeFalse();
 });
 
 it('passes claim data to the dashboard', function () {

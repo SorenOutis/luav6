@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
+use App\Support\GamificationSyncContext;
 use Illuminate\Database\Eloquent\Model;
 
 class SectionProgress extends Model
 {
-    public static $isSyncing = false;
-
     protected $table = 'section_progress';
 
     protected $fillable = ['user_id', 'section_id', 'exp', 'points', 'level'];
@@ -22,88 +21,90 @@ class SectionProgress extends Model
         return (float) ((max(1, $level) - 1) * 100);
     }
 
-    protected static function booted()
+    protected static function booted(): void
     {
-        static::saving(function (SectionProgress $progress) {
-            // Level 1: 0-99 XP
-            // Level 2: 100-199 XP
+        static::saving(function (SectionProgress $progress): void {
             $progress->level = self::levelFromExp($progress->exp);
         });
 
-        static::updated(function (SectionProgress $progress) {
-            if ($progress->wasChanged('exp') || $progress->wasChanged('points')) {
-                $expDelta = (float) $progress->exp - (float) $progress->getOriginal('exp');
-                $pointsDelta = (float) $progress->points - (float) $progress->getOriginal('points');
-
-                if (abs($expDelta) > 0.001 || abs($pointsDelta) > 0.001) {
-                    $user = $progress->user;
-                    if ($user) {
-                        $wasAlreadySyncing = self::$isSyncing;
-                        self::$isSyncing = true;
-
-                        $user->increment('exp', $expDelta);
-                        $user->increment('points', $pointsDelta);
-                        $user->level = floor($user->exp / 100) + 1;
-                        $user->save();
-
-                        $seasonProgress = $user->activeSeasonProgress();
-                        if ($seasonProgress) {
-                            $seasonProgress->increment('exp', $expDelta);
-                            $seasonProgress->increment('points', $pointsDelta);
-                            $seasonProgress->save();
-                        }
-
-                        // Only record history if NOT syncing from elsewhere (e.g., admin manual edit)
-                        if (! $wasAlreadySyncing) {
-                            // Recorded for audit, but not shown to the student
-                            // (filtered from feeds) and no XP notification sent.
-                            $user->recordGamificationHistory(
-                                $expDelta,
-                                $pointsDelta,
-                                'Admin Adjustment',
-                                'Manual adjustment for Section: '.($progress->section?->name ?? 'Unknown'),
-                                $progress->section_id,
-                                null,
-                                null,
-                                false
-                            );
-                        }
-
-                        self::$isSyncing = $wasAlreadySyncing;
-                    }
-                }
+        static::updated(function (SectionProgress $progress): void {
+            if (! $progress->wasChanged('exp') && ! $progress->wasChanged('points')) {
+                return;
             }
+
+            self::syncDelta(
+                $progress,
+                (float) $progress->exp - (float) $progress->getOriginal('exp'),
+                (float) $progress->points - (float) $progress->getOriginal('points'),
+                recordAutomaticHistory: true,
+            );
         });
 
-        static::created(function (SectionProgress $progress) {
-            $expDelta = (float) $progress->exp;
-            $pointsDelta = (float) $progress->points;
-
-            if ($expDelta > 0 || $pointsDelta > 0) {
-                $user = $progress->user;
-                if ($user) {
-                    $wasAlreadySyncing = self::$isSyncing;
-                    self::$isSyncing = true;
-
-                    $user->increment('exp', $expDelta);
-                    $user->increment('points', $pointsDelta);
-                    $user->level = floor($user->exp / 100) + 1;
-                    $user->save();
-
-                    $seasonProgress = $user->activeSeasonProgress();
-                    if ($seasonProgress) {
-                        $seasonProgress->increment('exp', $expDelta);
-                        $seasonProgress->increment('points', $pointsDelta);
-                        $seasonProgress->save();
-                    }
-
-                    // No history here because activeSectionProgress handles Enrollment history
-                    // and ExamSubmission handles Exam history.
-
-                    self::$isSyncing = $wasAlreadySyncing;
-                }
-            }
+        static::created(function (SectionProgress $progress): void {
+            self::syncDelta(
+                $progress,
+                (float) $progress->exp,
+                (float) $progress->points,
+                recordAutomaticHistory: false,
+            );
         });
+    }
+
+    private static function syncDelta(
+        SectionProgress $progress,
+        float $expDelta,
+        float $pointsDelta,
+        bool $recordAutomaticHistory,
+    ): void {
+        if (abs($expDelta) <= 0.001 && abs($pointsDelta) <= 0.001) {
+            return;
+        }
+
+        $context = app(GamificationSyncContext::class);
+        if ($context->sectionPropagationSuppressed()) {
+            return;
+        }
+
+        $user = $progress->user;
+        if (! $user) {
+            return;
+        }
+
+        $user->increment('exp', $expDelta);
+        $user->increment('points', $pointsDelta);
+        $user->level = self::levelFromExp($user->exp);
+        $user->save();
+
+        $seasonProgress = $user->activeSeasonProgress();
+        if ($seasonProgress) {
+            // A section delta has already been applied to the user. Updating
+            // the season aggregate must not make SeasonProgress apply it again.
+            $context->withoutSeasonPropagation(function () use ($seasonProgress, $expDelta, $pointsDelta): void {
+                if (abs($expDelta) > 0.001) {
+                    $seasonProgress->increment('exp', $expDelta);
+                }
+                if (abs($pointsDelta) > 0.001) {
+                    $seasonProgress->increment('points', $pointsDelta);
+                }
+
+                // increment() is atomic but bypasses the saving hook; save once
+                // more so the derived level follows the new XP total.
+                $seasonProgress->save();
+            });
+        }
+
+        if ($recordAutomaticHistory && ! $context->automaticHistorySuppressed()) {
+            $user->recordGamificationHistory(
+                $expDelta,
+                $pointsDelta,
+                'Admin Adjustment',
+                'Manual adjustment for Section: '.($progress->section?->name ?? 'Unknown'),
+                $progress->section_id,
+                null,
+                null,
+                false,
+            );
+        }
     }
 
     public function user()

@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\AiBudgetReservation;
 use App\Models\AiUsageLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Estimates and records AI token/neuron usage.
@@ -18,6 +20,11 @@ use Illuminate\Support\Facades\DB;
 class AiUsageTracker
 {
     public const DAILY_NEURON_LIMIT = 10_000;
+
+    public function __construct(
+        private readonly AiBudgetManager $budgetManager,
+        private readonly AiCostEstimator $costEstimator,
+    ) {}
 
     /**
      * Ordered [needle, input-neurons-per-M-tokens, output-neurons-per-M-tokens]
@@ -49,12 +56,64 @@ class AiUsageTracker
         ['', 25608, 75147],
     ];
 
+    public function start(
+        string $provider,
+        ?string $model,
+        string $source,
+        int $inputTokens,
+        int $maximumOutputTokens,
+    ): ?AiBudgetReservation {
+        return $this->budgetManager->reserve(
+            $provider,
+            $model,
+            $source,
+            $inputTokens,
+            $maximumOutputTokens,
+        );
+    }
+
+    public function complete(
+        ?AiBudgetReservation $reservation,
+        string $provider,
+        ?string $model,
+        string $source,
+        int $inputTokens,
+        int $outputTokens,
+    ): void {
+        if ($reservation) {
+            try {
+                $this->budgetManager->settle($reservation, $inputTokens, $outputTokens);
+            } catch (\Throwable $exception) {
+                // Never repeat a successful provider call because accounting
+                // failed. The reservation remains conservative until its TTL.
+                report($exception);
+            }
+
+            return;
+        }
+
+        $this->record($provider, $model, $source, $inputTokens, $outputTokens);
+    }
+
+    public function cancel(?AiBudgetReservation $reservation, ?string $reason = null): void
+    {
+        if (! $reservation) {
+            return;
+        }
+
+        try {
+            $this->budgetManager->release(
+                $reservation,
+                $reason !== null ? 'Provider request failed before usage could be settled.' : null,
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
     /**
-     * Record one AI call in the daily usage log.
-     *
-     * Neurons are only meaningful for Cloudflare models; other providers
-     * (gemini/groq/ollama) are logged with token counts but a null neuron
-     * estimate.
+     * Record one AI call in the daily usage log when workspace budget
+     * enforcement is disabled.
      */
     public function record(
         string $provider,
@@ -64,16 +123,25 @@ class AiUsageTracker
         int $outputTokens
     ): void {
         try {
+            $inputTokens = max(0, $inputTokens);
+            $outputTokens = max(0, $outputTokens);
+
             AiUsageLog::create([
                 'date' => now()->toDateString(),
-                'provider' => $provider,
-                'model' => $model,
-                'source' => $source,
-                'input_tokens' => max(0, $inputTokens),
-                'output_tokens' => max(0, $outputTokens),
+                'provider' => Str::limit($provider, 80, ''),
+                'model' => $model ? Str::limit($model, 191, '') : null,
+                'source' => Str::limit($source, 32, ''),
+                'input_tokens' => $inputTokens,
+                'output_tokens' => $outputTokens,
                 'neurons' => $provider === 'cloudflare'
-                    ? $this->estimateNeurons($model, $inputTokens, $outputTokens)
+                    ? self::estimateNeurons($model, $inputTokens, $outputTokens)
                     : null,
+                'estimated_cost_micros' => $this->costEstimator->estimateMicros(
+                    $provider,
+                    $model,
+                    $inputTokens,
+                    $outputTokens,
+                ),
             ]);
         } catch (\Throwable $e) {
             // Usage tracking must never break the AI call itself.
@@ -87,9 +155,9 @@ class AiUsageTracker
      * Unknown/empty models fall back to the conservative llama-3.1-8b rate so
      * the daily estimate never under-reports toward the cap.
      */
-    public function estimateNeurons(?string $model, int $inputTokens, int $outputTokens): float
+    public static function estimateNeurons(?string $model, int $inputTokens, int $outputTokens): float
     {
-        [$inputPerM, $outputPerM] = $this->pricingFor($model ?? '');
+        [$inputPerM, $outputPerM] = self::pricingFor($model ?? '');
 
         $neurons = ($inputTokens / 1_000_000) * $inputPerM
             + ($outputTokens / 1_000_000) * $outputPerM;
@@ -100,7 +168,7 @@ class AiUsageTracker
     /**
      * @return array{0: int, 1: int}
      */
-    private function pricingFor(string $model): array
+    private static function pricingFor(string $model): array
     {
         $model = strtolower($model);
 

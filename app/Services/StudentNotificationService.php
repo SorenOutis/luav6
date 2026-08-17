@@ -53,7 +53,7 @@ class StudentNotificationService
             'message' => $badge->name,
             'meta' => $seasonName ? "Earned in {$seasonName}" : 'Lifetime badge',
             'image' => $badge->image_path ? Storage::disk('public')->url($badge->image_path) : null,
-            'href' => "/u/{$user->id}",
+            'href' => "/u/{$user->public_id}",
         ]));
     }
 }

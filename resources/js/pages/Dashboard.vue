@@ -102,9 +102,9 @@ const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
 const userAvatar = computed(() => page.props.auth.user?.avatar);
 const userProfileHref = computed(() => {
-    const id = page.props.auth.user?.id;
+    const publicId = page.props.auth.user?.public_id;
 
-    return id ? `/u/${id}` : undefined;
+    return publicId ? `/u/${publicId}` : undefined;
 });
 const isBanned = computed(() => Boolean(page.props.auth.user?.is_banned));
 const banReason = computed(() => page.props.auth.user?.ban_reason || '');

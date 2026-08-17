@@ -24,11 +24,20 @@ class CloudflareAIService
     /**
      * Send a prompt to Cloudflare Workers AI and return the response.
      */
-    public function prompt(string $prompt, array $history = [], ?string $userContext = null): string
+    public function prompt(
+        string $prompt,
+        array $history = [],
+        ?string $userContext = null,
+        bool $trackUsage = true,
+    ): string
     {
         if (! $this->accountId || ! $this->apiToken) {
             throw new \Exception('Cloudflare Workers AI is not configured. Please set your Account ID and API Token in Platform Settings.');
         }
+
+        $usage = null;
+        $reservation = null;
+        $inputTokens = 0;
 
         try {
             // Build the conversation context
@@ -55,6 +64,18 @@ class CloudflareAIService
             // Add current prompt
             $messages[] = ['role' => 'user', 'content' => $prompt];
 
+            if ($trackUsage) {
+                $inputTokens = $this->inputTokens($instructions, $history, $prompt);
+                $usage = app(AiUsageTracker::class);
+                $reservation = $usage->start(
+                    'cloudflare',
+                    $this->model,
+                    'chat',
+                    $inputTokens,
+                    4096,
+                );
+            }
+
             $response = Http::withToken($this->apiToken)
                 ->timeout(60)
                 ->post("https://api.cloudflare.com/client/v4/accounts/{$this->accountId}/ai/run/{$this->model}", [
@@ -76,33 +97,33 @@ class CloudflareAIService
                 throw new \Exception('Unexpected response format from Cloudflare Workers AI');
             }
 
-            $this->trackUsage($instructions, $history, $prompt, $responseText);
+            if ($trackUsage) {
+                $usage?->complete(
+                    $reservation,
+                    'cloudflare',
+                    $this->model,
+                    'chat',
+                    $inputTokens,
+                    AiUsageTracker::tokensFromChars(strlen((string) $responseText)),
+                );
+            }
 
             return $responseText;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            $usage?->cancel($reservation, $e->getMessage());
             Log::error('CloudflareAIService Error: '.$e->getMessage());
             throw $e;
         }
     }
 
-    /**
-     * Record an estimate of the tokens/neurons consumed by a chat exchange.
-     */
-    private function trackUsage(string $instructions, array $history, string $prompt, string $responseText): void
+    private function inputTokens(string $instructions, array $history, string $prompt): int
     {
         $inputChars = strlen($instructions) + strlen($prompt);
         foreach ($history as $message) {
             $inputChars += strlen((string) ($message['content'] ?? ''));
         }
 
-        app(AiUsageTracker::class)->record(
-            'cloudflare',
-            $this->model,
-            'chat',
-            AiUsageTracker::tokensFromChars($inputChars),
-            // Cast: a malformed (non-string) response must not break the chat.
-            AiUsageTracker::tokensFromChars(strlen((string) $responseText)),
-        );
+        return AiUsageTracker::tokensFromChars($inputChars);
     }
 
     /**

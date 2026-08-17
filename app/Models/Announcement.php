@@ -10,7 +10,7 @@ class Announcement extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['title', 'description', 'link', 'is_active', 'section_id', 'admin_id'];
+    protected $fillable = ['title', 'description', 'link', 'is_active', 'section_id', 'workspace_id', 'admin_id'];
 
     /**
      * The section this announcement is targeted to.

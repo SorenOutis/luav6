@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AiBudgetExceededException;
 use App\Http\Responses\AiSseResponse;
+use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Services\AiChatLogger;
 use App\Services\ChatService;
 use App\Support\StudentPageRegistry;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Ai\Responses\Data\Meta;
@@ -24,6 +28,10 @@ use Throwable;
  */
 class ChatHistoryController extends Controller
 {
+    private const SESSION_PAGE_SIZE = 30;
+
+    private const MESSAGE_PAGE_SIZE = 80;
+
     public function __construct(
         protected ChatService $chatService,
         protected AiChatLogger $aiChatLogger,
@@ -69,8 +77,11 @@ class ChatHistoryController extends Controller
             ])->toResponse($request)->setStatusCode(423);
         }
 
+        $sessionPage = $this->sessionPage($request->user());
+
         return Inertia::render('Chats', [
-            'sessions' => $this->sessionList($request->user()),
+            'sessions' => $sessionPage['data'],
+            'sessionPagination' => $sessionPage['meta'],
         ]);
     }
 
@@ -84,11 +95,43 @@ class ChatHistoryController extends Controller
         }
 
         $session = $this->sessionForUser($request, $session);
+        $sessionPage = $this->sessionPage($request->user());
 
         return Inertia::render('Chats', [
-            'sessions' => $this->sessionList($request->user()),
+            'sessions' => $sessionPage['data'],
+            'sessionPagination' => $sessionPage['meta'],
             'activeSession' => $this->sessionPayload($session),
         ]);
+    }
+
+    /**
+     * Fetch the next bounded page of conversation summaries.
+     */
+    public function sessions(Request $request): JsonResponse
+    {
+        if ($message = $this->pageBlockedMessage($request)) {
+            return response()->json(['response' => $message], 423);
+        }
+
+        return response()->json($this->sessionPage(
+            $request->user(),
+            $request->query('cursor'),
+        ));
+    }
+
+    /**
+     * Fetch older messages without ever loading an entire conversation.
+     */
+    public function messages(Request $request, ChatSession $session): JsonResponse
+    {
+        if ($message = $this->pageBlockedMessage($request)) {
+            return response()->json(['response' => $message], 423);
+        }
+
+        $session = $this->sessionForUser($request, $session);
+        $beforeId = $request->integer('before_id') ?: null;
+
+        return response()->json($this->messagePage($session, $beforeId));
     }
 
     /**
@@ -195,7 +238,6 @@ class ChatHistoryController extends Controller
 
             $session->touch();
 
-            $session->load('messages');
             $this->aiChatLogger->info('ai_chat.response.persisted', array_merge($loggingContext, [
                 'response' => $this->aiChatLogger->textMetadata($response),
             ]));
@@ -205,6 +247,16 @@ class ChatHistoryController extends Controller
                 'session' => $this->sessionPayload($session),
             ]);
         } catch (Throwable $e) {
+            if ($e instanceof AiBudgetExceededException) {
+                $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                    'blocked_reason' => 'workspace_ai_budget',
+                    'budget_period' => $e->period,
+                    'budget_metric' => $e->metric,
+                ]));
+
+                return response()->json(['response' => $e->getMessage()], 429);
+            }
+
             $errorId = $this->logError('Chat History Controller Error', $e, $session, $loggingContext);
 
             return response()->json([
@@ -336,6 +388,14 @@ class ChatHistoryController extends Controller
                             yield $event;
                         }
                     } catch (Throwable $fallbackError) {
+                        if ($fallbackError instanceof AiBudgetExceededException) {
+                            foreach ($this->chatService->streamText($fallbackError->getMessage()) as $event) {
+                                yield $event;
+                            }
+
+                            return;
+                        }
+
                         $errorId = $this->logError('Chat History Stream Fallback Error', $fallbackError, $session, $loggingContext);
                         $message = 'Sorry, something went wrong. Please try again in a moment.';
 
@@ -379,6 +439,16 @@ class ChatHistoryController extends Controller
 
             return AiSseResponse::from($response);
         } catch (Throwable $e) {
+            if ($e instanceof AiBudgetExceededException) {
+                $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                    'blocked_reason' => 'workspace_ai_budget',
+                    'budget_period' => $e->period,
+                    'budget_metric' => $e->metric,
+                ]));
+
+                return AiSseResponse::from($this->chatService->streamText($e->getMessage()));
+            }
+
             $errorId = $this->logError('Chat History Stream Error', $e, $session, $loggingContext);
             $payload = $this->errorPayload($e, $errorId);
 
@@ -400,9 +470,7 @@ class ChatHistoryController extends Controller
      */
     private function sessionHistory(ChatSession $session): array
     {
-        return $session->messages
-            ->map(fn ($msg) => ['role' => $msg->role, 'content' => $msg->content])
-            ->all();
+        return $this->chatService->contextMessages($session);
     }
 
     public function destroy(Request $request, ChatSession $session)
@@ -476,24 +544,82 @@ class ChatHistoryController extends Controller
     }
 
     /**
-     * @return array<int, array<string, mixed>>
+     * A bounded page of summaries. Counts and the last-message preview are
+     * calculated by SQL, so listing chats never hydrates every message body.
+     *
+     * @return array{data: array<int, array<string, mixed>>, meta: array{hasMore: bool, nextCursor: string|null}}
      */
-    private function sessionList($user): array
+    private function sessionPage($user, ?string $cursor = null): array
     {
-        return $user->chatSessions()
-            ->with('messages')
-            ->get()
-            ->map(fn (ChatSession $session) => [
-                'id' => $session->id,
-                'title' => $session->title ?? 'New chat',
-                'source' => $session->source,
-                'messageCount' => $session->messages->count(),
-                'lastMessage' => ($last = $session->messages->last()) ? $last->content : null,
-                'updatedAt' => $session->updated_at?->toIso8601String(),
-                'updatedAtHuman' => $session->updated_at?->diffForHumans(),
+        $paginator = $user->chatSessions()
+            ->select(['chat_sessions.id', 'chat_sessions.user_id', 'chat_sessions.title', 'chat_sessions.source', 'chat_sessions.updated_at'])
+            ->withCount('messages')
+            ->addSelect([
+                'last_message' => ChatMessage::query()
+                    ->select('content')
+                    ->whereColumn('session_id', 'chat_sessions.id')
+                    ->latest('id')
+                    ->limit(1),
             ])
-            ->values()
-            ->all();
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->cursorPaginate(
+                self::SESSION_PAGE_SIZE,
+                ['*'],
+                'cursor',
+                Cursor::fromEncoded($cursor),
+            );
+
+        return [
+            'data' => collect($paginator->items())
+                ->map(fn (ChatSession $session) => [
+                    'id' => $session->id,
+                    'title' => $session->title ?? 'New chat',
+                    'source' => $session->source,
+                    'messageCount' => (int) $session->messages_count,
+                    'lastMessage' => $session->last_message,
+                    'updatedAt' => $session->updated_at?->toIso8601String(),
+                    'updatedAtHuman' => $session->updated_at?->diffForHumans(),
+                ])
+                ->values()
+                ->all(),
+            'meta' => [
+                'hasMore' => $paginator->hasMorePages(),
+                'nextCursor' => $paginator->nextCursor()?->encode(),
+            ],
+        ];
+    }
+
+    /**
+     * @return array{data: array<int, array<string, mixed>>, meta: array{hasMore: bool, nextBeforeId: int|null}}
+     */
+    private function messagePage(ChatSession $session, ?int $beforeId = null): array
+    {
+        $messages = $session->messages()
+            ->select(['id', 'session_id', 'role', 'content', 'thinking', 'attachments', 'created_at'])
+            ->when($beforeId, fn ($query) => $query->where('id', '<', $beforeId))
+            ->reorder()
+            ->latest('id')
+            ->limit(self::MESSAGE_PAGE_SIZE + 1)
+            ->get();
+
+        $hasMore = $messages->count() > self::MESSAGE_PAGE_SIZE;
+        $page = $messages->take(self::MESSAGE_PAGE_SIZE)->reverse()->values();
+
+        return [
+            'data' => $page->map(fn (ChatMessage $message) => [
+                'id' => $message->id,
+                'role' => $message->role,
+                'content' => $message->content,
+                'thinking' => $message->thinking,
+                'attachments' => $message->attachments,
+                'createdAt' => $message->created_at?->toIso8601String(),
+            ])->all(),
+            'meta' => [
+                'hasMore' => $hasMore,
+                'nextBeforeId' => $hasMore ? $page->first()?->id : null,
+            ],
+        ];
     }
 
     /**
@@ -501,18 +627,15 @@ class ChatHistoryController extends Controller
      */
     private function sessionPayload(ChatSession $session): array
     {
+        $messagePage = $this->messagePage($session);
+
         return [
             'id' => $session->id,
             'title' => $session->title ?? 'New chat',
             'source' => $session->source,
-            'messages' => $session->messages->map(fn ($msg) => [
-                'id' => $msg->id,
-                'role' => $msg->role,
-                'content' => $msg->content,
-                'thinking' => $msg->thinking,
-                'attachments' => $msg->attachments,
-                'createdAt' => $msg->created_at?->toIso8601String(),
-            ])->values()->all(),
+            'messageCount' => $session->messages()->count(),
+            'messages' => $messagePage['data'],
+            'messagePagination' => $messagePage['meta'],
             'updatedAt' => $session->updated_at?->toIso8601String(),
         ];
     }

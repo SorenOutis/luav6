@@ -6,9 +6,11 @@ use App\Filament\Resources\AiQuestionDrafts\AiQuestionDraftResource;
 use App\Filament\Resources\Exams\ExamResource;
 use App\Jobs\GenerateAiQuestions;
 use App\Jobs\RefineAiQuestions;
+use App\Models\AiQuestionDraft;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\User;
+use App\Services\AiReviewService;
 use App\Services\AiSdkProviderService;
 use App\Support\AiQueueWorker;
 use Filament\Actions\Action;
@@ -49,6 +51,10 @@ class EditAiQuestionDraft extends EditRecord
                         'last_error' => null,
                         'questions' => null,
                         'provider' => $data['provider'] ?? null,
+                        'review_status' => AiQuestionDraft::REVIEW_NOT_READY,
+                        'reviewed_by' => null,
+                        'reviewed_at' => null,
+                        'rejection_reason' => null,
                     ])->save();
 
                     GenerateAiQuestions::dispatch($this->record->id);
@@ -116,20 +122,77 @@ class EditAiQuestionDraft extends EditRecord
                     $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->record->id]));
                 }),
 
+            Action::make('approveReview')
+                ->label('Approve Draft')
+                ->icon('heroicon-o-check-badge')
+                ->color('success')
+                ->requiresConfirmation()
+                ->modalHeading('Approve this question set?')
+                ->modalDescription('Approval applies to the currently saved questions. Save any edits before approving. Only approved drafts can be attached to an exam.')
+                ->visible(fn ($record): bool => $record?->status === 'ready'
+                    && $record?->review_status !== AiQuestionDraft::REVIEW_APPROVED
+                    && is_array($record?->questions)
+                    && count($record->questions) > 0)
+                ->action(function (): void {
+                    app(AiReviewService::class)->approveQuestionDraft($this->record, auth()->user());
+                    $this->record->refresh();
+                    $this->refreshFormData(['review_status', 'reviewed_by', 'reviewed_at', 'rejection_reason']);
+
+                    Notification::make()
+                        ->title('Question draft approved')
+                        ->body('The reviewed question set can now be attached to an exam.')
+                        ->success()
+                        ->send();
+                }),
+
+            Action::make('rejectReview')
+                ->label('Reject Draft')
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->visible(fn ($record): bool => $record?->status === 'ready'
+                    && $record?->review_status === AiQuestionDraft::REVIEW_AWAITING)
+                ->form([
+                    Textarea::make('reason')
+                        ->label('Reason for rejection')
+                        ->required()
+                        ->maxLength(5000)
+                        ->rows(4),
+                ])
+                ->action(function (array $data): void {
+                    app(AiReviewService::class)->rejectQuestionDraft(
+                        $this->record,
+                        auth()->user(),
+                        (string) $data['reason'],
+                    );
+                    $this->record->refresh();
+                    $this->refreshFormData(['review_status', 'reviewed_by', 'reviewed_at', 'rejection_reason']);
+
+                    Notification::make()
+                        ->title('Question draft rejected')
+                        ->body('No questions were published. Use Follow-up or Regenerate to create a new revision.')
+                        ->warning()
+                        ->send();
+                }),
+
             Action::make('attachToExam')
                 ->label('Attach to Exam')
                 ->icon('heroicon-o-paper-airplane')
                 ->color('success')
-                ->visible(fn ($record): bool => $record?->status === 'ready' && is_array($record->questions) && count($record->questions) > 0)
+                ->visible(fn ($record): bool => $record?->status === 'ready'
+                    && $record?->review_status === AiQuestionDraft::REVIEW_APPROVED
+                    && is_array($record->questions)
+                    && count($record->questions) > 0)
                 ->form([
                     Select::make('exam_id')
                         ->label('Target Exam')
                         ->options(fn () => Exam::query()->orderByDesc('exam_date')->pluck('title', 'id')->all())
+                        ->default(fn () => $this->record?->target_exam_id)
                         ->searchable()
                         ->required(),
                     Textarea::make('instructions')
                         ->label('Instructions (applied to each new part)')
                         ->rows(2)
+                        ->default(fn () => $this->record?->attachment_instructions)
                         ->placeholder('Optional. Leave blank to use default per-type instructions.'),
                     TextInput::make('points')
                         ->label('Default Points Per Question')
@@ -138,6 +201,17 @@ class EditAiQuestionDraft extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data) {
+                    $this->record->refresh();
+                    if ($this->record->review_status !== AiQuestionDraft::REVIEW_APPROVED) {
+                        Notification::make()
+                            ->title('Approval required')
+                            ->body('Review and approve the saved question set before attaching it to an exam.')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
                     $exam = Exam::query()->findOrFail((int) $data['exam_id']);
                     $default = (int) ($data['points'] ?? 1) ?: 1;
                     $customInstructions = trim((string) ($data['instructions'] ?? ''));
@@ -208,6 +282,13 @@ class EditAiQuestionDraft extends EditRecord
                         return;
                     }
 
+                    app(AiReviewService::class)->recordQuestionDraftAttached(
+                        $this->record,
+                        auth()->user(),
+                        $exam->id,
+                        $created,
+                    );
+
                     Notification::make()
                         ->title('Attached to exam')
                         ->body("Added {$created} part(s) to \"{$exam->title}\".")
@@ -242,9 +323,11 @@ class EditAiQuestionDraft extends EditRecord
                         ->placeholder('Select an admin…'),
                 ])
                 ->action(function (array $data) {
-                    $this->record->update(['admin_id' => $data['target_admin_id']]);
-
                     $targetAdmin = User::find($data['target_admin_id']);
+                    $this->record->update([
+                        'admin_id' => $targetAdmin?->id,
+                        'workspace_id' => $targetAdmin?->current_workspace_id,
+                    ]);
 
                     Notification::make()
                         ->title('Draft transferred')
@@ -293,6 +376,11 @@ class EditAiQuestionDraft extends EditRecord
                 'last_error',
                 'ai_response',
                 'generated_at',
+                'review_status',
+                'review_version',
+                'reviewed_by',
+                'reviewed_at',
+                'rejection_reason',
             ]);
         }
     }

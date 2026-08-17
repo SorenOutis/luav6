@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\SectionProgress;
 use App\Models\User;
+use App\Support\GamificationSyncContext;
+use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -19,7 +20,7 @@ class TeacherXpAwardService
         $teacher = auth()->user();
 
         if ($teacher?->is_admin && ! $teacher->isSuperAdmin()) {
-            $sectionQuery->where('sections.admin_id', $teacher->id);
+            $sectionQuery->where('sections.workspace_id', app(WorkspaceContext::class)->id());
         }
 
         if (! $sectionQuery->exists()) {
@@ -28,11 +29,10 @@ class TeacherXpAwardService
 
         DB::transaction(function () use ($student, $sectionId, $amount, $reason, $teacher): void {
             $progress = $student->activeSectionProgress($sectionId);
-            $wasSyncing = SectionProgress::$isSyncing;
-            SectionProgress::$isSyncing = true;
-            $progress->increment('exp', $amount);
-            $progress->save();
-            SectionProgress::$isSyncing = $wasSyncing;
+            app(GamificationSyncContext::class)->withoutAutomaticHistory(function () use ($progress, $amount): void {
+                $progress->increment('exp', $amount);
+                $progress->save();
+            });
 
             $student->recordGamificationHistory(
                 $amount,

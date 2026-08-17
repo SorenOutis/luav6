@@ -146,6 +146,7 @@ const showSuccessModal = ref(false);
 const showXpModal = ref(false);
 const xpAward = ref<ExamXpAward | null>(props.xpAward ?? null);
 const isCalculatingScore = ref(false);
+const isAwaitingTeacherReview = ref(false);
 const successModalRef = ref<HTMLElement | null>(null);
 
 const showStartModal = ref(false);
@@ -1467,6 +1468,7 @@ const submitPart = async () => {
     // Check if current part has essay
     currentPartHasEssay.value =
         selectedPart.value?.questions?.some((q) => q.type === 'essay') || false;
+    isAwaitingTeacherReview.value = false;
 
     // Build detailed answers with question information
     const detailedAnswers = (selectedPart.value?.questions || []).map(
@@ -1630,9 +1632,17 @@ const startEssayGradingPoll = (partId: number) => {
                 };
                 submission.status = data.status;
 
+                if (data.awaiting_teacher_review) {
+                    localSubmissions.value[partId] = submission;
+                    isAwaitingTeacherReview.value = true;
+                    isCalculatingScore.value = false;
+                    return; // Done — a teacher must explicitly approve the draft.
+                }
+
                 if (data.scored && data.score !== null) {
                     submission.score = Number(data.score);
                     localSubmissions.value[partId] = submission;
+                    isAwaitingTeacherReview.value = false;
                     isCalculatingScore.value = false;
                     animateDisplayedScore(Number(totalScore.value) || 0);
                     return; // Done — grading finished.
@@ -1762,6 +1772,7 @@ const continueFromSuccess = () => {
         showSuccessModal.value = false;
         showXpModal.value = true;
         currentPartHasEssay.value = false;
+        isAwaitingTeacherReview.value = false;
         return;
     }
 
@@ -1784,6 +1795,7 @@ const closeSuccessModal = () => {
             onComplete: () => {
                 showSuccessModal.value = false;
                 currentPartHasEssay.value = false;
+                isAwaitingTeacherReview.value = false;
 
                 // If all parts are completed, redirect to the exams list
                 // Use partsPendingCount (correctly tracks via local submitted IDs) instead of allPartsSubmitted (stale server data)
@@ -3850,7 +3862,25 @@ const feedbackContent = computed(() => {
 
                                 <div v-else class="w-full space-y-4">
                                     <div
-                                        v-if="isCalculatingScore"
+                                        v-if="isAwaitingTeacherReview"
+                                        class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 text-center"
+                                    >
+                                        <p
+                                            class="font-semibold text-foreground"
+                                        >
+                                            Awaiting teacher review
+                                        </p>
+                                        <p
+                                            class="mt-1 text-sm text-muted-foreground"
+                                        >
+                                            Your essay is saved. Any AI score or
+                                            feedback remains private until your
+                                            teacher reviews and approves it.
+                                        </p>
+                                    </div>
+
+                                    <div
+                                        v-else-if="isCalculatingScore"
                                         class="flex flex-col items-center gap-4 py-4"
                                     >
                                         <div

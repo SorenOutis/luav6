@@ -19,6 +19,7 @@ class Lesson extends Model
         'video_url',
         'media_attachments',
         'sort_order',
+        'workspace_id',
         'admin_id',
     ];
 

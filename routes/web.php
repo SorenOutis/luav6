@@ -21,6 +21,7 @@ use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PendingAiActionController;
 use App\Http\Controllers\ProfileKudoController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
+use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public routes ────────────────────────────────────────────────────────
@@ -65,14 +67,21 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->middleware('student.page:leaderboard')
         ->name('leaderboard');
 
+    Route::post('workspaces/{workspace:public_id}/activate', [WorkspaceController::class, 'activate'])
+        ->name('workspaces.activate');
+    Route::post('workspaces/{workspace:public_id}/inspect', [WorkspaceController::class, 'inspect'])
+        ->name('workspaces.inspect');
+    Route::delete('workspaces/inspection', [WorkspaceController::class, 'stopInspecting'])
+        ->name('workspaces.inspection.stop');
+
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
-    Route::get('u/{user}', [PublicProfileController::class, 'show'])->name('users.show');
-    Route::post('u/{user}/follow', [UserFollowController::class, 'store'])->name('users.follow');
-    Route::delete('u/{user}/follow', [UserFollowController::class, 'destroy'])->name('users.unfollow');
-    Route::post('u/{user}/kudos', [ProfileKudoController::class, 'store'])->name('users.kudos');
-    Route::get('users/{user}/xp-history', XpHistoryController::class)->name('users.xp-history');
+    Route::get('u/{user:public_id}', [PublicProfileController::class, 'show'])->name('users.show');
+    Route::post('u/{user:public_id}/follow', [UserFollowController::class, 'store'])->name('users.follow');
+    Route::delete('u/{user:public_id}/follow', [UserFollowController::class, 'destroy'])->name('users.unfollow');
+    Route::post('u/{user:public_id}/kudos', [ProfileKudoController::class, 'store'])->name('users.kudos');
+    Route::get('users/{user:public_id}/xp-history', XpHistoryController::class)->name('users.xp-history');
     Route::patch('profile/section', [ProfileController::class, 'updateSection'])->name('profile.section.update');
     Route::post('sections/join-by-code', [ProfileController::class, 'joinByCode'])->name('sections.join-by-code');
     Route::post('sections/{section}/verify-password', [ProfileController::class, 'verifySectionPassword'])->name('sections.verify-password');
@@ -85,6 +94,8 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('assignments/{assignment}/submit', [AssignmentController::class, 'store'])->middleware('student.page:assignments')->name('assignments.submit');
 
     Route::get('exams', [ExamController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
+    Route::get('api/exams', [ExamController::class, 'listing'])->middleware('student.page:exams')->name('exams.listing');
+    Route::get('exams/{exam}/review', [ExamController::class, 'review'])->middleware('student.page:exams')->name('exams.review');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->middleware('student.page:exams')->name('exams.show');
     Route::post('exams/pre-warm-ai', [ExamController::class, 'preWarmAI'])->middleware('student.page:exams')->name('exams.preWarmAI');
     Route::post('exams/{exam}/monitor-progress', [ExamController::class, 'monitorProgress'])->middleware(['student.page:exams', 'throttle:exams.progress'])->name('exams.monitorProgress');
@@ -106,6 +117,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->name('exams.partStatus');
 
     Route::get('ngl', [AnonymousMessageController::class, 'index'])->middleware('student.page:ngl')->name('ngl.index');
+    Route::get('api/ngl', [AnonymousMessageController::class, 'feed'])->middleware('student.page:ngl')->name('ngl.feed');
     Route::post('ngl', [AnonymousMessageController::class, 'store'])->middleware('student.page:ngl')->name('ngl.store');
     Route::post('ngl/{message}/like', [AnonymousMessageController::class, 'like'])->middleware('student.page:ngl')->name('ngl.like');
 
@@ -132,6 +144,18 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('api/chat/history', [ChatController::class, 'getHistory'])->middleware('throttle:chat')->name('chat.history');
     Route::post('api/chat/clear', [ChatController::class, 'clearHistory'])->middleware('throttle:chat')->name('chat.clear');
 
+    // Human approval boundary for AI write tools. The AI can only stage an
+    // immutable preview; these nonce-protected endpoints are browser actions.
+    Route::get('api/ai-actions', [PendingAiActionController::class, 'index'])
+        ->middleware('throttle:ai-actions')
+        ->name('ai-actions.index');
+    Route::post('api/ai-actions/{action:public_id}/approve', [PendingAiActionController::class, 'approve'])
+        ->middleware('throttle:ai-actions')
+        ->name('ai-actions.approve');
+    Route::post('api/ai-actions/{action:public_id}/reject', [PendingAiActionController::class, 'reject'])
+        ->middleware('throttle:ai-actions')
+        ->name('ai-actions.reject');
+
     // Chats history (persisted conversations from the AI widget)
     Route::get('chats', [ChatHistoryController::class, 'index'])
         ->middleware('student.page:chats')
@@ -139,9 +163,15 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('chats/{session}', [ChatHistoryController::class, 'show'])
         ->middleware('student.page:chats')
         ->name('chats.show');
+    Route::get('api/chats', [ChatHistoryController::class, 'sessions'])
+        ->middleware(['student.page:chats', 'throttle:chats'])
+        ->name('chats.sessions');
     Route::post('api/chats', [ChatHistoryController::class, 'store'])
         ->middleware('throttle:chats')
         ->name('chats.store');
+    Route::get('api/chats/{session}/messages', [ChatHistoryController::class, 'messages'])
+        ->middleware(['student.page:chats', 'throttle:chats'])
+        ->name('chats.messages');
     Route::post('api/chats/{session}/messages', [ChatHistoryController::class, 'message'])
         ->middleware('throttle:chats')
         ->name('chats.message');

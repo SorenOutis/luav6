@@ -11,6 +11,7 @@ use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Schemas\UserInfolist;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
+use App\Support\WorkspaceContext;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -48,14 +49,21 @@ class UserResource extends Resource
     {
         $query = parent::getEloquentQuery();
 
-        // Super admins see all non-admin users
-        if (auth()->user()?->isSuperAdmin()) {
+        $context = app(WorkspaceContext::class);
+
+        // Platform mode is global; inspection mode uses the same tenant roster
+        // as a regular workspace administrator.
+        if (auth()->user()?->isSuperAdmin() && ! $context->isInspecting()) {
             return $query->where('is_admin', false);
         }
 
-        // Regular admins see only students enrolled in their sections
+        $workspaceId = $context->id();
+
+        // Co-admins in the same tenant share one student roster.
         return $query->where('is_admin', false)
-            ->whereHas('sections', fn ($q) => $q->where('admin_id', auth()->id()));
+            ->whereHas('sections', fn ($q) => $q
+                ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+                ->when(! $workspaceId, fn ($q) => $q->whereNull('workspace_id')));
     }
 
     public static function getRelations(): array

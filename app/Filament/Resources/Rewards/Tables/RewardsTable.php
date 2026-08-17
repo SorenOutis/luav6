@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Rewards\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -14,6 +15,7 @@ class RewardsTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('points_cost')
@@ -29,6 +31,7 @@ class RewardsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 //
             ])
             ->recordActions([

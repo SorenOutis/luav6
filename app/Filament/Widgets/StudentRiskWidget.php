@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Exam;
 use App\Models\User;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -81,6 +82,7 @@ class StudentRiskWidget extends BaseWidget
                     ->label('Submissions')
                     ->getStateUsing(function (User $record) {
                         return DB::table('exam_submissions')
+                            ->whereIn('exam_id', Exam::query()->select('id'))
                             ->where('user_id', $record->id)
                             ->count();
                     })

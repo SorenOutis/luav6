@@ -3,9 +3,9 @@
 /**
  * Admin chat tool tests.
  *
- * Admin tools are workspace-scoped (BelongsToWorkspace global scope plus
- * explicit ownership checks) and every write tool refuses to run without
- * confirm=true. Students must never reach these tools.
+ * Read tools are workspace-scoped. Write tools can only stage immutable,
+ * nonce-protected actions; they never trust model-provided confirmation and
+ * only a human approval endpoint can execute a write.
  */
 
 use App\Ai\Tools\CreateAssignmentTool;
@@ -17,15 +17,19 @@ use App\Ai\Tools\StudentsTool;
 use App\Ai\Tools\SubmissionsToGradeTool;
 use App\Ai\Tools\UpdateExamTool;
 use App\Ai\Tools\WorkspaceOverviewTool;
+use App\Models\AiActionAudit;
 use App\Models\Announcement;
 use App\Models\Assignment;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Models\PendingAiAction;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
+use App\Services\PendingAiActionService;
+use App\Support\WorkspaceContext;
 use Laravel\Ai\Tools\Request;
 
 it('scopes the workspace overview to the admin\'s own workspace', function () {
@@ -132,175 +136,354 @@ it('lists only pending submissions from the admin\'s own exams', function () {
         ->not->toContain('"status":"graded"');
 });
 
-it('only creates an exam after explicit confirmation', function () {
+
+
+function pendingAiActionNonce(PendingAiAction $action): string
+{
+    return app(PendingAiActionService::class)->present($action)['nonce'];
+}
+
+it('stages an exam action even when the model injects confirm true and writes only after a human approval', function () {
     $season = Season::factory()->active()->create();
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
-    $section = Section::factory()->forSeason($season)->create();
+    $section = Section::factory()->forSeason($season)->create(['name' => 'Biology A']);
+    $session = $admin->chatSessions()->create(['title' => 'Exam setup']);
 
-    $refused = (new CreateExamTool)->handle(new Request([
-        'title' => 'Cell Biology Quiz',
-        'exam_date' => '2026-09-01 09:00',
-        'section_id' => $section->id,
-        'confirm' => false,
-    ]));
-
-    expect($refused)->toContain('NOT EXECUTED')
-        ->and(Exam::count())->toBe(0);
-
-    $created = (new CreateExamTool)->handle(new Request([
+    $toolResult = (new CreateExamTool(chatSessionId: $session->id))->handle(new Request([
         'title' => 'Cell Biology Quiz',
         'exam_date' => '2026-09-01 09:00',
         'duration_minutes' => 45,
         'section_id' => $section->id,
+        // A prompt-injected legacy flag has no authority and is not in the schema.
         'confirm' => true,
     ]));
 
-    $exam = Exam::first();
+    $action = PendingAiAction::firstOrFail();
 
-    expect($created)->toContain('Draft exam created')
+    expect($toolResult)->toContain('PENDING HUMAN APPROVAL')
+        ->not->toContain($action->public_id)
+        ->not->toContain(pendingAiActionNonce($action))
+        ->and(Exam::count())->toBe(0)
+        ->and($action->status)->toBe(PendingAiAction::STATUS_PENDING)
+        ->and($action->chat_session_id)->toBe($session->id)
+        ->and($action->payload['title'])->toBe('Cell Biology Quiz')
+        ->and($action->preview['changes'])->toContain([
+            'field' => 'Status',
+            'before' => null,
+            'after' => 'draft',
+        ]);
+
+    $nonce = pendingAiActionNonce($action);
+
+    $this->postJson(route('ai-actions.approve', $action), ['nonce' => $nonce])
+        ->assertOk()
+        ->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    $exam = Exam::firstOrFail();
+    expect($exam->title)->toBe('Cell Biology Quiz')
         ->and($exam->status)->toBe('draft')
-        ->and($exam->admin_id)->toBe($admin->id)
-        ->and($exam->section_id)->toBe($section->id)
-        ->and($exam->duration_minutes)->toBe(45);
+        ->and($exam->workspace_id)->toBe($admin->current_workspace_id)
+        ->and($exam->admin_id)->toBe($admin->id);
+
+    // Replaying the same human request is idempotent.
+    $this->postJson(route('ai-actions.approve', $action), ['nonce' => $nonce])
+        ->assertOk()
+        ->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
+    expect(Exam::count())->toBe(1)
+        ->and(AiActionAudit::where('pending_ai_action_id', $action->id)->pluck('event')->all())
+        ->toContain('created', 'approved', 'executed');
 });
 
-it('safely refuses write tools when confirmation is omitted', function () {
-    $this->actingAs(User::factory()->admin()->create());
+it('deduplicates identical pending tool calls in the same conversation', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $session = $admin->chatSessions()->create(['title' => 'Announcement']);
+    $request = new Request([
+        'title' => 'Enrollment Week',
+        'description' => 'Enrollment closes Friday.',
+    ]);
 
-    $tools = [
-        new CreateAssignmentTool,
-        new CreateExamTool,
-        new GenerateExamQuestionsTool,
-        new PostAnnouncementTool,
-        new UpdateExamTool,
-    ];
+    (new PostAnnouncementTool(chatSessionId: $session->id))->handle($request);
+    (new PostAnnouncementTool(chatSessionId: $session->id))->handle($request);
 
-    foreach ($tools as $tool) {
-        expect($tool->handle(new Request([])))->toContain('NOT EXECUTED');
+    expect(PendingAiAction::count())->toBe(1)
+        ->and(Announcement::count())->toBe(0)
+        ->and(AiActionAudit::where('event', 'duplicate_request_deduplicated')->count())->toBe(1);
+});
+
+it('stages exam updates and rejects stale previews', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $exam = Exam::factory()->create(['title' => 'Midterm', 'status' => 'published']);
+
+    $result = (new UpdateExamTool)->handle(new Request([
+        'exam_id' => $exam->id,
+        'status' => 'closed',
+    ]));
+
+    expect($result)->toContain('PENDING HUMAN APPROVAL')
+        ->and($exam->refresh()->status)->toBe('published');
+
+    $action = PendingAiAction::firstOrFail();
+    $nonce = pendingAiActionNonce($action);
+
+    Exam::query()->withoutGlobalScope('workspace')->whereKey($exam->id)->update([
+        'description' => 'Changed after preview',
+        'updated_at' => now()->addMinute(),
+    ]);
+
+    $this->postJson(route('ai-actions.approve', $action), ['nonce' => $nonce])
+        ->assertStatus(409)
+        ->assertJsonPath('message', 'This record changed after the preview was created. Ask Echo to prepare a fresh action before approving it.');
+
+    expect($exam->refresh()->status)->toBe('published')
+        ->and($action->refresh()->status)->toBe(PendingAiAction::STATUS_FAILED);
+});
+
+it('requires a valid server nonce and the action owner', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'Enrollment Week',
+        'description' => 'Enrollment closes Friday.',
+    ]));
+    $action = PendingAiAction::firstOrFail();
+
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => str_repeat('x', 64),
+    ])->assertForbidden();
+
+    expect(Announcement::count())->toBe(0)
+        ->and($action->refresh()->status)->toBe(PendingAiAction::STATUS_PENDING)
+        ->and(AiActionAudit::where('event', 'invalid_nonce')->count())->toBe(1);
+
+    $nonce = pendingAiActionNonce($action);
+    $otherAdmin = User::factory()->admin()->create();
+    $this->actingAs($otherAdmin)
+        ->postJson(route('ai-actions.approve', $action), [
+            'nonce' => $nonce,
+        ])->assertNotFound();
+
+    expect(Announcement::count())->toBe(0);
+});
+
+it('rejects or expires actions without applying writes', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'First notice',
+        'description' => 'This one will be rejected.',
+    ]));
+    $rejected = PendingAiAction::firstOrFail();
+
+    $this->postJson(route('ai-actions.reject', $rejected), [
+        'nonce' => pendingAiActionNonce($rejected),
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_REJECTED);
+
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'Second notice',
+        'description' => 'This one will expire.',
+    ]));
+    $expired = PendingAiAction::latest('id')->firstOrFail();
+    $expired->forceFill(['expires_at' => now()->subMinute()])->save();
+
+    $this->postJson(route('ai-actions.approve', $expired), [
+        'nonce' => pendingAiActionNonce($expired),
+    ])->assertStatus(410);
+
+    expect(Announcement::count())->toBe(0)
+        ->and($expired->refresh()->status)->toBe(PendingAiAction::STATUS_EXPIRED);
+});
+
+it('recovers abandoned executions for a safe nonce-backed retry', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'Recovered notice',
+        'description' => 'Run exactly once after recovery.',
+    ]));
+    $action = PendingAiAction::firstOrFail();
+    $action->forceFill([
+        'status' => PendingAiAction::STATUS_EXECUTING,
+        'approved_at' => now()->subMinutes(11),
+        'execution_token' => (string) str()->uuid(),
+        'execution_started_at' => now()->subMinutes(11),
+    ])->save();
+
+    $response = $this->getJson(route('ai-actions.index'))
+        ->assertOk()
+        ->assertJsonPath('data.0.status', PendingAiAction::STATUS_PENDING);
+
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => $response->json('data.0.nonce'),
+    ])->assertOk();
+
+    expect(Announcement::count())->toBe(1)
+        ->and($action->refresh()->status)->toBe(PendingAiAction::STATUS_EXECUTED)
+        ->and(AiActionAudit::where('event', 'stale_execution_recovered')->count())->toBe(1);
+});
+
+it('detects payload tampering before execution', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'Safe title',
+        'description' => 'Safe body',
+    ]));
+    $action = PendingAiAction::firstOrFail();
+    $nonce = pendingAiActionNonce($action);
+    $action->forceFill(['payload' => [
+        ...$action->payload,
+        'title' => 'Tampered title',
+    ]])->save();
+
+    $this->postJson(route('ai-actions.approve', $action), ['nonce' => $nonce])
+        ->assertStatus(409)
+        ->assertJsonPath('message', 'The action payload failed its integrity check.');
+
+    expect(Announcement::count())->toBe(0)
+        ->and($action->refresh()->status)->toBe(PendingAiAction::STATUS_PENDING);
+});
+
+it('creates announcements and assignments only through approved cards in the active workspace', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $course = Course::query()->create(['name' => 'Biology 101']);
+
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'Enrollment Week',
+        'description' => 'Enrollment is open until Friday.',
+    ]));
+    (new CreateAssignmentTool)->handle(new Request([
+        'title' => 'Cell Model Project',
+        'course_id' => $course->id,
+        'due_date' => '2026-08-25 23:59',
+    ]));
+
+    expect(Announcement::count())->toBe(0)
+        ->and(Assignment::count())->toBe(0)
+        ->and(PendingAiAction::count())->toBe(2);
+
+    foreach (PendingAiAction::orderBy('id')->get() as $action) {
+        $this->postJson(route('ai-actions.approve', $action), [
+            'nonce' => pendingAiActionNonce($action),
+        ])->assertOk();
     }
 
-    expect(Assignment::count())->toBe(0)
-        ->and(Announcement::count())->toBe(0)
-        ->and(Exam::count())->toBe(0);
+    expect(Announcement::count())->toBe(1)
+        ->and(Assignment::count())->toBe(1)
+        ->and(Announcement::first()->workspace_id)->toBe($admin->current_workspace_id)
+        ->and(Assignment::first()->course_id)->toBe($course->id);
 });
 
-it('rejects a section from another workspace when creating an exam', function () {
+it('rejects foreign workspace references while preparing actions', function () {
     $adminA = User::factory()->admin()->create();
     $adminB = User::factory()->admin()->create();
 
     $this->actingAs($adminB);
     $foreignSection = Section::factory()->create();
+    $foreignCourse = Course::query()->create(['name' => 'Foreign Course']);
+    $foreignExam = Exam::factory()->create();
 
     $this->actingAs($adminA);
 
-    $result = (new CreateExamTool)->handle(new Request([
+    expect((new CreateExamTool)->handle(new Request([
         'title' => 'Sneaky Exam',
-        'exam_date' => '2026-09-01 09:00',
+        'exam_date' => '2026-09-01',
         'section_id' => $foreignSection->id,
-        'confirm' => true,
-    ]));
-
-    expect($result)->toContain('does not exist')
-        ->and(Exam::count())->toBe(0);
+    ])))->toContain('does not exist')
+        ->and((new CreateAssignmentTool)->handle(new Request([
+            'title' => 'Sneaky Assignment',
+            'due_date' => '2026-09-01',
+            'course_id' => $foreignCourse->id,
+        ])))->toContain('not found')
+        ->and((new UpdateExamTool)->handle(new Request([
+            'exam_id' => $foreignExam->id,
+            'status' => 'closed',
+        ])))->toContain('not found')
+        ->and(PendingAiAction::count())->toBe(0);
 });
 
-it('updates an exam only with confirmation and only in the admin\'s workspace', function () {
-    $adminA = User::factory()->admin()->create();
-    $adminB = User::factory()->admin()->create();
+it('never exposes admin write tools to students', function () {
+    $this->actingAs(User::factory()->create());
 
-    $this->actingAs($adminA);
-    $exam = Exam::factory()->create(['status' => 'published']);
+    foreach ([
+        new CreateAssignmentTool,
+        new CreateExamTool,
+        new GenerateExamQuestionsTool,
+        new PostAnnouncementTool,
+        new UpdateExamTool,
+    ] as $tool) {
+        expect($tool->handle(new Request([])))->toContain('Only admins');
+    }
 
-    // Another admin cannot touch it.
-    $this->actingAs($adminB);
-    $foreign = (new UpdateExamTool)->handle(new Request([
-        'exam_id' => $exam->id,
-        'status' => 'closed',
-        'confirm' => true,
-    ]));
-
-    expect($foreign)->toContain('not found')
-        ->and($exam->refresh()->status)->toBe('published');
-
-    // The owner still needs confirm=true.
-    $this->actingAs($adminA);
-    $unconfirmed = (new UpdateExamTool)->handle(new Request([
-        'exam_id' => $exam->id,
-        'status' => 'closed',
-        'confirm' => false,
-    ]));
-
-    expect($unconfirmed)->toContain('NOT EXECUTED')
-        ->and($exam->refresh()->status)->toBe('published');
-
-    $confirmed = (new UpdateExamTool)->handle(new Request([
-        'exam_id' => $exam->id,
-        'status' => 'closed',
-        'confirm' => true,
-    ]));
-
-    expect($confirmed)->toContain('status → closed')
-        ->and($exam->refresh()->status)->toBe('closed');
+    expect(PendingAiAction::count())->toBe(0);
 });
 
-it('posts an announcement only after confirmation', function () {
+it('binds super-admin actions to the active or inspected workspace shown in the preview', function () {
+    $superAdmin = User::factory()->superAdmin()->create();
+    $tenantAdmin = User::factory()->admin()->create();
+    $ownWorkspaceId = $superAdmin->current_workspace_id;
+    $tenantWorkspace = $tenantAdmin->currentWorkspace;
+    $this->actingAs($superAdmin);
+
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'Platform team notice',
+        'description' => 'Visible only in the super-admin workspace.',
+    ]));
+    $ownAction = PendingAiAction::firstOrFail();
+
+    app(WorkspaceContext::class)->inspect($tenantWorkspace);
+    (new PostAnnouncementTool)->handle(new Request([
+        'title' => 'Tenant notice',
+        'description' => 'Visible only in the inspected workspace.',
+    ]));
+    $tenantAction = PendingAiAction::latest('id')->firstOrFail();
+
+    expect($ownAction->workspace_id)->toBe($ownWorkspaceId)
+        ->and($tenantAction->workspace_id)->toBe($tenantWorkspace->id);
+
+    foreach ([$ownAction, $tenantAction] as $action) {
+        $this->postJson(route('ai-actions.approve', $action), [
+            'nonce' => pendingAiActionNonce($action),
+        ])->assertOk();
+    }
+
+    $announcements = Announcement::query()
+        ->withoutGlobalScope('workspace')
+        ->orderBy('id')
+        ->get();
+    expect($announcements->pluck('workspace_id')->all())->toBe([
+        $ownWorkspaceId,
+        $tenantWorkspace->id,
+    ]);
+});
+
+it('lists exact action previews only for the authenticated owner and session', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
+    $session = $admin->chatSessions()->create(['title' => 'Notice']);
 
-    $refused = (new PostAnnouncementTool)->handle(new Request([
-        'title' => 'Enrollment Week',
-        'description' => 'Enrollment is open until Friday.',
-        'confirm' => false,
+    (new PostAnnouncementTool(chatSessionId: $session->id))->handle(new Request([
+        'title' => 'Exact title',
+        'description' => 'Exact body',
     ]));
 
-    expect($refused)->toContain('NOT EXECUTED')
-        ->and(Announcement::count())->toBe(0);
+    $this->getJson(route('ai-actions.index', ['session_id' => $session->id]))
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.changes.1.after', 'Exact title')
+        ->assertJsonPath('data.0.changes.2.after', 'Exact body')
+        ->assertJsonPath('data.0.workspace.name', $admin->currentWorkspace->name)
+        ->assertJsonPath('data.0.status', PendingAiAction::STATUS_PENDING)
+        ->assertJsonPath('data.0.nonce', pendingAiActionNonce(PendingAiAction::firstOrFail()));
 
-    $posted = (new PostAnnouncementTool)->handle(new Request([
-        'title' => 'Enrollment Week',
-        'description' => 'Enrollment is open until Friday.',
-        'confirm' => true,
-    ]));
-
-    $announcement = Announcement::first();
-
-    expect($posted)->toContain('Announcement posted')
-        ->and($announcement->is_active)->toBeTruthy()
-        ->and($announcement->admin_id)->toBe($admin->id);
-});
-
-it('creates an assignment only for the admin\'s own courses', function () {
-    $adminA = User::factory()->admin()->create();
-    $adminB = User::factory()->admin()->create();
-
-    $this->actingAs($adminA);
-    $course = Course::create(['name' => 'Biology 101', 'admin_id' => $adminA->id]);
-
-    // Another admin's course is rejected.
-    $this->actingAs($adminB);
-    $foreign = (new CreateAssignmentTool)->handle(new Request([
-        'title' => 'Sneaky Homework',
-        'course_id' => $course->id,
-        'due_date' => '2026-08-25',
-        'confirm' => true,
-    ]));
-
-    expect($foreign)->toContain('not found')
-        ->and(Assignment::count())->toBe(0);
-
-    // The owner can create after confirming.
-    $this->actingAs($adminA);
-    $created = (new CreateAssignmentTool)->handle(new Request([
-        'title' => 'Cell Model Project',
-        'course_id' => $course->id,
-        'due_date' => '2026-08-25',
-        'confirm' => true,
-    ]));
-
-    $assignment = Assignment::first();
-
-    expect($created)->toContain('Assignment created')
-        ->and($assignment->course_id)->toBe($course->id)
-        ->and($assignment->admin_id)->toBe($adminA->id);
+    $other = User::factory()->admin()->create();
+    $this->actingAs($other)
+        ->getJson(route('ai-actions.index'))
+        ->assertOk()
+        ->assertJsonCount(0, 'data');
 });

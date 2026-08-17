@@ -4,27 +4,31 @@ namespace App\Http\Controllers;
 
 use App\Models\AnonymousMessage;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AnonymousMessageController extends Controller
 {
+    private const FEED_PAGE_SIZE = 24;
+
     public function index()
     {
-        $messages = AnonymousMessage::where('is_approved', true)
-            ->withCount('likedByUsers as likes_count')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        $userLikedMessageIds = DB::table('anonymous_message_likes')
-            ->where('user_id', auth()->id())
-            ->pluck('anonymous_message_id')
-            ->toArray();
+        $page = $this->feedPage(auth()->id());
 
         return Inertia::render('Ngl', [
-            'messages' => $messages,
-            'userLikedMessageIds' => $userLikedMessageIds,
+            'messages' => $page['data'],
+            'userLikedMessageIds' => $page['userLikedMessageIds'],
+            'pagination' => $page['meta'],
         ]);
+    }
+
+    public function feed(Request $request)
+    {
+        return response()->json($this->feedPage(
+            $request->user()->id,
+            $request->query('cursor'),
+        ));
     }
 
     public function like(AnonymousMessage $message)
@@ -53,6 +57,49 @@ class AnonymousMessageController extends Controller
         }
 
         return back();
+    }
+
+    /**
+     * @return array{data: array<int, array<string, mixed>>, userLikedMessageIds: array<int, int>, meta: array{hasMore: bool, nextCursor: string|null}}
+     */
+    private function feedPage(int $userId, ?string $cursor = null): array
+    {
+        $paginator = AnonymousMessage::query()
+            ->where('is_approved', true)
+            ->withCount('likedByUsers as likes_count')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->cursorPaginate(
+                self::FEED_PAGE_SIZE,
+                ['*'],
+                'cursor',
+                Cursor::fromEncoded($cursor),
+            );
+
+        $messages = collect($paginator->items());
+        $messageIds = $messages->pluck('id');
+
+        return [
+            'data' => $messages->map(fn (AnonymousMessage $message) => [
+                'id' => $message->id,
+                'content' => $message->content,
+                'likes_count' => (int) $message->likes_count,
+                'created_at' => $message->created_at?->toIso8601String(),
+            ])->values()->all(),
+            // Only fetch likes for rows in this page; a long-lived account can
+            // otherwise accumulate an unbounded array on every feed visit.
+            'userLikedMessageIds' => DB::table('anonymous_message_likes')
+                ->where('user_id', $userId)
+                ->whereIn('anonymous_message_id', $messageIds)
+                ->pluck('anonymous_message_id')
+                ->map(fn ($id): int => (int) $id)
+                ->values()
+                ->all(),
+            'meta' => [
+                'hasMore' => $paginator->hasMorePages(),
+                'nextCursor' => $paginator->nextCursor()?->encode(),
+            ],
+        ];
     }
 
     public function store(Request $request)

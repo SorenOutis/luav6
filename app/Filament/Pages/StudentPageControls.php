@@ -22,7 +22,7 @@ class StudentPageControls extends Page implements HasSchemas
     {
         $user = Filament::auth()->user();
 
-        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+        return (bool) $user?->is_admin;
     }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-eye-slash';

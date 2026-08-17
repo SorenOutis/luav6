@@ -45,7 +45,7 @@ class AiQuestionGeneratorService
      */
     public function forProvider(?string $provider): static
     {
-        if ($provider !== null && array_key_exists($provider, AiSdkProviderService::TEXT_PROVIDER_LABELS)) {
+        if ($provider !== null && array_key_exists($provider, AiSdkProviderService::textProviderLabels())) {
             $this->provider = $provider;
         }
 
@@ -228,8 +228,8 @@ PROMPT;
     */
 
     /**
-     * Send a prompt to the configured provider, falling back to Ollama when
-     * enabled. Throws a RuntimeException describing the real failure(s) when
+     * Send a prompt to the configured provider, applying the workspace's
+     * explicit failure/budget fallback rule. Throws a RuntimeException when
      * no provider can answer, so drafts surface actionable error messages
      * instead of a generic "no usable questions".
      */
@@ -253,20 +253,37 @@ PROMPT;
 
         try {
             return $this->callProvider($primary, $prompt, $jsonMode, $maxTokens, $temperature);
-        } catch (\Throwable $e) {
-            $failures[] = "{$primary}: {$e->getMessage()}";
-            Log::error("Primary AI provider [{$primary}] failed: {$e->getMessage()}");
+        } catch (\Throwable $primaryFailure) {
+            $failures[] = "{$primary}: {$primaryFailure->getMessage()}";
+            Log::error("Primary AI provider [{$primary}] failed: {$primaryFailure->getMessage()}");
         }
 
-        if ($primary !== 'ollama' && Setting::get('ollama_enabled', false) === '1') {
-            try {
-                Log::info('Attempting Ollama fallback for AI request');
+        $fallbackPolicy = app(AiProviderFallbackPolicy::class);
+        $fallback = $fallbackPolicy->fallbackFor($primary, $primaryFailure);
 
-                return $this->callProvider('ollama', $prompt, $jsonMode, $maxTokens, $temperature);
-            } catch (\Throwable $e) {
-                $failures[] = "ollama: {$e->getMessage()}";
-                Log::error('Ollama fallback also failed: '.$e->getMessage());
+        if ($fallback) {
+            app(AiBudgetManager::class)->recordFallback(
+                'generation',
+                $primary,
+                $fallback,
+                $fallbackPolicy->reason($primaryFailure),
+            );
+
+            try {
+                Log::info("Attempting {$fallback} fallback for AI generation");
+
+                return $this->callProvider($fallback, $prompt, $jsonMode, $maxTokens, $temperature);
+            } catch (\Throwable $fallbackFailure) {
+                $failures[] = "{$fallback}: {$fallbackFailure->getMessage()}";
+                Log::error("AI fallback [{$fallback}] also failed: {$fallbackFailure->getMessage()}");
             }
+        }
+
+        if ($primaryFailure instanceof \App\Exceptions\AiBudgetExceededException) {
+            throw $primaryFailure;
+        }
+        if (($fallbackFailure ?? null) instanceof \App\Exceptions\AiBudgetExceededException) {
+            throw $fallbackFailure;
         }
 
         throw new \RuntimeException('AI request failed ('.implode(' | ', $failures).')');
@@ -277,11 +294,53 @@ PROMPT;
      */
     protected function callProvider(string $provider, string $prompt, bool $jsonMode, int $maxTokens, float $temperature): string
     {
+        $model = $this->modelForProvider($provider);
+        $inputTokens = AiUsageTracker::tokensFromChars(strlen($prompt));
+        $usage = app(AiUsageTracker::class);
+        $reservation = $usage->start(
+            $provider,
+            $model,
+            'generation',
+            $inputTokens,
+            $maxTokens,
+        );
+
+        try {
+            $text = match ($provider) {
+                'cloudflare' => $this->callCloudflare($prompt, $maxTokens),
+                'groq' => $this->callGroq($prompt, $jsonMode, $maxTokens, $temperature),
+                'ollama' => $this->callOllama($prompt, $jsonMode, $maxTokens, $temperature),
+                default => $this->callSdkProvider($provider, $prompt, $jsonMode, $maxTokens, $temperature),
+            };
+
+            $usage->complete(
+                $reservation,
+                $provider,
+                $model,
+                'generation',
+                $inputTokens,
+                AiUsageTracker::tokensFromChars(strlen($text)),
+            );
+
+            return $text;
+        } catch (\Throwable $exception) {
+            $usage->cancel($reservation, $exception->getMessage());
+
+            throw $exception;
+        }
+    }
+
+    private function modelForProvider(string $provider): ?string
+    {
         return match ($provider) {
-            'cloudflare' => $this->callCloudflare($prompt, $maxTokens),
-            'groq' => $this->callGroq($prompt, $jsonMode, $maxTokens, $temperature),
-            'ollama' => $this->callOllama($prompt, $jsonMode, $maxTokens, $temperature),
-            default => $this->callSdkProvider($provider, $prompt, $jsonMode, $maxTokens, $temperature),
+            'cloudflare' => Setting::get('cloudflare_grading_model')
+                ?? Setting::get('cloudflare_model', '@cf/meta/llama-3.1-8b-instruct'),
+            'groq' => Setting::get('groq_model', 'llama-3.1-8b-instant'),
+            'ollama' => Setting::get('ollama_model', 'llama3.2:1b'),
+            'gemini' => app(GeminiAIService::class)->gradingModel(),
+            default => AiSdkProviderService::isSdkRouted($provider)
+                ? AiSdkProviderService::for($provider)->model()
+                : null,
         };
     }
 
@@ -328,17 +387,7 @@ PROMPT;
             timeout: 300,
         );
 
-        $text = (string) $response->text;
-
-        app(AiUsageTracker::class)->record(
-            $provider,
-            $model,
-            'generation',
-            AiUsageTracker::tokensFromChars(strlen($prompt)),
-            AiUsageTracker::tokensFromChars(strlen($text)),
-        );
-
-        return $text;
+        return (string) $response->text;
     }
 
     /**
@@ -383,14 +432,6 @@ PROMPT;
         if (! is_string($text)) {
             throw new \RuntimeException('Cloudflare returned an unexpected response format.');
         }
-
-        app(AiUsageTracker::class)->record(
-            'cloudflare',
-            $model,
-            'generation',
-            AiUsageTracker::tokensFromChars(strlen($prompt)),
-            AiUsageTracker::tokensFromChars(strlen($text)),
-        );
 
         return $text;
     }

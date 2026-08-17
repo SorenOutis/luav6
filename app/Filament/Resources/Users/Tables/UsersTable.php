@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Users\Tables;
 
 use App\Models\Section;
+use App\Models\Workspace;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -26,6 +27,10 @@ class UsersTable
     {
         return $table
             ->columns([
+                TextColumn::make('workspaces.name')
+                    ->label('Workspaces')
+                    ->badge()
+                    ->visible(fn (): bool => auth()->user()?->isSuperAdmin() ?? false),
                 ImageColumn::make('avatar')
                     ->label('Avatar')
                     ->circular()
@@ -91,6 +96,17 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('workspace_id')
+                    ->label('Workspace')
+                    ->options(fn (): array => Workspace::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->visible(fn (): bool => auth()->user()?->isSuperAdmin() ?? false)
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn ($query, $workspaceId) => $query->whereHas(
+                            'workspaces',
+                            fn ($workspaceQuery) => $workspaceQuery->where('workspaces.id', $workspaceId),
+                        ),
+                    )),
                 SelectFilter::make('sections')
                     ->relationship('sections', 'name')
                     ->label('Filter by Sections')

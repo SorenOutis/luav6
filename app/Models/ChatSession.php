@@ -23,4 +23,9 @@ class ChatSession extends Model
     {
         return $this->hasMany(ChatMessage::class, 'session_id')->orderBy('id');
     }
+
+    public function pendingAiActions(): HasMany
+    {
+        return $this->hasMany(PendingAiAction::class);
+    }
 }

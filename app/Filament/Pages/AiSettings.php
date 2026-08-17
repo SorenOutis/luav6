@@ -35,7 +35,7 @@ class AiSettings extends Page implements HasSchemas
     {
         $user = Filament::auth()->user();
 
-        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+        return (bool) $user?->is_admin;
     }
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cpu-chip';
@@ -70,6 +70,18 @@ class AiSettings extends Page implements HasSchemas
         $this->form->fill(array_merge([
             'ai_chat_enabled' => (bool) Setting::get('ai_chat_enabled', true),
             'ai_chat_maintenance_message' => Setting::get('ai_chat_maintenance_message', 'The AI service is currently under maintenance. Please try again later.'),
+            'ai_budget_enabled' => (string) Setting::get('ai_budget_enabled', '0') === '1',
+            'ai_budget_daily_tokens' => (int) Setting::get('ai_budget_daily_tokens', 0),
+            'ai_budget_monthly_tokens' => (int) Setting::get('ai_budget_monthly_tokens', 0),
+            'ai_budget_daily_cost' => (float) Setting::get('ai_budget_daily_cost', 0),
+            'ai_budget_monthly_cost' => (float) Setting::get('ai_budget_monthly_cost', 0),
+            'ai_budget_warning_percent' => (int) Setting::get('ai_budget_warning_percent', 80),
+            'ai_fallback_mode' => Setting::get(
+                'ai_fallback_mode',
+                (string) Setting::get('ollama_enabled', '0') === '1' ? 'provider_failure' : 'disabled',
+            ),
+            'ai_fallback_provider' => Setting::get('ai_fallback_provider', 'ollama'),
+            'ai_budget_cost_rates' => $this->storedCostRates(),
             'ai_provider' => $provider,
             'gemini_api_key' => Setting::get('gemini_api_key'),
             'gemini_chat_model' => Setting::get('gemini_chat_model', 'gemini-3.5-flash'),
@@ -109,7 +121,6 @@ class AiSettings extends Page implements HasSchemas
             'groq_model' => Setting::get('groq_model', 'llama-3.1-8b-instant'),
             'ollama_url' => Setting::get('ollama_url', 'http://localhost:11434'),
             'ollama_model' => Setting::get('ollama_model', 'llama3.2:1b'),
-            'ollama_enabled' => (bool) Setting::get('ollama_enabled', false),
             'openai_compatible_providers' => $compatibleProviders,
             'login_enabled' => (bool) Setting::get('login_enabled', true),
             'login_disabled_message' => Setting::get('login_disabled_message', 'Login is currently disabled. Please try again later.'),
@@ -180,6 +191,8 @@ class AiSettings extends Page implements HasSchemas
                             ->visible(fn ($get) => ! $get('ai_chat_enabled')),
                     ]),
 
+                $this->aiBudgetSection(),
+
                 Section::make('Daily XP Claim')
                     ->description('Configure the daily login reward students can claim on their dashboard.')
                     ->schema([
@@ -246,6 +259,123 @@ class AiSettings extends Page implements HasSchemas
                     ->columns(2),
             ])
             ->statePath('data');
+    }
+
+    private function aiBudgetSection(): Section
+    {
+        return Section::make('Workspace AI Budget & Fallback')
+            ->description('Set tenant-specific token and estimated-cost ceilings. Reservations are atomic, so concurrent requests cannot overspend the configured budget.')
+            ->schema([
+                Toggle::make('ai_budget_enabled')
+                    ->label('Enforce workspace AI budgets')
+                    ->helperText('Disabled by default. A value of 0 for any limit means unlimited.')
+                    ->live(),
+
+                Grid::make(2)->schema([
+                    TextInput::make('ai_budget_daily_tokens')
+                        ->label('Daily token limit')
+                        ->numeric()
+                        ->integer()
+                        ->minValue(0)
+                        ->default(0)
+                        ->helperText('Input plus output tokens. 0 = unlimited.'),
+                    TextInput::make('ai_budget_monthly_tokens')
+                        ->label('Monthly token limit')
+                        ->numeric()
+                        ->integer()
+                        ->minValue(0)
+                        ->default(0)
+                        ->helperText('Input plus output tokens. 0 = unlimited.'),
+                    TextInput::make('ai_budget_daily_cost')
+                        ->label('Daily estimated-cost limit')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(1000000)
+                        ->step(0.01)
+                        ->prefix('$')
+                        ->default(0)
+                        ->helperText('Estimated USD. 0 = unlimited.'),
+                    TextInput::make('ai_budget_monthly_cost')
+                        ->label('Monthly estimated-cost limit')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(1000000)
+                        ->step(0.01)
+                        ->prefix('$')
+                        ->default(0)
+                        ->helperText('Estimated USD. 0 = unlimited.'),
+                    TextInput::make('ai_budget_warning_percent')
+                        ->label('Warning threshold')
+                        ->numeric()
+                        ->integer()
+                        ->minValue(50)
+                        ->maxValue(100)
+                        ->suffix('%')
+                        ->default(80)
+                        ->helperText('Creates one warning event per daily/monthly period.'),
+                ])->visible(fn (Get $get): bool => (bool) $get('ai_budget_enabled')),
+
+                Grid::make(2)->schema([
+                    Select::make('ai_fallback_mode')
+                        ->label('Fallback rule')
+                        ->options([
+                            'disabled' => 'Never fall back',
+                            'provider_failure' => 'On provider failure only',
+                            'provider_failure_or_budget' => 'On provider failure or cost/token budget block',
+                        ])
+                        ->required()
+                        ->default('disabled')
+                        ->helperText('Budget fallback is most useful with a local or lower-cost provider.'),
+                    Select::make('ai_fallback_provider')
+                        ->label('Fallback provider')
+                        ->options($this->defaultableProviders())
+                        ->searchable()
+                        ->required()
+                        ->default('ollama')
+                        ->helperText('Must be configured and different from the default provider.'),
+                ]),
+
+                Repeater::make('ai_budget_cost_rates')
+                    ->label('Custom estimated provider rates')
+                    ->helperText('Optional USD per million-token overrides. The first matching provider/model pattern wins; leave empty to use conservative built-in estimates.')
+                    ->addActionLabel('Add cost-rate override')
+                    ->defaultItems(0)
+                    ->collapsible()
+                    ->columns(2)
+                    ->schema([
+                        Select::make('provider')
+                            ->options($this->defaultableProviders())
+                            ->searchable()
+                            ->required(),
+                        TextInput::make('model')
+                            ->label('Model contains')
+                            ->maxLength(160)
+                            ->helperText('Optional case-insensitive model substring.'),
+                        TextInput::make('input')
+                            ->label('Input $ / 1M tokens')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100000)
+                            ->step(0.0001)
+                            ->required(),
+                        TextInput::make('output')
+                            ->label('Output $ / 1M tokens')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100000)
+                            ->step(0.0001)
+                            ->required(),
+                    ]),
+            ]);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function storedCostRates(): array
+    {
+        $stored = Setting::get('ai_budget_cost_rates', '[]');
+        $rates = is_string($stored) ? json_decode($stored, true) : $stored;
+
+        return is_array($rates) ? array_values(array_filter($rates, 'is_array')) : [];
     }
 
     /**
@@ -668,14 +798,6 @@ class AiSettings extends Page implements HasSchemas
                         ]),
                     ]),
 
-                Section::make('Ollama Fallback')
-                    ->description('Configure local Ollama as a fallback when the default provider fails.')
-                    ->schema([
-                        Toggle::make('ollama_enabled')
-                            ->label('Enable Ollama Fallback')
-                            ->default(false)
-                            ->helperText('When enabled, Ollama will be used if the default provider fails. Uses the URL and model from the Ollama card above.'),
-                    ]),
             ]);
     }
 
@@ -684,10 +806,53 @@ class AiSettings extends Page implements HasSchemas
         try {
             $data = $this->form->getState();
 
+            if (
+                ($data['ai_fallback_mode'] ?? 'disabled') !== 'disabled'
+                && ($data['ai_fallback_provider'] ?? null) === ($data['ai_provider'] ?? 'gemini')
+            ) {
+                throw ValidationException::withMessages([
+                    'data.ai_fallback_provider' => 'Choose a fallback provider different from the default provider.',
+                ]);
+            }
+
             Setting::set('ai_chat_enabled', ($data['ai_chat_enabled'] ?? true) ? '1' : '0');
             if (isset($data['ai_chat_maintenance_message'])) {
                 Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
             }
+
+            Setting::set('ai_budget_enabled', ($data['ai_budget_enabled'] ?? false) ? '1' : '0');
+            Setting::set('ai_budget_daily_tokens', (string) max(0, (int) ($data['ai_budget_daily_tokens'] ?? 0)));
+            Setting::set('ai_budget_monthly_tokens', (string) max(0, (int) ($data['ai_budget_monthly_tokens'] ?? 0)));
+            Setting::set('ai_budget_daily_cost', (string) min(1000000, max(0, (float) ($data['ai_budget_daily_cost'] ?? 0))));
+            Setting::set('ai_budget_monthly_cost', (string) min(1000000, max(0, (float) ($data['ai_budget_monthly_cost'] ?? 0))));
+            Setting::set('ai_budget_warning_percent', (string) min(100, max(50, (int) ($data['ai_budget_warning_percent'] ?? 80))));
+
+            $fallbackMode = in_array(($data['ai_fallback_mode'] ?? null), [
+                'disabled',
+                'provider_failure',
+                'provider_failure_or_budget',
+            ], true) ? $data['ai_fallback_mode'] : 'disabled';
+            $fallbackProvider = (string) ($data['ai_fallback_provider'] ?? 'ollama');
+            Setting::set('ai_fallback_mode', $fallbackMode);
+            Setting::set('ai_fallback_provider', $fallbackProvider);
+            // Preserve compatibility with older code/config while every AI
+            // call site migrates to the explicit fallback policy.
+            Setting::set(
+                'ollama_enabled',
+                $fallbackMode !== 'disabled' && $fallbackProvider === 'ollama' ? '1' : '0',
+            );
+
+            $costRates = collect((array) ($data['ai_budget_cost_rates'] ?? []))
+                ->filter(fn (mixed $rate): bool => is_array($rate) && filled($rate['provider'] ?? null))
+                ->map(fn (array $rate): array => [
+                    'provider' => (string) $rate['provider'],
+                    'model' => trim((string) ($rate['model'] ?? '')),
+                    'input' => min(100000, max(0, (float) ($rate['input'] ?? 0))),
+                    'output' => min(100000, max(0, (float) ($rate['output'] ?? 0))),
+                ])
+                ->values()
+                ->all();
+            Setting::set('ai_budget_cost_rates', json_encode($costRates, JSON_THROW_ON_ERROR));
 
             $compatibleProviders = collect((array) ($data['openai_compatible_providers'] ?? []))
                 ->filter(fn (mixed $provider): bool => is_array($provider))
@@ -745,7 +910,6 @@ class AiSettings extends Page implements HasSchemas
             Setting::set('groq_model', $data['groq_model'] ?? 'llama-3.1-8b-instant');
             Setting::set('ollama_url', $data['ollama_url'] ?? 'http://localhost:11434');
             Setting::set('ollama_model', $data['ollama_model'] ?? 'llama3.2:1b');
-            Setting::set('ollama_enabled', ($data['ollama_enabled'] ?? false) ? '1' : '0');
 
             // Laravel AI SDK provider credentials and models. Empty values
             // are stored as null so the runtime falls back to the env vars.

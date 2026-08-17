@@ -16,6 +16,7 @@ class CourseModule extends Model
         'title',
         'description',
         'sort_order',
+        'workspace_id',
         'admin_id',
     ];
 

@@ -23,6 +23,7 @@ class LatestExamSubmissionsWidget extends BaseWidget
         return $table
             ->query(
                 fn (): Builder => ExamSubmission::query()
+                    ->whereHas('exam')
                     ->with(['user:id,name,email', 'exam:id,title', 'examPart:id,title'])
                     ->latest()
             )

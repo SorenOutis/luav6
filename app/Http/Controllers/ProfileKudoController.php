@@ -22,7 +22,11 @@ class ProfileKudoController extends Controller
     {
         $sender = $request->user();
         abort_if($sender->is($user), 422, 'You cannot send yourself a kudo.');
-        abort_unless($this->sharesSection($sender, $user), 403, 'You can only send kudos to students in one of your sections.');
+        abort_unless(
+            $sender->can('interactWithProfile', $user),
+            403,
+            'You can only send kudos to visible student profiles in one of your sections.',
+        );
 
         $data = $request->validate([
             'type' => ['required', 'string', Rule::in(array_keys(self::KUDOS))],
@@ -46,17 +50,11 @@ class ProfileKudoController extends Controller
                 'message' => "{$sender->name} sent you “".self::KUDOS[$data['type']].'”.',
                 'meta' => 'Social',
                 'image' => $sender->avatar,
-                'href' => "/u/{$sender->id}",
+                'href' => "/u/{$sender->public_id}",
             ]));
         }
 
         return back();
     }
 
-    private function sharesSection(User $first, User $second): bool
-    {
-        return $first->sections()
-            ->whereIn('sections.id', $second->sections()->select('sections.id'))
-            ->exists();
-    }
 }

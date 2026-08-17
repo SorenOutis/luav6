@@ -49,13 +49,13 @@ interface Badge {
 }
 
 interface SocialUser {
-    id: number;
+    id: string;
     name: string;
     avatar: string | null;
 }
 
 interface RecentKudo {
-    id: number;
+    id: string;
     name: string;
     avatar: string | null;
     type: 'great-work' | 'on-fire' | 'keep-going';
@@ -82,12 +82,13 @@ interface HistoryItem {
 
 const props = defineProps<{
     profileUser: {
-        id: number;
+        id: string;
         name: string;
         avatar: string | null;
         cover_photo: string | null;
         bio: string | null;
         sections: string[];
+        sectionsHidden?: boolean;
         streak: number;
         joinedAt: string;
         isCurrentUser: boolean;
@@ -107,6 +108,12 @@ const props = defineProps<{
     courses: Course[];
     history: HistoryItem[];
     isSameSection: boolean;
+    privacyControlsEnabled?: boolean;
+    canViewActivity?: boolean;
+    canViewPrivateProgress?: boolean;
+    canViewAchievements?: boolean;
+    canViewSocial?: boolean;
+    canInteract?: boolean;
     isFollowing: boolean;
     kudos: Record<'great-work' | 'on-fire' | 'keep-going', number>;
     viewerKudo: 'great-work' | 'on-fire' | 'keep-going' | null;
@@ -165,6 +172,23 @@ const sendKudo = (type: 'great-work' | 'on-fire' | 'keep-going') => {
 const formatCount = (value: number) =>
     new Intl.NumberFormat('en-US', { notation: 'compact' }).format(value);
 
+// Optional defaults preserve compatibility with cached pages during a rolling
+// deployment; new server responses always enable explicit privacy controls.
+const showActivity = computed(
+    () => !props.privacyControlsEnabled || Boolean(props.canViewActivity),
+);
+const showAchievements = computed(
+    () => !props.privacyControlsEnabled || Boolean(props.canViewAchievements),
+);
+const showSocial = computed(
+    () => !props.privacyControlsEnabled || Boolean(props.canViewSocial),
+);
+const showPrivateProgress = computed(() =>
+    props.privacyControlsEnabled
+        ? Boolean(props.canViewPrivateProgress)
+        : props.isSameSection,
+);
+
 /** @username-style handle derived from the display name. */
 const handle = computed(() => {
     const slug = props.profileUser.name
@@ -175,12 +199,34 @@ const handle = computed(() => {
     return `@${slug || 'student'}`;
 });
 
-const countStats = computed(() => [
-    { key: 'level', label: 'Level', value: props.stats.level },
-    { key: 'followers', label: 'Followers', value: props.stats.followersCount },
-    { key: 'following', label: 'Following', value: props.stats.followingCount },
-    { key: 'badges', label: 'Badges', value: props.stats.badgesCount },
-]);
+const countStats = computed(() => {
+    const items = [{ key: 'level', label: 'Level', value: props.stats.level }];
+
+    if (showSocial.value) {
+        items.push(
+            {
+                key: 'followers',
+                label: 'Followers',
+                value: props.stats.followersCount,
+            },
+            {
+                key: 'following',
+                label: 'Following',
+                value: props.stats.followingCount,
+            },
+        );
+    }
+
+    if (showAchievements.value) {
+        items.push({
+            key: 'badges',
+            label: 'Badges',
+            value: props.stats.badgesCount,
+        });
+    }
+
+    return items;
+});
 
 // XP progress toward the next level, used to draw the ring around the avatar.
 const levelProgress = computed(() => {
@@ -227,16 +273,23 @@ const openSocialList = (which: 'followers' | 'following') => {
 type TabKey = 'activity' | 'achievements' | 'courses';
 
 const tabs = computed(() => {
-    const items: Array<{ key: TabKey; label: string; count: number }> = [
-        { key: 'activity', label: 'Activity', count: props.history.length },
-        {
+    const items: Array<{ key: TabKey; label: string; count: number }> = [];
+
+    if (showActivity.value) {
+        items.push({
+            key: 'activity',
+            label: 'Activity',
+            count: props.history.length,
+        });
+    }
+    if (showAchievements.value) {
+        items.push({
             key: 'achievements',
             label: 'Achievements',
             count: earnedBadgesCount.value,
-        },
-    ];
-
-    if (props.isSameSection) {
+        });
+    }
+    if (showPrivateProgress.value) {
         items.push({
             key: 'courses',
             label: 'Courses',
@@ -247,7 +300,13 @@ const tabs = computed(() => {
     return items;
 });
 
-const activeTab = ref<TabKey>('activity');
+const activeTab = ref<TabKey>(
+    showActivity.value
+        ? 'activity'
+        : showAchievements.value
+          ? 'achievements'
+          : 'courses',
+);
 
 // ── Share ───────────────────────────────────────────────────────────
 const shareLabel = ref('Share');
@@ -375,7 +434,8 @@ const iconForReason = (reason: string) => {
                             </Link>
                             <button
                                 v-if="
-                                    !profileUser.isCurrentUser && isSameSection
+                                    !profileUser.isCurrentUser &&
+                                    (canInteract || isFollowing)
                                 "
                                 type="button"
                                 class="profile-btn inline-flex items-center gap-1.5 px-4 text-[14px] transition-colors"
@@ -451,7 +511,11 @@ const iconForReason = (reason: string) => {
                                 v-if="profileUser.sections.length === 0"
                                 class="rounded-full bg-muted px-3 py-1 text-[13px] font-medium text-muted-foreground"
                             >
-                                No section
+                                {{
+                                    profileUser.sectionsHidden
+                                        ? 'Sections hidden'
+                                        : 'No section'
+                                }}
                             </span>
                         </div>
 
@@ -558,7 +622,7 @@ const iconForReason = (reason: string) => {
 
                     <!-- ════════════ Positive kudos ════════════ -->
                     <div
-                        v-if="!profileUser.isCurrentUser && isSameSection"
+                        v-if="!profileUser.isCurrentUser && canInteract"
                         class="mt-4 flex flex-col gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div>
@@ -636,6 +700,7 @@ const iconForReason = (reason: string) => {
 
                     <!-- ════════════ Segmented tabs ════════════ -->
                     <div
+                        v-if="tabs.length > 0"
                         class="mt-5 inline-flex w-full gap-1 rounded-full bg-muted p-1 sm:w-auto"
                         role="tablist"
                     >
@@ -661,7 +726,7 @@ const iconForReason = (reason: string) => {
                     </div>
 
                     <!-- ════════════ Tab panels ════════════ -->
-                    <div class="mt-5">
+                    <div v-if="tabs.length > 0" class="mt-5">
                         <!-- ── Activity feed ── -->
                         <div
                             v-show="activeTab === 'activity'"
@@ -871,7 +936,8 @@ const iconForReason = (reason: string) => {
                             class="space-y-3"
                         >
                             <p class="text-[13px] text-muted-foreground">
-                                Visible because you share a section.
+                                Visible to you as the student or authorized
+                                staff.
                             </p>
 
                             <template v-if="courses.length > 0">

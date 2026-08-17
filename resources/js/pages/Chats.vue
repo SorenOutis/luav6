@@ -25,6 +25,7 @@ import {
     ref,
     watch,
 } from 'vue';
+import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ChatNavigation from '@/components/ChatNavigation.vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
@@ -56,6 +57,7 @@ import {
     stream as chatsStream,
 } from '@/routes/chats';
 import type { BreadcrumbItem } from '@/types';
+import type { PendingAiAction } from '@/types/aiActions';
 
 interface ChatMessage {
     id?: number;
@@ -88,12 +90,20 @@ interface ChatSession {
     title: string;
     messageCount?: number;
     messages?: ChatMessage[];
+    messagePagination?: {
+        hasMore: boolean;
+        nextBeforeId: number | null;
+    };
     updatedAt?: string | null;
     updatedAtHuman?: string;
 }
 
 const props = defineProps<{
     sessions: ChatSession[];
+    sessionPagination?: {
+        hasMore: boolean;
+        nextCursor: string | null;
+    };
     activeSession?: ChatSession | null;
 }>();
 
@@ -146,12 +156,26 @@ const activeSession = ref<ChatSession | null>(
     props.activeSession ? { ...props.activeSession } : null,
 );
 const messages = ref<ChatMessage[]>(props.activeSession?.messages ?? []);
+const sessionCursor = ref<string | null>(
+    props.sessionPagination?.nextCursor ?? null,
+);
+const hasMoreSessions = ref(props.sessionPagination?.hasMore ?? false);
+const isLoadingSessions = ref(false);
+const hasOlderMessages = ref(
+    props.activeSession?.messagePagination?.hasMore ?? false,
+);
+const nextBeforeMessageId = ref<number | null>(
+    props.activeSession?.messagePagination?.nextBeforeId ?? null,
+);
+const isLoadingOlderMessages = ref(false);
+const isPrependingHistory = ref(false);
 const inputMessage = ref('');
 const isLoading = ref(false);
 const sessionToDelete = ref<ChatSession | null>(null);
 const isCreatingSession = ref(false);
 const isDeletingSession = ref(false);
 const isMobileHistoryOpen = ref(false);
+const aiActions = ref<PendingAiAction[]>([]);
 
 // Abort controller for the in-flight reply, so the user can stop generation.
 let streamAbortController: AbortController | null = null;
@@ -207,6 +231,33 @@ const isAdmin = computed(() =>
     Boolean((page.props.aiChat as { isAdmin?: boolean })?.isAdmin),
 );
 
+const loadAiActions = async (sessionId = activeSession.value?.id) => {
+    if (!isAdmin.value || !sessionId) {
+        aiActions.value = [];
+        return;
+    }
+
+    try {
+        const response = await axios.get('/api/ai-actions', {
+            params: { session_id: sessionId },
+        });
+        aiActions.value = (response.data.data ?? []) as PendingAiAction[];
+    } catch (error) {
+        console.error('Failed to load AI approval actions:', error);
+    }
+};
+
+const updateAiAction = (updated: PendingAiAction) => {
+    const index = aiActions.value.findIndex(
+        (action) => action.id === updated.id,
+    );
+    if (index === -1) {
+        aiActions.value.unshift(updated);
+    } else {
+        aiActions.value.splice(index, 1, updated);
+    }
+};
+
 const showSuggestions = computed(() => {
     if (messages.value.length === 0) return true;
     return !messages.value.some((m) => m.role === 'user');
@@ -256,7 +307,13 @@ const scrollToBottom = async () => {
     }
 };
 
-watch(messages, () => scrollToBottom(), { deep: true });
+watch(
+    messages,
+    () => {
+        if (!isPrependingHistory.value) scrollToBottom();
+    },
+    { deep: true },
+);
 
 // Focus the centered input whenever a brand-new chat opens so the user can
 // start typing immediately — except on touch devices (coarse pointer), where
@@ -478,6 +535,73 @@ const normalizeMessages = (incoming: ChatMessage[]): ChatMessage[] => {
     }));
 };
 
+const loadOlderSessions = async () => {
+    if (!hasMoreSessions.value || isLoadingSessions.value) return;
+
+    isLoadingSessions.value = true;
+    try {
+        const response = await axios.get('/api/chats', {
+            params: { cursor: sessionCursor.value },
+        });
+        const incoming = (response.data.data ?? []) as ChatSession[];
+        const known = new Set(sessions.value.map((session) => session.id));
+        sessions.value.push(
+            ...incoming.filter((session) => !known.has(session.id)),
+        );
+        sessionCursor.value = response.data.meta?.nextCursor ?? null;
+        hasMoreSessions.value = Boolean(response.data.meta?.hasMore);
+    } catch (error) {
+        console.error('Failed to load older chats:', error);
+    } finally {
+        isLoadingSessions.value = false;
+    }
+};
+
+const loadOlderMessages = async () => {
+    if (
+        !activeSession.value ||
+        !hasOlderMessages.value ||
+        !nextBeforeMessageId.value ||
+        isLoadingOlderMessages.value
+    ) {
+        return;
+    }
+
+    const container = scrollContainer.value as
+        | (HTMLElement & { $el?: HTMLElement })
+        | null;
+    const element = container?.$el || container;
+    const previousHeight = element?.scrollHeight ?? 0;
+
+    isLoadingOlderMessages.value = true;
+    isPrependingHistory.value = true;
+    try {
+        const response = await axios.get(
+            `/api/chats/${activeSession.value.id}/messages`,
+            { params: { before_id: nextBeforeMessageId.value } },
+        );
+        const incoming = normalizeMessages(response.data.data ?? []);
+        const known = new Set(messages.value.map((message) => message.id));
+        messages.value.unshift(
+            ...incoming.filter(
+                (message) => message.id === undefined || !known.has(message.id),
+            ),
+        );
+        hasOlderMessages.value = Boolean(response.data.meta?.hasMore);
+        nextBeforeMessageId.value = response.data.meta?.nextBeforeId ?? null;
+
+        await nextTick();
+        if (element) {
+            element.scrollTop += element.scrollHeight - previousHeight;
+        }
+    } catch (error) {
+        console.error('Failed to load earlier messages:', error);
+    } finally {
+        isPrependingHistory.value = false;
+        isLoadingOlderMessages.value = false;
+    }
+};
+
 const sendMessageNonStreaming = async (userMessage: string) => {
     const messageIndex =
         messages.value.push({
@@ -511,6 +635,11 @@ const sendMessageNonStreaming = async (userMessage: string) => {
         if (updatedSession) {
             activeSession.value = { ...updatedSession };
             messages.value = normalizeMessages(updatedSession.messages ?? []);
+            hasOlderMessages.value = Boolean(
+                updatedSession.messagePagination?.hasMore,
+            );
+            nextBeforeMessageId.value =
+                updatedSession.messagePagination?.nextBeforeId ?? null;
             updateSessionInList(updatedSession);
         }
     } catch (error) {
@@ -806,6 +935,7 @@ const sendMessage = async () => {
         await sendMessageNonStreaming(userMessage);
     } finally {
         isLoading.value = false;
+        await loadAiActions(sessionId);
         await scrollToBottom();
     }
 };
@@ -862,7 +992,13 @@ onMounted(() => {
     if (messages.value.length === 0) {
         scrollToBottom();
     }
+    loadAiActions();
 });
+
+watch(
+    () => activeSession.value?.id,
+    (sessionId) => loadAiActions(sessionId),
+);
 
 onBeforeUnmount(() => {
     if (attachmentErrorTimer) clearTimeout(attachmentErrorTimer);
@@ -880,8 +1016,11 @@ onBeforeUnmount(() => {
                 :sessions="sessions"
                 :active-session-id="activeSession?.id"
                 :creating="isCreatingSession || !aiChatEnabled"
+                :has-more="hasMoreSessions"
+                :loading-more="isLoadingSessions"
                 @create="createNewChat"
                 @delete="openDeleteModal"
+                @load-more="loadOlderSessions"
             />
         </template>
 
@@ -989,6 +1128,24 @@ onBeforeUnmount(() => {
                     ref="scrollContainer"
                     class="min-h-0 flex-1 scrollbar-thin space-y-3 overflow-y-auto p-3 sm:p-4"
                 >
+                    <div
+                        v-if="!isNewChat && hasOlderMessages"
+                        class="flex justify-center pb-1"
+                    >
+                        <button
+                            type="button"
+                            class="rounded-full border border-border/60 bg-card px-4 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                            :disabled="isLoadingOlderMessages"
+                            @click="loadOlderMessages"
+                        >
+                            {{
+                                isLoadingOlderMessages
+                                    ? 'Loading earlier messages…'
+                                    : 'Load earlier messages'
+                            }}
+                        </button>
+                    </div>
+
                     <template v-if="isNewChat">
                         <!-- The inner wrapper centers itself with auto margins,
                              so the welcome content can't be clipped at the top
@@ -1322,6 +1479,18 @@ onBeforeUnmount(() => {
                         </div>
 
                         <div
+                            v-if="isAdmin && aiActions.length > 0"
+                            class="message-enter ml-9 flex max-w-3xl flex-col gap-3"
+                        >
+                            <AiActionApprovalCard
+                                v-for="action in aiActions"
+                                :key="action.id"
+                                :action="action"
+                                @updated="updateAiAction"
+                            />
+                        </div>
+
+                        <div
                             v-if="showSuggestions"
                             class="message-enter flex flex-wrap gap-1.5"
                         >
@@ -1546,6 +1715,15 @@ onBeforeUnmount(() => {
                         <Trash2 class="h-4 w-4" />
                     </button>
                 </div>
+                <button
+                    v-if="hasMoreSessions"
+                    type="button"
+                    class="mt-2 w-full rounded-xl border border-border/60 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/50 disabled:opacity-50"
+                    :disabled="isLoadingSessions"
+                    @click="loadOlderSessions"
+                >
+                    {{ isLoadingSessions ? 'Loading…' : 'Load older chats' }}
+                </button>
             </div>
         </MobileBottomSheet>
 

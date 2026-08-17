@@ -61,6 +61,42 @@ class AiQuestionDraftForm
                             ->columnSpanFull(),
                     ]),
 
+                Section::make('Teacher Review')
+                    ->columnSpanFull()
+                    ->visible(fn ($record) => $record?->status === 'ready')
+                    ->schema([
+                        Placeholder::make('review_status')
+                            ->label('Review status')
+                            ->content(fn ($record): string => match ($record?->review_status) {
+                                'approved' => '✅ Approved — this saved version may be attached to an exam.',
+                                'rejected' => '❌ Rejected — revise or regenerate before requesting approval again.',
+                                default => '🕒 Awaiting teacher review — nothing has been published to an exam.',
+                            })
+                            ->columnSpanFull(),
+                        Placeholder::make('review_version')
+                            ->label('Revision')
+                            ->content(fn ($record): string => '#'.number_format((int) ($record?->review_version ?? 0))),
+                        Placeholder::make('reviewed_by')
+                            ->label('Reviewed by')
+                            ->content(fn ($record): string => $record?->reviewer?->name ?? '—'),
+                        Placeholder::make('reviewed_at')
+                            ->label('Reviewed at')
+                            ->content(fn ($record): string => $record?->reviewed_at?->format('M d, Y g:i A') ?? '—'),
+                        Placeholder::make('rejection_reason')
+                            ->label('Rejection reason')
+                            ->content(fn ($record): string => $record?->rejection_reason ?: '—')
+                            ->visible(fn ($record): bool => filled($record?->rejection_reason))
+                            ->columnSpanFull(),
+                        Placeholder::make('review_activity')
+                            ->label('Recent review activity')
+                            ->content(fn ($record): string => $record
+                                ? ($record->reviewEvents()->with('actor:id,name')->limit(5)->get()
+                                    ->map(fn ($event): string => ($event->actor?->name ?? 'System').' · '.str($event->event)->replace('_', ' ')->title().' · '.$event->created_at?->diffForHumans())
+                                    ->implode("\n") ?: 'No review events yet.')
+                                : 'No review events yet.')
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('Draft details')
                     ->columnSpanFull()
                     ->columns(2)
@@ -72,6 +108,9 @@ class AiQuestionDraftForm
                             ->label('Topic / focus')
                             ->maxLength(255)
                             ->columnSpan(1),
+                        Placeholder::make('target_exam')
+                            ->label('Suggested target exam')
+                            ->content(fn ($record): string => $record?->targetExam?->title ?? '—'),
                         Placeholder::make('source_filename')
                             ->label('Source file')
                             ->content(fn ($record) => $record?->source_filename ?: '—'),
@@ -85,7 +124,7 @@ class AiQuestionDraftForm
                     ]),
 
                 Section::make('Generated Questions')
-                    ->description('Review and edit the AI-generated questions. These will be attached to the exam as a new part when you click "Attach to Exam".')
+                    ->description('Review and edit this AI-generated draft. Save edits, then explicitly approve the saved revision before attaching it to an exam.')
                     ->columnSpanFull()
                     ->visible(fn ($record) => $record?->status === 'ready' && ! empty($record?->questions))
                     ->schema([

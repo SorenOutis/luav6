@@ -1,24 +1,23 @@
 <?php
 
 use App\Models\Announcement;
+use App\Models\Assignment;
 use App\Models\Badge;
+use App\Models\AiUsageLog;
 use App\Models\Course;
+use App\Models\CourseModule;
 use App\Models\Exam;
+use App\Models\Grade;
+use App\Models\Lesson;
 use App\Models\Reward;
 use App\Models\Section;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\Workspace;
+use App\Support\WorkspaceContext;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * ─────────────────────────────────────────────
- * Helpers
- * ─────────────────────────────────────────────
- */
-
-/**
- * Create a section owned by a specific admin, bypassing any global scope.
- */
-function createSectionForAdmin(User $admin, string $name, ?string $joinCode = null): Section
+function workspaceSection(User $admin, string $name, ?string $joinCode = null): Section
 {
     return Section::withoutGlobalScope('workspace')->create([
         'name' => $name,
@@ -28,415 +27,335 @@ function createSectionForAdmin(User $admin, string $name, ?string $joinCode = nu
     ]);
 }
 
-/**
- * Create an exam owned by a specific admin.
- */
-function createExamForAdmin(User $admin, array $overrides = []): Exam
+function workspaceRecord(string $model, User $admin, array $attributes = [])
 {
-    return Exam::withoutGlobalScope('workspace')->create(array_merge([
-        'title' => fake()->sentence(),
-        'exam_date' => now()->addDays(7),
-        'admin_id' => $admin->id,
-    ], $overrides));
-}
-
-/**
- * Create a course owned by a specific admin.
- */
-function createCourseForAdmin(User $admin): Course
-{
-    return Course::withoutGlobalScope('workspace')->create([
-        'name' => fake()->words(2, true),
-        'admin_id' => $admin->id,
-    ]);
-}
-
-/**
- * Create a badge owned by a specific admin.
- */
-function createBadgeForAdmin(User $admin): Badge
-{
-    return Badge::withoutGlobalScope('workspace')->create([
-        'name' => fake()->words(2, true),
-        'admin_id' => $admin->id,
-    ]);
-}
-
-/**
- * Create a reward owned by a specific admin.
- */
-function createRewardForAdmin(User $admin): Reward
-{
-    return Reward::withoutGlobalScope('workspace')->create([
-        'name' => fake()->words(2, true),
-        'description' => fake()->sentence(),
-        'points_cost' => 100,
-        'admin_id' => $admin->id,
-    ]);
-}
-
-/**
- * Create an announcement owned by a specific admin.
- */
-function createAnnouncementForAdmin(User $admin): Announcement
-{
-    return Announcement::withoutGlobalScope('workspace')->create([
-        'title' => fake()->sentence(),
-        'description' => fake()->paragraph(),
-        'is_active' => true,
-        'admin_id' => $admin->id,
-    ]);
+    return $model::withoutGlobalScope('workspace')->create(array_merge(
+        match ($model) {
+            Exam::class => ['title' => fake()->sentence(), 'exam_date' => now()->addDay()],
+            Assignment::class => ['title' => fake()->sentence()],
+            Course::class => ['name' => fake()->words(2, true)],
+            Badge::class => ['name' => fake()->words(2, true)],
+            Reward::class => ['name' => fake()->word(), 'description' => fake()->sentence(), 'points_cost' => 100],
+            Announcement::class => ['title' => fake()->sentence(), 'description' => fake()->sentence(), 'is_active' => true],
+            default => [],
+        },
+        ['admin_id' => $admin->id],
+        $attributes,
+    ));
 }
 
 beforeEach(function () {
-    $this->admin1 = User::factory()->create(['is_admin' => true, 'is_super_admin' => false]);
-    $this->admin2 = User::factory()->create(['is_admin' => true, 'is_super_admin' => false]);
-    $this->superAdmin = User::factory()->create(['is_admin' => true, 'is_super_admin' => true]);
-    $this->student = User::factory()->create(['is_admin' => false, 'is_super_admin' => false]);
+    $this->admin1 = User::factory()->admin()->create();
+    $this->admin2 = User::factory()->admin()->create();
+    $this->superAdmin = User::factory()->superAdmin()->create();
+    $this->student = User::factory()->create();
+    app(WorkspaceContext::class)->clear();
 });
 
-// ─────────────────────────────────────────────
-// BelongsToWorkspace Global Scope – Section
-// ─────────────────────────────────────────────
-
-test('super admin sees sections from all workspaces', function () {
-    createSectionForAdmin($this->admin1, 'Admin1 Section', 'AAAABBBB');
-    createSectionForAdmin($this->admin2, 'Admin2 Section', 'CCCCDDDD');
-
-    $this->actingAs($this->superAdmin);
-
-    expect(Section::count())->toBe(2);
+it('leaves the retiring game schema unchanged', function () {
+    expect(Schema::hasColumn('td_maps', 'workspace_id'))->toBeFalse()
+        ->and(Schema::hasColumn('td_enemies', 'workspace_id'))->toBeFalse()
+        ->and(Schema::hasColumn('td_towers', 'workspace_id'))->toBeFalse()
+        ->and(Schema::hasColumn('td_difficulties', 'workspace_id'))->toBeFalse();
 });
 
-test('regular admin only sees their own sections', function () {
-    createSectionForAdmin($this->admin1, 'Admin1 Section', 'AAAABBBB');
-    createSectionForAdmin($this->admin2, 'Admin2 Section', 'CCCCDDDD');
+it('creates a tenant workspace for every regular admin', function () {
+    expect($this->admin1->workspaces)->toHaveCount(1)
+        ->and($this->admin1->current_workspace_id)->not->toBeNull()
+        ->and($this->admin1->workspaces->first()->pivot->role)->toBe(Workspace::ROLE_OWNER);
+});
+
+it('scopes regular admins by workspace rather than creator', function () {
+    workspaceSection($this->admin1, 'Workspace A', 'AAAABBBB');
+    workspaceSection($this->admin2, 'Workspace B', 'CCCCDDDD');
 
     $this->actingAs($this->admin1);
 
-    expect(Section::count())->toBe(1);
-    expect(Section::first()->name)->toBe('Admin1 Section');
+    expect(Section::pluck('name')->all())->toBe(['Workspace A']);
 });
 
-test('unauthenticated requests are not scoped', function () {
-    createSectionForAdmin($this->admin1, 'Admin1 Section', 'AAAABBBB');
-    createSectionForAdmin($this->admin2, 'Admin2 Section', 'CCCCDDDD');
-
-    expect(Section::count())->toBe(2);
-});
-
-test('student is not affected by workspace scope', function () {
-    createSectionForAdmin($this->admin1, 'Admin1 Section', 'AAAABBBB');
-    createSectionForAdmin($this->admin2, 'Admin2 Section', 'CCCCDDDD');
-
-    $this->actingAs($this->student);
-
-    expect(Section::count())->toBe(2);
-});
-
-// ─────────────────────────────────────────────
-// Auto-set admin_id on creation
-// ─────────────────────────────────────────────
-
-test('regular admin auto-sets admin_id when creating a section', function () {
-    $this->actingAs($this->admin1);
-
-    $section = Section::create([
-        'name' => 'My Section',
-        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
-        'join_code' => 'TEST1234',
+it('lets co-admins share all records in one tenant', function () {
+    $workspace = $this->admin1->currentWorkspace;
+    $workspace->users()->syncWithoutDetaching([
+        $this->admin2->id => ['role' => Workspace::ROLE_ADMIN],
     ]);
+    $this->admin2->forceFill(['current_workspace_id' => $workspace->id])->save();
 
-    expect($section->admin_id)->toBe($this->admin1->id);
-});
-
-test('super admin does NOT auto-set admin_id when creating a section', function () {
-    $this->actingAs($this->superAdmin);
-
-    $section = Section::create([
-        'name' => 'My Section',
-        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
-        'join_code' => 'TEST1234',
-    ]);
-
-    expect($section->admin_id)->toBeNull();
-});
-
-test('student does NOT auto-set admin_id when creating a section', function () {
-    $this->actingAs($this->student);
-
-    $section = Section::create([
-        'name' => 'My Section',
-        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
-        'join_code' => 'TEST1234',
-    ]);
-
-    expect($section->admin_id)->toBeNull();
-});
-
-test('admin_id set explicitly is not overwritten', function () {
-    $this->actingAs($this->admin1);
-
-    $section = Section::create([
-        'name' => 'My Section',
-        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
-        'join_code' => 'TEST1234',
-        'admin_id' => $this->admin2->id,
-    ]);
-
-    // Should respect explicit admin_id, not auto-set to admin1
-    expect($section->admin_id)->toBe($this->admin2->id);
-});
-
-// ─────────────────────────────────────────────
-// Admin data isolation across all model types
-// ─────────────────────────────────────────────
-
-test('admin cannot see another admins sections', function () {
-    createSectionForAdmin($this->admin1, 'S1');
-    createSectionForAdmin($this->admin2, 'S2');
-
-    $this->actingAs($this->admin1);
-    $names = Section::pluck('name')->toArray();
-
-    expect($names)->toBe(['S1']);
-});
-
-test('admin cannot see another admins exams', function () {
-    createExamForAdmin($this->admin1);
-    createExamForAdmin($this->admin2);
-
-    $this->actingAs($this->admin1);
-
-    expect(Exam::count())->toBe(1);
-});
-
-test('admin cannot see another admins courses', function () {
-    createCourseForAdmin($this->admin1);
-    createCourseForAdmin($this->admin2);
-
-    $this->actingAs($this->admin1);
-
-    expect(Course::count())->toBe(1);
-});
-
-test('admin cannot see another admins badges', function () {
-    createBadgeForAdmin($this->admin1);
-    createBadgeForAdmin($this->admin2);
-
-    $this->actingAs($this->admin1);
-
-    expect(Badge::count())->toBe(1);
-});
-
-test('admin cannot see another admins rewards', function () {
-    createRewardForAdmin($this->admin1);
-    createRewardForAdmin($this->admin2);
-
-    $this->actingAs($this->admin1);
-
-    expect(Reward::count())->toBe(1);
-});
-
-test('admin cannot see another admins announcements', function () {
-    createAnnouncementForAdmin($this->admin1);
-    createAnnouncementForAdmin($this->admin2);
-
-    $this->actingAs($this->admin1);
-
-    expect(Announcement::count())->toBe(1);
-});
-
-// ─────────────────────────────────────────────
-// User::scopeForWorkspace()
-// ─────────────────────────────────────────────
-
-test('scopeForWorkspace lets super admin see all non-admin users', function () {
-    // admin2 is also an admin — should be visible to super admin since
-    // scopeForWorkspace only filters non-admin users
-    $this->actingAs($this->superAdmin);
-
-    $users = User::where('is_admin', false)->forWorkspace()->get();
-
-    // Should see only the student (admin2 is admin, so filtered by where(is_admin, false))
-    expect($users)->toHaveCount(1);
-    expect($users->first()->id)->toBe($this->student->id);
-});
-
-test('scopeForWorkspace scopes regular admin to students in their sections', function () {
-    $section = createSectionForAdmin($this->admin1, 'A1 Section', 'A1CODEX1');
-
-    // Enroll student in admin1's section
-    $this->student->sections()->attach($section->id, ['season_id' => $section->season_id]);
-
-    $this->actingAs($this->admin1);
-
-    $students = User::where('is_admin', false)->forWorkspace()->get();
-
-    expect($students)->toHaveCount(1);
-    expect($students->first()->id)->toBe($this->student->id);
-});
-
-test('scopeForWorkspace excludes students not enrolled in admins sections', function () {
-    $section = createSectionForAdmin($this->admin1, 'A1 Section', 'A1CODEX1');
-
-    // Enroll student in admin1's section (so they appear)
-    $this->student->sections()->attach($section->id, ['season_id' => $section->season_id]);
-
-    // Create another student enrolled nowhere
-    $otherStudent = User::factory()->create(['is_admin' => false]);
-
-    $this->actingAs($this->admin1);
-
-    $students = User::where('is_admin', false)->forWorkspace()->get();
-
-    expect($students)->toHaveCount(1);
-    expect($students->first()->id)->toBe($this->student->id);
-});
-
-test('scopeForWorkspace does not apply to student users', function () {
-    createSectionForAdmin($this->admin1, 'A1 Section', 'A1CODEX1');
-    $section = Section::withoutGlobalScope('workspace')->first();
-    $this->student->sections()->attach($section->id, ['season_id' => $section->season_id]);
-
-    $this->actingAs($this->student);
-
-    // Student sees all non-admin users (scope doesn't apply)
-    $users = User::where('is_admin', false)->forWorkspace()->get();
-
-    expect($users)->toHaveCount(1); // themselves only since is_admin = false
-});
-
-// ─────────────────────────────────────────────
-// Join code bypasses workspace scope
-// ─────────────────────────────────────────────
-
-test('findByJoinCode finds sections across all workspaces', function () {
-    $section1 = createSectionForAdmin($this->admin1, 'A1', 'AAAABBBB');
-    createSectionForAdmin($this->admin2, 'A2', 'CCCCDDDD');
-
-    // Looking up admin2's join code while acting as admin1
-    $this->actingAs($this->admin1);
-
-    $found = Section::findByJoinCode('CCCCDDDD');
-
-    expect($found)->not->toBeNull();
-    expect($found->id)->not->toBe($section1->id);
-    expect($found->name)->toBe('A2');
-});
-
-test('generateUniqueJoinCode checks global uniqueness', function () {
-    // Admin1 creates a section with a known code
-    createSectionForAdmin($this->admin1, 'A1', 'AAAABBBB');
-
-    // Admin2 generates a code — should not collide with admin1's code
-    // We can't easily assert the exact code, but we can verify the method
-    // doesn't throw or return a duplicate by checking the query
+    $section = workspaceSection($this->admin1, 'Shared Section', 'SHARED01');
     $this->actingAs($this->admin2);
 
-    $code = Section::generateUniqueJoinCode();
-
-    // The generated code should not exist in ANY workspace
-    expect(Section::withoutGlobalScope('workspace')->where('join_code', $code)->exists())->toBeFalse();
+    expect(Section::first()?->id)->toBe($section->id);
 });
 
-// ─────────────────────────────────────────────
-// Setting model – workspace-aware fallback
-// ─────────────────────────────────────────────
+it('keeps creator metadata without using it as the tenant boundary', function () {
+    $workspace = $this->admin1->currentWorkspace;
+    $workspace->users()->syncWithoutDetaching([
+        $this->admin2->id => ['role' => Workspace::ROLE_ADMIN],
+    ]);
+    $this->admin2->forceFill(['current_workspace_id' => $workspace->id])->save();
+    $this->actingAs($this->admin2);
 
-test('admin gets their per-workspace setting when it exists', function () {
-    Setting::set('site_name', 'Global Name');
-    Setting::set('site_name', 'Admin1 Name'); // creates a workspace-level one...
-    // Actually, when acting as admin1, set() creates workspace-level.
-    // But we need to set up data carefully without scope getting in the way.
-
-    // Set global setting
-    Setting::unguarded(fn () => Setting::create(['key' => 'site_name', 'value' => 'Global Name', 'admin_id' => null]));
-
-    // Set admin1-specific setting
-    Setting::unguarded(fn () => Setting::create(['key' => 'site_name', 'value' => 'Admin1 Workspace', 'admin_id' => $this->admin1->id]));
-
-    $this->actingAs($this->admin1);
-
-    expect(Setting::get('site_name'))->toBe('Admin1 Workspace');
-});
-
-test('admin falls back to global setting when no workspace setting exists', function () {
-    Setting::unguarded(fn () => Setting::create(['key' => 'site_name', 'value' => 'Global Name', 'admin_id' => null]));
-
-    $this->actingAs($this->admin1);
-
-    expect(Setting::get('site_name'))->toBe('Global Name');
-});
-
-test('super admin always gets the global setting', function () {
-    Setting::unguarded(fn () => Setting::create(['key' => 'site_name', 'value' => 'Global Name', 'admin_id' => null]));
-    Setting::unguarded(fn () => Setting::create(['key' => 'site_name', 'value' => 'Admin1 Workspace', 'admin_id' => $this->admin1->id]));
-
-    $this->actingAs($this->superAdmin);
-
-    expect(Setting::get('site_name'))->toBe('Global Name');
-});
-
-test('setting returns default when no value exists', function () {
-    expect(Setting::get('nonexistent_key', 'fallback'))->toBe('fallback');
-});
-
-test('setting set for regular admin creates workspace-level entry', function () {
-    $this->actingAs($this->admin1);
-
-    Setting::set('theme', 'dark');
-
-    $entry = Setting::withoutGlobalScope('workspace')
-        ->where('key', 'theme')
-        ->first();
-
-    expect($entry)->not->toBeNull();
-    expect($entry->admin_id)->toBe($this->admin1->id);
-    expect($entry->value)->toBe('dark');
-});
-
-test('setting set for super admin creates global entry', function () {
-    $this->actingAs($this->superAdmin);
-
-    Setting::set('theme', 'dark');
-
-    $entry = Setting::where('key', 'theme')->first();
-
-    expect($entry)->not->toBeNull();
-    expect($entry->admin_id)->toBeNull();
-    expect($entry->value)->toBe('dark');
-});
-
-// ─────────────────────────────────────────────
-// admin() relationship
-// ─────────────────────────────────────────────
-
-test('workspace record has admin relationship', function () {
-    $section = createSectionForAdmin($this->admin1, 'Rel Test', 'RELTEST1');
-
-    expect($section->admin)->not->toBeNull();
-    expect($section->admin->id)->toBe($this->admin1->id);
-});
-
-test('admin relationship is null for global records', function () {
-    $section = Section::withoutGlobalScope('workspace')->create([
-        'name' => 'Global Section',
+    $section = Section::create([
+        'name' => 'Created by co-admin',
         'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
-        'join_code' => 'GLOBAL01',
-        'admin_id' => null,
+        'join_code' => 'COADMIN1',
     ]);
 
-    expect($section->admin)->toBeNull();
+    expect($section->workspace_id)->toBe($workspace->id)
+        ->and($section->admin_id)->toBe($this->admin2->id);
 });
 
-// ─────────────────────────────────────────────
-// isSuperAdmin helper
-// ─────────────────────────────────────────────
+it('keeps tenant data when the creating co-admin is deleted', function () {
+    $workspace = $this->admin1->currentWorkspace;
+    $workspace->users()->syncWithoutDetaching([
+        $this->admin2->id => ['role' => Workspace::ROLE_ADMIN],
+    ]);
+    $this->admin2->forceFill(['current_workspace_id' => $workspace->id])->save();
+    $this->actingAs($this->admin2);
+    $section = Section::create([
+        'name' => 'Durable tenant data',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'join_code' => 'DURABLE1',
+    ]);
 
-test('isSuperAdmin returns true only for super admins', function () {
-    expect($this->superAdmin->isSuperAdmin())->toBeTrue();
-    expect($this->admin1->isSuperAdmin())->toBeFalse();
-    expect($this->admin2->isSuperAdmin())->toBeFalse();
-    expect($this->student->isSuperAdmin())->toBeFalse();
+    $this->admin2->delete();
+
+    $persisted = Section::withoutGlobalScope('workspace')->findOrFail($section->id);
+    expect($persisted->workspace_id)->toBe($workspace->id)
+        ->and($persisted->admin_id)->toBeNull();
+});
+
+it('scopes every core tenant model consistently', function (string $model) {
+    workspaceRecord($model, $this->admin1);
+    workspaceRecord($model, $this->admin2);
+
+    $this->actingAs($this->admin1);
+
+    expect($model::count())->toBe(1);
+})->with([
+    Exam::class,
+    Assignment::class,
+    Course::class,
+    Badge::class,
+    Reward::class,
+    Announcement::class,
+]);
+
+it('propagates the active workspace into nested learning and analytics records', function () {
+    $this->actingAs($this->admin1);
+    $course = Course::create(['name' => 'Tenant Course']);
+    $module = CourseModule::create(['course_id' => $course->id, 'title' => 'Module']);
+    $lesson = Lesson::create(['course_module_id' => $module->id, 'title' => 'Lesson']);
+    $section = Section::create([
+        'name' => 'Tenant Section',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'join_code' => 'NESTED01',
+    ]);
+    $grade = Grade::create([
+        'user_id' => $this->student->id,
+        'section_id' => $section->id,
+        'subject' => 'Math',
+        'period' => 'Prelim',
+        'score' => 90,
+        'max_score' => 100,
+    ]);
+    $usage = AiUsageLog::create([
+        'date' => now()->toDateString(),
+        'provider' => 'test',
+        'model' => 'test',
+        'source' => 'test',
+        'input_tokens' => 1,
+        'output_tokens' => 1,
+        'neurons' => 1,
+    ]);
+
+    expect($course->workspace_id)->toBe($this->admin1->current_workspace_id)
+        ->and($module->workspace_id)->toBe($course->workspace_id)
+        ->and($lesson->workspace_id)->toBe($course->workspace_id)
+        ->and($grade->workspace_id)->toBe($course->workspace_id)
+        ->and($usage->workspace_id)->toBe($course->workspace_id);
+});
+
+it('gives super admins a separate active workspace for writes', function () {
+    expect($this->superAdmin->current_workspace_id)->not->toBeNull()
+        ->and($this->superAdmin->workspaces)->toHaveCount(1);
+
+    $this->actingAs($this->superAdmin);
+    $section = Section::create([
+        'name' => 'Super workspace section',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'join_code' => 'SUPEROWN',
+    ]);
+
+    expect($section->workspace_id)->toBe($this->superAdmin->current_workspace_id)
+        ->and($section->admin_id)->toBe($this->superAdmin->id);
+
+    $this->actingAs($this->admin1);
+    expect(Section::whereKey($section->id)->exists())->toBeFalse();
+});
+
+it('lets super admins inspect all tenant records while writing to their active one', function () {
+    workspaceSection($this->admin1, 'A', 'SUPER001');
+    workspaceSection($this->admin2, 'B', 'SUPER002');
+
+    $this->actingAs($this->superAdmin);
+
+    expect(Section::count())->toBe(2);
+});
+
+it('supports isolated super-admin inspection without losing platform mode', function () {
+    $sectionA = workspaceSection($this->admin1, 'A', 'INSPECT1');
+    workspaceSection($this->admin2, 'B', 'INSPECT2');
+    $this->actingAs($this->superAdmin);
+    $context = app(WorkspaceContext::class);
+
+    expect(Section::count())->toBe(2);
+
+    $context->inspect($this->admin1->currentWorkspace);
+    expect(Section::pluck('id')->all())->toBe([$sectionA->id]);
+
+    $created = Section::create([
+        'name' => 'Created while inspecting',
+        'school_level' => Section::SCHOOL_LEVEL_COLLEGE,
+        'join_code' => 'INSPECT3',
+    ]);
+    expect($created->workspace_id)->toBe($this->admin1->current_workspace_id);
+
+    $context->stopInspecting();
+    expect(Section::count())->toBe(3);
+});
+
+it('archives workspaces without deleting tenant data and supports restore', function () {
+    $workspace = $this->admin1->currentWorkspace;
+    $section = workspaceSection($this->admin1, 'Preserved', 'ARCHIVE1');
+
+    $workspace->archive($this->superAdmin);
+
+    expect(Section::withoutGlobalScope('workspace')->whereKey($section->id)->exists())->toBeTrue()
+        ->and($workspace->fresh()->isArchived())->toBeTrue()
+        ->and($this->admin1->fresh()->current_workspace_id)->toBeNull();
+
+    $this->actingAs($this->admin1);
+    expect(Section::whereKey($section->id)->exists())->toBeFalse();
+
+    $workspace->restore();
+    $this->admin1->fresh()->activateWorkspace($workspace->fresh());
+    expect(Section::whereKey($section->id)->exists())->toBeTrue();
+});
+
+it('scopes students to their active workspace', function () {
+    $sectionA = workspaceSection($this->admin1, 'A', 'STUDENT1');
+    workspaceSection($this->admin2, 'B', 'STUDENT2');
+    $this->student->sections()->attach($sectionA->id);
+    $this->student->joinWorkspace((int) $sectionA->workspace_id);
+    $this->actingAs($this->student);
+
+    expect(Section::pluck('name')->all())->toBe(['A']);
+});
+
+it('allows a student to switch between joined tenants', function () {
+    $sectionA = workspaceSection($this->admin1, 'A', 'SWITCH01');
+    $sectionB = workspaceSection($this->admin2, 'B', 'SWITCH02');
+    $this->student->sections()->attach([$sectionA->id, $sectionB->id]);
+    $this->student->forceFill(['current_workspace_id' => $sectionA->workspace_id])->save();
+    $this->actingAs($this->student);
+
+    expect(Section::pluck('name')->all())->toBe(['A']);
+
+    $this->post(route('workspaces.activate', ['workspace' => $this->admin2->currentWorkspace->public_id]))
+        ->assertRedirect();
+
+    expect(Section::pluck('name')->all())->toBe(['B']);
+});
+
+it('finds globally unique join codes across tenant scopes', function () {
+    workspaceSection($this->admin1, 'A', 'JOIN0001');
+    $expected = workspaceSection($this->admin2, 'B', 'JOIN0002');
+    $this->actingAs($this->admin1);
+
+    expect(Section::findByJoinCode('JOIN0002')?->id)->toBe($expected->id);
+});
+
+it('shares settings between co-admins and students in one workspace', function () {
+    $workspace = $this->admin1->currentWorkspace;
+    $workspace->users()->syncWithoutDetaching([
+        $this->admin2->id => ['role' => Workspace::ROLE_ADMIN],
+        $this->student->id => ['role' => Workspace::ROLE_STUDENT],
+    ]);
+    $this->admin2->forceFill(['current_workspace_id' => $workspace->id])->save();
+    $this->student->forceFill(['current_workspace_id' => $workspace->id])->save();
+
+    $this->actingAs($this->admin1);
+    Setting::set('school_name', 'Shared Academy');
+
+    $this->actingAs($this->admin2);
+    expect(Setting::get('school_name'))->toBe('Shared Academy');
+
+    $this->actingAs($this->student);
+    expect(Setting::get('school_name'))->toBe('Shared Academy');
+});
+
+it('falls back to global settings when a tenant has no override', function () {
+    Setting::create([
+        'key' => 'support_email',
+        'value' => 'global@example.test',
+        'workspace_id' => null,
+        'admin_id' => $this->superAdmin->id,
+    ]);
+
+    $this->actingAs($this->admin1);
+    expect(Setting::get('support_email'))->toBe('global@example.test');
+});
+
+it('keeps settings isolated between tenants', function () {
+    $this->actingAs($this->admin1);
+    Setting::set('school_name', 'Tenant A');
+
+    $this->actingAs($this->admin2);
+    Setting::set('school_name', 'Tenant B');
+
+    $this->actingAs($this->admin1);
+    expect(Setting::get('school_name'))->toBe('Tenant A');
+
+    $this->actingAs($this->admin2);
+    expect(Setting::get('school_name'))->toBe('Tenant B');
+});
+
+it('scopes the admin student roster to the active tenant', function () {
+    $sectionA = workspaceSection($this->admin1, 'A', 'ROSTER01');
+    $sectionB = workspaceSection($this->admin2, 'B', 'ROSTER02');
+    $studentA = User::factory()->create();
+    $studentB = User::factory()->create();
+    $studentA->sections()->attach($sectionA->id);
+    $studentB->sections()->attach($sectionB->id);
+
+    $this->actingAs($this->admin1);
+
+    expect(User::query()->where('is_admin', false)->forWorkspace()->pluck('id')->all())
+        ->toBe([$studentA->id]);
+});
+
+it('restores an explicit queue-style workspace context after callbacks', function () {
+    $this->actingAs($this->admin1);
+    $context = app(WorkspaceContext::class);
+
+    expect($context->id())->toBe($this->admin1->current_workspace_id);
+
+    $inside = $context->run(
+        $this->admin2->current_workspace_id,
+        fn (): ?int => $context->id(),
+    );
+
+    expect($inside)->toBe($this->admin2->current_workspace_id)
+        ->and($context->id())->toBe($this->admin1->current_workspace_id);
+});
+
+it('restores a fresh tenant context between Octane requests', function () {
+    $this->actingAs($this->admin1);
+    expect(app(WorkspaceContext::class)->id())->toBe($this->admin1->current_workspace_id);
+
+    app()->forgetScopedInstances();
+    $this->actingAs($this->admin2);
+
+    expect(app(WorkspaceContext::class)->id())->toBe($this->admin2->current_workspace_id);
 });
