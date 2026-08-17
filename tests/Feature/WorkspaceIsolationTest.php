@@ -1,9 +1,9 @@
 <?php
 
+use App\Models\AiUsageLog;
 use App\Models\Announcement;
 use App\Models\Assignment;
 use App\Models\Badge;
-use App\Models\AiUsageLog;
 use App\Models\Course;
 use App\Models\CourseModule;
 use App\Models\Exam;

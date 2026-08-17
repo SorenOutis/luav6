@@ -56,5 +56,4 @@ class ProfileKudoController extends Controller
 
         return back();
     }
-
 }

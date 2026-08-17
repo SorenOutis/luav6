@@ -136,8 +136,6 @@ it('lists only pending submissions from the admin\'s own exams', function () {
         ->not->toContain('"status":"graded"');
 });
 
-
-
 function pendingAiActionNonce(PendingAiAction $action): string
 {
     return app(PendingAiActionService::class)->present($action)['nonce'];

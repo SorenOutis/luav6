@@ -120,6 +120,9 @@ it('includes usage recorded earlier in the same period when enforcement is enabl
     Setting::set('ai_budget_enabled', '0');
     app(AiUsageTracker::class)->record('openai', 'gpt-4o-mini', 'chat', 60, 20);
 
+    expect(AiUsageLog::withoutGlobalScope('workspace')->count())->toBe(1)
+        ->and(AiUsageLog::withoutGlobalScope('workspace')->first()->workspace_id)->toBe($admin->current_workspace_id);
+
     enableTestBudget(['ai_budget_daily_tokens' => '100']);
 
     expect(fn () => app(AiBudgetManager::class)->reserve('openai', 'gpt-4o-mini', 'chat', 10, 20))

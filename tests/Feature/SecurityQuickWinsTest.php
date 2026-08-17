@@ -35,7 +35,7 @@ it('can switch CSP from report-only to enforcement', function () {
 });
 
 it('adds HSTS to secure requests without opting into preload by default', function () {
-    $response = $this->withServerVariables(['HTTPS' => 'on'])->get('/');
+    $response = $this->withHeader('X-Forwarded-Proto', 'https')->get('/');
 
     $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 });

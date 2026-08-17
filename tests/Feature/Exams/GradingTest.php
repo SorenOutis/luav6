@@ -18,8 +18,8 @@ use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
-use App\Services\AIService;
 use App\Services\AiReviewService;
+use App\Services\AIService;
 use Illuminate\Support\Facades\Queue;
 
 use function Pest\Laravel\actingAs;

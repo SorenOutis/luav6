@@ -31,6 +31,7 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\WorkspaceController;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public routes ────────────────────────────────────────────────────────
@@ -44,7 +45,7 @@ Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
 Route::get('/robots.txt', RobotsController::class);
 Route::get('/sitemap.xml', SitemapController::class);
 Route::post('/csp/report', CspReportController::class)
-    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+    ->withoutMiddleware(ValidateCsrfToken::class)
     ->middleware('throttle:csp-reports')
     ->name('csp.report');
 

@@ -83,7 +83,7 @@ it('uses an index for the dashboard heatmap query', function () {
 
     // Indexed access reports "SEARCH ... USING [COVERING] INDEX <name>".
     // A missing index reports "SCAN gamification_histories".
-    expect($detail)->toContain('gam_hist_user_created_idx')
+    expect($detail)->toContain('gam_hist_user_created_id_idx')
         ->and($detail)->toContain('search gamification_histories')
         ->and($detail)->not->toContain('scan gamification_histories');
 })->skip(

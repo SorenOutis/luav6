@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\AiQuestionDraft;
 use App\Services\AiQuestionGeneratorService;
+use App\Services\AiReviewService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -55,7 +56,7 @@ class GenerateAiQuestions implements ShouldQueue
                 throw new \RuntimeException('AI returned no usable questions. Try a shorter/cleaner source or reduce counts.');
             }
 
-            app(\App\Services\AiReviewService::class)->submitQuestionDraftForReview(
+            app(AiReviewService::class)->submitQuestionDraftForReview(
                 $draft,
                 $questions,
                 $service->lastRawResponse,

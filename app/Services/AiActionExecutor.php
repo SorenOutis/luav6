@@ -9,8 +9,8 @@ use App\Models\Assignment;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\PendingAiAction;
-use App\Models\Setting;
 use App\Models\Section;
+use App\Models\Setting;
 use Carbon\Carbon;
 use Closure;
 use Illuminate\Database\Eloquent\Model;
@@ -232,5 +232,4 @@ class AiActionExecutor
             throw new PendingAiActionException('This record changed after the preview was created. Ask Echo to prepare a fresh action before approving it.', 409);
         }
     }
-
 }

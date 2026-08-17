@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiBudgetExceededException;
 use App\Models\Setting;
 use App\Support\Utf8;
 use Illuminate\Support\Facades\Http;
@@ -279,10 +280,10 @@ PROMPT;
             }
         }
 
-        if ($primaryFailure instanceof \App\Exceptions\AiBudgetExceededException) {
+        if ($primaryFailure instanceof AiBudgetExceededException) {
             throw $primaryFailure;
         }
-        if (($fallbackFailure ?? null) instanceof \App\Exceptions\AiBudgetExceededException) {
+        if (($fallbackFailure ?? null) instanceof AiBudgetExceededException) {
             throw $fallbackFailure;
         }
 

@@ -80,6 +80,8 @@ it('shows only the student\'s own grades', function () {
 
     $student = User::factory()->create();
     $other = User::factory()->create();
+    $student->sections()->attach($section->id, ['season_id' => $section->season_id]);
+    $other->sections()->attach($section->id, ['season_id' => $section->season_id]);
 
     Grade::create(['user_id' => $student->id, 'section_id' => $section->id, 'subject' => 'Mathematics', 'period' => 'Prelim', 'score' => 90, 'max_score' => 100, 'recorded_by' => $admin->id]);
     Grade::create(['user_id' => $other->id, 'section_id' => $section->id, 'subject' => 'Filipino', 'period' => 'Prelim', 'score' => 45, 'max_score' => 100, 'recorded_by' => $admin->id]);

@@ -29,8 +29,7 @@ class CloudflareAIService
         array $history = [],
         ?string $userContext = null,
         bool $trackUsage = true,
-    ): string
-    {
+    ): string {
         if (! $this->accountId || ! $this->apiToken) {
             throw new \Exception('Cloudflare Workers AI is not configured. Please set your Account ID and API Token in Platform Settings.');
         }

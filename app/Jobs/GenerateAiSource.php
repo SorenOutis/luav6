@@ -33,7 +33,7 @@ class GenerateAiSource implements ShouldQueue
 
     public function handle(AiQuestionGeneratorService $service): void
     {
-        $draft = AiQuestionDraft::query()->find($this->draftId);
+        $draft = AiQuestionDraft::query()->withoutGlobalScope('workspace')->find($this->draftId);
         if (! $draft) {
             return;
         }

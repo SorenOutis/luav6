@@ -321,44 +321,16 @@ class AiBudgetManager
         ];
 
         foreach ($starts as $type => $start) {
-            $inserted = DB::table('ai_budget_periods')->insertOrIgnore([
+            DB::table('ai_budget_periods')->insertOrIgnore([
                 'workspace_id' => $workspaceId,
                 'period_type' => $type,
                 'period_start' => $start,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
-
-            if ($inserted) {
-                $existingUsage = AiUsageLog::query()
-                    ->withoutGlobalScope('workspace')
-                    ->where('workspace_id', $workspaceId)
-                    ->when(
-                        $type === AiBudgetPeriod::TYPE_DAILY,
-                        fn ($query) => $query->where('date', $start),
-                        fn ($query) => $query->where('date', '>=', $start),
-                    )
-                    ->selectRaw('COALESCE(SUM(input_tokens), 0) as input_tokens')
-                    ->selectRaw('COALESCE(SUM(output_tokens), 0) as output_tokens')
-                    ->selectRaw('COALESCE(SUM(estimated_cost_micros), 0) as cost_micros')
-                    ->selectRaw('COUNT(*) as requests')
-                    ->first();
-
-                DB::table('ai_budget_periods')
-                    ->where('workspace_id', $workspaceId)
-                    ->where('period_type', $type)
-                    ->where('period_start', $start)
-                    ->update([
-                        'used_input_tokens' => (int) ($existingUsage?->input_tokens ?? 0),
-                        'used_output_tokens' => (int) ($existingUsage?->output_tokens ?? 0),
-                        'used_cost_micros' => (int) ($existingUsage?->cost_micros ?? 0),
-                        'request_count' => (int) ($existingUsage?->requests ?? 0),
-                        'updated_at' => now(),
-                    ]);
-            }
         }
 
-        return AiBudgetPeriod::query()
+        $periods = AiBudgetPeriod::query()
             ->withoutGlobalScope('workspace')
             ->where('workspace_id', $workspaceId)
             ->where(function ($query) use ($starts): void {
@@ -371,8 +343,35 @@ class AiBudgetManager
             ->orderBy('period_type')
             ->lockForUpdate()
             ->get()
-            ->keyBy('period_type')
-            ->all();
+            ->keyBy('period_type');
+
+        // Usage logs are the durable source of truth. Reconcile while holding
+        // both period locks so enabling budgets mid-period and prior disabled
+        // usage are counted without racing concurrent reservations.
+        foreach ($starts as $type => $start) {
+            $existingUsage = AiUsageLog::query()
+                ->withoutGlobalScope('workspace')
+                ->where('workspace_id', $workspaceId)
+                ->when(
+                    $type === AiBudgetPeriod::TYPE_DAILY,
+                    fn ($query) => $query->whereDate('date', $start),
+                    fn ($query) => $query->whereDate('date', '>=', $start),
+                )
+                ->selectRaw('COALESCE(SUM(input_tokens), 0) as input_tokens')
+                ->selectRaw('COALESCE(SUM(output_tokens), 0) as output_tokens')
+                ->selectRaw('COALESCE(SUM(estimated_cost_micros), 0) as cost_micros')
+                ->selectRaw('COUNT(*) as requests')
+                ->first();
+            $period = $periods->get($type);
+            $period->forceFill([
+                'used_input_tokens' => (int) ($existingUsage?->input_tokens ?? 0),
+                'used_output_tokens' => (int) ($existingUsage?->output_tokens ?? 0),
+                'used_cost_micros' => (int) ($existingUsage?->cost_micros ?? 0),
+                'request_count' => (int) ($existingUsage?->requests ?? 0),
+            ])->save();
+        }
+
+        return $periods->all();
     }
 
     private function emitWarningIfNeeded(AiBudgetPeriod $period, AiBudgetReservation $reservation): void

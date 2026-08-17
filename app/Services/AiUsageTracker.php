@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AiBudgetReservation;
 use App\Models\AiUsageLog;
+use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -85,7 +86,11 @@ class AiUsageTracker
                 $this->budgetManager->settle($reservation, $inputTokens, $outputTokens);
             } catch (\Throwable $exception) {
                 // Never repeat a successful provider call because accounting
-                // failed. The reservation remains conservative until its TTL.
+                // failed. Tests fail loudly so reconciliation bugs are visible.
+                if (app()->runningUnitTests()) {
+                    throw $exception;
+                }
+
                 report($exception);
             }
 
@@ -127,6 +132,7 @@ class AiUsageTracker
             $outputTokens = max(0, $outputTokens);
 
             AiUsageLog::create([
+                'workspace_id' => app(WorkspaceContext::class)->id(),
                 'date' => now()->toDateString(),
                 'provider' => Str::limit($provider, 80, ''),
                 'model' => $model ? Str::limit($model, 191, '') : null,
@@ -144,7 +150,12 @@ class AiUsageTracker
                 ),
             ]);
         } catch (\Throwable $e) {
-            // Usage tracking must never break the AI call itself.
+            // Usage tracking must never break a real AI call, but tests should
+            // fail loudly so accounting schema regressions cannot be hidden.
+            if (app()->runningUnitTests()) {
+                throw $e;
+            }
+
             report($e);
         }
     }
@@ -201,7 +212,7 @@ class AiUsageTracker
         $date ??= now()->toDateString();
 
         return (float) AiUsageLog::query()
-            ->where('date', $date)
+            ->whereDate('date', $date)
             ->whereNotNull('neurons')
             ->sum('neurons');
     }
@@ -216,7 +227,7 @@ class AiUsageTracker
         $start = now()->startOfDay()->subDays($days - 1);
 
         $raw = AiUsageLog::query()
-            ->where('date', '>=', $start->toDateString())
+            ->whereDate('date', '>=', $start->toDateString())
             ->whereNotNull('neurons')
             ->select('date', DB::raw('SUM(neurons) as total'))
             ->groupBy('date')
@@ -239,7 +250,7 @@ class AiUsageTracker
     public static function requestsTodayBySource(): array
     {
         $counts = AiUsageLog::query()
-            ->where('date', now()->toDateString())
+            ->whereDate('date', now()->toDateString())
             ->select('source', DB::raw('COUNT(*) as total'))
             ->groupBy('source')
             ->pluck('total', 'source');

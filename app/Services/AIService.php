@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiBudgetExceededException;
 use App\Models\Setting;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -162,10 +163,10 @@ class AIService
             }
         }
 
-        if ($primaryFailure instanceof \App\Exceptions\AiBudgetExceededException) {
+        if ($primaryFailure instanceof AiBudgetExceededException) {
             throw $primaryFailure;
         }
-        if (($fallbackFailure ?? null) instanceof \App\Exceptions\AiBudgetExceededException) {
+        if (($fallbackFailure ?? null) instanceof AiBudgetExceededException) {
             throw $fallbackFailure;
         }
 

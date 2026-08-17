@@ -6,6 +6,7 @@ use App\Models\AiBudgetEvent;
 use App\Models\AiBudgetPeriod;
 use App\Models\AiUsageLog;
 use App\Support\WorkspaceContext;
+use Illuminate\Database\Eloquent\Builder;
 
 class AiBudgetReportingService
 {
@@ -55,11 +56,11 @@ class AiBudgetReportingService
             ->selectRaw('COALESCE(SUM(blocked_count), 0) as blocked_count')
             ->first();
 
-        $usage = AiUsageLog::query()
+        $usage = $this->usageQuery()
             ->when(
                 $type === AiBudgetPeriod::TYPE_DAILY,
-                fn ($query) => $query->where('date', $start),
-                fn ($query) => $query->where('date', '>=', $start),
+                fn ($query) => $query->whereDate('date', $start),
+                fn ($query) => $query->whereDate('date', '>=', $start),
             )
             ->selectRaw('COALESCE(SUM(input_tokens), 0) as input_tokens')
             ->selectRaw('COALESCE(SUM(output_tokens), 0) as output_tokens')
@@ -110,8 +111,8 @@ class AiBudgetReportingService
     /** @return array<int, array<string, mixed>> */
     private function featureBreakdown(string $from): array
     {
-        return AiUsageLog::query()
-            ->where('date', '>=', $from)
+        return $this->usageQuery()
+            ->whereDate('date', '>=', $from)
             ->select('source')
             ->selectRaw('COUNT(*) as requests')
             ->selectRaw('COALESCE(SUM(input_tokens), 0) as input_tokens')
@@ -133,8 +134,8 @@ class AiBudgetReportingService
     /** @return array<int, array<string, mixed>> */
     private function providerBreakdown(string $from): array
     {
-        return AiUsageLog::query()
-            ->where('date', '>=', $from)
+        return $this->usageQuery()
+            ->whereDate('date', '>=', $from)
             ->select(['provider', 'model'])
             ->selectRaw('COUNT(*) as requests')
             ->selectRaw('COALESCE(SUM(input_tokens + output_tokens), 0) as tokens')
@@ -157,8 +158,8 @@ class AiBudgetReportingService
     private function dailyTrend(int $days): array
     {
         $start = now()->startOfDay()->subDays($days - 1);
-        $rows = AiUsageLog::query()
-            ->where('date', '>=', $start->toDateString())
+        $rows = $this->usageQuery()
+            ->whereDate('date', '>=', $start->toDateString())
             ->select('date')
             ->selectRaw('COALESCE(SUM(input_tokens + output_tokens), 0) as tokens')
             ->selectRaw('COALESCE(SUM(estimated_cost_micros), 0) as cost_micros')
@@ -203,13 +204,24 @@ class AiBudgetReportingService
             ->all();
     }
 
+    private function usageQuery(): Builder
+    {
+        $query = AiUsageLog::query()->withoutGlobalScope('workspace');
+        $platformMode = auth()->user()?->isSuperAdmin() && ! $this->workspaceContext->isInspecting();
+
+        return $query->when(
+            ! $platformMode,
+            fn (Builder $builder) => $builder->where('workspace_id', $this->workspaceContext->id()),
+        );
+    }
+
     /** @return array<int, array<string, mixed>> */
     private function workspaceBreakdown(string $from): array
     {
         return AiUsageLog::query()
             ->withoutGlobalScope('workspace')
             ->leftJoin('workspaces', 'workspaces.id', '=', 'ai_usage_logs.workspace_id')
-            ->where('date', '>=', $from)
+            ->whereDate('date', '>=', $from)
             ->whereNotNull('ai_usage_logs.workspace_id')
             ->select(['ai_usage_logs.workspace_id', 'workspaces.name'])
             ->selectRaw('COUNT(*) as requests')

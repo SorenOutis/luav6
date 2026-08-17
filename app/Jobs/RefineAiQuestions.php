@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\AiQuestionDraft;
 use App\Services\AiQuestionGeneratorService;
+use App\Services\AiReviewService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -67,7 +68,7 @@ class RefineAiQuestions implements ShouldQueue
                 throw new \RuntimeException('The AI returned no usable questions for that follow-up. Try rephrasing the instruction or switching providers.');
             }
 
-            app(\App\Services\AiReviewService::class)->submitQuestionDraftForReview(
+            app(AiReviewService::class)->submitQuestionDraftForReview(
                 $draft,
                 $this->mode === 'replace' ? $new : array_merge($existing, $new),
                 $service->lastRawResponse,

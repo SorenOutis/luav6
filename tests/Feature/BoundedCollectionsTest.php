@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\AnonymousMessage;
-use App\Models\ChatSession;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\Season;
@@ -113,7 +112,7 @@ it('aggregates dashboard history in SQL and returns only the latest thirty entri
         ->assertInertia(fn ($page) => $page
             ->has('xpHistory', 30)
             ->where('statsBreakdown.xp.0.label', 'Lesson Complete')
-            ->where('statsBreakdown.xp.0.amount', 40.0)
+            ->where('statsBreakdown.xp.0.amount', 40)
             ->where('statsBreakdown.xp.0.count', 40));
 });
 

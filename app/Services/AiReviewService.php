@@ -8,6 +8,7 @@ use App\Models\AiReviewEvent;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -138,7 +139,7 @@ class AiReviewService
      * Store AI output as a teacher-only proposal. No student-facing answer,
      * score, progress, or XP value is changed here.
      *
-     * @param array{score?: mixed, feedback?: mixed} $assessment
+     * @param  array{score?: mixed, feedback?: mixed}  $assessment
      */
     public function stageEssayFeedback(
         ExamSubmission $submission,
@@ -161,7 +162,7 @@ class AiReviewService
 
         $workspaceId = (int) (
             $submission->exam()->withoutGlobalScope('workspace')->value('workspace_id')
-            ?: app(\App\Support\WorkspaceContext::class)->id()
+            ?: app(WorkspaceContext::class)->id()
         );
         if (! $workspaceId) {
             return null;
