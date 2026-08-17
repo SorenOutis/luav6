@@ -29,6 +29,7 @@ import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ChatNavigation from '@/components/ChatNavigation.vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,6 +48,7 @@ import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { resolveChatError, withErrorReference } from '@/lib/chatErrors';
 import { renderMarkdown } from '@/lib/markdown';
+import type { TourStep } from '@/lib/onboarding';
 import { dashboard } from '@/routes';
 import {
     destroy as chatsDestroy,
@@ -113,6 +115,36 @@ const { isCoarsePointer } = useMobile();
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard() },
     { title: 'Chats', href: chatsIndex().url },
+];
+
+// ─── Onboarding tour ────────────────────────────────────────────────────────
+// Per user + per device (localStorage). Targets exist in both the mobile and
+// desktop layouts (composer, history) — the tour spotlights whichever variant
+// is visible; missing ones (e.g. suggestions on an ongoing chat) are skipped.
+const chatsTourSteps: TourStep[] = [
+    {
+        id: 'welcome',
+        title: 'Meet Echo, your AI study buddy',
+        body: 'Ask about assignments, exams or your study progress — Echo knows your school context. Here’s a quick tour.',
+    },
+    {
+        id: 'composer',
+        target: 'chats-composer',
+        title: 'Ask anything',
+        body: 'Type your question here. You can also attach images and documents with the paperclip, or just drag files in.',
+    },
+    {
+        id: 'suggestions',
+        target: 'chats-suggestions',
+        title: 'Quick starters',
+        body: 'Not sure where to begin? Tap a suggestion chip to start a conversation instantly.',
+    },
+    {
+        id: 'history',
+        target: 'chats-history',
+        title: 'Your chat history',
+        body: 'Every conversation is saved. Jump back into a past chat, or start a fresh one with the new-chat button.',
+    },
 ];
 
 const branding = computed<{ logoUrl?: string | null; name?: string }>(
@@ -1014,6 +1046,7 @@ onBeforeUnmount(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <template #chat-navigation>
             <ChatNavigation
+                data-tour="chats-history"
                 :sessions="sessions"
                 :active-session-id="activeSession?.id"
                 :creating="isCreatingSession || !aiChatEnabled"
@@ -1117,6 +1150,7 @@ onBeforeUnmount(() => {
                             class="h-9 w-9 rounded-xl"
                             title="Chat history"
                             aria-haspopup="dialog"
+                            data-tour="chats-history"
                             :aria-expanded="isMobileHistoryOpen"
                             @click="isMobileHistoryOpen = true"
                         >
@@ -1190,6 +1224,7 @@ onBeforeUnmount(() => {
                                 <!-- Centered input -->
                                 <form
                                     v-if="aiChatEnabled"
+                                    data-tour="chats-composer"
                                     class="welcome-input mt-5 w-full max-w-xl sm:mt-8"
                                     @submit.prevent="sendMessage"
                                 >
@@ -1299,6 +1334,7 @@ onBeforeUnmount(() => {
                                 <!-- Suggestions -->
                                 <div
                                     v-if="aiChatEnabled"
+                                    data-tour="chats-suggestions"
                                     class="welcome-suggestions mt-4 flex flex-wrap justify-center gap-1.5 sm:mt-6"
                                 >
                                     <button
@@ -1531,6 +1567,7 @@ onBeforeUnmount(() => {
 
                     <form
                         v-if="aiChatEnabled"
+                        data-tour="chats-composer"
                         class="flex w-full flex-col items-stretch gap-1.5"
                         @submit.prevent="sendMessage"
                     >
@@ -1759,6 +1796,14 @@ onBeforeUnmount(() => {
                 </Button>
             </div>
         </ResponsiveModal>
+
+        <!-- First-visit walkthrough (per user, per device) -->
+        <OnboardingTour
+            tour-id="chats"
+            :steps="chatsTourSteps"
+            :can-start="!sessionToDelete && !isMobileHistoryOpen"
+            :start-delay="900"
+        />
     </AppLayout>
 </template>
 

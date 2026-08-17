@@ -25,11 +25,14 @@ import StreakCard from '@/components/dashboard/StreakCard.vue';
 import TodayStrip from '@/components/dashboard/TodayStrip.vue';
 import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import { useLoader } from '@/composables/useLoader';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { getTourStatus } from '@/lib/onboarding';
+import type { TourStep } from '@/lib/onboarding';
 import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { logout } from '@/routes';
 import { index as assignmentsIndex } from '@/routes/assignments';
@@ -270,6 +273,70 @@ const smarterStatus = computed(() => {
 
 const isBooted = ref(false);
 
+// ─── Onboarding tour ─────────────────────────────────────────────────────────
+// Completion is per user *and* per device (localStorage), so a login from a
+// new device replays the walkthrough while skipped/finished devices stay
+// quiet. The daily-XP claim prompt is held back until the tour resolves so
+// the two overlays never stack.
+const dashboardTourPending = ref(false);
+const isTourActive = ref(false);
+
+const dashboardTourSteps: TourStep[] = [
+    {
+        id: 'welcome',
+        title: 'Welcome to your dashboard',
+        body: 'This is your home base — XP, streaks, deadlines and your class leaderboard all live here. Here’s a quick tour (you can skip anytime).',
+    },
+    {
+        id: 'hero',
+        target: 'dashboard-hero',
+        title: 'Your daily snapshot',
+        body: 'A personalized greeting with your rank, level and announcements from your teachers. It refreshes automatically.',
+    },
+    {
+        id: 'today',
+        target: 'dashboard-today',
+        title: 'Today at a glance',
+        body: 'What’s due today, overdue, or coming up in the next 24 hours — plus the single most urgent item so you always know what to do next.',
+    },
+    {
+        id: 'daily-reward',
+        target: 'dashboard-daily-reward',
+        title: 'Claim your daily XP',
+        body: 'Come back every day to claim free XP. Longer login streaks earn bigger bonuses.',
+    },
+    {
+        id: 'level',
+        target: 'dashboard-level-card',
+        title: 'Level & XP history',
+        body: 'Tap this card to open your full XP history — every exam, assignment and daily claim that earned you XP, plus a summary breakdown.',
+    },
+    {
+        id: 'streak',
+        target: 'dashboard-streak-card',
+        title: 'Your streak',
+        body: 'Log in daily to keep your streak alive. Tap the card to see your streak calendar and your all-time best.',
+    },
+    {
+        id: 'season',
+        target: 'dashboard-season',
+        title: 'Season progress',
+        body: 'Seasons group your class activities. Watch how many days remain before the season wraps up.',
+    },
+    {
+        id: 'leaderboard',
+        target: 'dashboard-leaderboard',
+        title: 'Class leaderboard',
+        body: 'See where you rank in your section. Earn XP from activities and daily claims to climb the board.',
+    },
+    {
+        id: 'activity',
+        target: 'dashboard-activity',
+        title: 'Activity heatmap',
+        body: 'Your last four weeks at a glance — the greener, the more consistent you’ve been. That’s the tour, have fun!',
+    },
+];
+
 interface Assignment {
     id: number;
     title: string;
@@ -393,10 +460,32 @@ const userStats = computed(() => props.userStats);
 // Declared above claimXpForPrompt so the computed can reference it safely.
 const claimPromptReady = ref(Boolean(props.sectionName));
 
-// Gate the auto-prompt behind the section flow (see claimPromptReady above).
+// Whether the onboarding walkthrough still needs to run on this device.
+// Checked once at setup so the claim prompt isn't blocked forever on devices
+// that already finished (or skipped) the tour.
+dashboardTourPending.value =
+    typeof window !== 'undefined' &&
+    getTourStatus('dashboard', page.props.auth.user?.public_id ?? '') === null;
+
+// The tour waits for boot + the section flow, and never runs for banned users.
+const tourCanStart = computed(
+    () => isBooted.value && !isBanned.value && claimPromptReady.value,
+);
+
+const onTourResolved = () => {
+    dashboardTourPending.value = false;
+    isTourActive.value = false;
+};
+
+// Gate the auto-prompt behind the section flow (see claimPromptReady above)
+// and the onboarding tour, so overlays never stack on top of each other.
 const claimXpForPrompt = computed(() => ({
     ...props.claimXp,
-    showPrompt: claimPromptReady.value && Boolean(props.claimXp.showPrompt),
+    showPrompt:
+        claimPromptReady.value &&
+        !dashboardTourPending.value &&
+        !isTourActive.value &&
+        Boolean(props.claimXp.showPrompt),
 }));
 
 const dismissedAnnouncementIds = reactive(new Set<number>());
@@ -662,6 +751,7 @@ const handleLogout = () => {
                 >
                     <DashboardHero
                         class="dashboard-hero"
+                        data-tour="dashboard-hero"
                         :user-name="userName"
                         :user-avatar="userAvatar"
                         :profile-href="userProfileHref"
@@ -700,6 +790,7 @@ const handleLogout = () => {
                 >
                     <TodayStrip
                         class="dashboard-focus"
+                        data-tour="dashboard-today"
                         :due-today-count="todaySummary.dueTodayCount"
                         :overdue-count="todaySummary.overdueCount"
                         :upcoming-24h-count="todaySummary.upcoming24hCount"
@@ -727,6 +818,7 @@ const handleLogout = () => {
                 >
                     <DailyRewardCard
                         class="dashboard-reward"
+                        data-tour="dashboard-daily-reward"
                         :claim-xp="claimXpForPrompt"
                         :streak="userStats.streak"
                         @claimed="manualRefresh"
@@ -754,6 +846,7 @@ const handleLogout = () => {
                 >
                     <LevelProgressCard
                         class="col-span-2"
+                        data-tour="dashboard-level-card"
                         :user-stats="userStats"
                         :breakdown="props.statsBreakdown?.xp ?? []"
                         :xp-history="props.xpHistory ?? []"
@@ -761,11 +854,13 @@ const handleLogout = () => {
                         :bonus-xp="props.bonusXp"
                     />
                     <StreakCard
+                        data-tour="dashboard-streak-card"
                         :current-streak="userStats.streak"
                         :longest-streak="userStats.longestStreak"
                         :login-dates="streak.loginDates"
                     />
                     <SeasonProgressBand
+                        data-tour="dashboard-season"
                         :name="activeSeason?.name ?? null"
                         :start-date="activeSeason?.startDate ?? null"
                         :end-date="activeSeason?.endDate ?? null"
@@ -797,7 +892,11 @@ const handleLogout = () => {
                     <!-- Main Section: Leaderboard -->
                     <div class="min-w-0 space-y-4 sm:space-y-8 lg:col-span-2">
                         <!-- Mobile: Collapsible Leaderboard -->
-                        <div v-if="!isDesktop" class="lg:hidden">
+                        <div
+                            v-if="!isDesktop"
+                            class="lg:hidden"
+                            data-tour="dashboard-leaderboard"
+                        >
                             <button
                                 @click="
                                     isLeaderboardExpanded =
@@ -860,7 +959,11 @@ const handleLogout = () => {
                         </div>
 
                         <!-- Desktop: Full Leaderboard -->
-                        <div v-else class="hidden lg:block">
+                        <div
+                            v-else
+                            class="hidden lg:block"
+                            data-tour="dashboard-leaderboard"
+                        >
                             <ImprovedLeaderboard
                                 class="dashboard-leaderboard"
                                 :section-leaderboards="sectionLeaderboards"
@@ -883,6 +986,7 @@ const handleLogout = () => {
                         <section
                             class="surface-card w-full min-w-0 p-4 sm:p-5"
                             aria-label="Activity"
+                            data-tour="dashboard-activity"
                         >
                             <div class="mb-4 min-w-0 sm:mb-5">
                                 <h3
@@ -909,6 +1013,17 @@ const handleLogout = () => {
                 showSectionModal = false;
                 claimPromptReady = true;
             "
+        />
+
+        <!-- First-visit walkthrough (per user, per device) -->
+        <OnboardingTour
+            tour-id="dashboard"
+            :steps="dashboardTourSteps"
+            :can-start="tourCanStart"
+            :start-delay="900"
+            @start="isTourActive = true"
+            @finish="onTourResolved"
+            @skip="onTourResolved"
         />
 
         <div

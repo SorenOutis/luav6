@@ -25,6 +25,11 @@ vi.mock('@inertiajs/vue3', () => ({
         reload: vi.fn(),
     },
     usePoll: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
+    // OnboardingTour reads the authenticated user's public_id for its
+    // per-user localStorage scope.
+    usePage: () => ({
+        props: { auth: { user: { public_id: 'test-user' } } },
+    }),
 }));
 
 vi.mock('@motionone/vue', () => ({

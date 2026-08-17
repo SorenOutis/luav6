@@ -23,12 +23,14 @@ import {
     onMounted,
     onBeforeUnmount,
 } from 'vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { getLenis } from '@/composables/useLenis';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
+import type { TourStep } from '@/lib/onboarding';
 import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { show as examsShow } from '@/routes/exams';
 import type { BreadcrumbItem } from '@/types';
@@ -538,6 +540,44 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Exams', href: '/exams' },
 ];
 
+// ─── Onboarding tour ────────────────────────────────────────────────────────
+// Per user + per device (localStorage): a login on a new device replays the
+// walkthrough. Steps whose target isn't on screen (no exams yet, single
+// section) are skipped automatically. Held while the review modal is open.
+const activitiesTourSteps: TourStep[] = [
+    {
+        id: 'welcome',
+        title: 'Welcome to Activities',
+        body: 'All your exams and assessments live here, grouped by season. Here’s a quick look around.',
+    },
+    {
+        id: 'search',
+        target: 'exams-search',
+        title: 'Find an exam fast',
+        body: 'Search by title to jump straight to the exam you need — handy once a season fills up.',
+    },
+    {
+        id: 'sections',
+        target: 'exams-sections',
+        title: 'Filter by section',
+        body: 'Enrolled in more than one section? Use these tabs to see only that section’s activities.',
+    },
+    {
+        id: 'seasons',
+        target: 'exams-season',
+        title: 'Grouped by season',
+        body: 'Exams are organized under their season so you always know which grading period they belong to.',
+    },
+    {
+        id: 'card',
+        target: 'exams-card',
+        title: 'Everything on the card',
+        body: 'Each card shows status, parts submitted, duration and score. Tap a card to open the exam — completed ones open a full review of your answers.',
+    },
+];
+
+const isExamsTourActive = ref(false);
+
 watch(sectionTabs, (tabs) => {
     if (!tabs.some((tab) => tab.key === activeSection.value)) {
         activeSection.value = 'all';
@@ -652,7 +692,7 @@ watch(selectedPartId, () => {
             </Motion>
 
             <!-- Search Input -->
-            <div class="relative">
+            <div class="relative" data-tour="exams-search">
                 <Search
                     class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 sm:left-4 sm:h-5 sm:w-5"
                 />
@@ -667,6 +707,7 @@ watch(selectedPartId, () => {
             <!-- Section Tabs (Sticky) -->
             <div
                 v-if="sectionTabs.length > 1"
+                data-tour="exams-sections"
                 class="no-scrollbar sticky top-0 z-20 -mx-3 flex items-center gap-2 overflow-x-auto border-b border-transparent bg-background/80 px-3 pt-1.5 pb-2 backdrop-blur-md sm:gap-3 sm:pt-3 sm:pb-4 md:-mx-8 md:px-8"
             >
                 <button
@@ -720,6 +761,7 @@ watch(selectedPartId, () => {
                 >
                     <!-- Season Header -->
                     <div
+                        :data-tour="sIdx === 0 ? 'exams-season' : undefined"
                         class="mb-0.5 flex items-center gap-2 sm:mb-1 sm:gap-3"
                     >
                         <div class="flex items-center gap-2">
@@ -762,6 +804,11 @@ watch(selectedPartId, () => {
                                 easing: [0.16, 1, 0.3, 1],
                                 delay: eIdx * 0.05,
                             }"
+                            :data-tour="
+                                sIdx === 0 && eIdx === 0
+                                    ? 'exams-card'
+                                    : undefined
+                            "
                             class="exam-card flex min-h-[6.25rem] min-w-0 flex-col justify-between rounded-xl border border-l-[3px] p-3 transition-colors duration-200 sm:min-h-[7.5rem] sm:rounded-[1.25rem] sm:p-5"
                             :class="[
                                 exam.is_locked
@@ -1028,6 +1075,17 @@ watch(selectedPartId, () => {
                 </div>
             </Motion>
         </div>
+
+        <!-- First-visit walkthrough (per user, per device) -->
+        <OnboardingTour
+            tour-id="activities"
+            :steps="activitiesTourSteps"
+            :can-start="!showReviewModal"
+            :start-delay="900"
+            @start="isExamsTourActive = true"
+            @finish="isExamsTourActive = false"
+            @skip="isExamsTourActive = false"
+        />
     </AppLayout>
 
     <!-- Review Modal -->
