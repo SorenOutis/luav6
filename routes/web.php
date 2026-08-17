@@ -3,6 +3,7 @@
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\Admin\ExamSubmissionController;
 use App\Http\Controllers\AnonymousMessageController;
+use App\Http\Controllers\Api\BonusClaimController;
 use App\Http\Controllers\Api\ClaimXpController;
 use App\Http\Controllers\Api\DashboardExamsController;
 use App\Http\Controllers\Api\LeaderboardController;
@@ -144,6 +145,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('api/claim-xp/prompt-shown', [ClaimXpController::class, 'promptShown'])
         ->middleware(['auth', 'verified', 'throttle:claim-xp'])
         ->name('api.claim-xp.prompt-shown');
+
+    // Bonus XP Claim (flat amount, inside Level → XP History modal)
+    Route::post('api/claim-bonus-xp', BonusClaimController::class)
+        ->middleware(['auth', 'verified', 'throttle:claim-bonus-xp'])
+        ->name('api.claim-bonus-xp');
 
     Route::post('api/chat', ChatController::class)->middleware('throttle:chat')->name('chat');
     Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:chat')->name('chat.stream');

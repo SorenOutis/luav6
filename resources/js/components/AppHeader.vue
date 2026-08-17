@@ -399,6 +399,7 @@ const rightNavItems: NavItem[] = [
 
                                     <div
                                         v-if="notifications.items.length > 0"
+                                        data-lenis-prevent
                                         class="max-h-[min(24rem,50vh)] overflow-y-auto overscroll-contain p-2"
                                     >
                                         <button

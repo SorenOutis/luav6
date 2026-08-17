@@ -411,6 +411,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(DailyXpClaim::class);
     }
 
+    public function bonusXpClaims()
+    {
+        return $this->hasMany(BonusXpClaim::class);
+    }
+
     public function chatSessions()
     {
         return $this->hasMany(ChatSession::class)->orderByDesc('updated_at');

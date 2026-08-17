@@ -128,6 +128,8 @@ class AiSettings extends Page implements HasSchemas
             'registration_disabled_message' => Setting::get('registration_disabled_message', 'Registration is currently disabled. Please try again later.'),
             'daily_claim_enabled' => (bool) Setting::get('daily_claim_enabled', true),
             'daily_claim_base_xp' => (int) Setting::get('daily_claim_base_xp', 1),
+            'daily_claim_bonus_enabled' => (bool) Setting::get('daily_claim_bonus_enabled', false),
+            'daily_claim_bonus_xp' => (int) Setting::get('daily_claim_bonus_xp', 5),
             'welcome_demo_video_path' => Setting::get('welcome_demo_video_path'),
             'school_name' => Setting::get('school_name', 'LSI Engine'),
             'school_tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),
@@ -210,6 +212,21 @@ class AiSettings extends Page implements HasSchemas
                             ->required()
                             ->helperText('XP awarded per daily claim before the streak bonus. Streaks add +1 XP every 5 days, up to +4 (e.g. base 1 → 1–5 XP).')
                             ->visible(fn ($get) => (bool) $get('daily_claim_enabled')),
+
+                        Toggle::make('daily_claim_bonus_enabled')
+                            ->label('Enable Bonus XP Claim')
+                            ->helperText('Second daily reward shown and claimable inside the Level → XP History modal, alongside the daily claim.')
+                            ->reactive(),
+
+                        TextInput::make('daily_claim_bonus_xp')
+                            ->label('Bonus XP per Claim')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(1000)
+                            ->required()
+                            ->helperText('Flat XP awarded for the bonus claim (no streak bonus). Hidden when Bonus XP is disabled.')
+                            ->visible(fn ($get) => (bool) $get('daily_claim_bonus_enabled')),
                     ]),
 
                 Section::make('Welcome Demo Video')
@@ -939,6 +956,8 @@ class AiSettings extends Page implements HasSchemas
 
             Setting::set('daily_claim_enabled', ($data['daily_claim_enabled'] ?? true) ? '1' : '0');
             Setting::set('daily_claim_base_xp', (string) max(1, (int) ($data['daily_claim_base_xp'] ?? 1)));
+            Setting::set('daily_claim_bonus_enabled', ($data['daily_claim_bonus_enabled'] ?? false) ? '1' : '0');
+            Setting::set('daily_claim_bonus_xp', (string) max(1, (int) ($data['daily_claim_bonus_xp'] ?? 5)));
 
             Setting::set('welcome_demo_video_path', $data['welcome_demo_video_path'] ?? null);
             Setting::set('school_name', $data['school_name'] ?? 'LSI Engine');

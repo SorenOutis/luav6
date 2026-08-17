@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
+import axios from 'axios';
 import {
     Check,
     ChevronRight,
@@ -7,11 +9,12 @@ import {
     GraduationCap,
     Settings2,
     Sparkles,
+    Star,
     TrendingUp,
     Trophy,
     Zap,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
@@ -50,12 +53,14 @@ interface Props {
     breakdown?: BreakdownEntry[];
     xpHistory?: XpHistoryEntry[];
     claimXp?: ClaimInfo;
+    bonusXp?: ClaimInfo;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     breakdown: () => [],
     xpHistory: () => [],
     claimXp: undefined,
+    bonusXp: undefined,
 });
 
 const showBreakdown = ref(false);
@@ -106,6 +111,108 @@ const claimStatus = computed<ClaimStatus | null>(() => {
     };
 });
 
+// ── Bonus-claim status ──────────────────────────────────────────────────────
+const bonusStatus = computed<ClaimStatus | null>(() => {
+    const b = props.bonusXp;
+    if (!b) return null;
+    if (b.enabled === false) return null;
+    if (b.canClaim) {
+        if (!b.lastClaimedAt) {
+            return { state: 'never', amount: b.amount };
+        }
+        return { state: 'available', amount: b.amount };
+    }
+    return {
+        state: 'claimed',
+        amount: b.amount,
+        whenLabel: b.lastClaimedAt ? formatWhen(b.lastClaimedAt) : undefined,
+    };
+});
+
+// Local state for bonus claim interaction inside the modal
+const bonusClaimState = ref<'idle' | 'claiming' | 'claimed'>('idle');
+const bonusClaimedAmount = ref(0);
+const bonusError = ref(false);
+let bonusErrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Sync local state with prop
+const syncBonusState = () => {
+    const b = props.bonusXp;
+    if (!b || b.enabled === false) {
+        bonusClaimState.value = 'idle';
+        return;
+    }
+    // If we just claimed locally, keep 'claimed' until props refresh
+    if (bonusClaimState.value === 'claimed') return;
+    bonusClaimState.value = b.canClaim ? 'idle' : 'claimed';
+};
+
+watch(
+    () => props.bonusXp,
+    () => syncBonusState(),
+    { immediate: true, deep: true },
+);
+
+// Reset when modal opens (in case new day)
+watch(showBreakdown, (open) => {
+    if (open) syncBonusState();
+});
+
+const bonusDisplayStatus = computed<ClaimStatus | null>(() => {
+    // If we locally marked as claimed, show claimed even though props may still say available until reload
+    if (bonusClaimState.value === 'claimed') {
+        const raw = bonusStatus.value;
+        return {
+            state: 'claimed' as const,
+            amount: bonusClaimedAmount.value || raw?.amount || props.bonusXp?.amount || 0,
+            whenLabel: 'Just now',
+        };
+    }
+    return bonusStatus.value;
+});
+
+const isBonusAvailable = computed(() => {
+    if (!bonusStatus.value) return false;
+    if (bonusClaimState.value === 'claimed') return false;
+    return bonusStatus.value.state !== 'claimed';
+});
+
+async function handleBonusClaim() {
+    if (bonusClaimState.value === 'claiming') return;
+    if (!isBonusAvailable.value) return;
+    bonusClaimState.value = 'claiming';
+    bonusError.value = false;
+    if (bonusErrorTimer) clearTimeout(bonusErrorTimer);
+
+    try {
+        const { data } = await axios.post<{
+            claimed: boolean;
+            amount: number;
+            total_xp: number;
+            streak: number;
+        }>('/api/claim-bonus-xp', undefined, { timeout: 15000 });
+
+        if (data.claimed) {
+            bonusClaimedAmount.value = data.amount;
+            bonusClaimState.value = 'claimed';
+            // Refresh surrounding stats without waiting for poll
+            router.reload({
+                only: ['bonusXp', 'xpHistory', 'userStats', 'statsBreakdown', 'notifications'] as any,
+            });
+        } else {
+            // Already claimed (race)
+            bonusClaimState.value = 'claimed';
+            bonusClaimedAmount.value = data.amount || props.bonusXp?.amount || 0;
+        }
+    } catch {
+        bonusClaimState.value = 'idle';
+        bonusError.value = true;
+        bonusErrorTimer = setTimeout(() => {
+            bonusError.value = false;
+        }, 4000);
+    }
+}
+
 // ── Reason → icon / label / tone mapping ────────────────────────────────────
 type Tone = 'amber' | 'sky' | 'emerald' | 'violet' | 'zinc' | 'primary';
 
@@ -117,6 +224,8 @@ interface ReasonMeta {
 
 const reasonMeta = (reason: string): ReasonMeta => {
     const r = (reason || '').toLowerCase();
+    if (r === 'bonus claim')
+        return { icon: Star, label: 'Bonus Claim', tone: 'violet' };
     if (r === 'daily claim')
         return { icon: Gift, label: 'Daily Claim', tone: 'amber' };
     if (r.includes('exam'))
@@ -303,6 +412,99 @@ function formatWhen(iso: string): string {
                     </span>
                 </div>
 
+                <!-- Bonus XP claim: second daily reward inside the same modal -->
+                <div
+                    v-if="bonusDisplayStatus"
+                    class="flex items-center gap-3 rounded-xl border p-3"
+                    :class="
+                        bonusDisplayStatus.state === 'claimed'
+                            ? 'border-[#4D9375]/30 bg-[#4D9375]/10'
+                            : 'border-[#9D7CD8]/30 bg-[#9D7CD8]/10'
+                    "
+                    role="status"
+                    aria-label="Bonus XP"
+                >
+                    <span
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                        :class="
+                            bonusDisplayStatus.state === 'claimed'
+                                ? 'bg-[#4D9375]/15 text-[#4D9375] dark:text-[#4D9375]'
+                                : 'bg-[#9D7CD8]/15 text-[#9D7CD8] dark:text-[#9D7CD8]'
+                        "
+                    >
+                        <Check
+                            v-if="bonusDisplayStatus.state === 'claimed'"
+                            class="h-5 w-5"
+                        />
+                        <Star v-else class="h-5 w-5" />
+                    </span>
+                    <div class="min-w-0 flex-1">
+                        <p
+                            class="text-sm font-bold tracking-tight text-foreground"
+                        >
+                            <template v-if="bonusDisplayStatus.state === 'claimed'">
+                                Bonus XP claimed
+                            </template>
+                            <template v-else-if="bonusDisplayStatus.state === 'never'">
+                                Your bonus XP is ready
+                            </template>
+                            <template v-else>
+                                Bonus XP ready to claim
+                            </template>
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                            <template v-if="bonusDisplayStatus.state === 'claimed'">
+                                +{{ bonusDisplayStatus.amount }} XP
+                                <span v-if="bonusDisplayStatus.whenLabel"
+                                    >· {{ bonusDisplayStatus.whenLabel }}</span
+                                >
+                            </template>
+                            <template v-else>
+                                +{{ bonusDisplayStatus.amount }} XP available — claim it below.
+                            </template>
+                        </p>
+                        <p
+                            v-if="bonusError"
+                            class="mt-1 text-[11px] font-semibold text-[#CB7676]"
+                        >
+                            Couldn’t claim — check connection and try again.
+                        </p>
+                    </div>
+                    <!-- Right side: amount + claim button or claimed badge -->
+                    <div class="flex shrink-0 items-center gap-2">
+                        <span
+                            v-if="bonusDisplayStatus.state === 'claimed'"
+                            class="text-sm font-semibold tabular-nums text-[#4D9375] dark:text-[#4D9375]"
+                        >
+                            +{{ bonusDisplayStatus.amount }}
+                        </span>
+                        <template v-else>
+                            <span
+                                class="hidden text-sm font-semibold tabular-nums text-[#9D7CD8] dark:text-[#9D7CD8] sm:inline"
+                            >
+                                +{{ bonusDisplayStatus.amount }}
+                            </span>
+                            <button
+                                type="button"
+                                :disabled="bonusClaimState === 'claiming'"
+                                class="inline-flex min-w-[7.5rem] items-center justify-center gap-1.5 rounded-lg bg-[#9D7CD8] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#9D7CD8]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                                @click.stop="handleBonusClaim"
+                            >
+                                <span
+                                    v-if="bonusClaimState === 'claiming'"
+                                    class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                                ></span>
+                                <Sparkles v-else class="h-3.5 w-3.5" />
+                                {{
+                                    bonusClaimState === 'claiming'
+                                        ? 'Claiming…'
+                                        : `Claim ${bonusDisplayStatus.amount} XP`
+                                }}
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
                 <!-- Tabs -->
                 <div
                     class="flex gap-1 rounded-xl border border-border/40 bg-muted/30 p-1"
@@ -338,6 +540,7 @@ function formatWhen(iso: string): string {
                 <!-- History tab: per-entry ledger -->
                 <div
                     v-if="activeTab === 'history'"
+                    data-lenis-prevent
                     class="max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1"
                 >
                     <div
@@ -402,7 +605,7 @@ function formatWhen(iso: string): string {
                 </div>
 
                 <!-- Summary tab: aggregated by category -->
-                <div v-else class="space-y-2">
+                <div v-else data-lenis-prevent class="max-h-[50vh] overflow-y-auto overscroll-contain pr-1 space-y-2">
                     <div
                         v-if="breakdown.length === 0"
                         class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"

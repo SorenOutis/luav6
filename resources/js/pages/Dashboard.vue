@@ -55,7 +55,9 @@ const POLL_PROPS = [
     // Keep the daily-claim status + XP history fresh so the level card's
     // "claimed today?" banner and history reflect a claim immediately.
     'claimXp',
+    'bonusXp',
     'xpHistory',
+    'statsBreakdown',
 ];
 // Dashboard data is intentionally refreshed less often than interaction-heavy
 // pages. This avoids repeatedly rebuilding the leaderboard and sidebar on
@@ -340,6 +342,13 @@ const props = defineProps<{
         nextClaimAt: string | null;
         lastClaimedAt?: string | null;
         showPrompt?: boolean;
+    };
+    bonusXp?: {
+        enabled?: boolean;
+        canClaim: boolean;
+        amount: number;
+        nextClaimAt: string | null;
+        lastClaimedAt?: string | null;
     };
     userStats: {
         totalXP: number;
@@ -749,6 +758,7 @@ const handleLogout = () => {
                         :breakdown="props.statsBreakdown?.xp ?? []"
                         :xp-history="props.xpHistory ?? []"
                         :claim-xp="claimXpForPrompt"
+                        :bonus-xp="props.bonusXp"
                     />
                     <StreakCard
                         :current-streak="userStats.streak"

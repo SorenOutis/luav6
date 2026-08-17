@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Announcement;
 use App\Models\Season;
 use App\Services\BadgeAwardService;
+use App\Services\BonusXpService;
 use App\Services\ClaimXpService;
 use App\Services\LeaderboardService;
 use App\Services\StreakService;
@@ -36,6 +37,7 @@ class DashboardController extends Controller
         protected UpcomingExamsService $upcomingExamsService,
         protected BadgeAwardService $badgeAwardService,
         protected ClaimXpService $claimXpService,
+        protected BonusXpService $bonusXpService,
     ) {}
 
     public function __invoke(Request $request)
@@ -182,6 +184,12 @@ class DashboardController extends Controller
         $claimAmount = $this->claimXpService->claimAmount($user);
         $nextClaimAt = $this->claimXpService->nextClaimAt($user);
 
+        // ── Bonus Claim (flat, inside Level modal) ─────────────────
+        $bonusCanClaim = $this->bonusXpService->canClaim($user);
+        $bonusAmount = $this->bonusXpService->bonusXp();
+        $bonusNextClaimAt = $this->bonusXpService->nextClaimAt($user);
+        $bonusLastClaimedAt = $this->bonusXpService->lastClaimedAt($user);
+
         // Offer the claim popup once per calendar day instead of once per
         // session. A boolean flag set on the first dashboard visit never resets
         // for sessions that span multiple days (remember-me cookie, tab left
@@ -246,7 +254,7 @@ class DashboardController extends Controller
                 'description' => $entry->description,
                 'amount' => (float) $entry->amount_xp,
                 'createdAt' => $entry->created_at->toIso8601String(),
-                'isClaim' => $entry->reason === 'Daily Claim',
+                'isClaim' => in_array($entry->reason, ['Daily Claim', 'Bonus Claim'], true),
             ])->values();
 
         return inertia('Dashboard', [
@@ -258,6 +266,13 @@ class DashboardController extends Controller
                 'nextClaimAt' => $nextClaimAt?->toIso8601String(),
                 'lastClaimedAt' => $user->last_claimed_at?->toIso8601String(),
                 'showPrompt' => $showClaimPrompt,
+            ],
+            'bonusXp' => [
+                'enabled' => $this->bonusXpService->isEnabled(),
+                'canClaim' => $bonusCanClaim,
+                'amount' => $bonusAmount,
+                'nextClaimAt' => $bonusNextClaimAt?->toIso8601String(),
+                'lastClaimedAt' => $bonusLastClaimedAt?->toIso8601String(),
             ],
             'statsBreakdown' => [
                 'xp' => $xpBreakdown,
