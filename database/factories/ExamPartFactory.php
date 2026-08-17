@@ -97,7 +97,7 @@ class ExamPartFactory extends Factory
         ]);
     }
 
-    public function essay(int $count = 1, int $points = 10): static
+    public function essay(int $count = 1, int $points = 10, string $gradingMethod = 'ai'): static
     {
         return $this->state(fn (array $attributes) => [
             'type' => 'essay',
@@ -106,6 +106,7 @@ class ExamPartFactory extends Factory
                 'text' => "Discuss topic {$n} in detail.",
                 'type' => 'essay',
                 'points' => $points,
+                'grading_method' => $gradingMethod,
             ])->all(),
         ]);
     }
@@ -141,6 +142,7 @@ class ExamPartFactory extends Factory
                     'text' => 'Mixed essay?',
                     'type' => 'essay',
                     'points' => 10,
+                    'grading_method' => 'ai',
                 ],
             ],
         ]);

@@ -44,7 +44,7 @@ class AiEssayFeedbackProgress extends Page implements HasTable
                 ->color('primary')
                 ->requiresConfirmation()
                 ->modalHeading('Re-run AI essay feedback?')
-                ->modalDescription('This generates private score and feedback proposals only for essays without an existing review draft. Nothing is applied until a teacher approves each proposal.')
+                ->modalDescription('This automatically grades AI-assigned essays that are still missing a score or feedback. Results are applied to student submissions as soon as each AI response finishes.')
                 ->action(function () {
                     $activeRun = ExamAiFeedbackRun::query()
                         ->where('exam_id', $this->exam->id)
@@ -68,7 +68,7 @@ class AiEssayFeedbackProgress extends Page implements HasTable
 
                     Notification::make()
                         ->title('AI feedback run started')
-                        ->body('Progress will update automatically. Generated proposals will appear in AI Feedback Review.')
+                        ->body('Progress will update automatically. Completed scores and feedback are applied immediately.')
                         ->success()
                         ->send();
 

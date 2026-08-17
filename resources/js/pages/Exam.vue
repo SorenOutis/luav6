@@ -1569,8 +1569,8 @@ watch(selectedPartId, () => {
                                                     selectedExamForReview,
                                                     part.id,
                                                 )?.status === 'pending_review'
-                                                    ? 'Awaiting teacher review'
-                                                    : 'AI proposal pending'
+                                                    ? 'Awaiting teacher grading'
+                                                    : 'Automatic AI grading pending'
                                             }}</span
                                         >
                                     </div>

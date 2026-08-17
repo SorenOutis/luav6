@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\EssayGradingMethod;
 use App\Models\Exam;
 use Illuminate\Support\Facades\DB;
 
@@ -20,6 +21,7 @@ class ExamTemplateService
             'Choices (Pipe | Separated)',
             'Correct Choice/Answer',
             'Points',
+            'Essay Grading (ai|manual)',
         ]);
 
         // Example Rows
@@ -31,6 +33,7 @@ class ExamTemplateService
             'Berlin|Madrid|Paris|Rome',
             'Paris',
             '1',
+            '',
         ]);
 
         fputcsv($handle, [
@@ -41,6 +44,7 @@ class ExamTemplateService
             'Earth|Mars|Jupiter|Saturn',
             'Mars',
             '1',
+            '',
         ]);
 
         fputcsv($handle, [
@@ -51,6 +55,7 @@ class ExamTemplateService
             'True|False',
             'True',
             '1',
+            '',
         ]);
 
         fputcsv($handle, [
@@ -61,6 +66,18 @@ class ExamTemplateService
             '',
             'Jose Rizal',
             '5',
+            '',
+        ]);
+
+        fputcsv($handle, [
+            'Part IV - Essay',
+            'Answer in complete sentences.',
+            'Explain why photosynthesis is important to life on Earth.',
+            'essay',
+            '',
+            '',
+            '10',
+            'ai',
         ]);
 
         rewind($handle);
@@ -141,6 +158,13 @@ class ExamTemplateService
                     }
                 } elseif ($type === 'identification') {
                     $questionData['correct_answer'] = $correctInput;
+                } elseif ($type === 'essay') {
+                    $gradingMethod = str((string) ($row['Essay Grading (ai|manual)'] ?? ''))
+                        ->trim()
+                        ->lower()
+                        ->toString();
+                    $questionData['grading_method'] = EssayGradingMethod::tryFrom($gradingMethod)?->value
+                        ?? EssayGradingMethod::Ai->value;
                 }
 
                 $partsData[$partTitle]['questions'][] = $questionData;

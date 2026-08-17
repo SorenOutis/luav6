@@ -60,8 +60,9 @@ class SubmissionsRelationManager extends RelationManager
                 Forms\Components\Select::make('status')
                     ->options([
                         'submitted' => 'Submitted',
+                        'pending_ai' => 'Pending automatic AI grading',
+                        'pending_review' => 'Pending teacher grading',
                         'graded' => 'Graded',
-                        'pending' => 'Pending',
                     ])
                     ->required(),
                 Forms\Components\TextInput::make('score')
@@ -91,7 +92,7 @@ class SubmissionsRelationManager extends RelationManager
                     ->color(fn (string $state): string => match ($state) {
                         'submitted' => 'info',
                         'graded' => 'success',
-                        'pending' => 'warning',
+                        'pending_ai', 'pending_review' => 'warning',
                         default => 'gray',
                     })
                     ->sortable(),
@@ -111,8 +112,9 @@ class SubmissionsRelationManager extends RelationManager
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'submitted' => 'Submitted',
+                        'pending_ai' => 'Pending automatic AI grading',
+                        'pending_review' => 'Pending teacher grading',
                         'graded' => 'Graded',
-                        'pending' => 'Pending',
                     ]),
             ])
             ->recordActions([

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\EssayGradingMethod;
 use App\Enums\ExamStatus;
 use App\Events\ExamAnswersSaved;
 use App\Http\Requests\SaveExamAnswersRequest;
 use App\Http\Requests\SubmitExamPartRequest;
 use App\Jobs\GradeExamSubmissionEssays;
-use App\Models\AiEssayFeedbackDraft;
 use App\Models\Exam;
 use App\Models\ExamAnswerDraft;
 use App\Models\ExamLiveSession;
@@ -444,27 +444,26 @@ class ExamController extends Controller
         $totalPossible = 0;
         $questions = is_array($examPart->questions) ? $examPart->questions : $examPart->questions ?? [];
         $answers = $validated['answers'];
-        $hasEssay = false;
+        $hasAutomaticEssay = false;
+        $hasManualEssay = false;
 
         // Create a lookup for submitted answers by question number
         $submittedAnswers = collect($answers)->keyBy('question_number');
 
-        // ⚠️ Phase 1.0.2 — essays are NOT graded here.
-        //
-        // The AI provider is a ≤45s network call per essay, fired concurrently
-        // via Http::pool. Doing that inline held a RoadRunner worker for the
-        // whole duration and, because the save happened afterwards, a request
-        // that died mid-call lost the student's answers entirely.
-        //
-        // We only detect that essays exist; GradeExamSubmissionEssays scores
-        // them after the submission is safely persisted.
+        // Essays are graded only after the submission is safely persisted. AI
+        // essays are queued; manual essays remain pending for the teacher.
         foreach ($questions as $index => $question) {
             $questionNumber = $index + 1;
             $submittedAnswer = $submittedAnswers->get($questionNumber)['answer'] ?? null;
 
-            if ($submittedAnswer !== null && $submittedAnswer !== '' && $question['type'] === 'essay') {
-                $hasEssay = true;
-                break;
+            if ($submittedAnswer === null || trim((string) $submittedAnswer) === '' || ($question['type'] ?? null) !== 'essay') {
+                continue;
+            }
+
+            if (EssayGradingMethod::forQuestion($question) === EssayGradingMethod::Manual) {
+                $hasManualEssay = true;
+            } else {
+                $hasAutomaticEssay = true;
             }
         }
 
@@ -481,6 +480,10 @@ class ExamController extends Controller
                 $answer['question_type'] = $question['type'] ?? '';
                 $answer['question_text'] = $question['text'] ?? '';
                 $answer['points'] = (int) ($question['points'] ?? 1);
+
+                if (($question['type'] ?? null) === 'essay') {
+                    $answer['grading_method'] = EssayGradingMethod::forQuestion($question)->value;
+                }
             }
 
             return $answer;
@@ -552,7 +555,11 @@ class ExamController extends Controller
                     $enrichedAnswers->values()->toArray(),
                     JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_UNICODE
                 ),
-                'status' => $hasEssay ? 'pending_review' : 'submitted',
+                'status' => match (true) {
+                    $hasAutomaticEssay => 'pending_ai',
+                    $hasManualEssay => 'pending_review',
+                    default => 'submitted',
+                },
                 'is_late' => $isLate,
                 'score' => round((float) $score, 2),
             ]);
@@ -597,7 +604,7 @@ class ExamController extends Controller
         // OS processes inside the container is not wanted. Anything that still
         // slips through (e.g. submissions created before this change, or a
         // worker outage) is healed by partStatus() on the next poll.
-        if ($hasEssay) {
+        if ($hasAutomaticEssay) {
             GradeExamSubmissionEssays::dispatch($submission->id);
 
             if (! app()->isProduction()) {
@@ -636,16 +643,8 @@ class ExamController extends Controller
             return response()->json(['status' => 'not_submitted']);
         }
 
-        $awaitingTeacherReview = AiEssayFeedbackDraft::query()
-            ->withoutGlobalScope('workspace')
-            ->where('exam_submission_id', $submission->id)
-            ->whereIn('review_status', [
-                AiEssayFeedbackDraft::STATUS_GENERATING,
-                AiEssayFeedbackDraft::STATUS_AWAITING_REVIEW,
-                AiEssayFeedbackDraft::STATUS_REJECTED,
-                AiEssayFeedbackDraft::STATUS_SUPERSEDED,
-            ])
-            ->exists();
+        $awaitingTeacherReview = $submission->status === 'pending_review'
+            && $this->hasManualEssayGrading($submission);
 
         // Self-heal: submissions left pending (created before async grading
         // shipped, or whenever no queue worker is consuming the "ai" queue)
@@ -664,7 +663,7 @@ class ExamController extends Controller
         if (in_array($submission->status, ['pending_review', 'pending_ai'], true)
             && ! $submission->grading_failed
             && ! $awaitingTeacherReview
-            && $this->hasPendingEssayGrading($submission)) {
+            && $this->hasPendingAutomaticEssayGrading($submission)) {
             // Matches GradeExamSubmissionEssays::$timeout (300s) so the lock
             // can never expire while the job is still running.
             $lock = Cache::lock('essay_grading_'.$submission->id, 300);
@@ -680,13 +679,16 @@ class ExamController extends Controller
             }
         }
 
-        // `scored` means the AI has finished marking. Automatic feedback is
-        // produced by the same queued job and successful submissions become
-        // `graded`; the student's progress indicator should stop at `scored`.
+        // Automatic essay marks are visible as soon as AI finishes, even when
+        // another essay in the same part is still waiting for manual grading.
+        $automaticEssays = collect($submission->answers ?? [])
+            ->filter(fn ($answer): bool => is_array($answer)
+                && ($answer['question_type'] ?? null) === 'essay'
+                && EssayGradingMethod::forAnswer($answer) === EssayGradingMethod::Ai
+                && trim((string) ($answer['answer'] ?? '')) !== '');
         $essaysScored = $submission->status === 'graded'
-            || collect($submission->answers ?? [])
-                ->where('question_type', 'essay')
-                ->every(fn ($answer) => array_key_exists('ai_score', $answer));
+            || ($automaticEssays->isNotEmpty()
+                && $automaticEssays->every(fn ($answer): bool => array_key_exists('ai_score', $answer)));
 
         $xpAward = $this->examXpAwardService->awardIfEligible($request->user(), $exam);
 
@@ -750,19 +752,16 @@ class ExamController extends Controller
             ->addSeconds(30);
     }
 
-    /**
-     * Whether any non-blank essay answer in the submission is still awaiting
-     * AI grading (no score or no feedback yet).
-     */
-    private function hasPendingEssayGrading(ExamSubmission $submission): bool
+    /** Whether any non-blank automatic essay still needs an AI result. */
+    private function hasPendingAutomaticEssayGrading(ExamSubmission $submission): bool
     {
         foreach ($submission->answers ?? [] as $answer) {
-            if (! is_array($answer) || ($answer['question_type'] ?? null) !== 'essay') {
-                continue;
-            }
-
-            $text = trim((string) ($answer['answer'] ?? ''));
-            if ($text === '') {
+            if (
+                ! is_array($answer)
+                || ($answer['question_type'] ?? null) !== 'essay'
+                || EssayGradingMethod::forAnswer($answer) !== EssayGradingMethod::Ai
+                || trim((string) ($answer['answer'] ?? '')) === ''
+            ) {
                 continue;
             }
 
@@ -775,5 +774,16 @@ class ExamController extends Controller
         }
 
         return false;
+    }
+
+    /** Whether this submission contains a non-blank teacher-graded essay. */
+    private function hasManualEssayGrading(ExamSubmission $submission): bool
+    {
+        return collect($submission->answers ?? [])->contains(
+            fn ($answer): bool => is_array($answer)
+                && ($answer['question_type'] ?? null) === 'essay'
+                && EssayGradingMethod::forAnswer($answer) === EssayGradingMethod::Manual
+                && trim((string) ($answer['answer'] ?? '')) !== '',
+        );
     }
 }

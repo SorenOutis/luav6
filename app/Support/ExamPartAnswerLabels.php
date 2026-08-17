@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\EssayGradingMethod;
 use App\Models\ExamPart;
 
 class ExamPartAnswerLabels
@@ -114,6 +115,10 @@ class ExamPartAnswerLabels
 
             $type = $row['question_type'] ?? '';
             $answer = $row['answer'] ?? null;
+
+            if ($type === 'essay') {
+                $data['answers'][$key]['grading_method'] = EssayGradingMethod::forAnswer($row)->value;
+            }
 
             if (in_array($type, ['multiple_choice', 'true_false'], true)) {
                 $data['answers'][$key]['response_choice'] = self::normalizeChoiceState($answer);

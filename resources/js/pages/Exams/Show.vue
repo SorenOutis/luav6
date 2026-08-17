@@ -1632,20 +1632,23 @@ const startEssayGradingPoll = (partId: number) => {
                 };
                 submission.status = data.status;
 
+                if (data.scored && data.score !== null) {
+                    submission.score = Number(data.score);
+                    localSubmissions.value[partId] = submission;
+                    animateDisplayedScore(Number(totalScore.value) || 0);
+                }
+
                 if (data.awaiting_teacher_review) {
                     localSubmissions.value[partId] = submission;
                     isAwaitingTeacherReview.value = true;
                     isCalculatingScore.value = false;
-                    return; // Done — a teacher must explicitly approve the draft.
+                    return; // Done — the remaining manual essay needs a teacher.
                 }
 
                 if (data.scored && data.score !== null) {
-                    submission.score = Number(data.score);
-                    localSubmissions.value[partId] = submission;
                     isAwaitingTeacherReview.value = false;
                     isCalculatingScore.value = false;
-                    animateDisplayedScore(Number(totalScore.value) || 0);
-                    return; // Done — grading finished.
+                    return; // Done — automatic grading finished.
                 }
 
                 if (data.grading_failed) {
@@ -3873,9 +3876,10 @@ const feedbackContent = computed(() => {
                                         <p
                                             class="mt-1 text-sm text-muted-foreground"
                                         >
-                                            Your essay is saved. Any AI score or
-                                            feedback remains private until your
-                                            teacher reviews and approves it.
+                                            Your essay is saved. Essays assigned
+                                            to the teacher remain pending, while
+                                            automatic AI scores are applied as
+                                            soon as grading finishes.
                                         </p>
                                     </div>
 

@@ -72,7 +72,7 @@ class EditAiEssayFeedbackDraft extends EditRecord
                 }),
 
             Action::make('regenerateFeedback')
-                ->label('Regenerate Proposal')
+                ->label('Regrade Automatically')
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
                 ->requiresConfirmation()
@@ -81,20 +81,18 @@ class EditAiEssayFeedbackDraft extends EditRecord
                     AiEssayFeedbackDraft::STATUS_REJECTED,
                     AiEssayFeedbackDraft::STATUS_SUPERSEDED,
                 ], true))
+                ->modalHeading('Regrade this essay automatically?')
+                ->modalDescription('The replacement AI score and feedback will be applied to the student immediately without teacher approval.')
                 ->action(function (): void {
-                    app(AiReviewService::class)->requestEssayRegeneration($this->record, auth()->user());
                     GradeExamSubmissionEssays::dispatch(
                         submissionId: $this->record->exam_submission_id,
                         forceRegenerate: true,
                         onlyQuestionNumber: $this->record->question_number,
                     );
                     AiQueueWorker::ensureRunning();
-                    $this->record->refresh();
-                    $this->refreshFormData(['review_status', 'last_error']);
-
                     Notification::make()
-                        ->title('AI feedback regeneration queued')
-                        ->body('The replacement will return to this review queue; nothing is applied automatically.')
+                        ->title('Automatic regrading queued')
+                        ->body('The student score and feedback will update when the AI job finishes.')
                         ->success()
                         ->send();
                 }),
