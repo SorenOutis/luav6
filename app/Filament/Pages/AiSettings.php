@@ -832,11 +832,14 @@ class AiSettings extends Page implements HasSchemas
                 ]);
             }
 
-            Setting::set('ai_chat_enabled', ($data['ai_chat_enabled'] ?? true) ? '1' : '0');
+            Setting::setGlobal('ai_chat_enabled', ($data['ai_chat_enabled'] ?? true) ? '1' : '0');
             if (isset($data['ai_chat_maintenance_message'])) {
-                Setting::set('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
+                Setting::setGlobal('ai_chat_maintenance_message', $data['ai_chat_maintenance_message']);
             }
 
+            // Workspace AI Budget & Fallback — genuinely tenant-scoped, so it
+            // targets the admin's active workspace (or the workspace being
+            // inspected) instead of the platform-global scope.
             Setting::set('ai_budget_enabled', ($data['ai_budget_enabled'] ?? false) ? '1' : '0');
             Setting::set('ai_budget_daily_tokens', (string) max(0, (int) ($data['ai_budget_daily_tokens'] ?? 0)));
             Setting::set('ai_budget_monthly_tokens', (string) max(0, (int) ($data['ai_budget_monthly_tokens'] ?? 0)));
@@ -911,22 +914,22 @@ class AiSettings extends Page implements HasSchemas
                 $provider = 'gemini';
             }
 
-            Setting::set('ai_provider', $provider);
-            Setting::set(
+            Setting::setGlobal('ai_provider', $provider);
+            Setting::setGlobal(
                 AiSdkProviderService::OPENAI_COMPATIBLE_SETTINGS_KEY,
                 json_encode($compatibleProviders, JSON_THROW_ON_ERROR),
             );
-            Setting::set('gemini_api_key', $data['gemini_api_key'] ?? null);
-            Setting::set('gemini_chat_model', $data['gemini_chat_model'] ?? 'gemini-3.5-flash');
-            Setting::set('gemini_grading_model', $data['gemini_grading_model'] ?? 'gemini-3.5-flash');
-            Setting::set('cloudflare_account_id', $data['cloudflare_account_id'] ?? null);
-            Setting::set('cloudflare_api_token', $data['cloudflare_api_token'] ?? null);
-            Setting::set('cloudflare_model', $data['cloudflare_model'] ?? '@cf/zai-org/glm-4.7-flash');
-            Setting::set('cloudflare_grading_model', $data['cloudflare_grading_model'] ?? '@cf/meta/llama-3.1-8b-instruct');
-            Setting::set('groq_api_key', $data['groq_api_key'] ?? null);
-            Setting::set('groq_model', $data['groq_model'] ?? 'llama-3.1-8b-instant');
-            Setting::set('ollama_url', $data['ollama_url'] ?? 'http://localhost:11434');
-            Setting::set('ollama_model', $data['ollama_model'] ?? 'llama3.2:1b');
+            Setting::setGlobal('gemini_api_key', $data['gemini_api_key'] ?? null);
+            Setting::setGlobal('gemini_chat_model', $data['gemini_chat_model'] ?? 'gemini-3.5-flash');
+            Setting::setGlobal('gemini_grading_model', $data['gemini_grading_model'] ?? 'gemini-3.5-flash');
+            Setting::setGlobal('cloudflare_account_id', $data['cloudflare_account_id'] ?? null);
+            Setting::setGlobal('cloudflare_api_token', $data['cloudflare_api_token'] ?? null);
+            Setting::setGlobal('cloudflare_model', $data['cloudflare_model'] ?? '@cf/zai-org/glm-4.7-flash');
+            Setting::setGlobal('cloudflare_grading_model', $data['cloudflare_grading_model'] ?? '@cf/meta/llama-3.1-8b-instruct');
+            Setting::setGlobal('groq_api_key', $data['groq_api_key'] ?? null);
+            Setting::setGlobal('groq_model', $data['groq_model'] ?? 'llama-3.1-8b-instant');
+            Setting::setGlobal('ollama_url', $data['ollama_url'] ?? 'http://localhost:11434');
+            Setting::setGlobal('ollama_model', $data['ollama_model'] ?? 'llama3.2:1b');
 
             // Laravel AI SDK provider credentials and models. Empty values
             // are stored as null so the runtime falls back to the env vars.
@@ -941,29 +944,29 @@ class AiSettings extends Page implements HasSchemas
                 'azure_deployment', 'azure_embedding_deployment',
                 'cohere_api_key', 'jina_api_key', 'voyageai_api_key', 'eleven_api_key',
             ] as $sdkSetting) {
-                Setting::set($sdkSetting, $data[$sdkSetting] ?? null);
+                Setting::setGlobal($sdkSetting, $data[$sdkSetting] ?? null);
             }
 
-            Setting::set('login_enabled', ($data['login_enabled'] ?? true) ? '1' : '0');
+            Setting::setGlobal('login_enabled', ($data['login_enabled'] ?? true) ? '1' : '0');
             if (isset($data['login_disabled_message'])) {
-                Setting::set('login_disabled_message', $data['login_disabled_message']);
+                Setting::setGlobal('login_disabled_message', $data['login_disabled_message']);
             }
 
-            Setting::set('registration_enabled', ($data['registration_enabled'] ?? true) ? '1' : '0');
+            Setting::setGlobal('registration_enabled', ($data['registration_enabled'] ?? true) ? '1' : '0');
             if (isset($data['registration_disabled_message'])) {
-                Setting::set('registration_disabled_message', $data['registration_disabled_message']);
+                Setting::setGlobal('registration_disabled_message', $data['registration_disabled_message']);
             }
 
-            Setting::set('daily_claim_enabled', ($data['daily_claim_enabled'] ?? true) ? '1' : '0');
-            Setting::set('daily_claim_base_xp', (string) max(1, (int) ($data['daily_claim_base_xp'] ?? 1)));
-            Setting::set('daily_claim_bonus_enabled', ($data['daily_claim_bonus_enabled'] ?? false) ? '1' : '0');
-            Setting::set('daily_claim_bonus_xp', (string) max(1, (int) ($data['daily_claim_bonus_xp'] ?? 5)));
+            Setting::setGlobal('daily_claim_enabled', ($data['daily_claim_enabled'] ?? true) ? '1' : '0');
+            Setting::setGlobal('daily_claim_base_xp', (string) max(1, (int) ($data['daily_claim_base_xp'] ?? 1)));
+            Setting::setGlobal('daily_claim_bonus_enabled', ($data['daily_claim_bonus_enabled'] ?? false) ? '1' : '0');
+            Setting::setGlobal('daily_claim_bonus_xp', (string) max(1, (int) ($data['daily_claim_bonus_xp'] ?? 5)));
 
-            Setting::set('welcome_demo_video_path', $data['welcome_demo_video_path'] ?? null);
-            Setting::set('school_name', $data['school_name'] ?? 'LSI Engine');
-            Setting::set('school_tagline', $data['school_tagline'] ?? 'Learning Systems Intelligence');
-            Setting::set('school_logo_path', $data['school_logo_path'] ?? null);
-            Setting::set('school_accent_color', $data['school_accent_color'] ?? '#f59e0b');
+            Setting::setGlobal('welcome_demo_video_path', $data['welcome_demo_video_path'] ?? null);
+            Setting::setGlobal('school_name', $data['school_name'] ?? 'LSI Engine');
+            Setting::setGlobal('school_tagline', $data['school_tagline'] ?? 'Learning Systems Intelligence');
+            Setting::setGlobal('school_logo_path', $data['school_logo_path'] ?? null);
+            Setting::setGlobal('school_accent_color', $data['school_accent_color'] ?? '#f59e0b');
 
             Notification::make()
                 ->title('Settings saved successfully!')
