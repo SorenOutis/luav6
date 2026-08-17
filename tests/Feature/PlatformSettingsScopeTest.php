@@ -33,6 +33,7 @@ use App\Services\ClaimXpService;
 use App\Support\StudentPageRegistry;
 use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
 use Livewire\Livewire;
 
@@ -132,7 +133,7 @@ it('blocks registration when disabled even without an existing user', function (
         'password' => 'password',
         'password_confirmation' => 'password',
         'terms' => 'on',
-    ]))->toThrow(\Illuminate\Validation\ValidationException::class);
+    ]))->toThrow(ValidationException::class);
 });
 
 it('makes bonus XP visible to students in a different workspace than the admin', function () {
