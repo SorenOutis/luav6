@@ -164,7 +164,11 @@ const bonusDisplayStatus = computed<ClaimStatus | null>(() => {
         const raw = bonusStatus.value;
         return {
             state: 'claimed' as const,
-            amount: bonusClaimedAmount.value || raw?.amount || props.bonusXp?.amount || 0,
+            amount:
+                bonusClaimedAmount.value ||
+                raw?.amount ||
+                props.bonusXp?.amount ||
+                0,
             whenLabel: 'Just now',
         };
     }
@@ -197,12 +201,19 @@ async function handleBonusClaim() {
             bonusClaimState.value = 'claimed';
             // Refresh surrounding stats without waiting for poll
             router.reload({
-                only: ['bonusXp', 'xpHistory', 'userStats', 'statsBreakdown', 'notifications'] as any,
+                only: [
+                    'bonusXp',
+                    'xpHistory',
+                    'userStats',
+                    'statsBreakdown',
+                    'notifications',
+                ] as any,
             });
         } else {
             // Already claimed (race)
             bonusClaimState.value = 'claimed';
-            bonusClaimedAmount.value = data.amount || props.bonusXp?.amount || 0;
+            bonusClaimedAmount.value =
+                data.amount || props.bonusXp?.amount || 0;
         }
     } catch {
         bonusClaimState.value = 'idle';
@@ -442,10 +453,14 @@ function formatWhen(iso: string): string {
                         <p
                             class="text-sm font-bold tracking-tight text-foreground"
                         >
-                            <template v-if="bonusDisplayStatus.state === 'claimed'">
+                            <template
+                                v-if="bonusDisplayStatus.state === 'claimed'"
+                            >
                                 Bonus XP claimed
                             </template>
-                            <template v-else-if="bonusDisplayStatus.state === 'never'">
+                            <template
+                                v-else-if="bonusDisplayStatus.state === 'never'"
+                            >
                                 Your bonus XP is ready
                             </template>
                             <template v-else>
@@ -453,14 +468,17 @@ function formatWhen(iso: string): string {
                             </template>
                         </p>
                         <p class="text-xs text-muted-foreground">
-                            <template v-if="bonusDisplayStatus.state === 'claimed'">
+                            <template
+                                v-if="bonusDisplayStatus.state === 'claimed'"
+                            >
                                 +{{ bonusDisplayStatus.amount }} XP
                                 <span v-if="bonusDisplayStatus.whenLabel"
                                     >· {{ bonusDisplayStatus.whenLabel }}</span
                                 >
                             </template>
                             <template v-else>
-                                +{{ bonusDisplayStatus.amount }} XP available — claim it below.
+                                +{{ bonusDisplayStatus.amount }} XP available —
+                                claim it below.
                             </template>
                         </p>
                         <p
@@ -474,13 +492,13 @@ function formatWhen(iso: string): string {
                     <div class="flex shrink-0 items-center gap-2">
                         <span
                             v-if="bonusDisplayStatus.state === 'claimed'"
-                            class="text-sm font-semibold tabular-nums text-[#4D9375] dark:text-[#4D9375]"
+                            class="text-sm font-semibold text-[#4D9375] tabular-nums dark:text-[#4D9375]"
                         >
                             +{{ bonusDisplayStatus.amount }}
                         </span>
                         <template v-else>
                             <span
-                                class="hidden text-sm font-semibold tabular-nums text-[#9D7CD8] dark:text-[#9D7CD8] sm:inline"
+                                class="hidden text-sm font-semibold text-[#9D7CD8] tabular-nums sm:inline dark:text-[#9D7CD8]"
                             >
                                 +{{ bonusDisplayStatus.amount }}
                             </span>
@@ -605,7 +623,11 @@ function formatWhen(iso: string): string {
                 </div>
 
                 <!-- Summary tab: aggregated by category -->
-                <div v-else data-lenis-prevent class="max-h-[50vh] overflow-y-auto overscroll-contain pr-1 space-y-2">
+                <div
+                    v-else
+                    data-lenis-prevent
+                    class="max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1"
+                >
                     <div
                         v-if="breakdown.length === 0"
                         class="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground"
