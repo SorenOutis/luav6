@@ -29,7 +29,8 @@ class AdminCommandCenterWidget extends Widget
             ->first();
 
         $students = User::query()->where('is_admin', false)->forWorkspace();
-        $assignmentTargets = DB::table('assignment_user');
+        $assignmentTargets = DB::table('assignment_user')
+            ->whereIn('assignment_id', Assignment::query()->select('id'));
         $submittedAssignments = (clone $assignmentTargets)->where('submitted', true)->count();
         $totalAssignmentTargets = $assignmentTargets->count();
 
@@ -43,6 +44,7 @@ class AdminCommandCenterWidget extends Widget
 
         // Average score across all exam submissions this week
         $avgScore = ExamSubmission::query()
+            ->whereHas('exam')
             ->where('created_at', '>=', now()->subDays(7))
             ->whereNotNull('score')
             ->avg('score');
@@ -79,6 +81,7 @@ class AdminCommandCenterWidget extends Widget
             'liveExamsCount' => Exam::query()->where('status', 'published')->count(),
             'pendingAssignments' => max($totalAssignmentTargets - $submittedAssignments, 0),
             'submissionsToday' => ExamSubmission::query()
+                ->whereHas('exam')
                 ->where('created_at', '>=', now()->startOfDay())
                 ->count(),
             'upcomingAssignments' => Assignment::query()

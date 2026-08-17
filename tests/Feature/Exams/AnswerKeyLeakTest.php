@@ -108,26 +108,28 @@ it('does not reveal a closed exam the student never answered on the show page', 
         ->not->toContain('Identification question');
 })->group('security');
 
-it('reveals the answer key once the exam is closed and the student has submitted', function () {
+it('reveals the answer key on demand once the exam is closed and the student has submitted', function () {
     [$student, $section] = leakContext();
     $exam = Exam::factory()->closed()->forSection($section)->create();
     $part = ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
     ExamSubmission::factory()->forSubmission($student, $exam, $part)->create();
 
-    $response = actingAs($student)->get('/exams');
+    // The bounded list stays lightweight even for reviewable exams.
+    expect(actingAs($student)->get('/exams')->getContent())->not->toContain('Manila');
 
-    // Review mode: Exam.vue needs the key to render "correct answer" feedback.
-    expect($response->getContent())->toContain('Manila');
+    // Review mode fetches the answer-heavy payload only when the student opens it.
+    expect(actingAs($student)->get(route('exams.review', $exam))->getContent())
+        ->toContain('Manila');
 })->group('security');
 
-it('shows every part to a student who submitted only one of them', function () {
+it('shows every part in on-demand review to a student who submitted only one of them', function () {
     [$student, $section] = leakContext();
     $exam = Exam::factory()->closed()->forSection($section)->create();
     $submittedPart = ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
     ExamPart::factory()->forExam($exam)->identification(['Cebu'])->create();
     ExamSubmission::factory()->forSubmission($student, $exam, $submittedPart)->create();
 
-    $response = actingAs($student)->get('/exams');
+    $response = actingAs($student)->get(route('exams.review', $exam));
 
     // The student saw every part while the exam was open, so the review must
     // still include the part they never submitted — questions and all.

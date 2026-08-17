@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\Section;
+use App\Models\Workspace;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -161,6 +162,16 @@ class ProfileController extends Controller
         $syncData = $sections->mapWithKeys(fn ($s) => [$s->id => ['season_id' => $s->season_id]])->all();
         $request->user()->sections()->sync($syncData);
 
+        if (! $request->user()->is_admin) {
+            foreach ($sections->pluck('workspace_id')->filter()->unique() as $workspaceId) {
+                if (! $request->user()->workspaces()->whereKey($workspaceId)->exists()) {
+                    $request->user()->workspaces()->attach((int) $workspaceId, [
+                        'role' => Workspace::ROLE_STUDENT,
+                    ]);
+                }
+            }
+        }
+
         return back();
     }
 
@@ -187,6 +198,10 @@ class ProfileController extends Controller
         // Check if user is already in this section
         $user = $request->user();
         if ($user->sections()->where('section_id', $section->id)->exists()) {
+            if ($section->workspace_id) {
+                $user->joinWorkspace((int) $section->workspace_id);
+            }
+
             return response()->json([
                 'valid' => true,
                 'section' => [
@@ -197,8 +212,12 @@ class ProfileController extends Controller
             ]);
         }
 
-        // Join the section
+        // Join the section and activate its tenant. The same student account
+        // may belong to more than one tenant, but every request has one context.
         $user->sections()->syncWithoutDetaching([$section->id => ['season_id' => $section->season_id]]);
+        if ($section->workspace_id) {
+            $user->joinWorkspace((int) $section->workspace_id);
+        }
 
         return response()->json([
             'valid' => true,

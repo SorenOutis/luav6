@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AnonymousMessages\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -18,6 +19,7 @@ class AnonymousMessagesTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('user.name')
                     ->label('Student')
                     ->searchable()
@@ -44,6 +46,7 @@ class AnonymousMessagesTable
                     ->sortable(),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 TernaryFilter::make('is_approved')
                     ->label('Approval Status')
                     ->placeholder('All Messages')

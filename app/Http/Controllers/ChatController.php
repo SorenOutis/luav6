@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AiBudgetExceededException;
 use App\Http\Responses\AiSseResponse;
 use App\Models\ChatSession;
 use App\Models\Setting;
@@ -82,7 +83,8 @@ class ChatController extends Controller
         }
 
         $request->validate([
-            'message' => 'required|string',
+            'message' => $this->chatService->messageValidationRules(),
+            'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
             'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
 
@@ -140,6 +142,16 @@ class ChatController extends Controller
                 'session_id' => $sessionId,
             ]);
         } catch (Throwable $e) {
+            if ($e instanceof AiBudgetExceededException) {
+                $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                    'blocked_reason' => 'workspace_ai_budget',
+                    'budget_period' => $e->period,
+                    'budget_metric' => $e->metric,
+                ]));
+
+                return response()->json(['response' => $e->getMessage()], 429);
+            }
+
             $errorId = $this->logError('Chat Controller Error', $e, $loggingContext);
 
             return response()->json([
@@ -178,7 +190,7 @@ class ChatController extends Controller
         }
 
         $request->validate([
-            'message' => 'required|string',
+            'message' => $this->chatService->messageValidationRules(),
             'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
             'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
@@ -244,8 +256,23 @@ class ChatController extends Controller
                     }
                 });
 
-            return AiSseResponse::from($stream);
+            $streamResponse = AiSseResponse::from($stream);
+            if ($sessionId) {
+                $streamResponse->headers->set('X-Chat-Session-Id', (string) $sessionId);
+            }
+
+            return $streamResponse;
         } catch (Throwable $e) {
+            if ($e instanceof AiBudgetExceededException) {
+                $this->aiChatLogger->info('ai_chat.request.blocked', array_merge($loggingContext, [
+                    'blocked_reason' => 'workspace_ai_budget',
+                    'budget_period' => $e->period,
+                    'budget_metric' => $e->metric,
+                ]));
+
+                return AiSseResponse::from($this->chatService->streamText($e->getMessage()));
+            }
+
             $errorId = $this->logError('Chat Stream Error', $e, $loggingContext);
             $payload = $this->errorPayload($e, $errorId);
 
@@ -346,15 +373,7 @@ class ChatController extends Controller
      */
     private function historyData(ChatSession $session): array
     {
-        return $session->messages
-            ->map(fn ($msg) => collect([
-                'role' => $msg->role,
-                'content' => $msg->content,
-            ])
-                ->when($msg->thinking, fn ($row) => $row->put('thinking', $msg->thinking))
-                ->when($msg->attachments, fn ($row) => $row->put('attachments', $msg->attachments))
-                ->all())
-            ->all();
+        return $this->chatService->contextMessages($session);
     }
 
     /**

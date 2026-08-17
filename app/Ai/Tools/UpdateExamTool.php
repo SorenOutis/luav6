@@ -9,84 +9,93 @@ use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
 
-class UpdateExamTool implements Tool
+class UpdateExamTool extends PendingWriteTool implements Tool
 {
-    /**
-     * Get the description of the tool's purpose.
-     */
     public function description(): Stringable|string
     {
-        return 'Update an exam in the admin\'s workspace — change its status (draft/published/closed), reschedule it, or change the duration. IMPORTANT: present the changes to the admin first and only call this with confirm=true after they explicitly approve.';
+        return 'Prepare an exam status, schedule, or duration change for human review. This tool never updates the exam. It creates a server-issued card with the exact before/after diff; only a UI approval can execute it.';
     }
 
-    /**
-     * Execute the tool.
-     */
     public function handle(Request $request): Stringable|string
     {
-        $admin = auth()->user();
-
-        if (! $admin?->is_admin) {
-            return 'Only admins can use this tool.';
+        if ($error = $this->adminError()) {
+            return $error;
         }
 
-        if (! filter_var($request['confirm'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-            return 'NOT EXECUTED — confirmation missing. Present the planned changes to the admin and ask them to confirm; then call this tool again with confirm=true.';
-        }
-
-        // The workspace global scope makes this null for exams owned by
-        // another admin.
-        $exam = Exam::query()->find((int) ($request['exam_id'] ?? 0));
-
+        $exam = Exam::query()
+            ->withoutGlobalScope('workspace')
+            ->whereKey((int) ($request['exam_id'] ?? 0))
+            ->where('workspace_id', $this->workspaceId())
+            ->first();
         if (! $exam) {
-            return 'Error: exam not found in this workspace. Use the exams_admin tool to list valid exam IDs.';
+            return 'Error: exam not found in this workspace. Use exams_admin for valid exam IDs.';
         }
 
-        $changes = [];
+        $updates = [];
+        $preview = [];
 
         if ($status = $request['status'] ?? null) {
             if (! in_array($status, ['draft', 'published', 'closed'], true)) {
                 return 'Error: status must be one of draft, published, closed.';
             }
-
-            $exam->status = $status;
-            $changes[] = "status → {$status}";
-        }
-
-        if ($examDate = $request['exam_date'] ?? null) {
-            try {
-                $exam->exam_date = Carbon::parse((string) $examDate);
-                $changes[] = 'date → '.$exam->exam_date->format('M d, Y g:i A');
-            } catch (\Throwable) {
-                return 'Error: exam_date must be a valid date/time, e.g. "2026-08-20 09:00".';
+            if ($status !== $exam->status) {
+                $updates['status'] = $status;
+                $preview[] = ['field' => 'Status', 'before' => $exam->status, 'after' => $status];
             }
         }
 
-        if ($duration = $request['duration_minutes'] ?? null) {
-            $exam->duration_minutes = min(max((int) $duration, 5), 600);
-            $changes[] = "duration → {$exam->duration_minutes} minutes";
+        if ($dateInput = $request['exam_date'] ?? null) {
+            try {
+                $examDate = Carbon::parse((string) $dateInput);
+            } catch (\Throwable) {
+                return 'Error: exam_date must be a valid date/time, e.g. "2026-08-20 09:00".';
+            }
+            if (! $exam->exam_date || ! $exam->exam_date->equalTo($examDate)) {
+                $updates['exam_date'] = $examDate->toIso8601String();
+                $preview[] = [
+                    'field' => 'Date and time',
+                    'before' => $exam->exam_date?->format('M d, Y g:i A'),
+                    'after' => $examDate->format('M d, Y g:i A'),
+                ];
+            }
         }
 
-        if ($changes === []) {
-            return 'Nothing to update — provide a new status, exam_date, or duration_minutes.';
+        if (($durationInput = $request['duration_minutes'] ?? null) !== null) {
+            $duration = min(max((int) $durationInput, 5), 600);
+            if ($duration !== (int) $exam->duration_minutes) {
+                $updates['duration_minutes'] = $duration;
+                $preview[] = [
+                    'field' => 'Duration',
+                    'before' => "{$exam->duration_minutes} minutes",
+                    'after' => "{$duration} minutes",
+                ];
+            }
         }
 
-        $exam->save();
+        if ($updates === []) {
+            return 'Nothing to update — provide a status, exam_date, or duration_minutes that differs from the current value.';
+        }
 
-        return "Exam \"{$exam->title}\" (ID {$exam->id}) updated: ".implode('; ', $changes).'.';
+        return $this->stageAction(
+            'update_exam',
+            'Update exam',
+            "Update \"{$exam->title}\" (exam #{$exam->id}).",
+            [
+                'exam_id' => $exam->id,
+                'expected_updated_at' => $exam->updated_at?->toJSON(),
+                'changes' => $updates,
+            ],
+            $preview,
+        );
     }
 
-    /**
-     * Get the tool's schema definition.
-     */
     public function schema(JsonSchema $schema): array
     {
         return [
-            'exam_id' => $schema->integer()->description('Exam ID from the exams_admin tool.')->required(),
+            'exam_id' => $schema->integer()->description('Exam ID from exams_admin.')->required(),
             'status' => $schema->string()->description('New status: draft, published, or closed.'),
             'exam_date' => $schema->string()->description('New date/time, e.g. "2026-08-20 09:00".'),
             'duration_minutes' => $schema->integer()->description('New duration in minutes (5–600).'),
-            'confirm' => $schema->boolean()->description('Must be true, and only after the admin explicitly approved the summary.')->required(),
         ];
     }
 }

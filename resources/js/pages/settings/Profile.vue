@@ -467,6 +467,86 @@ const leaveSection = (sectionId: number) => {
                         <InputError class="mt-2" :message="errors.bio" />
                     </div>
 
+                    <div
+                        class="space-y-4 rounded-xl border border-border/50 p-4"
+                    >
+                        <div>
+                            <p class="text-sm font-semibold">Profile privacy</p>
+                            <p class="text-xs text-muted-foreground">
+                                Choose what classmates in your sections can see.
+                                You and authorized staff always retain access.
+                            </p>
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="profile_visibility"
+                                >Who can open your profile</Label
+                            >
+                            <select
+                                id="profile_visibility"
+                                name="profile_visibility"
+                                class="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                :value="user.profile_visibility || 'section'"
+                            >
+                                <option value="section">
+                                    Classmates in my sections
+                                </option>
+                                <option value="private">
+                                    Only me and authorized staff
+                                </option>
+                            </select>
+                            <InputError :message="errors.profile_visibility" />
+                        </div>
+
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <label
+                                v-for="setting in [
+                                    {
+                                        name: 'profile_show_activity',
+                                        label: 'Activity and XP history',
+                                        checked:
+                                            user.profile_show_activity ?? false,
+                                    },
+                                    {
+                                        name: 'profile_show_sections',
+                                        label: 'Shared section names',
+                                        checked:
+                                            user.profile_show_sections ?? true,
+                                    },
+                                    {
+                                        name: 'profile_show_social',
+                                        label: 'Followers, kudos, and social actions',
+                                        checked:
+                                            user.profile_show_social ?? true,
+                                    },
+                                    {
+                                        name: 'profile_show_achievements',
+                                        label: 'Achievements and badges',
+                                        checked:
+                                            user.profile_show_achievements ??
+                                            true,
+                                    },
+                                ]"
+                                :key="setting.name"
+                                class="flex items-start gap-3 rounded-lg bg-muted/30 p-3 text-sm"
+                            >
+                                <input
+                                    type="hidden"
+                                    :name="setting.name"
+                                    value="0"
+                                />
+                                <input
+                                    type="checkbox"
+                                    :name="setting.name"
+                                    value="1"
+                                    :checked="setting.checked"
+                                    class="mt-0.5 size-4 rounded border-input accent-primary"
+                                />
+                                <span>{{ setting.label }}</span>
+                            </label>
+                        </div>
+                    </div>
+
                     <div v-if="mustVerifyEmail && !user.email_verified_at">
                         <p class="-mt-4 text-sm text-muted-foreground">
                             Your email address is unverified.

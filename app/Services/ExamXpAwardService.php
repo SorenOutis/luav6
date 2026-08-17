@@ -7,6 +7,7 @@ use App\Models\ExamSubmission;
 use App\Models\ExamXpAward;
 use App\Models\SectionProgress;
 use App\Models\User;
+use App\Support\GamificationSyncContext;
 use Illuminate\Support\Facades\DB;
 
 class ExamXpAwardService
@@ -133,26 +134,26 @@ class ExamXpAwardService
 
         $description = $reason.' for Exam: '.$exam->title;
 
+        $context = app(GamificationSyncContext::class);
+
         if ($exam->section_id) {
             $progress = $user->activeSectionProgress($exam->section_id);
-            $wasSyncing = SectionProgress::$isSyncing;
-            SectionProgress::$isSyncing = true;
-            $progress->increment('exp', $amount);
-            $progress->save();
-            SectionProgress::$isSyncing = $wasSyncing;
+            $context->withoutAutomaticHistory(function () use ($progress, $amount): void {
+                $progress->increment('exp', $amount);
+                $progress->save();
+            });
             $user->recordGamificationHistory($amount, 0, $reason, $description, $exam->section_id);
 
             return;
         }
 
         if ($progress = $user->activeSeasonProgress()) {
-            // The SeasonProgress observer synchronizes the user total. Suppress
-            // its generic adjustment history because we record a precise reason.
-            $wasSyncing = SectionProgress::$isSyncing;
-            SectionProgress::$isSyncing = true;
-            $progress->increment('exp', $amount);
-            $progress->save();
-            SectionProgress::$isSyncing = $wasSyncing;
+            // SeasonProgress synchronizes the user total. Suppress only its
+            // generic adjustment history because we record a precise reason.
+            $context->withoutAutomaticHistory(function () use ($progress, $amount): void {
+                $progress->increment('exp', $amount);
+                $progress->save();
+            });
             $user->recordGamificationHistory($amount, 0, $reason, $description, null, $progress->season_id);
 
             return;

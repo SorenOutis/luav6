@@ -22,6 +22,14 @@ use Illuminate\Support\Facades\Storage;
  */
 class DashboardController extends Controller
 {
+    private const ANNOUNCEMENT_PREVIEW_LIMIT = 10;
+
+    private const COURSE_PREVIEW_LIMIT = 12;
+
+    private const BADGE_PREVIEW_LIMIT = 12;
+
+    private const SEASON_OPTION_LIMIT = 20;
+
     public function __construct(
         protected StreakService $streakService,
         protected LeaderboardService $leaderboardService,
@@ -67,8 +75,10 @@ class DashboardController extends Controller
             $currentSeason?->id
         );
 
+        $earnedBadgeCount = $user->badges()->count();
         $earnedBadges = $user->badges()
             ->orderByPivot('created_at', 'desc')
+            ->limit(self::BADGE_PREVIEW_LIMIT)
             ->get();
 
         $badgeSeasonNames = Season::query()
@@ -83,6 +93,7 @@ class DashboardController extends Controller
                 ->pluck('season_id')
             )
             ->orderBy('start_date', 'desc')
+            ->limit(self::SEASON_OPTION_LIMIT)
             ->get();
 
         $availableSeasons = $availableSeasonModels
@@ -109,6 +120,7 @@ class DashboardController extends Controller
                 ->orWhereIn('section_id', $studentSectionIds))
             ->with('section:id,name')
             ->latest()
+            ->limit(self::ANNOUNCEMENT_PREVIEW_LIMIT)
             ->get()
             ->map(fn (Announcement $announcement) => [
                 'id' => $announcement->id,
@@ -125,19 +137,22 @@ class DashboardController extends Controller
         if ($initialSeason) {
             $coursesResource->wherePivot('season_id', $initialSeason->id);
         }
-        $courses = $coursesResource->get()->map(function ($course) {
-            return [
-                'id' => $course->id,
-                'name' => $course->name,
-                'progress' => $course->total_lessons > 0
-                    ? round(($course->pivot->completed_lessons / $course->total_lessons) * 100)
-                    : 0,
-                'completedLessons' => $course->pivot->completed_lessons,
-                'totalLessons' => $course->total_lessons,
-                'xpEarned' => $course->pivot->xp_earned,
-                'nextDeadline' => $course->pivot->next_deadline ?? 'To be announced',
-            ];
-        });
+        $courses = $coursesResource
+            ->limit(self::COURSE_PREVIEW_LIMIT)
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'id' => $course->id,
+                    'name' => $course->name,
+                    'progress' => $course->total_lessons > 0
+                        ? round(($course->pivot->completed_lessons / $course->total_lessons) * 100)
+                        : 0,
+                    'completedLessons' => $course->pivot->completed_lessons,
+                    'totalLessons' => $course->total_lessons,
+                    'xpEarned' => $course->pivot->xp_earned,
+                    'nextDeadline' => $course->pivot->next_deadline ?? 'To be announced',
+                ];
+            });
 
         // ── Assignments ────────────────────────────────────────────
         $assignments = $user->assignments()->get()->map(function ($assignment) {
@@ -186,35 +201,45 @@ class DashboardController extends Controller
             $request->session()->put('daily_claim_prompt_shown_on', now()->toDateString());
         }
 
-        $history = $user->gamificationHistories()
+        $historyQuery = $user->gamificationHistories()
             ->when($currentSeason, fn ($query) => $query->where('season_id', $currentSeason->id))
             // Back-office manual XP/point adjustments are audit-only and
             // aren't surfaced on the student's dashboard.
-            ->where('reason', '!=', 'Admin Adjustment')
-            ->get(['id', 'amount_xp', 'amount_points', 'reason', 'description', 'created_at']);
+            ->where('reason', '!=', 'Admin Adjustment');
 
-        $xpBreakdown = $history->filter(fn ($entry) => (float) $entry->amount_xp !== 0.0)
-            ->groupBy(fn ($entry) => $entry->reason ?: 'Other activity')
-            ->map(fn ($entries, $reason) => [
-                'label' => $reason,
-                'amount' => (float) $entries->sum('amount_xp'),
-                'count' => $entries->count(),
+        // Aggregate in SQL instead of hydrating the student's complete ledger.
+        // These queries stay constant in memory even after years of activity.
+        $xpBreakdown = (clone $historyQuery)
+            ->where('amount_xp', '!=', 0)
+            ->select('reason')
+            ->selectRaw('SUM(amount_xp) as total_amount, COUNT(*) as entry_count')
+            ->groupBy('reason')
+            ->get()
+            ->map(fn ($entry) => [
+                'label' => $entry->reason ?: 'Other activity',
+                'amount' => (float) $entry->total_amount,
+                'count' => (int) $entry->entry_count,
             ])->values();
 
-        $pointsBreakdown = $history->filter(fn ($entry) => (float) $entry->amount_points !== 0.0)
-            ->groupBy(fn ($entry) => $entry->reason ?: 'Other activity')
-            ->map(fn ($entries, $reason) => [
-                'label' => $reason,
-                'amount' => (float) $entries->sum('amount_points'),
-                'count' => $entries->count(),
+        $pointsBreakdown = (clone $historyQuery)
+            ->where('amount_points', '!=', 0)
+            ->select('reason')
+            ->selectRaw('SUM(amount_points) as total_amount, COUNT(*) as entry_count')
+            ->groupBy('reason')
+            ->get()
+            ->map(fn ($entry) => [
+                'label' => $entry->reason ?: 'Other activity',
+                'amount' => (float) $entry->total_amount,
+                'count' => (int) $entry->entry_count,
             ])->values();
 
-        // Per-entry XP ledger (most recent first) for the level card's history
-        // view. Reuses the already-loaded $history collection — no extra query.
-        $xpHistory = $history
-            ->filter(fn ($entry) => (float) $entry->amount_xp !== 0.0)
-            ->sortByDesc('created_at')
-            ->take(30)
+        // The card is a recent-activity preview, not an unbounded ledger.
+        $xpHistory = (clone $historyQuery)
+            ->where('amount_xp', '!=', 0)
+            ->latest('created_at')
+            ->latest('id')
+            ->limit(30)
+            ->get(['id', 'amount_xp', 'reason', 'description', 'created_at'])
             ->map(fn ($entry) => [
                 'id' => $entry->id,
                 'reason' => $entry->reason,
@@ -247,7 +272,7 @@ class DashboardController extends Controller
                 'rank' => 'Player',
                 'rankNumber' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['userRank'] : 0,
                 'totalPlayers' => count($sectionLeaderboards) > 0 ? $sectionLeaderboards[0]['totalPlayers'] : 0,
-                'achievements' => $earnedBadges->count(),
+                'achievements' => $earnedBadgeCount,
                 'points' => $seasonalPoints,
                 'streak' => $user->current_streak,
                 'longestStreak' => (int) ($user->longest_streak ?? 0),

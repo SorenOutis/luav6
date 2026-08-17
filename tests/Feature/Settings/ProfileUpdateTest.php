@@ -250,6 +250,47 @@ test('a non-image upload is rejected with a validation error', function () {
     expect($user->refresh()->getRawOriginal('avatar'))->toBeNull();
 });
 
+test('profile privacy preferences can be updated', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('profile.update'), [
+            '_method' => 'PATCH',
+            'first_name' => $user->first_name,
+            'middle_name' => $user->middle_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'profile_visibility' => User::PROFILE_VISIBILITY_PRIVATE,
+            'profile_show_activity' => '1',
+            'profile_show_sections' => '0',
+            'profile_show_social' => '0',
+            'profile_show_achievements' => '0',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $user->refresh();
+
+    expect($user->profile_visibility)->toBe(User::PROFILE_VISIBILITY_PRIVATE)
+        ->and($user->profile_show_activity)->toBeTrue()
+        ->and($user->profile_show_sections)->toBeFalse()
+        ->and($user->profile_show_social)->toBeFalse()
+        ->and($user->profile_show_achievements)->toBeFalse();
+});
+
+test('invalid profile visibility is rejected', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('profile.update'), [
+            '_method' => 'PATCH',
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name,
+            'email' => $user->email,
+            'profile_visibility' => 'everyone',
+        ])
+        ->assertSessionHasErrors('profile_visibility');
+});
+
 test('an oversized image is rejected rather than silently ignored', function () {
     Storage::fake('public');
 

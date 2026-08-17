@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Services\StudentNotificationService;
 use App\Support\PublicFileUrl;
+use App\Support\WorkspaceContext;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -12,12 +13,41 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements FilamentUser
 {
+    public const PROFILE_VISIBILITY_SECTION = 'section';
+
+    public const PROFILE_VISIBILITY_PRIVATE = 'private';
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            // Current model code also runs inside historical data migrations on
+            // a fresh install, before the public_id migration has executed.
+            if (Schema::hasColumn($user->getTable(), 'public_id') && ! $user->public_id) {
+                $user->public_id = (string) Str::uuid7();
+            }
+        });
+
+        static::created(function (User $user): void {
+            // Existing super admins are backfilled by the workspace migration;
+            // this covers super-admin accounts created after deployment.
+            if (
+                $user->isSuperAdmin()
+                && Schema::hasTable('workspaces')
+                && $user->workspaces()->doesntExist()
+            ) {
+                Workspace::createForOwner($user);
+            }
+        });
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {
@@ -51,6 +81,11 @@ class User extends Authenticatable implements FilamentUser
         'avatar',
         'cover_photo',
         'bio',
+        'profile_visibility',
+        'profile_show_activity',
+        'profile_show_sections',
+        'profile_show_social',
+        'profile_show_achievements',
         'blur_leaderboard',
     ];
 
@@ -230,6 +265,10 @@ class User extends Authenticatable implements FilamentUser
             'is_super_admin' => 'boolean',
             'is_banned' => 'boolean',
             'blur_leaderboard' => 'boolean',
+            'profile_show_activity' => 'boolean',
+            'profile_show_sections' => 'boolean',
+            'profile_show_social' => 'boolean',
+            'profile_show_achievements' => 'boolean',
             'banned_at' => 'datetime',
         ];
     }
@@ -261,7 +300,10 @@ class User extends Authenticatable implements FilamentUser
      */
     public function courses()
     {
-        return $this->belongsToMany(Course::class)->withPivot('completed_lessons', 'xp_earned', 'next_deadline')->withTimestamps();
+        return $this->belongsToMany(Course::class)
+            ->using(CourseUser::class)
+            ->withPivot('completed_lessons', 'xp_earned', 'next_deadline')
+            ->withTimestamps();
     }
 
     /**
@@ -305,7 +347,42 @@ class User extends Authenticatable implements FilamentUser
      */
     public function sections()
     {
-        return $this->belongsToMany(Section::class)->withPivot('season_id');
+        return $this->belongsToMany(Section::class)
+            ->using(SectionUser::class)
+            ->withPivot('season_id');
+    }
+
+    public function workspaces()
+    {
+        return $this->belongsToMany(Workspace::class, 'workspace_user')
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    public function currentWorkspace()
+    {
+        return $this->belongsTo(Workspace::class, 'current_workspace_id');
+    }
+
+    public function activateWorkspace(Workspace $workspace): void
+    {
+        abort_if($workspace->isArchived(), 422, 'Archived workspaces cannot be activated.');
+        abort_unless(
+            $this->isSuperAdmin() || $this->workspaces()->whereKey($workspace->id)->exists(),
+            403,
+        );
+
+        $this->forceFill(['current_workspace_id' => $workspace->id])->save();
+        app(WorkspaceContext::class)->set($workspace);
+    }
+
+    public function joinWorkspace(int $workspaceId, string $role = Workspace::ROLE_STUDENT): void
+    {
+        if (! $this->workspaces()->whereKey($workspaceId)->exists()) {
+            $this->workspaces()->attach($workspaceId, ['role' => $role]);
+        }
+        $this->forceFill(['current_workspace_id' => $workspaceId])->save();
+        app(WorkspaceContext::class)->set($workspaceId);
     }
 
     /**
@@ -329,9 +406,19 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(GamificationHistory::class);
     }
 
+    public function dailyXpClaims()
+    {
+        return $this->hasMany(DailyXpClaim::class);
+    }
+
     public function chatSessions()
     {
         return $this->hasMany(ChatSession::class)->orderByDesc('updated_at');
+    }
+
+    public function pendingAiActions()
+    {
+        return $this->hasMany(PendingAiAction::class);
     }
 
     /**
@@ -343,13 +430,22 @@ class User extends Authenticatable implements FilamentUser
     {
         $user = auth()->user();
 
-        // Super admin sees all non-admin users
-        if (! $user || ! $user->is_admin || $user->isSuperAdmin()) {
+        $context = app(WorkspaceContext::class);
+
+        if (! $user || ! $user->is_admin) {
             return $query;
         }
 
-        // Regular admin sees only students enrolled in their sections
-        return $query->whereHas('sections', fn ($q) => $q->where('admin_id', $user->id));
+        if ($user->isSuperAdmin() && ! $context->isInspecting()) {
+            return $query;
+        }
+
+        $workspaceId = $context->id();
+
+        // Every administrator in the tenant sees the same student roster.
+        return $query->whereHas('sections', fn ($q) => $q
+            ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
+            ->when(! $workspaceId, fn ($q) => $q->whereNull('workspace_id')));
     }
 
     public function recordGamificationHistory($amountXp, $amountPoints, $reason, $description = null, $sectionId = null, $seasonId = null, $awardedBy = null, $notify = true)

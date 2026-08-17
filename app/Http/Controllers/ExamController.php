@@ -7,12 +7,14 @@ use App\Events\ExamAnswersSaved;
 use App\Http\Requests\SaveExamAnswersRequest;
 use App\Http\Requests\SubmitExamPartRequest;
 use App\Jobs\GradeExamSubmissionEssays;
+use App\Models\AiEssayFeedbackDraft;
 use App\Models\Exam;
 use App\Models\ExamAnswerDraft;
 use App\Models\ExamLiveSession;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\Season;
+use App\Models\User;
 use App\Services\AIService;
 use App\Services\ExamAnswerDraftService;
 use App\Services\ExamXpAwardService;
@@ -22,6 +24,7 @@ use Carbon\CarbonInterface as Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -37,88 +40,143 @@ class ExamController extends Controller
      * Phase 3.6 — Fixed N+1: batch-load all user submissions for all visible
      * exams in a single query instead of one per exam inside the map.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $user = auth()->user();
-        $exams = Exam::with([
-            'section.season',
-            'parts' => function ($query) {
-                $query->orderBy('sort_order');
-            },
-        ])
+        $page = $this->examPage($request->user());
+
+        return Inertia::render('Exam', [
+            'examsBySeason' => $page['data'],
+            'examPagination' => $page['meta'],
+        ]);
+    }
+
+    /**
+     * Fetch another bounded page of exam summaries.
+     */
+    public function listing(Request $request): JsonResponse
+    {
+        return response()->json($this->examPage(
+            $request->user(),
+            $request->query('cursor'),
+        ));
+    }
+
+    /**
+     * Load the answer-heavy review payload only when a student opens it.
+     * The exam listing intentionally carries neither question JSON nor answers.
+     */
+    public function review(Request $request, Exam $exam): JsonResponse
+    {
+        $this->assertCanAccess($exam);
+
+        $submissions = ExamSubmission::query()
+            ->where('user_id', $request->user()->id)
+            ->where('exam_id', $exam->id)
+            ->orderBy('exam_part_id')
+            ->get(['id', 'exam_id', 'exam_part_id', 'answers', 'status', 'score', 'is_late', 'grading_failed']);
+
+        abort_unless(
+            $request->user()->is_admin || $submissions->isNotEmpty(),
+            403,
+            'There are no results to review for this exam.',
+        );
+
+        $parts = Cache::remember("exam_structure_{$exam->id}", 3600, function () use ($exam) {
+            return $exam->parts()->orderBy('sort_order')->get();
+        });
+        $revealAnswers = ExamPartSerializer::mayRevealAnswers(
+            $exam,
+            (bool) $request->user()->is_admin,
+            $submissions->isNotEmpty(),
+        );
+
+        return response()->json([
+            'exam' => array_merge($exam->withoutRelations()->toArray(), [
+                'parts' => ExamPartSerializer::many($parts, $revealAnswers),
+            ]),
+            'submissions' => $submissions->values()->all(),
+        ]);
+    }
+
+    /**
+     * Return lightweight cards in pages of 24. Full question and answer JSON is
+     * deferred to review() or show(), keeping the polling response predictable.
+     *
+     * @return array{data: array<int, array<string, mixed>>, meta: array{hasMore: bool, nextCursor: string|null}}
+     */
+    private function examPage(User $user, ?string $cursor = null): array
+    {
+        $paginator = Exam::query()
+            ->with([
+                'section.season',
+                'parts' => fn ($query) => $query
+                    ->select(['id', 'exam_id', 'title', 'instructions', 'type', 'sort_order', 'points'])
+                    ->orderBy('sort_order'),
+            ])
             ->where('status', '!=', 'draft')
-            ->when(! $user->is_admin, function ($query) use ($user) {
-                $sectionIds = $user->sections()->pluck('sections.id')->toArray();
-                $query->where(function ($query) use ($sectionIds) {
+            ->when(! $user->is_admin, function ($query) use ($user): void {
+                $sectionIds = $user->sections()->pluck('sections.id');
+                $query->where(function ($query) use ($sectionIds): void {
                     $query->whereNull('section_id')
                         ->orWhereIn('section_id', $sectionIds);
                 });
             })
-            ->latest()
-            ->get();
+            ->latest('created_at')
+            ->latest('id')
+            ->cursorPaginate(24, ['*'], 'cursor', Cursor::fromEncoded($cursor));
 
-        // Phase 3.6 — batch-load all user submissions in one query
+        $exams = collect($paginator->items());
         $examIds = $exams->pluck('id');
-        $allSubmissions = ExamSubmission::where('user_id', $user->id)
+        $allSubmissions = ExamSubmission::query()
+            ->where('user_id', $user->id)
             ->whereIn('exam_id', $examIds)
-            ->get()
+            ->get(['id', 'exam_id', 'exam_part_id', 'status', 'score', 'is_late', 'grading_failed'])
             ->groupBy('exam_id');
 
-        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions, $user) {
+        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions) {
             $submissions = $allSubmissions->get($exam->id, collect());
-
             $submittedPartsCount = $submissions->unique('exam_part_id')->count();
-            $hasSubmissions = $submissions->isNotEmpty();
-
-            $seasonName = $exam->section?->season?->name;
-
-            // ⚠️ Answer keys are only serialized once the exam is closed AND the
-            // student has actually participated. A student who never answered a
-            // closed exam must not be able to open "review results" and read the
-            // questions (or the key) after the fact.
-            $reveal = ExamPartSerializer::mayRevealAnswers(
-                $exam,
-                (bool) $user->is_admin,
-                $hasSubmissions,
-            );
-
-            // For a closed exam the student never took, drop the questions
-            // entirely — there is nothing of their own to review, so the
-            // payload must not carry the question text/options either.
-            $includeQuestions = $exam->status !== 'closed' || $reveal;
 
             return array_merge($exam->withoutRelations()->toArray(), [
-                'parts' => ExamPartSerializer::many($exam->parts, $reveal, $includeQuestions),
+                // Cards only need part metadata and counts. Questions are the
+                // dominant payload and are fetched only for taking/reviewing.
+                'parts' => ExamPartSerializer::many($exam->parts, false, false),
                 'submitted_parts_count' => $submittedPartsCount,
                 'total_parts' => $exam->parts->count(),
-                'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->count() > 0) || $exam->status === 'closed',
-                'has_submissions' => $hasSubmissions,
-                'submissions' => $submissions->toArray(),
+                'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->isNotEmpty())
+                    || $exam->status === 'closed',
+                'has_submissions' => $submissions->isNotEmpty(),
+                'submissions' => $submissions->values()->all(),
                 'section_name' => $exam->section?->name,
-                'season_name' => $seasonName,
+                'season_name' => $exam->section?->season?->name,
                 'exam_date_iso' => $exam->exam_date?->toIso8601String(),
             ]);
         });
 
-        // Group exams by season name, ordered by most recent season first
         $seasonRank = Season::query()
             ->whereIn('id', $exams->pluck('section.season_id')->filter()->unique())
             ->orderBy('start_date', 'desc')
             ->pluck('id', 'name');
 
-        $examsBySeason = collect($examsData)
-            ->groupBy(fn ($e) => $e['season_name'] ?? 'Other')
-            ->map(fn ($exams, $seasonName) => [
+        $groups = $examsData
+            ->groupBy(fn ($exam) => $exam['season_name'] ?? 'Other')
+            ->map(fn ($group, $seasonName) => [
                 'seasonName' => $seasonName,
-                'exams' => $exams->values()->all(),
+                'exams' => $group->values()->all(),
             ])
-            ->sortBy(fn ($group) => $seasonRank->keys()->search(fn ($name) => $name === $group['seasonName']) ?? 999)
+            ->sortBy(fn ($group) => $seasonRank->keys()->search(
+                fn ($name) => $name === $group['seasonName']
+            ) ?? 999)
             ->values()
             ->all();
 
-        return Inertia::render('Exam', [
-            'examsBySeason' => $examsBySeason,
-        ]);
+        return [
+            'data' => $groups,
+            'meta' => [
+                'hasMore' => $paginator->hasMorePages(),
+                'nextCursor' => $paginator->nextCursor()?->encode(),
+            ],
+        ];
     }
 
     public function show(Exam $exam)
@@ -578,6 +636,17 @@ class ExamController extends Controller
             return response()->json(['status' => 'not_submitted']);
         }
 
+        $awaitingTeacherReview = AiEssayFeedbackDraft::query()
+            ->withoutGlobalScope('workspace')
+            ->where('exam_submission_id', $submission->id)
+            ->whereIn('review_status', [
+                AiEssayFeedbackDraft::STATUS_GENERATING,
+                AiEssayFeedbackDraft::STATUS_AWAITING_REVIEW,
+                AiEssayFeedbackDraft::STATUS_REJECTED,
+                AiEssayFeedbackDraft::STATUS_SUPERSEDED,
+            ])
+            ->exists();
+
         // Self-heal: submissions left pending (created before async grading
         // shipped, or whenever no queue worker is consuming the "ai" queue)
         // are re-queued here. The modal polls this endpoint every 2s, so a
@@ -594,6 +663,7 @@ class ExamController extends Controller
         // can't queue duplicates, and the job itself is idempotent.
         if (in_array($submission->status, ['pending_review', 'pending_ai'], true)
             && ! $submission->grading_failed
+            && ! $awaitingTeacherReview
             && $this->hasPendingEssayGrading($submission)) {
             // Matches GradeExamSubmissionEssays::$timeout (300s) so the lock
             // can never expire while the job is still running.
@@ -626,6 +696,7 @@ class ExamController extends Controller
             'score' => $essaysScored ? (float) $submission->score : null,
             'is_late' => (bool) $submission->is_late,
             'grading_failed' => (bool) $submission->grading_failed,
+            'awaiting_teacher_review' => $awaitingTeacherReview,
             'xp_award' => $this->examXpAwardService->serialize($xpAward),
         ]);
     }

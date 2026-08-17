@@ -13,6 +13,7 @@ function insertRawDraft(User $admin, array $overrides = []): int
     return (int) DB::table('ai_question_drafts')->insertGetId(array_merge([
         'user_id' => $admin->id,
         'admin_id' => $admin->id,
+        'workspace_id' => $admin->current_workspace_id,
         'title' => 'Legacy draft',
         'source_filename' => 'chapter3.pdf',
         'source_text' => "Cell \xC3\x28 division \x93mitosis\x94\x00 and \xF9meiosis",

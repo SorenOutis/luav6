@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Assignment;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use Carbon\CarbonInterface;
@@ -97,18 +98,21 @@ class AdminActivityTrendChart extends ChartWidget
 
         $registrationsRaw = User::query()
             ->where('is_admin', false)
+            ->forWorkspace()
             ->whereDate('created_at', '>=', now()->subDays($days)->toDateString())
             ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
             ->groupBy('day')
             ->pluck('total', 'day');
 
         $examSubmissionsRaw = ExamSubmission::query()
+            ->whereHas('exam')
             ->whereDate('created_at', '>=', now()->subDays($days)->toDateString())
             ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
             ->groupBy('day')
             ->pluck('total', 'day');
 
         $assignmentSubmissionsRaw = DB::table('assignment_user')
+            ->whereIn('assignment_id', Assignment::query()->select('id'))
             ->where('submitted', true)
             ->whereDate('updated_at', '>=', now()->subDays($days)->toDateString())
             ->selectRaw('DATE(updated_at) as day, COUNT(*) as total')

@@ -3,26 +3,27 @@
 namespace App\Services;
 
 use App\Models\Season;
-use App\Models\Section;
 use App\Models\User;
+use App\Support\PublicFileUrl;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Phase 3.1 — Extract the leaderboard from the duplicated dashboard + API
- * closures.
+ * Canonical leaderboard builder used by the dashboard and leaderboard API.
  *
- * Previously the dashboard closure and api/leaderboard endpoint each had their
- * own copy of the leaderboard logic, and they had already diverged (different
- * weeklyXp cast, missing xpProgress/trend in the API version).
- *
- * This service uses the dashboard version's shape as canonical (it's the
- * superset) and computes each user's rank from the exact roster that gets
- * rendered, using the same "ties share a rank" logic as the frontend so the
- * rank shown in the "Your rank" widget always matches the ranking list.
+ * The visible roster is deliberately bounded. Rank and total-player values are
+ * still calculated over the complete section by SQL window functions, while
+ * only the first rows plus the viewer are hydrated and serialized.
  */
 class LeaderboardService
 {
+    /** Maximum rows returned per section, excluding an out-of-range viewer. */
+    public const MAX_VISIBLE_USERS = 100;
+
+    /** Defensive ceiling for students enrolled in an unusually high number of sections. */
+    public const MAX_VISIBLE_SECTIONS = 20;
+
     /**
      * Build leaderboard data for every section the user belongs to in a given
      * season.
@@ -37,48 +38,62 @@ class LeaderboardService
 
         $userSections = $user->sections()
             ->wherePivot('season_id', $season->id)
+            ->orderBy('sections.name')
+            ->limit(self::MAX_VISIBLE_SECTIONS)
             ->get();
 
         if ($userSections->isEmpty()) {
             return [];
         }
 
-        $sectionIds = $userSections->pluck('id');
+        $sectionIds = $userSections->pluck('id')->map(fn ($id): int => (int) $id);
 
-        // ── Batch-load every section's roster in one round trip ──────
-        // This previously ran inside the foreach below (and again when
-        // building $allUserIds), so a student in 4 sections paid 8 queries
-        // just to assemble the dashboard leaderboard. Eager loading here makes
-        // it 2 queries regardless of how many sections the user is in.
-        //
-        // sectionProgress is scoped to the sections in play so a user enrolled
-        // in many sections doesn't drag in unrelated progress rows; it is then
-        // matched per section in PHP.
-        $userSections->load([
-            'users' => fn ($q) => $q->where('is_admin', false)
-                ->with(['sectionProgress' => fn ($p) => $p->whereIn('section_id', $sectionIds)]),
-        ]);
+        $ranked = DB::table('section_user as membership')
+            ->join('users', 'users.id', '=', 'membership.user_id')
+            ->leftJoin('section_progress as progress', function ($join): void {
+                $join->on('progress.user_id', '=', 'users.id')
+                    ->on('progress.section_id', '=', 'membership.section_id');
+            })
+            ->whereIn('membership.section_id', $sectionIds)
+            ->where('membership.season_id', $season->id)
+            ->where('users.is_admin', false)
+            ->select([
+                'membership.section_id',
+                'users.id as user_id',
+                'users.public_id',
+                'users.name',
+                'users.avatar',
+                'users.current_streak',
+                'users.created_at',
+                'users.blur_leaderboard',
+            ])
+            ->selectRaw('COALESCE(progress.exp, 0) as xp')
+            ->selectRaw('COALESCE(progress.level, 1) as level')
+            ->selectRaw('RANK() OVER (PARTITION BY membership.section_id ORDER BY COALESCE(progress.exp, 0) DESC) as rank_position')
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY membership.section_id ORDER BY COALESCE(progress.exp, 0) DESC, users.id ASC) as row_position')
+            ->selectRaw('COUNT(*) OVER (PARTITION BY membership.section_id) as total_players');
 
-        // ── Weekly XP + trend — one query over the last 14 days of XP ──
-        // gamification_histories is the canonical XP log (exams, daily claims,
-        // admin adjustments, enrollment). course_user.xp_earned is not kept in
-        // sync by the live lesson flow, so it is a poor source for activity.
-        //
-        // Reuses the rosters eager-loaded above — no extra query per section.
-        $allUserIds = $userSections
-            ->flatMap(fn ($s) => $s->users->pluck('id'))
-            ->unique()
-            ->values();
+        // ROW_NUMBER provides a hard payload/memory ceiling even when hundreds
+        // of students tie on XP. The viewer is included separately so their
+        // "Your rank" card remains useful when they are outside the top rows.
+        $visibleRows = DB::query()
+            ->fromSub($ranked, 'ranked_users')
+            ->where(function ($query) use ($user): void {
+                $query->where('row_position', '<=', self::MAX_VISIBLE_USERS)
+                    ->orWhere('user_id', $user->id);
+            })
+            ->orderBy('section_id')
+            ->orderBy('row_position')
+            ->get();
+
+        $rowsBySection = $visibleRows->groupBy(fn ($row): int => (int) $row->section_id);
+        $visibleUserIds = $visibleRows->pluck('user_id')->map(fn ($id): int => (int) $id)->unique()->values();
 
         $thisWeekStart = now()->subDays(7);
         $prevWeekStart = now()->subDays(14);
 
-        // Single-pass conditional aggregation for both week buckets.
-        // NOTE: bindings must go through selectRaw() — DB::raw() only accepts
-        // the expression and would silently drop a second argument, leaving the
-        // ? placeholders unbound and misaligning every subsequent binding.
         $weekStats = DB::table('gamification_histories')
-            ->whereIn('user_id', $allUserIds)
+            ->whereIn('user_id', $visibleUserIds)
             ->where('created_at', '>=', $prevWeekStart)
             ->where('amount_xp', '>', 0)
             ->selectRaw(
@@ -89,78 +104,44 @@ class LeaderboardService
             ->get()
             ->keyBy('user_id');
 
-        // ── Build per-section leaderboards ──────────────────────────
-        $sectionLeaderboards = [];
+        return $userSections->map(function ($section) use ($rowsBySection, $weekStats, $user) {
+            $rows = $rowsBySection->get((int) $section->id, collect());
 
-        foreach ($userSections as $section) {
-            // Already in memory from the eager load above.
-            $usersInSection = $section->users;
-
-            $leaderboardUsers = $usersInSection->map(function ($u) use ($weekStats, $user, $section) {
-                // ⚠️ sectionProgress is eager-loaded for ALL of the viewer's
-                // sections at once, so it must be matched to THIS section.
-                // Taking ->first() here would show a student's XP from an
-                // unrelated section.
-                // Cast both sides: section_id has no model cast, and drivers
-                // differ on whether integer columns come back as int or string.
-                $progress = $u->sectionProgress
-                    ->first(fn ($p) => (int) $p->section_id === (int) $section->id);
-                $xp = $progress?->exp ?? 0;
-                $level = $progress?->level ?? 1;
-
-                $weekly = $weekStats[$u->id] ?? null;
+            $leaderboardUsers = $rows->map(function ($row) use ($weekStats, $user) {
+                $weekly = $weekStats[(int) $row->user_id] ?? null;
                 $thisWeek = (float) ($weekly->this_week ?? 0);
                 $prevWeek = (float) ($weekly->prev_week ?? 0);
+                $xp = (float) $row->xp;
 
                 return [
-                    'id' => $u->id,
-                    'name' => $u->name,
-                    'avatar' => $u->avatar,
-                    'xp' => (float) $xp,
-                    'level' => (int) $level,
-                    'xpProgress' => (int) ($xp % 100),
-                    'streak' => $u->current_streak,
-                    'joinedAt' => $u->created_at->format('M Y'),
+                    'id' => (int) $row->user_id,
+                    'publicId' => (string) $row->public_id,
+                    'name' => (string) $row->name,
+                    'avatar' => PublicFileUrl::resolve($row->avatar),
+                    'xp' => $xp,
+                    'level' => (int) $row->level,
+                    'xpProgress' => (int) fmod($xp, 100),
+                    'streak' => (int) $row->current_streak,
+                    'joinedAt' => Carbon::parse($row->created_at)->format('M Y'),
                     'weeklyXp' => (int) round($thisWeek),
                     'trend' => $this->trendFor($thisWeek, $prevWeek),
-                    'isCurrentUser' => $u->id === $user->id,
-                    'blurred' => $u->blur_leaderboard,
+                    'isCurrentUser' => (int) $row->user_id === (int) $user->id,
+                    'blurred' => filter_var($row->blur_leaderboard, FILTER_VALIDATE_BOOL),
                 ];
-            })->sortByDesc('xp')->values();
+            })->values();
 
-            // The user's rank is computed from the exact roster being
-            // rendered, using the same "ties share a rank, then the position
-            // jumps by the number of tied students" logic the frontend uses
-            // (trueRankById in ImprovedLeaderboard.vue). A SQL DENSE_RANK()
-            // window disagreed with that algorithm whenever a tie preceded the
-            // user — DENSE_RANK yields 1,2,2,3 while the list shows 1,2,2,4 —
-            // which made the "Your rank" widget report a better rank than the
-            // ranking list actually showed.
-            $rank = 1;
-            $prevXp = null;
-            $userRank = $leaderboardUsers->count();
-            foreach ($leaderboardUsers as $i => $u) {
-                $xp = (float) $u['xp'];
-                if ($prevXp === null || $xp !== $prevXp) {
-                    $rank = $i + 1;
-                }
-                if ($u['id'] === $user->id) {
-                    $userRank = $rank;
-                    break;
-                }
-                $prevXp = $xp;
-            }
+            $viewer = $rows->first(fn ($row): bool => (int) $row->user_id === (int) $user->id);
+            $first = $rows->first();
 
-            $sectionLeaderboards[] = [
-                'sectionId' => $section->id,
-                'sectionName' => $section->name,
+            return [
+                'sectionId' => (int) $section->id,
+                'sectionName' => (string) $section->name,
                 'users' => $leaderboardUsers,
-                'userRank' => $userRank,
-                'totalPlayers' => $leaderboardUsers->count(),
+                'userRank' => (int) ($viewer->rank_position ?? 0),
+                'totalPlayers' => (int) ($first->total_players ?? 0),
+                'isTruncated' => (int) ($first->total_players ?? 0) > $leaderboardUsers->count(),
             ];
-        }
-
-        return $sectionLeaderboards;
+        })->values()->all();
     }
 
     /**

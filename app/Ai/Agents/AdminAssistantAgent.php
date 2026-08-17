@@ -23,12 +23,8 @@ use Stringable;
 
 /**
  * Echo for teachers/admins — workspace analytics plus guarded management
- * actions (create/update exams, post announcements, create assignments).
- *
- * Every query tool is limited to the admin's own workspace (via the
- * BelongsToWorkspace global scope and explicit ownership checks), and every
- * write tool requires an explicit confirm=true after the admin approves a
- * summary — see the WRITE-ACTION RULES in the instructions.
+ * actions. Write tools can only stage immutable, expiring approval requests;
+ * execution is exclusively available through a nonce-protected human UI.
  */
 #[Provider('gemini')]
 #[MaxSteps(8)]
@@ -40,6 +36,8 @@ class AdminAssistantAgent implements Agent, Conversational, HasTools
 
     protected ?string $userContext = null;
 
+    protected ?int $chatSessionId = null;
+
     public function setHistory(array $history): self
     {
         $this->history = $history;
@@ -50,6 +48,13 @@ class AdminAssistantAgent implements Agent, Conversational, HasTools
     public function setUserContext(?string $userContext): self
     {
         $this->userContext = $userContext;
+
+        return $this;
+    }
+
+    public function setChatSessionId(?int $chatSessionId): self
+    {
+        $this->chatSessionId = $chatSessionId;
 
         return $this;
     }
@@ -69,16 +74,17 @@ AVAILABLE TOOLS:
 - students: list/search students (level, streak, sections, recent exam average).
 - exams_admin: exams with IDs, submission counts, and average scores.
 - submissions_to_grade: submissions waiting for AI/manual grading.
-- generate_exam_questions: generate AI exam questions from source material and attach them to an exam as new question parts.
+- generate_exam_questions: generate AI questions into a private teacher-review draft for a target exam. It never attaches generated content directly.
 - create_exam, update_exam, post_announcement, create_assignment: write actions (see rules below).
 
 WRITE-ACTION RULES (strict):
-1. Before any write action, summarize EXACTLY what you will create or change and ask the admin to confirm.
-2. Only pass confirm=true after the admin explicitly approves in their latest message. If they decline, or their answer is ambiguous, do NOT call the tool — ask again or drop it.
-3. For generate_exam_questions, also state the target exam, source material type, question counts, and difficulty before asking to confirm.
-4. You CANNOT delete records, edit grades, or manage users. You CAN add question parts to exams, but ONLY through the generate_exam_questions tool.
-5. Never invent section/course/exam IDs — get them from workspace_overview or exams_admin.
-6. New exams are always created as DRAFTS. After creating one, tell the admin to add question parts, then offer to publish it with update_exam.
+1. Write tools NEVER execute a write. They only create an immutable, expiring approval card with an exact before/after diff and a server-issued nonce that you never receive.
+2. Gather all required values, use the read tools to resolve IDs, then call the appropriate write tool exactly once to stage the card. Do not ask the admin to type \"confirm\", do not claim typed approval is sufficient, and never retry the same tool call after it reports PENDING HUMAN APPROVAL.
+3. After staging, tell the admin to review the exact diff and click Approve or Reject in the UI. Only that human click can execute the action.
+4. For generate_exam_questions, make sure the target exam, full source material, question counts, difficulty, points, and instructions are settled before staging. Approval starts generation only; generated questions enter the teacher review queue and still require content approval before attachment.
+5. You CANNOT delete records, edit grades, or manage users. You CAN propose a question review draft only through generate_exam_questions.
+6. Never invent section/course/exam IDs — get them from workspace_overview or exams_admin.
+7. New exams are always proposed as DRAFTS. After approval and creation, tell the admin to add question parts, then offer to prepare a separate publish action.
 
 GENERAL RULES:
 1. NEVER fabricate workspace data — always use the tools.
@@ -115,11 +121,11 @@ GENERAL RULES:
             new StudentsTool,
             new ExamsAdminTool,
             new SubmissionsToGradeTool,
-            new GenerateExamQuestionsTool,
-            new CreateExamTool,
-            new UpdateExamTool,
-            new PostAnnouncementTool,
-            new CreateAssignmentTool,
+            new GenerateExamQuestionsTool(chatSessionId: $this->chatSessionId),
+            new CreateExamTool(chatSessionId: $this->chatSessionId),
+            new UpdateExamTool(chatSessionId: $this->chatSessionId),
+            new PostAnnouncementTool(chatSessionId: $this->chatSessionId),
+            new CreateAssignmentTool(chatSessionId: $this->chatSessionId),
         ];
     }
 }

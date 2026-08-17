@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Admins\Schemas;
 
+use App\Models\Workspace;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -14,7 +16,7 @@ class AdminForm
         return $schema
             ->components([
                 Section::make('Admin Account')
-                    ->description('Create a new admin workspace. The admin will start with an empty workspace — no sections, students, or data.')
+                    ->description('Create an administrator and either assign an existing tenant workspace or create a new one.')
                     ->schema([
                         Grid::make(2)
                             ->schema([
@@ -34,6 +36,14 @@ class AdminForm
                                     ->label('Middle name (optional)')
                                     ->maxLength(255)
                                     ->prefixIcon('heroicon-m-user')
+                                    ->columnSpanFull(),
+
+                                Select::make('workspace_id')
+                                    ->label('Tenant workspace')
+                                    ->options(fn (): array => Workspace::query()->orderBy('name')->pluck('name', 'id')->all())
+                                    ->searchable()
+                                    ->placeholder('Create a new workspace for this admin')
+                                    ->helperText('Select an existing tenant to add another administrator, or leave blank to create a new tenant.')
                                     ->columnSpanFull(),
 
                                 TextInput::make('email')

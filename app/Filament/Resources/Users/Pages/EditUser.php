@@ -6,6 +6,7 @@ use App\Filament\Resources\Users\Concerns\SyncsSectionProgress;
 use App\Filament\Resources\Users\UserResource;
 use App\Services\AdminUserGamificationService;
 use App\Services\TeacherXpAwardService;
+use App\Support\WorkspaceContext;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
@@ -35,7 +36,7 @@ class EditUser extends EditRecord
                         ->options(function () {
                             $query = $this->getRecord()->sections()->orderBy('name');
                             if (! auth()->user()?->isSuperAdmin()) {
-                                $query->where('sections.admin_id', auth()->id());
+                                $query->where('sections.workspace_id', app(WorkspaceContext::class)->id());
                             }
 
                             return $query->pluck('name', 'sections.id');

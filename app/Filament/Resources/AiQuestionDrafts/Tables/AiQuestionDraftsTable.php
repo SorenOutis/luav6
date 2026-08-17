@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AiQuestionDrafts\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -23,6 +24,7 @@ class AiQuestionDraftsTable
             ->defaultSort('created_at', 'desc')
             ->poll('15s')
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('title')
                     ->label('Title')
                     ->searchable()
@@ -54,6 +56,21 @@ class AiQuestionDraftsTable
                         'running' => 'info',
                         'ready' => 'success',
                         'failed' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('review_status')
+                    ->label('Teacher review')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                        'awaiting_review' => 'Awaiting review',
+                        default => 'Not ready',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'approved' => 'success',
+                        'rejected' => 'danger',
+                        'awaiting_review' => 'warning',
                         default => 'gray',
                     }),
                 TextColumn::make('questions_count')
@@ -95,9 +112,11 @@ class AiQuestionDraftsTable
                                 ->placeholder('Select an admin…'),
                         ])
                         ->action(function (array $data, $record) {
-                            $record->update(['admin_id' => $data['target_admin_id']]);
-
                             $targetAdmin = User::find($data['target_admin_id']);
+                            $record->update([
+                                'admin_id' => $targetAdmin?->id,
+                                'workspace_id' => $targetAdmin?->current_workspace_id,
+                            ]);
 
                             Notification::make()
                                 ->title('Draft transferred')
@@ -111,6 +130,7 @@ class AiQuestionDraftsTable
                     ->icon('heroicon-m-ellipsis-vertical'),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 SelectFilter::make('status')
                     ->options([
                         'pending' => 'Pending',
@@ -118,6 +138,14 @@ class AiQuestionDraftsTable
                         'running' => 'Generating questions',
                         'ready' => 'Ready',
                         'failed' => 'Failed',
+                    ]),
+                SelectFilter::make('review_status')
+                    ->label('Teacher review')
+                    ->options([
+                        'awaiting_review' => 'Awaiting review',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                        'not_ready' => 'Not ready',
                     ]),
                 SelectFilter::make('difficulty')
                     ->options([

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import { Building2, Check, LogOut, Settings, XCircle } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,10 +19,43 @@ type Props = {
     user: User;
 };
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
+const page = usePage();
+const workspaceState = computed(
+    () =>
+        (page.props.workspace as {
+            isInspecting?: boolean;
+            available?: Array<{
+                id: string;
+                name: string;
+                role: string;
+                isCurrent: boolean;
+            }>;
+        }) ?? {},
+);
+const workspaces = computed(() => workspaceState.value.available ?? []);
+const switchingWorkspace = ref<string | null>(null);
 const showLogoutDialog = ref(false);
 const loggingOut = ref(false);
+
+const activateWorkspace = (workspaceId: string) => {
+    if (switchingWorkspace.value) return;
+    switchingWorkspace.value = workspaceId;
+    const action = props.user.is_super_admin ? 'inspect' : 'activate';
+    router.post(
+        `/workspaces/${workspaceId}/${action}`,
+        {},
+        {
+            preserveScroll: false,
+            onFinish: () => (switchingWorkspace.value = null),
+        },
+    );
+};
+
+const stopInspecting = () => {
+    router.delete('/workspaces/inspection');
+};
 
 const openLogoutDialog = (event: Event) => {
     event.preventDefault();
@@ -52,6 +85,38 @@ const confirmLogout = () => {
         </div>
     </DropdownMenuLabel>
     <DropdownMenuSeparator />
+    <DropdownMenuGroup
+        v-if="workspaces.length > 1 || workspaceState.isInspecting"
+    >
+        <DropdownMenuLabel class="px-2 py-1 text-xs text-muted-foreground">
+            Workspace
+        </DropdownMenuLabel>
+        <DropdownMenuItem
+            v-for="workspace in workspaces"
+            :key="workspace.id"
+            :disabled="
+                (workspace.isCurrent &&
+                    (!user.is_super_admin || workspaceState.isInspecting)) ||
+                switchingWorkspace !== null
+            "
+            @select="activateWorkspace(workspace.id)"
+        >
+            <Building2 class="mr-2 h-4 w-4" />
+            <span class="min-w-0 flex-1 truncate">{{ workspace.name }}</span>
+            <Check v-if="workspace.isCurrent" class="ml-2 h-4 w-4" />
+        </DropdownMenuItem>
+        <DropdownMenuItem
+            v-if="workspaceState.isInspecting"
+            class="text-destructive"
+            @select="stopInspecting"
+        >
+            <XCircle class="mr-2 h-4 w-4" />
+            Exit workspace inspection
+        </DropdownMenuItem>
+    </DropdownMenuGroup>
+    <DropdownMenuSeparator
+        v-if="workspaces.length > 1 || workspaceState.isInspecting"
+    />
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full cursor-pointer" :href="edit()" prefetch>

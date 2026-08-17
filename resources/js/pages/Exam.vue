@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, usePoll } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
+import axios from 'axios';
 import {
     Calendar,
     Clock,
@@ -78,7 +79,7 @@ onBeforeUnmount(() => {
 interface ExamSubmission {
     id: number;
     exam_part_id: number;
-    answers: any[];
+    answers?: any[];
     status: string;
     score: string;
 }
@@ -118,7 +119,78 @@ interface SeasonGroup {
 
 const props = defineProps<{
     examsBySeason: SeasonGroup[];
+    examPagination?: {
+        hasMore: boolean;
+        nextCursor: string | null;
+    };
 }>();
+
+const examGroups = ref<SeasonGroup[]>(
+    props.examsBySeason.map((group) => ({
+        ...group,
+        exams: [...group.exams],
+    })),
+);
+const examCursor = ref<string | null>(props.examPagination?.nextCursor ?? null);
+const hasLoadedMoreExams = ref(false);
+const hasMoreExams = ref(props.examPagination?.hasMore ?? false);
+const isLoadingMoreExams = ref(false);
+const isLoadingReview = ref(false);
+
+const mergeExamGroups = (incoming: SeasonGroup[], prepend = false) => {
+    const merged = new Map<string, Exam[]>();
+
+    for (const group of examGroups.value) {
+        merged.set(group.seasonName, [...group.exams]);
+    }
+
+    for (const group of incoming) {
+        const existing = merged.get(group.seasonName) ?? [];
+        const incomingIds = new Set(group.exams.map((exam) => exam.id));
+        merged.set(
+            group.seasonName,
+            prepend
+                ? [
+                      ...group.exams,
+                      ...existing.filter((exam) => !incomingIds.has(exam.id)),
+                  ]
+                : [
+                      ...existing,
+                      ...group.exams.filter(
+                          (exam) =>
+                              !existing.some(
+                                  (current) => current.id === exam.id,
+                              ),
+                      ),
+                  ],
+        );
+    }
+
+    const preferredOrder = [
+        ...incoming.map((group) => group.seasonName),
+        ...examGroups.value.map((group) => group.seasonName),
+    ];
+    examGroups.value = [...new Set(preferredOrder)].map((seasonName) => ({
+        seasonName,
+        exams: merged.get(seasonName) ?? [],
+    }));
+};
+
+watch(
+    () => props.examsBySeason,
+    (groups) => {
+        if (!hasLoadedMoreExams.value) {
+            examGroups.value = groups.map((group) => ({
+                ...group,
+                exams: [...group.exams],
+            }));
+            hasMoreExams.value = props.examPagination?.hasMore ?? false;
+            examCursor.value = props.examPagination?.nextCursor ?? null;
+        } else {
+            mergeExamGroups(groups, true);
+        }
+    },
+);
 
 const showReviewModal = ref(false);
 const selectedExamForReview = ref<Exam | null>(null);
@@ -194,7 +266,7 @@ const filteredExamsBySeason = computed(() => {
     const filtered = filteredExams.value;
     const examIds = new Set(filtered.map((e) => e.id));
 
-    return props.examsBySeason
+    return examGroups.value
         .map((sg) => ({
             seasonName: sg.seasonName,
             exams: sg.exams.filter((e) => examIds.has(e.id)),
@@ -333,14 +405,63 @@ const answersRevealed = computed(
         hasSubmitted(selectedExamForReview.value),
 );
 
-const openReview = (exam: Exam) => {
-    if (!hasSubmitted(exam)) {
+const loadMoreExams = async () => {
+    if (!hasMoreExams.value || isLoadingMoreExams.value) return;
+
+    isLoadingMoreExams.value = true;
+    try {
+        const response = await axios.get('/api/exams', {
+            params: { cursor: examCursor.value },
+        });
+        mergeExamGroups(response.data.data ?? []);
+        hasLoadedMoreExams.value = true;
+        examCursor.value = response.data.meta?.nextCursor ?? null;
+        hasMoreExams.value = Boolean(response.data.meta?.hasMore);
+    } catch (error) {
+        console.error('Failed to load more exams:', error);
+    } finally {
+        isLoadingMoreExams.value = false;
+    }
+};
+
+const openReview = async (exam: Exam) => {
+    if (!hasSubmitted(exam) || isLoadingReview.value) {
         return;
     }
+
     selectedExamForReview.value = exam;
     selectedPartId.value = exam.parts.length > 0 ? exam.parts[0].id : null;
     selectedQuestionIndex.value = 0;
     showReviewModal.value = true;
+
+    // Keep compatibility with cached/rolling-deploy page props that already
+    // contain a complete review payload. New responses use the lighter cards.
+    const alreadyLoaded =
+        exam.parts.some((part) => (part.questions?.length ?? 0) > 0) &&
+        (exam.submissions ?? []).some((submission) =>
+            Array.isArray(submission.answers),
+        );
+    if (alreadyLoaded) {
+        return;
+    }
+
+    isLoadingReview.value = true;
+
+    try {
+        const response = await axios.get(`/exams/${exam.id}/review`);
+        const reviewedExam = response.data.exam as Exam;
+        selectedExamForReview.value = {
+            ...exam,
+            ...reviewedExam,
+            submissions: response.data.submissions ?? [],
+        };
+        selectedPartId.value = reviewedExam.parts?.[0]?.id ?? null;
+    } catch (error) {
+        console.error('Failed to load exam review:', error);
+        showReviewModal.value = false;
+    } finally {
+        isLoadingReview.value = false;
+    }
 };
 
 const openExam = (exam: Exam) => {
@@ -853,6 +974,22 @@ watch(selectedPartId, () => {
                         </Motion>
                     </div>
                 </Motion>
+
+                <div v-if="hasMoreExams" class="flex justify-center py-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="min-w-44 rounded-xl"
+                        :disabled="isLoadingMoreExams"
+                        @click="loadMoreExams"
+                    >
+                        {{
+                            isLoadingMoreExams
+                                ? 'Loading activities…'
+                                : 'Load more activities'
+                        }}
+                    </Button>
+                </div>
             </template>
 
             <!-- Empty State -->
@@ -970,7 +1107,16 @@ watch(selectedPartId, () => {
             data-lenis-prevent
             class="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
         >
-            <div v-if="selectedExamForReview" class="space-y-8">
+            <div
+                v-if="isLoadingReview"
+                class="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center"
+            >
+                <Timer class="h-7 w-7 animate-pulse text-primary" />
+                <p class="text-sm font-medium text-muted-foreground">
+                    Loading your review…
+                </p>
+            </div>
+            <div v-else-if="selectedExamForReview" class="space-y-8">
                 <Motion
                     v-for="part in selectedExamForReview.parts"
                     :key="part.id"
@@ -1405,7 +1551,11 @@ watch(selectedPartId, () => {
                                             getSubmissionForPart(
                                                 selectedExamForReview,
                                                 part.id,
-                                            )?.status === 'pending_ai'
+                                            )?.status === 'pending_ai' ||
+                                            getSubmissionForPart(
+                                                selectedExamForReview,
+                                                part.id,
+                                            )?.status === 'pending_review'
                                         "
                                         class="flex items-center gap-2 rounded-lg border border-border/40 bg-muted/20 p-3"
                                     >
@@ -1414,7 +1564,14 @@ watch(selectedPartId, () => {
                                         />
                                         <span
                                             class="text-xs font-medium text-[#E0AF68]"
-                                            >Feedback pending</span
+                                            >{{
+                                                getSubmissionForPart(
+                                                    selectedExamForReview,
+                                                    part.id,
+                                                )?.status === 'pending_review'
+                                                    ? 'Awaiting teacher review'
+                                                    : 'AI proposal pending'
+                                            }}</span
                                         >
                                     </div>
                                 </div>

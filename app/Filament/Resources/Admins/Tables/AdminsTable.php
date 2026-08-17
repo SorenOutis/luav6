@@ -34,6 +34,10 @@ class AdminsTable
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(),
+                TextColumn::make('currentWorkspace.name')
+                    ->label('Workspace')
+                    ->placeholder('Platform / none')
+                    ->badge(),
                 IconColumn::make('is_super_admin')
                     ->label('Super Admin')
                     ->boolean()
@@ -42,9 +46,9 @@ class AdminsTable
                     ->label('Created')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('sections_count')
-                    ->counts('sections')
+                TextColumn::make('workspace_sections')
                     ->label('Sections')
+                    ->getStateUsing(fn ($record): int => $record->currentWorkspace?->sections()->count() ?? 0)
                     ->badge()
                     ->color('primary'),
             ])
@@ -52,7 +56,7 @@ class AdminsTable
                 EditAction::make(),
                 DeleteAction::make()
                     ->modalHeading('Delete admin account')
-                    ->modalDescription('This will permanently delete this admin, all their sections, exams, and all associated student data. This action cannot be undone.')
+                    ->modalDescription('This removes the administrator account. Shared workspace data remains owned by the tenant. This action cannot be undone.')
                     ->modalSubmitActionLabel('Yes, delete admin'),
             ])
             ->bulkActions([

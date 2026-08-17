@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
 import { useTimeoutFn } from '@vueuse/core';
+import axios from 'axios';
 import gsap from 'gsap';
 import {
     MessageSquare,
@@ -10,7 +11,7 @@ import {
     Heart,
     Sparkles,
 } from 'lucide-vue-next';
-import { ref, onMounted } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -34,6 +35,10 @@ interface Message {
 const props = defineProps<{
     messages: Message[];
     userLikedMessageIds: number[];
+    pagination?: {
+        hasMore: boolean;
+        nextCursor: string | null;
+    };
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -49,7 +54,11 @@ const isSubmitting = ref(false);
 const showSuccess = ref(false);
 const showSubmissionModal = ref(false);
 
+const messages = ref<Message[]>([...props.messages]);
 const localLikedMessageIds = ref<number[]>([]);
+const nextCursor = ref<string | null>(props.pagination?.nextCursor ?? null);
+const hasMore = ref(props.pagination?.hasMore ?? false);
+const isLoadingMore = ref(false);
 
 onMounted(() => {
     localLikedMessageIds.value = [...props.userLikedMessageIds];
@@ -79,20 +88,25 @@ const toggleLike = (message: Message) => {
         localLikedMessageIds.value = localLikedMessageIds.value.filter(
             (id) => id !== messageId,
         );
+        message.likes_count = Math.max(0, message.likes_count - 1);
     } else {
         localLikedMessageIds.value.push(messageId);
+        message.likes_count++;
     }
 
     form.post(nglLike(messageId).url, {
         preserveScroll: true,
+        preserveState: true,
         onError: () => {
             // Revert on error
             if (isLiked) {
                 localLikedMessageIds.value.push(messageId);
+                message.likes_count++;
             } else {
                 localLikedMessageIds.value = localLikedMessageIds.value.filter(
                     (id) => id !== messageId,
                 );
+                message.likes_count = Math.max(0, message.likes_count - 1);
             }
         },
     });
@@ -118,6 +132,42 @@ const submit = () => {
             isSubmitting.value = false;
         },
     });
+};
+
+const loadMore = async () => {
+    if (!hasMore.value || isLoadingMore.value) return;
+
+    isLoadingMore.value = true;
+    try {
+        const response = await axios.get('/api/ngl', {
+            params: { cursor: nextCursor.value },
+        });
+        const incoming = (response.data.data ?? []) as Message[];
+        const known = new Set(messages.value.map((message) => message.id));
+        messages.value.push(
+            ...incoming.filter((message) => !known.has(message.id)),
+        );
+        localLikedMessageIds.value.push(
+            ...(response.data.userLikedMessageIds ?? []).filter(
+                (id: number) => !localLikedMessageIds.value.includes(id),
+            ),
+        );
+        nextCursor.value = response.data.meta?.nextCursor ?? null;
+        hasMore.value = Boolean(response.data.meta?.hasMore);
+
+        await nextTick();
+        gsap.from('.ngl-card:nth-last-child(-n+24)', {
+            y: 16,
+            opacity: 0,
+            duration: 0.45,
+            stagger: 0.03,
+            ease: 'power2.out',
+        });
+    } catch (error) {
+        console.error('Failed to load more shoutouts:', error);
+    } finally {
+        isLoadingMore.value = false;
+    }
 };
 
 const formatDate = (dateStr: string) => {
@@ -244,7 +294,7 @@ onMounted(() => {
                                 <span
                                     class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"
                                 ></span>
-                                {{ messages.length }} Approved Messages
+                                {{ messages.length }} Loaded Messages
                             </div>
                         </div>
                     </div>
@@ -385,6 +435,22 @@ onMounted(() => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div v-if="hasMore" class="flex justify-center pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            class="min-w-44 rounded-xl"
+                            :disabled="isLoadingMore"
+                            @click="loadMore"
+                        >
+                            {{
+                                isLoadingMore
+                                    ? 'Loading shoutouts…'
+                                    : 'Load more shoutouts'
+                            }}
+                        </Button>
                     </div>
                 </div>
             </div>

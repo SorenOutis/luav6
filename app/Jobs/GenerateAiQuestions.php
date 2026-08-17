@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\AiQuestionDraft;
 use App\Services\AiQuestionGeneratorService;
+use App\Services\AiReviewService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -28,7 +29,7 @@ class GenerateAiQuestions implements ShouldQueue
 
     public function handle(AiQuestionGeneratorService $service): void
     {
-        $draft = AiQuestionDraft::query()->find($this->draftId);
+        $draft = AiQuestionDraft::query()->withoutGlobalScope('workspace')->find($this->draftId);
         if (! $draft) {
             return;
         }
@@ -55,12 +56,11 @@ class GenerateAiQuestions implements ShouldQueue
                 throw new \RuntimeException('AI returned no usable questions. Try a shorter/cleaner source or reduce counts.');
             }
 
-            $draft->forceFill([
-                'questions' => $questions,
-                'status' => 'ready',
-                'ai_response' => $service->lastRawResponse,
-                'generated_at' => now(),
-            ])->save();
+            app(AiReviewService::class)->submitQuestionDraftForReview(
+                $draft,
+                $questions,
+                $service->lastRawResponse,
+            );
         } catch (\Throwable $e) {
             $draft->forceFill([
                 'status' => 'failed',

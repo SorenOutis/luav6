@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Grades\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use App\Models\Grade;
 use App\Models\Section;
 use Filament\Actions\BulkActionGroup;
@@ -19,6 +20,7 @@ class GradesTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('student.name')
                     ->label('Student')
                     ->searchable()
@@ -80,13 +82,10 @@ class GradesTable
             ->defaultGroup('section.name')
             ->defaultSort('updated_at', 'desc')
             ->filters([
+                WorkspaceTable::filter(),
                 SelectFilter::make('section_id')
                     ->label('Section')
                     ->options(fn () => Section::query()
-                        ->when(
-                            auth()->user()?->is_admin && ! auth()->user()?->isSuperAdmin(),
-                            fn ($q) => $q->where('admin_id', auth()->id())
-                        )
                         ->orderBy('name')
                         ->pluck('name', 'id')
                     )

@@ -3,15 +3,23 @@
 namespace App\Providers;
 
 use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
+use App\Models\User;
+use App\Policies\UserPolicy;
 use App\Services\AiSdkProviderService;
+use App\Support\GamificationSyncContext;
 use App\Support\RequestCache;
+use App\Support\WorkspaceContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Queue\Events\JobProcessed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -29,6 +37,11 @@ class AppServiceProvider extends ServiceProvider
         // flushes it between requests and one user's data never leaks into
         // the next response served by the same worker.
         $this->app->scoped(RequestCache::class);
+
+        // Observer suppression must never be process-static under Octane.
+        // Scoped lifetime gives each HTTP request / queue job fresh counters.
+        $this->app->scoped(GamificationSyncContext::class);
+        $this->app->scoped(WorkspaceContext::class);
     }
 
     /**
@@ -38,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureRateLimiting();
+        $this->configureQueueWorkspacePropagation();
 
         app(AiManager::class)->extend(
             AiSdkProviderService::HEADER_AWARE_OPENAI_COMPATIBLE_DRIVER,
@@ -51,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
         // the repo's composer.json), so its dashboard gate is defined with a
         // plain Laravel API — this boots fine whether or not the package is
         // present. Only super admins may inspect queue status.
+        Gate::policy(User::class, UserPolicy::class);
         Gate::define('viewHorizon', fn ($user = null): bool => (bool) $user?->isSuperAdmin());
 
         // Register the /broadcasting/auth endpoint. Without this, the
@@ -81,6 +96,24 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /** Carry the active tenant through every queued job payload. */
+    protected function configureQueueWorkspacePropagation(): void
+    {
+        Queue::createPayloadUsing(fn (): array => [
+            'workspace_id' => app(WorkspaceContext::class)->id(),
+        ]);
+
+        Queue::before(function (JobProcessing $event): void {
+            app(WorkspaceContext::class)->set(
+                $event->job->payload()['workspace_id'] ?? null,
+            );
+        });
+
+        $clear = fn (): mixed => app(WorkspaceContext::class)->clear();
+        Queue::after(fn (JobProcessed $event) => $clear());
+        Queue::exceptionOccurred(fn (JobExceptionOccurred $event) => $clear());
     }
 
     /**
@@ -118,6 +151,8 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('chat', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
         RateLimiter::for('chats', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
+        RateLimiter::for('ai-actions', fn (Request $request) => Limit::perMinute(30)->by($this->rateLimitKey($request)));
+        RateLimiter::for('csp-reports', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('claim-xp', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
     }
 

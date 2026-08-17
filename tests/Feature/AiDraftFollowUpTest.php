@@ -65,6 +65,7 @@ it('appends new questions in add mode', function () {
     $draft->refresh();
 
     expect($draft->status)->toBe('ready')
+        ->and($draft->review_status)->toBe('awaiting_review')
         ->and($draft->questions)->toHaveCount(2)
         ->and($draft->questions[1]['text'])->toBe('Cells have nuclei.');
 
@@ -89,6 +90,7 @@ it('replaces the whole question set in replace mode', function () {
     $draft->refresh();
 
     expect($draft->status)->toBe('ready')
+        ->and($draft->review_status)->toBe('awaiting_review')
         ->and($draft->questions)->toHaveCount(2)
         ->and($draft->questions[0]['text'])->toBe('Explain how the nucleus controls the cell.')
         ->and($draft->questions[0]['type'])->toBe('essay');

@@ -10,7 +10,7 @@ class AnonymousMessage extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['user_id', 'content', 'likes_count', 'is_approved', 'admin_id'];
+    protected $fillable = ['user_id', 'content', 'likes_count', 'is_approved', 'workspace_id', 'admin_id'];
 
     public function user()
     {

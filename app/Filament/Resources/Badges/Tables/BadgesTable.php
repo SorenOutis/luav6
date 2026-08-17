@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Badges\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -15,6 +16,7 @@ class BadgesTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 ImageColumn::make('image_path')
                     ->label('Image')
                     ->disk('public')
@@ -37,6 +39,7 @@ class BadgesTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 //
             ])
             ->recordActions([

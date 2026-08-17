@@ -3,196 +3,117 @@
 namespace App\Ai\Tools;
 
 use App\Models\Exam;
-use App\Models\ExamPart;
-use App\Services\AiQuestionGeneratorService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
 
-class GenerateExamQuestionsTool implements Tool
+class GenerateExamQuestionsTool extends PendingWriteTool implements Tool
 {
-    /** Canonical question-type order used when grouping questions into parts. */
-    protected const TYPE_ORDER = ['multiple_choice', 'true_false', 'identification', 'essay'];
+    private const TYPE_ORDER = ['multiple_choice', 'true_false', 'identification', 'essay'];
 
-    protected const TYPE_LABELS = [
-        'multiple_choice' => 'Multiple Choice',
-        'true_false' => 'True or False',
+    private const TYPE_LABELS = [
+        'multiple_choice' => 'Multiple choice',
+        'true_false' => 'True or false',
         'identification' => 'Identification',
         'essay' => 'Essay',
     ];
 
-    protected const DEFAULT_INSTRUCTIONS = [
-        'multiple_choice' => 'Choose the best answer for each item.',
-        'true_false' => 'Write TRUE if the statement is correct, otherwise write FALSE.',
-        'identification' => 'Write the term or phrase being described.',
-        'essay' => 'Answer the following in complete sentences.',
-    ];
-
-    protected const DIFFICULTIES = ['easy', 'medium', 'hard'];
-
-    public function __construct(protected ?AiQuestionGeneratorService $service = null)
-    {
-        $this->service ??= app(AiQuestionGeneratorService::class);
-    }
-
-    /**
-     * Get the description of the tool's purpose.
-     */
     public function description(): Stringable|string
     {
-        return 'Generate AI exam questions from source material and attach them to an exam in the admin\'s workspace as new question parts. IMPORTANT: present the plan (exam, source, question counts, difficulty) to the admin first and only call this with confirm=true after they explicitly approve.';
+        return 'Prepare an AI question-generation job. This tool does not attach questions. The first UI approval starts generation into a private review draft; a teacher must then review the generated content and explicitly approve that saved revision before it can be attached to an exam.';
     }
 
-    /**
-     * Execute the tool.
-     */
     public function handle(Request $request): Stringable|string
     {
-        $admin = auth()->user();
-
-        if (! $admin?->is_admin) {
-            return 'Only admins can use this tool.';
+        if ($error = $this->adminError()) {
+            return $error;
         }
 
-        if (! filter_var($request['confirm'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
-            return 'NOT EXECUTED — confirmation missing. Present the generation plan to the admin and ask them to confirm; then call this tool again with confirm=true.';
-        }
-
-        // The workspace global scope makes this null for exams owned by
-        // another admin.
-        $exam = Exam::query()->find((int) ($request['exam_id'] ?? 0));
-
+        $exam = Exam::query()
+            ->withoutGlobalScope('workspace')
+            ->whereKey((int) ($request['exam_id'] ?? 0))
+            ->where('workspace_id', $this->workspaceId())
+            ->first();
         if (! $exam) {
-            return 'Error: exam not found in this workspace. Use the exams_admin tool to list valid exam IDs.';
+            return 'Error: exam not found in this workspace. Use exams_admin for valid exam IDs.';
         }
 
         $sourceText = trim((string) ($request['source_text'] ?? ''));
-
         if ($sourceText === '') {
-            return 'Error: source_text is required. Paste the material the questions should be based on.';
+            return 'Error: source_text is required.';
+        }
+        if (mb_strlen($sourceText) > 32000) {
+            return 'Error: source_text is too long (maximum 32,000 characters). Split the material into a smaller question-generation action.';
         }
 
-        $typeCounts = $this->normalizeCounts($request);
-        $total = array_sum($typeCounts);
-
-        if ($total <= 0) {
-            return 'Error: request at least one question (multiple_choice, true_false, identification, or essay).';
-        }
-
-        if ($total > 100) {
-            return 'Error: too many questions (max 100 total). Please reduce some counts.';
-        }
-
-        $difficulty = in_array((string) ($request['difficulty'] ?? ''), self::DIFFICULTIES, true)
-            ? (string) $request['difficulty']
-            : 'medium';
-
-        $topic = trim((string) ($request['topic'] ?? '')) ?: null;
-
-        try {
-            $questions = $this->service->generate($sourceText, $typeCounts, $difficulty, $topic);
-        } catch (\Throwable $e) {
-            return "Error generating questions: {$e->getMessage()}";
-        }
-
-        if (empty($questions)) {
-            return 'The AI returned no usable questions. Try a shorter/cleaner source or reduce the requested counts.';
-        }
-
-        $created = $this->attach($exam, $questions, $request);
-
-        return "Attached {$created} question part(s) to \"{$exam->title}\" (exam ID {$exam->id}).";
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    protected function normalizeCounts(Request $request): array
-    {
         $counts = [];
-
         foreach (self::TYPE_ORDER as $type) {
             $counts[$type] = max(0, (int) ($request[$type] ?? 0));
         }
-
-        return $counts;
-    }
-
-    /**
-     * Group the generated questions by type and create one ExamPart per type.
-     */
-    protected function attach(Exam $exam, array $questions, Request $request): int
-    {
-        $default = max(1, (int) ($request['points'] ?? 1) ?: 1);
-        $customInstructions = trim((string) ($request['instructions'] ?? ''));
-
-        $grouped = array_fill_keys(self::TYPE_ORDER, []);
-
-        foreach ($questions as $q) {
-            if (! is_array($q)) {
-                continue;
-            }
-
-            $type = (string) ($q['type'] ?? '');
-
-            if (! isset($grouped[$type])) {
-                continue;
-            }
-
-            $q['points'] = max(1, (int) ($q['points'] ?? $default) ?: $default);
-            $grouped[$type][] = $q;
+        if ($counts['multiple_choice'] > 30 || $counts['true_false'] > 30 || $counts['identification'] > 30 || $counts['essay'] > 10) {
+            return 'Error: question counts exceed the per-type limits (30 objective questions and 10 essays).';
+        }
+        $total = array_sum($counts);
+        if ($total <= 0) {
+            return 'Error: request at least one question.';
+        }
+        if ($total > 100) {
+            return 'Error: too many questions (max 100 total).';
         }
 
-        $nextOrder = (int) ($exam->parts()->max('sort_order') ?? 0);
-        $partIndex = $exam->parts()->count();
-        $romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
-        $created = 0;
+        $difficulty = (string) ($request['difficulty'] ?? 'medium');
+        if (! in_array($difficulty, ['easy', 'medium', 'hard'], true)) {
+            $difficulty = 'medium';
+        }
+        $topic = trim((string) ($request['topic'] ?? '')) ?: null;
+        $points = max(1, (int) ($request['points'] ?? 1));
+        $instructions = trim((string) ($request['instructions'] ?? '')) ?: null;
+        $countSummary = collect($counts)
+            ->filter()
+            ->map(fn (int $count, string $type): string => self::TYPE_LABELS[$type].": {$count}")
+            ->values()
+            ->all();
 
-        foreach (self::TYPE_ORDER as $type) {
-            $typeQuestions = $grouped[$type];
-
-            if (empty($typeQuestions)) {
-                continue;
-            }
-
-            $nextOrder++;
-            $partIndex++;
-            $roman = $romans[$partIndex - 1] ?? (string) $partIndex;
-
-            ExamPart::create([
+        return $this->stageAction(
+            'generate_exam_questions',
+            'Generate an exam question review draft',
+            "Generate {$total} question(s) as a private teacher-review draft for \"{$exam->title}\". Nothing will be attached until the generated content is separately approved.",
+            [
                 'exam_id' => $exam->id,
-                'title' => "Part {$roman} - ".self::TYPE_LABELS[$type],
-                'instructions' => $customInstructions !== '' ? $customInstructions : self::DEFAULT_INSTRUCTIONS[$type],
-                'type' => 'section',
-                'sort_order' => $nextOrder,
-                'points' => $default,
-                'questions' => $typeQuestions,
-            ]);
-
-            $created++;
-        }
-
-        return $created;
+                'expected_updated_at' => $exam->updated_at?->toJSON(),
+                'source_text' => $sourceText,
+                'topic' => $topic,
+                'difficulty' => $difficulty,
+                'type_counts' => $counts,
+                'points' => $points,
+                'instructions' => $instructions,
+            ],
+            [
+                ['field' => 'Target exam', 'before' => "{$exam->title} (#{$exam->id})", 'after' => "Private AI question draft for {$exam->title} (#{$exam->id}) — teacher approval still required"],
+                ['field' => 'Question counts', 'before' => null, 'after' => implode("\n", $countSummary)],
+                ['field' => 'Difficulty', 'before' => null, 'after' => $difficulty],
+                ['field' => 'Topic', 'before' => null, 'after' => $topic],
+                ['field' => 'Points per question', 'before' => null, 'after' => $points],
+                ['field' => 'Part instructions', 'before' => null, 'after' => $instructions ?: 'Default instructions by question type'],
+                ['field' => 'Source material', 'before' => null, 'after' => $sourceText],
+            ],
+        );
     }
 
-    /**
-     * Get the tool's schema definition.
-     */
     public function schema(JsonSchema $schema): array
     {
         return [
-            'exam_id' => $schema->integer()->description('Target exam ID from the exams_admin tool.')->required(),
-            'source_text' => $schema->string()->description('The source material the questions should be based on.')->required(),
-            'topic' => $schema->string()->description('Optional topic/title to focus the questions on.'),
-            'difficulty' => $schema->string()->description('Difficulty: easy, medium, or hard (default medium).'),
-            'multiple_choice' => $schema->integer()->description('Number of multiple choice questions (0–30).'),
-            'true_false' => $schema->integer()->description('Number of true/false questions (0–30).'),
-            'identification' => $schema->integer()->description('Number of identification questions (0–30).'),
-            'essay' => $schema->integer()->description('Number of essay questions (0–10).'),
+            'exam_id' => $schema->integer()->description('Target exam ID from exams_admin.')->required(),
+            'source_text' => $schema->string()->description('Source material for the questions.')->required(),
+            'topic' => $schema->string()->description('Optional topic/title to focus on.'),
+            'difficulty' => $schema->string()->description('easy, medium, or hard (default medium).'),
+            'multiple_choice' => $schema->integer()->description('Multiple choice count (0–30).'),
+            'true_false' => $schema->integer()->description('True/false count (0–30).'),
+            'identification' => $schema->integer()->description('Identification count (0–30).'),
+            'essay' => $schema->integer()->description('Essay count (0–10).'),
             'points' => $schema->integer()->description('Default points per question (default 1).'),
-            'instructions' => $schema->string()->description('Optional custom instructions applied to each new part.'),
-            'confirm' => $schema->boolean()->description('Must be true, and only after the admin explicitly approved the plan.')->required(),
+            'instructions' => $schema->string()->description('Optional instructions for each new part.'),
         ];
     }
 }

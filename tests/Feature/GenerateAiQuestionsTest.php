@@ -98,6 +98,8 @@ test('the generate job persists the raw AI response on success', function () {
     $draft->refresh();
 
     expect($draft->status)->toBe('ready');
+    expect($draft->review_status)->toBe('awaiting_review');
+    expect($draft->review_version)->toBe(1);
     expect($draft->questions)->toHaveCount(1);
     expect($draft->ai_response)->toBe($raw);
 });

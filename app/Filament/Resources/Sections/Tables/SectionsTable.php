@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Sections\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use App\Models\Section;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -18,6 +19,7 @@ class SectionsTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
@@ -47,6 +49,7 @@ class SectionsTable
                     ->color('primary'),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 //
             ])
             ->actions([

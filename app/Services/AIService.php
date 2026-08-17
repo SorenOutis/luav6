@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiBudgetExceededException;
 use App\Models\Setting;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -51,12 +52,18 @@ class AIService
         $this->ollamaModel = Setting::get('ollama_model', 'llama3.2:1b');
         $this->ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
 
-        // Read only the active provider's API settings.
-        match ($this->provider) {
+        $this->configureProvider((string) $this->provider);
+    }
+
+    private function configureProvider(string $provider): void
+    {
+        $this->provider = $provider;
+
+        match ($provider) {
             'cloudflare' => $this->loadCloudflareSettings(),
             'groq' => $this->loadGroqSettings(),
             'gemini' => $this->loadGeminiSettings(),
-            default => null, // Ollama or unknown — no extra API keys needed
+            default => null,
         };
     }
 
@@ -129,34 +136,43 @@ class AIService
             throw new \RuntimeException('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
         }
 
-        // Dispatch to the configured AI provider
+        $primary = (string) $this->provider;
+
         try {
-            $results = match (true) {
-                $this->provider === 'cloudflare' => $this->batchAssessWithCloudflare($essays),
-                $this->provider === 'groq' => $this->batchAssessWithGroq($essays),
-                AiSdkProviderService::isSdkRouted($this->provider) => $this->batchAssessWithSdk($essays),
-                default => $this->batchAssessWithGemini($essays),
-            };
-
-            $this->trackUsage($essays, $results);
-
-            return $results;
-        } catch (\Throwable $e) {
-            Log::warning("AI provider '{$this->provider}' failed for essay grading: ".$e->getMessage());
-
-            if ($this->ollamaEnabled) {
-                Log::info('Falling back to Ollama for essay grading');
-
-                try {
-                    return $this->batchAssessWithOllama($essays);
-                } catch (\Throwable $ollamaError) {
-                    Log::error('Ollama fallback also failed: '.$ollamaError->getMessage());
-                }
-            }
-
-            // Return zero scores for all essays on total failure
-            return $this->zeroScores($essays);
+            return $this->attemptAssessment($primary, $essays);
+        } catch (\Throwable $primaryFailure) {
+            Log::warning("AI provider '{$primary}' failed for essay grading: ".$primaryFailure->getMessage());
         }
+
+        $fallbackPolicy = app(AiProviderFallbackPolicy::class);
+        $fallback = $fallbackPolicy->fallbackFor($primary, $primaryFailure);
+
+        if ($fallback) {
+            app(AiBudgetManager::class)->recordFallback(
+                'grading',
+                $primary,
+                $fallback,
+                $fallbackPolicy->reason($primaryFailure),
+            );
+            Log::info("Falling back to {$fallback} for essay grading");
+
+            try {
+                return $this->attemptAssessment($fallback, $essays);
+            } catch (\Throwable $fallbackFailure) {
+                Log::error("AI fallback [{$fallback}] also failed: ".$fallbackFailure->getMessage());
+            }
+        }
+
+        if ($primaryFailure instanceof AiBudgetExceededException) {
+            throw $primaryFailure;
+        }
+        if (($fallbackFailure ?? null) instanceof AiBudgetExceededException) {
+            throw $fallbackFailure;
+        }
+
+        // Preserve the historical grading failure behavior for provider
+        // outages, but never convert a hard budget stop into a zero grade.
+        return $this->zeroScores($essays);
     }
 
     /**
@@ -180,41 +196,78 @@ class AIService
         ])[0] ?? ['score' => 0.0];
     }
 
-    /**
-     * Record an estimate of the tokens/neurons consumed by a grading batch.
-     */
-    private function trackUsage(array $essays, array $results): void
+    private function attemptAssessment(string $provider, array $essays): array
     {
-        $inputChars = 0;
-        foreach ($essays as $essay) {
-            $inputChars += strlen((string) ($essay['essayText'] ?? ''))
-                + strlen((string) ($essay['questionText'] ?? ''));
-        }
-        // The static rubric + JSON instructions are ~1,400 chars of prompt
-        // overhead per essay call.
-        $inputChars += count($essays) * 1500;
+        $this->configureProvider($provider);
+        $model = $this->modelForProvider($provider);
+        $inputTokens = $this->gradingInputTokens($essays);
+        $usage = app(AiUsageTracker::class);
+        $reservation = $usage->start(
+            $provider,
+            $model,
+            'grading',
+            $inputTokens,
+            max(1000, count($essays) * 1000),
+        );
 
-        $outputChars = 0;
-        foreach ($results as $result) {
-            $outputChars += strlen((string) ($result['feedback'] ?? ''));
-        }
-        // Small JSON wrapper around each score payload.
-        $outputChars += count($results) * 24;
+        try {
+            $results = match (true) {
+                $provider === 'cloudflare' => $this->batchAssessWithCloudflare($essays),
+                $provider === 'groq' => $this->batchAssessWithGroq($essays),
+                $provider === 'ollama' => $this->batchAssessWithOllama($essays),
+                AiSdkProviderService::isSdkRouted($provider) => $this->batchAssessWithSdk($essays),
+                default => $this->batchAssessWithGemini($essays),
+            };
 
-        $model = match ($this->provider) {
+            $usage->complete(
+                $reservation,
+                $provider,
+                $model,
+                'grading',
+                $inputTokens,
+                $this->gradingOutputTokens($results),
+            );
+
+            return $results;
+        } catch (\Throwable $exception) {
+            $usage->cancel($reservation, $exception->getMessage());
+
+            throw $exception;
+        }
+    }
+
+    private function modelForProvider(string $provider): ?string
+    {
+        return match ($provider) {
             'cloudflare' => $this->cloudflareModel,
             'groq' => $this->groqModel,
             'gemini' => $this->geminiModel,
-            default => null,
+            'ollama' => $this->ollamaModel,
+            default => AiSdkProviderService::isSdkRouted($provider)
+                ? AiSdkProviderService::for($provider)->model()
+                : null,
         };
+    }
 
-        app(AiUsageTracker::class)->record(
-            $this->provider,
-            $model,
-            'grading',
-            AiUsageTracker::tokensFromChars($inputChars),
-            AiUsageTracker::tokensFromChars($outputChars),
-        );
+    private function gradingInputTokens(array $essays): int
+    {
+        $characters = count($essays) * 1500;
+        foreach ($essays as $essay) {
+            $characters += strlen((string) ($essay['essayText'] ?? ''))
+                + strlen((string) ($essay['questionText'] ?? ''));
+        }
+
+        return AiUsageTracker::tokensFromChars($characters);
+    }
+
+    private function gradingOutputTokens(array $results): int
+    {
+        $characters = count($results) * 24;
+        foreach ($results as $result) {
+            $characters += strlen((string) ($result['feedback'] ?? ''));
+        }
+
+        return AiUsageTracker::tokensFromChars($characters);
     }
 
     // ──────────────────────────────────────────────
@@ -254,11 +307,13 @@ class AIService
     private function parseOllamaResponses(array $essays, array $responses): array
     {
         $results = [];
+        $successfulResponses = 0;
         foreach ($essays as $index => $essay) {
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
             if ($response instanceof Response && $response->successful()) {
+                $successfulResponses++;
                 $rawPayload = $response->json('response') ?? $response->json();
                 if ($rawPayload !== null) {
                     $parsed = $this->extractJsonFromResponse($rawPayload);
@@ -272,6 +327,10 @@ class AIService
             }
 
             $results[$index] = $result;
+        }
+
+        if ($successfulResponses === 0 && $essays !== []) {
+            throw new \RuntimeException('Ollama returned no successful grading responses.');
         }
 
         return $results;
@@ -315,11 +374,13 @@ class AIService
     private function parseCloudflareResponses(array $essays, array $responses): array
     {
         $results = [];
+        $successfulResponses = 0;
         foreach ($essays as $index => $essay) {
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
             if ($response instanceof Response && $response->successful()) {
+                $successfulResponses++;
                 $data = $response->json();
                 $rawPayload = $data['result']['response'] ?? $data['result'] ?? $data['response'] ?? null;
                 if ($rawPayload !== null) {
@@ -334,6 +395,10 @@ class AIService
             }
 
             $results[$index] = $result;
+        }
+
+        if ($successfulResponses === 0 && $essays !== []) {
+            throw new \RuntimeException('Cloudflare returned no successful grading responses.');
         }
 
         return $results;
@@ -384,11 +449,13 @@ class AIService
     private function parseGroqResponses(array $essays, array $responses): array
     {
         $results = [];
+        $successfulResponses = 0;
         foreach ($essays as $index => $essay) {
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
             if ($response instanceof Response && $response->successful()) {
+                $successfulResponses++;
                 $data = $response->json();
                 $rawPayload = $data['choices'][0]['message']['content'] ?? null;
                 if ($rawPayload !== null) {
@@ -403,6 +470,10 @@ class AIService
             }
 
             $results[$index] = $result;
+        }
+
+        if ($successfulResponses === 0 && $essays !== []) {
+            throw new \RuntimeException('Groq returned no successful grading responses.');
         }
 
         return $results;
@@ -429,6 +500,7 @@ class AIService
         $sdkProvider->applyToSdk();
 
         $results = [];
+        $successfulResponses = 0;
         foreach ($essays as $index => $essay) {
             $result = ['score' => 0.0];
 
@@ -441,6 +513,7 @@ class AIService
 
                 $response = agent(instructions: 'You are a strict academic examiner. Always respond with valid JSON only.')
                     ->prompt($prompt, provider: $this->provider, model: $sdkProvider->model());
+                $successfulResponses++;
 
                 $parsed = $this->extractJsonFromResponse((string) $response->text);
                 $result = $this->buildResultFromData($parsed ?: [], $essay);
@@ -449,6 +522,10 @@ class AIService
             }
 
             $results[$index] = $result;
+        }
+
+        if ($successfulResponses === 0 && $essays !== []) {
+            throw new \RuntimeException("AI provider [{$this->provider}] returned no successful grading responses.");
         }
 
         return $results;
@@ -500,11 +577,13 @@ class AIService
     private function parseGeminiResponses(array $essays, array $responses): array
     {
         $results = [];
+        $successfulResponses = 0;
         foreach ($essays as $index => $essay) {
             $response = $responses[(string) $index] ?? null;
             $result = ['score' => 0.0];
 
             if ($response instanceof Response && $response->successful()) {
+                $successfulResponses++;
                 $data = $response->json();
                 $rawPayload = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
                 if ($rawPayload !== null) {
@@ -519,6 +598,10 @@ class AIService
             }
 
             $results[$index] = $result;
+        }
+
+        if ($successfulResponses === 0 && $essays !== []) {
+            throw new \RuntimeException('Gemini returned no successful grading responses.');
         }
 
         return $results;

@@ -9,7 +9,7 @@ class Assignment extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'admin_id'];
+    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id'];
 
     public function course()
     {

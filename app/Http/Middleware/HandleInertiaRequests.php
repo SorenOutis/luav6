@@ -2,9 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Data\AuthUserData;
 use App\Models\Setting;
+use App\Models\Workspace;
 use App\Support\PublicFileUrl;
 use App\Support\StudentPageRegistry;
+use App\Support\WorkspaceContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,8 +45,9 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => AuthUserData::from($request->user()),
             ],
+            'workspace' => fn () => $this->workspaceProps($request),
             'seo' => [
                 'siteName' => config('seo.site_name'),
                 'tagline' => config('seo.tagline'),
@@ -103,6 +107,47 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'sectionName' => fn () => $request->user()?->sections->pluck('name')->join(', '),
+        ];
+    }
+
+    private function workspaceProps(Request $request): array
+    {
+        $user = $request->user();
+        if (! $user) {
+            return ['current' => null, 'available' => []];
+        }
+
+        $context = app(WorkspaceContext::class);
+        $currentId = $context->id();
+
+        if ($user->isSuperAdmin()) {
+            $available = Workspace::query()
+                ->whereNull('archived_at')
+                ->orderBy('name')
+                ->get(['id', 'public_id', 'name'])
+                ->map(fn ($workspace) => [
+                    'id' => $workspace->public_id,
+                    'name' => $workspace->name,
+                    'role' => 'super-admin',
+                    'isCurrent' => (int) $workspace->id === (int) $currentId,
+                ])->values()->all();
+        } else {
+            $available = $user->workspaces()
+                ->whereNull('workspaces.archived_at')
+                ->orderBy('name')
+                ->get(['workspaces.id', 'public_id', 'name'])
+                ->map(fn ($workspace) => [
+                    'id' => $workspace->public_id,
+                    'name' => $workspace->name,
+                    'role' => $workspace->pivot->role,
+                    'isCurrent' => (int) $workspace->id === (int) $currentId,
+                ])->values()->all();
+        }
+
+        return [
+            'current' => collect($available)->firstWhere('isCurrent', true),
+            'available' => $available,
+            'isInspecting' => $context->isInspecting(),
         ];
     }
 }

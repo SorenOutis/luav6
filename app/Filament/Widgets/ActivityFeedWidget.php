@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Assignment;
+use App\Models\Badge;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use Carbon\Carbon;
@@ -41,6 +43,7 @@ class ActivityFeedWidget extends Widget
 
         // Exam submissions
         $examSubmissions = ExamSubmission::query()
+            ->whereHas('exam')
             ->with(['user:id,name', 'exam:id,title'])
             ->where('created_at', '>=', $cutoff)
             ->orderByDesc('created_at')
@@ -58,6 +61,7 @@ class ActivityFeedWidget extends Widget
         // Badge awards
         $badges = DB::table('badge_user')
             ->join('users', 'badge_user.user_id', '=', 'users.id')
+            ->whereIn('badge_user.badge_id', Badge::query()->select('id'))
             ->join('badges', 'badge_user.badge_id', '=', 'badges.id')
             ->where('badge_user.created_at', '>=', $cutoff)
             ->orderByDesc('badge_user.created_at')
@@ -74,6 +78,7 @@ class ActivityFeedWidget extends Widget
         // Assignment submissions
         $assignmentSubmissions = DB::table('assignment_user')
             ->join('users', 'assignment_user.user_id', '=', 'users.id')
+            ->whereIn('assignment_user.assignment_id', Assignment::query()->select('id'))
             ->join('assignments', 'assignment_user.assignment_id', '=', 'assignments.id')
             ->where('assignment_user.submitted', true)
             ->where('assignment_user.updated_at', '>=', $cutoff)

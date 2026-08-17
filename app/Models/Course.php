@@ -15,6 +15,7 @@ class Course extends Model
         'description',
         'total_lessons',
         'cover_photo',
+        'workspace_id',
         'admin_id',
     ];
 
@@ -35,7 +36,10 @@ class Course extends Model
      */
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('completed_lessons', 'xp_earned', 'next_deadline')->withTimestamps();
+        return $this->belongsToMany(User::class)
+            ->using(CourseUser::class)
+            ->withPivot('completed_lessons', 'xp_earned', 'next_deadline')
+            ->withTimestamps();
     }
 
     /**

@@ -6,9 +6,9 @@ namespace App\Enums;
  * Phase 4.1 — exam submission lifecycle.
  *
  * submitted      auto-gradable only; final
- * pending_review contains essays awaiting teacher review
- * pending_ai     automatic AI grading or feedback is still pending/failed
- * graded         automatic AI score and feedback are complete
+ * pending_review contains essays or AI proposals awaiting explicit teacher review
+ * pending_ai     AI proposal generation is still pending/failed
+ * graded         every essay score/feedback decision has been applied by a teacher
  */
 enum SubmissionStatus: string
 {

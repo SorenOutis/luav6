@@ -22,15 +22,7 @@ class GradeResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
-        $user = auth()->user();
-
-        // Regular admins only see grades for students enrolled in their sections
-        if ($user && $user->is_admin && ! $user->isSuperAdmin()) {
-            $query->whereHas('student.sections', fn (Builder $q) => $q->where('admin_id', $user->id));
-        }
-
-        return $query;
+        return parent::getEloquentQuery();
     }
 
     protected static string|\UnitEnum|null $navigationGroup = 'Learning';

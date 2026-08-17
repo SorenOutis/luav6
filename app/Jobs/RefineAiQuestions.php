@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\AiQuestionDraft;
 use App\Services\AiQuestionGeneratorService;
+use App\Services\AiReviewService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -36,7 +37,7 @@ class RefineAiQuestions implements ShouldQueue
 
     public function handle(AiQuestionGeneratorService $service): void
     {
-        $draft = AiQuestionDraft::query()->find($this->draftId);
+        $draft = AiQuestionDraft::query()->withoutGlobalScope('workspace')->find($this->draftId);
         if (! $draft) {
             return;
         }
@@ -67,12 +68,11 @@ class RefineAiQuestions implements ShouldQueue
                 throw new \RuntimeException('The AI returned no usable questions for that follow-up. Try rephrasing the instruction or switching providers.');
             }
 
-            $draft->forceFill([
-                'questions' => $this->mode === 'replace' ? $new : array_merge($existing, $new),
-                'status' => 'ready',
-                'ai_response' => $service->lastRawResponse,
-                'generated_at' => now(),
-            ])->save();
+            app(AiReviewService::class)->submitQuestionDraftForReview(
+                $draft,
+                $this->mode === 'replace' ? $new : array_merge($existing, $new),
+                $service->lastRawResponse,
+            );
         } catch (\Throwable $e) {
             // A failed follow-up must never destroy the existing questions —
             // restore "ready" and surface the error on the draft instead.

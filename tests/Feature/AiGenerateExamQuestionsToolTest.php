@@ -1,17 +1,15 @@
 <?php
 
 use App\Ai\Tools\GenerateExamQuestionsTool;
+use App\Models\AiQuestionDraft;
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\PendingAiAction;
 use App\Models\User;
 use App\Services\AiQuestionGeneratorService;
+use App\Services\PendingAiActionService;
 use Laravel\Ai\Tools\Request;
 
-/**
- * Test-only generator that returns predictable questions without any network
- * call, and records the arguments it was given so tests can assert the tool
- * passes the right source/counts/difficulty/topic.
- */
 class StubQuestionGenerator extends AiQuestionGeneratorService
 {
     public array $lastCall = [];
@@ -27,7 +25,6 @@ class StubQuestionGenerator extends AiQuestionGeneratorService
         }
 
         $questions = [];
-
         foreach ([
             'multiple_choice' => ['options' => true],
             'true_false' => ['options' => true],
@@ -35,41 +32,41 @@ class StubQuestionGenerator extends AiQuestionGeneratorService
             'essay' => [],
         ] as $type => $shape) {
             for ($i = 0; $i < (int) ($typeCounts[$type] ?? 0); $i++) {
-                $q = [
+                $question = [
                     'type' => $type,
                     'text' => ucfirst(str_replace('_', ' ', $type))." question {$i}",
                 ];
-
                 if (($shape['options'] ?? false) === true) {
-                    $q['options'] = [
+                    $question['options'] = [
                         ['text' => 'Option A', 'is_correct' => true],
                         ['text' => 'Option B', 'is_correct' => false],
                     ];
                 }
-
                 if (($shape['correct_answer'] ?? false) === true) {
-                    $q['correct_answer'] = 'Answer';
+                    $question['correct_answer'] = 'Answer';
                 }
-
-                $questions[] = $q;
+                $questions[] = $question;
             }
         }
 
         return $questions;
     }
 }
-it('attaches generated questions to the exam as grouped parts after confirmation', function () {
+
+function generatedQuestionActionNonce(PendingAiAction $action): string
+{
+    return app(PendingAiActionService::class)->present($action)['nonce'];
+}
+
+it('generates a private teacher-review draft after browser approval', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
-
     $exam = Exam::factory()->create(['title' => 'Cell Biology Midterm']);
 
     $fake = new StubQuestionGenerator;
     $this->app->instance(AiQuestionGeneratorService::class, $fake);
 
-    $tool = new GenerateExamQuestionsTool;
-
-    $result = $tool->handle(new Request([
+    $result = (new GenerateExamQuestionsTool)->handle(new Request([
         'exam_id' => $exam->id,
         'source_text' => 'The mitochondrion produces ATP.',
         'topic' => 'Cellular respiration',
@@ -79,12 +76,19 @@ it('attaches generated questions to the exam as grouped parts after confirmation
         'identification' => 1,
         'essay' => 1,
         'points' => 2,
-        'confirm' => true,
     ]));
 
-    expect($result)->toMatch('/Attached 4 question part\(s\) to "Cell Biology Midterm" \(exam ID \d+\)/');
+    $action = PendingAiAction::firstOrFail();
 
-    // The tool passed the right arguments to the generator.
+    expect($result)->toContain('PENDING HUMAN APPROVAL')
+        ->and($fake->lastCall)->toBe([])
+        ->and(ExamPart::count())->toBe(0)
+        ->and($action->preview['changes'][1]['after'])->toContain('Multiple choice: 2');
+
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => generatedQuestionActionNonce($action),
+    ])->assertOk()->assertJsonPath('data.status', PendingAiAction::STATUS_EXECUTED);
+
     expect($fake->lastCall['sourceText'])->toBe('The mitochondrion produces ATP.')
         ->and($fake->lastCall['difficulty'])->toBe('hard')
         ->and($fake->lastCall['topic'])->toBe('Cellular respiration')
@@ -95,62 +99,52 @@ it('attaches generated questions to the exam as grouped parts after confirmation
             'essay' => 1,
         ]);
 
-    // One part per requested type, in canonical order.
-    $parts = ExamPart::where('exam_id', $exam->id)->orderBy('sort_order')->get();
-
-    expect($parts)->toHaveCount(4)
-        ->and($parts->pluck('title')->all())->toBe([
-            'Part I - Multiple Choice',
-            'Part II - True or False',
-            'Part III - Identification',
-            'Part IV - Essay',
-        ])
-        ->and($parts->pluck('type')->all())->toBe(['section', 'section', 'section', 'section'])
-        ->and($parts->pluck('sort_order')->all())->toBe([1, 2, 3, 4])
-        ->and($parts->pluck('points')->all())->toBe([2, 2, 2, 2]);
-
-    // The MC part holds exactly the two generated MC questions.
-    expect($parts[0]->questions)->toHaveCount(2)
-        ->and($parts[0]->questions[0]['text'])->toBe('Multiple choice question 0')
-        ->and($parts[0]->questions[0]['points'])->toBe(2)
-        ->and($parts[0]->questions[0]['options'][0]['is_correct'])->toBeTrue();
-
-    // Default per-type instructions are applied when none provided.
-    expect($parts[0]->instructions)->toBe('Choose the best answer for each item.')
-        ->and($parts[2]->instructions)->toBe('Write the term or phrase being described.');
+    $draft = AiQuestionDraft::firstOrFail();
+    expect(ExamPart::where('exam_id', $exam->id)->count())->toBe(0)
+        ->and($draft->target_exam_id)->toBe($exam->id)
+        ->and($draft->review_status)->toBe(AiQuestionDraft::REVIEW_AWAITING)
+        ->and($draft->review_version)->toBe(1)
+        ->and($draft->questions)->toHaveCount(5)
+        ->and($draft->questions[0]['points'])->toBe(2);
 });
 
-it('refuses non-admins', function () {
+it('refuses non-admins before creating an action', function () {
     $this->actingAs(User::factory()->create());
 
-    $result = (new GenerateExamQuestionsTool(new StubQuestionGenerator))->handle(new Request([
+    $result = (new GenerateExamQuestionsTool)->handle(new Request([
         'exam_id' => 1,
         'source_text' => 'Some material.',
-        'confirm' => true,
+        'multiple_choice' => 1,
     ]));
 
     expect($result)->toContain('Only admins')
+        ->and(PendingAiAction::count())->toBe(0)
         ->and(ExamPart::count())->toBe(0);
 });
 
-it('does not generate without confirmation', function () {
+it('validates source and question counts before staging', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
-
     $exam = Exam::factory()->create();
 
-    $result = (new GenerateExamQuestionsTool(new StubQuestionGenerator))->handle(new Request([
+    expect((new GenerateExamQuestionsTool)->handle(new Request([
         'exam_id' => $exam->id,
-        'source_text' => 'Some material.',
+        'source_text' => '  ',
         'multiple_choice' => 1,
-        'confirm' => false,
-    ]));
-
-    expect($result)->toContain('NOT EXECUTED')
-        ->and(ExamPart::count())->toBe(0);
+    ])))->toContain('source_text is required')
+        ->and((new GenerateExamQuestionsTool)->handle(new Request([
+            'exam_id' => $exam->id,
+            'source_text' => 'Some material.',
+        ])))->toContain('at least one question')
+        ->and((new GenerateExamQuestionsTool)->handle(new Request([
+            'exam_id' => $exam->id,
+            'source_text' => 'Some material.',
+            'multiple_choice' => 31,
+        ])))->toContain('per-type limits')
+        ->and(PendingAiAction::count())->toBe(0);
 });
 
-it('rejects an exam from another workspace', function () {
+it('rejects an exam from another workspace before staging', function () {
     $adminA = User::factory()->admin()->create();
     $adminB = User::factory()->admin()->create();
 
@@ -158,87 +152,65 @@ it('rejects an exam from another workspace', function () {
     $foreignExam = Exam::factory()->create();
 
     $this->actingAs($adminA);
-
-    $result = (new GenerateExamQuestionsTool(new StubQuestionGenerator))->handle(new Request([
+    $result = (new GenerateExamQuestionsTool)->handle(new Request([
         'exam_id' => $foreignExam->id,
         'source_text' => 'Some material.',
         'multiple_choice' => 1,
-        'confirm' => true,
     ]));
 
     expect($result)->toContain('not found')
-        ->and(ExamPart::count())->toBe(0);
-});
-it('requires source text', function () {
-    $admin = User::factory()->admin()->create();
-    $this->actingAs($admin);
-
-    $exam = Exam::factory()->create();
-
-    $result = (new GenerateExamQuestionsTool(new StubQuestionGenerator))->handle(new Request([
-        'exam_id' => $exam->id,
-        'source_text' => '   ',
-        'multiple_choice' => 1,
-        'confirm' => true,
-    ]));
-
-    expect($result)->toContain('source_text is required')
+        ->and(PendingAiAction::count())->toBe(0)
         ->and(ExamPart::count())->toBe(0);
 });
 
-it('requires at least one question', function () {
+it('marks the approved action failed when generation returns no questions', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
-
-    $exam = Exam::factory()->create();
-
-    $result = (new GenerateExamQuestionsTool(new StubQuestionGenerator))->handle(new Request([
-        'exam_id' => $exam->id,
-        'source_text' => 'Some material.',
-        'confirm' => true,
-    ]));
-
-    expect($result)->toContain('at least one question')
-        ->and(ExamPart::count())->toBe(0);
-});
-
-it('rejects more than 100 total questions', function () {
-    $admin = User::factory()->admin()->create();
-    $this->actingAs($admin);
-
-    $exam = Exam::factory()->create();
-
-    $result = (new GenerateExamQuestionsTool(new StubQuestionGenerator))->handle(new Request([
-        'exam_id' => $exam->id,
-        'source_text' => 'Some material.',
-        'multiple_choice' => 30,
-        'true_false' => 30,
-        'identification' => 30,
-        'essay' => 11,
-        'confirm' => true,
-    ]));
-
-    expect($result)->toContain('too many questions')
-        ->and(ExamPart::count())->toBe(0);
-});
-
-it('handles the AI returning no usable questions', function () {
-    $admin = User::factory()->admin()->create();
-    $this->actingAs($admin);
-
     $exam = Exam::factory()->create();
 
     $fake = new StubQuestionGenerator;
     $fake->shouldReturnEmpty = true;
     $this->app->instance(AiQuestionGeneratorService::class, $fake);
 
-    $result = (new GenerateExamQuestionsTool)->handle(new Request([
+    (new GenerateExamQuestionsTool)->handle(new Request([
         'exam_id' => $exam->id,
         'source_text' => 'Some material.',
         'multiple_choice' => 1,
-        'confirm' => true,
     ]));
+    $action = PendingAiAction::firstOrFail();
 
-    expect($result)->toContain('no usable questions')
-        ->and(ExamPart::count())->toBe(0);
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => generatedQuestionActionNonce($action),
+    ])->assertStatus(422)->assertJsonPath(
+        'message',
+        'The AI returned no usable questions. Try a shorter source or reduce the requested counts.',
+    );
+
+    expect(ExamPart::count())->toBe(0)
+        ->and($action->refresh()->status)->toBe(PendingAiAction::STATUS_FAILED);
+});
+
+it('never attaches generated questions even when the target exam already has parts', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+    $exam = Exam::factory()->create();
+
+    $fake = new StubQuestionGenerator;
+    $this->app->instance(AiQuestionGeneratorService::class, $fake);
+
+    (new GenerateExamQuestionsTool)->handle(new Request([
+        'exam_id' => $exam->id,
+        'source_text' => 'Some material.',
+        'multiple_choice' => 1,
+    ]));
+    $action = PendingAiAction::firstOrFail();
+    ExamPart::factory()->create(['exam_id' => $exam->id, 'sort_order' => 1]);
+
+    $this->postJson(route('ai-actions.approve', $action), [
+        'nonce' => generatedQuestionActionNonce($action),
+    ])->assertOk();
+
+    expect(ExamPart::where('exam_id', $exam->id)->count())->toBe(1)
+        ->and(AiQuestionDraft::count())->toBe(1)
+        ->and($action->refresh()->status)->toBe(PendingAiAction::STATUS_EXECUTED);
 });

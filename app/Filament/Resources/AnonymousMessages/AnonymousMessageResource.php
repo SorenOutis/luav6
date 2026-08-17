@@ -25,7 +25,7 @@ class AnonymousMessageResource extends Resource
     {
         $user = Filament::auth()->user();
 
-        return ! ($user && $user->is_admin && ! $user->isSuperAdmin());
+        return (bool) $user?->is_admin;
     }
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleBottomCenterText;

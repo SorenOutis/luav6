@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Seasons\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -15,6 +16,7 @@ class SeasonsTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('start_date')
@@ -38,6 +40,7 @@ class SeasonsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 //
             ])
             ->recordActions([

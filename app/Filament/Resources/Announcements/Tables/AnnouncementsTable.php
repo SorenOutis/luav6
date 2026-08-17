@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Announcements\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -15,6 +16,7 @@ class AnnouncementsTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('section.name')
@@ -34,6 +36,7 @@ class AnnouncementsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 //
             ])
             ->recordActions([

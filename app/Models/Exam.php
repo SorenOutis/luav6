@@ -25,6 +25,7 @@ class Exam extends Model
         'ai_feedback_enabled_at',
         'url',
         'section_id',
+        'workspace_id',
         'admin_id',
     ];
 

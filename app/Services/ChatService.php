@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Ai\Agents\AdminAssistantAgent;
 use App\Ai\Agents\AssistantAgent;
+use App\Models\AiBudgetReservation;
+use App\Models\ChatSession;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -32,11 +34,27 @@ use Throwable;
  */
 class ChatService
 {
-    /** Max number of files a student may attach to a single message. */
+    /** Max number of files a user may attach to a single message. */
     public const MAX_ATTACHMENTS = 4;
+
+    /** Hard bounds applied before any chat provider receives the message. */
+    public const MAX_MESSAGE_CHARACTERS = 8000;
+
+    public const MAX_MESSAGE_TOKENS = 3000;
 
     /** Per-file size cap in kilobytes (5 MB). */
     public const MAX_ATTACHMENT_KB = 5120;
+
+    /**
+     * Maximum persisted turns sent back to an AI provider.
+     *
+     * The conversation itself remains durable; this only bounds each prompt's
+     * database read, memory use, latency, and provider context cost.
+     */
+    public const MAX_CONTEXT_MESSAGES = 40;
+
+    /** Approximate prompt-history budget (about 8k tokens for English text). */
+    public const MAX_CONTEXT_CHARACTERS = 32000;
 
     /** MIME types accepted as chat attachments (images + common documents). */
     public const ALLOWED_ATTACHMENT_MIMES = [
@@ -82,6 +100,26 @@ class ChatService
             'mime' => $file->getMimeType() ?: 'application/octet-stream',
             'kind' => str_starts_with($file->getMimeType() ?? '', 'image/') ? 'image' : 'document',
         ];
+    }
+
+    /** @return array<int, mixed> */
+    public function messageValidationRules(): array
+    {
+        return [
+            'required',
+            'string',
+            'max:'.self::MAX_MESSAGE_CHARACTERS,
+            function (string $attribute, mixed $value, \Closure $fail): void {
+                if (is_string($value) && self::tokensFromText($value) > self::MAX_MESSAGE_TOKENS) {
+                    $fail('The message is too large for one AI request. Shorten it or split it into smaller messages.');
+                }
+            },
+        ];
+    }
+
+    public static function tokensFromText(string $text): int
+    {
+        return max(1, (int) ceil(strlen($text) / 3));
     }
 
     /**
@@ -152,6 +190,57 @@ class ChatService
             ->filter(fn (string $text) => trim($text) !== '')
             ->values()
             ->join("\n\n");
+    }
+
+    /**
+     * Return the newest useful slice of a persisted conversation.
+     *
+     * Rows are read newest-first so SQL can stop at MAX_CONTEXT_MESSAGES, then
+     * selected newest-to-oldest until the character budget is full and finally
+     * restored to chronological order for the provider. A single oversized
+     * turn is truncated rather than allowing one message to defeat the bound.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function contextMessages(ChatSession $session): array
+    {
+        $remaining = self::MAX_CONTEXT_CHARACTERS;
+        $selected = [];
+
+        $messages = $session->messages()
+            ->select(['id', 'role', 'content', 'thinking', 'attachments'])
+            ->reorder()
+            ->latest('id')
+            ->limit(self::MAX_CONTEXT_MESSAGES)
+            ->get();
+
+        foreach ($messages as $message) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $content = (string) $message->content;
+            if (mb_strlen($content) > $remaining) {
+                $content = mb_substr($content, 0, $remaining);
+            }
+
+            $row = [
+                'role' => (string) $message->role,
+                'content' => $content,
+            ];
+
+            if ($message->thinking) {
+                $row['thinking'] = $message->thinking;
+            }
+            if ($message->attachments) {
+                $row['attachments'] = $message->attachments;
+            }
+
+            $selected[] = $row;
+            $remaining -= mb_strlen($content);
+        }
+
+        return array_reverse($selected);
     }
 
     /**
@@ -283,7 +372,7 @@ class ChatService
 
     /**
      * Route the conversation through the configured AI provider and return
-     * the assistant's text response, falling back to Ollama when enabled.
+     * the assistant's text response, applying the workspace fallback rule.
      *
      * @param  array<int, array{role: string, content: string}>  $historyData
      * @param  array<int, File>  $attachments
@@ -291,151 +380,63 @@ class ChatService
     public function prompt(string $message, array $historyData, string $userContext, ?User $user, array $attachments = [], array $loggingContext = []): string
     {
         $history = $this->buildHistoryMessages($historyData);
-
-        // Select agent based on provider setting; the user's role picks
-        // the agent class (admins get workspace management tools).
-        $provider = Setting::get('ai_provider', 'gemini');
-        $ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
+        $primary = (string) Setting::get('ai_provider', 'gemini');
         $agentClass = $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
-        $startedAt = hrtime(true);
-        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agentClass);
-
-        if (AiSdkProviderService::isRemovedCompatibleProvider($provider)) {
-            throw new \Exception('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
-        }
 
         try {
-            if ($provider === 'cloudflare') {
-                // Cloudflare Workers AI keeps its raw integration — it has
-                // no tool-calling support, so Echo answers without tools.
-                $cloudflareService = new CloudflareAIService;
-                $attemptContext = $this->providerContext($loggingContext, 'cloudflare', Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash'), $agentClass);
-                $this->aiChatLogger->info('ai_chat.provider.started', $attemptContext);
-
-                $response = $cloudflareService->prompt($message, $historyData, $userContext);
-                $this->logCompletedResponse($attemptContext, $response, $startedAt);
-
-                return $response;
-            }
-
-            if ($provider === 'groq') {
-                // Groq goes through the Laravel AI SDK so tool calling
-                // works — the raw GroqAIService integration has none.
-                $groqApiKey = Setting::get('groq_api_key') ?: config('ai.providers.groq.env_key');
-                $groqModel = Setting::get('groq_model', 'llama-3.1-8b-instant');
-                $attemptContext = $this->providerContext($loggingContext, 'groq', $groqModel, $agentClass);
-                $this->aiChatLogger->info('ai_chat.provider.started', $attemptContext);
-
-                if (! $groqApiKey) {
-                    throw new \Exception('Groq is not configured. Paste your API key in Platform Settings.');
-                }
-
-                config([
-                    'ai.providers.groq.key' => $groqApiKey,
-                    'ai.providers.groq.models.text.default' => $groqModel,
-                ]);
-                app(AiManager::class)->forgetInstance('groq');
-
-                $response = $this->promptAgent($agentClass, $history, $userContext, $message, 'groq', $groqModel, $attachments);
-
-                app(AiUsageTracker::class)->record(
-                    'groq',
-                    $groqModel,
-                    'chat',
-                    AiUsageTracker::tokensFromChars(strlen($message) + strlen($userContext)),
-                    AiUsageTracker::tokensFromChars(strlen((string) $response)),
-                );
-                $this->logCompletedResponse($attemptContext, $response, $startedAt);
-
-                return $response;
-            }
-
-            if (AiSdkProviderService::isSdkRouted($provider)) {
-                // Any other text-capable Laravel AI SDK provider (OpenAI,
-                // Anthropic, Mistral, DeepSeek, xAI, OpenRouter, Azure,
-                // Ollama). Credentials and model come from Platform
-                // Settings; the per-prompt provider/model override beats
-                // the agent's #[Provider('gemini')] attribute.
-                $sdkProvider = AiSdkProviderService::for($provider);
-                $attemptContext = $this->providerContext($loggingContext, $provider, $sdkProvider->model(), $agentClass);
-                $this->aiChatLogger->info('ai_chat.provider.started', $attemptContext);
-
-                if (! $sdkProvider->isConfigured()) {
-                    throw new \Exception("{$provider} is not configured. Paste your API key in Platform Settings.");
-                }
-
-                $sdkProvider->applyToSdk();
-
-                $response = $this->promptAgent($agentClass, $history, $userContext, $message, $provider, $sdkProvider->model(), $attachments);
-
-                app(AiUsageTracker::class)->record(
-                    $provider,
-                    $sdkProvider->model(),
-                    'chat',
-                    AiUsageTracker::tokensFromChars(strlen($message) + strlen($userContext)),
-                    AiUsageTracker::tokensFromChars(strlen((string) $response)),
-                );
-                $this->logCompletedResponse($attemptContext, $response, $startedAt);
-
-                return $response;
-            }
-
-            // Point the Laravel AI SDK at the Gemini key/model stored
-            // in Platform Settings (falls back to env GEMINI_API_KEY).
-            $gemini = app(GeminiAIService::class);
-            $attemptContext = $this->providerContext($loggingContext, 'gemini', $gemini->chatModel(), $agentClass);
-            $this->aiChatLogger->info('ai_chat.provider.started', $attemptContext);
-            if (! $gemini->apiKey()) {
-                throw new \Exception('Gemini is not configured. Paste your API key in Platform Settings.');
-            }
-            $gemini->applyToSdk();
-
-            $response = $this->promptAgent($agentClass, $history, $userContext, $message, 'gemini', $gemini->chatModel(), $attachments);
-
-            app(AiUsageTracker::class)->record(
-                'gemini',
-                $gemini->chatModel(),
-                'chat',
-                AiUsageTracker::tokensFromChars(strlen($message) + strlen($userContext)),
-                AiUsageTracker::tokensFromChars(strlen((string) $response)),
+            return $this->promptWithProvider(
+                $primary,
+                $agentClass,
+                $history,
+                $historyData,
+                $userContext,
+                $message,
+                $attachments,
+                $loggingContext,
             );
-            $this->logCompletedResponse($attemptContext, $response, $startedAt);
+        } catch (Throwable $primaryFailure) {
+            $fallbackPolicy = app(AiProviderFallbackPolicy::class);
+            $fallback = $fallbackPolicy->fallbackFor($primary, $primaryFailure);
 
-            return $response;
-        } catch (Throwable $e) {
-            $this->aiChatLogger->error('ai_chat.provider.failed', $e, array_merge($attemptContext, [
-                'duration_ms' => $this->aiChatLogger->elapsedMilliseconds($startedAt),
-                'fallback_enabled' => $ollamaEnabled,
-            ]));
-
-            // Try Ollama fallback if enabled
-            if ($ollamaEnabled) {
-                try {
-                    $ollamaService = new OllamaAIService;
-                    $fallbackContext = $this->providerContext($loggingContext, 'ollama', Setting::get('ollama_model', 'llama3.2:1b'), $agentClass, $provider);
-                    $fallbackStartedAt = hrtime(true);
-                    $this->aiChatLogger->info('ai_chat.provider.fallback_started', $fallbackContext);
-                    $response = $ollamaService->prompt($message, $historyData, $userContext);
-                    $this->logCompletedResponse($fallbackContext, $response, $fallbackStartedAt);
-
-                    return $response;
-                } catch (Throwable $ollamaError) {
-                    $this->aiChatLogger->error('ai_chat.provider.fallback_failed', $ollamaError, array_merge($fallbackContext ?? $loggingContext, [
-                        'duration_ms' => isset($fallbackStartedAt) ? $this->aiChatLogger->elapsedMilliseconds($fallbackStartedAt) : null,
-                    ]));
-                    throw $e; // Throw original error
-                }
+            if (! $fallback) {
+                throw $primaryFailure;
             }
 
-            throw $e; // No fallback enabled, throw original error
+            app(AiBudgetManager::class)->recordFallback(
+                'chat',
+                $primary,
+                $fallback,
+                $fallbackPolicy->reason($primaryFailure),
+            );
+
+            try {
+                return $this->promptWithProvider(
+                    $fallback,
+                    $agentClass,
+                    $history,
+                    $historyData,
+                    $userContext,
+                    $message,
+                    $attachments,
+                    $loggingContext,
+                    $primary,
+                );
+            } catch (Throwable $fallbackFailure) {
+                $this->aiChatLogger->error('ai_chat.provider.fallback_failed', $fallbackFailure, [
+                    ...$loggingContext,
+                    'provider' => $fallback,
+                    'fallback_from' => $primary,
+                ]);
+
+                throw $primaryFailure;
+            }
         }
     }
 
     /**
-     * Stream the conversation through the configured AI provider, returning a
-     * streamable SSE response. Providers that can't stream natively (Cloudflare,
-     * Ollama fallback) emit their full text as a single delta so the front-end
-     * always receives a uniform stream.
+     * Stream a conversation through the selected provider. Budget rejection
+     * and provider setup failures happen before any SSE bytes are emitted, so
+     * the configured fallback can still be selected safely.
      *
      * @param  array<int, array{role: string, content: string}>  $historyData
      * @param  array<int, File>  $attachments
@@ -443,94 +444,278 @@ class ChatService
     public function stream(string $message, array $historyData, string $userContext, ?User $user, array $attachments = [], array $loggingContext = []): StreamableAgentResponse
     {
         $history = $this->buildHistoryMessages($historyData);
-
-        $provider = Setting::get('ai_provider', 'gemini');
-        $ollamaEnabled = Setting::get('ollama_enabled', false) === '1';
+        $primary = (string) Setting::get('ai_provider', 'gemini');
         $agentClass = $user?->is_admin ? AdminAssistantAgent::class : AssistantAgent::class;
-        $startedAt = hrtime(true);
-        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agentClass);
-
-        if (AiSdkProviderService::isRemovedCompatibleProvider($provider)) {
-            throw new \Exception('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
-        }
 
         try {
-            if ($provider === 'cloudflare') {
-                // Cloudflare Workers AI has no streaming — emit the full text.
-                $cloudflareService = new CloudflareAIService;
-                $attemptContext = $this->providerContext($loggingContext, 'cloudflare', Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash'), $agentClass);
-                $this->aiChatLogger->info('ai_chat.provider.stream_started', $attemptContext);
+            return $this->streamWithProvider(
+                $primary,
+                $agentClass,
+                $history,
+                $historyData,
+                $userContext,
+                $message,
+                $attachments,
+                $loggingContext,
+            );
+        } catch (Throwable $primaryFailure) {
+            $fallbackPolicy = app(AiProviderFallbackPolicy::class);
+            $fallback = $fallbackPolicy->fallbackFor($primary, $primaryFailure);
 
-                return $this->logTextStream($this->streamText($cloudflareService->prompt($message, $historyData, $userContext)), $attemptContext, $startedAt);
+            if (! $fallback) {
+                throw $primaryFailure;
             }
 
-            if ($provider === 'groq') {
-                $groqApiKey = Setting::get('groq_api_key') ?: config('ai.providers.groq.env_key');
-                $groqModel = Setting::get('groq_model', 'llama-3.1-8b-instant');
-                $attemptContext = $this->providerContext($loggingContext, 'groq', $groqModel, $agentClass);
-                $this->aiChatLogger->info('ai_chat.provider.stream_started', $attemptContext);
+            app(AiBudgetManager::class)->recordFallback(
+                'chat',
+                $primary,
+                $fallback,
+                $fallbackPolicy->reason($primaryFailure),
+            );
 
-                if (! $groqApiKey) {
-                    throw new \Exception('Groq is not configured. Paste your API key in Platform Settings.');
-                }
-
-                config([
-                    'ai.providers.groq.key' => $groqApiKey,
-                    'ai.providers.groq.models.text.default' => $groqModel,
+            try {
+                return $this->streamWithProvider(
+                    $fallback,
+                    $agentClass,
+                    $history,
+                    $historyData,
+                    $userContext,
+                    $message,
+                    $attachments,
+                    $loggingContext,
+                    $primary,
+                );
+            } catch (Throwable $fallbackFailure) {
+                $this->aiChatLogger->error('ai_chat.provider.stream_fallback_failed', $fallbackFailure, [
+                    ...$loggingContext,
+                    'provider' => $fallback,
+                    'fallback_from' => $primary,
                 ]);
-                app(AiManager::class)->forgetInstance('groq');
 
-                return $this->streamAgent($agentClass, $history, $userContext, $message, 'groq', $groqModel, $attachments, $attemptContext, $startedAt);
+                throw $primaryFailure;
             }
+        }
+    }
 
-            if (AiSdkProviderService::isSdkRouted($provider)) {
-                $sdkProvider = AiSdkProviderService::for($provider);
-                $attemptContext = $this->providerContext($loggingContext, $provider, $sdkProvider->model(), $agentClass);
-                $this->aiChatLogger->info('ai_chat.provider.stream_started', $attemptContext);
+    /**
+     * @param  class-string  $agentClass
+     * @param  array<int, mixed>  $history
+     * @param  array<int, array<string, mixed>>  $historyData
+     * @param  array<int, File>  $attachments
+     */
+    private function promptWithProvider(
+        string $provider,
+        string $agentClass,
+        array $history,
+        array $historyData,
+        string $userContext,
+        string $message,
+        array $attachments,
+        array $loggingContext,
+        ?string $fallbackFrom = null,
+    ): string {
+        $startedAt = hrtime(true);
+        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agentClass, $fallbackFrom);
+        $usage = app(AiUsageTracker::class);
+        $reservation = null;
 
-                if (! $sdkProvider->isConfigured()) {
-                    throw new \Exception("{$provider} is not configured. Paste your API key in Platform Settings.");
-                }
+        try {
+            $model = $this->prepareProvider($provider);
+            $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agentClass, $fallbackFrom);
+            $inputTokens = $this->chatInputTokens($message, $historyData, $userContext, $loggingContext);
+            $reservation = $usage->start($provider, $model, 'chat', $inputTokens, 4096);
+            $this->aiChatLogger->info(
+                $fallbackFrom ? 'ai_chat.provider.fallback_started' : 'ai_chat.provider.started',
+                $attemptContext,
+            );
 
-                $sdkProvider->applyToSdk();
+            $response = $provider === 'cloudflare'
+                ? (new CloudflareAIService)->prompt($message, $historyData, $userContext, trackUsage: false)
+                : $this->promptAgent(
+                    $agentClass,
+                    $history,
+                    $userContext,
+                    $message,
+                    $provider,
+                    $model,
+                    $attachments,
+                    $this->sessionIdFrom($loggingContext),
+                );
 
-                return $this->streamAgent($agentClass, $history, $userContext, $message, $provider, $sdkProvider->model(), $attachments, $attemptContext, $startedAt);
+            $usage->complete(
+                $reservation,
+                $provider,
+                $model,
+                'chat',
+                $inputTokens,
+                AiUsageTracker::tokensFromChars(strlen($response)),
+            );
+            $this->logCompletedResponse($attemptContext, $response, $startedAt);
+
+            return $response;
+        } catch (Throwable $failure) {
+            $usage->cancel($reservation, $failure->getMessage());
+            $this->aiChatLogger->error('ai_chat.provider.failed', $failure, [
+                ...$attemptContext,
+                'duration_ms' => $this->aiChatLogger->elapsedMilliseconds($startedAt),
+                'fallback_enabled' => app(AiProviderFallbackPolicy::class)->fallbackFor($provider, $failure) !== null,
+            ]);
+
+            throw $failure;
+        }
+    }
+
+    /**
+     * @param  class-string  $agentClass
+     * @param  array<int, mixed>  $history
+     * @param  array<int, array<string, mixed>>  $historyData
+     * @param  array<int, File>  $attachments
+     */
+    private function streamWithProvider(
+        string $provider,
+        string $agentClass,
+        array $history,
+        array $historyData,
+        string $userContext,
+        string $message,
+        array $attachments,
+        array $loggingContext,
+        ?string $fallbackFrom = null,
+    ): StreamableAgentResponse {
+        // Cloudflare has no native streaming or tool calling. Execute its
+        // budgeted synchronous request and expose the text as one SSE delta.
+        if ($provider === 'cloudflare') {
+            return $this->streamText($this->promptWithProvider(
+                $provider,
+                $agentClass,
+                $history,
+                $historyData,
+                $userContext,
+                $message,
+                $attachments,
+                $loggingContext,
+                $fallbackFrom,
+            ));
+        }
+
+        $startedAt = hrtime(true);
+        $attemptContext = $this->providerContext($loggingContext, $provider, null, $agentClass, $fallbackFrom);
+        $usage = app(AiUsageTracker::class);
+        $reservation = null;
+
+        try {
+            $model = $this->prepareProvider($provider);
+            $attemptContext = $this->providerContext($loggingContext, $provider, $model, $agentClass, $fallbackFrom);
+            $inputTokens = $this->chatInputTokens($message, $historyData, $userContext, $loggingContext);
+            $reservation = $usage->start($provider, $model, 'chat', $inputTokens, 4096);
+            $this->aiChatLogger->info(
+                $fallbackFrom ? 'ai_chat.provider.stream_fallback_started' : 'ai_chat.provider.stream_started',
+                $attemptContext,
+            );
+
+            return $this->streamAgent(
+                $agentClass,
+                $history,
+                $userContext,
+                $message,
+                $provider,
+                (string) $model,
+                $attachments,
+                $attemptContext,
+                $startedAt,
+                $reservation,
+                $inputTokens,
+            );
+        } catch (Throwable $failure) {
+            $usage->cancel($reservation, $failure->getMessage());
+            $this->aiChatLogger->error('ai_chat.provider.stream_failed', $failure, [
+                ...$attemptContext,
+                'duration_ms' => $this->aiChatLogger->elapsedMilliseconds($startedAt),
+                'fallback_enabled' => app(AiProviderFallbackPolicy::class)->fallbackFor($provider, $failure) !== null,
+            ]);
+
+            throw $failure;
+        }
+    }
+
+    private function prepareProvider(string $provider): ?string
+    {
+        if (AiSdkProviderService::isRemovedCompatibleProvider($provider)) {
+            throw new \RuntimeException('The selected OpenAI-compatible provider was removed. Choose another provider in Platform Settings.');
+        }
+
+        if ($provider === 'cloudflare') {
+            return Setting::get('cloudflare_model', '@cf/zai-org/glm-4.7-flash');
+        }
+
+        if ($provider === 'groq') {
+            $apiKey = Setting::get('groq_api_key') ?: config('ai.providers.groq.env_key');
+            $model = Setting::get('groq_model', 'llama-3.1-8b-instant');
+            if (! $apiKey) {
+                throw new \RuntimeException('Groq is not configured. Paste your API key in Platform Settings.');
             }
+            config([
+                'ai.providers.groq.key' => $apiKey,
+                'ai.providers.groq.models.text.default' => $model,
+            ]);
+            app(AiManager::class)->forgetInstance('groq');
 
-            // Gemini streams through the Laravel AI SDK.
+            return $model;
+        }
+
+        if ($provider === 'gemini') {
             $gemini = app(GeminiAIService::class);
-            $attemptContext = $this->providerContext($loggingContext, 'gemini', $gemini->chatModel(), $agentClass);
-            $this->aiChatLogger->info('ai_chat.provider.stream_started', $attemptContext);
             if (! $gemini->apiKey()) {
-                throw new \Exception('Gemini is not configured. Paste your API key in Platform Settings.');
+                throw new \RuntimeException('Gemini is not configured. Paste your API key in Platform Settings.');
             }
             $gemini->applyToSdk();
 
-            return $this->streamAgent($agentClass, $history, $userContext, $message, 'gemini', $gemini->chatModel(), $attachments, $attemptContext, $startedAt);
-        } catch (Throwable $e) {
-            $this->aiChatLogger->error('ai_chat.provider.stream_failed', $e, array_merge($attemptContext, [
-                'duration_ms' => $this->aiChatLogger->elapsedMilliseconds($startedAt),
-                'fallback_enabled' => $ollamaEnabled,
-            ]));
-
-            if ($ollamaEnabled) {
-                try {
-                    $ollamaService = new OllamaAIService;
-                    $fallbackContext = $this->providerContext($loggingContext, 'ollama', Setting::get('ollama_model', 'llama3.2:1b'), $agentClass, $provider);
-                    $fallbackStartedAt = hrtime(true);
-                    $this->aiChatLogger->info('ai_chat.provider.stream_fallback_started', $fallbackContext);
-
-                    return $this->logTextStream($this->streamText($ollamaService->prompt($message, $historyData, $userContext)), $fallbackContext, $fallbackStartedAt);
-                } catch (Throwable $ollamaError) {
-                    $this->aiChatLogger->error('ai_chat.provider.stream_fallback_failed', $ollamaError, array_merge($fallbackContext ?? $loggingContext, [
-                        'duration_ms' => isset($fallbackStartedAt) ? $this->aiChatLogger->elapsedMilliseconds($fallbackStartedAt) : null,
-                    ]));
-                    throw $e;
-                }
-            }
-
-            throw $e;
+            return $gemini->chatModel();
         }
+
+        if (AiSdkProviderService::isSdkRouted($provider)) {
+            $sdkProvider = AiSdkProviderService::for($provider);
+            if (! $sdkProvider->isConfigured()) {
+                throw new \RuntimeException("{$provider} is not configured. Paste its credentials in Platform Settings.");
+            }
+            $sdkProvider->applyToSdk();
+
+            return $sdkProvider->model();
+        }
+
+        throw new \RuntimeException("Unsupported AI provider [{$provider}].");
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $historyData
+     * @param  array<string, mixed>  $loggingContext
+     */
+    private function chatInputTokens(
+        string $message,
+        array $historyData,
+        string $userContext,
+        array $loggingContext,
+    ): int {
+        // Reserve room for the agent/system instructions in addition to the
+        // bounded conversation context and current user message.
+        $characters = 6000 + strlen($message) + strlen($userContext);
+        foreach ($historyData as $historyMessage) {
+            $characters += strlen((string) ($historyMessage['content'] ?? ''));
+        }
+
+        // Documents are conservatively estimated from bytes; image token use
+        // depends on provider resolution, so reserve roughly 1,000 tokens per
+        // image instead of treating compressed image bytes as plain text.
+        foreach ((array) ($loggingContext['attachments'] ?? []) as $attachment) {
+            if (! is_array($attachment)) {
+                continue;
+            }
+            $characters += ($attachment['kind'] ?? null) === 'image'
+                ? 4000
+                : min(400000, max(0, (int) ($attachment['size'] ?? 0)));
+        }
+
+        return AiUsageTracker::tokensFromChars($characters);
     }
 
     /**
@@ -541,11 +726,14 @@ class ChatService
      * @param  array<int, mixed>  $history
      * @param  array<int, File>  $attachments
      */
-    private function promptAgent(string $agentClass, array $history, string $userContext, string $message, string $provider, ?string $model = null, array $attachments = []): string
+    private function promptAgent(string $agentClass, array $history, string $userContext, string $message, string $provider, ?string $model = null, array $attachments = [], ?int $chatSessionId = null): string
     {
         $agent = new $agentClass;
         $agent->setHistory($history);
         $agent->setUserContext($userContext);
+        if ($agent instanceof AdminAssistantAgent) {
+            $agent->setChatSessionId($chatSessionId);
+        }
 
         return $agent->prompt($message, attachments: $attachments, provider: $provider, model: $model)->text;
     }
@@ -558,29 +746,58 @@ class ChatService
      * @param  array<int, mixed>  $history
      * @param  array<int, File>  $attachments
      */
-    private function streamAgent(string $agentClass, array $history, string $userContext, string $message, string $provider, string $model, array $attachments = [], array $loggingContext = [], ?int $startedAt = null): StreamableAgentResponse
-    {
+    private function streamAgent(
+        string $agentClass,
+        array $history,
+        string $userContext,
+        string $message,
+        string $provider,
+        string $model,
+        array $attachments = [],
+        array $loggingContext = [],
+        ?int $startedAt = null,
+        ?AiBudgetReservation $reservation = null,
+        ?int $inputTokens = null,
+    ): StreamableAgentResponse {
         $agent = new $agentClass;
         $agent->setHistory($history);
         $agent->setUserContext($userContext);
+        if ($agent instanceof AdminAssistantAgent) {
+            $agent->setChatSessionId($this->sessionIdFrom($loggingContext));
+        }
 
-        $input = strlen($message) + strlen($userContext);
-
+        $inputTokens ??= AiUsageTracker::tokensFromChars(strlen($message) + strlen($userContext));
+        $usage = app(AiUsageTracker::class);
         $stream = $agent
             ->stream($message, attachments: $attachments, provider: $provider, model: $model)
-            ->then(function ($response) use ($provider, $model, $input, $loggingContext, $startedAt) {
-                app(AiUsageTracker::class)->record(
+            ->then(function ($response) use ($provider, $model, $inputTokens, $loggingContext, $startedAt, $reservation, $usage) {
+                $usage->complete(
+                    $reservation,
                     $provider,
                     $model,
                     'chat',
-                    AiUsageTracker::tokensFromChars($input),
+                    $inputTokens,
                     AiUsageTracker::tokensFromChars(strlen((string) $response->text)),
                 );
 
                 $this->logCompletedResponse($loggingContext, (string) $response->text, $startedAt ?? hrtime(true), true);
             });
 
-        return $this->logStreamErrors($stream, $loggingContext, $startedAt ?? hrtime(true));
+        return $this->logStreamErrors(
+            $stream,
+            $loggingContext,
+            $startedAt ?? hrtime(true),
+            $reservation,
+            $usage,
+        );
+    }
+
+    /** @param array<string, mixed> $loggingContext */
+    private function sessionIdFrom(array $loggingContext): ?int
+    {
+        $sessionId = (int) ($loggingContext['session_id'] ?? 0);
+
+        return $sessionId > 0 ? $sessionId : null;
     }
 
     /**
@@ -611,24 +828,20 @@ class ChatService
     /**
      * @param  array<string, mixed>  $loggingContext
      */
-    private function logTextStream(StreamableAgentResponse $stream, array $loggingContext, int $startedAt): StreamableAgentResponse
-    {
-        return $stream->then(function ($response) use ($loggingContext, $startedAt) {
-            $this->logCompletedResponse($loggingContext, (string) $response->text, $startedAt, true);
-        });
-    }
-
-    /**
-     * @param  array<string, mixed>  $loggingContext
-     */
-    private function logStreamErrors(StreamableAgentResponse $stream, array $loggingContext, int $startedAt): StreamableAgentResponse
-    {
+    private function logStreamErrors(
+        StreamableAgentResponse $stream,
+        array $loggingContext,
+        int $startedAt,
+        ?AiBudgetReservation $reservation = null,
+        ?AiUsageTracker $usage = null,
+    ): StreamableAgentResponse {
         return new StreamableAgentResponse(
             (string) Str::uuid7(),
-            function () use ($stream, $loggingContext, $startedAt) {
+            function () use ($stream, $loggingContext, $startedAt, $reservation, $usage) {
                 try {
                     yield from $stream;
                 } catch (Throwable $e) {
+                    $usage?->cancel($reservation, $e->getMessage());
                     $this->aiChatLogger->error('ai_chat.provider.stream_runtime_failed', $e, array_merge($loggingContext, [
                         'duration_ms' => $this->aiChatLogger->elapsedMilliseconds($startedAt),
                     ]));

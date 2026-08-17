@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Assignments\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -14,6 +15,7 @@ class AssignmentsTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('due_date')
@@ -32,6 +34,7 @@ class AssignmentsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 //
             ])
             ->recordActions([

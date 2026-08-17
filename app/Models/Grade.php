@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Grade extends Model
 {
-    use HasFactory;
+    use BelongsToWorkspace, HasFactory;
 
     protected $fillable = [
         'user_id',
@@ -19,6 +20,7 @@ class Grade extends Model
         'max_score',
         'remarks',
         'recorded_by',
+        'workspace_id',
     ];
 
     protected function casts(): array

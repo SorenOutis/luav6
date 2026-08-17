@@ -22,11 +22,25 @@ class AiQuestionDraftResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
-    protected static ?string $navigationLabel = 'AI Question Generator';
+    protected static ?string $navigationLabel = 'AI Question Review';
 
     protected static ?string $modelLabel = 'AI Question Draft';
 
     protected static ?string $recordTitleAttribute = 'title';
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = static::getModel()::query()
+            ->where('review_status', AiQuestionDraft::REVIEW_AWAITING)
+            ->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return 'warning';
+    }
 
     public static function form(Schema $schema): Schema
     {

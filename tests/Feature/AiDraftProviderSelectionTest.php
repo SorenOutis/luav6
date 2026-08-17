@@ -116,6 +116,7 @@ it('generates questions with the provider stored on the draft', function () {
     $draft->refresh();
 
     expect($draft->status)->toBe('ready')
+        ->and($draft->review_status)->toBe('awaiting_review')
         ->and($draft->questions)->toHaveCount(1)
         ->and($draft->questions[0]['text'])->toBe('What is a cell?');
 

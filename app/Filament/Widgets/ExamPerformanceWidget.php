@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Exam;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
 
@@ -63,6 +64,7 @@ class ExamPerformanceWidget extends ChartWidget
 
         // Get best score per user per exam in last 30 days
         $bestScores = DB::table('exam_submissions')
+            ->whereIn('exam_id', Exam::query()->select('id'))
             ->select('user_id', 'exam_id', DB::raw('MAX(CAST(score AS DECIMAL(10,2))) as best_score'))
             ->where('created_at', '>=', $cutoff)
             ->whereNotNull('score')

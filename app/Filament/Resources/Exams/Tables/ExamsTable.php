@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Exams\Tables;
 
+use App\Filament\Support\WorkspaceTable;
 use App\Models\Exam;
 use App\Services\ExamTemplateService;
 use Filament\Actions\Action;
@@ -22,6 +23,7 @@ class ExamsTable
     {
         return $table
             ->columns([
+                WorkspaceTable::column(),
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('section.name')
@@ -44,6 +46,7 @@ class ExamsTable
                     }),
             ])
             ->filters([
+                WorkspaceTable::filter(),
                 SelectFilter::make('section')
                     ->relationship('section', 'name'),
             ])

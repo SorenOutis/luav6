@@ -35,7 +35,8 @@ class ExamSubmissionForm
                 Select::make('status')
                     ->options([
                         'submitted' => 'Submitted',
-                        'pending_review' => 'Pending Review',
+                        'pending_ai' => 'Pending AI Proposal',
+                        'pending_review' => 'Pending Teacher Review',
                         'graded' => 'Graded',
                     ])
                     ->required(),

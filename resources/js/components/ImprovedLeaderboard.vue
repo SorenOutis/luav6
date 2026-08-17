@@ -37,6 +37,7 @@ import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface LeaderboardUser {
     id: number;
+    publicId?: string;
     name: string;
     xp: number;
     avatar?: string;
@@ -55,6 +56,7 @@ interface LeaderboardData {
     users: LeaderboardUser[];
     userRank: number;
     totalPlayers: number;
+    isTruncated?: boolean;
 }
 
 interface Season {
@@ -95,6 +97,8 @@ const emit = defineEmits<{
 /** Fixed-length obscured string for blurred users — prevents
  *  guessing the name by length, copying, or inspecting the DOM. */
 const BLURRED_NAME = '████████████████████';
+const profileIdentifier = (user: LeaderboardUser) =>
+    user.publicId || String(user.id);
 
 const activeTabIndex = ref(0);
 const searchQuery = ref('');
@@ -358,19 +362,63 @@ const isHistoryOpen = ref(false);
 const selectedUser = ref<LeaderboardUser | null>(null);
 const xpHistory = ref<any[]>([]);
 const isLoadingHistory = ref(false);
+const isLoadingMoreHistory = ref(false);
+const xpHistoryCursor = ref<string | null>(null);
+const hasMoreXpHistory = ref(false);
+
+const applyXpHistoryPage = (payload: any, append = false) => {
+    // Accept the old array shape during rolling deployments, while using the
+    // bounded cursor shape for every response produced by this version.
+    const rows = Array.isArray(payload) ? payload : (payload.data ?? []);
+    xpHistory.value = append ? [...xpHistory.value, ...rows] : rows;
+    xpHistoryCursor.value = Array.isArray(payload)
+        ? null
+        : (payload.meta?.nextCursor ?? null);
+    hasMoreXpHistory.value = Array.isArray(payload)
+        ? false
+        : Boolean(payload.meta?.hasMore);
+};
 
 const openHistory = async (user: LeaderboardUser) => {
     selectedUser.value = user;
     isHistoryOpen.value = true;
     isLoadingHistory.value = true;
     xpHistory.value = [];
+    xpHistoryCursor.value = null;
+    hasMoreXpHistory.value = false;
     try {
-        const r = await axios.get(`/users/${user.id}/xp-history`);
-        xpHistory.value = r.data;
+        const r = await axios.get(
+            `/users/${profileIdentifier(user)}/xp-history`,
+        );
+        applyXpHistoryPage(r.data);
     } catch (e) {
         console.error('Failed to fetch XP history:', e);
     } finally {
         isLoadingHistory.value = false;
+    }
+};
+
+const loadMoreXpHistory = async () => {
+    if (
+        !selectedUser.value ||
+        !hasMoreXpHistory.value ||
+        !xpHistoryCursor.value ||
+        isLoadingMoreHistory.value
+    ) {
+        return;
+    }
+
+    isLoadingMoreHistory.value = true;
+    try {
+        const r = await axios.get(
+            `/users/${profileIdentifier(selectedUser.value)}/xp-history`,
+            { params: { cursor: xpHistoryCursor.value } },
+        );
+        applyXpHistoryPage(r.data, true);
+    } catch (e) {
+        console.error('Failed to load more XP history:', e);
+    } finally {
+        isLoadingMoreHistory.value = false;
     }
 };
 
@@ -815,7 +863,7 @@ const changeSeason = async (seasonId: number) => {
                             >
                                 <Link
                                     v-if="!group.users[0].blurred"
-                                    :href="`/u/${group.users[0].id}`"
+                                    :href="`/u/${profileIdentifier(group.users[0])}`"
                                     :class="[
                                         'lb-avatar',
                                         origIdx === 0
@@ -881,7 +929,7 @@ const changeSeason = async (seasonId: number) => {
                                     <div class="relative">
                                         <Link
                                             v-if="!u.blurred"
-                                            :href="`/u/${u.id}`"
+                                            :href="`/u/${profileIdentifier(u)}`"
                                             :title="u.name"
                                             :class="[
                                                 'lb-avatar ring-2 ring-background transition-transform hover:z-20 hover:scale-110',
@@ -946,7 +994,7 @@ const changeSeason = async (seasonId: number) => {
                             <template v-if="group.users.length === 1">
                                 <Link
                                     v-if="!group.users[0].blurred"
-                                    :href="`/u/${group.users[0].id}`"
+                                    :href="`/u/${profileIdentifier(group.users[0])}`"
                                     :class="[
                                         'mt-3 max-w-full text-center leading-snug font-semibold tracking-tight break-words transition-colors hover:text-[#D97757]',
                                         getNameSize(
@@ -992,7 +1040,7 @@ const changeSeason = async (seasonId: number) => {
                                     <div class="inline-flex items-center gap-1">
                                         <Link
                                             v-if="!u.blurred"
-                                            :href="`/u/${u.id}`"
+                                            :href="`/u/${profileIdentifier(u)}`"
                                             class="text-xs font-semibold tracking-tight transition-colors hover:text-[#D97757] sm:text-sm"
                                         >
                                             {{ u.name }}
@@ -1130,7 +1178,7 @@ const changeSeason = async (seasonId: number) => {
                                 <div class="relative shrink-0">
                                     <Link
                                         v-if="!group.users[0].blurred"
-                                        :href="`/u/${group.users[0].id}`"
+                                        :href="`/u/${profileIdentifier(group.users[0])}`"
                                         class="lb-row-avatar"
                                     >
                                         <img
@@ -1173,7 +1221,7 @@ const changeSeason = async (seasonId: number) => {
                                     >
                                         <Link
                                             v-if="!group.users[0].blurred"
-                                            :href="`/u/${group.users[0].id}`"
+                                            :href="`/u/${profileIdentifier(group.users[0])}`"
                                             class="text-xs font-bold tracking-tight break-words transition-colors hover:text-[#D97757] sm:text-sm"
                                         >
                                             {{ group.users[0].name }}
@@ -1251,7 +1299,7 @@ const changeSeason = async (seasonId: number) => {
                                             </div>
                                             <Link
                                                 v-if="!u.blurred"
-                                                :href="`/u/${u.id}`"
+                                                :href="`/u/${profileIdentifier(u)}`"
                                                 class="text-xs font-semibold hover:text-[#D97757]"
                                             >
                                                 {{ u.name }}
@@ -1268,7 +1316,10 @@ const changeSeason = async (seasonId: number) => {
                                                 >YOU</span
                                             >
                                             <button
-                                                v-if="!u.blurred"
+                                                v-if="
+                                                    u.isCurrentUser &&
+                                                    !u.blurred
+                                                "
                                                 @click="openHistory(u)"
                                                 class="inline-flex items-center justify-center rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
                                                 title="XP History"
@@ -1358,14 +1409,21 @@ const changeSeason = async (seasonId: number) => {
                                 class="hidden items-center gap-1 opacity-0 transition-opacity duration-300 group-hover:opacity-100 sm:flex"
                             >
                                 <Link
-                                    :href="`/u/${group.users[0].id}`"
+                                    :href="`/u/${profileIdentifier(group.users[0])}`"
                                     class="lb-action-btn"
                                     title="View Profile"
                                 >
                                     <Eye class="h-3.5 w-3.5" />
                                 </Link>
                                 <button
-                                    @click="openHistory(group.users[0])"
+                                    v-if="group.hasCurrentUser"
+                                    @click="
+                                        openHistory(
+                                            group.users.find(
+                                                (user) => user.isCurrentUser,
+                                            ) ?? group.users[0],
+                                        )
+                                    "
                                     class="lb-action-btn"
                                     title="XP History"
                                 >
@@ -1395,6 +1453,14 @@ const changeSeason = async (seasonId: number) => {
                             }}</span>
                         </button>
                     </div>
+
+                    <p
+                        v-if="activeLeaderboard?.isTruncated"
+                        class="pt-2 text-center text-[11px] text-muted-foreground"
+                    >
+                        Showing the top {{ users.length }} of
+                        {{ totalPlayers }} students, plus your rank when needed.
+                    </p>
                 </div>
             </template>
         </template>
@@ -1503,6 +1569,19 @@ const changeSeason = async (seasonId: number) => {
                                 }}{{ item.amount_xp }}
                             </span>
                         </div>
+                        <button
+                            v-if="hasMoreXpHistory"
+                            type="button"
+                            class="mt-2 w-full rounded-xl border border-border/50 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
+                            :disabled="isLoadingMoreHistory"
+                            @click="loadMoreXpHistory"
+                        >
+                            {{
+                                isLoadingMoreHistory
+                                    ? 'Loading…'
+                                    : 'Load older activity'
+                            }}
+                        </button>
                     </div>
                 </div>
 
@@ -1596,7 +1675,7 @@ const changeSeason = async (seasonId: number) => {
                             <div class="relative">
                                 <Link
                                     v-if="!u.blurred"
-                                    :href="`/u/${u.id}`"
+                                    :href="`/u/${profileIdentifier(u)}`"
                                     :title="u.name"
                                     :class="[
                                         'lb-avatar h-12 w-12 ring-2 transition-transform duration-200 group-hover:scale-105 sm:h-14 sm:w-14',
@@ -1650,7 +1729,7 @@ const changeSeason = async (seasonId: number) => {
                             <!-- Name below circle profile -->
                             <Link
                                 v-if="!u.blurred"
-                                :href="`/u/${u.id}`"
+                                :href="`/u/${profileIdentifier(u)}`"
                                 class="mt-2 line-clamp-2 w-full text-center text-[11px] leading-tight font-semibold break-words transition-colors hover:text-[#D97757] sm:text-xs"
                                 :title="u.name"
                             >

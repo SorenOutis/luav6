@@ -22,6 +22,18 @@ trait ProfileValidationRules
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:10240'],
             'cover_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:10240'],
             'bio' => ['nullable', 'string', 'max:280'],
+            'profile_visibility' => [
+                'sometimes',
+                'string',
+                Rule::in([
+                    User::PROFILE_VISIBILITY_SECTION,
+                    User::PROFILE_VISIBILITY_PRIVATE,
+                ]),
+            ],
+            'profile_show_activity' => ['sometimes', 'boolean'],
+            'profile_show_sections' => ['sometimes', 'boolean'],
+            'profile_show_social' => ['sometimes', 'boolean'],
+            'profile_show_achievements' => ['sometimes', 'boolean'],
         ];
     }
 

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkspace;
 use App\Support\RequestCache;
+use App\Support\WorkspaceContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,7 +12,7 @@ class Season extends Model
 {
     use BelongsToWorkspace, HasFactory;
 
-    protected $fillable = ['name', 'start_date', 'end_date', 'is_active', 'show_countdown_on_welcome', 'admin_id'];
+    protected $fillable = ['name', 'start_date', 'end_date', 'is_active', 'show_countdown_on_welcome', 'workspace_id', 'admin_id'];
 
     protected $casts = [
         'start_date' => 'datetime',
@@ -24,8 +25,16 @@ class Season extends Model
     {
         static::saving(function (Season $season) {
             if ($season->is_active) {
-                // Deactivate all other seasons
-                static::where('id', '!=', $season->id)->update(['is_active' => false]);
+                // Active seasons are independent per tenant. Super-admin saves
+                // must never deactivate another workspace's school year.
+                static::withoutGlobalScope('workspace')
+                    ->where('id', '!=', $season->id)
+                    ->when(
+                        $season->workspace_id,
+                        fn ($query) => $query->where('workspace_id', $season->workspace_id),
+                        fn ($query) => $query->whereNull('workspace_id'),
+                    )
+                    ->update(['is_active' => false]);
             }
         });
 
@@ -65,7 +74,18 @@ class Season extends Model
     {
         return app(RequestCache::class)->remember(
             static::currentCacheKey(),
-            fn () => self::where('is_active', true)->first()
+            function () {
+                $workspaceId = app(WorkspaceContext::class)->id();
+
+                return self::withoutGlobalScope('workspace')
+                    ->when(
+                        $workspaceId,
+                        fn ($query) => $query->where('workspace_id', $workspaceId),
+                        fn ($query) => $query->whereNull('workspace_id'),
+                    )
+                    ->where('is_active', true)
+                    ->first();
+            },
         );
     }
 
@@ -91,6 +111,6 @@ class Season extends Model
 
     private static function currentCacheKey(): string
     {
-        return 'season:current:'.(auth()->id() ?? 'guest');
+        return 'season:current:'.(app(WorkspaceContext::class)->id() ?? 'global');
     }
 }
