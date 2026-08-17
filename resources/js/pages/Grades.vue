@@ -25,6 +25,7 @@ import {
     watch,
 } from 'vue';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
 import Button from '@/components/ui/button/Button.vue';
 import Card from '@/components/ui/card/Card.vue';
 import CardContent from '@/components/ui/card/CardContent.vue';
@@ -35,6 +36,7 @@ import Input from '@/components/ui/input/Input.vue';
 import Progress from '@/components/ui/progress/Progress.vue';
 import { useStaleWhileRevalidate } from '@/composables/useStaleWhileRevalidate';
 import AppLayout from '@/layouts/AppLayout.vue';
+import type { TourStep } from '@/lib/onboarding';
 import type { BreadcrumbItem } from '@/types';
 
 interface GradePeriodScore {
@@ -87,6 +89,42 @@ const props = defineProps<{
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
     { title: 'Grades', href: '/grades' },
+];
+
+// ─── Onboarding tour ────────────────────────────────────────────────────────
+// Per user + per device (localStorage). Waits until grades finish loading so
+// the overview cards / tables exist; steps whose target is missing (e.g. no
+// grades yet) are skipped automatically.
+const gradesTourSteps: TourStep[] = [
+    {
+        id: 'welcome',
+        title: 'Welcome to your Grades',
+        body: 'Track your academic performance across every enrolled subject — quarter by quarter. Here’s a quick tour.',
+    },
+    {
+        id: 'search',
+        target: 'grades-search',
+        title: 'Search your subjects',
+        body: 'Type a subject name to filter the grade tables instantly.',
+    },
+    {
+        id: 'export',
+        target: 'grades-export',
+        title: 'Export as PDF',
+        body: 'Need a copy for your records or parents? Export your full grade report as a PDF anytime.',
+    },
+    {
+        id: 'overview',
+        target: 'grades-overview',
+        title: 'Your overview',
+        body: 'Overall average, subject count, completion and grade distribution — the big picture at a glance.',
+    },
+    {
+        id: 'tables',
+        target: 'grades-table',
+        title: 'Detailed grade tables',
+        body: 'Each subject shows per-quarter scores, remarks and final grades. Grades update as soon as your teacher posts them.',
+    },
 ];
 
 // ── API fetch with stale-while-revalidate caching ────────────────
@@ -570,6 +608,7 @@ onMounted(() => {
                 >
                     <div
                         class="relative min-w-0 flex-1 sm:w-56 sm:flex-none lg:w-72"
+                        data-tour="grades-search"
                     >
                         <label for="grade-subject-search" class="sr-only">
                             Search subjects
@@ -588,6 +627,7 @@ onMounted(() => {
                     </div>
                     <button
                         type="button"
+                        data-tour="grades-export"
                         class="dash-btn inline-flex h-11 shrink-0 items-center justify-center gap-1.5 border border-border/60 bg-card px-3 text-[13px] text-foreground transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60 sm:px-4 sm:text-[15px]"
                         :disabled="isExporting"
                         :aria-busy="isExporting"
@@ -671,6 +711,7 @@ onMounted(() => {
             <!-- Overview Cards -->
             <div
                 v-show="!isLoading && !fetchError && totalSubjectCount > 0"
+                data-tour="grades-overview"
                 class="mb-4 grid grid-cols-2 gap-3 sm:mb-6 sm:gap-4 lg:grid-cols-4"
             >
                 <Card class="animate-card gap-2 py-3 sm:gap-6 sm:py-6">
@@ -833,8 +874,9 @@ onMounted(() => {
             <!-- Grades Tables -->
             <template v-else>
                 <Card
-                    v-for="group in gradeGroups"
+                    v-for="(group, groupIdx) in gradeGroups"
                     :key="group.key"
+                    :data-tour="groupIdx === 0 ? 'grades-table' : undefined"
                     class="animate-group mb-4 sm:mb-6"
                 >
                     <CardHeader>
@@ -1850,6 +1892,14 @@ onMounted(() => {
                 </Card>
             </template>
         </div>
+
+        <!-- First-visit walkthrough (per user, per device) -->
+        <OnboardingTour
+            tour-id="grades"
+            :steps="gradesTourSteps"
+            :can-start="!isLoading && !fetchError"
+            :start-delay="900"
+        />
     </AppLayout>
 </template>
 
