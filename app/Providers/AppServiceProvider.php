@@ -152,6 +152,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('chat', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
         RateLimiter::for('chats', fn (Request $request) => Limit::perMinute(60)->by($this->rateLimitKey($request)));
         RateLimiter::for('ai-actions', fn (Request $request) => Limit::perMinute(30)->by($this->rateLimitKey($request)));
+        RateLimiter::for('csp-reports', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('claim-xp', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
     }
 

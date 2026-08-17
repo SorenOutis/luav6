@@ -217,6 +217,7 @@ const ALLOWED_MIMES = [
 ];
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_MESSAGE_CHARACTERS = 8000;
 
 const aiChatEnabled = computed(
     () => (page.props.aiChat as { enabled?: boolean })?.enabled !== false,
@@ -1251,6 +1252,7 @@ onBeforeUnmount(() => {
                                             ref="welcomeInputRef"
                                             v-model="inputMessage"
                                             placeholder="Ask about assignments, exams, or your study progress..."
+                                            :maxlength="MAX_MESSAGE_CHARACTERS"
                                             class="min-h-[56px] resize-none rounded-2xl border-border/40 bg-background/70 py-3 pr-12 pl-12 text-[15px] shadow-sm placeholder:text-muted-foreground/50 focus-visible:ring-primary/30 sm:min-h-[72px] sm:py-3.5 sm:pr-14 sm:pl-14"
                                             @keydown="handleComposerKeydown"
                                         />
@@ -1593,6 +1595,7 @@ onBeforeUnmount(() => {
                             <Textarea
                                 v-model="inputMessage"
                                 placeholder="Continue the conversation... (drag & drop files)"
+                                :maxlength="MAX_MESSAGE_CHARACTERS"
                                 class="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-xl border-border/40 bg-background/60 px-3.5 py-2.5 text-[13px] placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30"
                                 @keydown="handleComposerKeydown"
                             />

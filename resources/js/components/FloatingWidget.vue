@@ -129,6 +129,7 @@ const ALLOWED_MIMES = [
 ];
 const MAX_ATTACHMENTS = 4;
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_MESSAGE_CHARACTERS = 8000;
 
 let blockedWarningTimer: ReturnType<typeof setTimeout> | null = null;
 let shakeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1406,6 +1407,7 @@ watch(inputMessage, () => {
                                 ref="textareaRef"
                                 v-model="inputMessage"
                                 placeholder="Ask me anything... (drag & drop files)"
+                                :maxlength="MAX_MESSAGE_CHARACTERS"
                                 class="max-h-[120px] min-h-[38px] flex-1 resize-none rounded-xl border-border/40 bg-background/60 px-3.5 py-2.5 text-xs placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30"
                                 @keydown.enter.prevent="sendMessage"
                             />

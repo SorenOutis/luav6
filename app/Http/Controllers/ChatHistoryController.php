@@ -176,7 +176,7 @@ class ChatHistoryController extends Controller
         $session = $this->sessionForUser($request, $session);
 
         $request->validate([
-            'message' => 'required|string',
+            'message' => $this->chatService->messageValidationRules(),
             'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
             'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
@@ -280,7 +280,7 @@ class ChatHistoryController extends Controller
         $session = $this->sessionForUser($request, $session);
 
         $request->validate([
-            'message' => 'required|string',
+            'message' => $this->chatService->messageValidationRules(),
             'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
             'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);

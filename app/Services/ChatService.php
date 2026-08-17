@@ -34,8 +34,13 @@ use Throwable;
  */
 class ChatService
 {
-    /** Max number of files a student may attach to a single message. */
+    /** Max number of files a user may attach to a single message. */
     public const MAX_ATTACHMENTS = 4;
+
+    /** Hard bounds applied before any chat provider receives the message. */
+    public const MAX_MESSAGE_CHARACTERS = 8000;
+
+    public const MAX_MESSAGE_TOKENS = 3000;
 
     /** Per-file size cap in kilobytes (5 MB). */
     public const MAX_ATTACHMENT_KB = 5120;
@@ -95,6 +100,26 @@ class ChatService
             'mime' => $file->getMimeType() ?: 'application/octet-stream',
             'kind' => str_starts_with($file->getMimeType() ?? '', 'image/') ? 'image' : 'document',
         ];
+    }
+
+    /** @return array<int, mixed> */
+    public function messageValidationRules(): array
+    {
+        return [
+            'required',
+            'string',
+            'max:'.self::MAX_MESSAGE_CHARACTERS,
+            function (string $attribute, mixed $value, \Closure $fail): void {
+                if (is_string($value) && self::tokensFromText($value) > self::MAX_MESSAGE_TOKENS) {
+                    $fail('The message is too large for one AI request. Shorten it or split it into smaller messages.');
+                }
+            },
+        ];
+    }
+
+    public static function tokensFromText(string $text): int
+    {
+        return max(1, (int) ceil(strlen($text) / 3));
     }
 
     /**

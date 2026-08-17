@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Data\AuthUserData;
 use App\Models\Setting;
 use App\Models\Workspace;
 use App\Support\PublicFileUrl;
@@ -44,7 +45,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => AuthUserData::from($request->user()),
             ],
             'workspace' => fn () => $this->workspaceProps($request),
             'seo' => [

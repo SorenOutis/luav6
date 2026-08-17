@@ -15,7 +15,7 @@ use App\Filament\Widgets\SeasonProgressWidget;
 use App\Filament\Widgets\SectionComparisonWidget;
 use App\Filament\Widgets\StudentRiskWidget;
 use App\Filament\Widgets\TopStudentsWidget;
-use App\Http\Middleware\SanitizeInput;
+use App\Http\Middleware\SecurityHeaders;
 use App\Support\FaviconUrl;
 use Croustibat\FilamentJobsMonitor\FilamentJobsMonitorPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -86,7 +86,7 @@ class AdminPanelProvider extends PanelProvider
                 QuickActionsWidget::class,
             ])
             ->middleware([
-                SanitizeInput::class,
+                SecurityHeaders::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

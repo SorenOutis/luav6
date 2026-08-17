@@ -17,6 +17,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import { withForm } from '@/lib/route-helpers';
+import { sanitizeSvg } from '@/lib/sanitizeHtml';
 import { confirm } from '@/routes/two-factor';
 import type { TwoFactorConfigContent } from '@/types';
 
@@ -33,6 +34,9 @@ const isOpen = defineModel<boolean>('isOpen');
 const { copy, copied } = useClipboard();
 const { qrCodeSvg, manualSetupKey, clearSetupData, fetchSetupData, errors } =
     useTwoFactorAuth();
+const sanitizedQrCodeSvg = computed(() =>
+    qrCodeSvg.value ? sanitizeSvg(qrCodeSvg.value) : '',
+);
 
 const showVerificationStep = ref(false);
 const code = ref<string>('');
@@ -172,7 +176,7 @@ watch(
                                 class="relative z-10 overflow-hidden border p-5"
                             >
                                 <div
-                                    v-html="qrCodeSvg"
+                                    v-html="sanitizedQrCodeSvg"
                                     class="flex aspect-square size-full items-center justify-center"
                                     :style="{
                                         filter:

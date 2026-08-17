@@ -83,7 +83,8 @@ class ChatController extends Controller
         }
 
         $request->validate([
-            'message' => 'required|string',
+            'message' => $this->chatService->messageValidationRules(),
+            'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
             'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);
 
@@ -189,7 +190,7 @@ class ChatController extends Controller
         }
 
         $request->validate([
-            'message' => 'required|string',
+            'message' => $this->chatService->messageValidationRules(),
             'attachments' => ['sometimes', 'array', 'max:'.ChatService::MAX_ATTACHMENTS],
             'attachments.*' => $this->chatService->attachmentValidationRules(),
         ]);

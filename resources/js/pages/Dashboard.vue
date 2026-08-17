@@ -100,7 +100,7 @@ const manualRefresh = () => {
 
 const page = usePage();
 const userName = computed(() => page.props.auth.user?.name || 'User');
-const userAvatar = computed(() => page.props.auth.user?.avatar);
+const userAvatar = computed(() => page.props.auth.user?.avatar || undefined);
 const userProfileHref = computed(() => {
     const publicId = page.props.auth.user?.public_id;
 

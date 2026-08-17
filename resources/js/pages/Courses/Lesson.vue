@@ -15,6 +15,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { sanitizeRichHtml } from '@/lib/sanitizeHtml';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
 
@@ -233,12 +234,12 @@ const embedUrl = computed(() => {
 });
 
 // Computed property for lesson content with fallback
-const sanitizedContent = computed(() => {
-    return (
+const sanitizedContent = computed(() =>
+    sanitizeRichHtml(
         props.lesson.content ||
-        '<p class="text-muted-foreground">No content available for this lesson yet.</p>'
-    );
-});
+            '<p class="text-muted-foreground">No content available for this lesson yet.</p>',
+    ),
+);
 
 // ─── Page Transition Animation ───
 const TRANSITION_DURATION = 280; // ms

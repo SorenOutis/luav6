@@ -12,6 +12,7 @@ use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\FaviconController;
@@ -42,6 +43,10 @@ Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
 
 Route::get('/robots.txt', RobotsController::class);
 Route::get('/sitemap.xml', SitemapController::class);
+Route::post('/csp/report', CspReportController::class)
+    ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+    ->middleware('throttle:csp-reports')
+    ->name('csp.report');
 
 // ─── Branding ───────────────────────────────────────────────────────────────
 
