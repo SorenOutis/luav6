@@ -166,15 +166,24 @@ class DashboardController extends Controller
         $canClaim = $this->claimXpService->canClaim($user);
         $claimAmount = $this->claimXpService->claimAmount($user);
         $nextClaimAt = $this->claimXpService->nextClaimAt($user);
-        $showClaimPrompt = $canClaim && ! $request->session()->has('daily_claim_prompt_shown');
 
-        // Consume the once-per-session flag only when the prompt is actually
-        // delivered now. Users without a section see the section-selection modal
-        // first, so their prompt (and flag) is deferred: either the client marks
-        // it as shown via api/claim-xp/prompt-shown when it opens, or it is set
-        // here on the reload after they join a section.
+        // Offer the claim popup once per calendar day instead of once per
+        // session. A boolean flag set on the first dashboard visit never resets
+        // for sessions that span multiple days (remember-me cookie, tab left
+        // open), so on later logins/visits with a fresh daily XP available only
+        // the inline claim card would render — the popup would never show again.
+        // Keying the flag by date re-offers the popup on every new day (i.e. on
+        // the next login) while the reward is still unclaimed.
+        $promptShownOn = $request->session()->get('daily_claim_prompt_shown_on');
+        $showClaimPrompt = $canClaim && $promptShownOn !== now()->toDateString();
+
+        // Consume the per-day flag only when the prompt is actually delivered
+        // now. Users without a section see the section-selection modal first,
+        // so their prompt (and flag) is deferred: either the client marks it as
+        // shown via api/claim-xp/prompt-shown when it opens, or it is set here
+        // on the reload after they join a section.
         if ($user->sections->isNotEmpty() && $showClaimPrompt) {
-            $request->session()->put('daily_claim_prompt_shown', true);
+            $request->session()->put('daily_claim_prompt_shown_on', now()->toDateString());
         }
 
         $history = $user->gamificationHistories()
