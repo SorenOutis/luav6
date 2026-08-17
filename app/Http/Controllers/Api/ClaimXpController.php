@@ -22,15 +22,19 @@ class ClaimXpController extends Controller
     }
 
     /**
-     * Mark the daily claim prompt as shown for this session.
+     * Mark the daily claim prompt as shown for today.
+     *
+     * Stored per calendar day so the popup is offered again on the next day
+     * (or next login) while the reward is still unclaimed, instead of being
+     * suppressed for the rest of the session.
      *
      * The prompt is deferred for users without a section until after the
      * section-selection modal; the client calls this when the prompt actually
-     * opens so it doesn't re-appear on later dashboard visits.
+     * opens so it doesn't re-appear on later dashboard visits today.
      */
     public function promptShown(Request $request): JsonResponse
     {
-        $request->session()->put('daily_claim_prompt_shown', true);
+        $request->session()->put('daily_claim_prompt_shown_on', now()->toDateString());
 
         return response()->json(['ok' => true]);
     }

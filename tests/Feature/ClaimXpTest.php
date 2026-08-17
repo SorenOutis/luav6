@@ -271,7 +271,7 @@ it('keeps the claim prompt available for section-less users until it is shown', 
     $season = Season::factory()->active()->create();
     $user = User::factory()->create(['last_claimed_at' => null]);
 
-    // No section yet — the prompt is deferred, so the once-per-session flag
+    // No section yet — the prompt is deferred, so the per-day flag
     // must NOT be consumed server-side on this first visit.
     $first = actingAs($user)->get('/dashboard');
     $first->assertOk();
@@ -286,7 +286,7 @@ it('keeps the claim prompt available for section-less users until it is shown', 
     expect(dashboardClaimPrompt($second))->toBeFalse();
 });
 
-it('consumes the claim prompt flag once for users who already have a section', function () {
+it('offers the claim prompt once per day for users who already have a section', function () {
     [$student] = claimContext();
 
     $first = actingAs($student)->get('/dashboard');
@@ -296,4 +296,21 @@ it('consumes the claim prompt flag once for users who already have a section', f
     $second = actingAs($student)->get('/dashboard');
     $second->assertOk();
     expect(dashboardClaimPrompt($second))->toBeFalse();
+});
+
+it('re-offers the claim prompt on a new day while the reward is unclaimed', function () {
+    [$student] = claimContext();
+
+    $first = actingAs($student)->get('/dashboard');
+    $first->assertOk();
+    expect(dashboardClaimPrompt($first))->toBeTrue();
+
+    // The suppression flag is keyed by calendar date — a flag from yesterday
+    // must not hide today's popup, so logging in on a new day (or opening the
+    // dashboard in a session that spans days) shows the popup again.
+    $this->withSession(['daily_claim_prompt_shown_on' => now()->subDay()->toDateString()]);
+
+    $nextDay = actingAs($student)->get('/dashboard');
+    $nextDay->assertOk();
+    expect(dashboardClaimPrompt($nextDay))->toBeTrue();
 });
