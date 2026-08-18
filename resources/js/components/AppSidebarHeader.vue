@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3';
 import { Bell, Moon, Shield, Sun, TrendingUp, Zap } from 'lucide-vue-next';
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import LogoutConfirmationModal from '@/components/LogoutConfirmationModal.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,7 @@ withDefaults(
 const { appearance, toggleTheme } = useAppearance();
 const page = usePage();
 const user = computed<User>(() => page.props.auth.user);
+const showLogoutDialog = ref(false);
 
 interface HeaderNotification {
     id: string;
@@ -307,9 +309,17 @@ const markAllNotificationsAsRead = () => {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" class="w-56">
-                    <UserMenuContent :user="user" />
+                    <UserMenuContent
+                        :user="user"
+                        @logout="showLogoutDialog = true"
+                    />
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>
     </header>
+
+    <LogoutConfirmationModal
+        :open="showLogoutDialog"
+        @close="showLogoutDialog = false"
+    />
 </template>

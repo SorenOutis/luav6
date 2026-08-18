@@ -70,7 +70,8 @@ function handleDesktopOpenChange(v: boolean) {
     <template v-if="isMobile">
         <MobileBottomSheet
             :open="isOpen"
-            :title="title"
+            :title="customHeader ? '' : title"
+            :description="customHeader ? '' : description"
             :show-close-button="showSheetClose"
             @close="handleClose"
         >
@@ -79,7 +80,12 @@ function handleDesktopOpenChange(v: boolean) {
             <!-- Main content -->
             <slot />
             <!-- Footer buttons -->
-            <slot name="footer" />
+            <div
+                v-if="$slots.footer"
+                class="mx-2 mt-5 flex flex-col-reverse gap-2 border-t border-border/60 px-4 pt-4"
+            >
+                <slot name="footer" />
+            </div>
         </MobileBottomSheet>
     </template>
 
