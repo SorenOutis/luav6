@@ -1163,7 +1163,7 @@ watch(selectedPartId, () => {
             ref="scrollRef"
             @scroll="showScrollbar"
             data-lenis-prevent
-            class="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            class="custom-scrollbar min-h-0 overscroll-contain sm:flex-1 sm:overflow-y-auto"
         >
             <div
                 v-if="isLoadingReview"
@@ -1522,12 +1522,13 @@ watch(selectedPartId, () => {
                                             class="text-[10px] font-medium text-muted-foreground"
                                             >Your response</span
                                         >
-                                        <!-- Long essays scroll inside a bounded box. The mobile
-                                             (base) cap is taller so the answer has room to display
-                                             on screen; the desktop modal keeps the tighter cap. -->
+                                        <!-- On mobile the essay flows at full height so the bottom
+                                             sheet's own scroll area handles it — a nested scroll box
+                                             traps touch scrolling and hides the Prev/Next controls.
+                                             The desktop modal keeps a bounded, scrollable box. -->
                                         <p
                                             data-test="essay-response"
-                                            class="custom-scrollbar mt-1 max-h-96 overflow-y-auto overscroll-contain text-sm leading-relaxed whitespace-pre-wrap text-foreground sm:max-h-52"
+                                            class="custom-scrollbar mt-1 overflow-y-auto overscroll-contain text-sm leading-relaxed whitespace-pre-wrap text-foreground sm:max-h-52"
                                         >
                                             {{
                                                 getAnswerForQuestion(
@@ -1595,7 +1596,7 @@ watch(selectedPartId, () => {
                                                 )?.ai_feedback
                                             "
                                             data-test="essay-feedback"
-                                            class="custom-scrollbar mt-2 max-h-96 overflow-y-auto overscroll-contain text-sm leading-relaxed text-foreground/80 sm:max-h-52"
+                                            class="custom-scrollbar mt-2 overflow-y-auto overscroll-contain text-sm leading-relaxed text-foreground/80 sm:max-h-52"
                                         >
                                             {{
                                                 getAnswerObjectForQuestion(

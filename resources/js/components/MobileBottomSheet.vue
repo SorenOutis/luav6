@@ -127,7 +127,7 @@ function handleClose() {
                  close button stay visible while the body scrolls -->
             <div
                 v-if="$slots.header || title || description || showCloseButton"
-                class="flex items-start gap-4 px-6 pt-4 pb-3"
+                class="flex shrink-0 items-start gap-4 px-6 pt-4 pb-3"
                 :class="
                     $slots.header || title || description
                         ? 'justify-between'
