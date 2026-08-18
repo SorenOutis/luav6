@@ -12,6 +12,7 @@ import {
     Cpu,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, onUnmounted, ref, computed } from 'vue';
+import { isLowEndDeviceSignal } from '@/lib/device';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -86,9 +87,15 @@ const updateTime = () => {
 
 onMounted(() => {
     updateTime();
+
+    // Phones / low-end: one static timestamp, no 1 Hz re-render, no GSAP
+    // blur-filter reveals (those force a paint of the whole footer).
+    if (isLowEndDeviceSignal()) {
+        return;
+    }
+
     timer = window.setInterval(updateTime, 1000);
 
-    // Check global reduced-motion preference via matchMedia
     const reducedMotion = window.matchMedia(
         '(prefers-reduced-motion: reduce)',
     ).matches;

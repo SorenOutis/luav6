@@ -2,7 +2,10 @@ import { router } from '@inertiajs/vue3';
 import Lenis from 'lenis';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
+import { isLowEndDeviceSignal } from '@/lib/device';
 import 'lenis/dist/lenis.css';
+
+export { isLowEndDeviceSignal };
 
 /**
  * A singleton wrapper around Lenis smooth scroll.
@@ -38,50 +41,6 @@ const defaultConfig: LenisConfig = {
     anchors: true,
     autoRaf: true,
 };
-
-/**
- * Whether the current device is low-tier hardware that should avoid the
- * per-frame cost of a smooth-scroll engine.
- *
- * Mirrors the heuristics in `useMobile`'s `isLowEndDevice` so the global
- * Lenis instance shares the same signal instead of only honoring
- * `prefers-reduced-motion`. Lenis runs its own `requestAnimationFrame`
- * virtual-scroll loop and `scroll` → `ScrollTrigger.update()` churn, which is
- * a leading source of frame drops on coarse-pointer / low-memory / few-core
- * devices — even when the page's own GSAP is already disabled.
- */
-interface DeviceMemory extends Navigator {
-    deviceMemory?: number;
-}
-interface NavigatorWithConnection extends Navigator {
-    connection?: { effectiveType?: string };
-}
-
-export function isLowEndDeviceSignal(): boolean {
-    if (typeof window === 'undefined') return false;
-    const reduced = window.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-    ).matches;
-    if (reduced) return true;
-
-    const coarse =
-        'ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        window.matchMedia('(pointer: coarse)').matches;
-    if (coarse) return true;
-
-    const mem = (navigator as DeviceMemory).deviceMemory;
-    if (mem !== undefined && mem !== null && mem <= 4) return true;
-
-    const cores = navigator.hardwareConcurrency;
-    if (cores !== undefined && cores !== null && cores <= 4) return true;
-
-    const conn = (navigator as NavigatorWithConnection).connection
-        ?.effectiveType;
-    if (conn === 'slow-2g' || conn === '2g') return true;
-
-    return false;
-}
 
 /**
  * Create (or return existing) global Lenis instance.

@@ -199,6 +199,7 @@ onUnmounted(() => {
     <div
         ref="featureCardsRef"
         class="mt-12 grid w-full gap-0 border-b border-border/20 lg:mt-24 lg:grid-cols-3 dark:border-border/10"
+        :class="{ 'lite-motion': prefersReducedMotion }"
     >
         <Motion
             v-for="(feature, index) in coreFeatures"
@@ -272,6 +273,12 @@ onUnmounted(() => {
             </div>
 
             <div
+                v-if="prefersReducedMotion"
+                class="mt-16 lg:mt-20"
+                aria-hidden="true"
+            ></div>
+            <div
+                v-else
                 class="group/matrix relative mt-12 mb-10 flex h-16 w-full items-end gap-1.5 overflow-hidden lg:mt-16 lg:mb-14 lg:h-20"
             >
                 <div
@@ -622,5 +629,21 @@ onUnmounted(() => {
     .group:hover .fragment-bar {
         background-color: transparent;
     }
+}
+
+/* Phones / low-end: the parent stamps `.lite-motion` even when the OS
+   reduced-motion setting is off, so looping CSS FX never start. */
+.lite-motion .feature-gradient,
+.lite-motion .shine-overlay,
+.lite-motion .feature-card-glow,
+.lite-motion .cta-btn::after,
+.lite-motion .view-details-btn::after {
+    animation: none !important;
+}
+.lite-motion .shine-overlay {
+    opacity: 0 !important;
+}
+.lite-motion .feature-card-glow {
+    box-shadow: none !important;
 }
 </style>

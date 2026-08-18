@@ -26,6 +26,7 @@ import SeoHead from '@/components/Seo/SeoHead.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import { syncLenisWithGsap } from '@/composables/useLenis';
+import { isLowEndDeviceSignal } from '@/lib/device';
 gsap.registerPlugin(ScrollTrigger);
 
 defineProps<{
@@ -174,6 +175,12 @@ const seoJsonLd = computed(() => [
 ]);
 
 onMounted(() => {
+    // Filter-blur scroll reveals on every <section> are a main-thread sink
+    // on phones. Skip the whole GSAP tree on low-end / coarse-pointer.
+    if (isLowEndDeviceSignal()) {
+        return;
+    }
+
     lenisCleanup = syncLenisWithGsap(ScrollTrigger);
 
     ctx = gsap.context(() => {

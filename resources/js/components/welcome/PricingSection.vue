@@ -362,7 +362,8 @@ onUnmounted(() => {
     <section
         ref="pricingRef"
         id="pricing"
-        class="reveal-section mt-32 scroll-mt-32"
+        class="reveal-section mt-20 scroll-mt-32 sm:mt-32"
+        :class="{ 'lite-motion': prefersReducedMotion }"
     >
         <div class="mb-12 flex flex-col gap-3">
             <div
@@ -911,5 +912,18 @@ onUnmounted(() => {
     .feature-row:hover {
         transform: none;
     }
+}
+
+.lite-motion .animated-gradient,
+.lite-motion .shine-overlay,
+.lite-motion .featured-glow,
+.lite-motion .cta-button::after {
+    animation: none !important;
+}
+.lite-motion .shine-overlay {
+    opacity: 0 !important;
+}
+.lite-motion .featured-glow {
+    box-shadow: none !important;
 }
 </style>

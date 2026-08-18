@@ -6,9 +6,14 @@ import { createApp, h } from 'vue';
 import '../css/app.css';
 import GlobalLoader from '@/components/GlobalLoader.vue';
 import { initializeTheme } from '@/composables/useAppearance';
-import { initLenis, isLowEndDeviceSignal } from '@/composables/useLenis';
+import { initLenis } from '@/composables/useLenis';
 import { useLoader } from '@/composables/useLoader';
+import { applyLowEndDocumentFlag } from '@/lib/device';
 import { formPropsFor } from '@/lib/route-helpers';
+
+// Stamp data-low-end before the async route-patch + Inertia boot so the
+// first paint already disables backdrop-filter / infinite CSS animation.
+applyLowEndDocumentFlag();
 
 const metaContent = (name: string): string | undefined =>
     document
@@ -307,11 +312,8 @@ function ensureFormMethod(route: any): void {
 
         initializeTheme();
 
-        // Flag low-end hardware on <html> so global CSS can disable heavy
-        // effects (animations, backdrop-blur, will-change) on every route.
-        if (isLowEndDeviceSignal()) {
-            document.documentElement.setAttribute('data-low-end', '');
-        }
+        // Re-stamp after boot in case matchMedia was not ready at module load.
+        applyLowEndDocumentFlag();
 
         // Initialise Lenis smooth scroll globally
         initLenis();

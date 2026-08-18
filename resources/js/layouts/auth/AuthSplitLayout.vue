@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { Command, ArrowUpRight } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
+import { isLowEndDeviceSignal } from '@/lib/device';
 import { home } from '@/routes';
 
 // Layout doesn't need title/description props anymore since pages provide them
@@ -100,6 +101,13 @@ let gsapCtx: gsap.Context | null = null;
 
 onMounted(() => {
     updateClock();
+
+    // Left-panel orbs / tagline / clock are `hidden lg:flex`. Running their
+    // GSAP + 1 Hz timers on a phone still costs a frame every tick.
+    if (isLowEndDeviceSignal()) {
+        return;
+    }
+
     clockInterval = setInterval(updateClock, 1000);
 
     // Tagline rotation

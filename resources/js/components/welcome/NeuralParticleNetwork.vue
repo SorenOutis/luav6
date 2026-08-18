@@ -27,7 +27,9 @@ interface Particle {
 
 const initParticleNetwork = () => {
     const canvas = particleCanvas.value;
-    if (!canvas || props.prefersReducedMotion) return;
+    // Coarse-pointer devices never see the canvas (`hidden md:block`) but
+    // the rAF loop still ran and burned a full core on phones.
+    if (!canvas || props.prefersReducedMotion || props.isCoarsePointer) return;
 
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;

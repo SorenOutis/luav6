@@ -101,9 +101,9 @@ const seoJsonLd = [
     <div
         class="howitworks-root relative min-h-screen w-full overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20"
     >
-        <!-- Background grid -->
+        <!-- Background grid (desktop only) -->
         <div
-            class="pointer-events-none fixed inset-0 z-0 opacity-[0.025] dark:opacity-[0.05]"
+            class="welcome-bg-grid pointer-events-none fixed inset-0 z-0 hidden opacity-[0.025] md:block dark:opacity-[0.05]"
         >
             <div
                 class="absolute inset-0"
