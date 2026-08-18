@@ -6,11 +6,13 @@ import { ref, watch, nextTick } from 'vue';
 type Props = {
     open: boolean;
     title?: string;
+    description?: string;
     showCloseButton?: boolean;
 };
 
 const props = withDefaults(defineProps<Props>(), {
     title: '',
+    description: '',
     showCloseButton: true,
 });
 
@@ -104,7 +106,7 @@ function handleClose() {
         <div
             v-if="open"
             ref="backdropRef"
-            class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
+            class="fixed inset-0 z-[100] bg-black/55 backdrop-blur-sm"
             @click="handleBackdropClick"
         />
 
@@ -112,7 +114,8 @@ function handleClose() {
         <div
             v-if="open"
             ref="sheetRef"
-            class="fixed right-0 bottom-0 left-0 z-[70] mx-auto max-w-lg rounded-t-3xl border-t border-border/60 bg-background/95 shadow-2xl shadow-black/20 backdrop-blur-2xl"
+            data-test="mobile-bottom-sheet"
+            class="fixed right-0 bottom-0 left-0 z-[110] mx-auto max-w-lg rounded-t-3xl border-t border-border/60 bg-background/95 shadow-2xl shadow-black/20 backdrop-blur-2xl"
             style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem)"
         >
             <!-- Grab Handle -->
@@ -122,17 +125,32 @@ function handleClose() {
 
             <!-- Header -->
             <div
-                v-if="title || showCloseButton"
-                class="flex items-center justify-between px-6 pt-4 pb-2"
+                v-if="title || description || showCloseButton"
+                class="flex items-start gap-4 px-6 pt-4 pb-3"
+                :class="
+                    title || description ? 'justify-between' : 'justify-end'
+                "
             >
-                <h2 class="text-base font-black tracking-tight text-foreground">
-                    {{ title }}
-                </h2>
+                <div v-if="title || description" class="min-w-0 pt-1">
+                    <h2
+                        v-if="title"
+                        class="text-lg font-bold tracking-tight text-foreground"
+                    >
+                        {{ title }}
+                    </h2>
+                    <p
+                        v-if="description"
+                        class="mt-1 text-sm leading-5 text-muted-foreground"
+                    >
+                        {{ description }}
+                    </p>
+                </div>
                 <button
                     v-if="showCloseButton"
-                    @click="handleClose"
-                    class="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-90"
+                    type="button"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-90"
                     aria-label="Close"
+                    @click="handleClose"
                 >
                     <X class="h-5 w-5" />
                 </button>

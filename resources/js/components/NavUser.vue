@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { ChevronsUpDown } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import LogoutConfirmationModal from '@/components/LogoutConfirmationModal.vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,6 +20,7 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const { isMobile, state } = useSidebar();
+const showLogoutDialog = ref(false);
 </script>
 
 <template>
@@ -47,9 +49,17 @@ const { isMobile, state } = useSidebar();
                     align="end"
                     :side-offset="4"
                 >
-                    <UserMenuContent :user="user" />
+                    <UserMenuContent
+                        :user="user"
+                        @logout="showLogoutDialog = true"
+                    />
                 </DropdownMenuContent>
             </DropdownMenu>
         </SidebarMenuItem>
     </SidebarMenu>
+
+    <LogoutConfirmationModal
+        :open="showLogoutDialog"
+        @close="showLogoutDialog = false"
+    />
 </template>

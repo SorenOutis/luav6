@@ -19,6 +19,7 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import LogoutConfirmationModal from '@/components/LogoutConfirmationModal.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -63,6 +64,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const page = usePage();
 const auth = computed(() => page.props.auth);
+const showLogoutDialog = ref(false);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 const { appearance, toggleTheme } = useAppearance();
 
@@ -583,7 +585,10 @@ const rightNavItems: NavItem[] = [
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" class="w-56">
-                            <UserMenuContent :user="auth.user" />
+                            <UserMenuContent
+                                :user="auth.user"
+                                @logout="showLogoutDialog = true"
+                            />
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -601,4 +606,9 @@ const rightNavItems: NavItem[] = [
             </div>
         </div>
     </div>
+
+    <LogoutConfirmationModal
+        :open="showLogoutDialog"
+        @close="showLogoutDialog = false"
+    />
 </template>
