@@ -166,6 +166,67 @@ describe('OnboardingTour', () => {
         wrapper.unmount();
         vi.useRealTimers();
     });
+
+    it('keeps the mobile card mounted and shows the next targeted step', async () => {
+        const originalWidth = window.innerWidth;
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: 390,
+        });
+
+        const target = document.createElement('div');
+        target.dataset.tour = 'mobile-target';
+        target.getBoundingClientRect = () => ({
+            x: 12,
+            y: 160,
+            top: 160,
+            right: 378,
+            bottom: 240,
+            left: 12,
+            width: 366,
+            height: 80,
+            toJSON: () => ({}),
+        });
+        target.scrollIntoView = vi.fn();
+        document.body.appendChild(target);
+
+        const wrapper = mountTour({
+            steps: [
+                { id: 'welcome', title: 'Welcome', body: 'Intro step.' },
+                {
+                    id: 'feature',
+                    title: 'Mobile feature',
+                    body: 'The next step.',
+                    target: 'mobile-target',
+                },
+            ],
+        });
+        await flushTimers(50);
+
+        const firstCard = document.querySelector<HTMLElement>('.ot-card');
+        expect(firstCard).not.toBeNull();
+
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+
+        const nextCard = document.querySelector<HTMLElement>('.ot-card');
+        expect(nextCard).toBe(firstCard);
+        expect(nextCard?.textContent).toContain('2 of 2');
+        expect(nextCard?.textContent).toContain('Mobile feature');
+        expect(nextCard?.style.bottom).toContain('4.75rem');
+        expect(target.scrollIntoView).toHaveBeenCalled();
+
+        wrapper.unmount();
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: originalWidth,
+        });
+        vi.useRealTimers();
+    });
 });
 
 describe('page wiring', () => {
