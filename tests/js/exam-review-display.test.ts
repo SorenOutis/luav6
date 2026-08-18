@@ -480,20 +480,21 @@ describe('Exam.vue review modal answer display', () => {
             expect(next, 'mobile Next control should exist').toBeTruthy();
             expect(wrapper.text()).toContain('1 / 4');
 
-            // The long essay stays inside a scrollable area on mobile, but the
-            // base cap is taller than the desktop cap so the text has room to
-            // display on screen instead of being trapped in a tiny box.
+            // The long essay flows at full height on mobile so the bottom
+            // sheet's own scroll area handles it. A nested mobile height cap
+            // (`max-h-96`) trapped touch scrolling and hid the Prev/Next and
+            // Close controls. Only the desktop modal keeps a bounded box.
             const response = wrapper.find('[data-test="essay-response"]');
             expect(response.exists()).toBe(true);
             expect(response.classes()).toContain('overflow-y-auto');
             expect(response.classes()).toContain('overscroll-contain');
-            expect(response.classes()).toContain('max-h-96');
+            expect(response.classes()).not.toContain('max-h-96');
             expect(response.classes()).toContain('sm:max-h-52');
             expect(response.text()).toContain('A very long essay response');
 
             const feedback = wrapper.find('[data-test="essay-feedback"]');
             expect(feedback.exists()).toBe(true);
-            expect(feedback.classes()).toContain('max-h-96');
+            expect(feedback.classes()).not.toContain('max-h-96');
             expect(feedback.classes()).toContain('sm:max-h-52');
         } finally {
             Object.defineProperty(window, 'innerWidth', {
