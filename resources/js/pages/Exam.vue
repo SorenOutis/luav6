@@ -1522,9 +1522,12 @@ watch(selectedPartId, () => {
                                             class="text-[10px] font-medium text-muted-foreground"
                                             >Your response</span
                                         >
+                                        <!-- Long essays scroll inside a bounded box. The mobile
+                                             (base) cap is taller so the answer has room to display
+                                             on screen; the desktop modal keeps the tighter cap. -->
                                         <p
                                             data-test="essay-response"
-                                            class="custom-scrollbar mt-1 max-h-52 overflow-y-auto overscroll-contain text-sm leading-relaxed whitespace-pre-wrap text-foreground"
+                                            class="custom-scrollbar mt-1 max-h-96 overflow-y-auto overscroll-contain text-sm leading-relaxed whitespace-pre-wrap text-foreground sm:max-h-52"
                                         >
                                             {{
                                                 getAnswerForQuestion(
@@ -1592,7 +1595,7 @@ watch(selectedPartId, () => {
                                                 )?.ai_feedback
                                             "
                                             data-test="essay-feedback"
-                                            class="custom-scrollbar mt-2 max-h-52 overflow-y-auto overscroll-contain text-sm leading-relaxed text-foreground/80"
+                                            class="custom-scrollbar mt-2 max-h-96 overflow-y-auto overscroll-contain text-sm leading-relaxed text-foreground/80 sm:max-h-52"
                                         >
                                             {{
                                                 getAnswerObjectForQuestion(
