@@ -382,10 +382,17 @@ const cardStyle = computed(() => {
                     aria-hidden="true"
                 />
 
-                <!-- Step card -->
+                <!-- Step card. Keep the element mounted between steps on
+                     mobile. Replacing a fixed, scrollable dialog during a
+                     touch click can leave WebKit waiting on the outgoing
+                     transition, so the next card never gets inserted. -->
                 <Transition name="ot-card" :css="!instant" mode="out-in">
                     <div
-                        :key="currentStep?.id ?? stepIndex"
+                        :key="
+                            isMobile
+                                ? 'mobile-tour-card'
+                                : (currentStep?.id ?? stepIndex)
+                        "
                         ref="cardRef"
                         tabindex="-1"
                         role="dialog"
