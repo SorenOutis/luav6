@@ -297,6 +297,46 @@ const closedExamPartialSubmission = {
     ],
 };
 
+// A closed exam whose essay question carries a long response + AI feedback.
+const closedExamWithEssay = {
+    ...closedExam,
+    id: 10,
+    title: 'Essay Exam',
+    submissions: [
+        {
+            ...closedExam.submissions[0],
+            answers: [
+                ...closedExam.submissions[0].answers,
+                {
+                    question_number: 4,
+                    answer: 'A very long essay response that would otherwise stretch the review modal far beyond the viewport height, making the close button unreachable without scrolling the entire sheet.',
+                    question_type: 'essay',
+                    question_text: 'Write an essay.',
+                    points: 10,
+                    ai_score: 8,
+                    ai_feedback:
+                        'A very long AI feedback paragraph that should also be bounded inside a scrollable area so it never pushes the rest of the review out of view.',
+                },
+            ],
+        },
+    ],
+    parts: [
+        {
+            ...closedExam.parts[0],
+            questions: [
+                ...closedExam.parts[0].questions,
+                {
+                    text: 'Write an essay.',
+                    type: 'essay',
+                    points: 10,
+                    options: null,
+                    correct_answer: null,
+                },
+            ],
+        },
+    ],
+};
+
 describe('Exam.vue review modal answer display', () => {
     beforeEach(() => {
         localStorage.clear();
@@ -378,5 +418,34 @@ describe('Exam.vue review modal answer display', () => {
         // the exam) and falls back to "No answer".
         expect(text).toContain('Who wrote Noli Me Tangere?');
         expect(text).toContain('No answer');
+    });
+
+    it('bounds long essay responses and AI feedback in scrollable areas', async () => {
+        const wrapper = mountExamPage([closedExamWithEssay as any]);
+        await flushPromises();
+
+        const reviewBtn = wrapper
+            .findAll('button')
+            .find((b: any) => b.text().includes('Review results'));
+        expect(reviewBtn, 'Review results button should exist').toBeTruthy();
+        await reviewBtn!.trigger('click');
+        await flushPromises();
+        await new Promise((r) => setTimeout(r, 50));
+
+        // The essay response renders inside a height-capped scroll container
+        const response = wrapper.find('[data-test="essay-response"]');
+        expect(response.exists()).toBe(true);
+        expect(response.classes()).toContain('overflow-y-auto');
+        expect(response.classes()).toContain('max-h-52');
+        expect(response.classes()).toContain('overscroll-contain');
+        // The long text is still fully rendered (scrollable, not truncated)
+        expect(response.text()).toContain('A very long essay response');
+
+        // The AI feedback is bounded the same way
+        const feedback = wrapper.find('[data-test="essay-feedback"]');
+        expect(feedback.exists()).toBe(true);
+        expect(feedback.classes()).toContain('overflow-y-auto');
+        expect(feedback.classes()).toContain('max-h-52');
+        expect(feedback.text()).toContain('A very long AI feedback paragraph');
     });
 });
