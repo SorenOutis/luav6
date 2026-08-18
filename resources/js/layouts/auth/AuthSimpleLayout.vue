@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { Command, Terminal } from 'lucide-vue-next';
 import { onMounted, ref } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
+import { isLowEndDeviceSignal } from '@/lib/device';
 import { home } from '@/routes';
 
 defineProps<{
@@ -15,6 +16,10 @@ const structuralLines = ref<HTMLElement[]>([]);
 const terminalRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
+    if (isLowEndDeviceSignal()) {
+        return;
+    }
+
     const tl = gsap.timeline({ defaults: { ease: 'expo.out', duration: 1.2 } });
 
     // 1. Initial State
@@ -80,7 +85,7 @@ onMounted(() => {
 
         <!-- Animated CRT Scanline Effect -->
         <div
-            class="scanline pointer-events-none fixed inset-0 z-10 opacity-[0.03] dark:opacity-[0.07]"
+            class="scanline pointer-events-none fixed inset-0 z-10 hidden opacity-[0.03] md:block dark:opacity-[0.07]"
         ></div>
 
         <!-- Vertical & Horizontal Structural Lines -->
@@ -146,7 +151,7 @@ onMounted(() => {
                 <!-- Form Section -->
                 <div class="auth-reveal">
                     <div
-                        class="relative border border-border/20 bg-background/40 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] backdrop-blur-3xl"
+                        class="relative border border-border/20 bg-background shadow-[0_30px_60px_-12px_rgba(0,0,0,0.5)] md:bg-background/40 md:backdrop-blur-xl"
                     >
                         <!-- Inner technical border -->
                         <div

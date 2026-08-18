@@ -10,6 +10,7 @@ import {
     SheetTrigger,
 } from '@/components/ui/sheet';
 import { useAppearance } from '@/composables/useAppearance';
+import { useMobile } from '@/composables/useMobile';
 
 const props = defineProps<{
     canRegister: boolean;
@@ -34,6 +35,10 @@ const props = defineProps<{
 }>();
 
 const { appearance, toggleTheme } = useAppearance();
+const { prefersReducedMotion, isLowEndDevice } = useMobile();
+const liteMotion = computed(
+    () => prefersReducedMotion.value || isLowEndDevice.value,
+);
 const brandName = computed(() => props.branding?.name || 'LSI Engine');
 const brandLogoUrl = computed(() => props.branding?.logoUrl || null);
 
@@ -111,16 +116,20 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 
 <template>
     <header
-        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border/10 bg-background/60 px-6 py-4 backdrop-blur-2xl transition-colors duration-500 lg:px-16 lg:py-5 dark:border-border/5 dark:bg-background/30"
+        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border/10 bg-background/95 px-4 py-3 sm:px-6 sm:py-4 md:bg-background/60 md:backdrop-blur-xl lg:px-16 lg:py-5 dark:border-border/5 dark:bg-background/95 md:dark:bg-background/30"
     >
         <Motion
-            :initial="{ x: -20, opacity: 0 }"
+            :initial="liteMotion ? false : { x: -20, opacity: 0 }"
             :animate="isBooted ? { x: 0, opacity: 1 } : { x: -20, opacity: 0 }"
-            :transition="{
-                duration: 0.8,
-                easing: [0.16, 1, 0.3, 1],
-                delay: 0.2,
-            }"
+            :transition="
+                liteMotion
+                    ? { duration: 0 }
+                    : {
+                          duration: 0.8,
+                          easing: [0.16, 1, 0.3, 1],
+                          delay: 0.2,
+                      }
+            "
             class="flex items-center gap-3"
         >
             <Link href="/" class="flex items-center gap-3">
@@ -142,13 +151,17 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
         </Motion>
 
         <Motion
-            :initial="{ y: -20, opacity: 0 }"
+            :initial="liteMotion ? false : { y: -20, opacity: 0 }"
             :animate="isBooted ? { y: 0, opacity: 1 } : { y: -20, opacity: 0 }"
-            :transition="{
-                duration: 0.8,
-                easing: [0.16, 1, 0.3, 1],
-                delay: 0.3,
-            }"
+            :transition="
+                liteMotion
+                    ? { duration: 0 }
+                    : {
+                          duration: 0.8,
+                          easing: [0.16, 1, 0.3, 1],
+                          delay: 0.3,
+                      }
+            "
             class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex"
         >
             <a
@@ -169,13 +182,17 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
         </Motion>
 
         <Motion
-            :initial="{ y: -10, opacity: 0 }"
+            :initial="liteMotion ? false : { y: -10, opacity: 0 }"
             :animate="isBooted ? { y: 0, opacity: 1 } : { y: -10, opacity: 0 }"
-            :transition="{
-                duration: 0.8,
-                easing: [0.16, 1, 0.3, 1],
-                delay: 0.4,
-            }"
+            :transition="
+                liteMotion
+                    ? { duration: 0 }
+                    : {
+                          duration: 0.8,
+                          easing: [0.16, 1, 0.3, 1],
+                          delay: 0.4,
+                      }
+            "
             as="nav"
             class="flex items-center gap-4 lg:gap-6"
         >

@@ -272,15 +272,19 @@ onUnmounted(() => {
 
         <div class="hero-parallax -m-2 overflow-hidden p-2" data-speed="0.02">
             <Motion
-                :initial="{ y: 40, opacity: 0 }"
+                :initial="prefersReducedMotion ? false : { y: 40, opacity: 0 }"
                 :animate="
                     isBooted ? { y: 0, opacity: 1 } : { y: 40, opacity: 0 }
                 "
-                :transition="{
-                    duration: 1,
-                    easing: [0.16, 1, 0.3, 1],
-                    delay: 0.4,
-                }"
+                :transition="
+                    prefersReducedMotion
+                        ? { duration: 0 }
+                        : {
+                              duration: 1,
+                              easing: [0.16, 1, 0.3, 1],
+                              delay: 0.4,
+                          }
+                "
                 class="hero-cta flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 lg:gap-5"
             >
                 <Link

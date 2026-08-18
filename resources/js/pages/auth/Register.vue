@@ -28,6 +28,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import AuthCard from '@/layouts/auth/AuthCardLayout.vue';
+import { isLowEndDeviceSignal } from '@/lib/device';
 import { withForm } from '@/lib/route-helpers';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
@@ -320,7 +321,8 @@ let gsapCtx: gsap.Context | null = null;
 
 const prefersReducedMotion = (): boolean =>
     typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    (window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        isLowEndDeviceSignal());
 
 onMounted(() => {
     focusFirstInput(0);

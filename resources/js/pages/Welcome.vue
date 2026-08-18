@@ -2,8 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowRight } from 'lucide-vue-next';
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ArrowRight, Play } from 'lucide-vue-next';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -69,6 +69,10 @@ const props = withDefaults(
 const isBooted = ref(true);
 const isDemoVideoOpen = ref(false);
 const { isCoarsePointer, prefersReducedMotion, isLowEndDevice } = useMobile();
+
+// Seeded synchronously by useMobile — true on the first render for phones,
+// so the 1.6 MB walkthrough never auto-buffers on a cellular connection.
+const walkthroughUnlocked = ref(!isLowEndDevice.value);
 
 const { isTransitioningTheme } = useAppearance();
 
@@ -256,6 +260,13 @@ const closeDemoVideo = () => {
     isDemoVideoOpen.value = false;
 };
 
+const unlockWalkthrough = () => {
+    walkthroughUnlocked.value = true;
+    nextTick(() => {
+        howItWorksVideo.value?.play().catch(() => {});
+    });
+};
+
 // The walkthrough video only plays while it's actually on screen — it starts
 // when the section scrolls into view and pauses when it leaves. Low-end /
 // reduced-motion visitors keep the poster frame (no playback at all).
@@ -311,9 +322,10 @@ onUnmounted(() => {
         class="welcome-root relative min-h-screen w-full bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
         :style="{ '--school-accent': brandAccentColor }"
     >
-        <!-- Subtle background grid -->
+        <!-- Subtle background grid (desktop only — fixed full-viewport
+             repeating gradients are a continuous paint cost on phones). -->
         <div
-            class="pointer-events-none fixed inset-0 z-0 opacity-[0.025] dark:opacity-[0.05]"
+            class="welcome-bg-grid pointer-events-none fixed inset-0 z-0 hidden opacity-[0.025] md:block dark:opacity-[0.05]"
         >
             <div
                 class="absolute inset-0"
@@ -344,7 +356,7 @@ onUnmounted(() => {
         />
 
         <main
-            class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-6 pt-12 pb-32 lg:px-16 lg:pt-28"
+            class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-4 pt-8 pb-20 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-28 lg:pb-32"
         >
             <WelcomeHero
                 :can-register="canRegister"
@@ -371,7 +383,7 @@ onUnmounted(() => {
             <FeatureCards
                 ref="featureCardsSection"
                 id="features"
-                class="reveal-section mt-24 scroll-mt-32"
+                class="welcome-defer reveal-section mt-16 scroll-mt-32 sm:mt-24"
                 :is-coarse-pointer="isCoarsePointer"
                 :prefers-reduced-motion="effectiveReducedMotion"
                 :auth="$page.props.auth"
@@ -382,7 +394,7 @@ onUnmounted(() => {
             <!-- Stats Counter Bar -->
             <div
                 ref="statsRef"
-                class="reveal-section mt-24 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/10 bg-border/10 lg:grid-cols-4"
+                class="welcome-defer reveal-section mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/10 bg-border/10 sm:mt-24 lg:grid-cols-4"
             >
                 <div
                     class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
@@ -437,7 +449,7 @@ onUnmounted(() => {
             <!-- How It Works -->
             <section
                 id="architecture"
-                class="reveal-section mt-32 scroll-mt-32"
+                class="welcome-defer reveal-section mt-20 scroll-mt-32 sm:mt-32"
             >
                 <div class="mb-10 flex flex-col gap-2">
                     <div
@@ -457,11 +469,40 @@ onUnmounted(() => {
                     </p>
                 </div>
 
-                <!-- Remotion walkthrough animation -->
+                <!-- Walkthrough: poster + tap-to-play on phones so the 1.6 MB
+                     mp4 is never auto-buffered. Desktop still autoplays
+                     while the section is on screen. -->
                 <div
                     class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5"
                 >
+                    <button
+                        v-if="!walkthroughUnlocked"
+                        type="button"
+                        class="group relative block w-full"
+                        aria-label="Play how it works walkthrough"
+                        @click="unlockWalkthrough"
+                    >
+                        <img
+                            src="/videos/how-it-works.png"
+                            alt="How LSI works from enrollment to achievement"
+                            class="aspect-video w-full object-cover"
+                            width="1280"
+                            height="720"
+                            decoding="async"
+                            fetchpriority="low"
+                        />
+                        <span
+                            class="absolute inset-0 flex items-center justify-center bg-black/35"
+                        >
+                            <span
+                                class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg sm:h-16 sm:w-16"
+                            >
+                                <Play class="ml-0.5 h-6 w-6 fill-current" />
+                            </span>
+                        </span>
+                    </button>
                     <video
+                        v-else
                         ref="howItWorksVideo"
                         class="block aspect-video w-full"
                         src="/videos/how-it-works.mp4?v=2"
@@ -469,7 +510,7 @@ onUnmounted(() => {
                         loop
                         muted
                         playsinline
-                        :preload="isLowEndDevice ? 'metadata' : 'auto'"
+                        :preload="isLowEndDevice ? 'none' : 'metadata'"
                         aria-label="How LSI works from enrollment to achievement"
                     ></video>
                 </div>
@@ -538,7 +579,7 @@ onUnmounted(() => {
                 </div>
             </section>
 
-            <div class="reveal-section">
+            <div class="welcome-defer reveal-section">
                 <TechStackCarousel
                     :is-coarse-pointer="isCoarsePointer"
                     :prefers-reduced-motion="effectiveReducedMotion"
@@ -546,6 +587,7 @@ onUnmounted(() => {
             </div>
 
             <PricingSection
+                class="welcome-defer"
                 :auth="$page.props.auth"
                 :dashboard="() => dashboard().url"
                 :login="() => login().url"

@@ -1831,12 +1831,15 @@
 /* ─── Low-end device optimisations ───
    Applied via the `data-low-end` attribute on <html> when the system
    detects low-end hardware (coarse pointer, low memory, few cores, slow connection).
-   Disables heavy CSS effects app-wide; the attribute is set in app.ts at boot. */
+   The attribute is stamped by an inline boot script in app.blade.php so the
+   first paint already skips these effects — not only after the JS bundle loads. */
 html[data-low-end] * {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 html[data-low-end] .backdrop-blur-sm,
@@ -1844,12 +1847,14 @@ html[data-low-end] .backdrop-blur,
 html[data-low-end] .backdrop-blur-md,
 html[data-low-end] .backdrop-blur-lg,
 html[data-low-end] .backdrop-blur-xl,
-html[data-low-end] .backdrop-blur-2xl {
+html[data-low-end] .backdrop-blur-2xl,
+html[data-low-end] .backdrop-blur-3xl {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 
-html[data-low-end] .will-change-transform {
+html[data-low-end] .will-change-transform,
+html[data-low-end] [class*='will-change'] {
     will-change: auto !important;
 }
 
@@ -1857,4 +1862,29 @@ html[data-low-end] [class*='animate-ping'],
 html[data-low-end] [class*='animate-pulse'],
 html[data-low-end] [class*='animate-bounce'] {
     animation: none !important;
+}
+
+html[data-low-end] .welcome-bg-grid,
+html[data-low-end] .scanline,
+html[data-low-end] .particle-canvas,
+html[data-low-end] .ambient-orb {
+    display: none !important;
+}
+
+/* Skip painting below-the-fold welcome sections on phones. Desktop keeps
+   them eager so GSAP ScrollTrigger can measure them. */
+html[data-low-end] .welcome-defer {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 32rem;
+}
+
+.welcome-root a,
+.welcome-root button {
+    touch-action: manipulation;
+}
+
+@media (pointer: coarse), (max-width: 767px) {
+    .welcome-bg-grid {
+        display: none !important;
+    }
 }

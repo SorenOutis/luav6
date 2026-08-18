@@ -25,6 +25,27 @@
                         document.documentElement.classList.add('dark');
                     }
                 }
+
+                // Flag phones / low-end hardware before CSS + JS parse so the
+                // first paint already skips backdrop-filter and looping animations.
+                try {
+                    var nav = navigator;
+                    var coarse = ('ontouchstart' in window)
+                        || (nav.maxTouchPoints > 0)
+                        || window.matchMedia('(pointer: coarse)').matches;
+                    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    var mem = nav.deviceMemory;
+                    var cores = nav.hardwareConcurrency;
+                    var conn = nav.connection && nav.connection.effectiveType;
+                    var lowEnd = reduced || coarse
+                        || (typeof mem === 'number' && mem <= 4)
+                        || (typeof cores === 'number' && cores <= 4)
+                        || conn === 'slow-2g'
+                        || conn === '2g';
+                    if (lowEnd) {
+                        document.documentElement.setAttribute('data-low-end', '');
+                    }
+                } catch (e) {}
             })();
         </script>
 

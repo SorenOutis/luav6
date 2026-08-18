@@ -1,11 +1,16 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-
-interface DeviceMemory extends Navigator {
-    deviceMemory?: number;
-}
+import {
+    BREAKPOINT_DESKTOP,
+    BREAKPOINT_MOBILE,
+    applyLowEndDocumentFlag,
+    emptyDeviceSnapshot,
+    isLowEndDeviceFrom,
+    readDeviceSnapshot,
+} from '@/lib/device';
+import type { ConnectionEffectiveType } from '@/lib/device';
 
 interface NetworkInformation extends EventTarget {
-    effectiveType?: 'slow-2g' | '2g' | '3g' | '4g';
+    effectiveType?: ConnectionEffectiveType;
     addEventListener(
         type: string,
         listener: EventListenerOrEventListenerObject,
@@ -23,64 +28,54 @@ interface NavigatorWithConnection extends Navigator {
 }
 
 export function useMobile() {
-    const isMobile = ref(false);
-    const isDesktop = ref(false);
-    const isTouchDevice = ref(false);
-    const isCoarsePointer = ref(false);
-    const prefersReducedMotion = ref(false);
-    const deviceMemory = ref<number | null>(null);
-    const hardwareConcurrency = ref<number | null>(null);
-    const connectionType = ref<'slow-2g' | '2g' | '3g' | '4g' | null>(null);
+    // Seed from the current device *during setup*. Waiting until onMounted
+    // meant the welcome page (and every other consumer) rendered the desktop
+    // animation path for a frame on phones, then tore it down — that's the
+    // hitch users feel as "laggy".
+    const initial =
+        typeof window === 'undefined'
+            ? emptyDeviceSnapshot()
+            : readDeviceSnapshot();
 
-    const BREAKPOINT_MOBILE = 640; // sm:
-    const BREAKPOINT_DESKTOP = 1024; // lg:
+    const isMobile = ref(initial.isMobile);
+    const isDesktop = ref(initial.isDesktop);
+    const isTouchDevice = ref(initial.isTouchDevice);
+    const isCoarsePointer = ref(initial.isCoarsePointer);
+    const prefersReducedMotion = ref(initial.prefersReducedMotion);
+    const deviceMemory = ref<number | null>(initial.deviceMemory);
+    const hardwareConcurrency = ref<number | null>(initial.hardwareConcurrency);
+    const connectionType = ref<ConnectionEffectiveType | null>(
+        initial.connectionType,
+    );
 
-    // ─── Debounced resize handler ───
     let resizeTimer: ReturnType<typeof setTimeout> | null = null;
     const RESIZE_DEBOUNCE_MS = 150;
 
-    const update = () => {
-        isMobile.value = window.innerWidth < BREAKPOINT_MOBILE;
-        isDesktop.value = window.innerWidth >= BREAKPOINT_DESKTOP;
-        isTouchDevice.value =
-            'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        isCoarsePointer.value =
-            isTouchDevice.value ||
-            window.matchMedia('(pointer: coarse)').matches;
-        prefersReducedMotion.value = window.matchMedia(
-            '(prefers-reduced-motion: reduce)',
-        ).matches;
-
-        // Read hardware signals (Chrome-only for deviceMemory)
-        const navMem = navigator as DeviceMemory;
-        deviceMemory.value = navMem.deviceMemory ?? null;
-        hardwareConcurrency.value = navigator.hardwareConcurrency ?? null;
-
-        const navConn = navigator as NavigatorWithConnection;
-        connectionType.value = navConn.connection?.effectiveType ?? null;
+    const applySnapshot = () => {
+        const snapshot = readDeviceSnapshot();
+        isMobile.value = snapshot.isMobile;
+        isDesktop.value = snapshot.isDesktop;
+        isTouchDevice.value = snapshot.isTouchDevice;
+        isCoarsePointer.value = snapshot.isCoarsePointer;
+        prefersReducedMotion.value = snapshot.prefersReducedMotion;
+        deviceMemory.value = snapshot.deviceMemory;
+        hardwareConcurrency.value = snapshot.hardwareConcurrency;
+        connectionType.value = snapshot.connectionType;
+        applyLowEndDocumentFlag();
     };
 
-    /**
-     * Combined low-end device signal.
-     * Returns true when at least one of these heuristics indicates lower-tier hardware:
-     * - Coarse pointer (touch / mobile)
-     * - prefers-reduced-motion (user-requested)
-     * - ≤ 4 GB RAM (Chrome deviceMemory API)
-     * - ≤ 4 CPU cores (hardwareConcurrency)
-     * - Slow connection (2g / slow-2g)
-     */
-    const isLowEndDevice = computed(() => {
-        if (isCoarsePointer.value || prefersReducedMotion.value) return true;
-        if (deviceMemory.value !== null && deviceMemory.value <= 4) return true;
-        if (
-            hardwareConcurrency.value !== null &&
-            hardwareConcurrency.value <= 4
-        )
-            return true;
-        if (connectionType.value === 'slow-2g' || connectionType.value === '2g')
-            return true;
-        return false;
-    });
+    const isLowEndDevice = computed(() =>
+        isLowEndDeviceFrom({
+            isMobile: isMobile.value,
+            isDesktop: isDesktop.value,
+            isTouchDevice: isTouchDevice.value,
+            isCoarsePointer: isCoarsePointer.value,
+            prefersReducedMotion: prefersReducedMotion.value,
+            deviceMemory: deviceMemory.value,
+            hardwareConcurrency: hardwareConcurrency.value,
+            connectionType: connectionType.value,
+        }),
+    );
 
     let mqlMobile: MediaQueryList | null = null;
     let mqlDesktop: MediaQueryList | null = null;
@@ -88,15 +83,15 @@ export function useMobile() {
     let mqlReducedMotion: MediaQueryList | null = null;
     let connection: NetworkInformation | null = null;
 
-    const onMqlUpdate = () => update();
+    const onMqlUpdate = () => applySnapshot();
 
     const onResizeDebounced = () => {
         if (resizeTimer) clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(update, RESIZE_DEBOUNCE_MS);
+        resizeTimer = setTimeout(applySnapshot, RESIZE_DEBOUNCE_MS);
     };
 
     onMounted(() => {
-        update();
+        applySnapshot();
 
         mqlMobile = window.matchMedia(
             `(max-width: ${BREAKPOINT_MOBILE - 1}px)`,
@@ -112,14 +107,12 @@ export function useMobile() {
         mqlCoarsePointer.addEventListener('change', onMqlUpdate);
         mqlReducedMotion.addEventListener('change', onMqlUpdate);
 
-        // Connection change listener
         const navConn = navigator as NavigatorWithConnection;
         connection = navConn.connection ?? null;
         if (connection) {
             connection.addEventListener('change', onMqlUpdate);
         }
 
-        // Debounced resize listener
         window.addEventListener('resize', onResizeDebounced);
     });
 

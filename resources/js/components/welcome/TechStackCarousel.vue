@@ -15,7 +15,7 @@ import {
     Boxes,
     Cpu,
 } from 'lucide-vue-next';
-import { ref, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -110,9 +110,15 @@ const props = defineProps<{
     prefersReducedMotion?: boolean;
 }>();
 
+const isLite = computed(
+    () => Boolean(props.prefersReducedMotion) || props.isCoarsePointer,
+);
+
+const allTech = computed(() => [...techStackTop, ...techStackBottom]);
+
 onMounted(() => {
-    // On low-end, skip all GSAP — no entrance, no marquee, no scroll-triggered FX
-    if (props.prefersReducedMotion) return;
+    // On low-end / touch, skip all GSAP — no entrance, no marquee, no scroll FX
+    if (isLite.value) return;
 
     gsapCtx = gsap.context(() => {
         // ─── Scroll-triggered entrance: fade + scale in before marquee starts ───
@@ -182,8 +188,9 @@ onUnmounted(() => {
         ref="techStackRef"
         class="relative -mx-6 mt-24 overflow-hidden border-y border-border/10 bg-gradient-to-b from-background via-muted/[0.02] to-background py-14 sm:mx-0 lg:mt-48 lg:py-20"
     >
-        <!-- Subtle grid backdrop -->
+        <!-- Subtle grid backdrop (desktop marquee only) -->
         <div
+            v-if="!isLite"
             class="pointer-events-none absolute inset-0 opacity-[0.05] dark:opacity-[0.08]"
             style="
                 background-image:
@@ -245,8 +252,35 @@ onUnmounted(() => {
             </div>
         </div>
 
+        <!-- Static grid on phones: no duplicated DOM, no infinite GSAP translate. -->
+        <div
+            v-if="isLite"
+            class="relative grid grid-cols-2 gap-3 px-6 sm:grid-cols-3 sm:px-10 lg:px-16"
+        >
+            <div
+                v-for="tech in allTech"
+                :key="tech.name"
+                class="tech-chip group"
+                :style="{ '--accent': tech.accent }"
+            >
+                <div class="tech-chip__icon">
+                    <component :is="tech.icon" class="h-5 w-5" />
+                </div>
+                <div class="flex min-w-0 flex-col leading-tight">
+                    <span
+                        class="truncate text-sm font-black tracking-tight uppercase"
+                        >{{ tech.name }}</span
+                    >
+                    <span
+                        class="truncate text-[9px] font-bold tracking-[0.18em] text-muted-foreground/70 uppercase"
+                        >{{ tech.description }}</span
+                    >
+                </div>
+            </div>
+        </div>
+
         <!-- Marquee viewport with edge fades -->
-        <div class="carousel-mask relative space-y-6">
+        <div v-else class="carousel-mask relative space-y-6">
             <!-- Row 1 -->
             <div class="flex flex-nowrap" ref="rowTop">
                 <div
@@ -342,7 +376,8 @@ onUnmounted(() => {
     align-items: center;
     gap: 0.875rem;
     padding: 0.75rem 1.25rem;
-    margin-right: 1rem;
+    margin-right: 0;
+    min-width: 0;
     border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
     background: color-mix(in oklab, var(--color-muted) 6%, transparent);
     backdrop-filter: blur(6px);
@@ -354,6 +389,10 @@ onUnmounted(() => {
         background 0.35s ease,
         box-shadow 0.35s ease;
     flex-shrink: 0;
+}
+
+.carousel-mask .tech-chip {
+    margin-right: 1rem;
 }
 
 .tech-chip:hover {
