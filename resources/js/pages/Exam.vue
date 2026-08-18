@@ -1523,7 +1523,8 @@ watch(selectedPartId, () => {
                                             >Your response</span
                                         >
                                         <p
-                                            class="mt-1 text-sm leading-relaxed whitespace-pre-wrap text-foreground"
+                                            data-test="essay-response"
+                                            class="custom-scrollbar mt-1 max-h-52 overflow-y-auto overscroll-contain text-sm leading-relaxed whitespace-pre-wrap text-foreground"
                                         >
                                             {{
                                                 getAnswerForQuestion(
@@ -1590,7 +1591,8 @@ watch(selectedPartId, () => {
                                                     qIndex + 1,
                                                 )?.ai_feedback
                                             "
-                                            class="mt-2 text-sm leading-relaxed text-foreground/80"
+                                            data-test="essay-feedback"
+                                            class="custom-scrollbar mt-2 max-h-52 overflow-y-auto overscroll-contain text-sm leading-relaxed text-foreground/80"
                                         >
                                             {{
                                                 getAnswerObjectForQuestion(
@@ -1676,7 +1678,7 @@ watch(selectedPartId, () => {
             <Button
                 variant="secondary"
                 @click="showReviewModal = false"
-                class="rounded-lg px-4 py-2 text-xs font-medium"
+                class="w-full rounded-lg px-4 py-2 text-xs font-medium sm:w-auto"
             >
                 Close
             </Button>

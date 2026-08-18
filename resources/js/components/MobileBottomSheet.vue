@@ -115,23 +115,30 @@ function handleClose() {
             v-if="open"
             ref="sheetRef"
             data-test="mobile-bottom-sheet"
-            class="fixed right-0 bottom-0 left-0 z-[110] mx-auto max-w-lg rounded-t-3xl border-t border-border/60 bg-background/95 shadow-2xl shadow-black/20 backdrop-blur-2xl"
+            class="fixed right-0 bottom-0 left-0 z-[110] mx-auto flex max-h-[min(85dvh,85vh)] max-w-lg flex-col rounded-t-3xl border-t border-border/60 bg-background/95 shadow-2xl shadow-black/20 backdrop-blur-2xl"
             style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem)"
         >
             <!-- Grab Handle -->
             <div
-                class="mx-auto mt-2 h-1.5 w-10 rounded-full bg-muted-foreground/20"
+                class="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/20"
             />
 
-            <!-- Header -->
+            <!-- Header: pinned above the scrollable content so titles and the
+                 close button stay visible while the body scrolls -->
             <div
-                v-if="title || description || showCloseButton"
+                v-if="$slots.header || title || description || showCloseButton"
                 class="flex items-start gap-4 px-6 pt-4 pb-3"
                 :class="
-                    title || description ? 'justify-between' : 'justify-end'
+                    $slots.header || title || description
+                        ? 'justify-between'
+                        : 'justify-end'
                 "
             >
-                <div v-if="title || description" class="min-w-0 pt-1">
+                <!-- Custom header slot (pinned, mirrors the desktop DialogHeader) -->
+                <div v-if="$slots.header" class="min-w-0 flex-1">
+                    <slot name="header" />
+                </div>
+                <div v-else-if="title || description" class="min-w-0 pt-1">
                     <h2
                         v-if="title"
                         class="text-lg font-bold tracking-tight text-foreground"
@@ -156,13 +163,23 @@ function handleClose() {
                 </button>
             </div>
 
-            <!-- Content -->
+            <!-- Content (scrollable) -->
             <div
                 ref="contentRef"
+                data-test="mobile-bottom-sheet-content"
                 data-lenis-prevent
-                class="max-h-[70vh] overflow-y-auto overscroll-contain px-2 pb-4"
+                class="min-h-0 grow overflow-y-auto overscroll-contain px-2 pb-4"
             >
                 <slot />
+            </div>
+
+            <!-- Footer: pinned below the scrollable content so action buttons
+                 (e.g. Close) are always reachable, mirroring DialogFooter -->
+            <div
+                v-if="$slots.footer"
+                class="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 px-4 pt-3 pb-2"
+            >
+                <slot name="footer" />
             </div>
         </div>
     </Teleport>

@@ -75,17 +75,18 @@ function handleDesktopOpenChange(v: boolean) {
             :show-close-button="showSheetClose"
             @close="handleClose"
         >
-            <!-- Custom header content (renders inline in sheet) -->
-            <slot name="header" />
-            <!-- Main content -->
+            <!-- Custom header content — pinned on mobile (mirrors the desktop
+                 DialogHeader which sits outside the scrollable area) -->
+            <template v-if="$slots.header" #header>
+                <slot name="header" />
+            </template>
+            <!-- Main content (scrollable) -->
             <slot />
-            <!-- Footer buttons -->
-            <div
-                v-if="$slots.footer"
-                class="mx-2 mt-5 flex flex-col-reverse gap-2 border-t border-border/60 px-4 pt-4"
-            >
+            <!-- Footer buttons — pinned on mobile (mirrors the desktop
+                 DialogFooter which sits outside the scrollable area) -->
+            <template v-if="$slots.footer" #footer>
                 <slot name="footer" />
-            </div>
+            </template>
         </MobileBottomSheet>
     </template>
 
