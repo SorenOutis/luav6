@@ -63,12 +63,20 @@ vi.mock('@/layouts/AppLayout.vue', () => ({
     }),
 }));
 
-// ResponsiveModal — render slot content (it's an overlay wrapper)
+// ResponsiveModal — render slot content (it's an overlay wrapper). The
+// footer slot matters: the mobile Prev/Next review controls are pinned there
+// so long essay answers can't push them off screen.
 vi.mock('@/components/ResponsiveModal.vue', () => ({
     default: defineComponent({
         props: ['open', 'custom-header', 'content-class'],
         setup(props: any, { slots }: any) {
-            return () => (props.open ? h('div', slots.default?.()) : null);
+            return () =>
+                props.open
+                    ? h('div', [
+                          slots.default?.(),
+                          slots.footer ? h('div', slots.footer()) : null,
+                      ])
+                    : null;
         },
     }),
 }));
@@ -94,7 +102,13 @@ const stubs = {
     ResponsiveModal: {
         props: ['open'],
         setup(props: any, { slots }: any) {
-            return () => (props.open ? h('div', slots.default?.()) : null);
+            return () =>
+                props.open
+                    ? h('div', [
+                          slots.default?.(),
+                          slots.footer ? h('div', slots.footer()) : null,
+                      ])
+                    : null;
         },
     },
     Button: { render: () => null },
@@ -432,18 +446,27 @@ describe('Exam.vue review modal answer display', () => {
         await flushPromises();
         await new Promise((r) => setTimeout(r, 50));
 
-        // The essay response renders inside a height-capped scroll container
+        // The essay response renders inside a height-capped scroll container.
+        // The cap and the overflow are gated behind `sm:` so the element is
+        // NOT a scroll container on phones — `overflow-y: auto` there would
+        // cut the touch scroll chain (see the mobile test below).
         const response = wrapper.find('[data-test="essay-response"]');
         expect(response.exists()).toBe(true);
-        expect(response.classes()).toContain('overflow-y-auto');
-        expect(response.classes()).toContain('overscroll-contain');
+        expect(response.classes()).toContain('sm:max-h-52');
+        expect(response.classes()).toContain('sm:overflow-y-auto');
+        // An unprefixed `overscroll-contain` on the nested box traps touch
+        // scrolling at its boundary instead of chaining to the modal scroller
+        // — containment belongs on the modal body, not on inner boxes.
+        expect(response.classes()).not.toContain('overscroll-contain');
         // The long text is still fully rendered (scrollable, not truncated)
         expect(response.text()).toContain('A very long essay response');
 
         // The AI feedback is bounded the same way
         const feedback = wrapper.find('[data-test="essay-feedback"]');
         expect(feedback.exists()).toBe(true);
-        expect(feedback.classes()).toContain('overflow-y-auto');
+        expect(feedback.classes()).toContain('sm:max-h-52');
+        expect(feedback.classes()).toContain('sm:overflow-y-auto');
+        expect(feedback.classes()).not.toContain('overscroll-contain');
         expect(feedback.text()).toContain('A very long AI feedback paragraph');
     });
 
@@ -481,21 +504,30 @@ describe('Exam.vue review modal answer display', () => {
             expect(wrapper.text()).toContain('1 / 4');
 
             // The long essay flows at full height on mobile so the bottom
-            // sheet's own scroll area handles it. A nested mobile height cap
-            // (`max-h-96`) trapped touch scrolling and hid the Prev/Next and
-            // Close controls. Only the desktop modal keeps a bounded box.
+            // sheet's own scroll area handles it. Any mobile scroll container
+            // here (`overflow-y-auto` used to be unprefixed, `max-h-96`
+            // before that) cuts the touch scroll chain — `overscroll-behavior`
+            // is honored even on non-scrolling scroll containers in modern
+            // Chrome/Safari — so drags on the answer text went dead and the
+            // Prev/Next controls were unreachable. The element must carry NO
+            // unprefixed overflow/overscroll classes; only the desktop modal
+            // (sm+) gets the bounded, scrollable box.
             const response = wrapper.find('[data-test="essay-response"]');
             expect(response.exists()).toBe(true);
-            expect(response.classes()).toContain('overflow-y-auto');
-            expect(response.classes()).toContain('overscroll-contain');
+            expect(response.classes()).not.toContain('overflow-y-auto');
+            expect(response.classes()).not.toContain('overscroll-contain');
             expect(response.classes()).not.toContain('max-h-96');
             expect(response.classes()).toContain('sm:max-h-52');
+            expect(response.classes()).toContain('sm:overflow-y-auto');
             expect(response.text()).toContain('A very long essay response');
 
             const feedback = wrapper.find('[data-test="essay-feedback"]');
             expect(feedback.exists()).toBe(true);
+            expect(feedback.classes()).not.toContain('overflow-y-auto');
             expect(feedback.classes()).not.toContain('max-h-96');
+            expect(feedback.classes()).not.toContain('overscroll-contain');
             expect(feedback.classes()).toContain('sm:max-h-52');
+            expect(feedback.classes()).toContain('sm:overflow-y-auto');
         } finally {
             Object.defineProperty(window, 'innerWidth', {
                 configurable: true,

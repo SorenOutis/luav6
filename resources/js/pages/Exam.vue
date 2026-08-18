@@ -1163,7 +1163,7 @@ watch(selectedPartId, () => {
             ref="scrollRef"
             @scroll="showScrollbar"
             data-lenis-prevent
-            class="custom-scrollbar min-h-0 overscroll-contain sm:flex-1 sm:overflow-y-auto"
+            class="custom-scrollbar min-h-0 sm:flex-1 sm:overflow-y-auto sm:overscroll-contain"
         >
             <div
                 v-if="isLoadingReview"
@@ -1522,13 +1522,16 @@ watch(selectedPartId, () => {
                                             class="text-[10px] font-medium text-muted-foreground"
                                             >Your response</span
                                         >
-                                        <!-- On mobile the essay flows at full height so the bottom
-                                             sheet's own scroll area handles it — a nested scroll box
-                                             traps touch scrolling and hides the Prev/Next controls.
-                                             The desktop modal keeps a bounded, scrollable box. -->
+                                        <!-- The essay text must NOT be a scroll container on
+                                             mobile: `overflow-y: auto` + `overscroll-behavior: contain`
+                                             cuts the scroll chain even when the element has nothing to
+                                             scroll (modern Chrome/Safari), so a touch drag started on the
+                                             answer goes dead instead of scrolling the bottom sheet. It
+                                             flows at full height on mobile; only the desktop modal (sm+)
+                                             bounds it, and without `contain` so scrolling chains up. -->
                                         <p
                                             data-test="essay-response"
-                                            class="custom-scrollbar mt-1 overflow-y-auto overscroll-contain text-sm leading-relaxed whitespace-pre-wrap text-foreground sm:max-h-52"
+                                            class="custom-scrollbar mt-1 text-sm leading-relaxed whitespace-pre-wrap text-foreground sm:max-h-52 sm:overflow-y-auto"
                                         >
                                             {{
                                                 getAnswerForQuestion(
@@ -1596,7 +1599,7 @@ watch(selectedPartId, () => {
                                                 )?.ai_feedback
                                             "
                                             data-test="essay-feedback"
-                                            class="custom-scrollbar mt-2 overflow-y-auto overscroll-contain text-sm leading-relaxed text-foreground/80 sm:max-h-52"
+                                            class="custom-scrollbar mt-2 text-sm leading-relaxed text-foreground/80 sm:max-h-52 sm:overflow-y-auto"
                                         >
                                             {{
                                                 getAnswerObjectForQuestion(
@@ -1642,37 +1645,6 @@ watch(selectedPartId, () => {
                             </div>
                         </Motion>
                     </div>
-
-                    <!-- Mobile: Prev / Next question navigation -->
-                    <div
-                        v-if="isMobile && selectedPartQuestions.length > 1"
-                        class="mt-5 flex items-center justify-between gap-2"
-                    >
-                        <button
-                            @click="goToPrevQuestion"
-                            :disabled="!canGoToPrevQuestion"
-                            class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[11px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
-                        >
-                            <ChevronLeft class="h-3.5 w-3.5" />
-                            Prev
-                        </button>
-
-                        <span
-                            class="text-[11px] font-black tracking-widest text-muted-foreground/60 uppercase"
-                        >
-                            {{ selectedQuestionIndex + 1 }} /
-                            {{ selectedPartQuestions.length }}
-                        </span>
-
-                        <button
-                            @click="goToNextQuestion"
-                            :disabled="!canGoToNextQuestion"
-                            class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[11px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
-                        >
-                            Next
-                            <ChevronRight class="h-3.5 w-3.5" />
-                        </button>
-                    </div>
                 </Motion>
             </div>
         </div>
@@ -1686,6 +1658,40 @@ watch(selectedPartId, () => {
             >
                 Close
             </Button>
+
+            <!-- Mobile: Prev / Next question navigation, pinned in the sheet
+                 footer so long essay answers can't push it off screen. The
+                 sheet footer is flex-col-reverse, so this renders above the
+                 Close button. -->
+            <div
+                v-if="isMobile && selectedPartQuestions.length > 1"
+                class="flex w-full items-center justify-between gap-2"
+            >
+                <button
+                    @click="goToPrevQuestion"
+                    :disabled="!canGoToPrevQuestion"
+                    class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[11px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
+                >
+                    <ChevronLeft class="h-3.5 w-3.5" />
+                    Prev
+                </button>
+
+                <span
+                    class="text-[11px] font-black tracking-widest text-muted-foreground/60 uppercase"
+                >
+                    {{ selectedQuestionIndex + 1 }} /
+                    {{ selectedPartQuestions.length }}
+                </span>
+
+                <button
+                    @click="goToNextQuestion"
+                    :disabled="!canGoToNextQuestion"
+                    class="flex items-center gap-1.5 rounded-lg border border-border/40 px-3 py-2 text-[11px] font-bold text-muted-foreground transition-all enabled:hover:border-primary/40 enabled:hover:text-primary disabled:opacity-30"
+                >
+                    Next
+                    <ChevronRight class="h-3.5 w-3.5" />
+                </button>
+            </div>
 
             <div
                 v-if="
