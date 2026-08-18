@@ -436,7 +436,6 @@ describe('Exam.vue review modal answer display', () => {
         const response = wrapper.find('[data-test="essay-response"]');
         expect(response.exists()).toBe(true);
         expect(response.classes()).toContain('overflow-y-auto');
-        expect(response.classes()).toContain('max-h-52');
         expect(response.classes()).toContain('overscroll-contain');
         // The long text is still fully rendered (scrollable, not truncated)
         expect(response.text()).toContain('A very long essay response');
@@ -445,7 +444,62 @@ describe('Exam.vue review modal answer display', () => {
         const feedback = wrapper.find('[data-test="essay-feedback"]');
         expect(feedback.exists()).toBe(true);
         expect(feedback.classes()).toContain('overflow-y-auto');
-        expect(feedback.classes()).toContain('max-h-52');
         expect(feedback.text()).toContain('A very long AI feedback paragraph');
+    });
+
+    it('keeps a long essay scrollable in the mobile one-question review', async () => {
+        const previousInnerWidth = window.innerWidth;
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: 390,
+        });
+
+        try {
+            const wrapper = mountExamPage([closedExamWithEssay as any]);
+            await flushPromises();
+
+            const reviewBtn = wrapper
+                .findAll('button')
+                .find((b: any) => b.text().includes('Review results'));
+            expect(
+                reviewBtn,
+                'Review results button should exist',
+            ).toBeTruthy();
+            await reviewBtn!.trigger('click');
+            await flushPromises();
+            await new Promise((r) => setTimeout(r, 50));
+
+            // Mobile review walks questions one at a time with Prev / Next.
+            const prev = wrapper
+                .findAll('button')
+                .find((b: any) => b.text().includes('Prev'));
+            const next = wrapper
+                .findAll('button')
+                .find((b: any) => b.text().includes('Next'));
+            expect(prev, 'mobile Prev control should exist').toBeTruthy();
+            expect(next, 'mobile Next control should exist').toBeTruthy();
+            expect(wrapper.text()).toContain('1 / 4');
+
+            // The long essay stays inside a scrollable area on mobile, but the
+            // base cap is taller than the desktop cap so the text has room to
+            // display on screen instead of being trapped in a tiny box.
+            const response = wrapper.find('[data-test="essay-response"]');
+            expect(response.exists()).toBe(true);
+            expect(response.classes()).toContain('overflow-y-auto');
+            expect(response.classes()).toContain('overscroll-contain');
+            expect(response.classes()).toContain('max-h-96');
+            expect(response.classes()).toContain('sm:max-h-52');
+            expect(response.text()).toContain('A very long essay response');
+
+            const feedback = wrapper.find('[data-test="essay-feedback"]');
+            expect(feedback.exists()).toBe(true);
+            expect(feedback.classes()).toContain('max-h-96');
+            expect(feedback.classes()).toContain('sm:max-h-52');
+        } finally {
+            Object.defineProperty(window, 'innerWidth', {
+                configurable: true,
+                value: previousInnerWidth,
+            });
+        }
     });
 });
