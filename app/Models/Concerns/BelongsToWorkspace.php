@@ -55,6 +55,11 @@ trait BelongsToWorkspace
             }
 
             $workspaceId = app(WorkspaceContext::class)->id();
+
+            if (! $workspaceId && $user?->isSuperAdmin()) {
+                $workspaceId = $user->current_workspace_id;
+            }
+
             $hasLegacyAdmin = ! in_array($model->getTable(), [
                 'grades',
                 'ai_usage_logs',
