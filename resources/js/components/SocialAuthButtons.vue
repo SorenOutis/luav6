@@ -14,12 +14,18 @@ const props = withDefaults(
         /** Verb shown on the button, e.g. "Continue" or "Sign up". */
         action?: string;
         dividerLabel?: string;
+        /** Hide the horizontal "or" divider entirely (caller provides its own). */
+        hideDivider?: boolean;
+        /** Force the buttons into a single column instead of 2-up on sm+. */
+        stacked?: boolean;
     }>(),
     {
         providers: () => [],
         enabled: true,
         action: 'Continue',
         dividerLabel: 'or continue with',
+        hideDivider: false,
+        stacked: false,
     },
 );
 
@@ -41,7 +47,7 @@ const onClick = (event: MouseEvent) => {
 
 <template>
     <div v-if="providers.length" class="flex flex-col gap-4">
-        <div class="relative">
+        <div v-if="!hideDivider" class="relative">
             <div class="absolute inset-0 flex items-center" aria-hidden="true">
                 <span class="w-full border-t border-border" />
             </div>
@@ -54,7 +60,7 @@ const onClick = (event: MouseEvent) => {
 
         <div
             class="grid gap-3"
-            :class="providers.length > 1 ? 'sm:grid-cols-2' : ''"
+            :class="providers.length > 1 && !stacked ? 'sm:grid-cols-2' : ''"
         >
             <Button
                 v-for="provider in providers"

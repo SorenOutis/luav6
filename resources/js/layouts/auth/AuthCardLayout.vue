@@ -14,6 +14,8 @@ import { home } from '@/routes';
 defineProps<{
     title?: string;
     description?: string;
+    /** Expand the card to a wider, landscape width (e.g. for side-by-side layouts). */
+    wide?: boolean;
 }>();
 
 interface SchoolBranding {
@@ -30,7 +32,10 @@ const branding = (page.props.schoolBranding ?? {}) as SchoolBranding;
     <div
         class="theme-neutral-page flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10"
     >
-        <div class="flex w-full max-w-md flex-col gap-6">
+        <div
+            class="flex w-full flex-col gap-6"
+            :class="wide ? 'max-w-3xl' : 'max-w-md'"
+        >
             <Link
                 :href="home()"
                 class="group flex flex-col items-center gap-2.5 self-center"
