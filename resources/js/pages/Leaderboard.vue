@@ -22,6 +22,9 @@ interface LeaderboardUser {
 interface LeaderboardData {
     sectionId: number;
     sectionName: string;
+    /** Present for the super admin's platform-wide view: which workspace the section belongs to. */
+    workspaceId?: number | null;
+    workspaceName?: string | null;
     users: LeaderboardUser[];
     userRank: number;
     totalPlayers: number;

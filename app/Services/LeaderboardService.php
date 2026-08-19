@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Season;
+use App\Models\Section;
 use App\Models\User;
 use App\Support\PublicFileUrl;
 use Illuminate\Support\Carbon;
@@ -24,6 +25,9 @@ class LeaderboardService
     /** Defensive ceiling for students enrolled in an unusually high number of sections. */
     public const MAX_VISIBLE_SECTIONS = 20;
 
+    /** Higher ceiling for the super admin's platform-wide, per-workspace view. */
+    public const MAX_ADMIN_VISIBLE_SECTIONS = 100;
+
     /**
      * Build leaderboard data for every section the user belongs to in a given
      * season.
@@ -42,11 +46,55 @@ class LeaderboardService
             ->limit(self::MAX_VISIBLE_SECTIONS)
             ->get();
 
-        if ($userSections->isEmpty()) {
+        return $this->build($user, $season, $userSections);
+    }
+
+    /**
+     * Resolve the sections a viewer is allowed to inspect and build their
+     * leaderboards.
+     *
+     * Students (and regular users) see the sections they are enrolled in for
+     * the season. Super admins see every section platform-wide — grouped per
+     * workspace, with the workspace name attached — or just the inspected
+     * workspace's sections while workspace inspection is active (the Section
+     * workspace global scope applies that constraint automatically).
+     *
+     * @return array<int, array{sectionId: int, sectionName: string, workspaceId?: int|null, workspaceName?: string|null, users: Collection, userRank: int, totalPlayers: int}>
+     */
+    public function forViewer(User $user, ?Season $season): array
+    {
+        if (! $season) {
             return [];
         }
 
-        $sectionIds = $userSections->pluck('id')->map(fn ($id): int => (int) $id);
+        if (! $user->isSuperAdmin()) {
+            return $this->forUserSections($user, $season);
+        }
+
+        $sections = Section::query()
+            ->whereHas('users', fn ($query) => $query->where('section_user.season_id', $season->id))
+            ->with('workspace:id,name')
+            ->orderBy('sections.workspace_id')
+            ->orderBy('sections.name')
+            ->limit(self::MAX_ADMIN_VISIBLE_SECTIONS)
+            ->get();
+
+        return $this->build($user, $season, $sections, includeWorkspace: true);
+    }
+
+    /**
+     * Rank and serialize the given sections for the given season.
+     *
+     * @param  Collection<int, Section>  $sections
+     * @return array<int, array<string, mixed>>
+     */
+    protected function build(User $user, Season $season, Collection $sections, bool $includeWorkspace = false): array
+    {
+        if ($sections->isEmpty()) {
+            return [];
+        }
+
+        $sectionIds = $sections->pluck('id')->map(fn ($id): int => (int) $id);
 
         $ranked = DB::table('section_user as membership')
             ->join('users', 'users.id', '=', 'membership.user_id')
@@ -104,7 +152,7 @@ class LeaderboardService
             ->get()
             ->keyBy('user_id');
 
-        return $userSections->map(function ($section) use ($rowsBySection, $weekStats, $user) {
+        return $sections->map(function ($section) use ($rowsBySection, $weekStats, $user, $includeWorkspace) {
             $rows = $rowsBySection->get((int) $section->id, collect());
 
             $leaderboardUsers = $rows->map(function ($row) use ($weekStats, $user) {
@@ -133,7 +181,7 @@ class LeaderboardService
             $viewer = $rows->first(fn ($row): bool => (int) $row->user_id === (int) $user->id);
             $first = $rows->first();
 
-            return [
+            $leaderboard = [
                 'sectionId' => (int) $section->id,
                 'sectionName' => (string) $section->name,
                 'users' => $leaderboardUsers,
@@ -141,6 +189,13 @@ class LeaderboardService
                 'totalPlayers' => (int) ($first->total_players ?? 0),
                 'isTruncated' => (int) ($first->total_players ?? 0) > $leaderboardUsers->count(),
             ];
+
+            if ($includeWorkspace) {
+                $leaderboard['workspaceId'] = $section->workspace_id !== null ? (int) $section->workspace_id : null;
+                $leaderboard['workspaceName'] = $section->workspace?->name;
+            }
+
+            return $leaderboard;
         })->values()->all();
     }
 
