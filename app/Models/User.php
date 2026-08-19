@@ -180,6 +180,25 @@ class User extends Authenticatable implements FilamentUser
         $this->attributes['name'] = $this->composeName();
     }
 
+    /**
+     * Google / GitHub identities linked to this account.
+     */
+    public function socialAccounts()
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    /**
+     * Whether the account can sign in with a password.
+     *
+     * Accounts created through social login start without one, so password
+     * based flows (and unlinking the last provider) must check this first.
+     */
+    public function hasPassword(): bool
+    {
+        return filled($this->getAuthPassword());
+    }
+
     public function seasonProgress()
     {
         return $this->hasMany(SeasonProgress::class);

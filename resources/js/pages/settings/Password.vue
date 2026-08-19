@@ -12,6 +12,16 @@ import { withForm } from '@/lib/route-helpers';
 import { edit } from '@/routes/user-password';
 import type { BreadcrumbItem } from '@/types';
 
+withDefaults(
+    defineProps<{
+        /** Social-only accounts have no password to confirm yet. */
+        hasPassword?: boolean;
+    }>(),
+    {
+        hasPassword: true,
+    },
+);
+
 const breadcrumbItems: BreadcrumbItem[] = [
     {
         title: 'Password settings',
@@ -30,8 +40,12 @@ const breadcrumbItems: BreadcrumbItem[] = [
             <div class="space-y-6">
                 <Heading
                     variant="small"
-                    title="Update password"
-                    description="Ensure your account is using a long, random password to stay secure"
+                    :title="hasPassword ? 'Update password' : 'Set a password'"
+                    :description="
+                        hasPassword
+                            ? 'Ensure your account is using a long, random password to stay secure'
+                            : 'You signed up with a social account. Set a password to also log in with your email.'
+                    "
                 />
 
                 <Form
@@ -48,7 +62,7 @@ const breadcrumbItems: BreadcrumbItem[] = [
                     class="space-y-6"
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
-                    <div class="grid gap-2">
+                    <div v-if="hasPassword" class="grid gap-2">
                         <Label for="current_password">Current password</Label>
                         <Input
                             id="current_password"

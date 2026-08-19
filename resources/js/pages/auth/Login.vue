@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-vue-next';
 import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import SocialAuthButtons from '@/components/SocialAuthButtons.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,13 +18,24 @@ import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
-const props = defineProps<{
-    status?: string;
-    canResetPassword: boolean;
-    canRegister: boolean;
-    loginEnabled: boolean;
-    loginDisabledMessage: string;
-}>();
+type SocialProvider = {
+    name: string;
+    label: string;
+};
+
+const props = withDefaults(
+    defineProps<{
+        status?: string;
+        canResetPassword: boolean;
+        canRegister: boolean;
+        loginEnabled: boolean;
+        loginDisabledMessage: string;
+        socialProviders?: SocialProvider[];
+    }>(),
+    {
+        socialProviders: () => [],
+    },
+);
 
 defineOptions({ layout: AuthCard });
 
@@ -166,6 +178,13 @@ const onSubmit = (event: Event) => {
                 {{ processing || submitting ? 'Logging in...' : 'Log in' }}
             </Button>
         </div>
+
+        <SocialAuthButtons
+            :providers="socialProviders"
+            :enabled="loginEnabled"
+            action="Continue"
+            @blocked="showDisabledModal = true"
+        />
 
         <div
             class="text-center text-sm text-muted-foreground"

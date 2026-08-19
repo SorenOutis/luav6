@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ConnectedAccountsController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\TwoFactorAuthenticationController;
@@ -20,6 +21,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('settings/password', [PasswordController::class, 'update'])
         ->middleware(['student.page:profile', 'throttle:6,1'])
         ->name('user-password.update');
+
+    Route::get('settings/connected-accounts', [ConnectedAccountsController::class, 'edit'])
+        ->middleware('student.page:profile')
+        ->name('connected-accounts.edit');
+
+    Route::delete('settings/connected-accounts/{provider}', [ConnectedAccountsController::class, 'destroy'])
+        ->middleware(['student.page:profile', 'throttle:6,1'])
+        ->name('connected-accounts.destroy');
 
     Route::inertia('settings/appearance', 'settings/Appearance')->middleware('student.page:profile')->name('appearance.edit');
 

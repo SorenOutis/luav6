@@ -39,4 +39,27 @@ return [
         'key' => env('OPENROUTER_API_KEY'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Social Login (Laravel Socialite)
+    |--------------------------------------------------------------------------
+    |
+    | Google and GitHub are first-party Socialite drivers, so no additional
+    | socialiteproviders/* package or SocialiteWasCalled listener is needed.
+    | Leaving the credentials empty simply hides the buttons on the auth pages.
+    |
+    */
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', '/auth/google/callback'),
+    ],
+
+    'github' => [
+        'client_id' => env('GITHUB_CLIENT_ID'),
+        'client_secret' => env('GITHUB_CLIENT_SECRET'),
+        'redirect' => env('GITHUB_REDIRECT_URI', '/auth/github/callback'),
+    ],
+
 ];

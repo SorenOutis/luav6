@@ -20,6 +20,7 @@ import {
 } from 'vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import SocialAuthButtons from '@/components/SocialAuthButtons.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -33,10 +34,21 @@ import { withForm } from '@/lib/route-helpers';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
-defineProps<{
-    registrationEnabled: boolean;
-    registrationDisabledMessage: string;
-}>();
+type SocialProvider = {
+    name: string;
+    label: string;
+};
+
+withDefaults(
+    defineProps<{
+        registrationEnabled: boolean;
+        registrationDisabledMessage: string;
+        socialProviders?: SocialProvider[];
+    }>(),
+    {
+        socialProviders: () => [],
+    },
+);
 
 defineOptions({ layout: AuthCard });
 
@@ -878,6 +890,13 @@ onBeforeUnmount(() => {
 
             <div></div>
         </div>
+
+        <SocialAuthButtons
+            :providers="socialProviders"
+            action="Sign up"
+            divider-label="or sign up with"
+            class="mt-2"
+        />
 
         <div class="text-center text-sm text-muted-foreground">
             Already have an account?

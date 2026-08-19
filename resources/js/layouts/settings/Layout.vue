@@ -25,6 +25,10 @@ const sidebarNavItems: NavItem[] = [
         href: show(),
     },
     {
+        title: 'Connected accounts',
+        href: '/settings/connected-accounts',
+    },
+    {
         title: 'Appearance',
         href: editAppearance(),
     },
