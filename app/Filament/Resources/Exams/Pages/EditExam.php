@@ -82,7 +82,6 @@ class EditExam extends EditRecord
             ->modalHeading('View answers as PDF')
             ->modalDescription('Choose what the report should contain. It opens as a print-ready page — pick “Save as PDF” in the print dialog.')
             ->modalSubmitActionLabel('Open report')
-            ->modalWidth('lg')
             ->form([
                 Radio::make('scope')
                     ->label('Report contents')
