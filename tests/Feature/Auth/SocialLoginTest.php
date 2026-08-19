@@ -117,7 +117,11 @@ test('a returning social user is matched on the provider id even after an email 
     $this->get(route('social.callback', 'github'));
 
     $this->assertAuthenticatedAs($user);
-    expect(User::count())->toBe(1);
+
+    // The provider id matched, so no second account was created for the new
+    // email address.
+    expect(User::where('email', 'new@example.com')->exists())->toBeFalse()
+        ->and($user->fresh()->email)->toBe('old@example.com');
 });
 
 test('a provider without an email is rejected', function () {
