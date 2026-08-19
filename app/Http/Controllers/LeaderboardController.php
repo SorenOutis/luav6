@@ -6,6 +6,7 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\LeaderboardService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 
 class LeaderboardController extends Controller
@@ -42,7 +43,7 @@ class LeaderboardController extends Controller
      * workspace global scopes confine that to the inspected workspace while
      * inspection is active, and leave it platform-wide otherwise.
      *
-     * @return \Illuminate\Database\Eloquent\Collection<int, Season>
+     * @return Collection<int, Season>
      */
     protected function availableSeasons(User $user)
     {
