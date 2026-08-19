@@ -2589,8 +2589,11 @@ const feedbackContent = computed(() => {
                             class="relative flex flex-col gap-6 pt-20 md:pt-0 lg:flex-row lg:items-start"
                         >
                             <!-- Main Question List -->
+                            <!-- pb-8 on mobile gives room after the inline Submit
+                                 button. md:pb-24 reserves space for the desktop
+                                 sticky footer that now holds the Submit button. -->
                             <div
-                                class="flex-1 space-y-6 pb-28 md:pb-0 lg:pr-[22rem]"
+                                class="flex-1 space-y-6 pb-8 md:pb-24 lg:pr-[22rem]"
                             >
                                 <!-- Part Instructions -->
                                 <div
@@ -2865,6 +2868,30 @@ const feedbackContent = computed(() => {
                                             <ChevronRight class="h-3.5 w-3.5" />
                                         </button>
                                     </div>
+
+                                    <!-- Mobile: Submit button placed inline
+                                         below Prev / Next so it never floats
+                                         over the sticky timer above or covers
+                                         question content. -->
+                                    <button
+                                        @click="submitPart"
+                                        :disabled="isSubmitting"
+                                        class="submit-celebration-btn group relative mt-3 flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-xs font-black tracking-[0.15em] text-primary-foreground uppercase shadow-2xl shadow-primary/50 transition-all hover:shadow-2xl hover:shadow-primary/70 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <div
+                                            class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
+                                        ></div>
+                                        {{
+                                            isSubmitting
+                                                ? currentPartHasEssay
+                                                    ? 'Checking...'
+                                                    : 'Submitting...'
+                                                : 'Submit this part'
+                                        }}
+                                        <ArrowRight
+                                            class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                                        />
+                                    </button>
                                 </div>
 
                                 <!-- ═══ DESKTOP: Full question grid ═══ -->
@@ -3061,9 +3088,13 @@ const feedbackContent = computed(() => {
                             </div>
 
                             <!-- Progress Navigator (Mini-Map) - Question status overview -->
+                            <!-- bottom-24 leaves room for the desktop sticky
+                                 footer (which holds the Submit button), so the
+                                 sidebar's own Submit is never hidden behind it
+                                 on short screens — no zooming out required. -->
                             <div
                                 v-if="selectedPart && examStarted"
-                                class="fixed top-24 right-8 z-50 hidden w-80 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col lg:gap-6 lg:overflow-hidden"
+                                class="fixed top-24 right-8 bottom-24 z-50 hidden w-80 lg:flex lg:flex-col lg:gap-6 lg:overflow-hidden"
                             >
                                 <div
                                     ref="progressBoxRef"
@@ -4062,9 +4093,11 @@ const feedbackContent = computed(() => {
 
                 <!-- ─── STICKY EXAM HEADER/FOOTER (shows when a part is being taken) ─── -->
                 <!-- On mobile: pinned to the top so the timer, title, and
-                     progress trigger are always visible without competing
-                     with the submit button at the bottom.
-                     On desktop: pinned to the bottom as before. -->
+                     progress trigger are always visible. The Submit button
+                     lives inline below the Prev/Next controls instead of
+                     floating over this bar.
+                     On desktop: pinned to the bottom and holds the always-
+                     visible Submit button. -->
                 <transition name="modal-fade">
                     <div
                         v-if="examStarted && selectedPart && !showSuccessModal"
@@ -4187,35 +4220,30 @@ const feedbackContent = computed(() => {
                                     >{{ formattedTime }}</span
                                 >
                             </div>
-                        </div>
 
-                        <!-- Mobile submit button -->
-                        <div
-                            class="fixed right-4 bottom-0 left-4 z-40 lg:hidden"
-                            :style="{
-                                paddingBottom:
-                                    'max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))',
-                            }"
-                        >
+                            <!-- Desktop submit button (md and up). Pinned in
+                                 the sticky footer so it is always visible on
+                                 screen regardless of viewport width/height —
+                                 students no longer need to zoom out. On large
+                                 screens it complements the sidebar Submit. -->
                             <button
                                 @click="submitPart"
                                 :disabled="isSubmitting"
-                                class="submit-celebration-btn group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-xs font-black tracking-[0.15em] text-primary-foreground uppercase shadow-2xl shadow-primary/50 transition-all hover:shadow-2xl hover:shadow-primary/70 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+                                class="submit-celebration-btn group relative hidden shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-5 py-2.5 text-[11px] font-black tracking-[0.15em] text-primary-foreground uppercase shadow-lg shadow-primary/40 transition-all hover:shadow-xl hover:shadow-primary/50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 md:flex"
                             >
-                                <!-- Shine effect on hover -->
                                 <div
                                     class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
                                 ></div>
+                                <ArrowRight
+                                    class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+                                />
                                 {{
                                     isSubmitting
                                         ? currentPartHasEssay
                                             ? 'Checking...'
                                             : 'Submitting...'
-                                        : 'Submit this part'
+                                        : 'Submit'
                                 }}
-                                <ArrowRight
-                                    class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-                                />
                             </button>
                         </div>
                     </div>
