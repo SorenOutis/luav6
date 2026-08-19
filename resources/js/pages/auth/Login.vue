@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { Eye, EyeOff } from 'lucide-vue-next';
-import { h, ref } from 'vue';
-import type { VNode } from 'vue';
+import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import SocialAuthButtons from '@/components/SocialAuthButtons.vue';
@@ -38,12 +37,7 @@ const props = withDefaults(
     },
 );
 
-// Use the wider landscape card so the form and social logins can sit
-// side-by-side on desktop.
-defineOptions({
-    layout: (_h: typeof h, page: VNode) =>
-        h(AuthCard, { wide: true }, () => page),
-});
+defineOptions({ layout: AuthCard });
 
 const submitting = ref(false);
 const showDisabledModal = ref(false);
@@ -94,119 +88,107 @@ const onSubmit = (event: Event) => {
         @error="submitting = false"
         @success="submitting = false"
     >
-        <div class="grid gap-6 lg:grid-cols-2 lg:items-start lg:gap-12">
-            <!-- Left column: credentials -->
-            <div class="grid gap-6">
-                <div class="grid gap-2">
+        <div class="grid gap-6">
+            <div class="grid gap-2">
+                <AnimatedInput
+                    id="email"
+                    type="email"
+                    name="email"
+                    required
+                    autofocus
+                    :tabindex="1"
+                    autocomplete="email"
+                    label="Email address"
+                    @keydown.enter="
+                        !loginEnabled &&
+                        ($event.preventDefault(), (showDisabledModal = true))
+                    "
+                />
+                <InputError :message="errors.email" />
+            </div>
+
+            <div class="grid gap-2">
+                <div class="relative">
                     <AnimatedInput
-                        id="email"
-                        type="email"
-                        name="email"
+                        id="password"
+                        :type="showPassword ? 'text' : 'password'"
+                        name="password"
                         required
-                        autofocus
-                        :tabindex="1"
-                        autocomplete="email"
-                        label="Email address"
+                        :tabindex="2"
+                        autocomplete="current-password"
+                        label="Password"
                         @keydown.enter="
                             !loginEnabled &&
                             ($event.preventDefault(),
                             (showDisabledModal = true))
                         "
                     />
-                    <InputError :message="errors.email" />
+                    <button
+                        type="button"
+                        :aria-label="
+                            showPassword ? 'Hide password' : 'Show password'
+                        "
+                        class="absolute right-0 bottom-2.5 text-muted-foreground/50 transition-colors hover:text-foreground"
+                        @click="showPassword = !showPassword"
+                    >
+                        <EyeOff v-if="showPassword" class="h-4 w-4" />
+                        <Eye v-else class="h-4 w-4" />
+                    </button>
                 </div>
-
-                <div class="grid gap-2">
-                    <div class="relative">
-                        <AnimatedInput
-                            id="password"
-                            :type="showPassword ? 'text' : 'password'"
-                            name="password"
-                            required
-                            :tabindex="2"
-                            autocomplete="current-password"
-                            label="Password"
-                            @keydown.enter="
-                                !loginEnabled &&
-                                ($event.preventDefault(),
-                                (showDisabledModal = true))
-                            "
-                        />
-                        <button
-                            type="button"
-                            :aria-label="
-                                showPassword ? 'Hide password' : 'Show password'
-                            "
-                            class="absolute right-0 bottom-2.5 text-muted-foreground/50 transition-colors hover:text-foreground"
-                            @click="showPassword = !showPassword"
-                        >
-                            <EyeOff v-if="showPassword" class="h-4 w-4" />
-                            <Eye v-else class="h-4 w-4" />
-                        </button>
-                    </div>
-                    <InputError :message="errors.password" />
-                    <div class="flex items-center justify-end">
-                        <TextLink
-                            v-if="canResetPassword"
-                            :href="request()"
-                            class="text-sm"
-                            :tabindex="5"
-                        >
-                            Forgot password?
-                        </TextLink>
-                    </div>
+                <InputError :message="errors.password" />
+                <div class="flex items-center justify-end">
+                    <TextLink
+                        v-if="canResetPassword"
+                        :href="request()"
+                        class="text-sm"
+                        :tabindex="5"
+                    >
+                        Forgot password?
+                    </TextLink>
                 </div>
-
-                <div class="flex items-center justify-between">
-                    <Label for="remember" class="flex items-center space-x-3">
-                        <Checkbox id="remember" name="remember" :tabindex="3" />
-                        <span>Remember me</span>
-                    </Label>
-                </div>
-
-                <Button
-                    v-if="!loginEnabled"
-                    type="button"
-                    class="mt-4 w-full"
-                    :tabindex="4"
-                    @click="showDisabledModal = true"
-                    data-test="login-button-disabled"
-                >
-                    Log in
-                </Button>
-
-                <Button
-                    v-else
-                    type="submit"
-                    class="mt-4 w-full"
-                    :tabindex="4"
-                    :disabled="processing || submitting"
-                    data-test="login-button"
-                >
-                    <Spinner v-if="processing || submitting" class="mr-2" />
-                    {{ processing || submitting ? 'Logging in...' : 'Log in' }}
-                </Button>
             </div>
 
-            <!-- Right column: social logins + sign up (landscape on desktop) -->
-            <div
-                v-if="socialProviders.length"
-                class="lg:border-l lg:border-border lg:pl-12"
+            <div class="flex items-center justify-between">
+                <Label for="remember" class="flex items-center space-x-3">
+                    <Checkbox id="remember" name="remember" :tabindex="3" />
+                    <span>Remember me</span>
+                </Label>
+            </div>
+
+            <Button
+                v-if="!loginEnabled"
+                type="button"
+                class="mt-4 w-full"
+                :tabindex="4"
+                @click="showDisabledModal = true"
+                data-test="login-button-disabled"
             >
-                <!-- Divider: horizontal on mobile; the vertical card divider
-                     replaces it on desktop -->
-                <div
-                    class="relative mb-5 flex items-center gap-3 lg:hidden"
-                    aria-hidden="true"
+                Log in
+            </Button>
+
+            <Button
+                v-else
+                type="submit"
+                class="mt-4 w-full"
+                :tabindex="4"
+                :disabled="processing || submitting"
+                data-test="login-button"
+            >
+                <Spinner v-if="processing || submitting" class="mr-2" />
+                {{ processing || submitting ? 'Logging in...' : 'Log in' }}
+            </Button>
+
+            <section
+                v-if="socialProviders.length"
+                class="grid gap-4 border-t border-border pt-6"
+                aria-labelledby="social-login-heading"
+            >
+                <h2
+                    id="social-login-heading"
+                    class="text-center text-xs font-medium tracking-wide text-muted-foreground uppercase"
                 >
-                    <span class="h-px flex-1 bg-border" />
-                    <span
-                        class="shrink-0 text-xs font-medium tracking-wide text-muted-foreground uppercase"
-                    >
-                        or continue with
-                    </span>
-                    <span class="h-px flex-1 bg-border" />
-                </div>
+                    Social Login
+                </h2>
 
                 <SocialAuthButtons
                     :providers="socialProviders"
@@ -216,22 +198,11 @@ const onSubmit = (event: Event) => {
                     hide-divider
                     @blocked="showDisabledModal = true"
                 />
+            </section>
 
-                <div
-                    v-if="canRegister"
-                    class="mt-6 text-center text-sm text-muted-foreground"
-                >
-                    Don't have an account?
-                    <TextLink :href="register()" :tabindex="5"
-                        >Sign up</TextLink
-                    >
-                </div>
-            </div>
-
-            <!-- No social providers: fall back to a full-width sign up link -->
             <div
-                v-else-if="canRegister"
-                class="text-center text-sm text-muted-foreground lg:col-span-2"
+                v-if="canRegister"
+                class="text-center text-sm text-muted-foreground"
             >
                 Don't have an account?
                 <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
