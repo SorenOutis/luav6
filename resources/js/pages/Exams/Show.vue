@@ -242,6 +242,12 @@ const progressBoxRef = ref<HTMLElement | null>(null);
 // ─── MOBILE: Swipe & Bottom Sheet ───────────────────────────
 const mobileQuestionIndex = ref(0);
 const showMobileProgress = ref(false);
+
+// Reset mobile state when switching to a new part.
+watch(selectedPart, () => {
+    mobileQuestionIndex.value = 0;
+    showMobileProgress.value = false;
+});
 const touchStartX = ref(0);
 const touchEndX = ref(0);
 
@@ -285,12 +291,6 @@ const submitFromSheet = () => {
     showMobileProgress.value = false;
     submitPart();
 };
-
-// Reset mobile question index when starting a new part
-watch(selectedPart, () => {
-    mobileQuestionIndex.value = 0;
-    showMobileProgress.value = false;
-});
 
 // ─── LIVE TIMER LOGIC ───────────────────────────────────────
 const timeLeftSeconds = ref(props.exam.duration_minutes * 60);
@@ -2586,10 +2586,12 @@ const feedbackContent = computed(() => {
                     <!-- ═══════════════════════════════════════════════════════ -->
                     <template v-else>
                         <div
-                            class="relative flex flex-col gap-6 lg:flex-row lg:items-start"
+                            class="relative flex flex-col gap-6 pt-20 md:pt-0 lg:flex-row lg:items-start"
                         >
                             <!-- Main Question List -->
-                            <div class="flex-1 space-y-6 lg:pr-[22rem]">
+                            <div
+                                class="flex-1 space-y-6 pb-28 md:pb-0 lg:pr-[22rem]"
+                            >
                                 <!-- Part Instructions -->
                                 <div
                                     v-if="selectedPart!.instructions"
@@ -3061,11 +3063,11 @@ const feedbackContent = computed(() => {
                             <!-- Progress Navigator (Mini-Map) - Question status overview -->
                             <div
                                 v-if="selectedPart && examStarted"
-                                class="fixed top-24 right-8 z-50 hidden w-80 space-y-6 lg:block"
+                                class="fixed top-24 right-8 z-50 hidden w-80 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col lg:gap-6 lg:overflow-hidden"
                             >
                                 <div
                                     ref="progressBoxRef"
-                                    class="group relative overflow-hidden rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
+                                    class="group relative min-h-0 flex-1 overflow-y-auto rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
                                 >
                                     <!-- Background Glow -->
                                     <div
@@ -3228,9 +3230,9 @@ const feedbackContent = computed(() => {
                                     </div>
                                 </div>
 
-                                <!-- Exam Summary card -->
+                                <!-- Exam Summary card (pinned at bottom, never scrolls away) -->
                                 <div
-                                    class="rounded-none border border-border/20 bg-muted/20 p-6"
+                                    class="flex-shrink-0 rounded-none border border-border/20 bg-muted/20 p-6"
                                 >
                                     <h4
                                         class="mb-4 text-[9px] font-black tracking-[0.4em] text-muted-foreground uppercase italic"
@@ -3369,64 +3371,14 @@ const feedbackContent = computed(() => {
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Mobile Bottom Bar Navigator (Small) - Only show when all parts are completed -->
-                        <div
-                            v-if="selectedPart && examStarted"
-                            class="fixed right-0 bottom-0 left-0 z-40 p-4 lg:hidden"
-                        >
-                            <div
-                                class="no-scrollbar flex items-center gap-3 overflow-x-auto rounded-2xl border border-white/10 bg-black/80 p-3 shadow-2xl backdrop-blur-2xl"
-                            >
-                                <div
-                                    class="vertical-writing mr-1 rotate-180 text-[9px] font-black text-muted-foreground uppercase"
-                                >
-                                    NAV
-                                </div>
-                                <div
-                                    v-for="(_, qIndex) in selectedPart!
-                                        .questions"
-                                    :key="qIndex"
-                                    class="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-white/5 text-[10px] font-black transition-all"
-                                    :class="[
-                                        getQuestionStatus(qIndex) === 'answered'
-                                            ? 'bg-primary text-primary-foreground'
-                                            : getQuestionStatus(qIndex) ===
-                                                'flagged'
-                                              ? 'bg-[#E0AF68] text-white'
-                                              : 'bg-white/5 text-white/40',
-                                    ]"
-                                >
-                                    {{ qIndex + 1 }}
-                                    <div
-                                        v-if="flaggedQuestions.has(qIndex)"
-                                        class="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full border border-black bg-[#CB7676] shadow-sm"
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
                     </template>
                 </div>
 
                 <!-- ═══════════════════════════════════════════════════════ -->
                 <!-- ═════════════════════════════════════════════════════════════════ -->
 
-                <!-- ═══ MOBILE: Progress Bottom Sheet Overlay ═══ -->
+                <!-- ═══ MOBILE: Progress Right Drawer ═══ -->
                 <div v-if="selectedPart && examStarted" class="md:hidden">
-                    <!-- Floating progress button -->
-                    <button
-                        @click="showMobileProgress = !showMobileProgress"
-                        class="fixed right-4 z-[60] flex items-center gap-2 rounded-full border border-primary/20 bg-primary/90 px-3.5 py-2.5 text-[10px] font-black tracking-widest text-primary-foreground uppercase shadow-2xl shadow-primary/30 backdrop-blur-xl transition-all duration-300 hover:bg-primary active:scale-95"
-                        :style="{
-                            bottom: `calc(5rem + env(safe-area-inset-bottom, 0px))`,
-                        }"
-                    >
-                        <Grid3x3 class="h-3.5 w-3.5" />
-                        {{ Object.keys(answers).length }}/{{
-                            selectedPart!.questions!.length
-                        }}
-                    </button>
-
                     <!-- Overlay backdrop -->
                     <transition name="modal-fade">
                         <div
@@ -3436,24 +3388,21 @@ const feedbackContent = computed(() => {
                         />
                     </transition>
 
-                    <!-- Bottom sheet -->
-                    <transition name="slide-up">
+                    <!-- Right drawer -->
+                    <transition name="slide-right">
                         <div
                             v-if="showMobileProgress"
-                            class="fixed right-0 bottom-0 left-0 z-[80] max-h-[70vh] overflow-y-auto rounded-t-2xl border border-border/50 bg-background/95 p-5 pb-8 shadow-2xl backdrop-blur-2xl"
-                            style="
-                                padding-bottom: max(
-                                    2rem,
-                                    calc(
-                                        env(safe-area-inset-bottom, 0px) +
-                                            0.5rem
-                                    )
-                                );
-                            "
+                            class="fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-[320px] overflow-y-auto rounded-l-2xl border-l border-border/50 bg-background/95 p-5 shadow-2xl backdrop-blur-2xl"
+                            :style="{
+                                paddingTop:
+                                    'max(1.25rem, env(safe-area-inset-top, 0px))',
+                                paddingBottom:
+                                    'max(2rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))',
+                            }"
                         >
-                            <!-- Sheet grab handle -->
+                            <!-- Drawer edge handle -->
                             <div
-                                class="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/20"
+                                class="absolute top-1/2 left-2 h-10 w-1 -translate-y-1/2 rounded-full bg-muted-foreground/20"
                             />
 
                             <!-- Header -->
@@ -3481,7 +3430,8 @@ const feedbackContent = computed(() => {
                             </div>
 
                             <!-- Question grid -->
-                            <div class="mb-5 grid grid-cols-5 gap-2.5">
+                            <!-- Question grid (compact, wrapping layout) -->
+                            <div class="mb-5 flex flex-wrap gap-1.5">
                                 <button
                                     v-for="(_, qIndex) in selectedPart!
                                         .questions"
@@ -3492,10 +3442,10 @@ const feedbackContent = computed(() => {
                                         showMobileProgress = false;
                                         scrollToQuestion(qIndex);
                                     "
-                                    class="group/nav-item relative flex aspect-square items-center justify-center rounded-lg border text-xs font-black transition-all duration-200"
+                                    class="group/nav-item relative flex h-8 min-w-[2rem] items-center justify-center rounded-md border px-1.5 text-[11px] font-bold tabular-nums transition-all duration-200"
                                     :class="[
                                         qIndex === mobileQuestionIndex
-                                            ? 'scale-110 border-primary bg-primary text-primary-foreground shadow-lg ring-2 shadow-primary/30 ring-primary/30'
+                                            ? 'border-primary bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/30'
                                             : getQuestionStatus(qIndex) ===
                                                 'answered'
                                               ? 'border-primary/60 bg-primary/10 text-primary'
@@ -3508,7 +3458,7 @@ const feedbackContent = computed(() => {
                                     {{ qIndex + 1 }}
                                     <div
                                         v-if="flaggedQuestions.has(qIndex)"
-                                        class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#E0AF68] shadow-sm"
+                                        class="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-[#E0AF68] shadow-sm"
                                     />
                                 </button>
                             </div>
@@ -3653,7 +3603,7 @@ const feedbackContent = computed(() => {
                 <transition name="modal-fade">
                     <div
                         v-if="showStartModal"
-                        class="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
+                        class="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 p-4 backdrop-blur-md"
                     >
                         <div
                             ref="startModalRef"
@@ -3809,7 +3759,7 @@ const feedbackContent = computed(() => {
                 <transition name="modal-fade">
                     <div
                         v-if="showSuccessModal"
-                        class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
+                        class="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
                     >
                         <div
                             ref="successModalRef"
@@ -4002,7 +3952,7 @@ const feedbackContent = computed(() => {
                 <transition name="modal-fade">
                     <div
                         v-if="showXpModal && xpAward"
-                        class="fixed inset-0 z-50 flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
+                        class="fixed inset-0 z-[100] flex items-center justify-center bg-background/90 p-4 backdrop-blur-2xl"
                     >
                         <div class="surface-card w-full max-w-md p-8 md:p-10">
                             <div
@@ -4110,11 +4060,18 @@ const feedbackContent = computed(() => {
                     </div>
                 </transition>
 
-                <!-- ─── STICKY EXAM FOOTER (shows when a part is being taken) ─── -->
+                <!-- ─── STICKY EXAM HEADER/FOOTER (shows when a part is being taken) ─── -->
+                <!-- On mobile: pinned to the top so the timer, title, and
+                     progress trigger are always visible without competing
+                     with the submit button at the bottom.
+                     On desktop: pinned to the bottom as before. -->
                 <transition name="modal-fade">
                     <div
                         v-if="examStarted && selectedPart && !showSuccessModal"
-                        class="exam-sticky-header fixed right-0 bottom-0 left-0 z-[90] border-t border-border bg-card/95 shadow-[0_-2px_12px_-4px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:bg-zinc-950/90"
+                        class="exam-sticky-header fixed top-0 right-0 left-0 z-[90] border-b border-border bg-card/95 shadow-[0_2px_12px_-4px_rgba(0,0,0,0.1)] backdrop-blur-xl md:top-auto md:bottom-0 md:border-t md:border-b-0 md:shadow-[0_-2px_12px_-4px_rgba(0,0,0,0.1)] dark:bg-zinc-950/90"
+                        :style="{
+                            paddingTop: 'env(safe-area-inset-top, 0px)',
+                        }"
                     >
                         <!-- Submission failure banner: tells the student the
                              answers were NOT recorded so they can retry instead
@@ -4198,6 +4155,22 @@ const feedbackContent = computed(() => {
                             </div>
 
                             <!-- Timer (right) -->
+                            <!-- Mobile progress trigger: tap to open the
+                                 question-grid right drawer. Lives inside the
+                                 sticky header so it's never hidden behind it
+                                 (the old standalone floating button was
+                                 obscured by this header's z-[90]). -->
+                            <button
+                                @click="
+                                    showMobileProgress = !showMobileProgress
+                                "
+                                class="flex shrink-0 items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-[11px] font-black text-primary tabular-nums transition-colors active:scale-95 md:hidden"
+                            >
+                                <Grid3x3 class="h-3.5 w-3.5" />
+                                {{ Object.keys(answers).length }}/{{
+                                    selectedPart!.questions!.length
+                                }}
+                            </button>
                             <div
                                 class="flex shrink-0 items-center gap-2 rounded-xl border px-3 py-1.5 transition-colors"
                                 :class="
@@ -4217,7 +4190,13 @@ const feedbackContent = computed(() => {
                         </div>
 
                         <!-- Mobile submit button -->
-                        <div class="fixed right-4 bottom-20 z-40 lg:hidden">
+                        <div
+                            class="fixed right-4 bottom-0 left-4 z-40 lg:hidden"
+                            :style="{
+                                paddingBottom:
+                                    'max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem))',
+                            }"
+                        >
                             <button
                                 @click="submitPart"
                                 :disabled="isSubmitting"
@@ -4287,5 +4266,20 @@ const feedbackContent = computed(() => {
 .modal-fade-enter-to,
 .modal-fade-leave-from {
     opacity: 1;
+}
+
+.slide-right-enter-active,
+.slide-right-leave-active {
+    transition: transform 0.3s ease;
+}
+
+.slide-right-enter-from,
+.slide-right-leave-to {
+    transform: translateX(100%);
+}
+
+.slide-right-enter-to,
+.slide-right-leave-from {
+    transform: translateX(0);
 }
 </style>
