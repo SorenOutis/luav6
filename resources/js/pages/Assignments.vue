@@ -1,32 +1,39 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
-import { Motion } from '@motionone/vue';
 import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
     FileUp,
     CheckCircle2,
     Clock,
     FileText,
     Download,
-    TrendingUp,
     Calendar,
     BookOpen,
-    Sparkles,
+    Search,
+    X,
+    ArrowUpDown,
+    AlertTriangle,
+    GraduationCap,
+    UploadCloud,
+    ChevronDown,
+    Loader2,
+    TrendingUp,
+    RotateCcw,
 } from 'lucide-vue-next';
-import { onMounted, ref, computed, watch } from 'vue';
+import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import OnboardingTour from '@/components/OnboardingTour.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
-import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { useLoader } from '@/composables/useLoader';
+import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
+import type { TourStep } from '@/lib/onboarding';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
-
-const { isVisible: isLoaderVisible } = useLoader();
-const isBooted = ref(false);
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface Assignment {
     id: number;
@@ -46,160 +53,25 @@ interface Assignment {
     } | null;
 }
 
-const props = defineProps<{
-    assignments: Assignment[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        assignments?: Assignment[];
+    }>(),
+    {
+        assignments: () => [],
+    },
+);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: dashboard() },
     { title: 'Assignments', href: '/assignments' },
 ];
 
-const container = ref<HTMLElement | null>(null);
-const selectedAssignment = ref<Assignment | null>(null);
-const selectedAssignmentId = ref<number | string>('');
-const showUploadModal = ref(false);
-const fileInput = ref<HTMLInputElement | null>(null);
-const activeTab = ref<'pending' | 'completed'>('pending');
-const selectedMonth = ref<string>('all');
+const { isVisible: isLoaderVisible } = useLoader();
+const { prefersReducedMotion, isLowEndDevice } = useMobile();
+const isBooted = ref(false);
+const pageContainer = ref<HTMLElement | null>(null);
 
-const months = [
-    { value: 'all', label: 'All Time' },
-    { value: '0', label: 'January' },
-    { value: '1', label: 'February' },
-    { value: '2', label: 'March' },
-    { value: '3', label: 'April' },
-    { value: '4', label: 'May' },
-    { value: '5', label: 'June' },
-    { value: '6', label: 'July' },
-    { value: '7', label: 'August' },
-    { value: '8', label: 'September' },
-    { value: '9', label: 'October' },
-    { value: '10', label: 'November' },
-    { value: '11', label: 'December' },
-];
-
-const filteredAssignments = computed(() => {
-    let list = props.assignments;
-
-    // Filter by tab
-    if (activeTab.value === 'pending') {
-        list = list.filter((a) => !a.submission?.submitted);
-    } else {
-        list = list.filter((a) => a.submission?.submitted);
-    }
-
-    // Filter by month
-    if (selectedMonth.value !== 'all') {
-        const monthIndex = parseInt(selectedMonth.value);
-        list = list.filter((a) => {
-            const dateStr = a.submission?.submitted_at || a.due_date;
-            if (!dateStr) return false;
-            return new Date(dateStr).getMonth() === monthIndex;
-        });
-    }
-
-    return list;
-});
-
-const form = useForm({
-    file: null as File | null,
-});
-
-const closeUploadModal = () => {
-    const modal = document.querySelector('.modal-content');
-    const overlay = document.querySelector('.modal-overlay');
-
-    if (modal && overlay) {
-        gsap.to(modal, {
-            scale: 0.9,
-            opacity: 0,
-            y: 20,
-            duration: 0.4,
-            ease: 'power2.in',
-            onComplete: () => {
-                showUploadModal.value = false;
-                form.reset();
-                selectedAssignment.value = null;
-                selectedAssignmentId.value = '';
-            },
-        });
-        gsap.to(overlay, {
-            opacity: 0,
-            duration: 0.4,
-            ease: 'power2.in',
-        });
-    } else {
-        showUploadModal.value = false;
-        form.reset();
-        selectedAssignment.value = null;
-        selectedAssignmentId.value = '';
-    }
-};
-
-const onModalEnter = (el: Element) => {
-    const modal = el.querySelector('.modal-content');
-    const overlay = el.querySelector('.modal-overlay');
-
-    gsap.set(modal, { scale: 0.9, opacity: 0, y: 20 });
-    gsap.set(overlay, { opacity: 0 });
-
-    gsap.to(overlay, {
-        opacity: 1,
-        duration: 0.5,
-        ease: 'power3.out',
-    });
-
-    gsap.to(modal, {
-        scale: 1,
-        opacity: 1,
-        y: 0,
-        duration: 0.6,
-        ease: 'back.out(1.7)',
-        delay: 0.1,
-    });
-};
-
-const submitAssignment = () => {
-    if (!form.file || !selectedAssignmentId.value) return;
-
-    form.post(route('assignments.submit', selectedAssignmentId.value), {
-        onSuccess: () => {
-            closeUploadModal();
-        },
-    });
-};
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'Submitted':
-            return 'bg-[#D97757]/10 text-[#D97757] border-[#D97757]/20';
-        case 'Graded':
-            return 'bg-[#4D9375]/10 text-[#4D9375] border-[#4D9375]/20';
-        case 'Pending':
-            return 'bg-[#E0AF68]/10 text-[#E0AF68] border-[#E0AF68]/20';
-        default:
-            return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
-    }
-};
-
-const isOverdue = (dueDate: string) => {
-    if (!dueDate) return false;
-    return new Date(dueDate) < new Date();
-};
-
-const handleMouseMove = (e: MouseEvent) => {
-    const card = e.currentTarget as HTMLElement;
-    const rect = card.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    card.style.setProperty('--mouse-x', `${x}px`);
-    card.style.setProperty('--mouse-y', `${y}px`);
-};
-
-// Sync isBooted with global loader — run during setup (before mount)
-// so the content template is ready to render. The container element
-// lives inside `v-if="isBooted"`, so we cannot gate this on mount.
 if (!isLoaderVisible.value) {
     isBooted.value = true;
 }
@@ -214,26 +86,527 @@ watch(
     { immediate: true },
 );
 
-onMounted(() => {
-    if (!container.value) return;
+// ─── Onboarding Tour ────────────────────────────────────────────────────────
+const assignmentsTourSteps: TourStep[] = [
+    {
+        id: 'welcome',
+        title: 'Welcome to Assignments',
+        body: 'Track your coursework, monitor upcoming deadlines, and submit your completed files all in one place.',
+    },
+    {
+        id: 'overview',
+        target: 'assignments-overview',
+        title: 'Assignments overview',
+        body: 'At-a-glance stats of pending tasks, completed work, evaluated grades, and overall progress.',
+    },
+    {
+        id: 'search',
+        target: 'assignments-search',
+        title: 'Search and filter',
+        body: 'Quickly find assignments by subject, status tabs, or submission month.',
+    },
+    {
+        id: 'cards',
+        target: 'assignments-grid',
+        title: 'Assignment cards',
+        body: 'Review instructions, due dates, submission timestamps, grades, and teacher feedback.',
+    },
+    {
+        id: 'submit',
+        target: 'assignments-submit-btn',
+        title: 'Submit your work',
+        body: 'Upload documents, PDFs, or images to submit your assignment before the deadline.',
+    },
+];
 
-    const orbs = container.value.querySelectorAll('.orb');
-    orbs.forEach((orb, i) => {
-        gsap.to(orb, {
-            x: `random(-40, 40)`,
-            y: `random(-40, 40)`,
-            duration: 10 + i * 5,
-            repeat: -1,
-            yoyo: true,
-            ease: 'sine.inOut',
-        });
-    });
+// ─── Filter & Search State ──────────────────────────────────────────────────
+const activeTab = ref<'all' | 'pending' | 'submitted' | 'graded'>('all');
+const searchQuery = ref('');
+const selectedCourseId = ref<string>('all');
+const selectedMonth = ref<string>('all');
+const sortBy = ref<'due_soon' | 'due_late' | 'title' | 'newest'>('due_soon');
+
+const months = [
+    { value: 'all', label: 'All months' },
+    { value: '0', label: 'January' },
+    { value: '1', label: 'February' },
+    { value: '2', label: 'March' },
+    { value: '3', label: 'April' },
+    { value: '4', label: 'May' },
+    { value: '5', label: 'June' },
+    { value: '6', label: 'July' },
+    { value: '7', label: 'August' },
+    { value: '8', label: 'September' },
+    { value: '9', label: 'October' },
+    { value: '10', label: 'November' },
+    { value: '11', label: 'December' },
+];
+
+// ─── Course Filter Options ──────────────────────────────────────────────────
+const availableCourses = computed(() => {
+    const map = new Map<number, string>();
+    for (const a of props.assignments) {
+        if (a.course) {
+            map.set(a.course.id, a.course.name);
+        }
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
 });
-</script>
 
-<script lang="ts">
-// Helper for Ziggy route if not globally available
-declare const route: any;
+// ─── Stats Computations ─────────────────────────────────────────────────────
+const totalCount = computed(() => props.assignments.length);
+
+const pendingAssignmentsList = computed(() =>
+    props.assignments.filter((a) => !a.submission?.submitted),
+);
+
+const pendingCount = computed(() => pendingAssignmentsList.value.length);
+
+const submittedCount = computed(
+    () => props.assignments.filter((a) => a.submission?.submitted).length,
+);
+
+const gradedCount = computed(
+    () =>
+        props.assignments.filter(
+            (a) =>
+                a.submission?.submitted &&
+                (a.submission?.status === 'Graded' ||
+                    a.submission?.grade !== null),
+        ).length,
+);
+
+const isOverdue = (dueDate: string | null) => {
+    if (!dueDate) return false;
+    const due = new Date(dueDate);
+    if (Number.isNaN(due.getTime())) return false;
+    return due.getTime() < Date.now();
+};
+
+const overdueCount = computed(
+    () =>
+        props.assignments.filter(
+            (a) => !a.submission?.submitted && isOverdue(a.due_date),
+        ).length,
+);
+
+const completionRate = computed(() => {
+    if (totalCount.value === 0) return 0;
+    return Math.round((submittedCount.value / totalCount.value) * 100);
+});
+
+// ─── Date Formatting & Helpers ──────────────────────────────────────────────
+const formatDueDate = (dateStr: string | null) => {
+    if (!dateStr) return 'No due date';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return 'No due date';
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
+};
+
+const formatDateTime = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+};
+
+const getRelativeDueInfo = (
+    dueDate: string | null,
+    isSubmitted: boolean,
+    submittedAt?: string | null,
+) => {
+    if (isSubmitted) {
+        if (submittedAt) {
+            const subDate = new Date(submittedAt);
+            if (!Number.isNaN(subDate.getTime())) {
+                return {
+                    text: `Submitted ${formatDateTime(submittedAt)}`,
+                    color: 'text-emerald-700 dark:text-emerald-400',
+                    isOverdue: false,
+                    isSubmitted: true,
+                };
+            }
+        }
+        return {
+            text: 'Submitted',
+            color: 'text-emerald-700 dark:text-emerald-400',
+            isOverdue: false,
+            isSubmitted: true,
+        };
+    }
+
+    if (!dueDate) {
+        return {
+            text: 'No deadline',
+            color: 'text-muted-foreground',
+            isOverdue: false,
+            isSubmitted: false,
+        };
+    }
+
+    const due = new Date(dueDate);
+    if (Number.isNaN(due.getTime())) {
+        return {
+            text: 'No deadline',
+            color: 'text-muted-foreground',
+            isOverdue: false,
+            isSubmitted: false,
+        };
+    }
+
+    const now = new Date();
+    const diffMs = due.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMs < 0) {
+        const absDays = Math.abs(diffDays);
+        return {
+            text:
+                absDays === 0
+                    ? 'Overdue today'
+                    : `Overdue by ${absDays} day${absDays === 1 ? '' : 's'}`,
+            color: 'text-red-700 dark:text-red-400',
+            isOverdue: true,
+            isSubmitted: false,
+        };
+    }
+
+    if (diffDays === 0) {
+        return {
+            text: 'Due today',
+            color: 'text-amber-700 dark:text-amber-400',
+            isOverdue: false,
+            isSubmitted: false,
+            isSoon: true,
+        };
+    }
+
+    if (diffDays === 1) {
+        return {
+            text: 'Due tomorrow',
+            color: 'text-amber-700 dark:text-amber-400',
+            isOverdue: false,
+            isSubmitted: false,
+            isSoon: true,
+        };
+    }
+
+    if (diffDays <= 7) {
+        return {
+            text: `Due in ${diffDays} days`,
+            color: 'text-amber-700 dark:text-amber-400',
+            isOverdue: false,
+            isSubmitted: false,
+            isSoon: true,
+        };
+    }
+
+    return {
+        text: `Due ${formatDueDate(dueDate)}`,
+        color: 'text-muted-foreground',
+        isOverdue: false,
+        isSubmitted: false,
+    };
+};
+
+const getStatusBadge = (assignment: Assignment) => {
+    if (assignment.submission?.submitted) {
+        if (
+            assignment.submission.status === 'Graded' ||
+            assignment.submission.grade !== null
+        ) {
+            return {
+                label: assignment.submission.grade
+                    ? `Graded · ${assignment.submission.grade}`
+                    : 'Graded',
+                classes:
+                    'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+            };
+        }
+        return {
+            label: 'Submitted',
+            classes:
+                'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20',
+        };
+    }
+
+    if (isOverdue(assignment.due_date)) {
+        return {
+            label: 'Overdue',
+            classes:
+                'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
+        };
+    }
+
+    return {
+        label: 'Pending',
+        classes:
+            'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
+    };
+};
+
+const getCardBorderClass = (assignment: Assignment) => {
+    if (assignment.submission?.submitted) {
+        if (
+            assignment.submission.status === 'Graded' ||
+            assignment.submission.grade !== null
+        ) {
+            return 'border-l-[3px] border-l-emerald-600/70 hover:border-l-emerald-600 dark:border-l-emerald-400/70';
+        }
+        return 'border-l-[3px] border-l-orange-600/70 hover:border-l-orange-600 dark:border-l-orange-400/70';
+    }
+    if (isOverdue(assignment.due_date)) {
+        return 'border-l-[3px] border-l-red-600/70 hover:border-l-red-600 dark:border-l-red-400/70';
+    }
+    return 'border-l-[3px] border-l-amber-600/70 hover:border-l-amber-600 dark:border-l-amber-400/70';
+};
+
+// ─── Filtered Assignments ───────────────────────────────────────────────────
+const filteredAssignments = computed(() => {
+    let list = [...props.assignments];
+
+    // Status Tab Filter
+    if (activeTab.value === 'pending') {
+        list = list.filter((a) => !a.submission?.submitted);
+    } else if (activeTab.value === 'submitted') {
+        list = list.filter((a) => a.submission?.submitted);
+    } else if (activeTab.value === 'graded') {
+        list = list.filter(
+            (a) =>
+                a.submission?.submitted &&
+                (a.submission?.status === 'Graded' ||
+                    a.submission?.grade !== null),
+        );
+    }
+
+    // Course Filter
+    if (selectedCourseId.value !== 'all') {
+        const courseId = parseInt(selectedCourseId.value);
+        list = list.filter((a) => a.course?.id === courseId);
+    }
+
+    // Month Filter
+    if (selectedMonth.value !== 'all') {
+        const monthIndex = parseInt(selectedMonth.value);
+        list = list.filter((a) => {
+            const dateStr = a.due_date || a.submission?.submitted_at;
+            if (!dateStr) return false;
+            return new Date(dateStr).getMonth() === monthIndex;
+        });
+    }
+
+    // Search Query Filter
+    const query = searchQuery.value.trim().toLowerCase();
+    if (query) {
+        list = list.filter(
+            (a) =>
+                a.title.toLowerCase().includes(query) ||
+                a.description?.toLowerCase().includes(query) ||
+                a.course?.name.toLowerCase().includes(query),
+        );
+    }
+
+    // Sort
+    if (sortBy.value === 'due_soon') {
+        list.sort((a, b) => {
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return (
+                new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+            );
+        });
+    } else if (sortBy.value === 'due_late') {
+        list.sort((a, b) => {
+            if (!a.due_date) return 1;
+            if (!b.due_date) return -1;
+            return (
+                new Date(b.due_date).getTime() - new Date(a.due_date).getTime()
+            );
+        });
+    } else if (sortBy.value === 'title') {
+        list.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy.value === 'newest') {
+        list.sort((a, b) => b.id - a.id);
+    }
+
+    return list;
+});
+
+const clearAllFilters = () => {
+    activeTab.value = 'all';
+    searchQuery.value = '';
+    selectedCourseId.value = 'all';
+    selectedMonth.value = 'all';
+    sortBy.value = 'due_soon';
+};
+
+const hasActiveFilters = computed(() => {
+    return (
+        activeTab.value !== 'all' ||
+        Boolean(searchQuery.value.trim()) ||
+        selectedCourseId.value !== 'all' ||
+        selectedMonth.value !== 'all' ||
+        sortBy.value !== 'due_soon'
+    );
+});
+
+// ─── Upload Modal State & Logic ─────────────────────────────────────────────
+const showUploadModal = ref(false);
+const selectedAssignmentId = ref<number | string>('');
+const fileInput = ref<HTMLInputElement | null>(null);
+const fileError = ref<string | null>(null);
+const isDraggingFile = ref(false);
+
+const selectedAssignment = computed(() => {
+    if (!selectedAssignmentId.value) return null;
+    return (
+        props.assignments.find(
+            (a) => a.id === Number(selectedAssignmentId.value),
+        ) ?? null
+    );
+});
+
+const form = useForm({
+    file: null as File | null,
+});
+
+const openModalForAssignment = (assignment?: Assignment) => {
+    fileError.value = null;
+    form.reset();
+
+    if (assignment) {
+        selectedAssignmentId.value = assignment.id;
+    } else {
+        const firstPending = props.assignments.find(
+            (a) => !a.submission?.submitted,
+        );
+        selectedAssignmentId.value = firstPending
+            ? firstPending.id
+            : (props.assignments[0]?.id ?? '');
+    }
+
+    showUploadModal.value = true;
+};
+
+const closeModal = () => {
+    showUploadModal.value = false;
+    form.reset();
+    fileError.value = null;
+    isDraggingFile.value = false;
+};
+
+const validateAndSetFile = (file: File | null) => {
+    fileError.value = null;
+    if (!file) {
+        form.file = null;
+        return;
+    }
+
+    // 10MB limit
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+        fileError.value =
+            'File size exceeds the 10 MB limit. Please select a smaller file.';
+        return;
+    }
+
+    // Allowed extensions
+    const allowedExtensions = [
+        'pdf',
+        'doc',
+        'docx',
+        'txt',
+        'png',
+        'jpg',
+        'jpeg',
+    ];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!allowedExtensions.includes(ext)) {
+        fileError.value =
+            'Unsupported file format. Please upload a PDF, Word document, Text, or Image file.';
+        return;
+    }
+
+    form.file = file;
+};
+
+const handleFileInputChange = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+        validateAndSetFile(input.files[0]);
+    }
+};
+
+const handleFileDrop = (event: DragEvent) => {
+    isDraggingFile.value = false;
+    if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
+        validateAndSetFile(event.dataTransfer.files[0]);
+    }
+};
+
+const removeSelectedFile = () => {
+    form.file = null;
+    fileError.value = null;
+    if (fileInput.value) {
+        fileInput.value.value = '';
+    }
+};
+
+const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const submitAssignment = () => {
+    if (!form.file || !selectedAssignmentId.value || form.processing) return;
+
+    form.post(`/assignments/${selectedAssignmentId.value}/submit`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeModal();
+        },
+    });
+};
+
+// ─── Animations ─────────────────────────────────────────────────────────────
+let animationContext: ReturnType<typeof gsap.context> | null = null;
+
+onBeforeUnmount(() => {
+    animationContext?.revert();
+});
+
+onMounted(() => {
+    if (
+        !pageContainer.value ||
+        prefersReducedMotion.value ||
+        isLowEndDevice.value
+    )
+        return;
+
+    animationContext = gsap.context(() => {
+        gsap.fromTo(
+            '.animate-section',
+            { opacity: 0, y: 15 },
+            {
+                opacity: 1,
+                y: 0,
+                duration: 0.6,
+                stagger: 0.08,
+                ease: 'power2.out',
+            },
+        );
+    }, pageContainer.value);
+});
 </script>
 
 <template>
@@ -243,33 +616,26 @@ declare const route: any;
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
             <div
-                class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
+                class="student-ui container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
             >
                 <PageSkeleton
                     :hero="true"
                     :subtitle="true"
                     :actions="2"
-                    :stats="3"
+                    :stats="4"
                     :count="0"
                     variant="minimal"
-                    wrapperClass="z-10 mb-4"
+                    wrapperClass="z-10 mb-6"
                 />
                 <div
-                    class="z-10 mb-6 flex gap-6 border-b border-border/10 pb-3"
-                >
-                    <div
-                        class="h-6 w-24 animate-pulse rounded bg-primary/10"
-                    ></div>
-                    <div
-                        class="h-6 w-28 animate-pulse rounded bg-primary/10"
-                    ></div>
-                </div>
-                <div class="z-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    class="mb-6 h-10 w-full animate-pulse rounded-xl bg-muted/40"
+                />
+                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <div
                         v-for="i in 4"
                         :key="i"
-                        class="h-52 animate-pulse rounded-xl border border-border/10 bg-card/30"
-                    ></div>
+                        class="h-48 animate-pulse rounded-2xl border border-border/50 bg-card/40"
+                    />
                 </div>
             </div>
         </template>
@@ -277,960 +643,945 @@ declare const route: any;
         <!-- Real Content -->
         <template v-if="isBooted">
             <div
-                ref="container"
-                class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 perspective-[1000px] md:p-10"
+                ref="pageContainer"
+                class="student-ui container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
             >
-                <Motion
-                    :initial="{ opacity: 0, y: 30 }"
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="{
-                        duration: 1,
-                        easing: [0.16, 1, 0.3, 1],
-                        delay: 0.1,
-                    }"
-                    class="assignments-hero header-content group/hero relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end"
+                <!-- Page Header -->
+                <div
+                    class="animate-section mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between"
                 >
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="h-[2px] w-8 rounded-full bg-primary/40 transition-all duration-500 group-hover/hero:w-12"
-                            ></div>
-                            <h1
-                                class="text-2xl font-black tracking-tighter uppercase"
-                            >
-                                Mission_Briefings
-                            </h1>
-                        </div>
-                        <p
-                            class="border-l-2 border-primary/10 pl-11 text-sm text-[9px] font-medium tracking-widest text-muted-foreground uppercase transition-colors group-hover/hero:border-primary/30"
+                    <div>
+                        <h1
+                            class="dash-title text-[22px] text-foreground sm:text-[34px]"
                         >
-                            Complete your objectives to earn XP and advance your
-                            rank.
+                            Assignments
+                        </h1>
+                        <p
+                            class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
+                        >
+                            Track your coursework, view deadlines, and submit
+                            your work.
                         </p>
                     </div>
 
-                    <div class="flex items-center gap-4">
-                        <!-- Global Submit Button -->
+                    <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
                         <Button
-                            @click="
-                                selectedAssignment = null;
-                                selectedAssignmentId = '';
-                                showUploadModal = true;
-                            "
-                            variant="default"
-                            size="sm"
-                            class="group/btn h-10 gap-2 rounded-xl border border-primary/20 bg-primary px-6 text-[10px] font-black tracking-[0.2em] text-primary-foreground uppercase shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]"
+                            v-if="pendingCount > 0 || totalCount === 0"
+                            data-tour="assignments-submit-btn"
+                            @click="openModalForAssignment()"
+                            class="dash-btn inline-flex h-11 items-center gap-2 bg-[#D97757] px-4 text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 active:scale-98 sm:px-5 sm:text-[15px]"
                         >
-                            <FileUp
-                                class="h-4 w-4 transition-transform group-hover/btn:-translate-y-0.5"
-                            />
-                            SUBMIT_INTEL
+                            <FileUp class="h-4 w-4" />
+                            <span>Submit assignment</span>
                         </Button>
-
-                        <!-- Month Filter -->
-                        <div
-                            class="group/filter flex h-10 items-center gap-3 rounded-2xl border border-border/50 bg-muted/30 px-4 py-2"
-                        >
-                            <Calendar
-                                class="h-3.5 w-3.5 text-primary/60 transition-colors group-hover/filter:text-primary"
-                            />
-                            <select
-                                v-model="selectedMonth"
-                                class="h-full cursor-pointer appearance-none border-none bg-transparent pr-6 font-mono text-[10px] font-black tracking-widest uppercase focus:ring-0"
-                            >
-                                <option
-                                    v-for="month in months"
-                                    :key="month.value"
-                                    :value="month.value"
-                                    class="bg-[#0a0a0a] text-foreground"
-                                >
-                                    {{ month.label.toUpperCase() }}
-                                </option>
-                            </select>
-                        </div>
-
-                        <div
-                            class="flex h-10 items-center gap-2 rounded-full border border-primary/10 bg-primary/5 px-4 py-1.5 font-mono"
-                        >
-                            <TrendingUp class="h-3.5 w-3.5 text-primary" />
-                            <span
-                                class="text-[9px] font-black tracking-widest uppercase"
-                                >RANK:VANGUARD</span
-                            >
-                        </div>
                     </div>
-                </Motion>
-
-                <!-- Stats Overview -->
-                <div class="z-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-                    <Motion
-                        v-for="(stat, sIdx) in [
-                            {
-                                label: 'ACTIVE_OBJECTIVES',
-                                value: assignments.filter(
-                                    (a) => !a.submission?.submitted,
-                                ).length,
-                                sub: 'IMMEDIATE_PRIORITY',
-                                icon: Clock,
-                                glowColor: 'orange' as const,
-                            },
-                            {
-                                label: 'COMPLETED_MISSIONS',
-                                value: assignments.filter(
-                                    (a) => a.submission?.submitted,
-                                ).length,
-                                sub: 'OBJECTIVES_ACHIEVED',
-                                icon: CheckCircle2,
-                                glowColor: 'green' as const,
-                            },
-                            {
-                                label: 'PERFORMANCE_RANK',
-                                value: 'A+',
-                                sub: 'TOP_1%_OF_BATTALION',
-                                icon: Sparkles,
-                                glowColor: 'purple' as const,
-                            },
-                        ]"
-                        :key="sIdx"
-                        :initial="{ opacity: 0, y: 20 }"
-                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                        :transition="{
-                            duration: 0.8,
-                            easing: [0.16, 1, 0.3, 1],
-                            delay: 0.2 + sIdx * 0.1,
-                        }"
-                    >
-                        <SpotlightCard
-                            customSize
-                            :glowColor="stat.glowColor"
-                            :spotlightSize="350"
-                            className="stats-card p-5 relative group/stat premium-hover bg-card/40 flex flex-col justify-between"
-                            @mousemove="handleMouseMove"
-                        >
-                            <!-- Inner container to clip overflowing background icons without clipping the outer glow -->
-                            <div
-                                class="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
-                            >
-                                <!-- Persistent colored corner highlights -->
-                                <div
-                                    class="absolute -top-16 -right-16 h-48 w-48 rounded-full opacity-40 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-70"
-                                    :class="{
-                                        'bg-[#D97757]/30':
-                                            stat.glowColor === 'orange',
-                                        'bg-[#4D9375]/30':
-                                            stat.glowColor === 'green',
-                                        'bg-[#9D7CD8]/30':
-                                            stat.glowColor === 'purple',
-                                    }"
-                                ></div>
-                                <div
-                                    class="absolute -bottom-20 -left-20 h-56 w-56 rounded-full opacity-25 blur-3xl transition-opacity duration-700 group-hover/stat:opacity-50"
-                                    :class="{
-                                        'bg-[#D97757]/25':
-                                            stat.glowColor === 'orange',
-                                        'bg-[#4D9375]/25':
-                                            stat.glowColor === 'green',
-                                        'bg-[#9D7CD8]/25':
-                                            stat.glowColor === 'purple',
-                                    }"
-                                ></div>
-
-                                <!-- Tech Grid Background -->
-                                <div
-                                    class="absolute inset-0 opacity-[0.03] transition-opacity group-hover/stat:opacity-[0.05]"
-                                >
-                                    <svg
-                                        class="h-full w-full"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="100%"
-                                        height="100%"
-                                    >
-                                        <defs>
-                                            <pattern
-                                                :id="`stat-grid-${sIdx}`"
-                                                width="15"
-                                                height="15"
-                                                patternUnits="userSpaceOnUse"
-                                            >
-                                                <path
-                                                    d="M 15 0 L 0 0 0 15"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="0.5"
-                                                />
-                                            </pattern>
-                                        </defs>
-                                        <rect
-                                            width="100%"
-                                            height="100%"
-                                            :fill="`url(#stat-grid-${sIdx})`"
-                                        />
-                                    </svg>
-                                </div>
-
-                                <!-- Tech Scanning Line -->
-                                <div
-                                    class="group-hover/stat:animate-scan-horizontal absolute inset-0 h-full w-32 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-0 transition-opacity group-hover/stat:opacity-100"
-                                ></div>
-
-                                <!-- Hover Bloom Effect -->
-                                <div
-                                    class="absolute inset-0 opacity-0 transition-opacity duration-700 group-hover/stat:opacity-100"
-                                    :style="{
-                                        background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08), transparent 40%)`,
-                                    }"
-                                ></div>
-
-                                <!-- Corner Accents -->
-                                <div
-                                    class="absolute top-0 left-0 h-4 w-4 rounded-tl-lg border-t-2 border-l-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/stat:opacity-100"
-                                ></div>
-                                <div
-                                    class="absolute right-0 bottom-0 h-4 w-4 rounded-br-lg border-r-2 border-b-2 border-primary/20 opacity-0 transition-opacity duration-500 group-hover/stat:opacity-100"
-                                ></div>
-
-                                <!-- Silhouette Background Icon -->
-                                <div
-                                    class="absolute -top-2 -right-2 opacity-[0.03] transition-all duration-700 group-hover/stat:scale-110 group-hover/stat:rotate-[20deg] group-hover/stat:opacity-[0.06] sm:-top-3 sm:-right-3"
-                                >
-                                    <component
-                                        :is="stat.icon"
-                                        class="h-16 w-16 sm:h-20 sm:w-20"
-                                    />
-                                </div>
-                            </div>
-
-                            <div
-                                class="relative z-10 flex h-full w-full flex-col justify-between"
-                            >
-                                <div>
-                                    <p
-                                        class="font-mono text-[8px] font-black tracking-[0.3em] text-muted-foreground/60 uppercase"
-                                    >
-                                        >_{{ stat.label }}
-                                    </p>
-                                    <h3
-                                        class="mt-1 font-mono text-3xl font-black tracking-tighter text-foreground transition-colors group-hover/stat:text-primary"
-                                    >
-                                        {{ stat.value }}
-                                    </h3>
-                                </div>
-                                <div
-                                    class="mt-4 flex items-center gap-2 border-t border-border/10 pt-4"
-                                >
-                                    <div
-                                        class="h-1 w-1 animate-pulse rounded-full bg-primary/40"
-                                    ></div>
-                                    <span
-                                        class="font-mono text-[8px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase"
-                                        >{{ stat.sub }}</span
-                                    >
-                                </div>
-                            </div>
-                        </SpotlightCard>
-                    </Motion>
                 </div>
 
-                <!-- Tabs Navigation -->
-                <Motion
-                    :initial="{ opacity: 0, y: 10 }"
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="{ duration: 0.8, delay: 0.5 }"
-                    class="tabs-nav z-10 flex border-b border-border/10"
+                <!-- Stat Overview Cards -->
+                <div
+                    data-tour="assignments-overview"
+                    class="animate-section mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4"
                 >
-                    <button
-                        @click="activeTab = 'pending'"
-                        :class="[
-                            'relative overflow-hidden px-8 py-4 text-[10px] font-black tracking-[0.2em] uppercase transition-all',
-                            activeTab === 'pending'
-                                ? 'text-primary'
-                                : 'text-muted-foreground/40 hover:text-muted-foreground',
-                        ]"
+                    <!-- Pending Card -->
+                    <Card class="surface-card gap-2 py-3 sm:gap-6 sm:py-5">
+                        <CardHeader
+                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
+                        >
+                            <CardTitle class="dash-label">Pending</CardTitle>
+                            <div
+                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            >
+                                <Clock class="h-4 w-4" />
+                            </div>
+                        </CardHeader>
+                        <CardContent class="px-3.5 sm:px-5">
+                            <div
+                                class="dash-metric text-[26px] leading-none text-foreground sm:text-[32px]"
+                            >
+                                {{ pendingCount }}
+                            </div>
+                            <p
+                                class="mt-1 text-[12px] sm:text-[13px]"
+                                :class="
+                                    overdueCount > 0
+                                        ? 'font-medium text-red-600 dark:text-red-400'
+                                        : 'text-muted-foreground'
+                                "
+                            >
+                                {{
+                                    overdueCount > 0
+                                        ? `${overdueCount} overdue`
+                                        : 'Awaiting submission'
+                                }}
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Submitted Card -->
+                    <Card class="surface-card gap-2 py-3 sm:gap-6 sm:py-5">
+                        <CardHeader
+                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
+                        >
+                            <CardTitle class="dash-label">Submitted</CardTitle>
+                            <div
+                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                            >
+                                <FileText class="h-4 w-4" />
+                            </div>
+                        </CardHeader>
+                        <CardContent class="px-3.5 sm:px-5">
+                            <div
+                                class="dash-metric text-[26px] leading-none text-foreground sm:text-[32px]"
+                            >
+                                {{ submittedCount }}
+                            </div>
+                            <p
+                                class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
+                            >
+                                Turned in for review
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Graded Card -->
+                    <Card class="surface-card gap-2 py-3 sm:gap-6 sm:py-5">
+                        <CardHeader
+                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
+                        >
+                            <CardTitle class="dash-label">Graded</CardTitle>
+                            <div
+                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            >
+                                <GraduationCap class="h-4 w-4" />
+                            </div>
+                        </CardHeader>
+                        <CardContent class="px-3.5 sm:px-5">
+                            <div
+                                class="dash-metric text-[26px] leading-none text-emerald-700 sm:text-[32px] dark:text-emerald-400"
+                            >
+                                {{ gradedCount }}
+                            </div>
+                            <p
+                                class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
+                            >
+                                Evaluated by teacher
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Progress / Completion Card -->
+                    <Card
+                        class="surface-card col-span-2 gap-2 py-3 sm:col-span-1 sm:gap-6 sm:py-5"
                     >
-                        Pending
-                        <div
-                            v-if="activeTab === 'pending'"
-                            class="animate-in slide-in-from-left absolute right-0 bottom-0 left-0 h-0.5 bg-primary duration-300"
-                        ></div>
-                    </button>
-                    <button
-                        @click="activeTab = 'completed'"
-                        :class="[
-                            'relative overflow-hidden px-8 py-4 text-[10px] font-black tracking-[0.2em] uppercase transition-all',
-                            activeTab === 'completed'
-                                ? 'text-primary'
-                                : 'text-muted-foreground/40 hover:text-muted-foreground',
-                        ]"
+                        <CardHeader
+                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
+                        >
+                            <CardTitle class="dash-label">Completion</CardTitle>
+                            <div
+                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                            >
+                                <TrendingUp class="h-4 w-4" />
+                            </div>
+                        </CardHeader>
+                        <CardContent class="px-3.5 sm:px-5">
+                            <div class="flex items-baseline justify-between">
+                                <div
+                                    class="dash-metric text-[26px] leading-none text-foreground sm:text-[32px]"
+                                >
+                                    {{ completionRate }}%
+                                </div>
+                                <span
+                                    class="text-[12px] text-muted-foreground sm:text-[13px]"
+                                >
+                                    {{ submittedCount }}/{{ totalCount }}
+                                </span>
+                            </div>
+                            <Progress
+                                :value="completionRate"
+                                class="mt-2 h-1.5 w-full bg-muted"
+                                :indicator-class="
+                                    completionRate === 100
+                                        ? 'bg-emerald-600 dark:bg-emerald-400'
+                                        : 'bg-primary'
+                                "
+                            />
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <!-- Filters & Search Bar -->
+                <div
+                    data-tour="assignments-search"
+                    class="animate-section mb-6 space-y-3"
+                >
+                    <div
+                        class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
                     >
-                        Completed
+                        <!-- Status Tabs -->
                         <div
-                            v-if="activeTab === 'completed'"
-                            class="animate-in slide-in-from-left absolute right-0 bottom-0 left-0 h-0.5 bg-primary duration-300"
-                        ></div>
-                    </button>
-                </Motion>
+                            class="no-scrollbar flex items-center gap-1.5 overflow-x-auto rounded-full border border-border/50 bg-card p-1"
+                        >
+                            <button
+                                type="button"
+                                @click="activeTab = 'all'"
+                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                :class="
+                                    activeTab === 'all'
+                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                "
+                            >
+                                <span>All</span>
+                                <span
+                                    class="py-0.2 rounded-full px-1.5 text-[11px]"
+                                    :class="
+                                        activeTab === 'all'
+                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground'
+                                    "
+                                >
+                                    {{ totalCount }}
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="activeTab = 'pending'"
+                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                :class="
+                                    activeTab === 'pending'
+                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                "
+                            >
+                                <span>Pending</span>
+                                <span
+                                    class="py-0.2 rounded-full px-1.5 text-[11px]"
+                                    :class="
+                                        activeTab === 'pending'
+                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground'
+                                    "
+                                >
+                                    {{ pendingCount }}
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="activeTab = 'submitted'"
+                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                :class="
+                                    activeTab === 'submitted'
+                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                "
+                            >
+                                <span>Submitted</span>
+                                <span
+                                    class="py-0.2 rounded-full px-1.5 text-[11px]"
+                                    :class="
+                                        activeTab === 'submitted'
+                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground'
+                                    "
+                                >
+                                    {{ submittedCount }}
+                                </span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="activeTab = 'graded'"
+                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                :class="
+                                    activeTab === 'graded'
+                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                "
+                            >
+                                <span>Graded</span>
+                                <span
+                                    class="py-0.2 rounded-full px-1.5 text-[11px]"
+                                    :class="
+                                        activeTab === 'graded'
+                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground'
+                                    "
+                                >
+                                    {{ gradedCount }}
+                                </span>
+                            </button>
+                        </div>
+
+                        <!-- Search & Dropdowns -->
+                        <div
+                            class="flex flex-wrap items-center gap-2.5 sm:gap-3"
+                        >
+                            <!-- Search Input -->
+                            <div
+                                class="relative min-w-48 flex-1 sm:w-64 sm:flex-none"
+                            >
+                                <Search
+                                    class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
+                                    aria-hidden="true"
+                                />
+                                <Input
+                                    v-model="searchQuery"
+                                    type="search"
+                                    placeholder="Search assignments..."
+                                    class="h-10 rounded-full border-border/60 bg-card pr-8 pl-9.5 text-xs sm:text-sm"
+                                />
+                                <button
+                                    v-if="searchQuery"
+                                    @click="searchQuery = ''"
+                                    type="button"
+                                    class="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground"
+                                    aria-label="Clear search"
+                                >
+                                    <X class="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+
+                            <!-- Course Filter (if multiple exist) -->
+                            <div
+                                v-if="availableCourses.length > 1"
+                                class="relative"
+                            >
+                                <select
+                                    v-model="selectedCourseId"
+                                    class="h-10 cursor-pointer appearance-none rounded-full border border-border/60 bg-card py-1.5 pr-8 pl-3.5 text-xs font-medium text-foreground transition-colors outline-none hover:bg-muted/40 focus:border-primary/40 focus:ring-2 focus:ring-primary/20 sm:text-[13px]"
+                                    aria-label="Filter by subject"
+                                >
+                                    <option value="all">All subjects</option>
+                                    <option
+                                        v-for="c in availableCourses"
+                                        :key="c.id"
+                                        :value="String(c.id)"
+                                    >
+                                        {{ c.name }}
+                                    </option>
+                                </select>
+                                <ChevronDown
+                                    class="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60"
+                                />
+                            </div>
+
+                            <!-- Month Filter -->
+                            <div class="relative">
+                                <select
+                                    v-model="selectedMonth"
+                                    class="h-10 cursor-pointer appearance-none rounded-full border border-border/60 bg-card py-1.5 pr-8 pl-3.5 text-xs font-medium text-foreground transition-colors outline-none hover:bg-muted/40 focus:border-primary/40 focus:ring-2 focus:ring-primary/20 sm:text-[13px]"
+                                    aria-label="Filter by month"
+                                >
+                                    <option
+                                        v-for="m in months"
+                                        :key="m.value"
+                                        :value="m.value"
+                                    >
+                                        {{ m.label }}
+                                    </option>
+                                </select>
+                                <Calendar
+                                    class="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60"
+                                />
+                            </div>
+
+                            <!-- Sort -->
+                            <div class="relative">
+                                <select
+                                    v-model="sortBy"
+                                    class="h-10 cursor-pointer appearance-none rounded-full border border-border/60 bg-card py-1.5 pr-8 pl-3.5 text-xs font-medium text-foreground transition-colors outline-none hover:bg-muted/40 focus:border-primary/40 focus:ring-2 focus:ring-primary/20 sm:text-[13px]"
+                                    aria-label="Sort assignments"
+                                >
+                                    <option value="due_soon">
+                                        Due soonest
+                                    </option>
+                                    <option value="due_late">Due latest</option>
+                                    <option value="title">Title (A–Z)</option>
+                                    <option value="newest">
+                                        Recently added
+                                    </option>
+                                </select>
+                                <ArrowUpDown
+                                    class="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60"
+                                />
+                            </div>
+
+                            <!-- Clear Filter Button -->
+                            <button
+                                v-if="hasActiveFilters"
+                                @click="clearAllFilters"
+                                type="button"
+                                class="inline-flex h-10 items-center gap-1.5 rounded-full border border-border/60 px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
+                                <RotateCcw class="h-3.5 w-3.5" />
+                                <span>Reset</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Assignments Grid -->
-                <div class="z-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
-                    <TransitionGroup
-                        enter-active-class="animate-in fade-in slide-in-from-bottom-4 duration-500"
-                        leave-active-class="animate-out fade-out slide-out-to-top-4 duration-300 absolute"
+                <div data-tour="assignments-grid" class="animate-section">
+                    <div
+                        v-if="filteredAssignments.length > 0"
+                        class="grid grid-cols-1 gap-4 lg:grid-cols-2"
                     >
-                        <Motion
-                            v-for="(assignment, aIdx) in filteredAssignments"
+                        <Card
+                            v-for="assignment in filteredAssignments"
                             :key="assignment.id"
-                            :initial="{ opacity: 0, y: 40 }"
-                            :in-view="isBooted ? { opacity: 1, y: 0 } : {}"
-                            :in-view-options="{ once: true, margin: '-50px' }"
-                            :transition="{
-                                duration: 1,
-                                easing: [0.16, 1, 0.3, 1],
-                                delay: aIdx * 0.05,
-                            }"
-                            class="assignment-card surface-card group/card premium-hover relative overflow-hidden p-5 transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 md:p-6"
-                            @mousemove="handleMouseMove"
+                            class="surface-card group flex flex-col justify-between overflow-hidden p-4.5 transition-all duration-300 hover:shadow-md sm:p-5.5"
+                            :class="getCardBorderClass(assignment)"
                         >
-                            <!-- Tech Grid Background -->
-                            <div
-                                class="pointer-events-none absolute inset-0 opacity-[0.03] transition-opacity group-hover/card:opacity-[0.05]"
-                            >
-                                <svg
-                                    class="h-full w-full"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="100%"
-                                    height="100%"
-                                >
-                                    <defs>
-                                        <pattern
-                                            :id="`assignment-grid-${assignment.id}`"
-                                            width="15"
-                                            height="15"
-                                            patternUnits="userSpaceOnUse"
-                                        >
-                                            <path
-                                                d="M 15 0 L 0 0 0 15"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="0.5"
-                                            />
-                                        </pattern>
-                                    </defs>
-                                    <rect
-                                        width="100%"
-                                        height="100%"
-                                        :fill="`url(#assignment-grid-${assignment.id})`"
-                                    />
-                                </svg>
-                            </div>
-
-                            <!-- Tech Scanning Line -->
-                            <div
-                                class="group-hover/card:animate-scan-horizontal pointer-events-none absolute inset-0 h-full w-32 -translate-x-full bg-gradient-to-r from-transparent via-primary/10 to-transparent opacity-0 transition-opacity group-hover/card:opacity-100"
-                            ></div>
-
-                            <!-- Hover Bloom Effect -->
-                            <div
-                                class="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover/card:opacity-100"
-                                :style="{
-                                    background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.1), transparent 40%)`,
-                                }"
-                            ></div>
-
-                            <!-- Silhouette Background Icon -->
-                            <div
-                                class="pointer-events-none absolute -right-6 -bottom-6 scale-110 rotate-12 opacity-[0.03] transition-all duration-700 group-hover:rotate-0 group-hover/card:opacity-[0.08]"
-                            >
-                                <BookOpen class="h-32 w-32" />
-                            </div>
-
-                            <div class="relative z-10 flex h-full flex-col">
+                            <div class="space-y-3">
+                                <!-- Top Row: Course + Status Badge + Relative Due Text -->
                                 <div
-                                    class="mb-4 flex items-start justify-between"
+                                    class="flex flex-wrap items-start justify-between gap-2.5"
                                 >
-                                    <div class="space-y-2">
-                                        <div class="flex items-center gap-2">
-                                            <div
-                                                class="rounded border border-primary/20 bg-primary/10 px-2 py-0.5 font-mono text-[8px] font-black tracking-widest text-primary uppercase"
-                                            >
-                                                {{
-                                                    assignment.course?.name?.toUpperCase() ||
-                                                    'GENERAL_UNIT'
-                                                }}
-                                            </div>
-                                            <div
-                                                :class="[
-                                                    'rounded border px-2 py-0.5 font-mono text-[8px] font-black tracking-widest uppercase',
-                                                    getStatusColor(
-                                                        assignment.submission
-                                                            ?.status ||
-                                                            'Pending',
-                                                    )
-                                                        .split(' ')
-                                                        .filter(
-                                                            (c) =>
-                                                                !c.includes(
-                                                                    'bg-',
-                                                                ),
-                                                        )
-                                                        .join(' '),
-                                                    getStatusColor(
-                                                        assignment.submission
-                                                            ?.status ||
-                                                            'Pending',
-                                                    )
-                                                        .split(' ')
-                                                        .find((c) =>
-                                                            c.includes('bg-'),
-                                                        )
-                                                        ?.replace('/10', '/20'),
-                                                ]"
-                                            >
-                                                {{
-                                                    assignment.submission?.status?.toUpperCase() ||
-                                                    'PENDING_OPS'
-                                                }}
-                                            </div>
-                                        </div>
-                                        <h3
-                                            class="text-xl leading-tight font-black tracking-tighter uppercase transition-colors duration-500 group-hover/card:text-primary"
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
+                                    >
+                                        <!-- Course Pill -->
+                                        <span
+                                            class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground/80"
                                         >
-                                            {{ assignment.title }}
-                                        </h3>
-                                    </div>
-
-                                    <div class="text-right">
-                                        <p
-                                            class="mb-1 font-mono text-[8px] font-black tracking-[0.2em] text-muted-foreground/40 uppercase"
-                                        >
+                                            <BookOpen
+                                                class="h-3 w-3 text-muted-foreground"
+                                            />
                                             {{
-                                                assignment.submission?.submitted
-                                                    ? '>_TRANSMISSION'
-                                                    : '>_DEADLINE'
+                                                assignment.course?.name ||
+                                                'General'
                                             }}
-                                        </p>
-                                        <p
-                                            class="font-mono text-xs font-black tracking-tight"
+                                        </span>
+
+                                        <!-- Status Badge -->
+                                        <span
+                                            class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
                                             :class="
-                                                isOverdue(
-                                                    assignment.due_date,
-                                                ) &&
-                                                !assignment.submission
-                                                    ?.submitted
-                                                    ? 'text-[#CB7676]'
-                                                    : 'text-muted-foreground'
+                                                getStatusBadge(assignment)
+                                                    .classes
                                             "
                                         >
                                             {{
-                                                assignment.submission
-                                                    ?.submitted_at
-                                                    ? new Date(
-                                                          assignment.submission
-                                                              .submitted_at,
-                                                      )
-                                                          .toLocaleDateString()
-                                                          .toUpperCase()
-                                                    : assignment.due_date
-                                                      ? new Date(
-                                                            assignment.due_date,
-                                                        )
-                                                            .toLocaleDateString()
-                                                            .toUpperCase()
-                                                      : 'UNDEFINED'
+                                                getStatusBadge(assignment).label
                                             }}
-                                        </p>
+                                        </span>
+                                    </div>
+
+                                    <!-- Due Date / Relative Info -->
+                                    <div
+                                        class="flex items-center gap-1.5 text-xs font-medium"
+                                        :class="
+                                            getRelativeDueInfo(
+                                                assignment.due_date,
+                                                Boolean(
+                                                    assignment.submission
+                                                        ?.submitted,
+                                                ),
+                                                assignment.submission
+                                                    ?.submitted_at,
+                                            ).color
+                                        "
+                                    >
+                                        <Clock
+                                            v-if="
+                                                !assignment.submission
+                                                    ?.submitted
+                                            "
+                                            class="h-3.5 w-3.5"
+                                        />
+                                        <CheckCircle2
+                                            v-else
+                                            class="h-3.5 w-3.5"
+                                        />
+                                        <span>
+                                            {{
+                                                getRelativeDueInfo(
+                                                    assignment.due_date,
+                                                    Boolean(
+                                                        assignment.submission
+                                                            ?.submitted,
+                                                    ),
+                                                    assignment.submission
+                                                        ?.submitted_at,
+                                                ).text
+                                            }}
+                                        </span>
                                     </div>
                                 </div>
 
-                                <p
-                                    class="mb-4 line-clamp-2 flex-grow text-xs leading-relaxed font-medium text-muted-foreground/70"
-                                >
-                                    {{
-                                        assignment.description ||
-                                        'No specialized mission intelligence provided for this objective. Proceed with standard operational procedures.'
-                                    }}
-                                </p>
+                                <!-- Assignment Title -->
+                                <div>
+                                    <h2
+                                        class="text-[17px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[19px]"
+                                    >
+                                        {{ assignment.title }}
+                                    </h2>
 
+                                    <p
+                                        class="mt-1 text-sm leading-relaxed text-muted-foreground"
+                                        :class="{
+                                            'line-clamp-3':
+                                                assignment.description?.length >
+                                                160,
+                                        }"
+                                    >
+                                        {{
+                                            assignment.description ||
+                                            'No additional instructions provided for this assignment.'
+                                        }}
+                                    </p>
+                                </div>
+
+                                <!-- Submitted File Information Preview -->
                                 <div
-                                    class="mt-auto flex items-center justify-between border-t border-border/10 pt-4"
+                                    v-if="assignment.submission?.submitted"
+                                    class="rounded-xl border border-border/60 bg-muted/25 p-3"
                                 >
-                                    <!-- Enhanced Mission Status -->
                                     <div
-                                        v-if="assignment.submission?.submitted"
-                                        class="flex items-center gap-3"
+                                        class="flex flex-wrap items-center justify-between gap-2"
                                     >
                                         <div
-                                            class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#4D9375]/10 bg-[#4D9375]/5"
+                                            class="flex min-w-0 items-center gap-2"
                                         >
-                                            <FileText
-                                                class="h-5 w-5 text-[#4D9375]"
-                                            />
-                                        </div>
-                                        <div>
-                                            <p
-                                                class="font-mono text-[8px] font-black tracking-widest text-muted-foreground/40 uppercase"
+                                            <div
+                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                                             >
-                                                >_SECURE_DATA
-                                            </p>
-                                            <p
-                                                class="font-mono text-xs font-black text-[#4D9375]/80"
-                                            >
-                                                VERIFIED_TRANSMISSION
-                                            </p>
+                                                <FileText class="h-4 w-4" />
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p
+                                                    class="truncate text-xs font-semibold text-foreground"
+                                                >
+                                                    {{
+                                                        assignment.submission
+                                                            .file_path
+                                                            ? assignment.submission.file_path
+                                                                  .split('/')
+                                                                  .pop()
+                                                            : 'Uploaded submission'
+                                                    }}
+                                                </p>
+                                                <p
+                                                    v-if="
+                                                        assignment.submission
+                                                            .submitted_at
+                                                    "
+                                                    class="text-[11px] text-muted-foreground"
+                                                >
+                                                    Turned in on
+                                                    {{
+                                                        formatDateTime(
+                                                            assignment
+                                                                .submission
+                                                                .submitted_at,
+                                                        )
+                                                    }}
+                                                </p>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div v-else class="flex items-center gap-2">
                                         <div
-                                            class="h-1.5 w-1.5 animate-pulse rounded-full bg-[#E0AF68]"
-                                        ></div>
-                                        <span
-                                            class="font-mono text-[8px] font-black tracking-[0.2em] text-[#E0AF68]/80 uppercase"
-                                            >>_OBJECTIVE_INCOMPLETE</span
+                                            v-if="assignment.submission.grade"
+                                            class="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-right"
                                         >
-                                    </div>
-
-                                    <div class="flex gap-3">
-                                        <Button
-                                            v-if="
-                                                assignment.submission?.submitted
-                                            "
-                                            variant="outline"
-                                            size="sm"
-                                            class="h-9 gap-2 rounded-xl border-white/5 bg-transparent px-4 font-mono text-[9px] font-black tracking-widest uppercase hover:bg-white/5"
-                                        >
-                                            <Download class="h-3.5 w-3.5" />
-                                            INTEL
-                                        </Button>
-                                        <Button
-                                            v-if="
-                                                !assignment.submission
-                                                    ?.submitted
-                                            "
-                                            @click="
-                                                selectedAssignment = assignment;
-                                                selectedAssignmentId =
-                                                    assignment.id;
-                                                showUploadModal = true;
-                                            "
-                                            variant="default"
-                                            size="sm"
-                                            class="group/btn h-9 gap-2 rounded-xl px-6 text-[9px] font-black tracking-[0.15em] uppercase shadow-[0_0_20px_rgba(var(--primary-rgb),0.3)] transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.5)]"
-                                        >
-                                            <FileUp
-                                                class="h-3.5 w-3.5 transition-transform group-hover/btn:-translate-y-0.5"
-                                            />
-                                            SUBMIT_INTEL
-                                        </Button>
+                                            <span
+                                                class="text-[10px] font-medium text-muted-foreground"
+                                                >Grade</span
+                                            >
+                                            <span
+                                                class="ml-1 text-xs font-bold text-emerald-700 dark:text-emerald-400"
+                                            >
+                                                {{
+                                                    assignment.submission.grade
+                                                }}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </Motion>
-                    </TransitionGroup>
-                </div>
 
-                <!-- Empty State -->
-                <div
-                    v-if="filteredAssignments.length === 0"
-                    class="animate-in fade-in zoom-in z-10 flex flex-col items-center justify-center py-24 duration-700"
-                >
-                    <div class="group/empty relative">
-                        <div
-                            class="absolute inset-0 rounded-full bg-primary/20 opacity-0 blur-3xl transition-opacity duration-1000 group-hover/empty:opacity-100"
-                        ></div>
-                        <div
-                            class="relative z-10 mb-8 flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border border-border/10 bg-muted/5 transition-colors duration-500 group-hover/empty:border-primary/30"
+                            <!-- Card Action Footer -->
+                            <div
+                                class="mt-4 flex items-center justify-between border-t border-border/50 pt-3.5 sm:mt-5"
+                            >
+                                <div class="text-xs text-muted-foreground">
+                                    <span v-if="assignment.due_date">
+                                        Deadline:
+                                        {{ formatDueDate(assignment.due_date) }}
+                                    </span>
+                                    <span v-else> Open assignment </span>
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <!-- Download / View Submission File if available -->
+                                    <a
+                                        v-if="
+                                            assignment.submission?.submitted &&
+                                            assignment.submission?.file_path
+                                        "
+                                        :href="`/storage/${assignment.submission.file_path}`"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                                    >
+                                        <Download class="h-3.5 w-3.5" />
+                                        <span>View file</span>
+                                    </a>
+
+                                    <!-- Resubmit button for already submitted items -->
+                                    <Button
+                                        v-if="assignment.submission?.submitted"
+                                        variant="outline"
+                                        size="sm"
+                                        class="dash-btn h-9 rounded-xl border-border/60 px-3.5 text-xs font-semibold"
+                                        @click="
+                                            openModalForAssignment(assignment)
+                                        "
+                                    >
+                                        <FileUp class="h-3.5 w-3.5" />
+                                        <span>Resubmit</span>
+                                    </Button>
+
+                                    <!-- Submit button for pending items -->
+                                    <Button
+                                        v-else
+                                        variant="default"
+                                        size="sm"
+                                        class="dash-btn h-9 gap-1.5 rounded-xl bg-[#D97757] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#D97757]/90 active:scale-98"
+                                        @click="
+                                            openModalForAssignment(assignment)
+                                        "
+                                    >
+                                        <FileUp class="h-3.5 w-3.5" />
+                                        <span>Submit</span>
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    <!-- Empty State: No results found after filters/search -->
+                    <Card
+                        v-else-if="totalCount > 0"
+                        class="surface-card border-dashed py-14 text-center sm:py-20"
+                    >
+                        <CardContent
+                            class="flex flex-col items-center justify-center p-6"
                         >
                             <div
-                                class="pointer-events-none absolute inset-0 opacity-[0.05]"
+                                class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground"
                             >
-                                <svg
-                                    class="h-full w-full"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                >
-                                    <defs>
-                                        <pattern
-                                            id="empty-grid"
-                                            width="10"
-                                            height="10"
-                                            patternUnits="userSpaceOnUse"
-                                        >
-                                            <path
-                                                d="M 10 0 L 0 0 0 10"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="0.5"
-                                            />
-                                        </pattern>
-                                    </defs>
-                                    <rect
-                                        width="100%"
-                                        height="100%"
-                                        fill="url(#empty-grid)"
-                                    />
-                                </svg>
+                                <Search class="h-6 w-6" />
                             </div>
-                            <BookOpen
-                                class="h-10 w-10 text-muted-foreground/20 transition-colors duration-500 group-hover/empty:text-primary/40"
-                            />
-                        </div>
+                            <h3
+                                class="text-lg font-semibold tracking-tight text-foreground"
+                            >
+                                No matching assignments
+                            </h3>
+                            <p
+                                class="mt-1.5 max-w-sm text-sm text-muted-foreground"
+                            >
+                                We couldn't find any assignments matching your
+                                search or active filters.
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                class="dash-btn mt-5 rounded-full px-5"
+                                @click="clearAllFilters"
+                            >
+                                <RotateCcw class="h-3.5 w-3.5" />
+                                <span>Clear all filters</span>
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Empty State: No assignments at all -->
+                    <Card
+                        v-else
+                        class="surface-card border-dashed py-14 text-center sm:py-20"
+                    >
+                        <CardContent
+                            class="flex flex-col items-center justify-center p-6"
+                        >
+                            <div
+                                class="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-muted/40 text-muted-foreground"
+                            >
+                                <BookOpen class="h-8 w-8" />
+                            </div>
+                            <h3
+                                class="text-xl font-semibold tracking-tight text-foreground"
+                            >
+                                No assignments yet
+                            </h3>
+                            <p
+                                class="mt-2 max-w-md text-sm text-muted-foreground"
+                            >
+                                Your teachers haven't posted any assignments
+                                yet. When coursework is assigned, it will appear
+                                here with clear instructions and deadlines.
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </template>
+
+        <!-- Onboarding Tour -->
+        <OnboardingTour
+            tour-id="assignments"
+            :steps="assignmentsTourSteps"
+            :can-start="isBooted && !showUploadModal"
+            :start-delay="900"
+        />
+
+        <!-- Upload & Submit Assignment Modal -->
+        <ResponsiveModal
+            :open="showUploadModal"
+            custom-header
+            content-class="sm:max-w-lg"
+            @close="closeModal"
+        >
+            <template #header>
+                <div class="flex items-center justify-between gap-4">
+                    <div class="min-w-0 space-y-1">
+                        <span class="text-xs font-medium text-[#D97757]">
+                            Assignment submission
+                        </span>
+                        <h2 class="text-lg font-bold text-foreground">
+                            {{
+                                selectedAssignment
+                                    ? selectedAssignment.title
+                                    : 'Submit assignment'
+                            }}
+                        </h2>
+                        <p class="text-xs text-muted-foreground">
+                            {{
+                                selectedAssignment?.course?.name
+                                    ? `Subject: ${selectedAssignment.course.name}`
+                                    : 'Upload your completed file for grading.'
+                            }}
+                        </p>
                     </div>
-                    <h3
-                        class="text-2xl font-black tracking-tighter text-muted-foreground/40 uppercase transition-colors duration-500 group-hover/empty:text-foreground"
+                </div>
+            </template>
+
+            <div class="space-y-4 pt-2">
+                <!-- Assignment Selector (if multiple pending or changing selection) -->
+                <div v-if="props.assignments.length > 1" class="space-y-1.5">
+                    <label
+                        for="assignment-select"
+                        class="text-xs font-semibold text-foreground"
                     >
-                        NO_MISSIONS_FOUND
-                    </h3>
-                    <p
-                        class="mt-3 font-mono text-[10px] font-black tracking-[0.3em] text-muted-foreground/20 uppercase"
-                    >
-                        ADJUST_FILTERS_OR_STANDBY_FOR_OBJECTIVES
+                        Select assignment
+                    </label>
+                    <div class="relative">
+                        <select
+                            id="assignment-select"
+                            v-model="selectedAssignmentId"
+                            class="h-11 w-full cursor-pointer appearance-none rounded-xl border border-border/60 bg-card px-3.5 text-sm font-medium text-foreground transition-colors outline-none hover:bg-muted/30 focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
+                        >
+                            <option value="" disabled>
+                                Select an assignment to submit...
+                            </option>
+                            <option
+                                v-for="a in props.assignments"
+                                :key="a.id"
+                                :value="a.id"
+                            >
+                                {{ a.title }}
+                                {{ a.course ? `(${a.course.name})` : '' }}
+                                {{
+                                    a.submission?.submitted ? '· Submitted' : ''
+                                }}
+                            </option>
+                        </select>
+                        <ChevronDown
+                            class="pointer-events-none absolute top-1/2 right-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
+                        />
+                    </div>
+                </div>
+
+                <!-- Assignment Description / Details Callout -->
+                <div
+                    v-if="selectedAssignment?.description"
+                    class="rounded-xl border border-border/60 bg-muted/20 p-3.5 text-xs leading-relaxed text-muted-foreground"
+                >
+                    <p class="mb-1 font-medium text-foreground">
+                        Instructions:
+                    </p>
+                    <p class="line-clamp-3">
+                        {{ selectedAssignment.description }}
                     </p>
                 </div>
 
-                <!-- Upload Modal -->
-                <Transition @enter="onModalEnter" :css="false">
+                <!-- Drag & Drop Upload Zone -->
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-foreground">
+                        Upload file
+                    </label>
+
                     <div
-                        v-if="showUploadModal"
-                        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        @click="fileInput?.click()"
+                        @dragover.prevent="isDraggingFile = true"
+                        @dragleave.prevent="isDraggingFile = false"
+                        @drop.prevent="handleFileDrop"
+                        class="group relative flex min-h-40 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center transition-all"
+                        :class="[
+                            isDraggingFile
+                                ? 'border-[#D97757] bg-[#D97757]/5'
+                                : 'border-border/70 hover:border-primary/50 hover:bg-muted/20',
+                            !selectedAssignmentId
+                                ? 'pointer-events-none opacity-50'
+                                : '',
+                        ]"
                     >
-                        <div
-                            class="modal-overlay absolute inset-0 bg-background/80 backdrop-blur-2xl"
-                            @click="closeUploadModal"
-                        ></div>
+                        <input
+                            ref="fileInput"
+                            type="file"
+                            class="hidden"
+                            accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                            @change="handleFileInputChange"
+                        />
 
                         <div
-                            class="modal-content surface-card relative z-10 w-full max-w-lg overflow-hidden rounded-[2rem] border border-primary/20 bg-gradient-to-b from-primary/10 to-transparent p-0.5 shadow-[0_0_50px_-12px_rgba(var(--primary-rgb),0.3)]"
+                            v-if="!form.file"
+                            class="flex flex-col items-center gap-2.5"
                         >
-                            <!-- Modal Inner Content -->
                             <div
-                                class="relative overflow-hidden rounded-[1.9rem] bg-background/40 p-6 backdrop-blur-md"
+                                class="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground transition-transform duration-300 group-hover:scale-105 group-hover:bg-[#D97757]/10 group-hover:text-[#D97757]"
                             >
-                                <!-- Tactical Background UI -->
-                                <div
-                                    class="pointer-events-none absolute inset-0 opacity-20"
+                                <UploadCloud class="h-6 w-6" />
+                            </div>
+                            <div>
+                                <p
+                                    class="text-sm font-semibold text-foreground"
                                 >
-                                    <div
-                                        class="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-                                    ></div>
-                                    <div
-                                        class="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-                                    ></div>
-                                    <div
-                                        class="absolute top-0 left-10 h-full w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent"
-                                    ></div>
-                                    <div
-                                        class="absolute top-0 right-10 h-full w-px bg-gradient-to-b from-transparent via-primary/20 to-transparent"
-                                    ></div>
-                                </div>
-
-                                <div class="relative z-10">
-                                    <div
-                                        class="mb-6 flex items-center justify-between"
-                                    >
-                                        <div class="flex items-center gap-3">
-                                            <div
-                                                class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 shadow-[0_0_20px_rgba(var(--primary-rgb),0.2)]"
-                                            >
-                                                <Cpu
-                                                    class="h-5 w-5 animate-pulse text-primary"
-                                                />
-                                            </div>
-                                            <div>
-                                                <p
-                                                    class="text-[9px] font-black tracking-[0.3em] text-primary/80 uppercase"
-                                                >
-                                                    Transmission Protocol 7-A
-                                                </p>
-                                                <h2
-                                                    class="mt-1 text-2xl leading-none font-black tracking-tighter uppercase"
-                                                >
-                                                    Submit Intel
-                                                </h2>
-                                            </div>
-                                        </div>
-                                        <div
-                                            class="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5"
-                                        >
-                                            <div
-                                                class="flex items-center gap-2"
-                                            >
-                                                <ShieldCheck
-                                                    class="h-3.5 w-3.5 text-[#4D9375]"
-                                                />
-                                                <span
-                                                    class="text-[9px] font-black tracking-widest text-[#4D9375] uppercase"
-                                                    >Secure</span
-                                                >
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Assignment Selector -->
-                                    <div
-                                        v-if="!selectedAssignment"
-                                        class="mb-6 space-y-2"
-                                    >
-                                        <label
-                                            class="text-[9px] font-black tracking-[0.2em] text-muted-foreground/50 uppercase"
-                                            >Designate Objective</label
-                                        >
-                                        <div class="group relative">
-                                            <select
-                                                v-model="selectedAssignmentId"
-                                                class="w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-white/[0.03] px-5 py-3 text-[10px] font-bold tracking-[0.15em] uppercase transition-all outline-none hover:bg-white/[0.05] focus:border-primary/40 focus:ring-2 focus:ring-primary/40"
-                                            >
-                                                <option value="" disabled>
-                                                    Awaiting Objective
-                                                    Designation...
-                                                </option>
-                                                <option
-                                                    v-for="a in assignments.filter(
-                                                        (x) =>
-                                                            !x.submission
-                                                                ?.submitted,
-                                                    )"
-                                                    :key="a.id"
-                                                    :value="a.id"
-                                                    class="bg-[#0a0a0a] text-foreground"
-                                                >
-                                                    {{ a.title }}
-                                                </option>
-                                            </select>
-                                            <div
-                                                class="pointer-events-none absolute top-1/2 right-5 -translate-y-1/2 transition-colors group-hover:text-primary"
-                                            >
-                                                <Clock
-                                                    class="h-3.5 w-3.5 text-muted-foreground/40"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div
-                                        v-else
-                                        class="group mb-6 flex items-center justify-between rounded-xl border border-primary/10 bg-primary/5 p-4"
-                                    >
-                                        <div>
-                                            <p
-                                                class="mb-0.5 text-[8px] font-black tracking-[0.2em] text-primary/60 uppercase"
-                                            >
-                                                Target Mission
-                                            </p>
-                                            <h4
-                                                class="text-base font-black tracking-tight uppercase transition-colors group-hover:text-primary"
-                                            >
-                                                {{ selectedAssignment.title }}
-                                            </h4>
-                                        </div>
-                                        <BookOpen
-                                            class="h-6 w-6 opacity-10 transition-all duration-500 group-hover:scale-110 group-hover:opacity-20"
-                                        />
-                                    </div>
-
-                                    <!-- Upload Zone -->
-                                    <div
-                                        @click="fileInput?.click()"
-                                        @mousemove="handleMouseMove"
-                                        class="upload-zone group relative flex cursor-pointer flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 border-dashed border-primary/20 p-8 transition-all duration-700 hover:border-primary hover:bg-primary/[0.03]"
-                                        :class="{
-                                            'opacity-40 grayscale-[0.5]':
-                                                !selectedAssignmentId,
-                                        }"
-                                    >
-                                        <!-- Dynamic Radial Glow -->
-                                        <div
-                                            class="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-700 group-hover:opacity-100"
-                                            :style="{
-                                                background: `radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.15), transparent 40%)`,
-                                            }"
-                                        ></div>
-
-                                        <input
-                                            type="file"
-                                            class="hidden"
-                                            ref="fileInput"
-                                            @change="
-                                                (e: any) =>
-                                                    (form.file =
-                                                        e.target.files[0])
-                                            "
-                                        />
-
-                                        <div
-                                            v-if="!form.file"
-                                            class="relative z-10 flex flex-col items-center gap-4"
-                                        >
-                                            <div class="relative">
-                                                <div
-                                                    class="absolute inset-0 rounded-2xl bg-primary opacity-0 blur-2xl transition-all duration-700 group-hover:opacity-20"
-                                                ></div>
-                                                <div
-                                                    class="flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 shadow-2xl transition-all duration-700 group-hover:scale-110 group-hover:border-primary/40"
-                                                >
-                                                    <FileUp
-                                                        class="h-6 w-6 text-primary"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div class="text-center">
-                                                <p
-                                                    class="text-[11px] font-black tracking-[0.2em] uppercase"
-                                                >
-                                                    Initialize Transmission
-                                                </p>
-                                                <div
-                                                    class="mt-2 flex items-center gap-3"
-                                                >
-                                                    <span
-                                                        class="rounded-full border border-white/5 bg-white/5 px-2 py-0.5 text-[8px] font-bold tracking-widest text-muted-foreground/40 uppercase"
-                                                        >PDF / PNG</span
-                                                    >
-                                                    <span
-                                                        class="rounded-full border border-white/5 bg-white/5 px-2 py-0.5 text-[8px] font-bold tracking-widest text-muted-foreground/40 uppercase"
-                                                        >MAX 10MB</span
-                                                    >
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            v-else
-                                            class="relative z-10 flex flex-col items-center gap-4"
-                                        >
-                                            <div
-                                                class="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#4D9375]/20 bg-[#4D9375]/10 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
-                                            >
-                                                <FileText
-                                                    class="h-6 w-6 text-[#4D9375]"
-                                                />
-                                            </div>
-                                            <div class="text-center">
-                                                <p
-                                                    class="max-w-[250px] truncate rounded-lg border border-[#4D9375]/10 bg-[#4D9375]/5 px-3 py-1.5 text-[10px] font-black tracking-tight text-[#4D9375] uppercase"
-                                                >
-                                                    {{
-                                                        form.file.name.toUpperCase()
-                                                    }}
-                                                </p>
-                                                <button
-                                                    @click.stop="
-                                                        form.file = null
-                                                    "
-                                                    class="mx-auto mt-3 flex items-center gap-2 text-[8px] font-black tracking-[0.25em] text-[#CB7676]/80 uppercase decoration-[#CB7676]/40 underline-offset-4 transition-all hover:scale-110 hover:text-[#CB7676] hover:underline"
-                                                >
-                                                    Discard Intelligence
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <!-- Corner accents -->
-                                        <div
-                                            class="absolute top-3 left-3 h-3 w-3 rounded-tl-md border-t-2 border-l-2 border-primary/20"
-                                        ></div>
-                                        <div
-                                            class="absolute top-3 right-3 h-3 w-3 rounded-tr-md border-t-2 border-r-2 border-primary/20"
-                                        ></div>
-                                        <div
-                                            class="absolute bottom-3 left-3 h-3 w-3 rounded-bl-md border-b-2 border-l-2 border-primary/20"
-                                        ></div>
-                                        <div
-                                            class="absolute right-3 bottom-3 h-3 w-3 rounded-br-md border-r-2 border-b-2 border-primary/20"
-                                        ></div>
-                                    </div>
-
-                                    <div class="relative z-10 mt-8 flex gap-4">
-                                        <button
-                                            @click="closeUploadModal"
-                                            class="flex-1 rounded-xl border border-white/10 bg-white/5 px-6 py-4 text-[9px] font-black tracking-[0.3em] uppercase transition-all hover:border-white/20 hover:bg-white/10 active:scale-95"
-                                        >
-                                            Abort
-                                        </button>
-                                        <button
-                                            :disabled="
-                                                !form.file ||
-                                                form.processing ||
-                                                !selectedAssignmentId
-                                            "
-                                            @click="submitAssignment"
-                                            :class="[
-                                                'group/btn relative flex-[1.5] overflow-hidden rounded-xl px-6 py-4 text-[9px] font-black tracking-[0.3em] uppercase shadow-2xl transition-all active:scale-95',
-                                                !form.file ||
-                                                form.processing ||
-                                                !selectedAssignmentId
-                                                    ? 'border border-border/10 bg-muted/10 text-muted-foreground/40 grayscale'
-                                                    : 'border border-primary/30 bg-primary text-primary-foreground hover:shadow-[0_0_40px_rgba(var(--primary-rgb),0.5)]',
-                                            ]"
-                                        >
-                                            <div
-                                                class="absolute inset-0 translate-x-[-100%] bg-white/20 transition-transform duration-1000 group-hover/btn:translate-x-[100%]"
-                                            ></div>
-                                            <span
-                                                class="relative z-10 flex items-center justify-center gap-2"
-                                            >
-                                                {{
-                                                    form.processing
-                                                        ? 'TRANSMITTING...'
-                                                        : 'Confirm Transmission'
-                                                }}
-                                                <Sparkles
-                                                    v-if="
-                                                        !form.processing &&
-                                                        form.file &&
-                                                        selectedAssignmentId
-                                                    "
-                                                    class="h-3.5 w-3.5"
-                                                />
-                                            </span>
-                                        </button>
-                                    </div>
-                                </div>
+                                    Click to upload or drag &amp; drop
+                                </p>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    PDF, Word document, Text, or Images (Max 10
+                                    MB)
+                                </p>
                             </div>
                         </div>
+
+                        <!-- Selected File Preview -->
+                        <div
+                            v-else
+                            class="flex w-full items-center justify-between rounded-xl border border-border/60 bg-card p-3 shadow-xs"
+                            @click.stop
+                        >
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                >
+                                    <FileText class="h-5 w-5" />
+                                </div>
+                                <div class="min-w-0 text-left">
+                                    <p
+                                        class="truncate text-xs font-semibold text-foreground"
+                                    >
+                                        {{ form.file.name }}
+                                    </p>
+                                    <p
+                                        class="text-[11px] text-muted-foreground"
+                                    >
+                                        {{ formatFileSize(form.file.size) }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                @click="removeSelectedFile"
+                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                title="Remove file"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
-                </Transition>
+
+                    <!-- Client / Server Error Feedback -->
+                    <div
+                        v-if="fileError || form.errors.file"
+                        class="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-xs text-destructive"
+                    >
+                        <AlertTriangle class="h-4 w-4 shrink-0" />
+                        <span>{{ fileError || form.errors.file }}</span>
+                    </div>
+                </div>
+
+                <!-- Progress Indicator -->
+                <div v-if="form.processing" class="space-y-1.5">
+                    <div
+                        class="flex items-center justify-between text-xs text-muted-foreground"
+                    >
+                        <span class="flex items-center gap-1.5 font-medium">
+                            <Loader2
+                                class="h-3.5 w-3.5 animate-spin text-[#D97757]"
+                            />
+                            Uploading assignment...
+                        </span>
+                        <span>Please wait</span>
+                    </div>
+                    <Progress
+                        :value="form.progress?.percentage ?? 60"
+                        class="h-1.5 w-full bg-muted"
+                        indicator-class="bg-[#D97757]"
+                    />
+                </div>
             </div>
-        </template>
+
+            <template #footer>
+                <div
+                    class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                >
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="dash-btn w-full rounded-xl sm:w-auto"
+                        :disabled="form.processing"
+                        @click="closeModal"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        class="dash-btn w-full rounded-xl bg-[#D97757] text-white hover:bg-[#D97757]/90 sm:w-auto"
+                        :disabled="
+                            !form.file ||
+                            !selectedAssignmentId ||
+                            form.processing
+                        "
+                        @click="submitAssignment"
+                    >
+                        <Loader2
+                            v-if="form.processing"
+                            class="h-4 w-4 animate-spin"
+                        />
+                        <FileUp v-else class="h-4 w-4" />
+                        <span>{{
+                            form.processing
+                                ? 'Submitting...'
+                                : 'Submit assignment'
+                        }}</span>
+                    </Button>
+                </div>
+            </template>
+        </ResponsiveModal>
     </AppLayout>
 </template>
 
 <style scoped>
-.surface-card {
-    background: rgba(255, 255, 255, 0.015);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 1.25rem;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
 }
-
-.premium-hover:hover {
-    background: rgba(var(--primary-rgb), 0.03);
-    border-color: rgba(var(--primary-rgb), 0.15);
-    transform: translateY(-4px) scale(1.01);
-    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
-}
-
-.orb {
-    will-change: transform;
-}
-
-.assignment-card {
-    will-change: transform, opacity;
-}
-
-@keyframes scan-horizontal {
-    0% {
-        transform: translateX(-100%);
-    }
-    100% {
-        transform: translateX(1000%);
-    }
-}
-
-.animate-scan-horizontal {
-    animation: scan-horizontal 3s linear infinite;
-}
-
-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.4)' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1rem;
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 </style>
