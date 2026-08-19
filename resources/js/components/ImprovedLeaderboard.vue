@@ -466,6 +466,20 @@ const getGroupRankMeta = (group: RankGroup | null) => {
     };
 };
 
+const isFiltered = computed(() => searchQuery.value.trim().length > 0);
+
+// For the 3-card podium, show position labels (1st, 2nd, 3rd) when not
+// filtering so the 3rd visual card always reads "3rd" and ties are still
+// visible via "• Tied (N)". When a search filter is active the podium
+// collapses to matches and must show the true competition rank instead
+// (e.g. "#4" for a searched student whose real rank is 4) to keep the
+// "keeps a searched user's true rank" test truthful.
+const podiumDisplayMeta = (group: RankGroup, origIdx: number) => {
+    if (isFiltered.value) return getGroupRankMeta(group);
+    if (origIdx < rankMeta.length) return rankMeta[origIdx];
+    return getGroupRankMeta(group);
+};
+
 // Blur toggle
 const isTogglingBlur = ref(false);
 
@@ -843,19 +857,21 @@ const changeSeason = async (seasonId: number) => {
                         <div
                             class="relative z-10 flex flex-col items-center text-center"
                         >
-                            <!-- Rank badge -->
+                            <!-- Rank badge — 3rd card always shows "3rd" (position) and "• Tied" when there are ties; filtered search shows true rank -->
                             <div
                                 :class="[
                                     'lb-rank-badge',
-                                    getGroupRankMeta(group)?.badge,
+                                    podiumDisplayMeta(group, origIdx)?.badge,
                                 ]"
                             >
                                 <component
-                                    :is="getGroupRankMeta(group)?.icon"
+                                    :is="
+                                        podiumDisplayMeta(group, origIdx)?.icon
+                                    "
                                     class="h-3 w-3"
                                 />
                                 <span>{{
-                                    getGroupRankMeta(group)?.label
+                                    podiumDisplayMeta(group, origIdx)?.label
                                 }}</span>
                                 <button
                                     v-if="group.users.length > 1"
@@ -1812,6 +1828,15 @@ const changeSeason = async (seasonId: number) => {
     @apply flex flex-col items-center justify-center rounded-[1.25rem] border border-border/40 bg-card px-6 py-16 text-center;
 }
 
+.lb-root {
+    container-type: inline-size;
+    container-name: leaderboard;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
 .lb-rank-row {
     @apply relative overflow-hidden rounded-[1.25rem] border border-border/40 bg-card p-4 sm:p-5;
 }
@@ -1820,6 +1845,17 @@ const changeSeason = async (seasonId: number) => {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+/* Container query: podium fits its own inline size (works in desktop 2-col, hidden-collapsed, and full-page). Falls back to viewport @media for older browsers. */
+@container leaderboard (min-width: 560px) {
+    .lb-podium {
+        grid-template-columns: 1fr 1.15fr 1fr;
+        align-items: end;
+        gap: 1rem;
+    }
 }
 @media (min-width: 640px) {
     .lb-podium {
@@ -1831,6 +1867,9 @@ const changeSeason = async (seasonId: number) => {
 .lb-podium-card {
     @apply relative rounded-[1.25rem] border border-border/40 bg-card p-5 transition-colors sm:p-6;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 .lb-podium-card:hover {
     @apply bg-muted/30;
