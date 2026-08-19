@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Assignment;
+use App\Support\PublicFileUrl;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class AssignmentController extends Controller
 {
+    public const ALLOWED_MIMES = 'pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png';
+
     public function index()
     {
         $user = auth()->user();
         $assignments = Assignment::with(['course'])->get()->map(function ($assignment) use ($user) {
             $submission = $user->assignments()->where('assignment_id', $assignment->id)->first();
+            $pivot = $submission?->pivot;
+            $filePath = $pivot?->file_path;
 
             return [
                 'id' => $assignment->id,
@@ -21,11 +26,18 @@ class AssignmentController extends Controller
                 'due_date' => $assignment->due_date,
                 'course' => $assignment->course,
                 'submission' => $submission ? [
-                    'submitted' => $submission->pivot->submitted,
-                    'status' => $submission->pivot->status,
-                    'grade' => $submission->pivot->grade,
-                    'file_path' => $submission->pivot->file_path,
-                    'submitted_at' => $submission->pivot->submitted_at,
+                    'submitted' => $pivot->submitted,
+                    'status' => $pivot->status,
+                    'grade' => $pivot->grade,
+                    'file_path' => $filePath,
+                    'file_url' => PublicFileUrl::resolve($filePath),
+                    'submitted_at' => $pivot->submitted_at,
+                    'points' => $pivot->points ?? 0,
+                    'xp_earned' => $pivot->xp_earned ?? 0,
+                    'feedback' => $pivot->feedback,
+                    'graded_at' => $pivot->graded_at,
+                    'graded_by' => $pivot->graded_by,
+                    'file_extension' => $filePath ? strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) : null,
                 ] : null,
             ];
         });
@@ -38,7 +50,7 @@ class AssignmentController extends Controller
     public function store(Request $request, Assignment $assignment)
     {
         $request->validate([
-            'file' => 'required|file|mimes:pdf,doc,docx,txt,png,jpg,jpeg|max:10240', // 10MB limit, restricted types
+            'file' => 'required|file|mimes:'.self::ALLOWED_MIMES.'|max:10240',
         ]);
 
         $user = auth()->user();
