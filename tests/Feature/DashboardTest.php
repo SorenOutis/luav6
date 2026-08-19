@@ -4,6 +4,8 @@ use App\Models\Badge;
 use App\Models\Season;
 use App\Models\SeasonProgress;
 use App\Models\User;
+use App\Models\Workspace;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('guests are redirected to the login page', function () {
     $response = $this->get(route('dashboard'));
@@ -64,4 +66,27 @@ test('dashboard awards eligible lifetime badges and keeps the earning season', f
         'badge_id' => $badge->id,
         'season_id' => $season->id,
     ]);
+});
+
+test('dashboard exposes the workspace active season for the season progress card', function () {
+    // The season stat card only renders when activeSeason resolves, and
+    // Season::current() is workspace-scoped — a season left outside the
+    // student's workspace hid the card on the dashboard.
+    $workspace = Workspace::factory()->create();
+
+    $season = Season::factory()->active()->create([
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $user = User::factory()->create();
+    $user->joinWorkspace($workspace->id);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('activeSeason.id', $season->id)
+            ->where('activeSeason.name', $season->name)
+            ->etc()
+        );
 });
