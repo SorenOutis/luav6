@@ -19,6 +19,11 @@ import {
     Loader2,
     TrendingUp,
     RotateCcw,
+    Eye,
+    Image as ImageIcon,
+    Award,
+    Zap,
+    MessageSquareText,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
@@ -49,7 +54,14 @@ interface Assignment {
         status: string;
         grade: string | null;
         file_path: string | null;
+        file_url: string | null;
         submitted_at: string | null;
+        points: number | string | null;
+        xp_earned: number | string | null;
+        feedback: string | null;
+        graded_at: string | null;
+        graded_by: number | null;
+        file_extension: string | null;
     } | null;
 }
 
@@ -109,13 +121,13 @@ const assignmentsTourSteps: TourStep[] = [
         id: 'cards',
         target: 'assignments-grid',
         title: 'Assignment cards',
-        body: 'Review instructions, due dates, submission timestamps, grades, and teacher feedback.',
+        body: 'Review instructions, due dates, submission timestamps, grades, teacher feedback, points and file preview.',
     },
     {
         id: 'submit',
         target: 'assignments-submit-btn',
         title: 'Submit your work',
-        body: 'Upload documents, PDFs, or images to submit your assignment before the deadline.',
+        body: 'Upload docx, pptx, excel, pdf, or images. Files are stored on R2 and visible to teachers instantly.',
     },
 ];
 
@@ -194,6 +206,38 @@ const completionRate = computed(() => {
     if (totalCount.value === 0) return 0;
     return Math.round((submittedCount.value / totalCount.value) * 100);
 });
+
+// ─── File Helpers ───────────────────────────────────────────────────────────
+const isImageFile = (ext: string | null | undefined) => {
+    if (!ext) return false;
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext.toLowerCase());
+};
+
+const isPdfFile = (ext: string | null | undefined) => {
+    return ext?.toLowerCase() === 'pdf';
+};
+
+const getFileName = (filePath: string | null) => {
+    if (!filePath) return 'Uploaded submission';
+    return filePath.split('/').pop() || 'Uploaded submission';
+};
+
+const getFileTypeLabel = (ext: string | null | undefined) => {
+    if (!ext) return 'File';
+    const map: Record<string, string> = {
+        pdf: 'PDF Document',
+        doc: 'Word Document',
+        docx: 'Word Document',
+        ppt: 'PowerPoint',
+        pptx: 'PowerPoint',
+        xls: 'Excel',
+        xlsx: 'Excel Spreadsheet',
+        jpg: 'Image',
+        jpeg: 'Image',
+        png: 'Image',
+    };
+    return map[ext.toLowerCase()] || ext.toUpperCase();
+};
 
 // ─── Date Formatting & Helpers ──────────────────────────────────────────────
 const formatDueDate = (dateStr: string | null) => {
@@ -519,12 +563,15 @@ const validateAndSetFile = (file: File | null) => {
         return;
     }
 
-    // Allowed extensions
+    // Allowed extensions: docx, pptx, excel (xls/xlsx), pdf, jpg, png + legacy
     const allowedExtensions = [
         'pdf',
         'doc',
         'docx',
-        'txt',
+        'ppt',
+        'pptx',
+        'xls',
+        'xlsx',
         'png',
         'jpg',
         'jpeg',
@@ -532,7 +579,7 @@ const validateAndSetFile = (file: File | null) => {
     const ext = file.name.split('.').pop()?.toLowerCase() || '';
     if (!allowedExtensions.includes(ext)) {
         fileError.value =
-            'Unsupported file format. Please upload a PDF, Word document, Text, or Image file.';
+            'Unsupported file format. Please upload PDF, Word (docx), PowerPoint (pptx), Excel (xls/xlsx), or Images (jpg/png).';
         return;
     }
 
@@ -664,14 +711,16 @@ onMounted(() => {
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                    <div
+                        class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto sm:gap-3"
+                    >
                         <Button
                             v-if="pendingCount > 0 || totalCount === 0"
                             data-tour="assignments-submit-btn"
                             @click="openModalForAssignment()"
-                            class="dash-btn inline-flex h-11 items-center gap-2 bg-[#D97757] px-4 text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 active:scale-98 sm:px-5 sm:text-[15px]"
+                            class="dash-btn inline-flex h-12 w-full items-center justify-center gap-2 bg-[#D97757] px-4 text-[14px] font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 active:scale-[0.98] sm:h-11 sm:w-auto sm:justify-start sm:px-5 sm:text-[15px]"
                         >
-                            <FileUp class="h-4 w-4" />
+                            <FileUp class="h-4 w-4 sm:h-4 sm:w-4" />
                             <span>Submit assignment</span>
                         </Button>
                     </div>
@@ -817,14 +866,14 @@ onMounted(() => {
                     <div
                         class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
                     >
-                        <!-- Status Tabs -->
+                        <!-- Status Tabs - Mobile optimized with larger touch targets -->
                         <div
-                            class="no-scrollbar flex items-center gap-1.5 overflow-x-auto rounded-full border border-border/50 bg-card p-1"
+                            class="no-scrollbar flex items-center gap-1.5 overflow-x-auto rounded-full border border-border/50 bg-card p-1 sm:p-1"
                         >
                             <button
                                 type="button"
                                 @click="activeTab = 'all'"
-                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'all'
                                         ? 'bg-primary text-primary-foreground shadow-xs'
@@ -847,7 +896,7 @@ onMounted(() => {
                             <button
                                 type="button"
                                 @click="activeTab = 'pending'"
-                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'pending'
                                         ? 'bg-primary text-primary-foreground shadow-xs'
@@ -870,7 +919,7 @@ onMounted(() => {
                             <button
                                 type="button"
                                 @click="activeTab = 'submitted'"
-                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'submitted'
                                         ? 'bg-primary text-primary-foreground shadow-xs'
@@ -893,7 +942,7 @@ onMounted(() => {
                             <button
                                 type="button"
                                 @click="activeTab = 'graded'"
-                                class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold transition-all sm:text-[13px]"
+                                class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'graded'
                                         ? 'bg-primary text-primary-foreground shadow-xs'
@@ -1031,20 +1080,20 @@ onMounted(() => {
                         <Card
                             v-for="assignment in filteredAssignments"
                             :key="assignment.id"
-                            class="surface-card group flex flex-col justify-between overflow-hidden p-4.5 transition-all duration-300 hover:shadow-md sm:p-5.5"
+                            class="surface-card group flex flex-col justify-between overflow-hidden p-4 transition-all duration-300 hover:shadow-md sm:p-5.5"
                             :class="getCardBorderClass(assignment)"
                         >
-                            <div class="space-y-3">
+                            <div class="space-y-3 sm:space-y-3.5">
                                 <!-- Top Row: Course + Status Badge + Relative Due Text -->
                                 <div
-                                    class="flex flex-wrap items-start justify-between gap-2.5"
+                                    class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
                                 >
                                     <div
                                         class="flex flex-wrap items-center gap-2"
                                     >
                                         <!-- Course Pill -->
                                         <span
-                                            class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground/80"
+                                            class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground/80 sm:py-0.5 sm:text-xs"
                                         >
                                             <BookOpen
                                                 class="h-3 w-3 text-muted-foreground"
@@ -1057,7 +1106,7 @@ onMounted(() => {
 
                                         <!-- Status Badge -->
                                         <span
-                                            class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold"
+                                            class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:py-0.5 sm:text-xs"
                                             :class="
                                                 getStatusBadge(assignment)
                                                     .classes
@@ -1071,7 +1120,7 @@ onMounted(() => {
 
                                     <!-- Due Date / Relative Info -->
                                     <div
-                                        class="flex items-center gap-1.5 text-xs font-medium"
+                                        class="flex items-center gap-1.5 text-[11px] font-medium sm:text-xs"
                                         :class="
                                             getRelativeDueInfo(
                                                 assignment.due_date,
@@ -1089,13 +1138,13 @@ onMounted(() => {
                                                 !assignment.submission
                                                     ?.submitted
                                             "
-                                            class="h-3.5 w-3.5"
+                                            class="h-3.5 w-3.5 shrink-0"
                                         />
                                         <CheckCircle2
                                             v-else
-                                            class="h-3.5 w-3.5"
+                                            class="h-3.5 w-3.5 shrink-0"
                                         />
-                                        <span>
+                                        <span class="leading-tight">
                                             {{
                                                 getRelativeDueInfo(
                                                     assignment.due_date,
@@ -1114,15 +1163,15 @@ onMounted(() => {
                                 <!-- Assignment Title -->
                                 <div>
                                     <h2
-                                        class="text-[17px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[19px]"
+                                        class="text-[16px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[19px]"
                                     >
                                         {{ assignment.title }}
                                     </h2>
 
                                     <p
-                                        class="mt-1 text-sm leading-relaxed text-muted-foreground"
+                                        class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground sm:text-sm"
                                         :class="{
-                                            'line-clamp-3':
+                                            'line-clamp-3 sm:line-clamp-3':
                                                 assignment.description?.length >
                                                 160,
                                         }"
@@ -1134,79 +1183,339 @@ onMounted(() => {
                                     </p>
                                 </div>
 
-                                <!-- Submitted File Information Preview -->
+                                <!-- Submitted File CARD with Preview + Points + Feedback - MOBILE OPTIMIZED -->
                                 <div
                                     v-if="assignment.submission?.submitted"
-                                    class="rounded-xl border border-border/60 bg-muted/25 p-3"
+                                    class="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-3 shadow-xs sm:p-3.5"
                                 >
-                                    <div
-                                        class="flex flex-wrap items-center justify-between gap-2"
-                                    >
+                                    <!-- File Preview Row - Stack on mobile, side by side on sm -->
+                                    <div class="flex gap-2.5 sm:gap-3">
+                                        <!-- Thumbnail Preview - Responsive size -->
                                         <div
-                                            class="flex min-w-0 items-center gap-2"
+                                            class="relative flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm sm:h-[80px] sm:w-[80px]"
+                                        >
+                                            <!-- Image Preview -->
+                                            <img
+                                                v-if="
+                                                    isImageFile(
+                                                        assignment.submission
+                                                            .file_extension,
+                                                    ) &&
+                                                    assignment.submission
+                                                        .file_url
+                                                "
+                                                :src="
+                                                    assignment.submission
+                                                        .file_url
+                                                "
+                                                :alt="
+                                                    getFileName(
+                                                        assignment.submission
+                                                            .file_path,
+                                                    )
+                                                "
+                                                class="h-full w-full object-cover"
+                                                loading="lazy"
+                                            />
+                                            <!-- PDF Preview Icon -->
+                                            <div
+                                                v-else-if="
+                                                    isPdfFile(
+                                                        assignment.submission
+                                                            .file_extension,
+                                                    )
+                                                "
+                                                class="flex h-full w-full flex-col items-center justify-center gap-1 bg-red-500/10 text-red-600 dark:text-red-400"
+                                            >
+                                                <FileText
+                                                    class="h-6 w-6 sm:h-7 sm:w-7"
+                                                />
+                                            </div>
+                                            <!-- Generic Doc Icon -->
+                                            <div
+                                                v-else
+                                                class="flex h-full w-full flex-col items-center justify-center gap-1 bg-primary/10 text-primary"
+                                            >
+                                                <FileText
+                                                    class="h-6 w-6 sm:h-7 sm:w-7"
+                                                />
+                                            </div>
+
+                                            <!-- Extension Badge -->
+                                            <span
+                                                class="absolute right-0 bottom-0 left-0 bg-black/70 px-1 py-0.5 text-center text-[8px] font-bold tracking-wide text-white uppercase sm:text-[9px]"
+                                            >
+                                                {{
+                                                    assignment.submission
+                                                        .file_extension ||
+                                                    'FILE'
+                                                }}
+                                            </span>
+                                        </div>
+
+                                        <!-- File Meta - Flexible -->
+                                        <div class="min-w-0 flex-1">
+                                            <p
+                                                class="truncate text-[12px] leading-tight font-semibold text-foreground sm:text-[13px]"
+                                                :title="
+                                                    getFileName(
+                                                        assignment.submission
+                                                            .file_path,
+                                                    )
+                                                "
+                                            >
+                                                {{
+                                                    getFileName(
+                                                        assignment.submission
+                                                            .file_path,
+                                                    )
+                                                }}
+                                            </p>
+                                            <p
+                                                class="mt-1 text-[10px] leading-tight text-muted-foreground sm:text-[11px]"
+                                            >
+                                                {{
+                                                    getFileTypeLabel(
+                                                        assignment.submission
+                                                            .file_extension,
+                                                    )
+                                                }}
+                                            </p>
+                                            <p
+                                                class="text-[10px] leading-tight text-muted-foreground sm:text-[11px]"
+                                            >
+                                                {{
+                                                    formatDateTime(
+                                                        assignment.submission
+                                                            .submitted_at,
+                                                    )
+                                                }}
+                                            </p>
+
+                                            <!-- Points / XP / Grade Pills - Wrap on mobile -->
+                                            <div
+                                                class="mt-2 flex flex-wrap gap-1 sm:gap-1.5"
+                                            >
+                                                <span
+                                                    v-if="
+                                                        assignment.submission
+                                                            .grade
+                                                    "
+                                                    class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 sm:px-2.5 sm:text-[11px] dark:text-emerald-400"
+                                                >
+                                                    <Award
+                                                        class="h-3 w-3 shrink-0"
+                                                    />
+                                                    <span class="truncate">{{
+                                                        assignment.submission
+                                                            .grade
+                                                    }}</span>
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        Number(
+                                                            assignment
+                                                                .submission
+                                                                .points,
+                                                        ) > 0
+                                                    "
+                                                    class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 sm:px-2.5 sm:text-[11px] dark:text-amber-400"
+                                                >
+                                                    <TrendingUp
+                                                        class="h-3 w-3 shrink-0"
+                                                    />
+                                                    +{{
+                                                        assignment.submission
+                                                            .points
+                                                    }}
+                                                    pts
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        Number(
+                                                            assignment
+                                                                .submission
+                                                                .xp_earned,
+                                                        ) > 0
+                                                    "
+                                                    class="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-700 sm:px-2.5 sm:text-[11px] dark:text-violet-400"
+                                                >
+                                                    <Zap
+                                                        class="h-3 w-3 shrink-0"
+                                                    />
+                                                    +{{
+                                                        assignment.submission
+                                                            .xp_earned
+                                                    }}
+                                                    XP
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Image Large Preview on Mobile (if image file) - Tappable to expand -->
+                                    <a
+                                        v-if="
+                                            isImageFile(
+                                                assignment.submission
+                                                    .file_extension,
+                                            ) && assignment.submission.file_url
+                                        "
+                                        :href="assignment.submission.file_url"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="group relative block overflow-hidden rounded-xl border border-border/50 bg-card active:scale-[0.99] sm:hidden"
+                                    >
+                                        <img
+                                            :src="
+                                                assignment.submission.file_url
+                                            "
+                                            :alt="
+                                                getFileName(
+                                                    assignment.submission
+                                                        .file_path,
+                                                )
+                                            "
+                                            class="max-h-[240px] w-full object-cover object-center transition-transform group-active:scale-[1.02]"
+                                            loading="lazy"
+                                        />
+                                        <div
+                                            class="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/10 group-hover:opacity-100"
                                         >
                                             <div
-                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                                                class="rounded-full bg-black/60 p-2.5 text-white backdrop-blur-sm"
                                             >
-                                                <FileText class="h-4 w-4" />
+                                                <Eye class="h-5 w-5" />
                                             </div>
-                                            <div class="min-w-0">
+                                        </div>
+                                        <div
+                                            class="absolute right-2 bottom-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm"
+                                        >
+                                            Tap to expand
+                                        </div>
+                                    </a>
+
+                                    <!-- Feedback Card - Mobile optimized -->
+                                    <div
+                                        v-if="assignment.submission.feedback"
+                                        class="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3 sm:p-3"
+                                    >
+                                        <div
+                                            class="flex items-start gap-2 sm:gap-2.5"
+                                        >
+                                            <div
+                                                class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700 sm:h-6 sm:w-6 dark:text-emerald-400"
+                                            >
+                                                <MessageSquareText
+                                                    class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+                                                />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
                                                 <p
-                                                    class="truncate text-xs font-semibold text-foreground"
+                                                    class="text-[10px] font-bold tracking-wide text-emerald-800 uppercase sm:text-[11px] dark:text-emerald-300"
+                                                >
+                                                    Teacher Feedback
+                                                </p>
+                                                <p
+                                                    class="mt-1.5 text-[12px] leading-relaxed text-foreground sm:text-[13px]"
                                                 >
                                                     {{
                                                         assignment.submission
-                                                            .file_path
-                                                            ? assignment.submission.file_path
-                                                                  .split('/')
-                                                                  .pop()
-                                                            : 'Uploaded submission'
+                                                            .feedback
                                                     }}
                                                 </p>
                                                 <p
                                                     v-if="
                                                         assignment.submission
-                                                            .submitted_at
+                                                            .graded_at
                                                     "
-                                                    class="text-[11px] text-muted-foreground"
+                                                    class="mt-2 text-[10px] text-muted-foreground sm:text-[11px]"
                                                 >
-                                                    Turned in on
+                                                    Graded
                                                     {{
                                                         formatDateTime(
                                                             assignment
                                                                 .submission
-                                                                .submitted_at,
+                                                                .graded_at,
                                                         )
                                                     }}
                                                 </p>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div
-                                            v-if="assignment.submission.grade"
-                                            class="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-right"
+                                    <!-- Preview + Download Buttons - Grid on mobile, flex on desktop for touch targets -->
+                                    <div
+                                        class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"
+                                    >
+                                        <a
+                                            v-if="
+                                                assignment.submission
+                                                    .file_url ||
+                                                assignment.submission.file_path
+                                            "
+                                            :href="
+                                                assignment.submission
+                                                    .file_url ??
+                                                `/storage/${assignment.submission.file_path}`
+                                            "
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 text-[13px] font-semibold text-foreground shadow-xs transition-all hover:bg-muted active:scale-[0.98] sm:h-9 sm:text-xs"
                                         >
-                                            <span
-                                                class="text-[10px] font-medium text-muted-foreground"
-                                                >Grade</span
-                                            >
-                                            <span
-                                                class="ml-1 text-xs font-bold text-emerald-700 dark:text-emerald-400"
-                                            >
-                                                {{
-                                                    assignment.submission.grade
-                                                }}
-                                            </span>
-                                        </div>
+                                            <Eye
+                                                class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+                                            />
+                                            <span>Preview</span>
+                                        </a>
+                                        <a
+                                            v-if="
+                                                assignment.submission
+                                                    .file_url ||
+                                                assignment.submission.file_path
+                                            "
+                                            :href="
+                                                assignment.submission
+                                                    .file_url ??
+                                                `/storage/${assignment.submission.file_path}`
+                                            "
+                                            :download="
+                                                getFileName(
+                                                    assignment.submission
+                                                        .file_path,
+                                                )
+                                            "
+                                            class="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 text-[13px] font-semibold text-background shadow-xs transition-all hover:bg-foreground/90 active:scale-[0.98] sm:h-9 sm:text-xs"
+                                        >
+                                            <Download
+                                                class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+                                            />
+                                            <span>Download</span>
+                                        </a>
+                                        <!-- Full width indicator on mobile, inline on desktop -->
+                                        <span
+                                            v-if="
+                                                isImageFile(
+                                                    assignment.submission
+                                                        .file_extension,
+                                                )
+                                            "
+                                            class="col-span-2 inline-flex h-8 items-center justify-center gap-1.5 rounded-xl bg-muted px-2.5 text-[11px] text-muted-foreground sm:col-span-1 sm:h-9"
+                                        >
+                                            <ImageIcon class="h-3.5 w-3.5" />
+                                            Tap image to expand preview
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card Action Footer -->
+                            <!-- Card Action Footer - Stack on mobile for better touch -->
                             <div
-                                class="mt-4 flex items-center justify-between border-t border-border/50 pt-3.5 sm:mt-5"
+                                class="mt-4 flex flex-col gap-3 border-t border-border/50 pt-3.5 sm:mt-5 sm:flex-row sm:items-center sm:justify-between"
                             >
-                                <div class="text-xs text-muted-foreground">
+                                <div
+                                    class="text-[11px] text-muted-foreground sm:text-xs"
+                                >
                                     <span v-if="assignment.due_date">
                                         Deadline:
                                         {{ formatDueDate(assignment.due_date) }}
@@ -1214,47 +1523,36 @@ onMounted(() => {
                                     <span v-else> Open assignment </span>
                                 </div>
 
-                                <div class="flex items-center gap-2">
-                                    <!-- Download / View Submission File if available -->
-                                    <a
-                                        v-if="
-                                            assignment.submission?.submitted &&
-                                            assignment.submission?.file_path
-                                        "
-                                        :href="`/storage/${assignment.submission.file_path}`"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="dash-btn inline-flex h-9 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-                                    >
-                                        <Download class="h-3.5 w-3.5" />
-                                        <span>View file</span>
-                                    </a>
-
-                                    <!-- Resubmit button for already submitted items -->
+                                <div class="flex w-full sm:w-auto">
+                                    <!-- Resubmit button - Full width on mobile for easy tap -->
                                     <Button
                                         v-if="assignment.submission?.submitted"
                                         variant="outline"
                                         size="sm"
-                                        class="dash-btn h-9 rounded-xl border-border/60 px-3.5 text-xs font-semibold"
+                                        class="dash-btn h-11 w-full rounded-xl border-border/60 px-4 text-[13px] font-semibold active:scale-[0.98] sm:h-9 sm:w-auto sm:px-3.5 sm:text-xs"
                                         @click="
                                             openModalForAssignment(assignment)
                                         "
                                     >
-                                        <FileUp class="h-3.5 w-3.5" />
+                                        <FileUp
+                                            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+                                        />
                                         <span>Resubmit</span>
                                     </Button>
 
-                                    <!-- Submit button for pending items -->
+                                    <!-- Submit button - Full width on mobile -->
                                     <Button
                                         v-else
                                         variant="default"
                                         size="sm"
-                                        class="dash-btn h-9 gap-1.5 rounded-xl bg-[#D97757] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#D97757]/90 active:scale-98"
+                                        class="dash-btn h-11 w-full gap-1.5 rounded-xl bg-[#D97757] px-4 text-[13px] font-semibold text-white shadow-xs hover:bg-[#D97757]/90 active:scale-[0.98] sm:h-9 sm:w-auto sm:px-4 sm:text-xs"
                                         @click="
                                             openModalForAssignment(assignment)
                                         "
                                     >
-                                        <FileUp class="h-3.5 w-3.5" />
+                                        <FileUp
+                                            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
+                                        />
                                         <span>Submit</span>
                                     </Button>
                                 </div>
@@ -1442,7 +1740,7 @@ onMounted(() => {
                             ref="fileInput"
                             type="file"
                             class="hidden"
-                            accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg"
                             @change="handleFileInputChange"
                         />
 
@@ -1462,8 +1760,8 @@ onMounted(() => {
                                     Click to upload or drag &amp; drop
                                 </p>
                                 <p class="mt-1 text-xs text-muted-foreground">
-                                    PDF, Word document, Text, or Images (Max 10
-                                    MB)
+                                    PDF, Word (docx), PowerPoint (pptx), Excel
+                                    (xls/xlsx), or Images (jpg/png) — Max 10 MB
                                 </p>
                             </div>
                         </div>
