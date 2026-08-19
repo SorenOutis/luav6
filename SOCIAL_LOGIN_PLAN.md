@@ -110,17 +110,17 @@ Decisions locked in with you:
 - Providers that return no email are refused with a clear message.
 - Callback failures (cancelled consent, invalid state) are logged and redirect back with an error.
 
-### Verification status
+### Verification status — CI green ✅
 
-| Check | Status |
+All three GitHub Actions checks pass on PR #86:
+
+| Check | Result |
 | --- | --- |
-| `pint --test` (whole repo, Laravel preset) | ✅ passes — run against a WASM PHP 8.5 build |
-| `php -l` on every new/changed PHP file | ✅ no syntax errors |
-| `npm run lint:check` (eslint) | ✅ passes |
-| `npm run format:check` (prettier) | ✅ passes |
-| `npm run test:js` (vitest, 123 tests) | ✅ passes |
-| `npm run types:check` (vue-tsc) | ⚠️ only the pre-existing "cannot find `@/routes/*`" errors, which disappear once wayfinder generates (needs PHP) |
-| `php artisan test` (pest) | ❔ not runnable here — no PHP/Composer; verified by review only |
+| `quality` (composer install → pint → prettier → eslint) | ✅ pass |
+| `ci (8.4)` — `composer ci:check`: eslint, prettier, vue-tsc, vitest, pest | ✅ pass |
+| `ci (8.5)` — same matrix on PHP 8.5 | ✅ pass |
+
+Pest: 510 passed, 1 skipped (pre-existing), 2225 assertions.
 
 ### After pulling this
 
