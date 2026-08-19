@@ -53,6 +53,9 @@ interface LeaderboardUser {
 interface LeaderboardData {
     sectionId: number;
     sectionName: string;
+    /** Present for the super admin's platform-wide view: which workspace the section belongs to. */
+    workspaceId?: number | null;
+    workspaceName?: string | null;
     users: LeaderboardUser[];
     userRank: number;
     totalPlayers: number;
@@ -161,6 +164,9 @@ const filteredUsers = computed(() => {
 });
 const totalPlayers = computed(() => activeLeaderboard.value?.totalPlayers || 0);
 const sectionName = computed(() => activeLeaderboard.value?.sectionName || '');
+const workspaceName = computed(
+    () => activeLeaderboard.value?.workspaceName || '',
+);
 const currentUser = computed(
     () => users.value.find((u) => u.isCurrentUser) || null,
 );
@@ -557,6 +563,9 @@ const changeSeason = async (seasonId: number) => {
                 :class="['lb-tab', activeTabIndex === idx && 'lb-tab--active']"
             >
                 {{ section.sectionName }}
+                <span v-if="section.workspaceName" class="lb-tab-workspace"
+                    >· {{ section.workspaceName }}
+                </span>
             </button>
 
             <!-- Join Section: aligned to the right of the section tabs (desktop) -->
@@ -582,6 +591,9 @@ const changeSeason = async (seasonId: number) => {
                         {{
                             sectionName ? `${sectionName} Rankings` : 'Rankings'
                         }}
+                        <template v-if="workspaceName"
+                            >· {{ workspaceName }}</template
+                        >
                     </span>
                 </div>
                 <h2
@@ -1780,6 +1792,9 @@ const changeSeason = async (seasonId: number) => {
 }
 .lb-tab--active {
     @apply border-transparent bg-[#D97757] text-white;
+}
+.lb-tab-workspace {
+    @apply text-[11px] font-normal opacity-70;
 }
 .lb-search {
     @apply rounded-full border border-border/50 bg-muted/40 text-[15px] font-normal transition-colors focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20 focus:outline-none;

@@ -24,7 +24,7 @@ class LeaderboardController extends Controller
             return response()->json(['leaderboards' => [], 'selectedSeason' => null]);
         }
 
-        $sectionLeaderboards = $this->leaderboardService->forUserSections($user, $season);
+        $sectionLeaderboards = $this->leaderboardService->forViewer($user, $season);
 
         return response()->json([
             'leaderboards' => $sectionLeaderboards,

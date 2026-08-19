@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Announcement;
 use App\Models\Season;
+use App\Models\Section;
 use App\Services\BadgeAwardService;
 use App\Services\BonusXpService;
 use App\Services\ClaimXpService;
@@ -87,16 +88,32 @@ class DashboardController extends Controller
             ->whereIn('id', $earnedBadges->pluck('pivot.season_id')->filter()->unique())
             ->pluck('name', 'id');
 
-        $availableSeasonModels = Season::query()
-            ->whereIn('id', DB::table('section_user')
-                ->where('user_id', $user->id)
-                ->whereNotNull('season_id')
-                ->distinct()
-                ->pluck('season_id')
-            )
-            ->orderBy('start_date', 'desc')
-            ->limit(self::SEASON_OPTION_LIMIT)
-            ->get();
+        // Students pick from the seasons their own enrollments point to;
+        // super admins from every season with enrollments, so the dashboard
+        // leaderboard can cover all sections per workspace. The Section and
+        // Season workspace global scopes confine the super admin variant to
+        // the inspected workspace while inspection is active.
+        $availableSeasonModels = $user->isSuperAdmin()
+            ? Season::query()
+                ->whereIn('id', Section::query()
+                    ->join('section_user', 'section_user.section_id', '=', 'sections.id')
+                    ->whereNotNull('section_user.season_id')
+                    ->distinct()
+                    ->select('section_user.season_id')
+                )
+                ->orderBy('start_date', 'desc')
+                ->limit(self::SEASON_OPTION_LIMIT)
+                ->get()
+            : Season::query()
+                ->whereIn('id', DB::table('section_user')
+                    ->where('user_id', $user->id)
+                    ->whereNotNull('season_id')
+                    ->distinct()
+                    ->pluck('season_id')
+                )
+                ->orderBy('start_date', 'desc')
+                ->limit(self::SEASON_OPTION_LIMIT)
+                ->get();
 
         $availableSeasons = $availableSeasonModels
             ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name])
@@ -177,7 +194,7 @@ class DashboardController extends Controller
         $upcomingExams = $this->upcomingExamsService->forUser($user, $sectionIds);
 
         // ── Leaderboard ────────────────────────────────────────────
-        $sectionLeaderboards = $this->leaderboardService->forUserSections($user, $initialSeason);
+        $sectionLeaderboards = $this->leaderboardService->forViewer($user, $initialSeason);
 
         // ── Daily Claim ────────────────────────────────────────────
         $canClaim = $this->claimXpService->canClaim($user);
