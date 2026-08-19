@@ -17,8 +17,14 @@ class PasswordUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Accounts created through social login have no password yet, so there
+        // is nothing to confirm the first time they set one.
+        $currentPasswordRules = $this->user()?->hasPassword()
+            ? $this->currentPasswordRules()
+            : ['nullable'];
+
         return [
-            'current_password' => $this->currentPasswordRules(),
+            'current_password' => $currentPasswordRules,
             'password' => $this->passwordRules(),
         ];
     }

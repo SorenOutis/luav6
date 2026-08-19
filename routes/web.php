@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\LeaderboardToggleBlurController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\CourseController;
@@ -40,6 +41,21 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', WelcomeController::class)->name('home');
 Route::get('/about', AboutController::class)->name('about');
 Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
+
+// ─── Social login (Google / GitHub) ───────────────────────────────────────
+// Plain GET redirects: OAuth needs real browser navigation, not Inertia visits.
+// Not restricted to guests — an authenticated visit links the provider to the
+// account that is already signed in.
+
+Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
+    ->whereIn('provider', ['google', 'github'])
+    ->middleware('throttle:10,1')
+    ->name('social.redirect');
+
+Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
+    ->whereIn('provider', ['google', 'github'])
+    ->middleware('throttle:10,1')
+    ->name('social.callback');
 
 // ─── Crawler-facing routes ────────────────────────────────────────────────
 
