@@ -1449,6 +1449,23 @@
     display: none !important;
 }
 
+/* Cheap theme-switch fallback for phones / low-end devices (see
+   useAppearance.ts). A short opacity fade on <html> is compositor-only, so it
+   replaces the heavy View Transition + clip-path ripple without the jank. */
+html.theme-fade {
+    animation: theme-fade 0.18s ease-out;
+}
+
+@keyframes theme-fade {
+    from {
+        opacity: 0.6;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
 /* ════════════════════════════════════════════════════
    TEST PAPER LAYOUT
    ════════════════════════════════════════════════════ */

@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
+import { isLowEndDeviceSignal } from '@/lib/device';
 import type {
     Appearance,
     CardStylePreset,
@@ -308,7 +309,40 @@ export function useAppearance(): UseAppearanceReturn {
     function toggleTheme(event: MouseEvent) {
         const newTheme = appearance.value === 'dark' ? 'light' : 'dark';
 
-        if (!(document as any).startViewTransition) {
+        // Guard against a second tap while a reveal is still running —
+        // startViewTransition() is single-flight and would throw, leaving the
+        // theme stuck mid-transition. Apply the new theme instantly instead.
+        if (isTransitioningTheme.value) {
+            updateAppearance(newTheme);
+            return;
+        }
+
+        const supportsViewTransition =
+            typeof (document as any).startViewTransition === 'function';
+        const prefersReducedMotion =
+            typeof window !== 'undefined' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // The full-page View Transition snapshot + per-frame clip-path masking
+        // is the whole reason the circular reveal stutters on phones. Touch
+        // devices are already flagged as low-end (see @/lib/device and the
+        // `data-low-end` attribute) and have every other heavy effect disabled
+        // there — so skip the ripple and use a cheap, compositor-only fade so
+        // the switch still reads as animated without the jank.
+        if (
+            !supportsViewTransition ||
+            prefersReducedMotion ||
+            isLowEndDeviceSignal()
+        ) {
+            if (prefersReducedMotion) {
+                updateAppearance(newTheme);
+                return;
+            }
+
+            document.documentElement.classList.remove('theme-fade');
+            // Force a reflow so the fade restarts on rapid consecutive taps.
+            void document.documentElement.offsetWidth;
+            document.documentElement.classList.add('theme-fade');
             updateAppearance(newTheme);
             return;
         }
