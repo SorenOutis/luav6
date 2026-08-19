@@ -53,103 +53,93 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
 <template>
     <div class="space-y-3 sm:space-y-5 lg:space-y-6">
         <TransitionGroup
-            enter-active-class="transition duration-500 ease-out"
-            enter-from-class="opacity-0 -translate-y-3 scale-[0.99]"
+            enter-active-class="transition duration-400 ease-out"
+            enter-from-class="opacity-0 -translate-y-2 scale-[0.99]"
             enter-to-class="opacity-100 translate-y-0 scale-100"
-            leave-active-class="transition duration-300 ease-in"
+            leave-active-class="transition duration-200 ease-in"
             leave-from-class="opacity-100 scale-100"
             leave-to-class="opacity-0 scale-[0.98]"
         >
             <section
                 v-for="item in announcements.slice(0, 3)"
                 :key="item.id"
-                class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#E8895F] via-[#D97757] to-[#B64A2E] p-4 text-white shadow-xl ring-1 shadow-[#D97757]/25 ring-white/10 sm:rounded-[1.75rem] sm:p-7"
+                class="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#E8895F] via-[#D97757] to-[#B64A2E] p-3 text-white shadow-md ring-1 shadow-[#D97757]/15 ring-white/15 sm:rounded-2xl sm:p-4 sm:px-5"
                 aria-live="polite"
             >
-                <!-- Decorative depth layers -->
+                <!-- Subtle decorative highlight -->
                 <div
-                    class="pointer-events-none absolute -top-24 -right-16 h-64 w-64 rounded-full bg-white/15 blur-3xl"
-                    aria-hidden="true"
-                />
-                <div
-                    class="pointer-events-none absolute right-1/3 -bottom-28 h-56 w-56 rounded-full bg-black/10 blur-3xl"
-                    aria-hidden="true"
-                />
-                <Megaphone
-                    class="pointer-events-none absolute -right-4 -bottom-8 hidden h-40 w-40 -rotate-12 text-white/10 sm:block"
+                    class="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full bg-white/10 blur-2xl"
                     aria-hidden="true"
                 />
 
                 <div
-                    class="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6"
+                    class="relative flex items-start gap-3 sm:items-center sm:gap-4"
                 >
                     <div
-                        class="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 shadow-inner backdrop-blur-sm sm:h-[4.5rem] sm:w-[4.5rem]"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-xs backdrop-blur-xs sm:h-10 sm:w-10"
                     >
-                        <span
-                            class="absolute inset-0 animate-ping rounded-2xl bg-white/20 [animation-duration:2.4s]"
-                            aria-hidden="true"
+                        <Megaphone
+                            class="h-4.5 w-4.5 text-white sm:h-5 sm:w-5"
                         />
-                        <Megaphone class="relative h-6 w-6 sm:h-9 sm:w-9" />
                     </div>
 
                     <div class="min-w-0 flex-1">
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div
+                            class="flex flex-wrap items-center gap-1.5 sm:gap-2"
+                        >
                             <span
-                                class="text-[11px] font-bold tracking-[0.18em] text-white/80 uppercase sm:text-xs"
+                                class="text-[10px] font-bold tracking-wider text-white/80 uppercase sm:text-[11px]"
                             >
                                 Announcement
                             </span>
                             <span
-                                class="shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold tracking-wide text-[#B64A2E] uppercase shadow-sm"
+                                class="py-0.2 shrink-0 rounded-full bg-white px-1.5 text-[10px] font-bold tracking-wide text-[#B64A2E] uppercase shadow-xs"
                             >
                                 New
                             </span>
                             <span
                                 v-if="item.sectionName"
-                                class="shrink-0 rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm sm:text-xs"
+                                class="py-0.2 shrink-0 rounded-full bg-white/20 px-2 text-[10px] font-medium text-white backdrop-blur-xs sm:text-[11px]"
                             >
                                 {{ item.sectionName }}
                             </span>
                             <span
                                 v-if="item.createdAt"
-                                class="text-[11px] font-medium text-white/70 sm:text-xs"
+                                class="text-[10px] font-normal text-white/70 sm:text-[11px]"
                             >
                                 {{ item.createdAt }}
                             </span>
                         </div>
                         <h2
-                            class="mt-1.5 text-xl leading-tight font-extrabold tracking-tight break-words sm:text-2xl lg:text-3xl"
+                            class="mt-0.5 text-sm leading-snug font-bold tracking-tight break-words text-white sm:text-base"
                         >
                             {{ item.title }}
                         </h2>
                         <p
                             v-if="item.description"
-                            class="mt-1.5 max-w-3xl text-[13px] leading-relaxed break-words whitespace-pre-line text-white/90 sm:text-[15px]"
+                            class="mt-0.5 line-clamp-2 max-w-3xl text-xs leading-relaxed break-words text-white/90 sm:line-clamp-3 sm:text-[13px]"
                         >
                             {{ item.description }}
                         </p>
                     </div>
 
-                    <div
-                        class="flex items-center gap-2 border-t border-white/20 pt-3 sm:flex-col sm:items-stretch sm:border-0 sm:pt-0"
-                    >
+                    <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
                         <Link
                             v-if="item.link"
                             :href="item.link"
-                            class="dash-btn inline-flex flex-1 items-center justify-center gap-2 bg-white px-5 text-[15px] font-semibold text-[#B64A2E] shadow-lg transition-colors hover:bg-white/90 sm:flex-none"
+                            class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-white px-3 text-xs font-semibold text-[#B64A2E] shadow-xs transition-colors hover:bg-white/90 sm:h-9 sm:rounded-xl sm:px-3.5 sm:text-[13px]"
                         >
-                            View details
-                            <ArrowRight class="h-4 w-4" />
+                            <span>Details</span>
+                            <ArrowRight class="h-3.5 w-3.5" />
                         </Link>
                         <button
                             type="button"
-                            class="inline-flex h-11 w-11 shrink-0 items-center justify-center self-end rounded-full bg-white/15 text-white backdrop-blur-sm transition-colors hover:bg-white/25"
+                            class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-xs transition-colors hover:bg-white/25 sm:h-9 sm:w-9"
                             title="Dismiss announcement"
                             aria-label="Dismiss announcement"
                             @click="emit('close-announcement', item.id)"
                         >
-                            <X class="h-5 w-5" />
+                            <X class="h-4 w-4" />
                         </button>
                     </div>
                 </div>
