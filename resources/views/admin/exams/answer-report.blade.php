@@ -9,7 +9,7 @@
     $resultBadge = static fn (string $result): array => match ($result) {
         'correct' => ['Correct', 'ok'],
         'wrong' => ['Wrong', 'bad'],
-        'partial' => ['Partial credit', 'warn'],
+        'scored' => ['Scored', 'ok'],
         'pending' => ['Awaiting grading', 'warn'],
         'graded_manually' => ['Teacher graded', 'warn'],
         default => ['No answer', 'muted'],
@@ -219,8 +219,8 @@
                         <th>Score</th>
                         <th>Percentage</th>
                         <th>Correct</th>
-                        <th>Partial</th>
                         <th>Wrong</th>
+                        <th>Essays scored</th>
                         <th>No answer</th>
                         <th>Pending</th>
                         <th>Parts</th>
@@ -234,8 +234,8 @@
                             <td>{{ $student['summary']['score'] }} / {{ $student['summary']['total_points'] }}</td>
                             <td>{{ $student['summary']['percentage'] !== null ? $student['summary']['percentage'].'%' : '—' }}</td>
                             <td>{{ $student['summary']['correct'] }}</td>
-                            <td>{{ $student['summary']['partial'] }}</td>
                             <td>{{ $student['summary']['wrong'] }}</td>
+                            <td>{{ $student['summary']['essays_scored'] }}</td>
                             <td>{{ $student['summary']['unanswered'] }}</td>
                             <td>{{ $student['summary']['pending'] }}</td>
                             <td>{{ $student['summary']['parts_submitted'] }} / {{ $student['summary']['parts_total'] }}</td>
@@ -283,8 +283,8 @@
                         @endif
 
                         <div class="q__row">
-                            <span class="q__label">Correct answer</span>
-                            <span class="q__value--ok">{{ $question['correct_display'] }}</span>
+                            <span class="q__label">{{ $question['type'] === 'essay' ? 'Grading' : 'Correct answer' }}</span>
+                            <span class="{{ $question['type'] === 'essay' ? 'meta' : 'q__value--ok' }}">{{ $question['correct_display'] }}</span>
                         </div>
                     </div>
                 @empty
@@ -316,7 +316,7 @@
                         <div><span>Percentage</span><strong>{{ $student['summary']['percentage'] !== null ? $student['summary']['percentage'].'%' : '—' }}</strong></div>
                         <div class="ok"><span>Correct</span><strong>{{ $student['summary']['correct'] }}</strong></div>
                         <div class="bad"><span>Wrong</span><strong>{{ $student['summary']['wrong'] }}</strong></div>
-                        <div><span>Partial credit</span><strong>{{ $student['summary']['partial'] }}</strong></div>
+                        <div><span>Essay points</span><strong>{{ $student['summary']['essay_points'] }}</strong></div>
                         <div><span>No answer / pending</span><strong>{{ $student['summary']['unanswered'] }} / {{ $student['summary']['pending'] }}</strong></div>
                     </div>
 
@@ -351,22 +351,45 @@
 
                                     @if ($question['type'] === 'essay')
                                         <div class="q__row">
-                                            <span class="q__label">Student answer</span>
+                                            <span class="q__label">Answer</span>
                                             @if ($item['student_answer'])
                                                 <div class="essay">{{ $item['student_answer'] }}</div>
                                             @else
                                                 <span class="meta">— no answer —</span>
                                             @endif
                                         </div>
+
                                         @if ($item['feedback'])
                                             <div class="q__row">
-                                                <span class="q__label">Feedback</span>
+                                                <span class="q__label">{{ $item['feedback_source'] === 'teacher' ? 'Teacher feedback' : 'AI feedback' }}</span>
                                                 <div class="essay">{{ $item['feedback'] }}</div>
                                             </div>
                                         @endif
+
+                                        @if ($item['teacher_feedback'])
+                                            <div class="q__row">
+                                                <span class="q__label">Teacher feedback</span>
+                                                <div class="essay">{{ $item['teacher_feedback'] }}</div>
+                                            </div>
+                                        @endif
+
+                                        @if (! $item['feedback'] && ! $item['teacher_feedback'])
+                                            <div class="q__row">
+                                                <span class="q__label">Feedback</span>
+                                                <span class="meta">— none recorded —</span>
+                                            </div>
+                                        @endif
+
                                         <div class="q__row">
-                                            <span class="q__label">Grading</span>
-                                            <span>{{ $question['correct_display'] }}</span>
+                                            <span class="q__label">Score</span>
+                                            <span class="{{ $item['earned_known'] ? 'q__value--ok' : '' }}">
+                                                @if ($item['earned_known'])
+                                                    {{ $item['earned'] }} / {{ $question['points'] }} points
+                                                    <span class="meta">· {{ $question['grading_method'] === 'manual' ? 'graded by the teacher' : 'graded automatically by AI' }}</span>
+                                                @else
+                                                    Not scored per question — counted in the part total ({{ $question['points'] }} points possible)
+                                                @endif
+                                            </span>
                                         </div>
                                     @else
                                         <div class="q__row">
@@ -399,8 +422,9 @@
         @endif
 
         <p class="footnote">
-            Scores shown per part come from the recorded submission score. Essay questions graded by a teacher
-            show “?” per item because marks are recorded on the part total, not per question.
+            Part scores come from the recorded submission score. Essays are reported as answer, feedback and score —
+            never as right or wrong. An essay marked manually shows “?” per question because teacher marks are recorded
+            on the part total, not per question.
         </p>
     </div>
 

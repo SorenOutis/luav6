@@ -81,7 +81,7 @@ it('renders a graded report for a selected student', function () {
         ->assertSee('5 / 15'); // recorded score over the exam total
 });
 
-it('marks answers correct, wrong and AI graded exactly like the grader does', function () {
+it('marks answers correct, wrong and scores essays exactly like the grader does', function () {
     [, $exam, $part, $student] = answerReportContext();
     submissionFor($student, $exam, $part);
 
@@ -92,17 +92,32 @@ it('marks answers correct, wrong and AI graded exactly like the grader does', fu
     expect($items[0]['result'])->toBe('correct')          // MCQ index 1
         ->and($items[0]['earned'])->toBe(2.0)
         ->and($items[1]['result'])->toBe('wrong')          // "Cebu" != "Manila"
-        ->and($items[2]['result'])->toBe('partial')        // AI gave 7 of 10
-        ->and($items[2]['earned'])->toBe(7.0);
+        ->and($items[2]['result'])->toBe('scored')         // essays are score-only
+        ->and($items[2]['earned'])->toBe(7.0)
+        ->and($items[2]['feedback'])->toBe('Good structure.')
+        ->and($items[2]['feedback_source'])->toBe('ai');
 
     $summary = $report['students'][0]['summary'];
 
     expect($summary['correct'])->toBe(1)
         ->and($summary['wrong'])->toBe(1)
-        ->and($summary['partial'])->toBe(1)
+        ->and($summary['essays_scored'])->toBe(1)
+        ->and($summary['essay_points'])->toBe(7.0)
         ->and($summary['score'])->toBe(5.0)
         ->and($summary['total_points'])->toBe(15)
         ->and($summary['percentage'])->toBe(33.3);
+});
+
+it('prints the teacher comment under the essay instead of twice', function () {
+    [, $exam, $part, $student] = answerReportContext();
+    submissionFor($student, $exam, $part)->update(['feedback' => 'Well argued, expand your conclusion.']);
+
+    $report = app(ExamAnswerReportService::class)->build($exam, 'students', [$student->id]);
+    $partReport = $report['students'][0]['parts'][0];
+
+    expect($partReport['items'][2]['teacher_feedback'])->toBe('Well argued, expand your conclusion.')
+        ->and($partReport['items'][2]['feedback'])->toBe('Good structure.')
+        ->and($partReport['feedback'])->toBeNull();
 });
 
 it('includes every student who submitted when none are selected', function () {

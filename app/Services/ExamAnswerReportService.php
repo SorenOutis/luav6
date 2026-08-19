@@ -123,9 +123,10 @@ class ExamAnswerReportService
         $parts = [];
         $correct = 0;
         $wrong = 0;
-        $partial = 0;
         $unanswered = 0;
         $pending = 0;
+        $essaysScored = 0;
+        $essayPoints = 0.0;
         $awarded = 0.0;
         $totalPoints = 0;
 
@@ -139,16 +140,37 @@ class ExamAnswerReportService
                 $row = $answers->get($question['number']);
                 $item = $this->buildItem($question, is_array($row) ? $row : null, $submission);
 
-                match ($item['result']) {
-                    'correct' => $correct++,
-                    'wrong' => $wrong++,
-                    'partial' => $partial++,
-                    'unanswered' => $unanswered++,
-                    default => $pending++,
-                };
+                if ($item['result'] === 'scored') {
+                    $essaysScored++;
+                    $essayPoints += (float) $item['earned'];
+                } else {
+                    match ($item['result']) {
+                        'correct' => $correct++,
+                        'wrong' => $wrong++,
+                        'unanswered' => $unanswered++,
+                        default => $pending++,
+                    };
+                }
 
                 $items[] = $item;
                 $totalPoints += $question['points'];
+            }
+
+            // The teacher's comment lives on the submission, not per question.
+            // Show it under the part's first essay (where it belongs in context)
+            // and skip the part-level block so it is never printed twice.
+            $teacherFeedback = $this->teacherFeedback($submission);
+            $teacherFeedbackShownInline = false;
+
+            if ($teacherFeedback !== null) {
+                foreach ($items as $index => $candidate) {
+                    if ($candidate['question']['type'] === 'essay') {
+                        $items[$index]['teacher_feedback'] = $teacherFeedback;
+                        $teacherFeedbackShownInline = true;
+
+                        break;
+                    }
+                }
             }
 
             $partAwarded = $submission ? (float) $submission->score : 0.0;
@@ -163,7 +185,7 @@ class ExamAnswerReportService
                 'total_points' => $part['total_points'],
                 'is_late' => (bool) $submission?->is_late,
                 'submitted_at' => $submission?->created_at,
-                'feedback' => $submission?->feedback,
+                'feedback' => $teacherFeedbackShownInline ? null : $teacherFeedback,
                 'items' => $items,
             ];
         }
@@ -183,7 +205,8 @@ class ExamAnswerReportService
                 'percentage' => $percentage,
                 'correct' => $correct,
                 'wrong' => $wrong,
-                'partial' => $partial,
+                'essays_scored' => $essaysScored,
+                'essay_points' => round($essayPoints, 2),
                 'unanswered' => $unanswered,
                 'pending' => $pending,
                 'parts_submitted' => $submissions->count(),
@@ -214,20 +237,26 @@ class ExamAnswerReportService
             'earned' => 0.0,
             'earned_known' => true,
             'feedback' => null,
+            'feedback_source' => null,
+            'teacher_feedback' => null,
         ];
 
         if ($question['type'] === 'essay') {
+            // Essays are reported as: question, answer, feedback, score.
+            // There is no key to compare against, so no correct/wrong verdict.
             $item['student_answer'] = $hasAnswer ? (string) $answer : null;
             $item['feedback'] = $this->essayFeedback($row);
+            $item['feedback_source'] = $item['feedback'] === null
+                ? null
+                : ($this->isTeacherReviewed($row) ? 'teacher' : 'ai');
 
             if (! $hasAnswer) {
                 return $item;
             }
 
             if (is_array($row) && array_key_exists('ai_score', $row) && $row['ai_score'] !== null) {
-                $score = (float) $row['ai_score'];
-                $item['earned'] = round($score, 2);
-                $item['result'] = $score >= $question['points'] ? 'correct' : ($score > 0 ? 'partial' : 'wrong');
+                $item['earned'] = round((float) $row['ai_score'], 2);
+                $item['result'] = 'scored';
 
                 return $item;
             }
@@ -381,6 +410,26 @@ class ExamAnswerReportService
         $feedback = trim((string) ($row['ai_feedback'] ?? ''));
 
         return $feedback === '' ? null : $feedback;
+    }
+
+    /** Feedback the teacher left on the whole submission, shown next to essays. */
+    private function teacherFeedback(?ExamSubmission $submission): ?string
+    {
+        $feedback = trim((string) ($submission?->feedback ?? ''));
+
+        return $feedback === '' ? null : $feedback;
+    }
+
+    /**
+     * AI feedback that a teacher reviewed/edited is attributed to the teacher.
+     *
+     * @param  array<string, mixed>|null  $row
+     */
+    private function isTeacherReviewed(?array $row): bool
+    {
+        $source = (string) ($row['ai_feedback_source'] ?? '');
+
+        return $source !== '' && $source !== 'automatic';
     }
 
     /** Same normalisation ExamController applies when grading identification. */
