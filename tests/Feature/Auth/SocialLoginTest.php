@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\SocialAccount;
 use App\Models\Setting;
+use App\Models\SocialAccount;
 use App\Models\User;
 use Laravel\Socialite\Contracts\Provider as SocialiteProvider;
 use Laravel\Socialite\Facades\Socialite;

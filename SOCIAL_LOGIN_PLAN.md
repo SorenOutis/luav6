@@ -3,9 +3,14 @@
 > Status: **implemented** (see "What was built" below).
 > Source: https://socialiteproviders.com/usage/ + Laravel Socialite docs.
 >
-> ⚠️ This sandbox has no PHP/Composer, so `composer.json` was edited by hand.
-> Run `composer update laravel/socialite` locally to install it and refresh
-> `composer.lock`, then `php artisan migrate`.
+> ⚠️ This sandbox has no PHP or Composer and cannot reach packagist, so
+> `composer.json` **and `composer.lock`** were updated by hand (lock entries
+> built from the GitHub tags, `content-hash` recomputed with Composer's own
+> algorithm). `composer install` therefore works in CI and in Docker.
+> Locked: `laravel/socialite v5.30.0` + its deps `firebase/php-jwt v7.1.0`,
+> `league/oauth1-client v1.11.0`, `phpseclib/phpseclib 3.0.56`,
+> `paragonie/random_compat v9.99.100`.
+> Re-running `composer update laravel/socialite` locally is still recommended.
 
 ---
 
@@ -104,6 +109,18 @@ Decisions locked in with you:
 - You cannot disconnect your **last** sign-in method — set a password first.
 - Providers that return no email are refused with a clear message.
 - Callback failures (cancelled consent, invalid state) are logged and redirect back with an error.
+
+### Verification status
+
+| Check | Status |
+| --- | --- |
+| `pint --test` (whole repo, Laravel preset) | ✅ passes — run against a WASM PHP 8.5 build |
+| `php -l` on every new/changed PHP file | ✅ no syntax errors |
+| `npm run lint:check` (eslint) | ✅ passes |
+| `npm run format:check` (prettier) | ✅ passes |
+| `npm run test:js` (vitest, 123 tests) | ✅ passes |
+| `npm run types:check` (vue-tsc) | ⚠️ only the pre-existing "cannot find `@/routes/*`" errors, which disappear once wayfinder generates (needs PHP) |
+| `php artisan test` (pest) | ❔ not runnable here — no PHP/Composer; verified by review only |
 
 ### After pulling this
 

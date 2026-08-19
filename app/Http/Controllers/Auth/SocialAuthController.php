@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\SocialAccount;
 use App\Models\Setting;
+use App\Models\SocialAccount;
 use App\Models\User;
 use App\Support\SocialProviders;
 use Illuminate\Http\RedirectResponse;
