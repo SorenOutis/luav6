@@ -181,6 +181,100 @@ const isBonusAvailable = computed(() => {
     return bonusStatus.value.state !== 'claimed';
 });
 
+// ── Daily claim interaction inside the same modal ───────────────────────
+// The dashboard also shows the daily claim as a standalone card, but the
+// XP history modal deserves the same action so students don't have to close
+// the modal, scroll, and hunt for the card. Local state mirrors the bonus
+// flow so the UI flips to "claimed" instantly and stays there until the
+// next Inertia reload brings fresh props.
+const dailyClaimState = ref<'idle' | 'claiming' | 'claimed'>('idle');
+const dailyClaimedAmount = ref(0);
+const dailyError = ref(false);
+let dailyErrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+const syncDailyState = () => {
+    const c = props.claimXp;
+    if (!c || c.enabled === false) {
+        dailyClaimState.value = 'idle';
+        return;
+    }
+    if (dailyClaimState.value === 'claimed') return;
+    dailyClaimState.value = c.canClaim ? 'idle' : 'claimed';
+};
+
+watch(
+    () => props.claimXp,
+    () => syncDailyState(),
+    { immediate: true, deep: true },
+);
+
+watch(showBreakdown, (open) => {
+    if (open) syncDailyState();
+});
+
+const dailyDisplayStatus = computed<ClaimStatus | null>(() => {
+    if (dailyClaimState.value === 'claimed') {
+        const raw = claimStatus.value;
+        return {
+            state: 'claimed' as const,
+            amount:
+                dailyClaimedAmount.value ||
+                raw?.amount ||
+                props.claimXp?.amount ||
+                0,
+            whenLabel: 'Just now',
+        };
+    }
+    return claimStatus.value;
+});
+
+const isDailyAvailable = computed(() => {
+    if (!dailyDisplayStatus.value) return false;
+    if (dailyClaimState.value === 'claimed') return false;
+    return dailyDisplayStatus.value.state !== 'claimed';
+});
+
+async function handleDailyClaim() {
+    if (dailyClaimState.value === 'claiming') return;
+    if (!isDailyAvailable.value) return;
+    dailyClaimState.value = 'claiming';
+    dailyError.value = false;
+    if (dailyErrorTimer) clearTimeout(dailyErrorTimer);
+
+    try {
+        const { data } = await axios.post<{
+            claimed: boolean;
+            amount: number;
+            total_xp: number;
+            streak: number;
+        }>('/api/claim-xp', undefined, { timeout: 15000 });
+
+        if (data.claimed) {
+            dailyClaimedAmount.value = data.amount;
+            dailyClaimState.value = 'claimed';
+            router.reload({
+                only: [
+                    'claimXp',
+                    'xpHistory',
+                    'userStats',
+                    'statsBreakdown',
+                    'notifications',
+                ] as any,
+            });
+        } else {
+            dailyClaimState.value = 'claimed';
+            dailyClaimedAmount.value =
+                data.amount || props.claimXp?.amount || 0;
+        }
+    } catch {
+        dailyClaimState.value = 'idle';
+        dailyError.value = true;
+        dailyErrorTimer = setTimeout(() => {
+            dailyError.value = false;
+        }, 4000);
+    }
+}
+
 async function handleBonusClaim() {
     if (bonusClaimState.value === 'claiming') return;
     if (!isBonusAvailable.value) return;
@@ -359,27 +453,28 @@ function formatWhen(iso: string): string {
             @close="showBreakdown = false"
         >
             <div class="space-y-4 py-2">
-                <!-- Daily-claim status: "have I claimed today?" -->
+                <!-- Daily-claim status: "have I claimed today?" — now with an inline Claim button so students don't need to hunt the dashboard card -->
                 <div
-                    v-if="claimStatus"
+                    v-if="dailyDisplayStatus"
                     class="flex items-center gap-3 rounded-xl border p-3"
                     :class="
-                        claimStatus.state === 'claimed'
+                        dailyDisplayStatus.state === 'claimed'
                             ? 'border-[#4D9375]/30 bg-[#4D9375]/10'
                             : 'border-[#E0AF68]/30 bg-[#E0AF68]/10'
                     "
                     role="status"
+                    aria-label="Daily XP"
                 >
                     <span
                         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                         :class="
-                            claimStatus.state === 'claimed'
+                            dailyDisplayStatus.state === 'claimed'
                                 ? 'bg-[#4D9375]/15 text-[#4D9375] dark:text-[#4D9375]'
                                 : 'bg-[#E0AF68]/15 text-[#E0AF68] dark:text-[#E0AF68]'
                         "
                     >
                         <Check
-                            v-if="claimStatus.state === 'claimed'"
+                            v-if="dailyDisplayStatus.state === 'claimed'"
                             class="h-5 w-5"
                         />
                         <Gift v-else class="h-5 w-5" />
@@ -388,10 +483,14 @@ function formatWhen(iso: string): string {
                         <p
                             class="text-sm font-bold tracking-tight text-foreground"
                         >
-                            <template v-if="claimStatus.state === 'claimed'">
+                            <template
+                                v-if="dailyDisplayStatus.state === 'claimed'"
+                            >
                                 Today's daily XP claimed
                             </template>
-                            <template v-else-if="claimStatus.state === 'never'">
+                            <template
+                                v-else-if="dailyDisplayStatus.state === 'never'"
+                            >
                                 Your first daily XP is ready
                             </template>
                             <template v-else>
@@ -399,28 +498,58 @@ function formatWhen(iso: string): string {
                             </template>
                         </p>
                         <p class="text-xs text-muted-foreground">
-                            <template v-if="claimStatus.state === 'claimed'">
-                                +{{ claimStatus.amount }} XP
-                                <span v-if="claimStatus.whenLabel"
-                                    >· {{ claimStatus.whenLabel }}</span
+                            <template
+                                v-if="dailyDisplayStatus.state === 'claimed'"
+                            >
+                                +{{ dailyDisplayStatus.amount }} XP
+                                <span v-if="dailyDisplayStatus.whenLabel"
+                                    >· {{ dailyDisplayStatus.whenLabel }}</span
                                 >
                             </template>
                             <template v-else>
-                                +{{ claimStatus.amount }} XP available — claim
-                                it from the daily reward card.
+                                +{{ dailyDisplayStatus.amount }} XP available —
+                                claim it here.
                             </template>
                         </p>
+                        <p
+                            v-if="dailyError"
+                            class="mt-1 text-[11px] font-semibold text-[#CB7676]"
+                        >
+                            Couldn’t claim — check connection and try again.
+                        </p>
                     </div>
-                    <span
-                        class="shrink-0 text-sm font-semibold tabular-nums"
-                        :class="
-                            claimStatus.state === 'claimed'
-                                ? 'text-[#4D9375] dark:text-[#4D9375]'
-                                : 'text-[#E0AF68] dark:text-[#E0AF68]'
-                        "
-                    >
-                        +{{ claimStatus.amount }}
-                    </span>
+                    <div class="flex shrink-0 items-center gap-2">
+                        <span
+                            v-if="dailyDisplayStatus.state === 'claimed'"
+                            class="text-sm font-semibold text-[#4D9375] tabular-nums dark:text-[#4D9375]"
+                        >
+                            +{{ dailyDisplayStatus.amount }}
+                        </span>
+                        <template v-else>
+                            <span
+                                class="hidden text-sm font-semibold text-[#E0AF68] tabular-nums sm:inline dark:text-[#E0AF68]"
+                            >
+                                +{{ dailyDisplayStatus.amount }}
+                            </span>
+                            <button
+                                type="button"
+                                :disabled="dailyClaimState === 'claiming'"
+                                class="inline-flex min-w-[7.5rem] items-center justify-center gap-1.5 rounded-lg bg-[#D97757] px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#D97757]/90 disabled:cursor-not-allowed disabled:opacity-60"
+                                @click.stop="handleDailyClaim"
+                            >
+                                <span
+                                    v-if="dailyClaimState === 'claiming'"
+                                    class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                                ></span>
+                                <Gift v-else class="h-3.5 w-3.5" />
+                                {{
+                                    dailyClaimState === 'claiming'
+                                        ? 'Claiming…'
+                                        : `Claim ${dailyDisplayStatus.amount} XP`
+                                }}
+                            </button>
+                        </template>
+                    </div>
                 </div>
 
                 <!-- Bonus XP claim: second daily reward inside the same modal -->
