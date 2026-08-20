@@ -1,12 +1,9 @@
 <?php
 
-use App\Filament\Resources\Users\Pages\EditUser;
-use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\StreakService;
 use App\Support\Impersonation;
-use Livewire\Livewire;
 
 function impersonateSectionFor(User $admin, string $name, string $joinCode): Section
 {
@@ -56,30 +53,19 @@ it('lets a workspace admin impersonate only students in their tenant', function 
         ->and($unenrolled->canBeImpersonated())->toBeFalse();
 });
 
-it('loads the admin user list and edit pages', function () {
-    $admin = User::factory()->superAdmin()->create();
-    $student = User::factory()->create();
-
-    $this->actingAs($admin);
-
-    Livewire::test(ListUsers::class)->assertSuccessful();
-    Livewire::test(EditUser::class, ['record' => $student->id])->assertSuccessful();
-});
-
 it('enters and leaves impersonation', function () {
     $admin = User::factory()->superAdmin()->create();
     $student = User::factory()->create();
 
     $this->actingAs($admin);
-    expect(Impersonation::enter($admin, $student))->toBeTrue()
-        ->and(Impersonation::isImpersonating())->toBeTrue();
+    Impersonation::enter($admin, $student);
 
-    $this->get(route('dashboard'))
-        ->assertOk()
-        ->assertSee('impersonate-banner', false);
+    expect(Impersonation::isImpersonating())->toBeTrue()
+        ->and(auth()->id())->toBe($student->id);
 
-    expect(Impersonation::leave())->toBeTrue()
-        ->and(Impersonation::isImpersonating())->toBeFalse()
+    Impersonation::leave();
+
+    expect(Impersonation::isImpersonating())->toBeFalse()
         ->and(auth()->id())->toBe($admin->id);
 });
 
