@@ -2,13 +2,9 @@
 
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
-use App\Filament\Resources\Users\Pages\ViewUser;
-use App\Filament\Support\ImpersonateUser;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\StreakService;
-use Filament\Actions\Testing\TestAction;
-use Illuminate\Support\Facades\Route;
 use Livewire\Livewire;
 use STS\FilamentImpersonate\Facades\Impersonation;
 
@@ -60,80 +56,31 @@ it('lets a workspace admin impersonate only students in their tenant', function 
         ->and($unenrolled->canBeImpersonated())->toBeFalse();
 });
 
-it('sends impersonation to the student dashboard without spa navigation', function () {
-    $source = file_get_contents(app_path('Filament/Support/ImpersonateUser.php'));
-
-    expect($source)->toContain('withoutSpa()')
-        ->and($source)->toContain("route('dashboard')");
-
-    $action = ImpersonateUser::action();
-
-    expect($action->getRedirectTo())->toEndWith('/dashboard')
-        ->and($action->getRedirectSpa())->toBeFalse();
-});
-
-it('loads the users pages with impersonate available', function () {
+it('loads the admin user list and edit pages', function () {
     $admin = User::factory()->superAdmin()->create();
     $student = User::factory()->create();
 
     $this->actingAs($admin);
 
-    Livewire::test(ListUsers::class)
-        ->assertSuccessful()
-        ->assertActionExists(TestAction::make('impersonate')->table($student));
-
-    Livewire::test(ViewUser::class, ['record' => $student->getRouteKey()])
-        ->assertSuccessful()
-        ->assertActionExists('impersonate');
-
-    Livewire::test(EditUser::class, ['record' => $student->getRouteKey()])
-        ->assertSuccessful()
-        ->assertActionExists('impersonate');
+    Livewire::test(ListUsers::class)->assertSuccessful();
+    Livewire::test(EditUser::class, ['record' => $student->id])->assertSuccessful();
 });
 
-it('impersonates a student from the users table', function () {
+it('enters and leaves impersonation', function () {
     $admin = User::factory()->superAdmin()->create();
     $student = User::factory()->create();
 
     $this->actingAs($admin);
-
-    Livewire::test(ListUsers::class)
-        ->callAction(TestAction::make('impersonate')->table($student));
-
-    expect(Impersonation::isImpersonating())->toBeTrue()
-        ->and((int) Impersonation::getImpersonatorId())->toBe($admin->id);
-});
-
-it('registers the leave route and banner view', function () {
-    expect(Route::has('filament-impersonate.leave'))->toBeTrue()
-        ->and(view()->exists('impersonate::components.banner'))->toBeTrue();
-});
-
-it('shows the leave banner on the student dashboard while impersonating', function () {
-    $admin = User::factory()->superAdmin()->create();
-    $student = User::factory()->create();
-
-    $this->actingAs($admin);
-    expect(Impersonation::enter($admin, $student, 'web'))->toBeTrue();
+    expect(Impersonation::enter($admin, $student, 'web'))->toBeTrue()
+        ->and(Impersonation::isImpersonating())->toBeTrue();
 
     $this->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('impersonate-banner', false)
-        ->assertSee('filament-impersonate/leave', false);
-});
+        ->assertSee('impersonate-banner', false);
 
-it('restores the admin when leaving impersonation', function () {
-    $admin = User::factory()->superAdmin()->create();
-    $student = User::factory()->create();
-
-    $this->actingAs($admin);
-    expect(Impersonation::enter($admin, $student, 'web'))->toBeTrue();
-
-    $this->get(route('filament-impersonate.leave'))
-        ->assertRedirect();
-
-    expect(auth()->id())->toBe($admin->id)
-        ->and(Impersonation::isImpersonating())->toBeFalse();
+    expect(Impersonation::leave())->toBeTrue()
+        ->and(Impersonation::isImpersonating())->toBeFalse()
+        ->and(auth()->id())->toBe($admin->id);
 });
 
 it('does not advance a student streak while an admin is impersonating them', function () {

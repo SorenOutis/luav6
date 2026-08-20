@@ -88,8 +88,11 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
-        @if (view()->exists('impersonate::components.banner'))
-            @include('impersonate::components.banner')
+        @if (session()->has('impersonated_by'))
+            <div id="impersonate-banner" style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;gap:1rem;align-items:center;justify-content:center;height:50px;background:#1f2937;color:#f3f4f6;">
+                <span>Impersonating <strong>{{ auth()->user()?->name }}</strong></span>
+                <a href="{{ url('/filament-impersonate/leave') }}" style="padding:0.25rem 1rem;border-radius:0.375rem;background:#f3f4f6;color:#1f2937;">Leave</a>
+            </div>
         @endif
     </body>
 </html>

@@ -4,13 +4,12 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Support\WorkspaceContext;
-use STS\FilamentImpersonate\Facades\Impersonation;
 
 class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        if (Impersonation::isImpersonating()) {
+        if (session()->has('impersonated_by')) {
             return true;
         }
 
