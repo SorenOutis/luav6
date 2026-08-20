@@ -151,6 +151,17 @@ describe('assignments student shell and UI revamp', () => {
         expect(wrapper.text()).toContain('Physics 101');
         expect(wrapper.text()).toContain('World Literature');
 
+        // Compact assignment cards — not stretched 2-column slabs
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Assignments.vue'),
+            'utf8',
+        );
+        expect(page).toContain('xl:grid-cols-3');
+        expect(page).toContain('items-start');
+        expect(page).toContain('line-clamp-2');
+        expect(page).not.toContain('max-h-[240px]');
+        expect(page).not.toContain('lg:grid-cols-2');
+
         // Submit action button exists
         const submitBtns = wrapper
             .findAll('button')

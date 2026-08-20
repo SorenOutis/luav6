@@ -2,6 +2,12 @@
 
 namespace App\Filament\Resources\Assignments\AssignmentResource\RelationManagers;
 
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -9,12 +15,6 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -24,6 +24,8 @@ use Illuminate\Support\Facades\Storage;
 class SubmissionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'submissions';
+
+    protected static ?string $recordTitleAttribute = 'id';
 
     protected static ?string $title = 'Student Submissions';
 
@@ -153,6 +155,7 @@ class SubmissionsRelationManager extends RelationManager
                     ->sortable()
                     ->toggleable(),
             ])
+            ->defaultSort('submitted_at', 'desc')
             ->filters([
                 SelectFilter::make('status')
                     ->options([
@@ -165,7 +168,7 @@ class SubmissionsRelationManager extends RelationManager
                 CreateAction::make()
                     ->label('Manual Submission'),
             ])
-            ->actions([
+            ->recordActions([
                 Action::make('download')
                     ->label('Download')
                     ->icon('heroicon-o-arrow-down-tray')
@@ -190,7 +193,7 @@ class SubmissionsRelationManager extends RelationManager
                     ->label('Grade/Edit'),
                 DeleteAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
