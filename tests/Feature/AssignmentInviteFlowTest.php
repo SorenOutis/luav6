@@ -141,10 +141,12 @@ it('allows only one pending invite per student per assignment', function () {
 
     sendInvites($this->creator, $assignment, [$this->member->id])->assertRedirect();
 
-    // A second group courts the same student.
-    sendInvites($this->other, $assignment, [$this->creator->id])->assertRedirect();
-
+    // A second group courts the same student while the first invite is
+    // still pending. (The second group's creation rolls back with the 422.)
     sendInvites($this->other, $assignment, [$this->member->id])->assertStatus(422);
+
+    // The original invite is untouched.
+    expect(pendingInviteFor($this->member, $assignment))->toBeInstanceOf(AssignmentGroupInvite::class);
 });
 
 it('only allows the group creator to invite members', function () {

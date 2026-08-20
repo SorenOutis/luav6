@@ -113,13 +113,15 @@ class AssignmentInviteService
         $group = $invite->group;
         abort_if($group === null, 422, 'This group no longer exists.');
 
-        $this->assertWithinMax($assignment, $group, 1);
-
         DB::transaction(function () use ($assignment, $invite, $group, $user): void {
             $invite->forceFill([
                 'status' => AssignmentGroupInvite::STATUS_ACCEPTED,
                 'responded_at' => now(),
             ])->save();
+
+            // Cap check runs AFTER the invite left the pending pool — the
+            // accepting invite must not count against its own slot.
+            $this->assertWithinMax($assignment, $group, 1);
 
             $this->groups->joinGroup($assignment, $group, $user);
         });
