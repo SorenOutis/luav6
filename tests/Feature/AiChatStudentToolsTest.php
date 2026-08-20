@@ -138,21 +138,40 @@ it('shows only active announcements', function () {
     expect($result)->toContain('Enrollment Week')->not->toContain('Old Memo');
 });
 
-it('lists course assignments with submission state', function () {
+it('lists section assignments with submission state', function () {
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
 
     $course = Course::create(['name' => 'Biology 101', 'admin_id' => $admin->id]);
-    Assignment::create(['title' => 'Cell Model Project', 'course_id' => $course->id, 'due_date' => now()->addWeek()]);
+    $section = Section::factory()->create();
+    $assignment = Assignment::create(['title' => 'Cell Model Project', 'course_id' => $course->id, 'due_date' => now()->addWeek()]);
+    $assignment->sections()->attach($section->id);
 
     $student = User::factory()->create();
-    $student->courses()->attach($course->id);
+    $student->sections()->attach($section->id);
 
     $this->actingAs($student);
 
     $result = (new AssignmentsTool)->handle(new Request([]));
 
     expect($result)->toContain('Cell Model Project')->toContain('"submitted":false');
+});
+
+it('hides assignments targeted at other sections', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    $ownSection = Section::factory()->create();
+    $otherSection = Section::factory()->create();
+    $assignment = Assignment::create(['title' => 'Other Section Only', 'due_date' => now()->addWeek()]);
+    $assignment->sections()->attach($otherSection->id);
+
+    $student = User::factory()->create();
+    $student->sections()->attach($ownSection->id);
+
+    $this->actingAs($student);
+
+    expect((new AssignmentsTool)->handle(new Request([])))->not->toContain('Other Section Only');
 });
 
 it('claims the daily XP reward only once per day', function () {

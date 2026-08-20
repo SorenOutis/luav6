@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AssignmentRosterService;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +34,18 @@ class SectionUser extends Pivot
                 ->where('id', $membership->user_id)
                 ->whereNull('current_workspace_id')
                 ->update(['current_workspace_id' => $workspaceId]);
+        });
+
+        // A student joining a section inherits the assignments already
+        // targeted at it; leaving drops the ones they never worked on.
+        static::created(function (SectionUser $membership): void {
+            app(AssignmentRosterService::class)
+                ->syncNewMembership((int) $membership->user_id, (int) $membership->section_id);
+        });
+
+        static::deleted(function (SectionUser $membership): void {
+            app(AssignmentRosterService::class)
+                ->syncRemovedMembership((int) $membership->user_id, (int) $membership->section_id);
         });
     }
 }

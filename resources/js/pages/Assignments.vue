@@ -24,6 +24,7 @@ import {
     Award,
     Zap,
     MessageSquareText,
+    Users,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
@@ -44,11 +45,15 @@ interface Assignment {
     id: number;
     title: string;
     description: string;
-    due_date: string;
+    due_date: string | null;
     course: {
         id: number;
         name: string;
     } | null;
+    sections: {
+        id: number;
+        name: string;
+    }[];
     submission: {
         submitted: boolean;
         status: string;
@@ -455,7 +460,8 @@ const filteredAssignments = computed(() => {
             (a) =>
                 a.title.toLowerCase().includes(query) ||
                 a.description?.toLowerCase().includes(query) ||
-                a.course?.name.toLowerCase().includes(query),
+                a.course?.name.toLowerCase().includes(query) ||
+                a.sections?.some((s) => s.name.toLowerCase().includes(query)),
         );
     }
 
@@ -1102,6 +1108,16 @@ onMounted(() => {
                                                 assignment.course?.name ||
                                                 'General'
                                             }}
+                                        </span>
+
+                                        <!-- Section Pills -->
+                                        <span
+                                            v-for="section in assignment.sections"
+                                            :key="section.id"
+                                            class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary sm:py-0.5 sm:text-xs"
+                                        >
+                                            <Users class="h-3 w-3" />
+                                            {{ section.name }}
                                         </span>
 
                                         <!-- Status Badge -->

@@ -350,6 +350,7 @@ it('creates announcements and assignments only through approved cards in the act
     $admin = User::factory()->admin()->create();
     $this->actingAs($admin);
     $course = Course::query()->create(['name' => 'Biology 101']);
+    $section = Section::factory()->create();
 
     (new PostAnnouncementTool)->handle(new Request([
         'title' => 'Enrollment Week',
@@ -357,6 +358,7 @@ it('creates announcements and assignments only through approved cards in the act
     ]));
     (new CreateAssignmentTool)->handle(new Request([
         'title' => 'Cell Model Project',
+        'section_ids' => (string) $section->id,
         'course_id' => $course->id,
         'due_date' => '2026-08-25 23:59',
     ]));
@@ -374,7 +376,19 @@ it('creates announcements and assignments only through approved cards in the act
     expect(Announcement::count())->toBe(1)
         ->and(Assignment::count())->toBe(1)
         ->and(Announcement::first()->workspace_id)->toBe($admin->current_workspace_id)
-        ->and(Assignment::first()->course_id)->toBe($course->id);
+        ->and(Assignment::first()->course_id)->toBe($course->id)
+        ->and(Assignment::first()->sections->pluck('id')->all())->toBe([$section->id]);
+});
+
+it('refuses to stage an assignment with no target sections', function () {
+    $admin = User::factory()->admin()->create();
+    $this->actingAs($admin);
+
+    expect((new CreateAssignmentTool)->handle(new Request([
+        'title' => 'Nowhere Assignment',
+        'due_date' => '2026-09-01',
+    ])))->toContain('at least one section_id')
+        ->and(PendingAiAction::count())->toBe(0);
 });
 
 it('rejects foreign workspace references while preparing actions', function () {
@@ -396,8 +410,9 @@ it('rejects foreign workspace references while preparing actions', function () {
         ->and((new CreateAssignmentTool)->handle(new Request([
             'title' => 'Sneaky Assignment',
             'due_date' => '2026-09-01',
+            'section_ids' => (string) $foreignSection->id,
             'course_id' => $foreignCourse->id,
-        ])))->toContain('not found')
+        ])))->toContain('do not exist')
         ->and((new UpdateExamTool)->handle(new Request([
             'exam_id' => $foreignExam->id,
             'status' => 'closed',
