@@ -1087,16 +1087,14 @@ onMounted(() => {
                                 class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
                             >
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <!-- Course Pill -->
                                     <span
+                                        v-if="assignment.course?.name"
                                         class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground/80 sm:py-0.5 sm:text-xs"
                                     >
                                         <BookOpen
                                             class="h-3 w-3 text-muted-foreground"
                                         />
-                                        {{
-                                            assignment.course?.name || 'General'
-                                        }}
+                                        {{ assignment.course.name }}
                                     </span>
 
                                     <!-- Section Pills -->
@@ -1172,28 +1170,52 @@ onMounted(() => {
                                 v-if="assignment.submission?.submitted"
                                 class="space-y-2"
                             >
-                                <button
-                                    type="button"
-                                    @click="toggleGradeExpanded(assignment.id)"
-                                    class="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:text-xs"
-                                    :aria-expanded="
-                                        isGradeExpanded(assignment.id)
-                                    "
-                                >
-                                    <ChevronDown
-                                        class="h-3.5 w-3.5 transition-transform"
-                                        :class="
-                                            isGradeExpanded(assignment.id)
-                                                ? 'rotate-180'
-                                                : ''
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button
+                                        type="button"
+                                        @click="
+                                            toggleGradeExpanded(assignment.id)
                                         "
-                                    />
-                                    <span>{{
-                                        isGradeExpanded(assignment.id)
-                                            ? 'Hide details'
-                                            : 'View grade'
-                                    }}</span>
-                                </button>
+                                        class="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:text-xs"
+                                        :aria-expanded="
+                                            isGradeExpanded(assignment.id)
+                                        "
+                                    >
+                                        <ChevronDown
+                                            class="h-3.5 w-3.5 transition-transform"
+                                            :class="
+                                                isGradeExpanded(assignment.id)
+                                                    ? 'rotate-180'
+                                                    : ''
+                                            "
+                                        />
+                                        <span>{{
+                                            isGradeExpanded(assignment.id)
+                                                ? 'Hide details'
+                                                : 'View grade'
+                                        }}</span>
+                                    </button>
+
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        class="dash-btn h-8 rounded-full border-border/60 px-3 text-[11px] sm:text-xs"
+                                        :disabled="
+                                            isGraded(assignment.submission)
+                                        "
+                                        :title="
+                                            isGraded(assignment.submission)
+                                                ? 'This assignment has already been graded and cannot be resubmitted.'
+                                                : undefined
+                                        "
+                                        @click="
+                                            openModalForAssignment(assignment)
+                                        "
+                                    >
+                                        <FileUp class="h-3.5 w-3.5" />
+                                        <span>Resubmit</span>
+                                    </Button>
+                                </div>
 
                                 <div
                                     v-if="isGradeExpanded(assignment.id)"
@@ -1442,33 +1464,11 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <!-- Card Action Footer -->
                             <div
+                                v-if="!assignment.submission?.submitted"
                                 class="mt-1 flex items-center justify-end gap-2 border-t border-border/50 pt-2.5"
                             >
-                                <!-- Resubmit button — disabled once the teacher has
-                                     graded the work. -->
                                 <Button
-                                    v-if="assignment.submission?.submitted"
-                                    variant="outline"
-                                    size="sm"
-                                    class="dash-btn h-9 rounded-xl border-border/60 px-3.5 text-xs"
-                                    :disabled="isGraded(assignment.submission)"
-                                    :title="
-                                        isGraded(assignment.submission)
-                                            ? 'This assignment has already been graded and cannot be resubmitted.'
-                                            : undefined
-                                    "
-                                    @click="openModalForAssignment(assignment)"
-                                >
-                                    <FileUp class="h-3.5 w-3.5" />
-                                    <span>Resubmit</span>
-                                </Button>
-
-                                <!-- Submit button — only shown when the student
-                                     hasn't submitted yet. -->
-                                <Button
-                                    v-else
                                     variant="default"
                                     size="sm"
                                     class="dash-btn h-9 gap-1.5 rounded-xl bg-[#D97757] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#D97757]/90"
