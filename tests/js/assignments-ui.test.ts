@@ -240,4 +240,142 @@ describe('assignments student shell and UI revamp', () => {
         expect(wrapper.text()).not.toContain('Physics Lab Report');
         expect(wrapper.text()).not.toContain('Literature Essay');
     });
+
+    it('does not render a page-level "Submit assignment" header button', async () => {
+        const wrapper = mount(Assignments, {
+            props: { assignments: sampleAssignments as any },
+            global: {
+                stubs: {
+                    Head: { render: () => null },
+                    AppLayout: {
+                        setup(_: unknown, { slots }: any) {
+                            return () => h('div', slots.default?.());
+                        },
+                    },
+                    ResponsiveModal: { render: () => null },
+                    OnboardingTour: { render: () => null },
+                },
+            },
+        });
+        await flushPromises();
+
+        // The data-tour hook for the old free-submit button is gone.
+        expect(wrapper.find('[data-tour="assignments-submit-btn"]').exists())
+            .toBe(false);
+
+        // The header-level "Submit assignment" CTA used to live next to the
+        // page title. After the change, the only "Submit" text in the page
+        // comes from per-card action buttons (and the upload modal footer).
+        const headerSubmit = wrapper
+            .findAll('button')
+            .filter((b) => b.text().trim() === 'Submit assignment');
+        expect(headerSubmit.length).toBe(0);
+    });
+
+    it('disables the resubmit button on graded assignments', async () => {
+        const wrapper = mount(Assignments, {
+            props: { assignments: sampleAssignments as any },
+            global: {
+                stubs: {
+                    Head: { render: () => null },
+                    AppLayout: {
+                        setup(_: unknown, { slots }: any) {
+                            return () => h('div', slots.default?.());
+                        },
+                    },
+                    ResponsiveModal: { render: () => null },
+                    OnboardingTour: { render: () => null },
+                },
+            },
+        });
+        await flushPromises();
+
+        const resubmitButtons = wrapper
+            .findAll('button')
+            .filter((b) => b.text().includes('Resubmit'));
+
+        // Two cards have a submission: one graded, one pending review.
+        expect(resubmitButtons.length).toBe(2);
+
+        // Resubmit for a graded submission (Literature Essay) must be locked
+        // and show an explanatory tooltip.
+        const graded = resubmitButtons.find((b) => b.text() === 'Resubmit' && b.attributes('title'));
+        expect(graded).toBeDefined();
+        expect(graded!.attributes('disabled')).toBeDefined();
+        expect(graded!.attributes('title')).toMatch(/graded/i);
+
+        // Resubmit for a submitted-but-not-graded card stays interactive.
+        const notGraded = resubmitButtons.find(
+            (b) => !b.attributes('disabled'),
+        );
+        expect(notGraded).toBeDefined();
+    });
+
+    it('shows the graded status badge on graded cards without expanding details', async () => {
+        const wrapper = mount(Assignments, {
+            props: { assignments: sampleAssignments as any },
+            global: {
+                stubs: {
+                    Head: { render: () => null },
+                    AppLayout: {
+                        setup(_: unknown, { slots }: any) {
+                            return () => h('div', slots.default?.());
+                        },
+                    },
+                    ResponsiveModal: { render: () => null },
+                    OnboardingTour: { render: () => null },
+                },
+            },
+        });
+        await flushPromises();
+
+        // The graded submission's status badge must be visible at the top of
+        // its card even before the student taps "View grade". It should
+        // include the numeric grade.
+        expect(wrapper.text()).toContain('Graded · 95');
+    });
+
+    it('equalizes the height of stat overview cards on mobile', async () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Assignments.vue'),
+            'utf8',
+        );
+
+        // The stats grid should stretch its items so cards sharing a row on
+        // mobile are the same height — fixes the "blank space" gap below
+        // the shorter card in a 2-col row.
+        expect(page).toMatch(/grid grid-cols-2[^"]*items-stretch/);
+
+        // Every stat card opts in to row-stretching via h-full.
+        const statCardClassMatches = page.match(
+            /class="surface-card[^"]*?h-full[^"]*?"/g,
+        ) ?? [];
+        expect(statCardClassMatches.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('uses a same-shape icon for the sort select so it lines up with the other filters', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Assignments.vue'),
+            'utf8',
+        );
+
+        // The previous ArrowUpDown icon was a visually different glyph from
+        // the Calendar/Clock icons used by the other selects, which threw
+        // off the right-edge alignment.
+        expect(page).not.toContain('ArrowUpDown');
+        // Grab the sort select's wrapper div, which contains both the
+        // <select> and its trailing icon.
+        const sortWrapper =
+            /<div class="relative">\s*<select[^>]*v-model="sortBy"[\s\S]*?<\/div>/m.exec(
+                page,
+            );
+        expect(sortWrapper).not.toBeNull();
+        const sortBlock = sortWrapper![0];
+        // The sort's icon must share the same positioning classes as the
+        // Calendar/Clock icons on the other selects so the visual right-edge
+        // matches.
+        expect(sortBlock).toMatch(
+            /absolute top-1\/2 right-3 h-3\.5 w-3\.5 -translate-y-1\/2/,
+        );
+    });
 });
