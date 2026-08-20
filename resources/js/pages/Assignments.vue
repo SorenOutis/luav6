@@ -211,6 +211,24 @@ const completionRate = computed(() => {
     return Math.round((submittedCount.value / totalCount.value) * 100);
 });
 
+// ─── Graded Detection ───────────────────────────────────────────────────────
+// A submission counts as "graded" once the teacher has posted a grade or
+// marked the status as Graded. Used to lock the resubmit action.
+const isGraded = (submission: Assignment['submission']) => {
+    if (!submission?.submitted) return false;
+    return submission.status === 'Graded' || submission.grade !== null;
+};
+
+// ─── Per-card grade details expand/collapse ─────────────────────────────────
+const expandedGradeIds = ref<Set<number>>(new Set());
+const isGradeExpanded = (id: number) => expandedGradeIds.value.has(id);
+const toggleGradeExpanded = (id: number) => {
+    const next = new Set(expandedGradeIds.value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    expandedGradeIds.value = next;
+};
+
 // ─── File Helpers ───────────────────────────────────────────────────────────
 const isImageFile = (ext: string | null | undefined) => {
     if (!ext) return false;
@@ -224,23 +242,6 @@ const isPdfFile = (ext: string | null | undefined) => {
 const getFileName = (filePath: string | null) => {
     if (!filePath) return 'Uploaded submission';
     return filePath.split('/').pop() || 'Uploaded submission';
-};
-
-const getFileTypeLabel = (ext: string | null | undefined) => {
-    if (!ext) return 'File';
-    const map: Record<string, string> = {
-        pdf: 'PDF Document',
-        doc: 'Word Document',
-        docx: 'Word Document',
-        ppt: 'PowerPoint',
-        pptx: 'PowerPoint',
-        xls: 'Excel',
-        xlsx: 'Excel Spreadsheet',
-        jpg: 'Image',
-        jpeg: 'Image',
-        png: 'Image',
-    };
-    return map[ext.toLowerCase()] || ext.toUpperCase();
 };
 
 // ─── Date Formatting & Helpers ──────────────────────────────────────────────
@@ -717,20 +718,6 @@ onMounted(() => {
                             your work.
                         </p>
                     </div>
-
-                    <div
-                        class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto sm:gap-3"
-                    >
-                        <Button
-                            v-if="pendingCount > 0 || totalCount === 0"
-                            data-tour="assignments-submit-btn"
-                            @click="openModalForAssignment()"
-                            class="dash-btn inline-flex h-12 w-full items-center justify-center gap-2 bg-[#D97757] px-4 text-[14px] font-semibold text-white shadow-sm transition-all hover:bg-[#D97757]/90 active:scale-[0.98] sm:h-11 sm:w-auto sm:justify-start sm:px-5 sm:text-[15px]"
-                        >
-                            <FileUp class="h-4 w-4 sm:h-4 sm:w-4" />
-                            <span>Submit assignment</span>
-                        </Button>
-                    </div>
                 </div>
 
                 <!-- Stat Overview Cards -->
@@ -1090,55 +1077,75 @@ onMounted(() => {
                             class="surface-card group flex flex-col gap-3 overflow-hidden p-3.5 py-3.5 transition-all duration-300 hover:shadow-md sm:p-4 sm:py-4"
                             :class="getCardBorderClass(assignment)"
                         >
-                            <div class="space-y-2.5">
-                                <!-- Top Row: Course + Status Badge + Relative Due Text -->
+                            <!-- Top Row: Course + Status Badge + Relative Due Text -->
+                            <div
+                                class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
+                            >
                                 <div
-                                    class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
+                                    class="flex flex-wrap items-center gap-2"
                                 >
-                                    <div
-                                        class="flex flex-wrap items-center gap-2"
+                                    <!-- Course Pill -->
+                                    <span
+                                        class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground/80 sm:py-0.5 sm:text-xs"
                                     >
-                                        <!-- Course Pill -->
-                                        <span
-                                            class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground/80 sm:py-0.5 sm:text-xs"
-                                        >
-                                            <BookOpen
-                                                class="h-3 w-3 text-muted-foreground"
-                                            />
-                                            {{
-                                                assignment.course?.name ||
-                                                'General'
-                                            }}
-                                        </span>
+                                        <BookOpen
+                                            class="h-3 w-3 text-muted-foreground"
+                                        />
+                                        {{
+                                            assignment.course?.name ||
+                                            'General'
+                                        }}
+                                    </span>
 
-                                        <!-- Section Pills -->
-                                        <span
-                                            v-for="section in assignment.sections"
-                                            :key="section.id"
-                                            class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary sm:py-0.5 sm:text-xs"
-                                        >
-                                            <Users class="h-3 w-3" />
-                                            {{ section.name }}
-                                        </span>
+                                    <!-- Section Pills -->
+                                    <span
+                                        v-for="section in assignment.sections"
+                                        :key="section.id"
+                                        class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary sm:py-0.5 sm:text-xs"
+                                    >
+                                        <Users class="h-3 w-3" />
+                                        {{ section.name }}
+                                    </span>
 
-                                        <!-- Status Badge -->
-                                        <span
-                                            class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:py-0.5 sm:text-xs"
-                                            :class="
-                                                getStatusBadge(assignment)
-                                                    .classes
-                                            "
-                                        >
-                                            {{
-                                                getStatusBadge(assignment).label
-                                            }}
-                                        </span>
-                                    </div>
-
-                                    <!-- Due Date / Relative Info -->
-                                    <div
-                                        class="flex items-center gap-1.5 text-[11px] font-medium sm:text-xs"
+                                    <!-- Status Badge -->
+                                    <span
+                                        class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:py-0.5 sm:text-xs"
                                         :class="
+                                            getStatusBadge(assignment)
+                                                .classes
+                                        "
+                                    >
+                                        {{
+                                            getStatusBadge(assignment).label
+                                        }}
+                                    </span>
+                                </div>
+
+                                <!-- Due Date / Relative Info -->
+                                <div
+                                    class="flex items-center gap-1.5 text-[11px] font-medium sm:text-xs"
+                                    :class="
+                                        getRelativeDueInfo(
+                                            assignment.due_date,
+                                            Boolean(
+                                                assignment.submission?.submitted,
+                                            ),
+                                            assignment.submission?.submitted_at,
+                                        ).color
+                                    "
+                                >
+                                    <Clock
+                                        v-if="
+                                            !assignment.submission?.submitted
+                                        "
+                                        class="h-3.5 w-3.5 shrink-0"
+                                    />
+                                    <CheckCircle2
+                                        v-else
+                                        class="h-3.5 w-3.5 shrink-0"
+                                    />
+                                    <span class="leading-tight">
+                                        {{
                                             getRelativeDueInfo(
                                                 assignment.due_date,
                                                 Boolean(
@@ -1147,66 +1154,60 @@ onMounted(() => {
                                                 ),
                                                 assignment.submission
                                                     ?.submitted_at,
-                                            ).color
-                                        "
-                                    >
-                                        <Clock
-                                            v-if="
-                                                !assignment.submission
-                                                    ?.submitted
-                                            "
-                                            class="h-3.5 w-3.5 shrink-0"
-                                        />
-                                        <CheckCircle2
-                                            v-else
-                                            class="h-3.5 w-3.5 shrink-0"
-                                        />
-                                        <span class="leading-tight">
-                                            {{
-                                                getRelativeDueInfo(
-                                                    assignment.due_date,
-                                                    Boolean(
-                                                        assignment.submission
-                                                            ?.submitted,
-                                                    ),
-                                                    assignment.submission
-                                                        ?.submitted_at,
-                                                ).text
-                                            }}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Assignment Title -->
-                                <div>
-                                    <h2
-                                        class="line-clamp-2 text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[16px]"
-                                    >
-                                        {{ assignment.title }}
-                                    </h2>
-
-                                    <p
-                                        class="mt-1 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground sm:text-[13px]"
-                                    >
-                                        {{
-                                            assignment.description ||
-                                            'No additional instructions provided for this assignment.'
+                                            ).text
                                         }}
-                                    </p>
+                                    </span>
                                 </div>
+                            </div>
 
-                                <!-- Submitted File CARD with Preview + Points + Feedback - MOBILE OPTIMIZED -->
+                            <!-- Assignment Title -->
+                            <h2
+                                class="line-clamp-2 text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[16px]"
+                            >
+                                {{ assignment.title }}
+                            </h2>
+
+                            <!-- Submitted File Block: only when there's a submission.
+                                 Collapsed by default — students tap "View grade"
+                                 to see file, points, feedback, etc. -->
+                            <div
+                                v-if="assignment.submission?.submitted"
+                                class="space-y-2"
+                            >
+                                <button
+                                    type="button"
+                                    @click="
+                                        toggleGradeExpanded(assignment.id)
+                                    "
+                                    class="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:text-xs"
+                                    :aria-expanded="
+                                        isGradeExpanded(assignment.id)
+                                    "
+                                >
+                                    <ChevronDown
+                                        class="h-3.5 w-3.5 transition-transform"
+                                        :class="
+                                            isGradeExpanded(assignment.id)
+                                                ? 'rotate-180'
+                                                : ''
+                                        "
+                                    />
+                                    <span>{{
+                                        isGradeExpanded(assignment.id)
+                                            ? 'Hide details'
+                                            : 'View grade'
+                                    }}</span>
+                                </button>
+
                                 <div
-                                    v-if="assignment.submission?.submitted"
+                                    v-if="isGradeExpanded(assignment.id)"
                                     class="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-2.5 shadow-xs"
                                 >
-                                    <!-- File Preview Row -->
+                                    <!-- File Row -->
                                     <div class="flex gap-2.5">
-                                        <!-- Thumbnail Preview -->
                                         <div
                                             class="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-card shadow-sm"
                                         >
-                                            <!-- Image Preview -->
                                             <img
                                                 v-if="
                                                     isImageFile(
@@ -1229,7 +1230,6 @@ onMounted(() => {
                                                 class="h-full w-full object-cover"
                                                 loading="lazy"
                                             />
-                                            <!-- PDF Preview Icon -->
                                             <div
                                                 v-else-if="
                                                     isPdfFile(
@@ -1241,15 +1241,12 @@ onMounted(() => {
                                             >
                                                 <FileText class="h-5 w-5" />
                                             </div>
-                                            <!-- Generic Doc Icon -->
                                             <div
                                                 v-else
                                                 class="flex h-full w-full flex-col items-center justify-center gap-1 bg-primary/10 text-primary"
                                             >
                                                 <FileText class="h-5 w-5" />
                                             </div>
-
-                                            <!-- Extension Badge -->
                                             <span
                                                 class="absolute right-0 bottom-0 left-0 bg-black/70 px-1 py-0.5 text-center text-[8px] font-bold tracking-wide text-white uppercase sm:text-[9px]"
                                             >
@@ -1261,7 +1258,6 @@ onMounted(() => {
                                             </span>
                                         </div>
 
-                                        <!-- File Meta - Flexible -->
                                         <div class="min-w-0 flex-1">
                                             <p
                                                 class="truncate text-[12px] leading-tight font-semibold text-foreground sm:text-[13px]"
@@ -1283,16 +1279,6 @@ onMounted(() => {
                                                 class="mt-1 text-[10px] leading-tight text-muted-foreground sm:text-[11px]"
                                             >
                                                 {{
-                                                    getFileTypeLabel(
-                                                        assignment.submission
-                                                            .file_extension,
-                                                    )
-                                                }}
-                                            </p>
-                                            <p
-                                                class="text-[10px] leading-tight text-muted-foreground sm:text-[11px]"
-                                            >
-                                                {{
                                                     formatDateTime(
                                                         assignment.submission
                                                             .submitted_at,
@@ -1300,7 +1286,7 @@ onMounted(() => {
                                                 }}
                                             </p>
 
-                                            <!-- Points / XP / Grade Pills - Wrap on mobile -->
+                                            <!-- Grade / Points / XP Pills -->
                                             <div
                                                 class="mt-2 flex flex-wrap gap-1 sm:gap-1.5"
                                             >
@@ -1361,13 +1347,15 @@ onMounted(() => {
                                         </div>
                                     </div>
 
-                                    <!-- Feedback Card -->
+                                    <!-- Teacher Feedback -->
                                     <div
-                                        v-if="assignment.submission.feedback"
-                                        class="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3 sm:p-3"
+                                        v-if="
+                                            assignment.submission.feedback
+                                        "
+                                        class="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3"
                                     >
                                         <div
-                                            class="flex items-start gap-2 sm:gap-2.5"
+                                            class="flex items-start gap-2.5"
                                         >
                                             <div
                                                 class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700 sm:h-6 sm:w-6 dark:text-emerald-400"
@@ -1410,7 +1398,7 @@ onMounted(() => {
                                         </div>
                                     </div>
 
-                                    <!-- Preview + Download Buttons - Grid on mobile, flex on desktop for touch targets -->
+                                    <!-- Preview + Download -->
                                     <div
                                         class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap"
                                     >
@@ -1464,51 +1452,43 @@ onMounted(() => {
 
                             <!-- Card Action Footer -->
                             <div
-                                class="mt-1 flex flex-col gap-2 border-t border-border/50 pt-2.5 sm:flex-row sm:items-center sm:justify-between"
+                                class="mt-1 flex items-center justify-end gap-2 border-t border-border/50 pt-2.5"
                             >
-                                <div
-                                    class="text-[11px] text-muted-foreground sm:text-xs"
+                                <!-- Resubmit button — disabled once the teacher has
+                                     graded the work. -->
+                                <Button
+                                    v-if="assignment.submission?.submitted"
+                                    variant="outline"
+                                    size="sm"
+                                    class="dash-btn h-9 rounded-xl border-border/60 px-3.5 text-xs"
+                                    :disabled="isGraded(assignment.submission)"
+                                    :title="
+                                        isGraded(assignment.submission)
+                                            ? 'This assignment has already been graded and cannot be resubmitted.'
+                                            : undefined
+                                    "
+                                    @click="
+                                        openModalForAssignment(assignment)
+                                    "
                                 >
-                                    <span v-if="assignment.due_date">
-                                        Deadline:
-                                        {{ formatDueDate(assignment.due_date) }}
-                                    </span>
-                                    <span v-else> Open assignment </span>
-                                </div>
+                                    <FileUp class="h-3.5 w-3.5" />
+                                    <span>Resubmit</span>
+                                </Button>
 
-                                <div class="flex w-full sm:w-auto">
-                                    <!-- Resubmit button - Full width on mobile for easy tap -->
-                                    <Button
-                                        v-if="assignment.submission?.submitted"
-                                        variant="outline"
-                                        size="sm"
-                                        class="dash-btn h-11 w-full rounded-xl border-border/60 px-4 text-[13px] font-semibold active:scale-[0.98] sm:h-9 sm:w-auto sm:px-3.5 sm:text-xs"
-                                        @click="
-                                            openModalForAssignment(assignment)
-                                        "
-                                    >
-                                        <FileUp
-                                            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
-                                        />
-                                        <span>Resubmit</span>
-                                    </Button>
-
-                                    <!-- Submit button - Full width on mobile -->
-                                    <Button
-                                        v-else
-                                        variant="default"
-                                        size="sm"
-                                        class="dash-btn h-11 w-full gap-1.5 rounded-xl bg-[#D97757] px-4 text-[13px] font-semibold text-white shadow-xs hover:bg-[#D97757]/90 active:scale-[0.98] sm:h-9 sm:w-auto sm:px-4 sm:text-xs"
-                                        @click="
-                                            openModalForAssignment(assignment)
-                                        "
-                                    >
-                                        <FileUp
-                                            class="h-4 w-4 sm:h-3.5 sm:w-3.5"
-                                        />
-                                        <span>Submit</span>
-                                    </Button>
-                                </div>
+                                <!-- Submit button — only shown when the student
+                                     hasn't submitted yet. -->
+                                <Button
+                                    v-else
+                                    variant="default"
+                                    size="sm"
+                                    class="dash-btn h-9 gap-1.5 rounded-xl bg-[#D97757] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#D97757]/90"
+                                    @click="
+                                        openModalForAssignment(assignment)
+                                    "
+                                >
+                                    <FileUp class="h-3.5 w-3.5" />
+                                    <span>Submit</span>
+                                </Button>
                             </div>
                         </Card>
                     </div>

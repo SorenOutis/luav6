@@ -240,4 +240,74 @@ describe('assignments student shell and UI revamp', () => {
         expect(wrapper.text()).not.toContain('Physics Lab Report');
         expect(wrapper.text()).not.toContain('Literature Essay');
     });
+
+    it('does not render a page-level "Submit assignment" header button', async () => {
+        const wrapper = mount(Assignments, {
+            props: { assignments: sampleAssignments as any },
+            global: {
+                stubs: {
+                    Head: { render: () => null },
+                    AppLayout: {
+                        setup(_: unknown, { slots }: any) {
+                            return () => h('div', slots.default?.());
+                        },
+                    },
+                    ResponsiveModal: { render: () => null },
+                    OnboardingTour: { render: () => null },
+                },
+            },
+        });
+        await flushPromises();
+
+        // The data-tour hook for the old free-submit button is gone.
+        expect(wrapper.find('[data-tour="assignments-submit-btn"]').exists())
+            .toBe(false);
+
+        // The header-level "Submit assignment" CTA used to live next to the
+        // page title. After the change, the only "Submit" text in the page
+        // comes from per-card action buttons (and the upload modal footer).
+        const headerSubmit = wrapper
+            .findAll('button')
+            .filter((b) => b.text().trim() === 'Submit assignment');
+        expect(headerSubmit.length).toBe(0);
+    });
+
+    it('disables the resubmit button on graded assignments', async () => {
+        const wrapper = mount(Assignments, {
+            props: { assignments: sampleAssignments as any },
+            global: {
+                stubs: {
+                    Head: { render: () => null },
+                    AppLayout: {
+                        setup(_: unknown, { slots }: any) {
+                            return () => h('div', slots.default?.());
+                        },
+                    },
+                    ResponsiveModal: { render: () => null },
+                    OnboardingTour: { render: () => null },
+                },
+            },
+        });
+        await flushPromises();
+
+        const resubmitButtons = wrapper
+            .findAll('button')
+            .filter((b) => b.text().includes('Resubmit'));
+
+        // Two cards have a submission: one graded, one pending review.
+        expect(resubmitButtons.length).toBe(2);
+
+        // Resubmit for a graded submission (Literature Essay) must be locked
+        // and show an explanatory tooltip.
+        const graded = resubmitButtons.find((b) => b.text() === 'Resubmit' && b.attributes('title'));
+        expect(graded).toBeDefined();
+        expect(graded!.attributes('disabled')).toBeDefined();
+        expect(graded!.attributes('title')).toMatch(/graded/i);
+
+        // Resubmit for a submitted-but-not-graded card stays interactive.
+        const notGraded = resubmitButtons.find(
+            (b) => !b.attributes('disabled'),
+        );
+        expect(notGraded).toBeDefined();
+    });
 });
