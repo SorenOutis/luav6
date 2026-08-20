@@ -531,6 +531,9 @@ const dueItems = computed<DueItem[]>(() => {
     }
 
     for (const e of props.upcomingExams ?? []) {
+        // Closed / draft exams are not actionable — they must not count as
+        // today, overdue, next-24h, or "next exam".
+        if (e.status !== 'published') continue;
         if (!e.exam_date_iso) continue;
         const dueAt = new Date(e.exam_date_iso);
         if (Number.isNaN(dueAt.getTime())) continue;

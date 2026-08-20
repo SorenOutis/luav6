@@ -53,6 +53,7 @@ describe('dashboard student shell', () => {
         );
 
         expect(page).toContain('dashboard-ui');
+        expect(page).toContain("e.status !== 'published'");
         expect(page).not.toContain('SpotlightCard');
         expect(css).toContain('.dashboard-ui');
         expect(css).toContain('system-ui');
