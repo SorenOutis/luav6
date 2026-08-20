@@ -121,9 +121,27 @@ class AiActionExecutor
         $payload = $action->payload;
 
         return function () use ($action, $payload): string {
-            /** @var Course $course */
-            $course = $this->lockWorkspaceRecord(Course::class, (int) $payload['course_id'], $action, 'The selected course no longer exists in this workspace.');
-            $this->assertUnchanged($course, $payload['course_expected_updated_at'] ?? null);
+            $sectionIds = collect($payload['section_ids'] ?? [])->map(fn ($id) => (int) $id)->filter()->unique();
+
+            if ($sectionIds->isEmpty()) {
+                throw new PendingAiActionException('This assignment has no target sections, so it would reach no students.');
+            }
+
+            $expectedTimestamps = (array) ($payload['section_expected_updated_at'] ?? []);
+            $sections = $sectionIds->map(function (int $sectionId) use ($action, $expectedTimestamps) {
+                $section = $this->lockWorkspaceRecord(Section::class, $sectionId, $action, 'One of the selected sections no longer exists in this workspace.');
+                $this->assertUnchanged($section, $expectedTimestamps[$sectionId] ?? null);
+
+                return $section;
+            });
+
+            // The course is an optional label; targeting is by section.
+            $course = null;
+            if (! empty($payload['course_id'])) {
+                /** @var Course $course */
+                $course = $this->lockWorkspaceRecord(Course::class, (int) $payload['course_id'], $action, 'The selected course no longer exists in this workspace.');
+                $this->assertUnchanged($course, $payload['course_expected_updated_at'] ?? null);
+            }
 
             $assignment = Assignment::query()->create([
                 'workspace_id' => $action->workspace_id,
@@ -131,10 +149,15 @@ class AiActionExecutor
                 'title' => $payload['title'],
                 'description' => $payload['description'],
                 'due_date' => Carbon::parse($payload['due_date']),
-                'course_id' => $course->id,
+                'course_id' => $course?->id,
             ]);
 
-            return "Assignment created: \"{$assignment->title}\" (ID {$assignment->id}) for course \"{$course->name}\".";
+            $assignment->sections()->sync($sections->pluck('id')->all());
+            app(AssignmentRosterService::class)->syncAssignment($assignment);
+
+            $sectionNames = $sections->pluck('name')->implode(', ');
+
+            return "Assignment created: \"{$assignment->title}\" (ID {$assignment->id}) for section(s) {$sectionNames}.";
         };
     }
 

@@ -11,14 +11,20 @@ const sampleAssignments = [
         description: 'Complete exercises 1 through 15 on page 42.',
         due_date: '2026-09-01T23:59:59Z',
         course: { id: 101, name: 'Calculus I' },
+        sections: [{ id: 1, name: 'BSIT 1-A' }],
         submission: null,
     },
     {
         id: 2,
         title: 'Physics Lab Report',
-        description: 'Write up the pendulum experiment results and error analysis.',
+        description:
+            'Write up the pendulum experiment results and error analysis.',
         due_date: '2026-08-15T23:59:59Z',
         course: { id: 102, name: 'Physics 101' },
+        sections: [
+            { id: 1, name: 'BSIT 1-A' },
+            { id: 2, name: 'BSIT 1-B' },
+        ],
         submission: {
             submitted: true,
             status: 'Submitted',
@@ -33,6 +39,7 @@ const sampleAssignments = [
         description: 'Analyze the theme of isolation in Frankenstein.',
         due_date: '2026-08-10T23:59:59Z',
         course: { id: 103, name: 'World Literature' },
+        sections: [{ id: 2, name: 'BSIT 1-B' }],
         submission: {
             submitted: true,
             status: 'Graded',
@@ -113,7 +120,12 @@ describe('assignments student shell and UI revamp', () => {
                     },
                     ResponsiveModal: {
                         setup(_: unknown, { slots }: any) {
-                            return () => h('div', [slots.header?.(), slots.default?.(), slots.footer?.()]);
+                            return () =>
+                                h('div', [
+                                    slots.header?.(),
+                                    slots.default?.(),
+                                    slots.footer?.(),
+                                ]);
                         },
                     },
                     OnboardingTour: { render: () => null },
@@ -140,7 +152,9 @@ describe('assignments student shell and UI revamp', () => {
         expect(wrapper.text()).toContain('World Literature');
 
         // Submit action button exists
-        const submitBtns = wrapper.findAll('button').filter((b) => b.text().includes('Submit'));
+        const submitBtns = wrapper
+            .findAll('button')
+            .filter((b) => b.text().includes('Submit'));
         expect(submitBtns.length).toBeGreaterThan(0);
     });
 
@@ -163,7 +177,9 @@ describe('assignments student shell and UI revamp', () => {
         await flushPromises();
 
         // Switch to Pending tab
-        const pendingTab = wrapper.findAll('button').find((b) => b.text().includes('Pending'));
+        const pendingTab = wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('Pending'));
         expect(pendingTab).toBeDefined();
         await pendingTab?.trigger('click');
         await flushPromises();
@@ -173,7 +189,9 @@ describe('assignments student shell and UI revamp', () => {
         expect(wrapper.text()).not.toContain('Literature Essay');
 
         // Switch to Submitted tab
-        const submittedTab = wrapper.findAll('button').find((b) => b.text().includes('Submitted'));
+        const submittedTab = wrapper
+            .findAll('button')
+            .find((b) => b.text().includes('Submitted'));
         expect(submittedTab).toBeDefined();
         await submittedTab?.trigger('click');
         await flushPromises();

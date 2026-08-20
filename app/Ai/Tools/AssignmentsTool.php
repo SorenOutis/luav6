@@ -15,7 +15,7 @@ class AssignmentsTool implements Tool
      */
     public function description(): Stringable|string
     {
-        return 'Get the list of assignments for the current user, including their due dates and submission status.';
+        return 'Get the list of assignments for the current user, including the sections they were assigned to, their due dates and submission status.';
     }
 
     /**
@@ -29,17 +29,18 @@ class AssignmentsTool implements Tool
             return 'No user is currently authenticated.';
         }
 
-        // Assignments live on courses; students see the ones for their
-        // courses plus any they already interacted with (pivot rows hold
-        // their submission state).
+        // Assignments are targeted at sections; students see the ones given
+        // to a section they belong to, plus any they already interacted with
+        // (pivot rows hold their submission state).
         $interacted = $user->assignments()->get()->keyBy('id');
-        $courseIds = $user->courses()->pluck('courses.id');
+        $sectionIds = $user->sections()->pluck('sections.id');
 
         $assignments = Assignment::query()
-            ->with('course:id,name')
+            ->with(['course:id,name', 'sections:id,name'])
             ->where(fn ($query) => $query
-                ->whereIn('course_id', $courseIds)
+                ->whereHas('sections', fn ($sections) => $sections->whereIn('sections.id', $sectionIds))
                 ->orWhereIn('id', $interacted->keys()))
+            ->orderByRaw('due_date IS NULL')
             ->orderBy('due_date')
             ->limit(15)
             ->get()
@@ -49,7 +50,8 @@ class AssignmentsTool implements Tool
                 return [
                     'title' => $assignment->title,
                     'course' => $assignment->course?->name,
-                    'due_date' => $assignment->due_date,
+                    'sections' => $assignment->sections->pluck('name')->values(),
+                    'due_date' => $assignment->due_date?->toDateTimeString(),
                     'submitted' => (bool) ($pivot?->submitted ?? false),
                     'status' => $pivot?->status,
                     'grade' => $pivot?->grade,
@@ -58,7 +60,7 @@ class AssignmentsTool implements Tool
             ->values();
 
         if ($assignments->isEmpty()) {
-            return 'The student has no assignments for their courses right now.';
+            return 'The student has no assignments for their sections right now.';
         }
 
         return json_encode($assignments);

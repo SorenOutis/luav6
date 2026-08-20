@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Announcement;
+use App\Models\Assignment;
 use App\Models\Season;
 use App\Models\Section;
 use App\Services\BadgeAwardService;
@@ -11,7 +12,6 @@ use App\Services\ClaimXpService;
 use App\Services\LeaderboardService;
 use App\Services\StreakService;
 use App\Services\UpcomingExamsService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -174,21 +174,33 @@ class DashboardController extends Controller
             });
 
         // ── Assignments ────────────────────────────────────────────
-        $assignments = $user->assignments()->get()->map(function ($assignment) {
-            $due = $assignment->due_date ? Carbon::parse($assignment->due_date) : null;
+        // Driven by section targeting so upcoming work shows up before the
+        // student has submitted anything, not only afterwards.
+        $allSectionIds = $user->sections()->pluck('sections.id');
+        $submissionPivots = $user->assignments()->get()->keyBy('id');
 
-            return [
-                'id' => $assignment->id,
-                'title' => $assignment->title,
-                'description' => $assignment->description,
-                'dueDate' => $due ? $due->format('M d, Y') : 'No deadline',
-                'dueAtIso' => $due?->toIso8601String(),
-                'isOverdue' => $due ? $due->isPast() : false,
-                'submitted' => (bool) $assignment->pivot->submitted,
-                'status' => $assignment->pivot->status,
-                'grade' => $assignment->pivot->grade,
-            ];
-        });
+        $assignments = Assignment::query()
+            ->visibleToSections($allSectionIds)
+            ->orderByRaw('due_date IS NULL')
+            ->orderBy('due_date')
+            ->get()
+            ->map(function ($assignment) use ($submissionPivots) {
+                $due = $assignment->due_date;
+                $pivot = $submissionPivots->get($assignment->id)?->pivot;
+
+                return [
+                    'id' => $assignment->id,
+                    'title' => $assignment->title,
+                    'description' => $assignment->description,
+                    'dueDate' => $due ? $due->format('M d, Y') : 'No deadline',
+                    'dueAtIso' => $due?->toIso8601String(),
+                    'isOverdue' => $due ? $due->isPast() : false,
+                    'submitted' => (bool) ($pivot?->submitted ?? false),
+                    'status' => $pivot?->status ?? 'Pending',
+                    'grade' => $pivot?->grade,
+                ];
+            })
+            ->values();
 
         // ── Upcoming Exams ─────────────────────────────────────────
         $upcomingExams = $this->upcomingExamsService->forUser($user, $sectionIds);
