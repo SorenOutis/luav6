@@ -4,7 +4,6 @@ namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\Concerns\SyncsSectionProgress;
 use App\Filament\Resources\Users\UserResource;
-use App\Filament\Support\ImpersonateUser;
 use App\Services\AdminUserGamificationService;
 use App\Services\TeacherXpAwardService;
 use App\Support\WorkspaceContext;
@@ -26,7 +25,6 @@ class EditUser extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            ImpersonateUser::action($this->getRecord()),
             Action::make('awardXp')
                 ->label('Award XP')
                 ->icon('heroicon-o-sparkles')
