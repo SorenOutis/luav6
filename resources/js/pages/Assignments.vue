@@ -11,7 +11,6 @@ import {
     BookOpen,
     Search,
     X,
-    ArrowUpDown,
     AlertTriangle,
     GraduationCap,
     UploadCloud,
@@ -723,10 +722,12 @@ onMounted(() => {
                 <!-- Stat Overview Cards -->
                 <div
                     data-tour="assignments-overview"
-                    class="animate-section mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4"
+                    class="animate-section mb-6 grid grid-cols-2 items-stretch gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4"
                 >
                     <!-- Pending Card -->
-                    <Card class="surface-card gap-2 py-3 sm:gap-6 sm:py-5">
+                    <Card
+                        class="surface-card h-full gap-2 py-3 sm:gap-6 sm:py-5"
+                    >
                         <CardHeader
                             class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
                         >
@@ -761,7 +762,9 @@ onMounted(() => {
                     </Card>
 
                     <!-- Submitted Card -->
-                    <Card class="surface-card gap-2 py-3 sm:gap-6 sm:py-5">
+                    <Card
+                        class="surface-card h-full gap-2 py-3 sm:gap-6 sm:py-5"
+                    >
                         <CardHeader
                             class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
                         >
@@ -787,7 +790,9 @@ onMounted(() => {
                     </Card>
 
                     <!-- Graded Card -->
-                    <Card class="surface-card gap-2 py-3 sm:gap-6 sm:py-5">
+                    <Card
+                        class="surface-card h-full gap-2 py-3 sm:gap-6 sm:py-5"
+                    >
                         <CardHeader
                             class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
                         >
@@ -814,7 +819,7 @@ onMounted(() => {
 
                     <!-- Progress / Completion Card -->
                     <Card
-                        class="surface-card col-span-2 gap-2 py-3 sm:col-span-1 sm:gap-6 sm:py-5"
+                        class="surface-card col-span-2 h-full gap-2 py-3 sm:col-span-1 sm:gap-6 sm:py-5"
                     >
                         <CardHeader
                             class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
@@ -1046,7 +1051,7 @@ onMounted(() => {
                                         Recently added
                                     </option>
                                 </select>
-                                <ArrowUpDown
+                                <Clock
                                     class="pointer-events-none absolute top-1/2 right-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60"
                                 />
                             </div>
@@ -1081,9 +1086,7 @@ onMounted(() => {
                             <div
                                 class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
                             >
-                                <div
-                                    class="flex flex-wrap items-center gap-2"
-                                >
+                                <div class="flex flex-wrap items-center gap-2">
                                     <!-- Course Pill -->
                                     <span
                                         class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground/80 sm:py-0.5 sm:text-xs"
@@ -1092,8 +1095,7 @@ onMounted(() => {
                                             class="h-3 w-3 text-muted-foreground"
                                         />
                                         {{
-                                            assignment.course?.name ||
-                                            'General'
+                                            assignment.course?.name || 'General'
                                         }}
                                     </span>
 
@@ -1111,13 +1113,10 @@ onMounted(() => {
                                     <span
                                         class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:py-0.5 sm:text-xs"
                                         :class="
-                                            getStatusBadge(assignment)
-                                                .classes
+                                            getStatusBadge(assignment).classes
                                         "
                                     >
-                                        {{
-                                            getStatusBadge(assignment).label
-                                        }}
+                                        {{ getStatusBadge(assignment).label }}
                                     </span>
                                 </div>
 
@@ -1128,16 +1127,15 @@ onMounted(() => {
                                         getRelativeDueInfo(
                                             assignment.due_date,
                                             Boolean(
-                                                assignment.submission?.submitted,
+                                                assignment.submission
+                                                    ?.submitted,
                                             ),
                                             assignment.submission?.submitted_at,
                                         ).color
                                     "
                                 >
                                     <Clock
-                                        v-if="
-                                            !assignment.submission?.submitted
-                                        "
+                                        v-if="!assignment.submission?.submitted"
                                         class="h-3.5 w-3.5 shrink-0"
                                     />
                                     <CheckCircle2
@@ -1176,9 +1174,7 @@ onMounted(() => {
                             >
                                 <button
                                     type="button"
-                                    @click="
-                                        toggleGradeExpanded(assignment.id)
-                                    "
+                                    @click="toggleGradeExpanded(assignment.id)"
                                     class="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:text-xs"
                                     :aria-expanded="
                                         isGradeExpanded(assignment.id)
@@ -1349,14 +1345,10 @@ onMounted(() => {
 
                                     <!-- Teacher Feedback -->
                                     <div
-                                        v-if="
-                                            assignment.submission.feedback
-                                        "
+                                        v-if="assignment.submission.feedback"
                                         class="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3"
                                     >
-                                        <div
-                                            class="flex items-start gap-2.5"
-                                        >
+                                        <div class="flex items-start gap-2.5">
                                             <div
                                                 class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-700 sm:h-6 sm:w-6 dark:text-emerald-400"
                                             >
@@ -1467,9 +1459,7 @@ onMounted(() => {
                                             ? 'This assignment has already been graded and cannot be resubmitted.'
                                             : undefined
                                     "
-                                    @click="
-                                        openModalForAssignment(assignment)
-                                    "
+                                    @click="openModalForAssignment(assignment)"
                                 >
                                     <FileUp class="h-3.5 w-3.5" />
                                     <span>Resubmit</span>
@@ -1482,9 +1472,7 @@ onMounted(() => {
                                     variant="default"
                                     size="sm"
                                     class="dash-btn h-9 gap-1.5 rounded-xl bg-[#D97757] px-4 text-xs font-semibold text-white shadow-xs hover:bg-[#D97757]/90"
-                                    @click="
-                                        openModalForAssignment(assignment)
-                                    "
+                                    @click="openModalForAssignment(assignment)"
                                 >
                                     <FileUp class="h-3.5 w-3.5" />
                                     <span>Submit</span>
