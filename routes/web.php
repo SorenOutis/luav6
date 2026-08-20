@@ -96,7 +96,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         Impersonation::leave();
 
         return redirect(session()->pull(Impersonation::BACK_TO_KEY) ?: '/admin/users');
-    })->name('impersonation.leave');
+    });
 
     Route::get('leaderboard', LeaderboardPageController::class)
         ->middleware('student.page:leaderboard')
