@@ -4,9 +4,19 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Support\WorkspaceContext;
+use STS\FilamentImpersonate\Facades\Impersonation;
 
 class UserPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        if (Impersonation::isImpersonating()) {
+            return true;
+        }
+
+        return (bool) ($user->is_admin || $user->is_super_admin);
+    }
+
     public function viewPublicProfile(User $viewer, User $profile): bool
     {
         if ($viewer->is($profile) || $viewer->isSuperAdmin()) {

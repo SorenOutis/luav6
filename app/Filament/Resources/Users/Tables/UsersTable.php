@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Filament\Support\ImpersonateUser;
 use App\Models\Section;
 use App\Models\Workspace;
 use Filament\Actions\Action;
@@ -157,6 +158,7 @@ class UsersTable
                             ->success()
                             ->send();
                     }),
+                ImpersonateUser::action(),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use STS\FilamentImpersonate\Facades\Impersonation;
 
 /**
  * Phase 3.2 — Move streak logic out of the GET request.
@@ -30,6 +31,10 @@ class StreakService
      */
     public function touch(User $user): void
     {
+        if (Impersonation::isImpersonating()) {
+            return;
+        }
+
         $now = now();
         $lastLogin = $user->last_login_at;
 

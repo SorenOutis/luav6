@@ -80,6 +80,18 @@ class UserFactory extends Factory
     }
 
     /**
+     * A banned student account.
+     */
+    public function banned(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_banned' => true,
+            'banned_at' => now(),
+            'ban_reason' => 'Test ban',
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static
