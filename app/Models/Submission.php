@@ -96,13 +96,19 @@ class Submission extends Model
      * Group activities share one submission: whenever a member's row changes,
      * mirror the submission/grading state onto the sibling rows. Sibling rows
      * get their own `updated` events, so each member's points/XP award and
-     * graded notification fire exactly once through the existing hooks; the
-     * values copied back to the origin row are identical, so Eloquent saves
-     * them as a no-op and the propagation cannot loop.
+     * graded notification fire exactly once through the existing hooks.
+     *
+     * The propagation is guarded against re-entry: a sibling's own `updated`
+     * event must award its points, but must NOT re-save the other siblings —
+     * doing so would re-run their awards through stale model instances and
+     * double-credit late-joining members. The top-level call already covers
+     * every sibling, so nested calls simply return.
      */
+    private static bool $propagatingToGroup = false;
+
     private static function propagateToGroup(self $submission): void
     {
-        if (! $submission->group_id) {
+        if (! $submission->group_id || self::$propagatingToGroup) {
             return;
         }
 
@@ -129,8 +135,14 @@ class Submission extends Model
             'graded_by' => $submission->graded_by,
         ];
 
-        foreach ($siblings as $sibling) {
-            $sibling->forceFill($fields)->save();
+        self::$propagatingToGroup = true;
+
+        try {
+            foreach ($siblings as $sibling) {
+                $sibling->forceFill($fields)->save();
+            }
+        } finally {
+            self::$propagatingToGroup = false;
         }
     }
 

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\LeaderboardToggleBlurController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\AssignmentGroupController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
