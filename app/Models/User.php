@@ -29,16 +29,12 @@ class User extends Authenticatable implements FilamentUser
     protected static function booted(): void
     {
         static::creating(function (User $user): void {
-            // Current model code also runs inside historical data migrations on
-            // a fresh install, before the public_id migration has executed.
             if (Schema::hasColumn($user->getTable(), 'public_id') && ! $user->public_id) {
                 $user->public_id = (string) Str::uuid7();
             }
         });
 
         static::created(function (User $user): void {
-            // Existing super admins are backfilled by the workspace migration;
-            // this covers super-admin accounts created after deployment.
             if (
                 $user->isSuperAdmin()
                 && Schema::hasTable('workspaces')
@@ -54,11 +50,6 @@ class User extends Authenticatable implements FilamentUser
         return (bool) ($this->is_admin || $this->is_super_admin);
     }
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'first_name',
@@ -89,19 +80,11 @@ class User extends Authenticatable implements FilamentUser
         'blur_leaderboard',
     ];
 
-    /**
-     * Determine if the user is a super admin who can see all workspaces.
-     */
     public function isSuperAdmin(): bool
     {
         return $this->is_admin && $this->is_super_admin;
     }
 
-    /**
-     * Split a full name into first / middle / last parts.
-     *
-     * @return array{0: string, 1: string, 2: string}
-     */
     protected function splitName(?string $value): array
     {
         $parts = array_values(array_filter(
@@ -126,9 +109,6 @@ class User extends Authenticatable implements FilamentUser
         return [$first, $middle, $last];
     }
 
-    /**
-     * Compose the full name from the three name parts.
-     */
     protected function composeName(): string
     {
         return trim(implode(' ', array_filter([
@@ -138,10 +118,6 @@ class User extends Authenticatable implements FilamentUser
         ])));
     }
 
-    /**
-     * Keep the name parts in sync when the full name is assigned directly
-     * (legacy paths such as factories, seeders, and CLI commands).
-     */
     public function setNameAttribute($value): void
     {
         $this->attributes['name'] = $value;
@@ -153,47 +129,29 @@ class User extends Authenticatable implements FilamentUser
         $this->attributes['last_name'] = $last;
     }
 
-    /**
-     * Keep the full name column in sync when the first name changes.
-     */
     public function setFirstNameAttribute($value): void
     {
         $this->attributes['first_name'] = $value;
         $this->attributes['name'] = $this->composeName();
     }
 
-    /**
-     * Keep the full name column in sync when the middle name changes.
-     */
     public function setMiddleNameAttribute($value): void
     {
         $this->attributes['middle_name'] = $value;
         $this->attributes['name'] = $this->composeName();
     }
 
-    /**
-     * Keep the full name column in sync when the last name changes.
-     */
     public function setLastNameAttribute($value): void
     {
         $this->attributes['last_name'] = $value;
         $this->attributes['name'] = $this->composeName();
     }
 
-    /**
-     * Google / GitHub identities linked to this account.
-     */
     public function socialAccounts()
     {
         return $this->hasMany(SocialAccount::class);
     }
 
-    /**
-     * Whether the account can sign in with a password.
-     *
-     * Accounts created through social login start without one, so password
-     * based flows (and unlinking the last provider) must check this first.
-     */
     public function hasPassword(): bool
     {
         return filled($this->getAuthPassword());
@@ -255,11 +213,6 @@ class User extends Authenticatable implements FilamentUser
         return $progress;
     }
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'two_factor_secret',
@@ -267,11 +220,6 @@ class User extends Authenticatable implements FilamentUser
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -292,31 +240,23 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    /**
-     * Get the badges associated with the user.
-     */
     public function badges()
     {
         return $this->belongsToMany(Badge::class)->withPivot('season_id')->withTimestamps();
     }
 
-    /** Users this student follows. */
     public function following()
     {
         return $this->belongsToMany(self::class, 'user_follows', 'follower_id', 'followed_id')
             ->withTimestamps();
     }
 
-    /** Users following this student. */
     public function followers()
     {
         return $this->belongsToMany(self::class, 'user_follows', 'followed_id', 'follower_id')
             ->withTimestamps();
     }
 
-    /**
-     * Get the courses associated with the user.
-     */
     public function courses()
     {
         return $this->belongsToMany(Course::class)
@@ -325,12 +265,9 @@ class User extends Authenticatable implements FilamentUser
             ->withTimestamps();
     }
 
-    /**
-     * Get the assignments associated with the user.
-     */
     public function assignments()
     {
-        return $this->belongsToMany(Assignment::class)->withPivot('submitted', 'status', 'grade', 'file_path', 'submitted_at')->withTimestamps();
+        return $this->belongsToMany(Assignment::class)->withPivot('submitted', 'status', 'grade', 'file_path', 'submitted_at', 'points', 'xp_earned', 'feedback', 'graded_at', 'graded_by')->withTimestamps();
     }
 
     public function submissions()
@@ -343,27 +280,16 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(ExamSubmission::class);
     }
 
-    /**
-     * Get the rewards associated with the user.
-     */
     public function rewards()
     {
         return $this->belongsToMany(Reward::class);
     }
 
-    /**
-     * Get the user's avatar URL.
-     *
-     * @return string|null
-     */
     public function getAvatarAttribute($value)
     {
         return PublicFileUrl::resolve($value);
     }
 
-    /**
-     * Get the section associated with the user.
-     */
     public function sections()
     {
         return $this->belongsToMany(Section::class)
@@ -404,17 +330,11 @@ class User extends Authenticatable implements FilamentUser
         app(WorkspaceContext::class)->set($workspaceId);
     }
 
-    /**
-     * Grades the user (student) has received.
-     */
     public function grades()
     {
         return $this->hasMany(Grade::class);
     }
 
-    /**
-     * Grades the user (admin/teacher) has recorded for others.
-     */
     public function recordedGrades()
     {
         return $this->hasMany(Grade::class, 'recorded_by');
@@ -445,11 +365,6 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(PendingAiAction::class);
     }
 
-    /**
-     * Scope the query to only include users in the current admin's workspace.
-     * Super admins see all non-admin users; regular admins only see students
-     * enrolled in their sections.
-     */
     public function scopeForWorkspace(Builder $query): Builder
     {
         $user = auth()->user();
@@ -466,7 +381,6 @@ class User extends Authenticatable implements FilamentUser
 
         $workspaceId = $context->id();
 
-        // Every administrator in the tenant sees the same student roster.
         return $query->whereHas('sections', fn ($q) => $q
             ->when($workspaceId, fn ($q) => $q->where('workspace_id', $workspaceId))
             ->when(! $workspaceId, fn ($q) => $q->whereNull('workspace_id')));
@@ -492,9 +406,6 @@ class User extends Authenticatable implements FilamentUser
             'season_id' => $seasonId,
         ]);
 
-        // Back-office adjustments (admin/teacher manual tweaks) are recorded
-        // for audit but are not surfaced to the student, so we don't push an
-        // XP notification for them.
         if ($notify) {
             app(StudentNotificationService::class)->sendXpEarned(
                 $this,
@@ -507,11 +418,6 @@ class User extends Authenticatable implements FilamentUser
         return $history;
     }
 
-    /**
-     * Get the user's cover photo URL.
-     *
-     * @return string|null
-     */
     public function getCoverPhotoAttribute($value)
     {
         return PublicFileUrl::resolve($value);
