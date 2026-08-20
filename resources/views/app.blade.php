@@ -94,7 +94,7 @@
                     Impersonating
                     <strong>{{ auth()->user()?->name }}</strong>
                 </span>
-                <a href="{{ route('impersonation.leave') }}">Leave</a>
+                <a href="{{ url('/impersonation/leave') }}">Leave</a>
             </div>
             <style>
                 #impersonate-banner {

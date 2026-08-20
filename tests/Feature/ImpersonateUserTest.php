@@ -69,6 +69,27 @@ it('enters and leaves impersonation', function () {
         ->and(auth()->id())->toBe($admin->id);
 });
 
+it('leaves impersonation through the web path', function () {
+    $admin = User::factory()->superAdmin()->create();
+    $student = User::factory()->create();
+
+    $this->actingAs($admin);
+    Impersonation::enter($admin, $student);
+    session()->put(Impersonation::BACK_TO_KEY, '/admin/users');
+
+    $this->get('/impersonation/leave')
+        ->assertRedirect('/admin/users');
+
+    expect(Impersonation::isImpersonating())->toBeFalse()
+        ->and(auth()->id())->toBe($admin->id);
+});
+
+it('redirects to the dashboard when leaving without an impersonation session', function () {
+    $this->actingAs(User::factory()->create())
+        ->get('/impersonation/leave')
+        ->assertRedirect(route('dashboard'));
+});
+
 it('does not advance a student streak while an admin is impersonating them', function () {
     $admin = User::factory()->superAdmin()->create();
     $student = User::factory()->create([

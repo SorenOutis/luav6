@@ -7,15 +7,6 @@ use App\Support\WorkspaceContext;
 
 class UserPolicy
 {
-    public function viewAny(User $user): bool
-    {
-        if (session()->has('impersonated_by')) {
-            return true;
-        }
-
-        return (bool) ($user->is_admin || $user->is_super_admin);
-    }
-
     public function viewPublicProfile(User $viewer, User $profile): bool
     {
         if ($viewer->is($profile) || $viewer->isSuperAdmin()) {

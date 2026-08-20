@@ -24,6 +24,7 @@ use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
+use App\Http\Controllers\LeaveImpersonationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PendingAiActionController;
 use App\Http\Controllers\ProfileKudoController;
@@ -34,7 +35,6 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\WorkspaceController;
-use App\Support\Impersonation;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -88,15 +88,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->middleware('student.page:dashboard')
         ->name('dashboard');
 
-    Route::get('impersonation/leave', function () {
-        if (! Impersonation::isImpersonating()) {
-            return redirect()->route('dashboard');
-        }
-
-        Impersonation::leave();
-
-        return redirect(session()->pull(Impersonation::BACK_TO_KEY) ?: '/admin/users');
-    });
+    Route::get('impersonation/leave', LeaveImpersonationController::class);
 
     Route::get('leaderboard', LeaderboardPageController::class)
         ->middleware('student.page:leaderboard')
