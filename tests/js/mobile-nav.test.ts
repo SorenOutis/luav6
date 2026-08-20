@@ -3,19 +3,25 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('mobile navigation', () => {
-    it('exposes exactly Home, Exams, Grades, and Chats', () => {
+    it('exposes exactly Home, Exams, Assignments, Grades, and Chats', () => {
         const source = readFileSync(
             join(process.cwd(), 'resources/js/components/MobileNav.vue'),
             'utf8',
         );
 
-        expect(source).toContain("label: 'Home'");
-        expect(source).toContain("label: 'Exams'");
-        expect(source).toContain("label: 'Grades'");
-        expect(source).toContain("label: 'Chats'");
+        const labels = [...source.matchAll(/label: '([^']+)'/g)].map(
+            (match) => match[1],
+        );
+
+        expect(labels).toEqual([
+            'Home',
+            'Exams',
+            'Assignments',
+            'Grades',
+            'Chats',
+        ]);
         expect(source).not.toContain("label: 'More'");
         expect(source).not.toContain("label: 'Courses'");
-        expect(source).not.toContain("label: 'Assignments'");
         expect(source).not.toContain("label: 'Games'");
     });
 

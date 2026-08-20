@@ -153,10 +153,7 @@ const aiChat = computed<AiChatProps>(
 );
 const isAdmin = computed(() => Boolean(aiChat.value.isAdmin));
 
-const isVisible = computed(() => {
-    const component = page.component;
-    return component === 'Dashboard' || component === 'Assignments';
-});
+const isVisible = computed(() => page.component === 'Dashboard');
 
 const isEnabled = computed(() => aiChat.value.enabled);
 const maintenanceMessage = computed(() => aiChat.value.maintenanceMessage);

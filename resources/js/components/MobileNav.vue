@@ -4,12 +4,14 @@ import { useTimeoutFn } from '@vueuse/core';
 import { gsap } from 'gsap';
 import {
     LayoutGrid,
+    ClipboardList,
     GraduationCap,
     Award,
     MessageSquareText,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import { dashboard, grades } from '@/routes';
+import { index as assignmentsIndex } from '@/routes/assignments';
 import { index as chatsIndex } from '@/routes/chats';
 import { index as examsIndex } from '@/routes/exams';
 
@@ -28,6 +30,12 @@ const navItems = computed(() =>
             href: examsIndex().url,
             icon: GraduationCap,
             studentPageKey: 'exams',
+        },
+        {
+            label: 'Assignments',
+            href: assignmentsIndex().url,
+            icon: ClipboardList,
+            studentPageKey: 'assignments',
         },
         {
             label: 'Grades',
@@ -138,7 +146,7 @@ watch(activeIndex, () => {
                 :ref="(el) => setItemRef(el, index)"
                 prefetch="click"
                 cache-for="30s"
-                class="relative z-10 flex flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-all outline-none active:scale-90"
+                class="relative z-10 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-all outline-none active:scale-90"
             >
                 <div
                     class="flex items-center justify-center transition-all duration-500"

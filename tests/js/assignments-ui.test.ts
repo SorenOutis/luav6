@@ -260,8 +260,9 @@ describe('assignments student shell and UI revamp', () => {
         await flushPromises();
 
         // The data-tour hook for the old free-submit button is gone.
-        expect(wrapper.find('[data-tour="assignments-submit-btn"]').exists())
-            .toBe(false);
+        expect(
+            wrapper.find('[data-tour="assignments-submit-btn"]').exists(),
+        ).toBe(false);
 
         // The header-level "Submit assignment" CTA used to live next to the
         // page title. After the change, the only "Submit" text in the page
@@ -270,6 +271,27 @@ describe('assignments student shell and UI revamp', () => {
             .findAll('button')
             .filter((b) => b.text().trim() === 'Submit assignment');
         expect(headerSubmit.length).toBe(0);
+    });
+
+    it('omits the General course fallback and keeps Resubmit beside View grade', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Assignments.vue'),
+            'utf8',
+        );
+
+        expect(page).not.toContain("'General'");
+        expect(page).toContain('v-if="assignment.course?.name"');
+
+        const submittedBlock =
+            /v-if="assignment.submission\?\.submitted"[\s\S]*?v-if="!assignment.submission\?\.submitted"/m.exec(
+                page,
+            );
+        expect(submittedBlock).not.toBeNull();
+        expect(submittedBlock![0]).toContain('View grade');
+        expect(submittedBlock![0]).toContain('Resubmit');
+        expect(submittedBlock![0]).toContain(
+            'flex flex-wrap items-center gap-2',
+        );
     });
 
     it('disables the resubmit button on graded assignments', async () => {
@@ -299,7 +321,9 @@ describe('assignments student shell and UI revamp', () => {
 
         // Resubmit for a graded submission (Literature Essay) must be locked
         // and show an explanatory tooltip.
-        const graded = resubmitButtons.find((b) => b.text() === 'Resubmit' && b.attributes('title'));
+        const graded = resubmitButtons.find(
+            (b) => b.text() === 'Resubmit' && b.attributes('title'),
+        );
         expect(graded).toBeDefined();
         expect(graded!.attributes('disabled')).toBeDefined();
         expect(graded!.attributes('title')).toMatch(/graded/i);
@@ -347,10 +371,19 @@ describe('assignments student shell and UI revamp', () => {
         expect(page).toMatch(/grid grid-cols-2[^"]*items-stretch/);
 
         // Every stat card opts in to row-stretching via h-full.
-        const statCardClassMatches = page.match(
-            /class="surface-card[^"]*?h-full[^"]*?"/g,
-        ) ?? [];
+        const statCardClassMatches =
+            page.match(/class="surface-card[^"]*?h-full[^"]*?"/g) ?? [];
         expect(statCardClassMatches.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('does not show the Echo floating widget on the assignments page', () => {
+        const widget = readFileSync(
+            join(process.cwd(), 'resources/js/components/FloatingWidget.vue'),
+            'utf8',
+        );
+
+        expect(widget).toContain("page.component === 'Dashboard'");
+        expect(widget).not.toContain("component === 'Assignments'");
     });
 
     it('uses a same-shape icon for the sort select so it lines up with the other filters', () => {
