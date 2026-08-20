@@ -4,9 +4,9 @@ namespace App\Filament\Support;
 
 use App\Filament\Resources\Users\UserResource;
 use App\Models\User;
+use App\Support\Impersonation;
 use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
-use STS\FilamentImpersonate\Facades\Impersonation;
 
 final class ImpersonateUser
 {
@@ -35,11 +35,8 @@ final class ImpersonateUser
                     return;
                 }
 
-                session()->put('impersonate.back_to', UserResource::getUrl('index'));
-
-                if (! Impersonation::enter($actor, $record, 'web')) {
-                    return;
-                }
+                session()->put(Impersonation::BACK_TO_KEY, UserResource::getUrl('index'));
+                Impersonation::enter($actor, $record);
 
                 return redirect()->route('dashboard');
             });

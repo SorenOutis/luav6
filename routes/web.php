@@ -34,6 +34,7 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\WorkspaceController;
+use App\Support\Impersonation;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -86,6 +87,16 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', DashboardController::class)
         ->middleware('student.page:dashboard')
         ->name('dashboard');
+
+    Route::get('impersonation/leave', function () {
+        if (! Impersonation::isImpersonating()) {
+            return redirect()->route('dashboard');
+        }
+
+        Impersonation::leave();
+
+        return redirect(session()->pull(Impersonation::BACK_TO_KEY) ?: '/admin/users');
+    })->name('impersonation.leave');
 
     Route::get('leaderboard', LeaderboardPageController::class)
         ->middleware('student.page:leaderboard')

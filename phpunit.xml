@@ -41,6 +41,5 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="FILAMENT_IMPERSONATE_REDIRECT" value="/dashboard"/>
     </php>
 </phpunit>

@@ -5,8 +5,8 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\StreakService;
+use App\Support\Impersonation;
 use Livewire\Livewire;
-use STS\FilamentImpersonate\Facades\Impersonation;
 
 function impersonateSectionFor(User $admin, string $name, string $joinCode): Section
 {
@@ -71,7 +71,7 @@ it('enters and leaves impersonation', function () {
     $student = User::factory()->create();
 
     $this->actingAs($admin);
-    expect(Impersonation::enter($admin, $student, 'web'))->toBeTrue()
+    expect(Impersonation::enter($admin, $student))->toBeTrue()
         ->and(Impersonation::isImpersonating())->toBeTrue();
 
     $this->get(route('dashboard'))
@@ -92,7 +92,7 @@ it('does not advance a student streak while an admin is impersonating them', fun
     ]);
 
     $this->actingAs($admin);
-    Impersonation::enter($admin, $student, 'web');
+    Impersonation::enter($admin, $student);
 
     app(StreakService::class)->touch($student->fresh());
 
