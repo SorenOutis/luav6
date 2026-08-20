@@ -13,10 +13,11 @@ class Assignment extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id'];
+    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id', 'points_possible'];
 
     protected $casts = [
         'due_date' => 'datetime',
+        'points_possible' => 'decimal:2',
     ];
 
     public function course()

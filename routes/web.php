@@ -126,6 +126,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('assignments/{assignment}/groups', [AssignmentGroupController::class, 'store'])->middleware('student.page:assignments')->name('assignments.groups.store');
     Route::post('assignments/{assignment}/groups/members', [AssignmentGroupController::class, 'addMember'])->middleware('student.page:assignments')->name('assignments.groups.members.store');
     Route::delete('assignments/{assignment}/groups/members/{user}', [AssignmentGroupController::class, 'removeMember'])->middleware('student.page:assignments')->name('assignments.groups.members.destroy');
+    Route::post('assignments/{assignment}/feedback-seen', [AssignmentController::class, 'markFeedbackSeen'])->middleware('student.page:assignments')->name('assignments.feedback.seen');
 
     Route::get('exams', [ExamController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
     Route::get('api/exams', [ExamController::class, 'listing'])->middleware('student.page:exams')->name('exams.listing');

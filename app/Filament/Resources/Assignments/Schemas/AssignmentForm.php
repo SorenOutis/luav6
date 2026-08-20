@@ -37,6 +37,14 @@ class AssignmentForm
                     ->label('Due date')
                     ->seconds(false)
                     ->columnSpan(1),
+                TextInput::make('points_possible')
+                    ->label('Points possible')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(999999)
+                    ->placeholder('e.g. 100')
+                    ->helperText('Optional. Students see what the work is worth, and grades display as earned / possible.')
+                    ->columnSpan(1),
                 Select::make('course_id')
                     ->relationship('course', 'name')
                     ->searchable()

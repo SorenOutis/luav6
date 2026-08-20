@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { useEcho } from '@laravel/echo-vue';
 import axios from 'axios';
 import gsap from 'gsap';
 import {
@@ -67,6 +68,7 @@ interface Assignment {
     title: string;
     description: string;
     due_date: string | null;
+    points_possible: number | string | null;
     course: {
         id: number;
         name: string;
@@ -90,8 +92,21 @@ interface Assignment {
         feedback: string | null;
         graded_at: string | null;
         graded_by: number | null;
+        feedback_seen_at: string | null;
+        has_unseen_feedback?: boolean;
         file_extension: string | null;
     } | null;
+}
+
+/** Push payload of App\Events\AssignmentGraded (minimal identifying bits). */
+interface AssignmentGradedPayload {
+    assignment_id: number;
+    status: string;
+    grade: string | null;
+    points: number;
+    xp_earned: number;
+    has_feedback: boolean;
+    graded_at: string | null;
 }
 
 const props = withDefaults(
@@ -217,11 +232,18 @@ const gradedCount = computed(
         ).length,
 );
 
+// ─── Live Clock ─────────────────────────────────────────────────────────────
+// Relative labels ("Due today" → "Overdue") must keep moving without a page
+// reload. A coarse 30s tick is plenty for minute-level labels and keeps the
+// re-render cost negligible even with a wall of cards.
+const nowMs = ref(Date.now());
+let clockTimer: ReturnType<typeof setInterval> | null = null;
+
 const isOverdue = (dueDate: string | null) => {
     if (!dueDate) return false;
     const due = new Date(dueDate);
     if (Number.isNaN(due.getTime())) return false;
-    return due.getTime() < Date.now();
+    return due.getTime() < nowMs.value;
 };
 
 const overdueCount = computed(
@@ -244,14 +266,79 @@ const isGraded = (submission: Assignment['submission']) => {
     return submission.status === 'Graded' || submission.grade !== null;
 };
 
+// ─── Points Possible ────────────────────────────────────────────────────────
+const formatNumber = (value: number) =>
+    value.toLocaleString('en-US', { maximumFractionDigits: 2 });
+
+const pointsPossibleOf = (assignment: Assignment) =>
+    Number(assignment.points_possible ?? 0);
+
+/**
+ * Compact "what's at stake" label. With a possible value set the pill reads
+ * "85 / 100 pts" (or "0 / 100 pts" once graded without points yet);
+ * otherwise it keeps the legacy "+85 pts" for awarded points only.
+ */
+const pointsLabel = (assignment: Assignment): string | null => {
+    const earned = Number(assignment.submission?.points ?? 0);
+    const possible = pointsPossibleOf(assignment);
+
+    if (possible > 0) {
+        return `${formatNumber(earned)} / ${formatNumber(possible)} pts`;
+    }
+    if (earned > 0) {
+        return `+${formatNumber(earned)} pts`;
+    }
+    return null;
+};
+
 // ─── Per-card grade details expand/collapse ─────────────────────────────────
 const expandedGradeIds = ref<Set<number>>(new Set());
 const isGradeExpanded = (id: number) => expandedGradeIds.value.has(id);
-const toggleGradeExpanded = (id: number) => {
+
+const toggleGradeExpanded = (assignment: Assignment) => {
+    const id = assignment.id;
     const next = new Set(expandedGradeIds.value);
     if (next.has(id)) next.delete(id);
-    else next.add(id);
+    else {
+        next.add(id);
+        // Opening the details is exactly "the student has seen the feedback".
+        markFeedbackSeen(assignment);
+    }
     expandedGradeIds.value = next;
+};
+
+// ─── Unseen Feedback Acknowledgement ────────────────────────────────────────
+const hasUnseenFeedback = (assignment: Assignment) =>
+    Boolean(assignment.submission?.has_unseen_feedback);
+
+const feedbackSeenPending = ref<Set<number>>(new Set());
+
+const markFeedbackSeen = (assignment: Assignment) => {
+    if (
+        !hasUnseenFeedback(assignment) ||
+        feedbackSeenPending.value.has(assignment.id)
+    ) {
+        return;
+    }
+
+    feedbackSeenPending.value = new Set(feedbackSeenPending.value).add(
+        assignment.id,
+    );
+
+    router.post(
+        `/assignments/${assignment.id}/feedback-seen`,
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['assignments'],
+            onFinish: () => {
+                const next = new Set(feedbackSeenPending.value);
+                next.delete(assignment.id);
+                feedbackSeenPending.value = next;
+            },
+        },
+    );
 };
 
 // ─── File Helpers ───────────────────────────────────────────────────────────
@@ -292,6 +379,13 @@ const formatDateTime = (dateStr: string | null) => {
         minute: '2-digit',
     });
 };
+
+const startOfDay = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+/** Calendar-day gap between two dates (0 = same day). DST-safe via rounding. */
+const calendarDaysBetween = (from: Date, to: Date) =>
+    Math.round((startOfDay(to) - startOfDay(from)) / 86_400_000);
 
 const getRelativeDueInfo = (
     dueDate: string | null,
@@ -337,26 +431,45 @@ const getRelativeDueInfo = (
         };
     }
 
-    const now = new Date();
+    const now = new Date(nowMs.value);
     const diffMs = due.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const daysAhead = calendarDaysBetween(now, due);
 
+    // Past due. Sub-day gaps read better in hours ("Overdue by 5h") than the
+    // old ceil-based math, which called anything under 24h "1 day".
     if (diffMs < 0) {
-        const absDays = Math.abs(diffDays);
+        const elapsedMs = -diffMs;
+        const daysOverdue = calendarDaysBetween(due, now);
+        if (daysOverdue <= 0) {
+            return {
+                text: 'Overdue today',
+                color: 'text-red-700 dark:text-red-400',
+                isOverdue: true,
+                isSubmitted: false,
+            };
+        }
+        if (elapsedMs < 86_400_000) {
+            const hours = Math.max(1, Math.ceil(elapsedMs / 3_600_000));
+            return {
+                text: `Overdue by ${hours}h`,
+                color: 'text-red-700 dark:text-red-400',
+                isOverdue: true,
+                isSubmitted: false,
+            };
+        }
         return {
-            text:
-                absDays === 0
-                    ? 'Overdue today'
-                    : `Overdue by ${absDays} day${absDays === 1 ? '' : 's'}`,
+            text: `Overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`,
             color: 'text-red-700 dark:text-red-400',
             isOverdue: true,
             isSubmitted: false,
         };
     }
 
-    if (diffDays === 0) {
+    // Under an hour left: minute-level urgency.
+    if (diffMs < 3_600_000) {
+        const minutes = Math.max(1, Math.ceil(diffMs / 60_000));
         return {
-            text: 'Due today',
+            text: `Due in ${minutes} min`,
             color: 'text-amber-700 dark:text-amber-400',
             isOverdue: false,
             isSubmitted: false,
@@ -364,7 +477,18 @@ const getRelativeDueInfo = (
         };
     }
 
-    if (diffDays === 1) {
+    // Same calendar day: say so, with the exact time so "today" is actionable.
+    if (daysAhead <= 0) {
+        return {
+            text: `Due today · ${due.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`,
+            color: 'text-amber-700 dark:text-amber-400',
+            isOverdue: false,
+            isSubmitted: false,
+            isSoon: true,
+        };
+    }
+
+    if (daysAhead === 1) {
         return {
             text: 'Due tomorrow',
             color: 'text-amber-700 dark:text-amber-400',
@@ -374,9 +498,22 @@ const getRelativeDueInfo = (
         };
     }
 
-    if (diffDays <= 7) {
+    // 1–2 calendar days out but under 24h on the clock (late-night due
+    // times): hours are more precise than "2 days".
+    if (diffMs < 86_400_000) {
+        const hours = Math.ceil(diffMs / 3_600_000);
         return {
-            text: `Due in ${diffDays} days`,
+            text: `Due in ${hours}h`,
+            color: 'text-amber-700 dark:text-amber-400',
+            isOverdue: false,
+            isSubmitted: false,
+            isSoon: true,
+        };
+    }
+
+    if (daysAhead <= 7) {
+        return {
+            text: `Due in ${daysAhead} days`,
             color: 'text-amber-700 dark:text-amber-400',
             isOverdue: false,
             isSubmitted: false,
@@ -662,6 +799,35 @@ const currentUserId = computed<number | null>(
     () => (page.props.auth?.user as { id?: number } | null)?.id ?? null,
 );
 
+// ─── Live Grade Updates ─────────────────────────────────────────────────────
+// The backend broadcasts AssignmentGraded on this student's private channel
+// when a teacher grades (or re-grades) their work. Coalesce bursts — group
+// grading fans out one event per member — into a single partial reload of
+// the list so the card updates in place without losing local state.
+let gradeReloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+const refreshAssignmentsFromBroadcast = () => {
+    if (gradeReloadTimer) clearTimeout(gradeReloadTimer);
+    gradeReloadTimer = setTimeout(() => {
+        gradeReloadTimer = null;
+        // reload() preserves scroll + component state by design in Inertia 2,
+        // so open modals and expanded cards survive the refresh.
+        router.reload({ only: ['assignments'] });
+    }, 400);
+};
+
+if (currentUserId.value) {
+    useEcho<AssignmentGradedPayload>(
+        `App.Models.User.${currentUserId.value}`,
+        'AssignmentGraded',
+        (event) => {
+            if (props.assignments.some((a) => a.id === event.assignment_id)) {
+                refreshAssignmentsFromBroadcast();
+            }
+        },
+    );
+}
+
 /** A graded group is locked: no add/remove/leave/resubmit. */
 const isGroupLocked = (assignment: Assignment) =>
     isGraded(assignment.submission);
@@ -824,10 +990,18 @@ const addGroupMember = (candidate: GroupCandidate) => {
 let animationContext: ReturnType<typeof gsap.context> | null = null;
 
 onBeforeUnmount(() => {
+    if (clockTimer) clearInterval(clockTimer);
+    if (gradeReloadTimer) clearTimeout(gradeReloadTimer);
     animationContext?.revert();
 });
 
 onMounted(() => {
+    // Ticks even on reduced-motion / low-end devices: it moves text labels,
+    // not animation.
+    clockTimer = setInterval(() => {
+        nowMs.value = Date.now();
+    }, 30_000);
+
     if (
         !pageContainer.value ||
         prefersReducedMotion.value ||
@@ -1306,6 +1480,24 @@ onMounted(() => {
                                     >
                                         {{ getStatusBadge(assignment).label }}
                                     </span>
+
+                                    <!-- Points possible: what the work is worth -->
+                                    <span
+                                        v-if="
+                                            !assignment.submission?.submitted &&
+                                            pointsPossibleOf(assignment) > 0
+                                        "
+                                        class="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:py-0.5 sm:text-xs dark:text-amber-400"
+                                    >
+                                        <Award class="h-3 w-3" />
+                                        Worth
+                                        {{
+                                            formatNumber(
+                                                pointsPossibleOf(assignment),
+                                            )
+                                        }}
+                                        pts
+                                    </span>
                                 </div>
 
                                 <!-- Due Date / Relative Info -->
@@ -1506,9 +1698,7 @@ onMounted(() => {
                                 <div class="flex flex-wrap items-center gap-2">
                                     <button
                                         type="button"
-                                        @click="
-                                            toggleGradeExpanded(assignment.id)
-                                        "
+                                        @click="toggleGradeExpanded(assignment)"
                                         class="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted sm:text-xs"
                                         :aria-expanded="
                                             isGradeExpanded(assignment.id)
@@ -1528,6 +1718,23 @@ onMounted(() => {
                                                 : 'View grade'
                                         }}</span>
                                     </button>
+
+                                    <!-- Unread feedback pulse: clears when the
+                                         student expands the details above. -->
+                                    <span
+                                        v-if="hasUnseenFeedback(assignment)"
+                                        class="inline-flex h-8 items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 text-[11px] font-semibold text-emerald-700 sm:text-xs dark:text-emerald-400"
+                                    >
+                                        <span class="relative flex h-2 w-2">
+                                            <span
+                                                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden"
+                                            />
+                                            <span
+                                                class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"
+                                            />
+                                        </span>
+                                        New feedback
+                                    </span>
 
                                     <Button
                                         variant="outline"
@@ -1670,22 +1877,18 @@ onMounted(() => {
                                                 </span>
                                                 <span
                                                     v-if="
-                                                        Number(
-                                                            assignment
-                                                                .submission
-                                                                .points,
-                                                        ) > 0
+                                                        pointsLabel(
+                                                            assignment,
+                                                        ) !== null
                                                     "
                                                     class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 sm:px-2.5 sm:text-[11px] dark:text-amber-400"
                                                 >
                                                     <TrendingUp
                                                         class="h-3 w-3 shrink-0"
                                                     />
-                                                    +{{
-                                                        assignment.submission
-                                                            .points
-                                                    }}
-                                                    pts
+                                                    <span class="truncate">{{
+                                                        pointsLabel(assignment)
+                                                    }}</span>
                                                 </span>
                                                 <span
                                                     v-if="

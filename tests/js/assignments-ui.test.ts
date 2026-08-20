@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { flushPromises, mount } from '@vue/test-utils';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, h } from 'vue';
 
 const sampleAssignments = [
@@ -52,6 +52,11 @@ const sampleAssignments = [
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: defineComponent({ render: () => null }),
+    router: {
+        post: vi.fn(),
+        delete: vi.fn(),
+        reload: vi.fn(),
+    },
     usePage: () => ({
         props: { auth: { user: { public_id: 'test-user' } } },
     }),
@@ -409,6 +414,213 @@ describe('assignments student shell and UI revamp', () => {
         // matches.
         expect(sortBlock).toMatch(
             /absolute top-1\/2 right-3 h-3\.5 w-3\.5 -translate-y-1\/2/,
+        );
+    });
+
+    afterEach(() => {
+        // Countdown tests freeze the clock; never let that leak.
+        vi.useRealTimers();
+        vi.clearAllMocks();
+    });
+
+    const mountPage = (assignments: any[]) =>
+        mount(Assignments, {
+            props: { assignments },
+            global: {
+                stubs: {
+                    Head: { render: () => null },
+                    AppLayout: {
+                        setup(_: unknown, { slots }: any) {
+                            return () => h('div', slots.default?.());
+                        },
+                    },
+                    ResponsiveModal: { render: () => null },
+                    OnboardingTour: { render: () => null },
+                },
+            },
+        });
+
+    const cardFor = (wrapper: ReturnType<typeof mount>, title: string) =>
+        wrapper.findAll('.surface-card').find((c) => c.text().includes(title));
+
+    it('labels near-term deadlines accurately instead of rounding everything to days', async () => {
+        // Freeze the world at Fri 2026-08-21 10:00 local time so calendar-day
+        // boundaries are deterministic.
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(2026, 7, 21, 10, 0, 0));
+
+        const at = (dayOffset: number, hour: number, minute = 0) => {
+            const d = new Date(2026, 7, 21 + dayOffset, hour, minute, 0);
+            return d.toISOString();
+        };
+
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Due in forty five minutes',
+                due_date: at(0, 10, 45),
+                course: null,
+                sections: [],
+                submission: null,
+            },
+            {
+                id: 2,
+                title: 'Due later today',
+                due_date: at(0, 23, 0),
+                course: null,
+                sections: [],
+                submission: null,
+            },
+            {
+                id: 3,
+                title: 'Due tomorrow morning',
+                due_date: at(1, 9, 0),
+                course: null,
+                sections: [],
+                submission: null,
+            },
+            {
+                id: 4,
+                title: 'Due next week',
+                due_date: at(5, 9, 0),
+                course: null,
+                sections: [],
+                submission: null,
+            },
+            {
+                id: 5,
+                title: 'Missed it this morning',
+                due_date: at(0, 7, 0),
+                course: null,
+                sections: [],
+                submission: null,
+            },
+            {
+                id: 6,
+                title: 'Missed it late yesterday',
+                due_date: at(-1, 23, 0),
+                course: null,
+                sections: [],
+                submission: null,
+            },
+            {
+                id: 7,
+                title: 'Missed it days ago',
+                due_date: at(-3, 9, 0),
+                course: null,
+                sections: [],
+                submission: null,
+            },
+        ]);
+        await flushPromises();
+
+        // The old Math.ceil( ms / day ) logic showed "Due tomorrow" for
+        // anything under 24h out and "Overdue by 1 day" for anything under
+        // 24h late. Labels must now be calendar-accurate with hour and
+        // minute granularity near the wire.
+        expect(cardFor(wrapper, 'Due in forty five minutes')!.text()).toContain(
+            'Due in 45 min',
+        );
+        expect(cardFor(wrapper, 'Due later today')!.text()).toContain(
+            'Due today',
+        );
+        expect(cardFor(wrapper, 'Due tomorrow morning')!.text()).toContain(
+            'Due tomorrow',
+        );
+        expect(cardFor(wrapper, 'Due next week')!.text()).toContain(
+            'Due in 5 days',
+        );
+        expect(cardFor(wrapper, 'Missed it this morning')!.text()).toContain(
+            'Overdue today',
+        );
+        expect(cardFor(wrapper, 'Missed it late yesterday')!.text()).toContain(
+            'Overdue by 11h',
+        );
+        expect(cardFor(wrapper, 'Missed it days ago')!.text()).toContain(
+            'Overdue by 3 days',
+        );
+    });
+
+    it('shows what pending work is worth and renders graded points as earned / possible', async () => {
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Worthwhile homework',
+                due_date: '2026-09-01T23:59:59Z',
+                points_possible: '100.00',
+                course: null,
+                sections: [],
+                submission: null,
+            },
+            {
+                id: 2,
+                title: 'Graded with a denominator',
+                due_date: '2026-08-10T23:59:59Z',
+                points_possible: '100.00',
+                course: null,
+                sections: [],
+                submission: {
+                    submitted: true,
+                    status: 'Graded',
+                    grade: 'A',
+                    points: '85.00',
+                    submitted_at: '2026-08-09T18:00:00Z',
+                },
+            },
+        ]);
+        await flushPromises();
+
+        // Pending card advertises the stakes.
+        expect(cardFor(wrapper, 'Worthwhile homework')!.text()).toContain(
+            'Worth 100 pts',
+        );
+
+        // Graded card expands to show the earned / possible split.
+        const gradedCard = cardFor(wrapper, 'Graded with a denominator')!;
+        await gradedCard
+            .findAll('button')
+            .find((b) => b.text().includes('View grade'))!
+            .trigger('click');
+        await flushPromises();
+        expect(gradedCard.text()).toContain('85 / 100 pts');
+    });
+
+    it('flags unseen feedback and acknowledges it when the student expands the details', async () => {
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Freshly graded essay',
+                due_date: '2026-08-10T23:59:59Z',
+                course: null,
+                sections: [],
+                submission: {
+                    submitted: true,
+                    status: 'Graded',
+                    grade: '95',
+                    feedback: 'Sharp thesis statement.',
+                    submitted_at: '2026-08-09T18:00:00Z',
+                    has_unseen_feedback: true,
+                },
+            },
+        ]);
+        await flushPromises();
+
+        const card = cardFor(wrapper, 'Freshly graded essay')!;
+        expect(card.text()).toContain('New feedback');
+
+        await card
+            .findAll('button')
+            .find((b) => b.text().includes('View grade'))!
+            .trigger('click');
+        await flushPromises();
+
+        // Import the mocked module lazily — a top-level import of the module
+        // being vi.mock'ed trips the factory hoisting order.
+        const { router } = await import('@inertiajs/vue3');
+        expect(router.post).toHaveBeenCalledWith(
+            '/assignments/1/feedback-seen',
+            {},
+            expect.objectContaining({ only: ['assignments'] }),
         );
     });
 });

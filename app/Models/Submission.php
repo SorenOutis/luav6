@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\AssignmentGraded;
 use App\Notifications\StudentActivityNotification;
 use App\Support\GamificationSyncContext;
 use App\Support\PublicFileUrl;
@@ -26,6 +27,7 @@ class Submission extends Model
         'feedback',
         'graded_at',
         'graded_by',
+        'feedback_seen_at',
         'season_id',
     ];
 
@@ -33,6 +35,7 @@ class Submission extends Model
         'submitted' => 'boolean',
         'submitted_at' => 'datetime',
         'graded_at' => 'datetime',
+        'feedback_seen_at' => 'datetime',
         'points' => 'decimal:2',
         'xp_earned' => 'decimal:2',
     ];
@@ -43,7 +46,10 @@ class Submission extends Model
     {
         static::saving(function (self $submission): void {
             if ($submission->status === 'Graded') {
-                if (! $submission->graded_at) {
+                // A feedback revision is a new grading pass: refresh the
+                // stamp so "unseen feedback" (feedback_seen_at < graded_at)
+                // flags again for students who already opened the old one.
+                if (! $submission->graded_at || $submission->isDirty('feedback')) {
                     $submission->graded_at = now();
                 }
                 if (! $submission->graded_by && auth()->check()) {
@@ -86,6 +92,23 @@ class Submission extends Model
                 self::applyDelta($submission, $oldPoints, $newPoints, $oldXp, $newXp, $isNowGraded && $shouldNotify);
             } elseif ($isNowGraded && $shouldNotify) {
                 self::notifyGraded($submission);
+            }
+
+            // Live updates: tell the student's browser a grade or feedback
+            // landed so the assignments page can refresh in place. Group
+            // members each get their own event when propagation saves their
+            // sibling rows (their `updated` hooks dispatch again).
+            if ($isNowGraded && $shouldNotify) {
+                AssignmentGraded::dispatch(
+                    (int) $submission->user_id,
+                    (int) $submission->assignment_id,
+                    (string) $submission->status,
+                    $submission->grade,
+                    self::asFloat($submission->points),
+                    self::asFloat($submission->xp_earned),
+                    filled($submission->feedback),
+                    $submission->graded_at?->toIso8601String(),
+                );
             }
 
             self::propagateToGroup($submission);
