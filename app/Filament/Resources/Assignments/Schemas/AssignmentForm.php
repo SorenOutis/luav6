@@ -45,6 +45,22 @@ class AssignmentForm
                     ->placeholder('e.g. 100')
                     ->helperText('Optional. Students see what the work is worth, and grades display as earned / possible.')
                     ->columnSpan(1),
+                TextInput::make('min_group_size')
+                    ->label('Min group size')
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(20)
+                    ->placeholder('No minimum')
+                    ->helperText('Optional advisory for group activities — students are never blocked from submitting.')
+                    ->columnSpan(1),
+                TextInput::make('max_group_size')
+                    ->label('Max group size')
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(20)
+                    ->placeholder('Unlimited')
+                    ->helperText('Optional hard cap on group invites for this assignment.')
+                    ->columnSpan(1),
                 Select::make('course_id')
                     ->relationship('course', 'name')
                     ->searchable()

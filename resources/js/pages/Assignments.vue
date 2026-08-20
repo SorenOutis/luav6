@@ -54,6 +54,27 @@ interface AssignmentGroup {
     id: number;
     created_by: number;
     members: GroupMember[];
+    pending_invites?: PendingGroupInvite[];
+}
+
+interface PendingGroupInvite {
+    id: number;
+    user: {
+        id: number;
+        name: string | null;
+        avatar: string | null;
+    };
+    expires_at: string | null;
+}
+
+interface IncomingInvite {
+    id: number;
+    inviter: {
+        id: number;
+        name: string | null;
+        avatar: string | null;
+    };
+    expires_at: string | null;
 }
 
 interface GroupCandidate {
@@ -69,6 +90,11 @@ interface Assignment {
     description: string;
     due_date: string | null;
     points_possible: number | string | null;
+    group_rules: {
+        min: number | null;
+        max: number | null;
+    } | null;
+    incoming_invite: IncomingInvite | null;
     course: {
         id: number;
         name: string;
@@ -826,6 +852,23 @@ if (currentUserId.value) {
             }
         },
     );
+
+    // Group invites: the bell notifies, and this listener refreshes the
+    // accept/decline banners and "waiting" states on the page live.
+    useEcho<Record<string, unknown>>(
+        `App.Models.User.${currentUserId.value}`,
+        'Illuminate\\Notifications\\Events\\BroadcastNotificationCreated',
+        (payload) => {
+            const kind = (payload as { type?: unknown }).type;
+            if (
+                kind === 'assignment_invite' ||
+                kind === 'invite_accepted' ||
+                kind === 'invite_declined'
+            ) {
+                refreshAssignmentsFromBroadcast();
+            }
+        },
+    );
 }
 
 /** A graded group is locked: no add/remove/leave/resubmit. */
@@ -852,21 +895,8 @@ const initials = (name: string | null | undefined) =>
         .join('')
         .toUpperCase();
 
-// ── Create / add / remove / leave ───────────────────────────────────────────
+// ── Create / invite / cancel / leave ────────────────────────────────────────
 const groupActionLoading = ref(false);
-
-const createGroup = (assignment: Assignment) => {
-    if (groupActionLoading.value || isGroupLocked(assignment)) return;
-    groupActionLoading.value = true;
-    router.post(
-        `/assignments/${assignment.id}/groups`,
-        {},
-        {
-            preserveScroll: true,
-            onFinish: () => (groupActionLoading.value = false),
-        },
-    );
-};
 
 // Confirmation modal state: member = null means "leave by yourself".
 const groupConfirm = ref<{
@@ -904,86 +934,199 @@ const confirmGroupAction = () => {
     );
 };
 
-// ── Add-member modal (candidate search) ─────────────────────────────────────
-const showGroupModal = ref(false);
-const groupAssignmentId = ref<number | null>(null);
-const groupSearchQuery = ref('');
-const groupCandidates = ref<GroupCandidate[]>([]);
-const groupSearching = ref(false);
-const groupError = ref<string | null>(null);
+// ── Invite modal (step 1: pick classmates, step 2: sent confirmation) ───────
+const showInviteModal = ref(false);
+const inviteAssignmentId = ref<number | null>(null);
+const inviteStep = ref<'select' | 'sent'>('select');
+const inviteSelection = ref<GroupCandidate[]>([]);
+const inviteSearchQuery = ref('');
+const inviteCandidates = ref<GroupCandidate[]>([]);
+const inviteSearching = ref(false);
+const inviteError = ref<string | null>(null);
 
-const groupAssignment = computed(
+const inviteAssignment = computed(
     () =>
-        props.assignments.find((a) => a.id === groupAssignmentId.value) ?? null,
+        props.assignments.find((a) => a.id === inviteAssignmentId.value) ??
+        null,
 );
 
-const openGroupModal = (assignment: Assignment) => {
-    groupError.value = null;
-    groupSearchQuery.value = '';
-    groupCandidates.value = [];
-    groupAssignmentId.value = assignment.id;
-    showGroupModal.value = true;
-    searchGroupCandidates();
+/** Teacher cap minus members and already-invited students (null = ∞). */
+const openInviteSlots = computed(() => {
+    const assignment = inviteAssignment.value;
+    if (!assignment) return Infinity;
+    const max = assignment.group_rules?.max;
+    if (!max) return Infinity;
+    const members = assignment.group?.members?.length ?? 0;
+    const pending = assignment.group?.pending_invites?.length ?? 0;
+    return Math.max(0, max - members - pending);
+});
+
+const canInviteMore = (assignment: Assignment) => {
+    const max = assignment.group_rules?.max;
+    if (!max) return true;
+    const members = assignment.group?.members?.length ?? 0;
+    const pending = assignment.group?.pending_invites?.length ?? 0;
+    return members + pending < max;
 };
 
-const closeGroupModal = () => {
-    showGroupModal.value = false;
-    groupAssignmentId.value = null;
+const groupRulesLabel = (assignment: Assignment) => {
+    const min = assignment.group_rules?.min;
+    const max = assignment.group_rules?.max;
+    if (min && max) return `Groups of ${min}–${max}`;
+    if (max) return `Up to ${max} members`;
+    if (min) return `At least ${min} members`;
+    return '';
 };
 
-let groupSearchTimer: ReturnType<typeof setTimeout> | null = null;
+const pendingInviteCount = (assignment: Assignment) =>
+    assignment.group?.pending_invites?.length ?? 0;
 
-const searchGroupCandidates = () => {
-    const assignmentId = groupAssignmentId.value;
+const openInviteModal = (assignment: Assignment) => {
+    if (isGroupLocked(assignment)) return;
+    inviteError.value = null;
+    inviteSelection.value = [];
+    inviteSearchQuery.value = '';
+    inviteCandidates.value = [];
+    inviteStep.value = 'select';
+    inviteAssignmentId.value = assignment.id;
+    showInviteModal.value = true;
+    searchInviteCandidates();
+};
+
+const closeInviteModal = () => {
+    showInviteModal.value = false;
+    inviteAssignmentId.value = null;
+};
+
+let inviteSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const searchInviteCandidates = () => {
+    const assignmentId = inviteAssignmentId.value;
     if (!assignmentId) return;
 
-    groupSearching.value = true;
-    groupError.value = null;
+    inviteSearching.value = true;
+    inviteError.value = null;
 
     axios
         .get(`/assignments/${assignmentId}/groups/candidates`, {
             params: {
-                q: groupSearchQuery.value.trim() || undefined,
+                q: inviteSearchQuery.value.trim() || undefined,
             },
         })
         .then((res) => {
-            groupCandidates.value = res.data.candidates ?? [];
+            inviteCandidates.value = res.data.candidates ?? [];
         })
         .catch(() => {
-            groupError.value = 'Could not load classmates. Please try again.';
+            inviteError.value = 'Could not load classmates. Please try again.';
         })
         .finally(() => {
-            groupSearching.value = false;
+            inviteSearching.value = false;
         });
 };
 
-watch(groupSearchQuery, () => {
-    if (groupSearchTimer) clearTimeout(groupSearchTimer);
-    groupSearchTimer = setTimeout(searchGroupCandidates, 300);
+watch(inviteSearchQuery, () => {
+    if (inviteSearchTimer) clearTimeout(inviteSearchTimer);
+    inviteSearchTimer = setTimeout(searchInviteCandidates, 300);
 });
 
-const addGroupMember = (candidate: GroupCandidate) => {
-    const assignmentId = groupAssignmentId.value;
-    if (!assignmentId || groupActionLoading.value) return;
+const isCandidateSelected = (candidate: GroupCandidate) =>
+    inviteSelection.value.some((c) => c.id === candidate.id);
+
+const toggleCandidate = (candidate: GroupCandidate) => {
+    inviteError.value = null;
+
+    if (isCandidateSelected(candidate)) {
+        inviteSelection.value = inviteSelection.value.filter(
+            (c) => c.id !== candidate.id,
+        );
+        return;
+    }
+
+    if (inviteSelection.value.length >= openInviteSlots.value) {
+        const max = inviteAssignment.value?.group_rules?.max;
+        inviteError.value = max
+            ? `Only ${openInviteSlots.value} more invite${openInviteSlots.value === 1 ? '' : 's'} fit — the group limit is ${max}.`
+            : 'No invite slots left in this group.';
+        return;
+    }
+
+    inviteSelection.value = [...inviteSelection.value, candidate];
+};
+
+const firstErrorText = (error: unknown): string | null => {
+    if (Array.isArray(error)) return error[0] ?? null;
+    if (typeof error === 'string') return error;
+    return null;
+};
+
+const sendInvites = () => {
+    const assignmentId = inviteAssignmentId.value;
+    if (
+        !assignmentId ||
+        groupActionLoading.value ||
+        inviteSelection.value.length === 0
+    )
+        return;
 
     groupActionLoading.value = true;
-    groupError.value = null;
+    inviteError.value = null;
 
     router.post(
-        `/assignments/${assignmentId}/groups/members`,
-        { user_id: candidate.id },
+        `/assignments/${assignmentId}/invites`,
+        { user_ids: inviteSelection.value.map((c) => c.id) },
         {
             preserveScroll: true,
+            preserveState: true,
+            only: ['assignments'],
             onSuccess: () => {
-                closeGroupModal();
+                inviteStep.value = 'sent';
             },
-            onError: () => {
-                groupError.value =
-                    'Could not add this member. They may already be in a group.';
+            onError: (errors) => {
+                const record = errors as Record<string, unknown>;
+                inviteError.value =
+                    firstErrorText(record.user_ids) ??
+                    firstErrorText(record.message) ??
+                    'Could not send the invites. Please try again.';
             },
             onFinish: () => (groupActionLoading.value = false),
         },
     );
+};
+
+// ── Incoming invite (invitee side) ──────────────────────────────────────────
+const inviteRespondLoading = ref(false);
+
+const respondToIncomingInvite = (
+    assignment: Assignment,
+    action: 'accept' | 'decline',
+) => {
+    const invite = assignment.incoming_invite;
+    if (!invite || inviteRespondLoading.value) return;
+
+    inviteRespondLoading.value = true;
+    router.post(
+        `/assignments/${assignment.id}/invites/${invite.id}/respond`,
+        { action },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['assignments'],
+            onFinish: () => (inviteRespondLoading.value = false),
+        },
+    );
+};
+
+// ── Cancel a pending invite (creator side) ──────────────────────────────────
+const cancelPendingInvite = (assignment: Assignment, inviteId: number) => {
+    if (groupActionLoading.value || isGroupLocked(assignment)) return;
+
+    groupActionLoading.value = true;
+    router.delete(`/assignments/${assignment.id}/invites/${inviteId}`, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['assignments'],
+        onFinish: () => (groupActionLoading.value = false),
+    });
 };
 
 // ─── Animations ─────────────────────────────────────────────────────────────
@@ -1446,6 +1589,87 @@ onMounted(() => {
                             class="surface-card group flex flex-col gap-3 overflow-hidden p-3.5 py-3.5 transition-all duration-300 hover:shadow-md sm:p-4 sm:py-4"
                             :class="getCardBorderClass(assignment)"
                         >
+                            <!-- Incoming group invite: accept or decline right on the card -->
+                            <div
+                                v-if="
+                                    assignment.incoming_invite &&
+                                    !isGroupLocked(assignment)
+                                "
+                                class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/25 bg-primary/[0.06] px-2.5 py-2"
+                            >
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <Avatar class="size-7 shrink-0">
+                                        <AvatarImage
+                                            v-if="
+                                                assignment.incoming_invite
+                                                    .inviter.avatar
+                                            "
+                                            :src="
+                                                assignment.incoming_invite
+                                                    .inviter.avatar
+                                            "
+                                            :alt="
+                                                assignment.incoming_invite
+                                                    .inviter.name ?? 'Inviter'
+                                            "
+                                        />
+                                        <AvatarFallback
+                                            class="bg-primary/10 text-[9px] font-bold text-primary"
+                                        >
+                                            {{
+                                                initials(
+                                                    assignment.incoming_invite
+                                                        .inviter.name,
+                                                )
+                                            }}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <p
+                                        class="min-w-0 text-[12px] leading-snug text-foreground sm:text-[13px]"
+                                    >
+                                        <span class="font-semibold">{{
+                                            assignment.incoming_invite.inviter
+                                                .name
+                                        }}</span>
+                                        invited you to their group
+                                    </p>
+                                </div>
+                                <div class="flex shrink-0 items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-7 items-center gap-1 rounded-full bg-emerald-600 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-600/90 active:scale-95 disabled:opacity-60 sm:text-xs"
+                                        :disabled="inviteRespondLoading"
+                                        @click="
+                                            respondToIncomingInvite(
+                                                assignment,
+                                                'accept',
+                                            )
+                                        "
+                                    >
+                                        <Loader2
+                                            v-if="inviteRespondLoading"
+                                            class="h-3 w-3 animate-spin"
+                                        />
+                                        <CheckCircle2 v-else class="h-3 w-3" />
+                                        <span>Accept</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-7 items-center gap-1 rounded-full border border-border/60 bg-card px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground active:scale-95 disabled:opacity-60 sm:text-xs"
+                                        :disabled="inviteRespondLoading"
+                                        @click="
+                                            respondToIncomingInvite(
+                                                assignment,
+                                                'decline',
+                                            )
+                                        "
+                                    >
+                                        <X class="h-3 w-3" />
+                                        <span>Decline</span>
+                                    </button>
+                                </div>
+                            </div>
+
                             <!-- Top Row: Course + Status Badge + Relative Due Text -->
                             <div
                                 class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
@@ -1626,6 +1850,60 @@ onMounted(() => {
                                                 <X class="h-3 w-3" />
                                             </button>
                                         </span>
+                                        <!-- Pending invitees: greyed until they respond -->
+                                        <span
+                                            v-for="invite in assignment.group
+                                                .pending_invites ?? []"
+                                            :key="`invite-${invite.id}`"
+                                            class="inline-flex items-center gap-1 rounded-full border border-dashed border-border/70 bg-muted/40 py-0.5 pr-1.5 pl-0.5 text-[11px] font-medium text-muted-foreground"
+                                        >
+                                            <Avatar class="size-5">
+                                                <AvatarImage
+                                                    v-if="invite.user.avatar"
+                                                    :src="invite.user.avatar"
+                                                    :alt="
+                                                        invite.user.name ??
+                                                        'Invitee'
+                                                    "
+                                                />
+                                                <AvatarFallback
+                                                    class="bg-muted text-[8px] font-bold text-muted-foreground"
+                                                >
+                                                    {{
+                                                        initials(
+                                                            invite.user.name,
+                                                        )
+                                                    }}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <span
+                                                class="max-w-24 truncate sm:max-w-32"
+                                                >{{ invite.user.name }}</span
+                                            >
+                                            <span
+                                                class="hidden text-[9px] font-semibold tracking-wide text-muted-foreground/70 uppercase sm:inline"
+                                            >
+                                                waiting
+                                            </span>
+                                            <button
+                                                v-if="
+                                                    isGroupCreator(assignment)
+                                                "
+                                                type="button"
+                                                class="flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                                :title="`Cancel invite for ${invite.user.name}`"
+                                                :aria-label="`Cancel invite for ${invite.user.name}`"
+                                                :disabled="groupActionLoading"
+                                                @click="
+                                                    cancelPendingInvite(
+                                                        assignment,
+                                                        invite.id,
+                                                    )
+                                                "
+                                            >
+                                                <X class="h-3 w-3" />
+                                            </button>
+                                        </span>
                                         <span
                                             class="text-[10px] text-muted-foreground"
                                         >
@@ -1638,6 +1916,21 @@ onMounted(() => {
                                                     ? ''
                                                     : 's'
                                             }}
+                                            <template
+                                                v-if="
+                                                    pendingInviteCount(
+                                                        assignment,
+                                                    ) > 0
+                                                "
+                                            >
+                                                ·
+                                                {{
+                                                    pendingInviteCount(
+                                                        assignment,
+                                                    )
+                                                }}
+                                                waiting
+                                            </template>
                                         </span>
                                     </template>
                                 </div>
@@ -1652,28 +1945,27 @@ onMounted(() => {
                                         type="button"
                                         class="inline-flex h-6 items-center gap-1 rounded-full bg-primary/10 px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
                                         :disabled="groupActionLoading"
-                                        @click="createGroup(assignment)"
+                                        @click="openInviteModal(assignment)"
                                     >
-                                        <Loader2
-                                            v-if="groupActionLoading"
-                                            class="h-3 w-3 animate-spin"
-                                        />
-                                        <UserPlus v-else class="h-3 w-3" />
-                                        <span>Create group</span>
+                                        <UserPlus class="h-3 w-3" />
+                                        <span>Form a group</span>
                                     </button>
                                     <template v-else>
                                         <button
-                                            v-if="isGroupCreator(assignment)"
+                                            v-if="
+                                                isGroupCreator(assignment) &&
+                                                canInviteMore(assignment)
+                                            "
                                             type="button"
                                             class="inline-flex h-6 items-center gap-1 rounded-full bg-primary/10 px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
                                             :disabled="groupActionLoading"
-                                            @click="openGroupModal(assignment)"
+                                            @click="openInviteModal(assignment)"
                                         >
                                             <UserPlus class="h-3 w-3" />
-                                            <span>Add member</span>
+                                            <span>Invite members</span>
                                         </button>
                                         <button
-                                            v-else
+                                            v-if="!isGroupCreator(assignment)"
                                             type="button"
                                             class="inline-flex h-6 items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
                                             :disabled="groupActionLoading"
@@ -1685,6 +1977,12 @@ onMounted(() => {
                                             <span>Leave group</span>
                                         </button>
                                     </template>
+                                    <span
+                                        v-if="groupRulesLabel(assignment)"
+                                        class="text-[10px] text-muted-foreground"
+                                    >
+                                        {{ groupRulesLabel(assignment) }}
+                                    </span>
                                 </div>
                             </div>
 
@@ -2366,12 +2664,12 @@ onMounted(() => {
             </template>
         </ResponsiveModal>
 
-        <!-- Add Group Member Modal -->
+        <!-- Invite Members Modal (step 1: pick, step 2: sent) -->
         <ResponsiveModal
-            :open="showGroupModal"
+            :open="showInviteModal"
             custom-header
             content-class="sm:max-w-md"
-            @close="closeGroupModal"
+            @close="closeInviteModal"
         >
             <template #header>
                 <div class="space-y-1">
@@ -2379,19 +2677,67 @@ onMounted(() => {
                         Group activity
                     </span>
                     <h2 class="text-lg font-bold text-foreground">
-                        Add member
+                        {{
+                            inviteStep === 'sent'
+                                ? 'Invites sent'
+                                : inviteAssignment?.group
+                                  ? 'Invite members'
+                                  : 'Form a group'
+                        }}
                     </h2>
                     <p class="text-xs text-muted-foreground">
                         {{
-                            groupAssignment?.title
-                                ? `Group for: ${groupAssignment.title}`
-                                : 'Add classmates to your group'
+                            inviteStep === 'sent'
+                                ? 'Your classmates will get a notification and can accept right from their assignments page.'
+                                : inviteAssignment?.title
+                                  ? `Group for: ${inviteAssignment.title}`
+                                  : 'Invite classmates to your group'
                         }}
+                        <template
+                            v-if="
+                                inviteStep === 'select' &&
+                                inviteAssignment &&
+                                groupRulesLabel(inviteAssignment)
+                            "
+                        >
+                            ·
+                            {{ groupRulesLabel(inviteAssignment) }}
+                        </template>
                     </p>
                 </div>
             </template>
 
-            <div class="space-y-3 pt-2">
+            <!-- Step 2: confirmation -->
+            <div
+                v-if="inviteStep === 'sent'"
+                class="flex flex-col items-center py-6 text-center"
+            >
+                <div
+                    class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                >
+                    <CheckCircle2 class="h-7 w-7" />
+                </div>
+                <p class="text-sm font-semibold text-foreground">
+                    <template v-if="inviteSelection.length === 1"
+                        >1 invite was sent</template
+                    >
+                    <template v-else-if="inviteSelection.length > 1"
+                        >{{ inviteSelection.length }} invites were
+                        sent</template
+                    >
+                    <template v-else>Your invites were sent</template>
+                </p>
+                <p
+                    class="mt-1.5 max-w-xs text-xs leading-relaxed text-muted-foreground"
+                >
+                    You can submit for the group any time — no need to wait for
+                    everyone. Members who accept later still see the shared
+                    file.
+                </p>
+            </div>
+
+            <!-- Step 1: pick classmates -->
+            <div v-else class="space-y-3 pt-2">
                 <!-- Search input -->
                 <div class="relative">
                     <Search
@@ -2399,15 +2745,37 @@ onMounted(() => {
                         aria-hidden="true"
                     />
                     <Input
-                        v-model="groupSearchQuery"
+                        v-model="inviteSearchQuery"
                         placeholder="Search classmates by name..."
                         class="h-10 rounded-xl pl-10"
                     />
                 </div>
 
+                <!-- Selected chips -->
+                <div
+                    v-if="inviteSelection.length"
+                    class="flex flex-wrap gap-1.5"
+                >
+                    <span
+                        v-for="selected in inviteSelection"
+                        :key="selected.id"
+                        class="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 py-0.5 pr-1 pl-2 text-[11px] font-semibold text-primary"
+                    >
+                        {{ selected.name }}
+                        <button
+                            type="button"
+                            class="flex h-4 w-4 items-center justify-center rounded-full transition-colors hover:bg-primary/20"
+                            :aria-label="`Remove ${selected.name}`"
+                            @click="toggleCandidate(selected)"
+                        >
+                            <X class="h-3 w-3" />
+                        </button>
+                    </span>
+                </div>
+
                 <!-- Results -->
                 <div
-                    v-if="groupSearching"
+                    v-if="inviteSearching"
                     class="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground"
                 >
                     <Loader2 class="h-4 w-4 animate-spin text-[#D97757]" />
@@ -2415,15 +2783,15 @@ onMounted(() => {
                 </div>
 
                 <div
-                    v-else-if="groupError"
+                    v-else-if="inviteError"
                     class="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-xs text-destructive"
                 >
                     <AlertTriangle class="h-4 w-4 shrink-0" />
-                    <span>{{ groupError }}</span>
+                    <span>{{ inviteError }}</span>
                 </div>
 
                 <div
-                    v-else-if="groupCandidates.length === 0"
+                    v-else-if="inviteCandidates.length === 0"
                     class="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center"
                 >
                     <div
@@ -2435,8 +2803,8 @@ onMounted(() => {
                         No classmates available
                     </p>
                     <p class="mt-1 text-xs text-muted-foreground">
-                        Everyone in your sections who can join this group has
-                        already joined. Try a different search.
+                        Everyone in your sections is already grouped or has a
+                        pending invite. Try a different search.
                     </p>
                 </div>
 
@@ -2445,12 +2813,17 @@ onMounted(() => {
                     class="no-scrollbar max-h-72 space-y-1.5 overflow-y-auto pr-1"
                 >
                     <button
-                        v-for="candidate in groupCandidates"
+                        v-for="candidate in inviteCandidates"
                         :key="candidate.id"
                         type="button"
-                        class="flex w-full items-center gap-2.5 rounded-xl border border-border/60 bg-card p-2.5 text-left transition-colors hover:bg-muted/40 active:scale-[0.99]"
+                        class="flex w-full items-center gap-2.5 rounded-xl border p-2.5 text-left transition-colors active:scale-[0.99]"
+                        :class="
+                            isCandidateSelected(candidate)
+                                ? 'border-primary/40 bg-primary/10'
+                                : 'border-border/60 bg-card hover:bg-muted/40'
+                        "
                         :disabled="groupActionLoading"
-                        @click="addGroupMember(candidate)"
+                        @click="toggleCandidate(candidate)"
                     >
                         <Avatar class="size-8">
                             <AvatarImage
@@ -2478,24 +2851,55 @@ onMounted(() => {
                             </p>
                         </div>
                         <span
-                            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                            :class="
+                                isCandidateSelected(candidate)
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-primary/10 text-primary'
+                            "
                         >
-                            <UserPlus class="h-3.5 w-3.5" />
+                            <CheckCircle2
+                                v-if="isCandidateSelected(candidate)"
+                                class="h-3.5 w-3.5"
+                            />
+                            <UserPlus v-else class="h-3.5 w-3.5" />
                         </span>
                     </button>
                 </div>
             </div>
 
             <template #footer>
-                <div class="flex w-full justify-end">
+                <div
+                    class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                >
                     <Button
                         type="button"
                         variant="outline"
                         class="dash-btn w-full rounded-xl sm:w-auto"
                         :disabled="groupActionLoading"
-                        @click="closeGroupModal"
+                        @click="closeInviteModal"
                     >
-                        Close
+                        {{ inviteStep === 'sent' ? 'Close' : 'Cancel' }}
+                    </Button>
+                    <Button
+                        v-if="inviteStep === 'select'"
+                        type="button"
+                        class="dash-btn w-full rounded-xl bg-[#D97757] text-white hover:bg-[#D97757]/90 sm:w-auto"
+                        :disabled="
+                            groupActionLoading || inviteSelection.length === 0
+                        "
+                        @click="sendInvites"
+                    >
+                        <Loader2
+                            v-if="groupActionLoading"
+                            class="h-4 w-4 animate-spin"
+                        />
+                        <UserPlus v-else class="h-4 w-4" />
+                        <span
+                            >Send {{ inviteSelection.length || '' }} invite{{
+                                inviteSelection.length === 1 ? '' : 's'
+                            }}</span
+                        >
                     </Button>
                 </div>
             </template>

@@ -2,6 +2,7 @@
 
 use App\Models\Assignment;
 use App\Models\AssignmentGroup;
+use App\Models\AssignmentGroupInvite;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\Submission;
@@ -38,28 +39,47 @@ function makeGroupAssignment(array $sectionIds): Assignment
     return $assignment;
 }
 
-function createGroupFor(User $creator, Assignment $assignment): AssignmentGroup
+function inviteMember(User $inviter, Assignment $assignment, User $invitee): AssignmentGroupInvite
 {
-    $response = test()->actingAs($creator)->post(route('assignments.groups.store', $assignment));
-    $response->assertSessionHasNoErrors();
+    test()->actingAs($inviter)
+        ->post(route('assignments.invites.store', $assignment), ['user_ids' => [$invitee->id]])
+        ->assertRedirect();
 
-    return AssignmentGroup::where('assignment_id', $assignment->id)->firstOrFail();
+    return AssignmentGroupInvite::query()
+        ->where('assignment_id', $assignment->id)
+        ->where('invitee_id', $invitee->id)
+        ->where('status', 'pending')
+        ->firstOrFail();
 }
 
-it('lets a student create a group and add a classmate from the targeted section', function () {
+function acceptInvite(User $invitee, Assignment $assignment): void
+{
+    $invite = AssignmentGroupInvite::query()
+        ->where('assignment_id', $assignment->id)
+        ->where('invitee_id', $invitee->id)
+        ->where('status', 'pending')
+        ->firstOrFail();
+
+    test()->actingAs($invitee)
+        ->post(route('assignments.invites.respond', [$assignment, $invite]), ['action' => 'accept'])
+        ->assertRedirect();
+}
+
+it('lets a student form a group with a classmate through invites', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.store', $assignment))
-        ->assertRedirect();
+    // Nobody is grouped until the classmate accepts.
+    inviteMember($this->creator, $assignment, $this->member);
 
     $group = AssignmentGroup::where('assignment_id', $assignment->id)->first();
     expect($group)->not->toBeNull()
-        ->and($group->created_by)->toBe($this->creator->id);
+        ->and($group->created_by)->toBe($this->creator->id)
+        ->and(DB::table('assignment_user')
+            ->where('assignment_id', $assignment->id)
+            ->where('user_id', $this->member->id)
+            ->value('group_id'))->toBeNull();
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    acceptInvite($this->member, $assignment);
 
     expect(DB::table('assignment_user')
         ->where('assignment_id', $assignment->id)
@@ -71,12 +91,11 @@ it('lets a student create a group and add a classmate from the targeted section'
             ->value('group_id'))->toBe($group->id);
 });
 
-it('rejects adding a student who is not assigned to the activity', function () {
+it('rejects inviting a student who is not assigned to the activity', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    createGroupFor($this->creator, $assignment);
 
     $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->outsider->id])
+        ->post(route('assignments.invites.store', $assignment), ['user_ids' => [$this->outsider->id]])
         ->assertStatus(422);
 
     expect(DB::table('assignment_user')
@@ -85,38 +104,29 @@ it('rejects adding a student who is not assigned to the activity', function () {
         ->value('group_id'))->toBeNull();
 });
 
-it('rejects adding a student who is already in a group for the same assignment', function () {
+it('rejects inviting a student who already accepted another group', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
 
     $secondCreator = User::factory()->create(['name' => 'Ana Reyes']);
     $secondCreator->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
 
-    createGroupFor($this->creator, $assignment);
-    createGroupFor($secondCreator, $assignment);
-
-    // The member already joined the first group.
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
 
     $this->actingAs($secondCreator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
+        ->post(route('assignments.invites.store', $assignment), ['user_ids' => [$this->member->id]])
         ->assertStatus(422);
 });
 
-it('only allows the group creator to add members', function () {
+it('only allows the group creator to invite members', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
 
-    createGroupFor($this->creator, $assignment);
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
 
-    $intruder = User::factory()->create(['name' => 'Kiko Ramos']);
-    $intruder->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
-
-    $this->actingAs($intruder)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->outsider->id])
+    // An accepted member (not the creator) cannot invite anyone.
+    $this->actingAs($this->member)
+        ->post(route('assignments.invites.store', $assignment), ['user_ids' => [$this->outsider->id]])
         ->assertForbidden();
 });
 
@@ -124,11 +134,9 @@ it('shares the submitted file with every group member', function () {
     Storage::fake('public');
 
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    createGroupFor($this->creator, $assignment);
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
 
     $this->actingAs($this->creator)
         ->post(route('assignments.submit', $assignment), [
@@ -173,7 +181,13 @@ it('lets a late joiner see the file the group already submitted', function () {
     Storage::fake('public');
 
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    createGroupFor($this->creator, $assignment);
+
+    $latecomer = User::factory()->create(['name' => 'Tina Ocampo']);
+    $latecomer->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
+
+    // Invite first, submit while it is still pending (never blocked), then
+    // the latecomer accepts and inherits the shared file.
+    inviteMember($this->creator, $assignment, $latecomer);
 
     $this->actingAs($this->creator)
         ->post(route('assignments.submit', $assignment), [
@@ -181,12 +195,7 @@ it('lets a late joiner see the file the group already submitted', function () {
         ])
         ->assertRedirect();
 
-    $latecomer = User::factory()->create(['name' => 'Tina Ocampo']);
-    $latecomer->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
-
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $latecomer->id])
-        ->assertRedirect();
+    acceptInvite($latecomer, $assignment);
 
     $row = DB::table('assignment_user')
         ->where('assignment_id', $assignment->id)
@@ -209,11 +218,9 @@ it('resets a removed member to pending and hides the shared file', function () {
     Storage::fake('public');
 
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    createGroupFor($this->creator, $assignment);
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
 
     $this->actingAs($this->creator)
         ->post(route('assignments.submit', $assignment), [
@@ -244,11 +251,11 @@ it('resets a removed member to pending and hides the shared file', function () {
 
 it('transfers creator role when the creator leaves the group', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    $group = createGroupFor($this->creator, $assignment);
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
+
+    $group = AssignmentGroup::where('assignment_id', $assignment->id)->firstOrFail();
 
     $this->actingAs($this->creator)
         ->delete(route('assignments.groups.members.destroy', [$assignment, $this->creator]))
@@ -259,7 +266,10 @@ it('transfers creator role when the creator leaves the group', function () {
 
 it('deletes the group when the last member leaves', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    $group = createGroupFor($this->creator, $assignment);
+
+    // A group forms only once an invite has been sent.
+    $invite = inviteMember($this->creator, $assignment, $this->member);
+    $group = $invite->group;
 
     $this->actingAs($this->creator)
         ->delete(route('assignments.groups.members.destroy', [$assignment, $this->creator]))
@@ -270,11 +280,9 @@ it('deletes the group when the last member leaves', function () {
 
 it('applies a group grade to every member and awards each one points and xp', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    createGroupFor($this->creator, $assignment);
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
 
     $creatorRow = Submission::where('assignment_id', $assignment->id)->where('user_id', $this->creator->id)->firstOrFail();
     $memberRow = Submission::where('assignment_id', $assignment->id)->where('user_id', $this->member->id)->firstOrFail();
@@ -308,11 +316,9 @@ it('locks a graded group against add, remove and resubmit', function () {
     Storage::fake('public');
 
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    createGroupFor($this->creator, $assignment);
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
 
     $this->actingAs($this->creator)
         ->post(route('assignments.submit', $assignment), [
@@ -328,8 +334,8 @@ it('locks a graded group against add, remove and resubmit', function () {
     $other->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
 
     $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $other->id])
-        ->assertStatus(403);
+        ->post(route('assignments.invites.store', $assignment), ['user_ids' => [$other->id]])
+        ->assertForbidden();
 
     $this->actingAs($this->member)
         ->delete(route('assignments.groups.members.destroy', [$assignment, $this->member]))
@@ -355,11 +361,9 @@ it('locks a graded group against add, remove and resubmit', function () {
 
 it('excludes self, already-grouped students and out-of-section students from candidates', function () {
     $assignment = makeGroupAssignment([$this->sectionA->id]);
-    createGroupFor($this->creator, $assignment);
 
-    $this->actingAs($this->creator)
-        ->post(route('assignments.groups.members.store', $assignment), ['user_id' => $this->member->id])
-        ->assertRedirect();
+    inviteMember($this->creator, $assignment, $this->member);
+    acceptInvite($this->member, $assignment);
 
     $this->actingAs($this->creator)
         ->getJson(route('assignments.groups.candidates', $assignment))

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Assignment;
 use App\Models\AssignmentGroup;
+use App\Models\AssignmentGroupInvite;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,21 +53,14 @@ class AssignmentGroupService
     }
 
     /**
-     * Add a member to the actor's group. Late joiners (group already
-     * submitted) immediately see the shared file.
+     * Write a member onto the group. Used when an invite is accepted — with
+     * the invite flow replacing instant adds, nobody lands here without
+     * consenting. Late joiners (group already submitted) immediately see the
+     * shared file.
      */
-    public function addMember(Assignment $assignment, User $actor, User $member): void
+    public function joinGroup(Assignment $assignment, AssignmentGroup $group, User $member): void
     {
-        $group = $this->groupFor($assignment, $actor);
-
-        if (! $group) {
-            abort(403, 'You are not in a group for this assignment.');
-        }
-        if ($group->created_by !== $actor->id) {
-            abort(403, 'Only the group creator can add members.');
-        }
-
-        $this->ensureNotGraded($assignment, $actor);
+        $this->ensureNotGraded($assignment, $member);
 
         if (! $assignment->isVisibleTo($member)) {
             abort(422, 'This student is not assigned to this activity.');
@@ -191,14 +185,17 @@ class AssignmentGroupService
     }
 
     /**
-     * Students the actor can still add: members of the assignment's targeted
-     * sections (same workspace context), excluding the actor and anyone who
-     * already belongs to a group for this assignment.
+     * Students the actor can still invite: members of the assignment's
+     * targeted sections (same workspace context), excluding the actor,
+     * anyone who already belongs to a group for this assignment, and anyone
+     * already holding a pending invite for it.
      *
      * @return Collection<int, array{id: int, name: string, avatar: ?string, sections: array<int, string>}>
      */
     public function candidates(Assignment $assignment, User $user, ?string $query): Collection
     {
+        AssignmentGroupInvite::expireOverdue($assignment);
+
         $sectionIds = $assignment->sections()->pluck('sections.id');
 
         if ($sectionIds->isEmpty()) {
@@ -215,9 +212,15 @@ class AssignmentGroupService
             ->whereNotNull('group_id')
             ->pluck('user_id');
 
+        $pendingInvited = AssignmentGroupInvite::query()
+            ->where('assignment_id', $assignment->id)
+            ->where('status', AssignmentGroupInvite::STATUS_PENDING)
+            ->pluck('invitee_id');
+
         $eligibleIds = $sectionMemberIds
             ->diff([$user->id])
             ->diff($alreadyGrouped)
+            ->diff($pendingInvited)
             ->values();
 
         if ($eligibleIds->isEmpty()) {

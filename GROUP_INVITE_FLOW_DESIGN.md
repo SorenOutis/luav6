@@ -1,14 +1,23 @@
 # Group Assignment Invite Flow — Design Spec
 
-Status: **awaiting review** — no code yet. Decisions below were confirmed with
-the product owner:
+Status: **implemented** — see the invite service, controller, and page UI.
 
 | Decision | Choice |
 | --- | --- |
 | Consent model | Invites **replace** instant add/remove-group formation entirely |
 | Responses | **Flexible**: submit with whoever accepted; late accepters still join |
 | Size limits | **Teacher-configurable** min/max per assignment |
-| Delivery | Design first, implement after review |
+| Delivery | Design reviewed, then implemented |
+
+Resolved during review:
+
+- **A (minimums)** — never block submission. `min_group_size` is advisory
+  (shown as "Groups of 2–4" guidance); a student alone can always submit.
+- **B (expiry)** — invites expire at the assignment's due date (no TTL).
+- **C (batch cap)** — the picker caps selection at the remaining open slots
+  (max − members − pending).
+- **D (bell actions)** — Accept/Decline render inline in the notification
+  dropdown for unread invite notifications.
 
 ## 1. Problem
 
@@ -90,16 +99,14 @@ a re-invite creates a **new** row (the partial unique index allows that).
 3. **Max size** — creator cannot send invites past `max_group_size`
    (accepted + pending counted against the cap so two pending invites can't
    push a 4-max group to 5). Hard-enforced client + server.
-4. **Min size at submit** — ⚠ open question A; recommended rule:
-   - blocked while below min **and** invites are still pending;
-   - once every invite is resolved (accepted/declined/cancelled/expired) and
-     the group is still below min, submission is allowed but flagged
-     `under_minimum` for the teacher (visible in the Filament submissions
-     table). No student is ever deadlocked at 11 PM.
+4. **Min size at submit** — advisory only (decision A): the UI surfaces the
+   teacher's guidance, but submission is never blocked by group state. No
+   student is ever deadlocked.
 5. **Locked when graded** — `ensureNotGraded` already aborts everything;
    invites also become non-sendable/non-acceptable once graded.
-6. **Expiry** — pending invites expire at `min(expires_at, due_date)`.
-   Recommended TTL: 48 h. ⚠ open question B.
+6. **Expiry** — pending invites expire at the assignment's due date
+   (decision B), enforced lazily by a sweep on page load and before
+   responses — no scheduler needed.
 7. **Declined → re-invitable** — yes (new row). A decline is an answer to an
    invitation, not a block on future ones.
 8. **Creator leaves** — existing earliest-member transfer applies. If a group
@@ -180,12 +187,7 @@ No blocking "waiting" step — that state lives on the card.
    routes are deleted, so UI and API change together).
 4. Existing groups are untouched — the flow only governs **forming** groups.
 
-## 12. Open questions for review
+## 12. Open questions
 
-- **A. Minimum enforcement** — adopt the no-deadlock rule (block while invites
-  pending; allow-but-flag once all resolved), or hard-block below min always?
-- **B. Invite TTL** — 48 h, 24 h, or "until due date only"?
-- **C. Bulk invites** — cap invites per send (e.g., one batch up to remaining
-  slots) — confirmed by slot counter, OK?
-- **D. Bell actions** — Accept/Decline directly in the dropdown (recommended),
-  or notification click-through to the assignments page only?
+All four (minimum enforcement, expiry, batch cap, bell actions) were resolved
+during review — see the decisions table at the top.

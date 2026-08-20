@@ -72,6 +72,8 @@ class HandleInertiaRequests extends Middleware
                         'meta' => $notification->data['meta'] ?? null,
                         'image' => $notification->data['image'] ?? null,
                         'href' => $notification->data['href'] ?? '/dashboard',
+                        'inviteId' => $notification->data['invite_id'] ?? null,
+                        'assignmentId' => $notification->data['assignment_id'] ?? null,
                         'readAt' => optional($notification->read_at)?->toIso8601String(),
                         'createdAt' => $notification->created_at?->diffForHumans(),
                     ])

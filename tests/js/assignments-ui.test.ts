@@ -58,7 +58,7 @@ vi.mock('@inertiajs/vue3', () => ({
         reload: vi.fn(),
     },
     usePage: () => ({
-        props: { auth: { user: { public_id: 'test-user' } } },
+        props: { auth: { user: { id: 99, public_id: 'test-user' } } },
     }),
     useForm: (initialValues: any) => ({
         ...initialValues,
@@ -622,5 +622,114 @@ describe('assignments student shell and UI revamp', () => {
             {},
             expect.objectContaining({ only: ['assignments'] }),
         );
+    });
+
+    it('shows an accept/decline banner for incoming group invites and posts the response', async () => {
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Group lab activity',
+                due_date: '2026-09-01T23:59:59Z',
+                course: null,
+                sections: [],
+                group_rules: { min: 2, max: 4 },
+                incoming_invite: {
+                    id: 7,
+                    inviter: { id: 5, name: 'Mina Cruz', avatar: null },
+                    expires_at: '2026-09-01T23:59:59Z',
+                },
+                submission: null,
+            },
+        ]);
+        await flushPromises();
+
+        const card = cardFor(wrapper, 'Group lab activity')!;
+        expect(card.text()).toContain('Mina Cruz');
+        expect(card.text()).toContain('invited you to their group');
+
+        await card
+            .findAll('button')
+            .find((b) => b.text().includes('Accept'))!
+            .trigger('click');
+        await flushPromises();
+
+        const { router } = await import('@inertiajs/vue3');
+        expect(router.post).toHaveBeenCalledWith(
+            '/assignments/1/invites/7/respond',
+            { action: 'accept' },
+            expect.objectContaining({ only: ['assignments'] }),
+        );
+    });
+
+    it('lists pending invitees as waiting and lets the creator cancel an invite', async () => {
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Group lab activity',
+                due_date: '2026-09-01T23:59:59Z',
+                course: null,
+                sections: [],
+                group_rules: { min: null, max: null },
+                group: {
+                    id: 3,
+                    created_by: 99, // current user (see usePage mock)
+                    members: [{ id: 99, name: 'Me', avatar: null }],
+                    pending_invites: [
+                        {
+                            id: 12,
+                            user: {
+                                id: 5,
+                                name: 'Jose Santos',
+                                avatar: null,
+                            },
+                            expires_at: '2026-09-01T23:59:59Z',
+                        },
+                    ],
+                },
+                submission: null,
+            },
+        ]);
+        await flushPromises();
+
+        const card = cardFor(wrapper, 'Group lab activity')!;
+        expect(card.text()).toContain('Jose Santos');
+        expect(card.text()).toContain('waiting');
+        expect(card.text()).toContain('Invite members');
+
+        const cancel = card
+            .findAll('button')
+            .find((b) => b.attributes('title')?.includes('Jose Santos'));
+        expect(cancel).toBeDefined();
+
+        await cancel!.trigger('click');
+        await flushPromises();
+
+        const { router } = await import('@inertiajs/vue3');
+        expect(router.delete).toHaveBeenCalledWith(
+            '/assignments/1/invites/12',
+            expect.objectContaining({ only: ['assignments'] }),
+        );
+    });
+
+    it('offers to form a group on ungrouped pending assignments', async () => {
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Solo-able group task',
+                due_date: '2026-09-01T23:59:59Z',
+                course: null,
+                sections: [],
+                group_rules: { min: 2, max: 4 },
+                group: null,
+                incoming_invite: null,
+                submission: null,
+            },
+        ]);
+        await flushPromises();
+
+        const card = cardFor(wrapper, 'Solo-able group task')!;
+        expect(card.text()).toContain('Form a group');
+        // The teacher's size guidance surfaces on the card.
+        expect(card.text()).toContain('Groups of 2–4');
     });
 });
