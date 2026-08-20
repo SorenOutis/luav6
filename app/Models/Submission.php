@@ -14,11 +14,13 @@ class Submission extends Model
     protected $fillable = [
         'user_id',
         'assignment_id',
+        'group_id',
         'submitted',
         'status',
         'grade',
         'file_path',
         'submitted_at',
+        'submitted_by',
         'points',
         'xp_earned',
         'feedback',
@@ -85,7 +87,63 @@ class Submission extends Model
             } elseif ($isNowGraded && $shouldNotify) {
                 self::notifyGraded($submission);
             }
+
+            self::propagateToGroup($submission);
         });
+    }
+
+    /**
+     * Group activities share one submission: whenever a member's row changes,
+     * mirror the submission/grading state onto the sibling rows. Sibling rows
+     * get their own `updated` events, so each member's points/XP award and
+     * graded notification fire exactly once through the existing hooks.
+     *
+     * The propagation is guarded against re-entry: a sibling's own `updated`
+     * event must award its points, but must NOT re-save the other siblings —
+     * doing so would re-run their awards through stale model instances and
+     * double-credit late-joining members. The top-level call already covers
+     * every sibling, so nested calls simply return.
+     */
+    private static bool $propagatingToGroup = false;
+
+    private static function propagateToGroup(self $submission): void
+    {
+        if (! $submission->group_id || self::$propagatingToGroup) {
+            return;
+        }
+
+        $siblings = self::query()
+            ->where('group_id', $submission->group_id)
+            ->whereKeyNot($submission->getKey())
+            ->get();
+
+        if ($siblings->isEmpty()) {
+            return;
+        }
+
+        $fields = [
+            'submitted' => $submission->submitted,
+            'status' => $submission->status,
+            'grade' => $submission->grade,
+            'file_path' => $submission->file_path,
+            'submitted_at' => $submission->submitted_at,
+            'submitted_by' => $submission->submitted_by,
+            'points' => $submission->points,
+            'xp_earned' => $submission->xp_earned,
+            'feedback' => $submission->feedback,
+            'graded_at' => $submission->graded_at,
+            'graded_by' => $submission->graded_by,
+        ];
+
+        self::$propagatingToGroup = true;
+
+        try {
+            foreach ($siblings as $sibling) {
+                $sibling->forceFill($fields)->save();
+            }
+        } finally {
+            self::$propagatingToGroup = false;
+        }
     }
 
     private static function asFloat(mixed $value): float
@@ -216,6 +274,11 @@ class Submission extends Model
     public function assignment()
     {
         return $this->belongsTo(Assignment::class);
+    }
+
+    public function group()
+    {
+        return $this->belongsTo(AssignmentGroup::class, 'group_id');
     }
 
     public function grader()

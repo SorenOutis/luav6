@@ -46,7 +46,7 @@ class SubmissionsRelationManager extends RelationManager
                     ])
                     ->required()
                     ->live()
-                    ->helperText('Set to Graded to trigger points/XP award and student notification.'),
+                    ->helperText('Set to Graded to trigger points/XP award and student notification. For a group activity, grading one member applies the grade, points, and XP to every member of the group.'),
                 TextInput::make('grade')
                     ->label('Grade (e.g., A, 95%, 8/10)')
                     ->placeholder('e.g., 90, A, 8/10')
@@ -108,6 +108,17 @@ class SubmissionsRelationManager extends RelationManager
                 TextColumn::make('user.name')
                     ->label('Student')
                     ->searchable()
+                    ->sortable(),
+                TextColumn::make('group_id')
+                    ->label('Group')
+                    ->placeholder('—')
+                    ->formatStateUsing(fn ($state) => $state ? 'Group #'.$state : null)
+                    ->badge()
+                    ->color('primary')
+                    ->icon(fn ($state) => $state ? 'heroicon-o-user-group' : null)
+                    ->tooltip(fn ($record) => $record->group_id
+                        ? 'Group activity — grading this row applies to every member.'
+                        : null)
                     ->sortable(),
                 IconColumn::make('submitted')
                     ->boolean()

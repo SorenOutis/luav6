@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import axios from 'axios';
 import gsap from 'gsap';
 import {
     FileUp,
@@ -23,11 +24,14 @@ import {
     Zap,
     MessageSquareText,
     Users,
+    UserPlus,
+    LogOut,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,6 +42,25 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { TourStep } from '@/lib/onboarding';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+
+interface GroupMember {
+    id: number;
+    name: string | null;
+    avatar: string | null;
+}
+
+interface AssignmentGroup {
+    id: number;
+    created_by: number;
+    members: GroupMember[];
+}
+
+interface GroupCandidate {
+    id: number;
+    name: string;
+    avatar: string | null;
+    sections: string[];
+}
 
 interface Assignment {
     id: number;
@@ -52,6 +75,7 @@ interface Assignment {
         id: number;
         name: string;
     }[];
+    group: AssignmentGroup | null;
     submission: {
         submitted: boolean;
         status: string;
@@ -59,6 +83,8 @@ interface Assignment {
         file_path: string | null;
         file_url: string | null;
         submitted_at: string | null;
+        submitted_by: number | null;
+        submitted_by_name: string | null;
         points: number | string | null;
         xp_earned: number | string | null;
         feedback: string | null;
@@ -630,6 +656,170 @@ const submitAssignment = () => {
     });
 };
 
+// ─── Group Activity (shared submission) ─────────────────────────────────────
+const page = usePage();
+const currentUserId = computed<number | null>(
+    () => (page.props.auth?.user as { id?: number } | null)?.id ?? null,
+);
+
+/** A graded group is locked: no add/remove/leave/resubmit. */
+const isGroupLocked = (assignment: Assignment) =>
+    isGraded(assignment.submission);
+
+const isGroupCreator = (assignment: Assignment) =>
+    assignment.group?.created_by === currentUserId.value;
+
+const groupMembers = (assignment: Assignment) =>
+    assignment.group?.members ?? [];
+
+const groupMemberNames = (assignment: Assignment) =>
+    groupMembers(assignment)
+        .map((m) => m.name ?? 'A member')
+        .join(', ');
+
+const initials = (name: string | null | undefined) =>
+    (name ?? '?')
+        .split(' ')
+        .filter(Boolean)
+        .map((part) => part[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+
+// ── Create / add / remove / leave ───────────────────────────────────────────
+const groupActionLoading = ref(false);
+
+const createGroup = (assignment: Assignment) => {
+    if (groupActionLoading.value || isGroupLocked(assignment)) return;
+    groupActionLoading.value = true;
+    router.post(
+        `/assignments/${assignment.id}/groups`,
+        {},
+        {
+            preserveScroll: true,
+            onFinish: () => (groupActionLoading.value = false),
+        },
+    );
+};
+
+// Confirmation modal state: member = null means "leave by yourself".
+const groupConfirm = ref<{
+    assignment: Assignment;
+    member: GroupMember | null;
+} | null>(null);
+
+const requestRemoveMember = (assignment: Assignment, member: GroupMember) => {
+    if (groupActionLoading.value || isGroupLocked(assignment)) return;
+    groupConfirm.value = { assignment, member };
+};
+
+const requestLeaveGroup = (assignment: Assignment) => {
+    if (groupActionLoading.value || isGroupLocked(assignment)) return;
+    groupConfirm.value = { assignment, member: null };
+};
+
+const confirmGroupAction = () => {
+    const pending = groupConfirm.value;
+    if (!pending || groupActionLoading.value) return;
+
+    const memberId = pending.member?.id ?? currentUserId.value;
+    if (memberId == null) return;
+
+    groupActionLoading.value = true;
+    router.delete(
+        `/assignments/${pending.assignment.id}/groups/members/${memberId}`,
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                groupConfirm.value = null;
+            },
+            onFinish: () => (groupActionLoading.value = false),
+        },
+    );
+};
+
+// ── Add-member modal (candidate search) ─────────────────────────────────────
+const showGroupModal = ref(false);
+const groupAssignmentId = ref<number | null>(null);
+const groupSearchQuery = ref('');
+const groupCandidates = ref<GroupCandidate[]>([]);
+const groupSearching = ref(false);
+const groupError = ref<string | null>(null);
+
+const groupAssignment = computed(
+    () =>
+        props.assignments.find((a) => a.id === groupAssignmentId.value) ?? null,
+);
+
+const openGroupModal = (assignment: Assignment) => {
+    groupError.value = null;
+    groupSearchQuery.value = '';
+    groupCandidates.value = [];
+    groupAssignmentId.value = assignment.id;
+    showGroupModal.value = true;
+    searchGroupCandidates();
+};
+
+const closeGroupModal = () => {
+    showGroupModal.value = false;
+    groupAssignmentId.value = null;
+};
+
+let groupSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const searchGroupCandidates = () => {
+    const assignmentId = groupAssignmentId.value;
+    if (!assignmentId) return;
+
+    groupSearching.value = true;
+    groupError.value = null;
+
+    axios
+        .get(`/assignments/${assignmentId}/groups/candidates`, {
+            params: {
+                q: groupSearchQuery.value.trim() || undefined,
+            },
+        })
+        .then((res) => {
+            groupCandidates.value = res.data.candidates ?? [];
+        })
+        .catch(() => {
+            groupError.value = 'Could not load classmates. Please try again.';
+        })
+        .finally(() => {
+            groupSearching.value = false;
+        });
+};
+
+watch(groupSearchQuery, () => {
+    if (groupSearchTimer) clearTimeout(groupSearchTimer);
+    groupSearchTimer = setTimeout(searchGroupCandidates, 300);
+});
+
+const addGroupMember = (candidate: GroupCandidate) => {
+    const assignmentId = groupAssignmentId.value;
+    if (!assignmentId || groupActionLoading.value) return;
+
+    groupActionLoading.value = true;
+    groupError.value = null;
+
+    router.post(
+        `/assignments/${assignmentId}/groups/members`,
+        { user_id: candidate.id },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                closeGroupModal();
+            },
+            onError: () => {
+                groupError.value =
+                    'Could not add this member. They may already be in a group.';
+            },
+            onFinish: () => (groupActionLoading.value = false),
+        },
+    );
+};
+
 // ─── Animations ─────────────────────────────────────────────────────────────
 let animationContext: ReturnType<typeof gsap.context> | null = null;
 
@@ -1163,6 +1353,149 @@ onMounted(() => {
                                 {{ assignment.title }}
                             </h2>
 
+                            <!-- Group Activity Section: student-formed groups share
+                                 one submission file. Read-only once graded. -->
+                            <div
+                                v-if="
+                                    assignment.group ||
+                                    !isGroupLocked(assignment)
+                                "
+                                class="rounded-xl border border-primary/15 bg-primary/[0.04] p-2.5"
+                            >
+                                <div
+                                    class="flex flex-wrap items-center gap-1.5"
+                                >
+                                    <Users
+                                        class="h-3.5 w-3.5 shrink-0 text-primary"
+                                    />
+                                    <span
+                                        class="text-[10px] font-bold tracking-wide text-foreground/70 uppercase sm:text-[11px]"
+                                    >
+                                        Group
+                                    </span>
+
+                                    <template v-if="assignment.group">
+                                        <span
+                                            v-for="member in groupMembers(
+                                                assignment,
+                                            )"
+                                            :key="member.id"
+                                            class="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card py-0.5 pr-1.5 pl-0.5 text-[11px] font-medium text-foreground"
+                                        >
+                                            <Avatar class="size-5">
+                                                <AvatarImage
+                                                    v-if="member.avatar"
+                                                    :src="member.avatar"
+                                                    :alt="
+                                                        member.name ??
+                                                        'Group member'
+                                                    "
+                                                />
+                                                <AvatarFallback
+                                                    class="bg-primary/10 text-[8px] font-bold text-primary"
+                                                >
+                                                    {{ initials(member.name) }}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <span
+                                                class="max-w-24 truncate sm:max-w-32"
+                                                >{{ member.name }}</span
+                                            >
+                                            <span
+                                                v-if="
+                                                    member.id ===
+                                                    assignment.group.created_by
+                                                "
+                                                class="hidden text-[9px] font-semibold text-primary sm:inline"
+                                            >
+                                                creator
+                                            </span>
+                                            <button
+                                                v-if="
+                                                    !isGroupLocked(
+                                                        assignment,
+                                                    ) &&
+                                                    isGroupCreator(
+                                                        assignment,
+                                                    ) &&
+                                                    member.id !== currentUserId
+                                                "
+                                                type="button"
+                                                class="flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                                :title="`Remove ${member.name}`"
+                                                :aria-label="`Remove ${member.name}`"
+                                                @click="
+                                                    requestRemoveMember(
+                                                        assignment,
+                                                        member,
+                                                    )
+                                                "
+                                            >
+                                                <X class="h-3 w-3" />
+                                            </button>
+                                        </span>
+                                        <span
+                                            class="text-[10px] text-muted-foreground"
+                                        >
+                                            {{
+                                                groupMembers(assignment).length
+                                            }}
+                                            member{{
+                                                groupMembers(assignment)
+                                                    .length === 1
+                                                    ? ''
+                                                    : 's'
+                                            }}
+                                        </span>
+                                    </template>
+                                </div>
+
+                                <!-- Group actions (locked once graded) -->
+                                <div
+                                    v-if="!isGroupLocked(assignment)"
+                                    class="mt-1.5 flex flex-wrap items-center gap-1.5"
+                                >
+                                    <button
+                                        v-if="!assignment.group"
+                                        type="button"
+                                        class="inline-flex h-6 items-center gap-1 rounded-full bg-primary/10 px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
+                                        :disabled="groupActionLoading"
+                                        @click="createGroup(assignment)"
+                                    >
+                                        <Loader2
+                                            v-if="groupActionLoading"
+                                            class="h-3 w-3 animate-spin"
+                                        />
+                                        <UserPlus v-else class="h-3 w-3" />
+                                        <span>Create group</span>
+                                    </button>
+                                    <template v-else>
+                                        <button
+                                            v-if="isGroupCreator(assignment)"
+                                            type="button"
+                                            class="inline-flex h-6 items-center gap-1 rounded-full bg-primary/10 px-2.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/15"
+                                            :disabled="groupActionLoading"
+                                            @click="openGroupModal(assignment)"
+                                        >
+                                            <UserPlus class="h-3 w-3" />
+                                            <span>Add member</span>
+                                        </button>
+                                        <button
+                                            v-else
+                                            type="button"
+                                            class="inline-flex h-6 items-center gap-1 rounded-full border border-border/60 bg-card px-2.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
+                                            :disabled="groupActionLoading"
+                                            @click="
+                                                requestLeaveGroup(assignment)
+                                            "
+                                        >
+                                            <LogOut class="h-3 w-3" />
+                                            <span>Leave group</span>
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+
                             <!-- Submitted File Block: only when there's a submission.
                                  Collapsed by default — students tap "View grade"
                                  to see file, points, feedback, etc. -->
@@ -1302,6 +1635,18 @@ onMounted(() => {
                                                             .submitted_at,
                                                     )
                                                 }}
+                                                <span
+                                                    v-if="
+                                                        assignment.submission
+                                                            .submitted_by_name
+                                                    "
+                                                >
+                                                    · Submitted by
+                                                    {{
+                                                        assignment.submission
+                                                            .submitted_by_name
+                                                    }}
+                                                </span>
                                             </p>
 
                                             <!-- Grade / Points / XP Pills -->
@@ -1636,6 +1981,31 @@ onMounted(() => {
                     </p>
                 </div>
 
+                <!-- Group Share Note -->
+                <div
+                    v-if="selectedAssignment?.group"
+                    class="rounded-xl border border-primary/20 bg-primary/5 p-3.5"
+                >
+                    <p
+                        class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
+                    >
+                        <Users class="h-3.5 w-3.5 text-primary" />
+                        Group submission —
+                        {{ groupMembers(selectedAssignment).length }}
+                        member{{
+                            groupMembers(selectedAssignment).length === 1
+                                ? ''
+                                : 's'
+                        }}
+                    </p>
+                    <p
+                        class="mt-1 text-[11px] leading-relaxed text-muted-foreground"
+                    >
+                        The file you upload will be shared with everyone in your
+                        group: {{ groupMemberNames(selectedAssignment) }}
+                    </p>
+                </div>
+
                 <!-- Drag & Drop Upload Zone -->
                 <div class="space-y-2">
                     <label class="text-xs font-semibold text-foreground">
@@ -1787,6 +2157,220 @@ onMounted(() => {
                             form.processing
                                 ? 'Submitting...'
                                 : 'Submit assignment'
+                        }}</span>
+                    </Button>
+                </div>
+            </template>
+        </ResponsiveModal>
+
+        <!-- Add Group Member Modal -->
+        <ResponsiveModal
+            :open="showGroupModal"
+            custom-header
+            content-class="sm:max-w-md"
+            @close="closeGroupModal"
+        >
+            <template #header>
+                <div class="space-y-1">
+                    <span class="text-xs font-medium text-[#D97757]">
+                        Group activity
+                    </span>
+                    <h2 class="text-lg font-bold text-foreground">
+                        Add member
+                    </h2>
+                    <p class="text-xs text-muted-foreground">
+                        {{
+                            groupAssignment?.title
+                                ? `Group for: ${groupAssignment.title}`
+                                : 'Add classmates to your group'
+                        }}
+                    </p>
+                </div>
+            </template>
+
+            <div class="space-y-3 pt-2">
+                <!-- Search input -->
+                <div class="relative">
+                    <Search
+                        class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
+                        aria-hidden="true"
+                    />
+                    <Input
+                        v-model="groupSearchQuery"
+                        placeholder="Search classmates by name..."
+                        class="h-10 rounded-xl pl-10"
+                    />
+                </div>
+
+                <!-- Results -->
+                <div
+                    v-if="groupSearching"
+                    class="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground"
+                >
+                    <Loader2 class="h-4 w-4 animate-spin text-[#D97757]" />
+                    Searching...
+                </div>
+
+                <div
+                    v-else-if="groupError"
+                    class="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-xs text-destructive"
+                >
+                    <AlertTriangle class="h-4 w-4 shrink-0" />
+                    <span>{{ groupError }}</span>
+                </div>
+
+                <div
+                    v-else-if="groupCandidates.length === 0"
+                    class="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center"
+                >
+                    <div
+                        class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-muted/50 text-muted-foreground"
+                    >
+                        <Users class="h-5 w-5" />
+                    </div>
+                    <p class="text-sm font-semibold text-foreground">
+                        No classmates available
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Everyone in your sections who can join this group has
+                        already joined. Try a different search.
+                    </p>
+                </div>
+
+                <div
+                    v-else
+                    class="no-scrollbar max-h-72 space-y-1.5 overflow-y-auto pr-1"
+                >
+                    <button
+                        v-for="candidate in groupCandidates"
+                        :key="candidate.id"
+                        type="button"
+                        class="flex w-full items-center gap-2.5 rounded-xl border border-border/60 bg-card p-2.5 text-left transition-colors hover:bg-muted/40 active:scale-[0.99]"
+                        :disabled="groupActionLoading"
+                        @click="addGroupMember(candidate)"
+                    >
+                        <Avatar class="size-8">
+                            <AvatarImage
+                                v-if="candidate.avatar"
+                                :src="candidate.avatar"
+                                :alt="candidate.name"
+                            />
+                            <AvatarFallback
+                                class="bg-primary/10 text-[10px] font-bold text-primary"
+                            >
+                                {{ initials(candidate.name) }}
+                            </AvatarFallback>
+                        </Avatar>
+                        <div class="min-w-0 flex-1">
+                            <p
+                                class="truncate text-sm font-semibold text-foreground"
+                            >
+                                {{ candidate.name }}
+                            </p>
+                            <p
+                                v-if="candidate.sections.length"
+                                class="truncate text-[11px] text-muted-foreground"
+                            >
+                                {{ candidate.sections.join(', ') }}
+                            </p>
+                        </div>
+                        <span
+                            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        >
+                            <UserPlus class="h-3.5 w-3.5" />
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <template #footer>
+                <div class="flex w-full justify-end">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="dash-btn w-full rounded-xl sm:w-auto"
+                        :disabled="groupActionLoading"
+                        @click="closeGroupModal"
+                    >
+                        Close
+                    </Button>
+                </div>
+            </template>
+        </ResponsiveModal>
+
+        <!-- Remove member / Leave group confirmation -->
+        <ResponsiveModal
+            :open="!!groupConfirm"
+            custom-header
+            content-class="sm:max-w-md"
+            @close="groupConfirm = null"
+        >
+            <template #header>
+                <div class="space-y-1">
+                    <span class="text-xs font-medium text-[#D97757]">
+                        Group activity
+                    </span>
+                    <h2 class="text-lg font-bold text-foreground">
+                        {{
+                            groupConfirm?.member
+                                ? 'Remove member?'
+                                : 'Leave group?'
+                        }}
+                    </h2>
+                </div>
+            </template>
+
+            <div class="pt-2">
+                <p class="text-sm leading-relaxed text-muted-foreground">
+                    <template v-if="groupConfirm?.member">
+                        Remove
+                        <span class="font-semibold text-foreground">{{
+                            groupConfirm.member.name
+                        }}</span>
+                        from the group for
+                        <span class="font-semibold text-foreground">{{
+                            groupConfirm.assignment.title
+                        }}</span
+                        >? They will no longer see the submitted file.
+                    </template>
+                    <template v-else>
+                        Leave the group for
+                        <span class="font-semibold text-foreground">{{
+                            groupConfirm?.assignment.title
+                        }}</span
+                        >? Your submission file will be removed from your
+                        assignment and you will no longer see the group's file.
+                    </template>
+                </p>
+            </div>
+
+            <template #footer>
+                <div
+                    class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                >
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="dash-btn w-full rounded-xl sm:w-auto"
+                        :disabled="groupActionLoading"
+                        @click="groupConfirm = null"
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        class="dash-btn w-full rounded-xl bg-destructive text-white hover:bg-destructive/90 sm:w-auto"
+                        :disabled="groupActionLoading"
+                        @click="confirmGroupAction"
+                    >
+                        <Loader2
+                            v-if="groupActionLoading"
+                            class="h-4 w-4 animate-spin"
+                        />
+                        <span>{{
+                            groupConfirm?.member
+                                ? 'Remove member'
+                                : 'Leave group'
                         }}</span>
                     </Button>
                 </div>

@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 class Assignment extends Model
@@ -36,12 +37,20 @@ class Assignment extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('submitted', 'status', 'grade', 'file_path', 'submitted_at', 'points', 'xp_earned', 'feedback', 'graded_at', 'graded_by')->withTimestamps();
+        return $this->belongsToMany(User::class)->withPivot('submitted', 'status', 'grade', 'file_path', 'submitted_at', 'points', 'xp_earned', 'feedback', 'graded_at', 'graded_by', 'group_id', 'submitted_by')->withTimestamps();
     }
 
     public function submissions()
     {
         return $this->hasMany(Submission::class);
+    }
+
+    /**
+     * Student-formed groups for this assignment (group activities).
+     */
+    public function groups(): HasMany
+    {
+        return $this->hasMany(AssignmentGroup::class);
     }
 
     /**
