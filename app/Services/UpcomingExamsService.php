@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ExamStatus;
 use App\Models\Exam;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -17,16 +18,21 @@ use Illuminate\Support\Collection;
 class UpcomingExamsService
 {
     /**
-     * Get upcoming exams for the user, scoped to the given section IDs.
+     * Get open exams for the user, scoped to the given section IDs.
+     *
+     * Only published exams are returned. Closed exams no longer accept
+     * submissions, so they must not appear as Today / Overdue / Next 24h /
+     * Next exam work. They would also occupy the result limit and hide
+     * exams the student can still take.
      *
      * @param  Collection<int>  $sectionIds
-     * @return Collection<int, array>
+     * @return Collection<int, array<string, mixed>>
      */
     public function forUser(User $user, Collection $sectionIds, int $limit = 3): Collection
     {
         $exams = Exam::withCount(['parts'])
             ->withCount(['submissions as submitted_parts' => fn ($q) => $q->where('user_id', $user->id)])
-            ->where('status', '!=', 'draft')
+            ->where('status', ExamStatus::Published)
             ->when(! $user->is_admin, function ($query) use ($sectionIds) {
                 $query->where(function ($q) use ($sectionIds) {
                     $q->whereNull('section_id')

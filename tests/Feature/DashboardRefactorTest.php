@@ -257,6 +257,26 @@ it('hides draft exams', function () {
     expect($exams)->toBeEmpty();
 });
 
+it('hides closed exams so they cannot appear as overdue or next-up', function () {
+    [$user, $section] = dashboardContext();
+
+    Exam::factory()->closed()->forSection($section)->create([
+        'exam_date' => now()->subDay(),
+        'title' => 'Closed Midterm',
+    ]);
+    $open = Exam::factory()->published()->forSection($section)->create([
+        'exam_date' => now()->addDay(),
+        'title' => 'Open Quiz',
+    ]);
+
+    $exams = app(UpcomingExamsService::class)->forUser($user, collect([$section->id]));
+
+    expect($exams)->toHaveCount(1)
+        ->and($exams[0]['id'])->toBe($open->id)
+        ->and($exams[0]['status'])->toBe(ExamStatus::Published->value)
+        ->and($exams->pluck('title'))->not->toContain('Closed Midterm');
+});
+
 // ─────────────────────────────────────────────
 //  Phase 4 — enums
 // ─────────────────────────────────────────────
