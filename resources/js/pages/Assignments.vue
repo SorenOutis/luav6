@@ -20,7 +20,6 @@ import {
     TrendingUp,
     RotateCcw,
     Eye,
-    Image as ImageIcon,
     Award,
     Zap,
     MessageSquareText,
@@ -683,11 +682,13 @@ onMounted(() => {
                 <div
                     class="mb-6 h-10 w-full animate-pulse rounded-xl bg-muted/40"
                 />
-                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div
+                    class="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3"
+                >
                     <div
-                        v-for="i in 4"
+                        v-for="i in 6"
                         :key="i"
-                        class="h-48 animate-pulse rounded-2xl border border-border/50 bg-card/40"
+                        class="h-36 animate-pulse rounded-2xl border border-border/50 bg-card/40"
                     />
                 </div>
             </div>
@@ -1081,15 +1082,15 @@ onMounted(() => {
                 <div data-tour="assignments-grid" class="animate-section">
                     <div
                         v-if="filteredAssignments.length > 0"
-                        class="grid grid-cols-1 gap-4 lg:grid-cols-2"
+                        class="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3"
                     >
                         <Card
                             v-for="assignment in filteredAssignments"
                             :key="assignment.id"
-                            class="surface-card group flex flex-col justify-between overflow-hidden p-4 transition-all duration-300 hover:shadow-md sm:p-5.5"
+                            class="surface-card group flex flex-col gap-3 overflow-hidden p-3.5 py-3.5 transition-all duration-300 hover:shadow-md sm:p-4 sm:py-4"
                             :class="getCardBorderClass(assignment)"
                         >
-                            <div class="space-y-3 sm:space-y-3.5">
+                            <div class="space-y-2.5">
                                 <!-- Top Row: Course + Status Badge + Relative Due Text -->
                                 <div
                                     class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
@@ -1179,18 +1180,13 @@ onMounted(() => {
                                 <!-- Assignment Title -->
                                 <div>
                                     <h2
-                                        class="text-[16px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[19px]"
+                                        class="line-clamp-2 text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[16px]"
                                     >
                                         {{ assignment.title }}
                                     </h2>
 
                                     <p
-                                        class="mt-1.5 text-[13px] leading-relaxed text-muted-foreground sm:text-sm"
-                                        :class="{
-                                            'line-clamp-3 sm:line-clamp-3':
-                                                assignment.description?.length >
-                                                160,
-                                        }"
+                                        class="mt-1 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground sm:text-[13px]"
                                     >
                                         {{
                                             assignment.description ||
@@ -1202,13 +1198,13 @@ onMounted(() => {
                                 <!-- Submitted File CARD with Preview + Points + Feedback - MOBILE OPTIMIZED -->
                                 <div
                                     v-if="assignment.submission?.submitted"
-                                    class="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-3 shadow-xs sm:p-3.5"
+                                    class="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-2.5 shadow-xs"
                                 >
-                                    <!-- File Preview Row - Stack on mobile, side by side on sm -->
-                                    <div class="flex gap-2.5 sm:gap-3">
-                                        <!-- Thumbnail Preview - Responsive size -->
+                                    <!-- File Preview Row -->
+                                    <div class="flex gap-2.5">
+                                        <!-- Thumbnail Preview -->
                                         <div
-                                            class="relative flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/50 bg-card shadow-sm sm:h-[80px] sm:w-[80px]"
+                                            class="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/50 bg-card shadow-sm"
                                         >
                                             <!-- Image Preview -->
                                             <img
@@ -1243,18 +1239,14 @@ onMounted(() => {
                                                 "
                                                 class="flex h-full w-full flex-col items-center justify-center gap-1 bg-red-500/10 text-red-600 dark:text-red-400"
                                             >
-                                                <FileText
-                                                    class="h-6 w-6 sm:h-7 sm:w-7"
-                                                />
+                                                <FileText class="h-5 w-5" />
                                             </div>
                                             <!-- Generic Doc Icon -->
                                             <div
                                                 v-else
                                                 class="flex h-full w-full flex-col items-center justify-center gap-1 bg-primary/10 text-primary"
                                             >
-                                                <FileText
-                                                    class="h-6 w-6 sm:h-7 sm:w-7"
-                                                />
+                                                <FileText class="h-5 w-5" />
                                             </div>
 
                                             <!-- Extension Badge -->
@@ -1369,49 +1361,7 @@ onMounted(() => {
                                         </div>
                                     </div>
 
-                                    <!-- Image Large Preview on Mobile (if image file) - Tappable to expand -->
-                                    <a
-                                        v-if="
-                                            isImageFile(
-                                                assignment.submission
-                                                    .file_extension,
-                                            ) && assignment.submission.file_url
-                                        "
-                                        :href="assignment.submission.file_url"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="group relative block overflow-hidden rounded-xl border border-border/50 bg-card active:scale-[0.99] sm:hidden"
-                                    >
-                                        <img
-                                            :src="
-                                                assignment.submission.file_url
-                                            "
-                                            :alt="
-                                                getFileName(
-                                                    assignment.submission
-                                                        .file_path,
-                                                )
-                                            "
-                                            class="max-h-[240px] w-full object-cover object-center transition-transform group-active:scale-[1.02]"
-                                            loading="lazy"
-                                        />
-                                        <div
-                                            class="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all group-hover:bg-black/10 group-hover:opacity-100"
-                                        >
-                                            <div
-                                                class="rounded-full bg-black/60 p-2.5 text-white backdrop-blur-sm"
-                                            >
-                                                <Eye class="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                        <div
-                                            class="absolute right-2 bottom-2 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-white backdrop-blur-sm"
-                                        >
-                                            Tap to expand
-                                        </div>
-                                    </a>
-
-                                    <!-- Feedback Card - Mobile optimized -->
+                                    <!-- Feedback Card -->
                                     <div
                                         v-if="assignment.submission.feedback"
                                         class="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.07] p-3 sm:p-3"
@@ -1508,26 +1458,13 @@ onMounted(() => {
                                             />
                                             <span>Download</span>
                                         </a>
-                                        <!-- Full width indicator on mobile, inline on desktop -->
-                                        <span
-                                            v-if="
-                                                isImageFile(
-                                                    assignment.submission
-                                                        .file_extension,
-                                                )
-                                            "
-                                            class="col-span-2 inline-flex h-8 items-center justify-center gap-1.5 rounded-xl bg-muted px-2.5 text-[11px] text-muted-foreground sm:col-span-1 sm:h-9"
-                                        >
-                                            <ImageIcon class="h-3.5 w-3.5" />
-                                            Tap image to expand preview
-                                        </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Card Action Footer - Stack on mobile for better touch -->
+                            <!-- Card Action Footer -->
                             <div
-                                class="mt-4 flex flex-col gap-3 border-t border-border/50 pt-3.5 sm:mt-5 sm:flex-row sm:items-center sm:justify-between"
+                                class="mt-1 flex flex-col gap-2 border-t border-border/50 pt-2.5 sm:flex-row sm:items-center sm:justify-between"
                             >
                                 <div
                                     class="text-[11px] text-muted-foreground sm:text-xs"
