@@ -188,9 +188,13 @@ class AssignmentInviteService
 
         if ($additional > $open) {
             $open = max($open, 0);
-            abort(422, $open === 0
-                ? "Your group is full (max {$max} members)."
-                : "Only {$open} more invite{$open === 1 ? '' : 's'} fit — the limit is {$max} members.");
+
+            if ($open === 0) {
+                abort(422, "Your group is full (max {$max} members).");
+            }
+
+            $plural = $open === 1 ? '' : 's';
+            abort(422, "Only {$open} more invite{$plural} fit — the limit is {$max} members.");
         }
     }
 
