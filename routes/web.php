@@ -24,6 +24,7 @@ use App\Http\Controllers\Games\TowerDefenseController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
+use App\Http\Controllers\LeaveImpersonationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PendingAiActionController;
 use App\Http\Controllers\ProfileKudoController;
@@ -86,6 +87,8 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', DashboardController::class)
         ->middleware('student.page:dashboard')
         ->name('dashboard');
+
+    Route::get('impersonation/leave', LeaveImpersonationController::class);
 
     Route::get('leaderboard', LeaderboardPageController::class)
         ->middleware('student.page:leaderboard')

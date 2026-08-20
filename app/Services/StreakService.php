@@ -30,6 +30,10 @@ class StreakService
      */
     public function touch(User $user): void
     {
+        if (session()->has('impersonated_by')) {
+            return;
+        }
+
         $now = now();
         $lastLogin = $user->last_login_at;
 

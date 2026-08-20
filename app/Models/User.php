@@ -50,6 +50,35 @@ class User extends Authenticatable implements FilamentUser
         return (bool) ($this->is_admin || $this->is_super_admin);
     }
 
+    public function canImpersonate(): bool
+    {
+        return (bool) ($this->is_admin || $this->is_super_admin);
+    }
+
+    public function canBeImpersonated(): bool
+    {
+        if ($this->is_admin || $this->is_banned) {
+            return false;
+        }
+
+        $actor = auth()->user();
+
+        if (! $actor instanceof self || $actor->is($this) || ! $actor->canImpersonate()) {
+            return false;
+        }
+
+        if ($actor->isSuperAdmin()) {
+            return true;
+        }
+
+        $workspaceId = app(WorkspaceContext::class)->id();
+
+        return $this->sections()
+            ->when($workspaceId, fn ($query) => $query->where('sections.workspace_id', $workspaceId))
+            ->when(! $workspaceId, fn ($query) => $query->whereNull('sections.workspace_id'))
+            ->exists();
+    }
+
     protected $fillable = [
         'name',
         'first_name',
