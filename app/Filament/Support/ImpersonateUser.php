@@ -11,6 +11,8 @@ final class ImpersonateUser
     public static function action(?Model $record = null): Impersonate
     {
         $action = Impersonate::make()
+            ->label('Impersonate')
+            ->icon('heroicon-o-finger-print')
             ->redirectTo(fn (): string => route('dashboard'))
             ->backTo(fn (): string => UserResource::getUrl('index'))
             ->withoutSpa();

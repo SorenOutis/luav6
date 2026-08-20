@@ -88,6 +88,8 @@
     </head>
     <body class="font-sans antialiased">
         @inertia
-        <x-impersonate::banner/>
+        @if (view()->exists('impersonate::components.banner'))
+            @include('impersonate::components.banner')
+        @endif
     </body>
 </html>
