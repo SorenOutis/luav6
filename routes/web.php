@@ -14,6 +14,7 @@ use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AssignmentGroupController;
 use App\Http\Controllers\AssignmentInviteController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
 use App\Http\Controllers\CourseController;
@@ -89,6 +90,10 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::get('dashboard', DashboardController::class)
         ->middleware('student.page:dashboard')
         ->name('dashboard');
+
+    Route::get('calendar', CalendarController::class)
+        ->middleware('student.page:calendar')
+        ->name('calendar');
 
     Route::get('impersonation/leave', LeaveImpersonationController::class);
 

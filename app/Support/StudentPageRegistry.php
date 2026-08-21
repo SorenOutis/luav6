@@ -37,6 +37,11 @@ class StudentPageRegistry
                 'path' => '/exams',
                 'description' => 'Published exams, activity list, exam taking, and submissions.',
             ],
+            'calendar' => [
+                'label' => 'Calendar',
+                'path' => '/calendar',
+                'description' => 'Monthly calendar of exams, assignment deadlines, and season ranges.',
+            ],
             'games' => [
                 'label' => 'Games',
                 'path' => '/games',
