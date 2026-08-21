@@ -6,19 +6,21 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AssignmentRosterService;
+use App\Support\WorkspaceContext;
+use Illuminate\Support\Facades\DB;
 
 function diag_probe(string $label, $assignment, $member): array
 {
     return [
         'label' => $label,
-        'raw_rows' => Illuminate\Support\Facades\DB::table('assignment_group_invites')->count(),
+        'raw_rows' => DB::table('assignment_group_invites')->count(),
         'scoped_pending_for_member' => AssignmentGroupInvite::query()
             ->where('assignment_id', $assignment->id)
             ->where('invitee_id', $member->id)
             ->where('status', 'pending')
             ->count(),
         'auth_id' => auth()->id(),
-        'context' => app(App\Support\WorkspaceContext::class)->id(),
+        'context' => app(WorkspaceContext::class)->id(),
     ];
 }
 
@@ -41,7 +43,7 @@ it('diagnoses invite visibility on ci', function () {
     $r1 = $this->actingAs($creator)->post("/assignments/{$t1->id}/invites", [
         'user_ids' => [$member->id, $other->id],
     ]);
-    $t1Rows = Illuminate\Support\Facades\DB::table('assignment_group_invites')->get();
+    $t1Rows = DB::table('assignment_group_invites')->get();
 
     // ── T2-equivalent: new assignment, one invite, then respond helper query ──
     $t2 = Assignment::create(['title' => 'T2 task', 'due_date' => now()->addWeek()]);
