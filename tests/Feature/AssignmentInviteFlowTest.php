@@ -40,17 +40,36 @@ function makeInviteAssignment(array $attributes = []): Assignment
 
 function sendInvites(User $inviter, Assignment $assignment, array $userIds)
 {
-    return test()->actingAs($inviter)
+    $response = test()->actingAs($inviter)
         ->post(route('assignments.invites.store', $assignment), ['user_ids' => $userIds]);
+
+    $GLOBALS['__diag_last_post'] = [
+        'status' => $response->getStatusCode(),
+        'errors' => $response->getSession()?->get('errors')?->keys() ?? [],
+        'sent_ids' => $userIds,
+    ];
+
+    return $response;
 }
 
 function pendingInviteFor(User $invitee, Assignment $assignment): AssignmentGroupInvite
 {
-    return AssignmentGroupInvite::query()
-        ->where('assignment_id', $assignment->id)
-        ->where('invitee_id', $invitee->id)
-        ->where('status', 'pending')
-        ->firstOrFail();
+    try {
+        return AssignmentGroupInvite::query()
+            ->where('assignment_id', $assignment->id)
+            ->where('invitee_id', $invitee->id)
+            ->where('status', 'pending')
+            ->firstOrFail();
+    } catch (Throwable $e) {
+        $diag = [
+            'last_post' => $GLOBALS['__diag_last_post'] ?? null,
+            'invitee_id' => $invitee->id,
+            'invitee_exists' => DB::table('users')->whereKey($invitee->id)->exists(),
+            'assignment_id' => $assignment->id,
+            'raw_rows' => DB::table('assignment_group_invites')->get()->map(fn ($r) => [$r->id, $r->assignment_id, $r->invitee_id, $r->status])->all(),
+        ];
+        throw new RuntimeException('DIAG '.$e->getMessage().' | '.json_encode($diag));
+    }
 }
 
 function respondToInvite(User $invitee, Assignment $assignment, string $action)
