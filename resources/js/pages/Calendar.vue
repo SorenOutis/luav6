@@ -10,6 +10,8 @@ import {
     GraduationCap,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import CalendarEventCard from '@/components/calendar/CalendarEventCard.vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
 import Card from '@/components/ui/card/Card.vue';
@@ -18,30 +20,18 @@ import CardDescription from '@/components/ui/card/CardDescription.vue';
 import CardHeader from '@/components/ui/card/CardHeader.vue';
 import CardTitle from '@/components/ui/card/CardTitle.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import {
+    addMonths,
+    eventMeta,
+    formatDayLabel,
+    formatMonthLabel,
+    formatShortDate,
+    isEventDone,
+    parseKey,
+    toKey,
+} from '@/lib/calendar';
 import type { BreadcrumbItem } from '@/types';
-
-interface CalendarEvent {
-    type: 'exam' | 'assignment';
-    id: number;
-    title: string;
-    dateKey: string;
-    sectionName?: string | null;
-    courseName?: string | null;
-    durationMinutes?: number;
-    status?: string;
-    submitted?: boolean;
-    isOverdue?: boolean;
-    isCompleted?: boolean;
-    href: string;
-}
-
-interface CalendarSeason {
-    id: number;
-    name: string;
-    startDateKey: string;
-    endDateKey: string | null;
-    isActive: boolean;
-}
+import type { CalendarEvent, CalendarSeason } from '@/types/calendar';
 
 const props = defineProps<{
     events: CalendarEvent[];
@@ -54,48 +44,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Calendar', href: '/calendar' },
 ];
 
-// ─── Date-key helpers (UTC on Y-m-d strings) ────────────────────────────────
-// Every bucketing decision runs on server-supplied Y-m-d keys instead of
-// parsing ISO timestamps, so SSR and client hydration always agree and the
-// dates match the ones the dashboard formats server-side.
-
-const pad = (value: number) => String(value).padStart(2, '0');
-
-const parseKey = (key: string) => {
-    const [year, month, day] = key.split('-').map(Number);
-
-    return new Date(Date.UTC(year, month - 1, day));
-};
+const MS_PER_DAY = 86_400_000;
 
 const dayNumberOf = (key: string) => parseKey(key).getUTCDate();
-
-const addMonths = (key: string, delta: number) => {
-    const date = parseKey(`${key.slice(0, 7)}-01`);
-    date.setUTCMonth(date.getUTCMonth() + delta);
-
-    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-01`;
-};
-
-const dayDiffFromToday = (key: string) =>
-    Math.round(
-        (parseKey(key).getTime() - parseKey(props.todayKey).getTime()) /
-            86_400_000,
-    );
-
-const formatDayLabel = (key: string) =>
-    parseKey(key).toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'UTC',
-    });
-
-const formatShortDate = (key: string) =>
-    parseKey(key).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        timeZone: 'UTC',
-    });
 
 // ─── Month grid ─────────────────────────────────────────────────────────────
 
@@ -106,25 +57,17 @@ const isCurrentMonth = computed(
     () => monthAnchor.value === props.todayKey.slice(0, 7),
 );
 
-const monthLabel = computed(() =>
-    parseKey(`${monthAnchor.value}-01`).toLocaleDateString('en-US', {
-        month: 'long',
-        year: 'numeric',
-        timeZone: 'UTC',
-    }),
-);
+const monthLabel = computed(() => formatMonthLabel(monthAnchor.value));
 
 const gridDays = computed(() => {
     const firstOfMonth = parseKey(`${monthAnchor.value}-01`);
     const start = new Date(
-        firstOfMonth.getTime() - firstOfMonth.getUTCDay() * 86_400_000,
+        firstOfMonth.getTime() - firstOfMonth.getUTCDay() * MS_PER_DAY,
     );
 
-    return Array.from({ length: 42 }, (_, index) => {
-        const day = new Date(start.getTime() + index * 86_400_000);
-
-        return `${day.getUTCFullYear()}-${pad(day.getUTCMonth() + 1)}-${pad(day.getUTCDate())}`;
-    });
+    return Array.from({ length: 42 }, (_, index) =>
+        toKey(new Date(start.getTime() + index * MS_PER_DAY)),
+    );
 });
 
 // ─── Filters ────────────────────────────────────────────────────────────────
@@ -139,7 +82,7 @@ const visibleEvents = computed(() =>
             return false;
         }
 
-        return !(hideSubmitted.value && (event.submitted || event.isCompleted));
+        return !isEventDone(event) ? true : !hideSubmitted.value;
     }),
 );
 
@@ -158,6 +101,8 @@ const eventsByDay = computed(() => {
 
     return byDay;
 });
+
+const eventsOn = (dayKey: string) => eventsByDay.value.get(dayKey) ?? [];
 
 const monthEvents = computed(() =>
     visibleEvents.value.filter(
@@ -193,6 +138,33 @@ const seasonRangeLabel = (season: CalendarSeason) =>
         ? `${formatShortDate(season.startDateKey)} – ${formatShortDate(season.endDateKey)}`
         : `Started ${formatShortDate(season.startDateKey)}`;
 
+// ─── Day sheet (mobile bottom sheet / desktop dialog) ───────────────────────
+// On small screens cells are too narrow for readable chips: days show colored
+// dots instead, and tapping a day opens this sheet with the full event list.
+
+const openDayKey = ref<string | null>(null);
+
+const isDaySheetOpen = computed({
+    get: () => openDayKey.value !== null,
+    set: (value: boolean) => {
+        if (!value) openDayKey.value = null;
+    },
+});
+
+const openDayEvents = computed(() =>
+    openDayKey.value ? eventsOn(openDayKey.value) : [],
+);
+
+const openDayTitle = computed(() =>
+    openDayKey.value ? formatDayLabel(openDayKey.value) : '',
+);
+
+const openDayDescription = computed(() => {
+    const count = openDayEvents.value.length;
+
+    return `${count} ${count === 1 ? 'activity' : 'activities'}`;
+});
+
 // ─── Upcoming panel ─────────────────────────────────────────────────────────
 
 const upcomingEvents = computed(() =>
@@ -200,33 +172,6 @@ const upcomingEvents = computed(() =>
         .filter((event) => event.dateKey >= props.todayKey)
         .slice(0, 6),
 );
-
-const relativeBadge = (key: string) => {
-    const diff = dayDiffFromToday(key);
-
-    if (diff === 0) {
-        return {
-            label: 'Today',
-            class: 'border-transparent bg-destructive text-white',
-        };
-    }
-
-    if (diff === 1) {
-        return {
-            label: 'Tomorrow',
-            class: 'border-transparent bg-primary text-primary-foreground',
-        };
-    }
-
-    if (diff < 0) {
-        return {
-            label: `${Math.abs(diff)}d late`,
-            class: 'border-transparent bg-destructive/15 text-red-600 dark:text-red-400',
-        };
-    }
-
-    return { label: `In ${diff} days`, class: 'text-muted-foreground' };
-};
 
 // ─── Event chip presentation ────────────────────────────────────────────────
 
@@ -242,17 +187,16 @@ const chipClasses = (event: CalendarEvent) => {
     return 'bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-300';
 };
 
-const eventMeta = (event: CalendarEvent) => {
-    if (event.type === 'exam') {
-        return [
-            event.sectionName,
-            event.durationMinutes ? `${event.durationMinutes} min` : null,
-        ]
-            .filter(Boolean)
-            .join(' · ');
+const dotClasses = (event: CalendarEvent) => {
+    if (isEventDone(event)) {
+        return 'bg-emerald-500';
     }
 
-    return event.courseName ?? 'Assignment';
+    if (event.isOverdue) {
+        return 'bg-red-500';
+    }
+
+    return event.type === 'exam' ? 'bg-primary' : 'bg-amber-500';
 };
 
 const eventTooltip = (event: CalendarEvent) => {
@@ -262,7 +206,7 @@ const eventTooltip = (event: CalendarEvent) => {
         eventMeta(event),
     ].filter(Boolean);
 
-    if (event.submitted || event.isCompleted) {
+    if (isEventDone(event)) {
         parts.push('Submitted');
     }
 
@@ -388,9 +332,9 @@ const eventTooltip = (event: CalendarEvent) => {
                             >
                                 <ClipboardList class="h-3.5 w-3.5" />
                                 Assignments
-                                <span v-if="monthAssignmentCount"
-                                    >({{ monthAssignmentCount }})</span
-                                >
+                                <span v-if="monthAssignmentCount">
+                                    ({{ monthAssignmentCount }})
+                                </span>
                             </button>
                             <button
                                 type="button"
@@ -447,7 +391,7 @@ const eventTooltip = (event: CalendarEvent) => {
                                 <div
                                     v-for="(dayKey, index) in gridDays"
                                     :key="dayKey"
-                                    class="min-h-20 border-t border-l border-border p-1 md:min-h-28 md:p-1.5"
+                                    class="min-h-16 border-t border-l border-border p-1 sm:min-h-20 md:min-h-28 md:p-1.5"
                                     :class="[
                                         index % 7 === 0 ? 'border-l-0' : '',
                                         dayKey.slice(0, 7) === monthAnchor
@@ -476,48 +420,71 @@ const eventTooltip = (event: CalendarEvent) => {
                                         </span>
                                     </div>
 
-                                    <div class="mt-1 space-y-1">
+                                    <!-- Mobile: colored dots — tap opens the day sheet -->
+                                    <button
+                                        v-if="eventsOn(dayKey).length"
+                                        type="button"
+                                        class="mt-0.5 flex w-full flex-col items-center gap-1 rounded-md px-0.5 py-1 transition hover:bg-accent/50 active:bg-accent sm:hidden"
+                                        :aria-label="`Open ${eventsOn(dayKey).length} activities on ${formatDayLabel(dayKey)}`"
+                                        @click="openDayKey = dayKey"
+                                    >
+                                        <span
+                                            class="flex flex-wrap items-center justify-center gap-1"
+                                        >
+                                            <span
+                                                v-for="event in eventsOn(
+                                                    dayKey,
+                                                ).slice(0, 3)"
+                                                :key="`${event.type}-${event.id}`"
+                                                class="size-2 rounded-full"
+                                                :class="dotClasses(event)"
+                                            />
+                                        </span>
+                                        <span
+                                            v-if="eventsOn(dayKey).length > 3"
+                                            class="text-[9px] leading-none font-medium text-muted-foreground"
+                                        >
+                                            +{{ eventsOn(dayKey).length - 3 }}
+                                        </span>
+                                    </button>
+
+                                    <!-- Desktop: full chips -->
+                                    <div class="mt-1 hidden space-y-1 sm:block">
                                         <Link
-                                            v-for="event in (
-                                                eventsByDay.get(dayKey) ?? []
+                                            v-for="event in eventsOn(
+                                                dayKey,
                                             ).slice(0, 3)"
                                             :key="`${event.type}-${event.id}`"
                                             :href="event.href"
                                             :title="eventTooltip(event)"
-                                            class="flex items-center gap-1 rounded px-1 py-0.5 text-[10px] leading-tight font-medium transition md:text-xs"
+                                            class="flex items-center gap-1 rounded px-1 py-0.5 text-xs leading-tight font-medium transition"
                                             :class="chipClasses(event)"
                                         >
                                             <Check
-                                                v-if="
-                                                    event.submitted ||
-                                                    event.isCompleted
-                                                "
+                                                v-if="isEventDone(event)"
                                                 class="h-3 w-3 shrink-0"
                                             />
                                             <span
                                                 class="truncate"
                                                 :class="{
                                                     'line-through opacity-70':
-                                                        event.submitted ||
-                                                        event.isCompleted,
+                                                        isEventDone(event),
                                                 }"
                                             >
                                                 {{ event.title }}
                                             </span>
                                         </Link>
-                                        <p
-                                            v-if="
-                                                (eventsByDay.get(dayKey) ?? [])
-                                                    .length > 3
-                                            "
-                                            class="px-1 text-[10px] font-medium text-muted-foreground"
+                                        <button
+                                            v-if="eventsOn(dayKey).length > 3"
+                                            type="button"
+                                            class="px-1 text-[10px] font-medium text-muted-foreground transition hover:text-foreground"
+                                            @click="openDayKey = dayKey"
                                         >
                                             +{{
-                                                (eventsByDay.get(dayKey) ?? [])
-                                                    .length - 3
+                                                eventsOn(dayKey).length - 3
                                             }}
                                             more
-                                        </p>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -545,67 +512,10 @@ const eventTooltip = (event: CalendarEvent) => {
                                 v-for="event in upcomingEvents"
                                 :key="`upcoming-${event.type}-${event.id}`"
                             >
-                                <Link
-                                    :href="event.href"
-                                    class="flex items-start gap-3 rounded-lg border border-border/60 bg-background/60 p-3 transition hover:border-primary/40 hover:bg-accent/40"
-                                >
-                                    <span
-                                        class="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg"
-                                        :class="
-                                            event.type === 'exam'
-                                                ? 'bg-primary/15 text-primary'
-                                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                                        "
-                                    >
-                                        <GraduationCap
-                                            v-if="event.type === 'exam'"
-                                            class="h-4 w-4"
-                                        />
-                                        <ClipboardList v-else class="h-4 w-4" />
-                                    </span>
-                                    <span class="min-w-0 flex-1">
-                                        <span
-                                            class="block truncate text-sm font-semibold"
-                                            :class="{
-                                                'line-through opacity-70':
-                                                    event.submitted ||
-                                                    event.isCompleted,
-                                            }"
-                                        >
-                                            {{ event.title }}
-                                        </span>
-                                        <span
-                                            class="mt-0.5 block text-xs text-muted-foreground"
-                                        >
-                                            {{ eventMeta(event) }}
-                                        </span>
-                                        <span
-                                            class="mt-1.5 flex flex-wrap items-center gap-1.5"
-                                        >
-                                            <span
-                                                class="text-xs font-medium text-muted-foreground"
-                                            >
-                                                {{
-                                                    formatDayLabel(
-                                                        event.dateKey,
-                                                    )
-                                                }}
-                                            </span>
-                                            <span
-                                                class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
-                                                :class="
-                                                    relativeBadge(event.dateKey)
-                                                        .class
-                                                "
-                                            >
-                                                {{
-                                                    relativeBadge(event.dateKey)
-                                                        .label
-                                                }}
-                                            </span>
-                                        </span>
-                                    </span>
-                                </Link>
+                                <CalendarEventCard
+                                    :event="event"
+                                    :today-key="todayKey"
+                                />
                             </li>
                         </ul>
                         <p
@@ -618,5 +528,22 @@ const eventTooltip = (event: CalendarEvent) => {
                 </Card>
             </div>
         </div>
+
+        <ResponsiveModal
+            v-model="isDaySheetOpen"
+            :title="openDayTitle"
+            :description="openDayDescription"
+        >
+            <div class="space-y-2">
+                <CalendarEventCard
+                    v-for="event in openDayEvents"
+                    :key="`sheet-${event.type}-${event.id}`"
+                    :event="event"
+                    :today-key="todayKey"
+                    :show-date="false"
+                    @click="openDayKey = null"
+                />
+            </div>
+        </ResponsiveModal>
     </AppLayout>
 </template>
