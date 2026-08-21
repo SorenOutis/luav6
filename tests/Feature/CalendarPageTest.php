@@ -158,12 +158,17 @@ it('keeps closed exams the student answered on the calendar', function () {
 });
 
 it('lets admins see closed exams even without submissions', function () {
+    $admin = User::factory()->admin()->create();
+
+    // The factory auto-creates the admin's workspace, and the Exam workspace
+    // scope filters the calendar query to it — so the exam must live there.
     Exam::factory()->closed()->forSection($this->mySection)->create([
         'title' => 'Closed Exam For Review',
         'exam_date' => now()->subWeeks(2),
+        'workspace_id' => $admin->current_workspace_id,
     ]);
 
-    $this->actingAs(User::factory()->admin()->create())
+    $this->actingAs($admin)
         ->get(route('calendar'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
