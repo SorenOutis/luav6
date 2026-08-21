@@ -17,6 +17,9 @@
             <directory>app</directory>
         </include>
     </source>
+    <extensions>
+        <bootstrap class="Tests\Reporting\GithubAnnotationReporter"/>
+    </extensions>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
         <!-- A globally-exported APP_ENV (e.g. APP_ENV=local on a dev machine)
