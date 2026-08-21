@@ -8,6 +8,7 @@ import {
     GraduationCap,
     Award,
     MessageSquareText,
+    CalendarDays,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import { dashboard, grades } from '@/routes';
@@ -30,6 +31,12 @@ const navItems = computed(() =>
             href: examsIndex().url,
             icon: GraduationCap,
             studentPageKey: 'exams',
+        },
+        {
+            label: 'Calendar',
+            href: '/calendar',
+            icon: CalendarDays,
+            studentPageKey: 'calendar',
         },
         {
             label: 'Assignments',

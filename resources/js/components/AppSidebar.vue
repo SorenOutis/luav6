@@ -8,6 +8,7 @@ import {
     Gamepad2,
     Award,
     MessageSquareText,
+    CalendarDays,
 } from 'lucide-vue-next';
 import { computed, useSlots } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -60,6 +61,12 @@ const mainNavItems = computed<NavItem[]>(() =>
             href: '/exams',
             icon: GraduationCap,
             studentPageKey: 'exams',
+        },
+        {
+            title: 'Calendar',
+            href: '/calendar',
+            icon: CalendarDays,
+            studentPageKey: 'calendar',
         },
         {
             title: 'Games',

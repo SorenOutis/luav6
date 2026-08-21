@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('mobile navigation', () => {
-    it('exposes exactly Home, Exams, Assignments, Grades, and Chats', () => {
+    it('exposes exactly Home, Exams, Calendar, Assignments, Grades, and Chats', () => {
         const source = readFileSync(
             join(process.cwd(), 'resources/js/components/MobileNav.vue'),
             'utf8',
@@ -16,6 +16,7 @@ describe('mobile navigation', () => {
         expect(labels).toEqual([
             'Home',
             'Exams',
+            'Calendar',
             'Assignments',
             'Grades',
             'Chats',
