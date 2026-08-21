@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Assignment;
 use App\Models\AssignmentGroup;
 use App\Models\AssignmentGroupInvite;
+use App\Models\Submission;
 use App\Models\User;
 use App\Notifications\AssignmentGroupInviteNotification;
 use Illuminate\Support\Collection;
@@ -112,6 +113,16 @@ class AssignmentInviteService
 
         $group = $invite->group;
         abort_if($group === null, 422, 'This group no longer exists.');
+
+        // The invitee's own row is untouched, but the GROUP may already be
+        // graded (teacher graded before the invitee responded) — joining is
+        // still locked. ensureNotGraded can't see this (it walks from the
+        // user's own row/group), so check the group's rows directly.
+        $groupGraded = Submission::query()
+            ->where('group_id', $group->id)
+            ->where('status', 'Graded')
+            ->exists();
+        abort_if($groupGraded, 403, 'This assignment has already been graded and the group is locked.');
 
         DB::transaction(function () use ($assignment, $invite, $group, $user): void {
             $invite->forceFill([
