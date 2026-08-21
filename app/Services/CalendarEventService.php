@@ -17,7 +17,9 @@ use Illuminate\Support\Facades\DB;
  * Exams, assignments, and season ranges are normalized into one shape so
  * Calendar.vue can lay out a month grid without caring where each item came
  * from. Visibility mirrors the pages the events link back to: exams follow the
- * exam-list rule (visible statuses, own sections or global), assignments use
+ * exam-list rule (visible statuses, own sections or global) with one
+ * exception — closed exams only appear when the viewer answered them, since a
+ * missed closed exam is no longer an actionable deadline; assignments use
  * section targeting (visibleToSections), seasons come from the student's own
  * enrollments — the same source the dashboard season picker uses.
  *
@@ -53,9 +55,11 @@ class CalendarEventService
     /**
      * Exams the user may see, in the given window.
      *
-     * Drafts never leak. Closed exams stay on the calendar — unlike the
-     * "upcoming exams" card, this is a historical view too, and ExamStatus
-     * already defines closed as visible to students.
+     * Drafts never leak. Published exams follow the exam-list rule (own
+     * sections or global). Closed exams only stay on the calendar when the
+     * viewer submitted answers to them — a closed exam the student never took
+     * is no longer an actionable deadline, so it would only clutter the grid.
+     * Admins keep the full historical view.
      *
      * @param  Collection<int, int>  $sectionIds
      * @return Collection<int, array<string, mixed>>
@@ -66,7 +70,20 @@ class CalendarEventService
             ->with(['section:id,name'])
             ->withCount(['parts'])
             ->withCount(['submissions as submitted_parts' => fn ($q) => $q->where('user_id', $user->id)])
-            ->whereIn('status', [ExamStatus::Published, ExamStatus::Closed])
+            ->where(function ($query) use ($user) {
+                $query->where('status', ExamStatus::Published);
+
+                if ($user->is_admin) {
+                    $query->orWhere('status', ExamStatus::Closed);
+
+                    return;
+                }
+
+                $query->orWhere(function ($query) use ($user) {
+                    $query->where('status', ExamStatus::Closed)
+                        ->whereHas('submissions', fn ($q) => $q->where('user_id', $user->id));
+                });
+            })
             ->whereBetween('exam_date', [$from, $to])
             ->when(! $user->is_admin, function ($query) use ($sectionIds) {
                 $query->where(function ($q) use ($sectionIds) {

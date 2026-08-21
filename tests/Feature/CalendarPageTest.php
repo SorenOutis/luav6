@@ -2,6 +2,8 @@
 
 use App\Models\Assignment;
 use App\Models\Exam;
+use App\Models\ExamPart;
+use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\Submission;
@@ -121,17 +123,58 @@ it('flags past unsubmitted assignments as overdue', function () {
             ->etc());
 });
 
-it('shows closed exams so past work stays visible', function () {
+it('hides closed exams the student never answered', function () {
     Exam::factory()->closed()->forSection($this->mySection)->create([
-        'title' => 'Closed Exam',
+        'title' => 'Missed Closed Exam',
         'exam_date' => now()->subWeeks(2),
     ]);
+
+    $response = $this->actingAs($this->student)->get(route('calendar'));
+
+    $response->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('events', 0)
+        ->etc());
+
+    expect($response->getContent())->not->toContain('Missed Closed Exam');
+});
+
+it('keeps closed exams the student answered on the calendar', function () {
+    $exam = Exam::factory()->closed()->forSection($this->mySection)->create([
+        'title' => 'Answered Closed Exam',
+        'exam_date' => now()->subWeeks(2),
+    ]);
+    $part = ExamPart::factory()->forExam($exam)->create();
+    ExamSubmission::factory()->forSubmission($this->student, $exam, $part)->create();
 
     $this->actingAs($this->student)
         ->get(route('calendar'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('events.0.title', 'Closed Exam')
+            ->has('events', 1)
+            ->where('events.0.title', 'Answered Closed Exam')
+            ->where('events.0.status', 'closed')
+            ->where('events.0.isCompleted', true)
+            ->etc());
+});
+
+it('lets admins see closed exams even without submissions', function () {
+    $admin = User::factory()->admin()->create();
+
+    // The factory auto-creates the admin's workspace, and the Exam workspace
+    // scope filters the calendar query to it — so the exam must live there.
+    Exam::factory()->closed()->forSection($this->mySection)->create([
+        'title' => 'Closed Exam For Review',
+        'exam_date' => now()->subWeeks(2),
+        'workspace_id' => $admin->current_workspace_id,
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('calendar'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('events', 1)
+            ->where('events.0.title', 'Closed Exam For Review')
+            ->where('events.0.isCompleted', false)
             ->etc());
 });
 
