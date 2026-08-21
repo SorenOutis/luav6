@@ -12,9 +12,12 @@ return new class extends Migration
      * only accepted invites write group membership. Rows are history — a
      * declined student can be re-invited on a fresh row.
      *
-     * One LIVE invite per student per assignment: the partial unique index
-     * below only constrains pending rows (Postgres in production and SQLite
-     * in tests both support partial indexes).
+     * One LIVE invite per student per assignment is enforced by the service
+     * inside the send transaction (AssignmentInviteService::assertInvitable).
+     * A partial unique index ("... WHERE status = pending") would be the
+     * belt-and-braces version, but Laravel's SQLite grammar silently drops
+     * the WHERE clause — turning it into a full unique index that blocks
+     * re-invites. So: plain index + service-level invariant.
      */
     public function up(): void
     {
@@ -34,7 +37,7 @@ return new class extends Migration
 
             $table->index(['group_id', 'status']);
             $table->index(['invitee_id', 'status']);
-            $table->unique(['assignment_id', 'invitee_id'])->where('status', 'pending');
+            $table->index(['assignment_id', 'invitee_id', 'status']);
         });
     }
 

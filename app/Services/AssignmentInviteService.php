@@ -207,7 +207,7 @@ class AssignmentInviteService
             abort(422, "{$invitee->name} is already in a group for this assignment.");
         }
 
-        // The partial unique index backs this against races.
+        // One live invite per student per assignment (service-level invariant).
         $hasPending = AssignmentGroupInvite::query()
             ->where('assignment_id', $assignment->id)
             ->where('invitee_id', $invitee->id)

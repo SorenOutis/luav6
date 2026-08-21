@@ -11,9 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * Lifecycle: pending → accepted | declined (invitee) | cancelled (creator)
  * | expired (due date passed without a response). Terminal states stay in the
- * table as history; a re-invite creates a new row. The partial unique index
- * (assignment_id, invitee_id) WHERE status = pending guarantees at most one
- * live invite per student per assignment.
+ * table as history; a re-invite creates a new row. At most one live invite
+ * per student per assignment is enforced by AssignmentInviteService inside
+ * the send transaction.
  */
 class AssignmentGroupInvite extends Model
 {

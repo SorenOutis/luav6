@@ -99,6 +99,10 @@ it('re-flags feedback as unseen when the teacher revises it', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->where('assignments.0.submission.has_unseen_feedback', false));
 
+    // Timestamps truncate to seconds — travel past the acknowledgement so
+    // the revision's graded_at is strictly newer than feedback_seen_at.
+    $this->travel(10)->minutes();
+
     // A feedback revision refreshes graded_at, so the flag comes back.
     $row->update(['feedback' => 'Updated: add uncertainty bounds.']);
 

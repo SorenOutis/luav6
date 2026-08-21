@@ -142,7 +142,8 @@ it('allows only one pending invite per student per assignment', function () {
     sendInvites($this->creator, $assignment, [$this->member->id])->assertRedirect();
 
     // A second group courts the same student while the first invite is
-    // still pending. (The second group's creation rolls back with the 422.)
+    // still pending — the service invariant rejects it and the 422 rolls
+    // back the second group's creation.
     sendInvites($this->other, $assignment, [$this->member->id])->assertStatus(422);
 
     // The original invite is untouched.
