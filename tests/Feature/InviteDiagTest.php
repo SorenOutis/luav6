@@ -6,6 +6,7 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\AssignmentRosterService;
+use App\Support\WorkspaceContext;
 use Illuminate\Support\Facades\DB;
 
 it('diagnoses invite visibility on ci', function () {
@@ -36,7 +37,7 @@ it('diagnoses invite visibility on ci', function () {
         'scoped_as_creator' => AssignmentGroupInvite::query()->count(),
         'creator_ws' => $creator->workspaces()->pluck('workspaces.id')->all(),
         'creator_current_ws' => $creator->current_workspace_id,
-        'context_id' => app(\App\Support\WorkspaceContext::class)->id(),
+        'context_id' => app(WorkspaceContext::class)->id(),
         'session_errors' => session('errors')?->keys() ?? [],
     ];
 
