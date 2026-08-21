@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import { useEcho } from '@laravel/echo-vue';
 import {
     BookOpen,
+    Check,
     Folder,
     LayoutGrid,
     Menu,
@@ -10,6 +11,7 @@ import {
     Moon,
     Sun,
     Bell,
+    X,
     Zap,
     Shield,
     TrendingUp,
@@ -92,6 +94,8 @@ interface HeaderNotification {
     meta?: string | null;
     image?: string | null;
     href?: string | null;
+    inviteId?: number | null;
+    assignmentId?: number | null;
     readAt?: string | null;
     createdAt?: string | null;
 }
@@ -160,6 +164,32 @@ const markNotificationAsRead = (
                 if (href) {
                     router.visit(href);
                 }
+            },
+        },
+    );
+};
+
+// Group invites carry inline actions: accept/decline straight from the bell.
+// If the invite is no longer actionable (expired/cancelled/handled on another
+// device), the request errors out and we simply clear the notification.
+const respondToInvite = (
+    notification: HeaderNotification,
+    action: 'accept' | 'decline',
+) => {
+    if (!notification.inviteId || !notification.assignmentId) return;
+
+    router.post(
+        `/assignments/${notification.assignmentId}/invites/${notification.inviteId}/respond`,
+        { action },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            only: ['notifications'],
+            onSuccess: () => {
+                markNotificationAsRead(notification.id);
+            },
+            onError: () => {
+                markNotificationAsRead(notification.id);
             },
         },
     );
@@ -474,6 +504,48 @@ const rightNavItems: NavItem[] = [
                                                             notification.createdAt
                                                         }}
                                                     </span>
+                                                </div>
+
+                                                <!-- Inline accept / decline for pending group invites -->
+                                                <div
+                                                    v-if="
+                                                        notification.type ===
+                                                            'assignment_invite' &&
+                                                        notification.inviteId &&
+                                                        notification.assignmentId &&
+                                                        !notification.readAt
+                                                    "
+                                                    class="mt-1.5 flex items-center gap-1.5"
+                                                    @click.stop
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex h-6 items-center gap-1 rounded-full bg-emerald-600 px-2.5 text-[10px] font-bold text-white transition-colors hover:bg-emerald-600/90 active:scale-95"
+                                                        @click.stop.prevent="
+                                                            respondToInvite(
+                                                                notification,
+                                                                'accept',
+                                                            )
+                                                        "
+                                                    >
+                                                        <Check
+                                                            class="h-3 w-3"
+                                                        />
+                                                        <span>Accept</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex h-6 items-center gap-1 rounded-full border border-border/60 px-2.5 text-[10px] font-bold text-muted-foreground transition-colors hover:text-foreground active:scale-95"
+                                                        @click.stop.prevent="
+                                                            respondToInvite(
+                                                                notification,
+                                                                'decline',
+                                                            )
+                                                        "
+                                                    >
+                                                        <X class="h-3 w-3" />
+                                                        <span>Decline</span>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </button>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Assignment;
 use App\Models\AssignmentGroup;
+use App\Models\AssignmentGroupInvite;
 use App\Models\Submission;
 use App\Models\User;
 use App\Services\AssignmentGroupService;
@@ -53,18 +54,58 @@ class AssignmentController extends Controller
                 ->get()
                 ->keyBy('id');
 
+        // Invites drive the group-formation UI: pending invites sent by the
+        // student's group (creator view) and pending invites received by the
+        // student (invitee banner). Stale ones expire lazily first.
+        AssignmentGroupInvite::expireOverdue();
+
+        $pendingByGroup = $groupIds->isEmpty()
+            ? collect()
+            : AssignmentGroupInvite::query()
+                ->whereIn('group_id', $groupIds)
+                ->where('status', AssignmentGroupInvite::STATUS_PENDING)
+                ->with('invitee:id,name,avatar')
+                ->get()
+                ->groupBy('group_id');
+
+        $incomingInvites = $ids->isEmpty()
+            ? collect()
+            : AssignmentGroupInvite::query()
+                ->where('invitee_id', $user->id)
+                ->whereIn('assignment_id', $ids)
+                ->where('status', AssignmentGroupInvite::STATUS_PENDING)
+                ->with('inviter:id,name,avatar')
+                ->get()
+                ->keyBy('assignment_id');
+
         return Inertia::render('Assignments', [
-            'assignments' => $assignments->map(function ($assignment) use ($submissions, $uploaders, $groups) {
+            'assignments' => $assignments->map(function ($assignment) use ($submissions, $uploaders, $groups, $pendingByGroup, $incomingInvites) {
                 $submission = $submissions->get($assignment->id);
                 $pivot = $submission?->pivot ?? $submission;
                 $filePath = $pivot?->file_path;
                 $group = $groups->get($pivot?->group_id);
+
+                $incoming = $incomingInvites->get($assignment->id);
 
                 return [
                     'id' => $assignment->id,
                     'title' => $assignment->title,
                     'description' => $assignment->description,
                     'due_date' => $assignment->due_date?->toIso8601String(),
+                    'points_possible' => $assignment->points_possible,
+                    'group_rules' => [
+                        'min' => $assignment->min_group_size,
+                        'max' => $assignment->max_group_size,
+                    ],
+                    'incoming_invite' => $incoming ? [
+                        'id' => $incoming->id,
+                        'inviter' => [
+                            'id' => $incoming->inviter_id,
+                            'name' => $incoming->inviter?->name,
+                            'avatar' => $incoming->inviter?->avatar,
+                        ],
+                        'expires_at' => $incoming->expires_at?->toIso8601String(),
+                    ] : null,
                     'course' => $assignment->course,
                     'sections' => $assignment->sections->map(fn ($section) => [
                         'id' => $section->id,
@@ -80,6 +121,20 @@ class AssignmentController extends Controller
                                 'avatar' => $member->user?->avatar,
                             ])
                             ->values(),
+                        'pending_invites' => $pendingByGroup->has($group->id)
+                            ? $pendingByGroup->get($group->id)
+                                ->map(fn (AssignmentGroupInvite $invite) => [
+                                    'id' => $invite->id,
+                                    'user' => [
+                                        'id' => $invite->invitee_id,
+                                        'name' => $invite->invitee?->name,
+                                        'avatar' => $invite->invitee?->avatar,
+                                    ],
+                                    'expires_at' => $invite->expires_at?->toIso8601String(),
+                                ])
+                                ->values()
+                                ->all()
+                            : [],
                     ] : null,
                     'submission' => $submission ? [
                         'submitted' => $pivot->submitted,
@@ -95,11 +150,45 @@ class AssignmentController extends Controller
                         'feedback' => $pivot->feedback,
                         'graded_at' => $pivot->graded_at,
                         'graded_by' => $pivot->graded_by,
+                        'feedback_seen_at' => $pivot->feedback_seen_at?->toIso8601String(),
+                        'has_unseen_feedback' => $this->hasUnseenFeedback($pivot),
                         'file_extension' => $filePath ? strtolower(pathinfo($filePath, PATHINFO_EXTENSION)) : null,
                     ] : null,
                 ];
             })->values(),
         ]);
+    }
+
+    /**
+     * Feedback the student has not opened yet: posted after they last
+     * acknowledged it, or never acknowledged at all.
+     */
+    private function hasUnseenFeedback(?Submission $submission): bool
+    {
+        if ($submission === null || blank($submission->feedback)) {
+            return false;
+        }
+
+        if ($submission->feedback_seen_at === null) {
+            return true;
+        }
+
+        return $submission->graded_at !== null && $submission->feedback_seen_at->lt($submission->graded_at);
+    }
+
+    /**
+     * The student expanded the grade details: acknowledge the feedback so
+     * the "New feedback" flag clears. Mass update on purpose — it must not
+     * re-trigger the grading/award hooks on the submission row.
+     */
+    public function markFeedbackSeen(Request $request, Assignment $assignment)
+    {
+        Submission::query()
+            ->where('assignment_id', $assignment->id)
+            ->where('user_id', $request->user()->id)
+            ->update(['feedback_seen_at' => now()]);
+
+        return back();
     }
 
     public function store(Request $request, Assignment $assignment)

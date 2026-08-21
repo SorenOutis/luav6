@@ -38,6 +38,10 @@ class AssignmentsTable
                     ->dateTime('M d, Y g:i A')
                     ->placeholder('No deadline')
                     ->sortable(),
+                TextColumn::make('points_possible')
+                    ->label('Points')
+                    ->placeholder('—')
+                    ->toggleable(),
                 TextColumn::make('course.name')
                     ->label('Course')
                     ->placeholder('—')

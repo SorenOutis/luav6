@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\LeaderboardToggleBlurController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AssignmentGroupController;
+use App\Http\Controllers\AssignmentInviteController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
@@ -123,9 +124,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
 
     // Student-formed groups for group activities (shared submission).
     Route::get('assignments/{assignment}/groups/candidates', [AssignmentGroupController::class, 'candidates'])->middleware('student.page:assignments')->name('assignments.groups.candidates');
-    Route::post('assignments/{assignment}/groups', [AssignmentGroupController::class, 'store'])->middleware('student.page:assignments')->name('assignments.groups.store');
-    Route::post('assignments/{assignment}/groups/members', [AssignmentGroupController::class, 'addMember'])->middleware('student.page:assignments')->name('assignments.groups.members.store');
     Route::delete('assignments/{assignment}/groups/members/{user}', [AssignmentGroupController::class, 'removeMember'])->middleware('student.page:assignments')->name('assignments.groups.members.destroy');
+    Route::post('assignments/{assignment}/invites', [AssignmentInviteController::class, 'store'])->middleware('student.page:assignments')->name('assignments.invites.store');
+    Route::post('assignments/{assignment}/invites/{invite}/respond', [AssignmentInviteController::class, 'respond'])->middleware('student.page:assignments')->name('assignments.invites.respond');
+    Route::delete('assignments/{assignment}/invites/{invite}', [AssignmentInviteController::class, 'destroy'])->middleware('student.page:assignments')->name('assignments.invites.destroy');
+    Route::post('assignments/{assignment}/feedback-seen', [AssignmentController::class, 'markFeedbackSeen'])->middleware('student.page:assignments')->name('assignments.feedback.seen');
 
     Route::get('exams', [ExamController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
     Route::get('api/exams', [ExamController::class, 'listing'])->middleware('student.page:exams')->name('exams.listing');

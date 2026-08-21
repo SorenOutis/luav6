@@ -14,7 +14,7 @@ class AssignmentGroupController extends Controller
     ) {}
 
     /**
-     * Searchable list of classmates the actor can add to their group.
+     * Searchable list of classmates the actor can invite to their group.
      */
     public function candidates(Request $request, Assignment $assignment)
     {
@@ -27,34 +27,6 @@ class AssignmentGroupController extends Controller
                 $request->query('q'),
             ),
         ]);
-    }
-
-    /**
-     * Create a group for the current student.
-     */
-    public function store(Request $request, Assignment $assignment)
-    {
-        $this->authorizeVisibility($assignment, $request->user());
-
-        $this->groups->createGroup($assignment, $request->user());
-
-        return back()->with('success', 'Group created. You can now add members.');
-    }
-
-    /**
-     * Add a member to the current student's group.
-     */
-    public function addMember(Request $request, Assignment $assignment)
-    {
-        $this->authorizeVisibility($assignment, $request->user());
-
-        $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
-        ]);
-
-        $this->groups->addMember($assignment, $request->user(), User::findOrFail($data['user_id']));
-
-        return back()->with('success', 'Member added to your group.');
     }
 
     /**
