@@ -480,9 +480,7 @@ const eventTooltip = (event: CalendarEvent) => {
                                             class="px-1 text-[10px] font-medium text-muted-foreground transition hover:text-foreground"
                                             @click="openDayKey = dayKey"
                                         >
-                                            +{{
-                                                eventsOn(dayKey).length - 3
-                                            }}
+                                            +{{ eventsOn(dayKey).length - 3 }}
                                             more
                                         </button>
                                     </div>
