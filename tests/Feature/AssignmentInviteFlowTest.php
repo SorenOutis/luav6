@@ -40,36 +40,17 @@ function makeInviteAssignment(array $attributes = []): Assignment
 
 function sendInvites(User $inviter, Assignment $assignment, array $userIds)
 {
-    $response = test()->actingAs($inviter)
+    return test()->actingAs($inviter)
         ->post(route('assignments.invites.store', $assignment), ['user_ids' => $userIds]);
-
-    $GLOBALS['__diag_last_post'] = [
-        'status' => $response->getStatusCode(),
-        'errors' => $response->getSession()?->get('errors')?->keys() ?? [],
-        'sent_ids' => $userIds,
-    ];
-
-    return $response;
 }
 
 function pendingInviteFor(User $invitee, Assignment $assignment): AssignmentGroupInvite
 {
-    try {
-        return AssignmentGroupInvite::query()
-            ->where('assignment_id', $assignment->id)
-            ->where('invitee_id', $invitee->id)
-            ->where('status', 'pending')
-            ->firstOrFail();
-    } catch (Throwable $e) {
-        $diag = [
-            'last_post' => $GLOBALS['__diag_last_post'] ?? null,
-            'invitee_id' => $invitee->id,
-            'invitee_exists' => DB::table('users')->whereKey($invitee->id)->exists(),
-            'assignment_id' => $assignment->id,
-            'raw_rows' => DB::table('assignment_group_invites')->get()->map(fn ($r) => [$r->id, $r->assignment_id, $r->invitee_id, $r->status])->all(),
-        ];
-        throw new RuntimeException('DIAG '.$e->getMessage().' | '.json_encode($diag));
-    }
+    return AssignmentGroupInvite::query()
+        ->where('assignment_id', $assignment->id)
+        ->where('invitee_id', $invitee->id)
+        ->where('status', 'pending')
+        ->firstOrFail();
 }
 
 function respondToInvite(User $invitee, Assignment $assignment, string $action)
@@ -116,7 +97,12 @@ it('adds the invitee to the group when they accept and tells the creator', funct
             ->where('user_id', $this->member->id)
             ->value('group_id')
     )->toBe($group->id)
-        ->and(pendingInviteFor($this->member, $assignment)->status)->not->toBe('pending')
+        ->and(
+            AssignmentGroupInvite::query()
+                ->where('assignment_id', $assignment->id)
+                ->where('invitee_id', $this->member->id)
+                ->value('status')
+        )->toBe('accepted')
         ->and($this->creator->notifications()->first()->data['type'])->toBe('invite_accepted');
 });
 
