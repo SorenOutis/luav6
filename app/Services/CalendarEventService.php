@@ -37,6 +37,10 @@ class CalendarEventService
         $sectionIds = $user->sections()->pluck('sections.id');
 
         return [
+            // toBase(): examEvents()/assignmentEvents() return collections of
+            // arrays, not models. Eloquent\Collection::merge() chokes merging
+            // a plain collection of arrays (TypeError), so normalize both
+            // sides to base collections before combining.
             'events' => $this->examEvents($user, $sectionIds, $from, $to)
                 ->merge($this->assignmentEvents($user, $sectionIds, $from, $to))
                 ->sortBy('dateKey')
@@ -73,7 +77,9 @@ class CalendarEventService
             ->orderBy('exam_date')
             ->get();
 
-        return $exams->map(function (Exam $exam) {
+        // toBase(): the mapped items are arrays; keep this a base collection
+        // so it can merge with the assignment events.
+        return $exams->toBase()->map(function (Exam $exam) {
             return [
                 'type' => 'exam',
                 'id' => $exam->id,
@@ -114,7 +120,7 @@ class CalendarEventService
         // instead of constraining the belongsToMany join.
         $pivots = $user->assignments()->get()->keyBy('id');
 
-        return $assignments->map(function (Assignment $assignment) use ($pivots) {
+        return $assignments->toBase()->map(function (Assignment $assignment) use ($pivots) {
             $pivot = $pivots->get($assignment->id)?->pivot;
             $submitted = (bool) ($pivot?->submitted ?? false);
             $due = $assignment->due_date;
