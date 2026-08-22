@@ -34,12 +34,15 @@ const navItems = computed(() =>
         },
         {
             label: 'Calendar',
+            // Short form keeps the label inside its slot when the bar is full.
+            shortLabel: 'Agenda',
             href: '/calendar',
             icon: CalendarDays,
             studentPageKey: 'calendar',
         },
         {
             label: 'Assignments',
+            shortLabel: 'Tasks',
             href: assignmentsIndex().url,
             icon: ClipboardList,
             studentPageKey: 'assignments',
@@ -62,6 +65,16 @@ const navItems = computed(() =>
                 ?.mode !== 'disabled',
     ),
 );
+
+// --- Label sizing ---
+// The bar is a fixed-width strip split evenly between items, so the more items
+// are enabled the less room each label gets. Past 4 items we switch to the
+// short label + a smaller, tighter type scale so nothing spills into its
+// neighbour on 320-375px devices.
+const isCompact = computed(() => navItems.value.length > 4);
+
+const labelFor = (item: { label: string; shortLabel?: string }) =>
+    isCompact.value ? (item.shortLabel ?? item.label) : item.label;
 
 // --- Active Route Detection ---
 const isActive = (href: string) => {
@@ -138,7 +151,7 @@ watch(activeIndex, () => {
         style="padding-bottom: env(safe-area-inset-bottom, 0px)"
     >
         <div
-            class="relative mx-2 mb-1.5 flex h-14 items-center justify-around overflow-hidden rounded-2xl border border-border/60 bg-background/95 px-2 shadow-lg shadow-black/10 dark:bg-zinc-950 dark:shadow-black/30"
+            class="relative mx-2 mb-1.5 flex h-14 items-center justify-between gap-0.5 overflow-hidden rounded-2xl border border-border/60 bg-background/95 px-1 shadow-lg shadow-black/10 dark:bg-zinc-950 dark:shadow-black/30"
         >
             <!-- Sliding Active Indicator -->
             <div
@@ -151,12 +164,14 @@ watch(activeIndex, () => {
                 :key="item.label"
                 :href="item.href"
                 :ref="(el) => setItemRef(el, index)"
+                :aria-label="item.label"
+                :title="item.label"
                 prefetch="click"
                 cache-for="30s"
-                class="relative z-10 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-all outline-none active:scale-90"
+                class="relative z-10 flex min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0.5 overflow-hidden px-0.5 py-1.5 transition-all outline-none active:scale-90"
             >
                 <div
-                    class="flex items-center justify-center transition-all duration-500"
+                    class="flex shrink-0 items-center justify-center transition-all duration-500"
                     :class="[activeIndex === index ? 'scale-110' : '']"
                 >
                     <component
@@ -171,14 +186,17 @@ watch(activeIndex, () => {
                 </div>
 
                 <span
-                    class="text-[10px] font-semibold tracking-wide uppercase transition-all duration-500"
+                    class="w-full truncate text-center font-semibold uppercase transition-all duration-500"
                     :class="[
+                        isCompact
+                            ? 'text-[9px] tracking-tight'
+                            : 'text-[10px] tracking-wide',
                         activeIndex === index
                             ? 'text-primary opacity-100'
                             : 'text-muted-foreground opacity-70',
                     ]"
                 >
-                    {{ item.label }}
+                    {{ labelFor(item) }}
                 </span>
             </Link>
         </div>

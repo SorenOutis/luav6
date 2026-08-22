@@ -1,14 +1,24 @@
 /**
  * Onboarding tour persistence.
  *
- * Completion is stored in `localStorage`, which is inherently per
- * device/browser — that's the point: a user logging in on a *new* device sees
- * the onboarding again, while skipping or finishing it silences it on the
- * device where they did so. Keys are additionally scoped per user (public_id)
- * so shared devices still onboard each account once.
+ * Two layers, deliberately:
+ *
+ * 1. **The user account (source of truth).** Finishing or skipping a tour is
+ *    POSTed to `/onboarding/{tour}` and stored on the user row, then shared
+ *    back on every response as `onboarding.tours`. This is what guarantees a
+ *    resolved tour never shows again — new device, new browser, incognito, or
+ *    cleared site data included.
+ * 2. **`localStorage` (instant + offline fallback).** Written synchronously so
+ *    the tour is silenced immediately even if the request is slow, fails, or
+ *    the user is offline, and so guests (no account) still onboard once.
+ *
+ * A tour is considered resolved when *either* layer says so, and the first
+ * resolution wins — a later 'skipped' can't overwrite a 'done'.
  *
  * Bump `TOUR_VERSION` to re-run every tour after a major redesign.
  */
+
+import { router } from '@inertiajs/vue3';
 
 export interface TourStep {
     /** Stable identifier for the step (used as the render key). */
@@ -28,35 +38,103 @@ export interface TourStep {
 
 export type TourStatus = 'done' | 'skipped';
 
+/** Shape of the `onboarding` prop shared by HandleInertiaRequests. */
+export interface OnboardingProps {
+    tours?: Record<string, TourStatus | string> | null;
+}
+
 const TOUR_VERSION = 'v1';
 
 const storageKey = (tourId: string, scope: string): string =>
     `onboarding:${TOUR_VERSION}:${tourId}${scope ? `:${scope}` : ''}`;
 
-export function getTourStatus(tourId: string, scope = ''): TourStatus | null {
+const asStatus = (value: unknown): TourStatus | null =>
+    value === 'done' || value === 'skipped' ? value : null;
+
+/** Local (per device) record only. */
+export function getLocalTourStatus(
+    tourId: string,
+    scope = '',
+): TourStatus | null {
     if (typeof window === 'undefined') return null;
     try {
-        const value = window.localStorage.getItem(storageKey(tourId, scope));
-        return value === 'done' || value === 'skipped' ? value : null;
+        return asStatus(window.localStorage.getItem(storageKey(tourId, scope)));
     } catch {
         // Private browsing / storage disabled — never block the page.
         return null;
     }
 }
 
-export function setTourStatus(
+/** Server (per account) record, read from the shared Inertia prop. */
+export function getServerTourStatus(
+    tourId: string,
+    onboarding?: OnboardingProps | null,
+): TourStatus | null {
+    return asStatus(onboarding?.tours?.[tourId]);
+}
+
+/**
+ * Resolved status across both layers. Pass the shared `onboarding` prop when
+ * available; without it this degrades to the local record.
+ */
+export function getTourStatus(
+    tourId: string,
+    scope = '',
+    onboarding?: OnboardingProps | null,
+): TourStatus | null {
+    return (
+        getServerTourStatus(tourId, onboarding) ??
+        getLocalTourStatus(tourId, scope)
+    );
+}
+
+function writeLocalTourStatus(
     tourId: string,
     status: TourStatus,
-    scope = '',
+    scope: string,
 ): void {
     if (typeof window === 'undefined') return;
     try {
         window.localStorage.setItem(storageKey(tourId, scope), status);
     } catch {
-        // Ignore quota / privacy errors — the tour just reappears next visit.
+        // Ignore quota / privacy errors — the server record still covers us.
     }
 }
 
+/**
+ * Record a tour as finished/skipped: localStorage immediately, then the
+ * account. The POST is fire-and-forget and never disturbs the current page —
+ * if it fails, localStorage still silences the tour on this device.
+ */
+export function setTourStatus(
+    tourId: string,
+    status: TourStatus,
+    scope = '',
+    options: { persistRemote?: boolean } = {},
+): void {
+    writeLocalTourStatus(tourId, status, scope);
+
+    if (options.persistRemote === false || typeof window === 'undefined') {
+        return;
+    }
+
+    router.post(
+        `/onboarding/${encodeURIComponent(tourId)}`,
+        { status },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            // Refresh just the onboarding prop so the account record and the
+            // client agree straight away; nothing else re-renders.
+            only: ['onboarding'],
+            onError: () => {
+                // Local record already applied — stay silent.
+            },
+        },
+    );
+}
+
+/** Clear a tour so it plays again (local + account). */
 export function resetTourStatus(tourId: string, scope = ''): void {
     if (typeof window === 'undefined') return;
     try {
@@ -64,4 +142,10 @@ export function resetTourStatus(tourId: string, scope = ''): void {
     } catch {
         // Ignore.
     }
+
+    router.delete(`/onboarding/${encodeURIComponent(tourId)}`, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['onboarding'],
+    });
 }

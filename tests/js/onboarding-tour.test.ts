@@ -9,12 +9,22 @@ import {
     resetTourStatus,
 } from '@/lib/onboarding';
 
+/** Account-level onboarding prop the mocked page exposes. */
+const serverTours: { tours: Record<string, string> } = { tours: {} };
+const routerPost = vi.fn();
+const routerDelete = vi.fn();
+
 vi.mock('@inertiajs/vue3', () => ({
     usePage: () => ({
         props: {
             auth: { user: { public_id: 'user-123' } },
+            onboarding: serverTours,
         },
     }),
+    router: {
+        post: (...args: unknown[]) => routerPost(...args),
+        delete: (...args: unknown[]) => routerDelete(...args),
+    },
 }));
 
 const flushTimers = async (ms: number) => {
@@ -44,6 +54,9 @@ const mountTour = (overrides: Record<string, unknown> = {}) =>
 describe('onboarding persistence (lib/onboarding)', () => {
     beforeEach(() => {
         window.localStorage.clear();
+        serverTours.tours = {};
+        routerPost.mockClear();
+        routerDelete.mockClear();
     });
 
     it('stores and reads status scoped per user', () => {
@@ -61,16 +74,61 @@ describe('onboarding persistence (lib/onboarding)', () => {
         expect(getTourStatus('dashboard', 'u1')).toBeNull();
     });
 
-    it('uses localStorage so completion is per device', () => {
+    it('uses localStorage so completion survives an offline/failed request', () => {
         setTourStatus('grades', 'done', 'u1');
         const keys = Object.keys(window.localStorage);
         expect(keys.some((k) => k.startsWith('onboarding:'))).toBe(true);
+    });
+
+    it('persists resolution to the account', () => {
+        setTourStatus('grades', 'done', 'u1');
+
+        expect(routerPost).toHaveBeenCalledTimes(1);
+        expect(routerPost.mock.calls[0][0]).toBe('/onboarding/grades');
+        expect(routerPost.mock.calls[0][1]).toEqual({ status: 'done' });
+    });
+
+    it('treats the account record as resolved even on a fresh device', () => {
+        // Nothing in localStorage — a brand new browser for this user.
+        expect(getTourStatus('grades', 'u1')).toBeNull();
+
+        expect(
+            getTourStatus('grades', 'u1', { tours: { grades: 'skipped' } }),
+        ).toBe('skipped');
+        expect(
+            getTourStatus('grades', 'u1', { tours: { grades: 'done' } }),
+        ).toBe('done');
+        expect(
+            getTourStatus('chats', 'u1', { tours: { grades: 'done' } }),
+        ).toBe(null);
+    });
+
+    it('ignores malformed account values', () => {
+        expect(
+            getTourStatus('grades', 'u1', { tours: { grades: 'nonsense' } }),
+        ).toBeNull();
+        expect(getTourStatus('grades', 'u1', { tours: null })).toBeNull();
+        expect(getTourStatus('grades', 'u1', null)).toBeNull();
+    });
+
+    it('clears both layers on reset', () => {
+        setTourStatus('grades', 'done', 'u1');
+        resetTourStatus('grades', 'u1');
+
+        expect(getTourStatus('grades', 'u1')).toBeNull();
+        expect(routerDelete).toHaveBeenCalledWith(
+            '/onboarding/grades',
+            expect.anything(),
+        );
     });
 });
 
 describe('OnboardingTour', () => {
     beforeEach(() => {
         window.localStorage.clear();
+        serverTours.tours = {};
+        routerPost.mockClear();
+        routerDelete.mockClear();
         document.body.innerHTML = '';
         vi.useFakeTimers();
     });
@@ -99,6 +157,54 @@ describe('OnboardingTour', () => {
         expect(
             document.querySelector('[data-testid="onboarding-tour"]'),
         ).toBeNull();
+
+        wrapper.unmount();
+        vi.useRealTimers();
+    });
+
+    it('does not start when the account already finished it on another device', async () => {
+        // Empty localStorage (new browser) but the account says it's done.
+        serverTours.tours = { 'test-tour': 'done' };
+
+        const wrapper = mountTour();
+        await flushTimers(50);
+
+        expect(
+            document.querySelector('[data-testid="onboarding-tour"]'),
+        ).toBeNull();
+
+        wrapper.unmount();
+        vi.useRealTimers();
+    });
+
+    it('does not start when the account record says it was skipped', async () => {
+        serverTours.tours = { 'test-tour': 'skipped' };
+
+        const wrapper = mountTour();
+        await flushTimers(50);
+
+        expect(
+            document.querySelector('[data-testid="onboarding-tour"]'),
+        ).toBeNull();
+
+        wrapper.unmount();
+        vi.useRealTimers();
+    });
+
+    it('records the resolution on the account when skipped', async () => {
+        const wrapper = mountTour();
+        await flushTimers(50);
+
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-skip"]',
+            )!
+            .click();
+        await flushTimers(10);
+
+        expect(routerPost).toHaveBeenCalledTimes(1);
+        expect(routerPost.mock.calls[0][0]).toBe('/onboarding/test-tour');
+        expect(routerPost.mock.calls[0][1]).toEqual({ status: 'skipped' });
 
         wrapper.unmount();
         vi.useRealTimers();
