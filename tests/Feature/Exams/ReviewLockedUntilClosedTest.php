@@ -63,8 +63,13 @@ it('unlocks review once the exam is closed', function () {
 })->group('security');
 
 it('still lets an admin review an open exam', function () {
-    [, $section] = reviewLockContext();
-    $admin = User::factory()->create(['is_admin' => true]);
+    // Act as the admin *before* creating records so the exam is created in
+    // their workspace (records are workspace-scoped on read).
+    $admin = User::factory()->admin()->create();
+    actingAs($admin);
+
+    $season = Season::factory()->active()->create();
+    $section = Section::factory()->forSeason($season)->create();
     $exam = Exam::factory()->published()->forSection($section)->create();
     ExamPart::factory()->forExam($exam)->identification(['Manila'])->create();
 
