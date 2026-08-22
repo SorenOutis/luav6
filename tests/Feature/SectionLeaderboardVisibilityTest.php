@@ -58,8 +58,8 @@ it('hides sections with disabled leaderboards from student-facing views', functi
 it('drops seasons whose sections all have hidden leaderboards from the student season list', function () {
     $workspace = Workspace::factory()->create();
 
-    $visibleSeason = Season::factory()->active()->create();
-    $hiddenSeason = Season::factory()->create();
+    $visibleSeason = Season::factory()->active()->create(['workspace_id' => $workspace->id]);
+    $hiddenSeason = Season::factory()->create(['workspace_id' => $workspace->id]);
 
     $visible = Section::factory()->forSeason($visibleSeason)->create(['workspace_id' => $workspace->id]);
     $hidden = Section::factory()->forSeason($hiddenSeason)->leaderboardHidden()->create(['workspace_id' => $workspace->id]);
@@ -77,8 +77,8 @@ it('drops seasons whose sections all have hidden leaderboards from the student s
 });
 
 it('excludes hidden sections from the student leaderboard page', function () {
-    $season = Season::factory()->active()->create();
     $workspace = Workspace::factory()->create();
+    $season = Season::factory()->active()->create(['workspace_id' => $workspace->id]);
 
     $visible = Section::factory()->forSeason($season)->create([
         'name' => 'Visible',
