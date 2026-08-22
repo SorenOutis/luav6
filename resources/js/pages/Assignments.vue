@@ -998,7 +998,11 @@ const groupRulesLabel = (assignment: Assignment) => {
     const min = assignment.group_rules?.min;
     const max = assignment.group_rules?.max;
     if (max === 1) return 'Individual activity';
-    if (min && max) return `Groups of ${min}–${max}`;
+    if (min && max) {
+        return min === max
+            ? `Groups of ${max}`
+            : `Groups of ${min}–${max}`;
+    }
     if (max) return `Up to ${max} members`;
     if (min) return `At least ${min} members`;
     return '';

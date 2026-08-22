@@ -45,22 +45,21 @@ class AssignmentForm
                     ->placeholder('e.g. 100')
                     ->helperText('Optional. Students see what the work is worth, and grades display as earned / possible.')
                     ->columnSpan(1),
-                TextInput::make('min_group_size')
-                    ->label('Min group size')
-                    ->numeric()
-                    ->minValue(1)
-                    ->maxValue(20)
-                    ->placeholder('No minimum')
-                    ->helperText('Optional advisory minimum group size for group activities.')
-                    ->columnSpan(1),
-                TextInput::make('max_group_size')
-                    ->label('Max group size')
-                    ->numeric()
-                    ->minValue(1)
-                    ->maxValue(20)
-                    ->rule('gte:min_group_size')
-                    ->placeholder('Unlimited')
-                    ->helperText('Set to 1 for individual assignments (disables group formation and member invites). Leave empty for unlimited.')
+                Select::make('group_size')
+                    ->label('Group size')
+                    ->options([
+                        1 => '1 — Individual',
+                        2 => '2 — Pair',
+                        3 => '3 — Trio',
+                        4 => '4 — Quartet',
+                    ])
+                    ->searchable()
+                    ->allowCustomValue()
+                    ->default(1)
+                    ->required()
+                    ->rules(['required', 'integer', 'between:1,20'])
+                    ->helperText('How many students work together per group. Pick 1 for an individual assignment, or type any number up to 20 for a larger group.')
+                    ->formatStateUsing(fn ($record) => $record?->max_group_size ?? 1)
                     ->columnSpan(1),
                 Select::make('course_id')
                     ->relationship('course', 'name')
