@@ -69,6 +69,15 @@ class ExamController extends Controller
     {
         $this->assertCanAccess($exam);
 
+        // Results stay sealed until the exam closes. Finishing early must not
+        // hand a student their paper back while classmates are still working —
+        // they could pass the questions (and their answers) along.
+        abort_unless(
+            $request->user()->is_admin || $exam->status === 'closed',
+            403,
+            'Results unlock once this exam is closed.',
+        );
+
         $submissions = ExamSubmission::query()
             ->where('user_id', $request->user()->id)
             ->where('exam_id', $exam->id)
@@ -146,6 +155,10 @@ class ExamController extends Controller
                 'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->isNotEmpty())
                     || $exam->status === 'closed',
                 'has_submissions' => $submissions->isNotEmpty(),
+                // Drives the "Review results" affordance: the student took part
+                // AND the exam is closed. `is_locked` is also true for a student
+                // who merely finished every part, which is not enough.
+                'results_available' => $exam->status === 'closed' && $submissions->isNotEmpty(),
                 'submissions' => $submissions->values()->all(),
                 'section_name' => $exam->section?->name,
                 'season_name' => $exam->section?->season?->name,
