@@ -7,6 +7,7 @@ use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\RelationManagers\ExamSubmissionsRelationManager;
+use App\Filament\Resources\Users\RelationManagers\XpHistoryRelationManager;
 use App\Filament\Resources\Users\Schemas\UserForm;
 use App\Filament\Resources\Users\Schemas\UserInfolist;
 use App\Filament\Resources\Users\Tables\UsersTable;
@@ -70,6 +71,7 @@ class UserResource extends Resource
     {
         return [
             ExamSubmissionsRelationManager::class,
+            XpHistoryRelationManager::class,
         ];
     }
 
