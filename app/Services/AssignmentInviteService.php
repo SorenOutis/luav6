@@ -43,6 +43,10 @@ class AssignmentInviteService
             abort(403, 'This assignment was not assigned to your section.');
         }
 
+        if ($assignment->max_group_size !== null && $assignment->max_group_size <= 1) {
+            abort(422, 'Group invites are disabled for this assignment as maximum group size is set to 1.');
+        }
+
         // Graded work is final: no new groups, no new invites.
         $this->groups->assertSubmittable($assignment, $inviter);
 

@@ -300,3 +300,15 @@ it('exposes invites and size rules on the assignments page payload', function ()
         ->assertInertia(fn (Assert $page) => $page
             ->where('assignments.0.group.pending_invites.0.user.name', 'Jose Santos'));
 });
+
+it('disallows group formation and invites when max_group_size is set to 1', function () {
+    $assignment = makeInviteAssignment(['max_group_size' => 1]);
+
+    sendInvites($this->creator, $assignment, [$this->member->id])
+        ->assertStatus(422);
+
+    $this->actingAs($this->creator)
+        ->get(route('assignments.groups.candidates', $assignment))
+        ->assertOk()
+        ->assertJsonCount(0, 'candidates');
+});
