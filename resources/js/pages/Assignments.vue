@@ -697,6 +697,37 @@ const hasActiveFilters = computed(() => {
     );
 });
 
+// ─── Instructions Modal State & Logic ───────────────────────────────────────
+// Each card exposes a "View instructions" action; the full instructions open
+// in a modal (bottom sheet on mobile, centered dialog on desktop) so students
+// can read them without leaving the page.
+const instructionsAssignmentId = ref<number | null>(null);
+
+const instructionsAssignment = computed(
+    () =>
+        (instructionsAssignmentId.value === null
+            ? null
+            : props.assignments.find(
+                  (a) => a.id === instructionsAssignmentId.value,
+              )) ?? null,
+);
+
+const openInstructions = (assignment: Assignment) => {
+    instructionsAssignmentId.value = assignment.id;
+};
+
+const closeInstructions = () => {
+    instructionsAssignmentId.value = null;
+};
+
+const openUploadFromInstructions = () => {
+    const assignment = instructionsAssignment.value;
+    closeInstructions();
+    if (assignment) {
+        openModalForAssignment(assignment);
+    }
+};
+
 // ─── Upload Modal State & Logic ─────────────────────────────────────────────
 const showUploadModal = ref(false);
 const selectedAssignmentId = ref<number | string>('');
@@ -717,21 +748,13 @@ const form = useForm({
     file: null as File | null,
 });
 
-const openModalForAssignment = (assignment?: Assignment) => {
+const openModalForAssignment = (assignment: Assignment) => {
     fileError.value = null;
     form.reset();
 
-    if (assignment) {
-        selectedAssignmentId.value = assignment.id;
-    } else {
-        const firstPending = props.assignments.find(
-            (a) => !a.submission?.submitted,
-        );
-        selectedAssignmentId.value = firstPending
-            ? firstPending.id
-            : (props.assignments[0]?.id ?? '');
-    }
-
+    // The modal is always opened for a specific assignment card, so the
+    // submission is targeted at that assignment — never switchable.
+    selectedAssignmentId.value = assignment.id;
     showUploadModal.value = true;
 };
 
@@ -1769,6 +1792,19 @@ onMounted(() => {
                                 {{ assignment.title }}
                             </h2>
 
+                            <!-- View instructions: opens a modal (bottom sheet on
+                                 mobile) with the full assignment instructions. -->
+                            <button
+                                type="button"
+                                class="inline-flex h-8 w-fit max-w-full items-center gap-1.5 self-start rounded-full border border-border/60 bg-card px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted active:scale-95 sm:text-xs"
+                                @click="openInstructions(assignment)"
+                            >
+                                <BookOpen
+                                    class="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                                />
+                                <span class="truncate">View instructions</span>
+                            </button>
+
                             <!-- Group Activity Section: student-formed groups share
                                  one submission file. Read-only once graded. -->
                             <div
@@ -2434,41 +2470,6 @@ onMounted(() => {
             </template>
 
             <div class="space-y-4 pt-2">
-                <!-- Assignment Selector (if multiple pending or changing selection) -->
-                <div v-if="props.assignments.length > 1" class="space-y-1.5">
-                    <label
-                        for="assignment-select"
-                        class="text-xs font-semibold text-foreground"
-                    >
-                        Select assignment
-                    </label>
-                    <div class="relative">
-                        <select
-                            id="assignment-select"
-                            v-model="selectedAssignmentId"
-                            class="h-11 w-full cursor-pointer appearance-none rounded-xl border border-border/60 bg-card px-3.5 text-sm font-medium text-foreground transition-colors outline-none hover:bg-muted/30 focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                        >
-                            <option value="" disabled>
-                                Select an assignment to submit...
-                            </option>
-                            <option
-                                v-for="a in props.assignments"
-                                :key="a.id"
-                                :value="a.id"
-                            >
-                                {{ a.title }}
-                                {{ a.course ? `(${a.course.name})` : '' }}
-                                {{
-                                    a.submission?.submitted ? '· Submitted' : ''
-                                }}
-                            </option>
-                        </select>
-                        <ChevronDown
-                            class="pointer-events-none absolute top-1/2 right-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
-                        />
-                    </div>
-                </div>
-
                 <!-- Assignment Description / Details Callout -->
                 <div
                     v-if="selectedAssignment?.description"
@@ -2659,6 +2660,141 @@ onMounted(() => {
                                 ? 'Submitting...'
                                 : 'Submit assignment'
                         }}</span>
+                    </Button>
+                </div>
+            </template>
+        </ResponsiveModal>
+
+        <!-- View Instructions Modal -->
+        <ResponsiveModal
+            :open="!!instructionsAssignment"
+            custom-header
+            content-class="sm:max-w-2xl"
+            @close="closeInstructions"
+        >
+            <template #header>
+                <div class="min-w-0 space-y-1">
+                    <span class="text-xs font-medium text-[#D97757]">
+                        Assignment instructions
+                    </span>
+                    <h2
+                        class="text-lg font-bold tracking-tight text-foreground"
+                    >
+                        {{ instructionsAssignment?.title }}
+                    </h2>
+                    <p class="text-xs text-muted-foreground">
+                        <template v-if="instructionsAssignment?.course?.name">
+                            {{ instructionsAssignment.course.name }}
+                        </template>
+                        <template
+                            v-if="
+                                instructionsAssignment?.course?.name &&
+                                instructionsAssignment?.due_date
+                            "
+                        >
+                            ·
+                        </template>
+                        <template v-if="instructionsAssignment?.due_date">
+                            Due
+                            {{ formatDueDate(instructionsAssignment.due_date) }}
+                        </template>
+                        <template v-if="!instructionsAssignment?.due_date">
+                            No due date
+                        </template>
+                    </p>
+                </div>
+            </template>
+
+            <div class="space-y-4 pt-2">
+                <!-- At-a-glance meta: status + what the work is worth -->
+                <div
+                    v-if="instructionsAssignment"
+                    class="flex flex-wrap items-center gap-1.5"
+                >
+                    <span
+                        class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:text-xs"
+                        :class="getStatusBadge(instructionsAssignment).classes"
+                    >
+                        {{ getStatusBadge(instructionsAssignment).label }}
+                    </span>
+
+                    <span
+                        v-if="
+                            !instructionsAssignment.submission?.submitted &&
+                            pointsPossibleOf(instructionsAssignment) > 0
+                        "
+                        class="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:text-xs dark:text-amber-400"
+                    >
+                        <Award class="h-3 w-3 shrink-0" />
+                        Worth
+                        {{
+                            formatNumber(
+                                pointsPossibleOf(instructionsAssignment),
+                            )
+                        }}
+                        pts
+                    </span>
+
+                    <span
+                        v-if="
+                            instructionsAssignment.submission?.submitted &&
+                            pointsLabel(instructionsAssignment) !== null
+                        "
+                        class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:text-xs dark:text-amber-400"
+                    >
+                        <TrendingUp class="h-3 w-3 shrink-0" />
+                        {{ pointsLabel(instructionsAssignment) }}
+                    </span>
+                </div>
+
+                <!-- Full instructions body -->
+                <div
+                    class="rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5"
+                >
+                    <p
+                        class="mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-foreground/70 uppercase sm:text-xs"
+                    >
+                        <BookOpen class="h-3.5 w-3.5 shrink-0" />
+                        Instructions
+                    </p>
+                    <div
+                        v-if="instructionsAssignment?.description"
+                        class="max-h-[50vh] overflow-y-auto overscroll-contain pr-1 text-sm leading-relaxed break-words whitespace-pre-wrap text-foreground sm:text-[15px]"
+                    >
+                        {{ instructionsAssignment.description }}
+                    </div>
+                    <p
+                        v-else
+                        class="text-sm leading-relaxed text-muted-foreground"
+                    >
+                        No instructions were provided for this assignment.
+                    </p>
+                </div>
+            </div>
+
+            <template #footer>
+                <div
+                    class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                >
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="dash-btn w-full rounded-xl sm:w-auto"
+                        @click="closeInstructions"
+                    >
+                        Close
+                    </Button>
+                    <Button
+                        v-if="
+                            instructionsAssignment &&
+                            !instructionsAssignment.submission?.submitted
+                        "
+                        type="button"
+                        class="dash-btn w-full rounded-xl bg-[#D97757] text-white hover:bg-[#D97757]/90 sm:w-auto"
+                        @click="openUploadFromInstructions"
+                    >
+                        <FileUp class="h-4 w-4" />
+                        <span>Submit assignment</span>
                     </Button>
                 </div>
             </template>
