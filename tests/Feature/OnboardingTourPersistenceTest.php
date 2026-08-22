@@ -73,12 +73,13 @@ it('does not leak another users onboarding state', function () {
     $other = User::factory()->create();
     $other->markOnboardingTour('dashboard', 'done');
 
+    // `where()` wraps array props in a Collection before handing them to a
+    // closure, so assert on the key itself rather than on emptiness.
     $this->actingAs($this->student)
         ->get('/dashboard')
-        ->assertInertia(fn (Assert $page) => $page->where(
-            'onboarding.tours',
-            fn ($tours) => empty((array) $tours),
-        ));
+        ->assertInertia(fn (Assert $page) => $page->missing('onboarding.tours.dashboard'));
+
+    expect($this->student->fresh()->onboardingTours())->toBe([]);
 });
 
 it('lets a tour be replayed after a reset', function () {
