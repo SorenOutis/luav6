@@ -1813,7 +1813,11 @@ onMounted(() => {
                             <div
                                 v-if="
                                     assignment.group ||
-                                    (!isGroupLocked(assignment) && (assignment.group_rules?.max === null || assignment.group_rules?.max === undefined || assignment.group_rules.max > 1))
+                                    (!isGroupLocked(assignment) &&
+                                        (assignment.group_rules?.max === null ||
+                                            assignment.group_rules?.max ===
+                                                undefined ||
+                                            assignment.group_rules.max > 1))
                                 "
                                 class="rounded-xl border border-primary/15 bg-primary/[0.04] p-2.5"
                             >
