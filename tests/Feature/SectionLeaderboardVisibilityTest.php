@@ -18,6 +18,8 @@ use App\Models\Workspace;
 use App\Services\LeaderboardService;
 use Livewire\Livewire;
 
+use function Pest\Laravel\actingAs;
+
 it('hides sections with disabled leaderboards from student-facing views', function () {
     $season = Season::factory()->active()->create();
     $workspace = Workspace::factory()->create();
