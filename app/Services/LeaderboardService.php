@@ -5,13 +5,15 @@ namespace App\Services;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Support\PublicFileUrl;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Canonical leaderboard builder used by the dashboard and leaderboard API.
+ * Canonical leaderboard builder used by the dashboard, the leaderboard API
+ * and the admin leaderboards page.
  *
  * The visible roster is deliberately bounded. Rank and total-player values are
  * still calculated over the complete section by SQL window functions, while
@@ -27,6 +29,12 @@ class LeaderboardService
 
     /** Higher ceiling for the super admin's platform-wide, per-workspace view. */
     public const MAX_ADMIN_VISIBLE_SECTIONS = 100;
+
+    /** Per-section row ceiling when an admin expands a section on the leaderboards page. */
+    public const MAX_ADMIN_VISIBLE_USERS = 200;
+
+    /** Maximum sections listed on the admin leaderboards page (platform-wide super admin view). */
+    public const MAX_ADMIN_PAGE_SECTIONS = 500;
 
     /**
      * Build leaderboard data for every section the user belongs to in a given
@@ -83,13 +91,178 @@ class LeaderboardService
     }
 
     /**
+     * Leaderboards for the admin panel.
+     *
+     * Regular admins see the sections of their own workspace — the Section
+     * workspace global scope applies that automatically. Super admins see
+     * every section platform-wide, optionally narrowed to a single workspace
+     * via $workspaceId, and workspace inspection confines them to the
+     * inspected workspace as usual.
+     *
+     * Every section carries at most $maxVisibleUsers rows so the initial page
+     * render stays light; expanding a section refetches its full board through
+     * forAdminSection().
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function forAdminSections(
+        User $admin,
+        ?Season $season,
+        ?int $workspaceId = null,
+        int $maxVisibleUsers = self::MAX_ADMIN_VISIBLE_USERS,
+        int $sectionLimit = self::MAX_ADMIN_PAGE_SECTIONS,
+    ): array {
+        if (! $season) {
+            return [];
+        }
+
+        $sections = Section::query()
+            ->when(
+                $workspaceId !== null && $admin->isSuperAdmin(),
+                fn ($query) => $query->where('sections.workspace_id', $workspaceId),
+            )
+            ->whereHas('users', fn ($query) => $query->where('section_user.season_id', $season->id))
+            ->with('workspace:id,name')
+            ->orderBy('sections.workspace_id')
+            ->orderBy('sections.name')
+            ->limit($sectionLimit)
+            ->get();
+
+        return $this->build($admin, $season, $sections, includeWorkspace: true, maxVisibleUsers: $maxVisibleUsers);
+    }
+
+    /**
+     * Full leaderboard for a single section — used when an admin expands a
+     * section on the admin leaderboards page. Scoped like forAdminSections().
+     *
+     * @return array<string, mixed>
+     */
+    public function forAdminSection(User $admin, ?Season $season, int $sectionId): array
+    {
+        if (! $season) {
+            return [];
+        }
+
+        $section = Section::query()
+            ->with('workspace:id,name')
+            ->find($sectionId);
+
+        if (! $section) {
+            return [];
+        }
+
+        $boards = $this->build(
+            $admin,
+            $season,
+            collect([$section]),
+            includeWorkspace: true,
+            maxVisibleUsers: self::MAX_ADMIN_VISIBLE_USERS,
+        );
+
+        return $boards[0] ?? [];
+    }
+
+    /**
+     * Total number of sections the admin leaderboards page would list, before
+     * the section-limit cap applies. Used to surface truncation in the UI.
+     */
+    public function countAdminSections(User $admin, ?Season $season, ?int $workspaceId = null): int
+    {
+        if (! $season) {
+            return 0;
+        }
+
+        return (int) Section::query()
+            ->when(
+                $workspaceId !== null && $admin->isSuperAdmin(),
+                fn ($query) => $query->where('sections.workspace_id', $workspaceId),
+            )
+            ->whereHas('users', fn ($query) => $query->where('section_user.season_id', $season->id))
+            ->count();
+    }
+
+    /**
+     * Seasons selectable on a leaderboard view.
+     *
+     * Students pick from the seasons their own enrollments point to. Tenant
+     * admins pick from the seasons used by their own workspace's sections
+     * (the Section workspace global scope applies that automatically). Super
+     * admins pick from every season with enrollments — optionally narrowed to
+     * one workspace — while the Section and Season workspace global scopes
+     * confine that to the inspected workspace while inspection is active, and
+     * leave it platform-wide otherwise.
+     *
+     * @return Collection<int, Season>
+     */
+    public function availableSeasons(User $user, ?int $workspaceId = null): Collection
+    {
+        if ($user->isSuperAdmin()) {
+            return Season::query()
+                ->when($workspaceId !== null, fn ($query) => $query->where('seasons.workspace_id', $workspaceId))
+                ->whereIn('id', Section::query()
+                    ->when($workspaceId !== null, fn ($query) => $query->where('sections.workspace_id', $workspaceId))
+                    ->join('section_user', 'section_user.section_id', '=', 'sections.id')
+                    ->whereNotNull('section_user.season_id')
+                    ->distinct()
+                    ->select('section_user.season_id'))
+                ->orderBy('start_date', 'desc')
+                ->get();
+        }
+
+        if ($user->is_admin) {
+            return Season::query()
+                ->whereIn('id', Section::query()
+                    ->join('section_user', 'section_user.section_id', '=', 'sections.id')
+                    ->whereNotNull('section_user.season_id')
+                    ->distinct()
+                    ->select('section_user.season_id'))
+                ->orderBy('start_date', 'desc')
+                ->get();
+        }
+
+        return Season::query()
+            ->whereIn('id', $user->sections()
+                ->wherePivotNotNull('season_id')
+                ->pluck('section_user.season_id')
+                ->unique())
+            ->orderBy('start_date', 'desc')
+            ->get();
+    }
+
+    /**
+     * Workspaces that have at least one section with student enrollments,
+     * optionally for a specific season. Drives the super admin's workspace
+     * filter on the admin leaderboards page.
+     *
+     * @return Collection<int, Workspace>
+     */
+    public function workspacesWithEnrollments(?Season $season): Collection
+    {
+        return Workspace::query()
+            ->whereIn('id', Section::query()
+                ->whereNotNull('sections.workspace_id')
+                ->join('section_user', 'section_user.section_id', '=', 'sections.id')
+                ->when($season, fn ($query) => $query->where('section_user.season_id', $season->id))
+                ->whereNotNull('section_user.season_id')
+                ->distinct()
+                ->select('sections.workspace_id'))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+
+    /**
      * Rank and serialize the given sections for the given season.
      *
      * @param  Collection<int, Section>  $sections
      * @return array<int, array<string, mixed>>
      */
-    protected function build(User $user, Season $season, Collection $sections, bool $includeWorkspace = false): array
-    {
+    protected function build(
+        User $user,
+        Season $season,
+        Collection $sections,
+        bool $includeWorkspace = false,
+        int $maxVisibleUsers = self::MAX_VISIBLE_USERS,
+    ): array {
         if ($sections->isEmpty()) {
             return [];
         }
@@ -127,7 +300,7 @@ class LeaderboardService
         $visibleRows = DB::query()
             ->fromSub($ranked, 'ranked_users')
             ->where(function ($query) use ($user): void {
-                $query->where('row_position', '<=', self::MAX_VISIBLE_USERS)
+                $query->where('row_position', '<=', $maxVisibleUsers)
                     ->orWhere('user_id', $user->id);
             })
             ->orderBy('section_id')
