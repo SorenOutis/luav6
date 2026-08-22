@@ -748,21 +748,13 @@ const form = useForm({
     file: null as File | null,
 });
 
-const openModalForAssignment = (assignment?: Assignment) => {
+const openModalForAssignment = (assignment: Assignment) => {
     fileError.value = null;
     form.reset();
 
-    if (assignment) {
-        selectedAssignmentId.value = assignment.id;
-    } else {
-        const firstPending = props.assignments.find(
-            (a) => !a.submission?.submitted,
-        );
-        selectedAssignmentId.value = firstPending
-            ? firstPending.id
-            : (props.assignments[0]?.id ?? '');
-    }
-
+    // The modal is always opened for a specific assignment card, so the
+    // submission is targeted at that assignment — never switchable.
+    selectedAssignmentId.value = assignment.id;
     showUploadModal.value = true;
 };
 
@@ -2478,41 +2470,6 @@ onMounted(() => {
             </template>
 
             <div class="space-y-4 pt-2">
-                <!-- Assignment Selector (if multiple pending or changing selection) -->
-                <div v-if="props.assignments.length > 1" class="space-y-1.5">
-                    <label
-                        for="assignment-select"
-                        class="text-xs font-semibold text-foreground"
-                    >
-                        Select assignment
-                    </label>
-                    <div class="relative">
-                        <select
-                            id="assignment-select"
-                            v-model="selectedAssignmentId"
-                            class="h-11 w-full cursor-pointer appearance-none rounded-xl border border-border/60 bg-card px-3.5 text-sm font-medium text-foreground transition-colors outline-none hover:bg-muted/30 focus:border-primary/40 focus:ring-2 focus:ring-primary/20"
-                        >
-                            <option value="" disabled>
-                                Select an assignment to submit...
-                            </option>
-                            <option
-                                v-for="a in props.assignments"
-                                :key="a.id"
-                                :value="a.id"
-                            >
-                                {{ a.title }}
-                                {{ a.course ? `(${a.course.name})` : '' }}
-                                {{
-                                    a.submission?.submitted ? '· Submitted' : ''
-                                }}
-                            </option>
-                        </select>
-                        <ChevronDown
-                            class="pointer-events-none absolute top-1/2 right-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"
-                        />
-                    </div>
-                </div>
-
                 <!-- Assignment Description / Details Callout -->
                 <div
                     v-if="selectedAssignment?.description"
