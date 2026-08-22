@@ -194,6 +194,10 @@ class AssignmentGroupService
      */
     public function candidates(Assignment $assignment, User $user, ?string $query): Collection
     {
+        if ($assignment->max_group_size !== null && $assignment->max_group_size <= 1) {
+            return Collection::make();
+        }
+
         AssignmentGroupInvite::expireOverdue($assignment);
 
         $sectionIds = $assignment->sections()->pluck('sections.id');

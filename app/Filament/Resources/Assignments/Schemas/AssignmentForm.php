@@ -51,15 +51,16 @@ class AssignmentForm
                     ->minValue(1)
                     ->maxValue(20)
                     ->placeholder('No minimum')
-                    ->helperText('Optional advisory for group activities — students are never blocked from submitting.')
+                    ->helperText('Optional advisory minimum group size for group activities.')
                     ->columnSpan(1),
                 TextInput::make('max_group_size')
                     ->label('Max group size')
                     ->numeric()
                     ->minValue(1)
                     ->maxValue(20)
+                    ->rule('gte:min_group_size')
                     ->placeholder('Unlimited')
-                    ->helperText('Optional hard cap on group invites for this assignment.')
+                    ->helperText('Set to 1 for individual assignments (disables group formation and member invites). Leave empty for unlimited.')
                     ->columnSpan(1),
                 Select::make('course_id')
                     ->relationship('course', 'name')

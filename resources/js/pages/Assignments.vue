@@ -978,6 +978,7 @@ const openInviteSlots = computed(() => {
     const assignment = inviteAssignment.value;
     if (!assignment) return Infinity;
     const max = assignment.group_rules?.max;
+    if (max !== null && max !== undefined && max <= 1) return 0;
     if (!max) return Infinity;
     const members = assignment.group?.members?.length ?? 0;
     const pending = assignment.group?.pending_invites?.length ?? 0;
@@ -986,6 +987,7 @@ const openInviteSlots = computed(() => {
 
 const canInviteMore = (assignment: Assignment) => {
     const max = assignment.group_rules?.max;
+    if (max !== null && max !== undefined && max <= 1) return false;
     if (!max) return true;
     const members = assignment.group?.members?.length ?? 0;
     const pending = assignment.group?.pending_invites?.length ?? 0;
@@ -995,6 +997,7 @@ const canInviteMore = (assignment: Assignment) => {
 const groupRulesLabel = (assignment: Assignment) => {
     const min = assignment.group_rules?.min;
     const max = assignment.group_rules?.max;
+    if (max === 1) return 'Individual activity';
     if (min && max) return `Groups of ${min}–${max}`;
     if (max) return `Up to ${max} members`;
     if (min) return `At least ${min} members`;
@@ -1810,7 +1813,7 @@ onMounted(() => {
                             <div
                                 v-if="
                                     assignment.group ||
-                                    !isGroupLocked(assignment)
+                                    (!isGroupLocked(assignment) && (assignment.group_rules?.max === null || assignment.group_rules?.max === undefined || assignment.group_rules.max > 1))
                                 "
                                 class="rounded-xl border border-primary/15 bg-primary/[0.04] p-2.5"
                             >
