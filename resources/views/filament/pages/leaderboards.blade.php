@@ -86,33 +86,69 @@
 
                         <div wire:key="leaderboard-section-{{ $sectionId }}" class="bg-white dark:bg-gray-900">
                             {{-- Accordion header --}}
-                            <button
-                                type="button"
-                                wire:click="toggleSection({{ $sectionId }})"
-                                aria-expanded="{{ $expanded ? 'true' : 'false' }}"
-                                class="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-gray-50 dark:hover:bg-white/5"
-                            >
-                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-300">
-                                    <x-filament::icon icon="heroicon-o-academic-cap" class="h-5 w-5" />
-                                </span>
-
-                                <span class="min-w-0 flex-1">
-                                    <span class="block truncate text-sm font-semibold text-gray-950 dark:text-white">
-                                        {{ $section['sectionName'] }}
+                            <div class="flex items-center">
+                                <button
+                                    type="button"
+                                    wire:click="toggleSection({{ $sectionId }})"
+                                    aria-expanded="{{ $expanded ? 'true' : 'false' }}"
+                                    class="flex min-w-0 flex-1 items-center gap-3 px-5 py-4 text-left transition hover:bg-gray-50 dark:hover:bg-white/5"
+                                >
+                                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/10 dark:text-primary-300">
+                                        <x-filament::icon icon="heroicon-o-academic-cap" class="h-5 w-5" />
                                     </span>
-                                    <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
-                                        {{ $section['totalPlayers'] }} {{ Str::plural('student', $section['totalPlayers']) }}
-                                        @if ($leader)
-                                            · #1 {{ $leader['name'] }} · {{ number_format($leader['xp']) }} XP
-                                        @endif
-                                    </span>
-                                </span>
 
-                                <x-filament::icon
-                                    icon="heroicon-m-chevron-down"
-                                    class="h-5 w-5 shrink-0 text-gray-400 transition-transform duration-200 dark:text-gray-500 {{ $expanded ? 'rotate-180' : '' }}"
-                                />
-                            </button>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="flex items-center gap-2">
+                                            <span class="truncate text-sm font-semibold text-gray-950 dark:text-white">
+                                                {{ $section['sectionName'] }}
+                                            </span>
+                                            @unless ($section['leaderboardEnabled'])
+                                                <span class="shrink-0 rounded-full bg-warning-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning-700 dark:bg-warning-500/10 dark:text-warning-300">
+                                                    Hidden from students
+                                                </span>
+                                            @endunless
+                                        </span>
+                                        <span class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400">
+                                            {{ $section['totalPlayers'] }} {{ Str::plural('student', $section['totalPlayers']) }}
+                                            @if ($leader)
+                                                · #1 {{ $leader['name'] }} · {{ number_format($leader['xp']) }} XP
+                                            @endif
+                                        </span>
+                                    </span>
+
+                                    <x-filament::icon
+                                        icon="heroicon-m-chevron-down"
+                                        class="h-5 w-5 shrink-0 text-gray-400 transition-transform duration-200 dark:text-gray-500 {{ $expanded ? 'rotate-180' : '' }}"
+                                    />
+                                </button>
+
+                                {{-- Student visibility toggle --}}
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked="{{ $section['leaderboardEnabled'] ? 'true' : 'false' }}"
+                                    aria-label="Show {{ $section['sectionName'] }} leaderboard to students"
+                                    wire:click="toggleLeaderboardVisibility({{ $sectionId }})"
+                                    title="{{ $section['leaderboardEnabled'] ? 'Visible to students — click to hide' : 'Hidden from students — click to show' }}"
+                                    class="group flex shrink-0 items-center gap-2 border-l border-gray-100 px-4 py-4 transition hover:bg-gray-50 dark:border-white/5 dark:hover:bg-white/5"
+                                >
+                                    <x-filament::icon
+                                        :icon="$section['leaderboardEnabled'] ? 'heroicon-o-eye' : 'heroicon-o-eye-slash'"
+                                        class="h-4 w-4 {{ $section['leaderboardEnabled'] ? 'text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300' : 'text-warning-500' }}"
+                                    />
+                                    <span @class([
+                                        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition',
+                                        'bg-success-500' => $section['leaderboardEnabled'],
+                                        'bg-gray-300 dark:bg-gray-600' => ! $section['leaderboardEnabled'],
+                                    ])>
+                                        <span @class([
+                                            'inline-block h-4 w-4 transform rounded-full bg-white shadow transition',
+                                            'translate-x-[18px]' => $section['leaderboardEnabled'],
+                                            'translate-x-0.5' => ! $section['leaderboardEnabled'],
+                                        ])></span>
+                                    </span>
+                                </button>
+                            </div>
 
                             {{-- Section body --}}
                             @if ($expanded)

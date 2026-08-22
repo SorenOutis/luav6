@@ -18,6 +18,7 @@ class Section extends Model
         'join_code',
         'workspace_id',
         'admin_id',
+        'leaderboard_enabled',
     ];
 
     public const SCHOOL_LEVEL_COLLEGE = 'college';
@@ -32,6 +33,7 @@ class Section extends Model
     {
         return [
             'password' => 'hashed',
+            'leaderboard_enabled' => 'boolean',
         ];
     }
 

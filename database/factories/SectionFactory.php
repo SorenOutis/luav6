@@ -39,4 +39,14 @@ class SectionFactory extends Factory
             'season_id' => $season->id,
         ]);
     }
+
+    /**
+     * Hide this section's leaderboard from students.
+     */
+    public function leaderboardHidden(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'leaderboard_enabled' => false,
+        ]);
+    }
 }

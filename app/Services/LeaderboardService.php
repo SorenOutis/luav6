@@ -50,6 +50,7 @@ class LeaderboardService
 
         $userSections = $user->sections()
             ->wherePivot('season_id', $season->id)
+            ->where('sections.leaderboard_enabled', true)
             ->orderBy('sections.name')
             ->limit(self::MAX_VISIBLE_SECTIONS)
             ->get();
@@ -67,6 +68,10 @@ class LeaderboardService
      * workspace's sections while workspace inspection is active (the Section
      * workspace global scope applies that constraint automatically).
      *
+     * Sections with leaderboards disabled by an admin are always excluded:
+     * this powers the student dashboard, the student leaderboard page and the
+     * leaderboard API, all of which mirror what students are allowed to see.
+     *
      * @return array<int, array{sectionId: int, sectionName: string, workspaceId?: int|null, workspaceName?: string|null, users: Collection, userRank: int, totalPlayers: int}>
      */
     public function forViewer(User $user, ?Season $season): array
@@ -81,6 +86,7 @@ class LeaderboardService
 
         $sections = Section::query()
             ->whereHas('users', fn ($query) => $query->where('section_user.season_id', $season->id))
+            ->where('sections.leaderboard_enabled', true)
             ->with('workspace:id,name')
             ->orderBy('sections.workspace_id')
             ->orderBy('sections.name')
@@ -184,13 +190,15 @@ class LeaderboardService
     /**
      * Seasons selectable on a leaderboard view.
      *
-     * Students pick from the seasons their own enrollments point to. Tenant
-     * admins pick from the seasons used by their own workspace's sections
-     * (the Section workspace global scope applies that automatically). Super
-     * admins pick from every season with enrollments — optionally narrowed to
-     * one workspace — while the Section and Season workspace global scopes
-     * confine that to the inspected workspace while inspection is active, and
-     * leave it platform-wide otherwise.
+     * Students pick from the seasons their own (leaderboard-enabled)
+     * enrollments point to, so a season whose sections all have their
+     * leaderboards hidden does not appear. Tenant admins pick from the
+     * seasons used by their own workspace's sections (the Section workspace
+     * global scope applies that automatically). Super admins pick from every
+     * season with enrollments — optionally narrowed to one workspace — while
+     * the Section and Season workspace global scopes confine that to the
+     * inspected workspace while inspection is active, and leave it
+     * platform-wide otherwise.
      *
      * @return Collection<int, Season>
      */
@@ -223,6 +231,7 @@ class LeaderboardService
         return Season::query()
             ->whereIn('id', $user->sections()
                 ->wherePivotNotNull('season_id')
+                ->where('sections.leaderboard_enabled', true)
                 ->pluck('section_user.season_id')
                 ->unique())
             ->orderBy('start_date', 'desc')
@@ -357,6 +366,7 @@ class LeaderboardService
             $leaderboard = [
                 'sectionId' => (int) $section->id,
                 'sectionName' => (string) $section->name,
+                'leaderboardEnabled' => (bool) ($section->leaderboard_enabled ?? true),
                 'users' => $leaderboardUsers,
                 'userRank' => (int) ($viewer->rank_position ?? 0),
                 'totalPlayers' => (int) ($first->total_players ?? 0),

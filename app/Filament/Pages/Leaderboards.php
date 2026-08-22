@@ -3,10 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Models\Season;
+use App\Models\Section;
 use App\Models\Workspace;
 use App\Services\LeaderboardService;
 use App\Support\WorkspaceContext;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 
@@ -18,6 +20,9 @@ use Illuminate\Support\Collection;
  * table. Tenant admins see their own workspace's sections; super admins get
  * an extra workspace filter to drill into any workspace (or see everything
  * platform-wide while not inspecting).
+ *
+ * Each section header carries a toggle that controls whether the section's
+ * leaderboard is shown to students on their dashboard and leaderboard page.
  */
 class Leaderboards extends Page
 {
@@ -59,6 +64,40 @@ class Leaderboards extends Page
         }
 
         $this->expandedSections[$sectionId] = true;
+    }
+
+    /**
+     * Flip whether this section's leaderboard is shown to students.
+     *
+     * The Section workspace global scope keeps tenant admins inside their own
+     * workspace, so a foreign section id simply resolves to nothing.
+     */
+    public function toggleLeaderboardVisibility(int $sectionId): void
+    {
+        $section = Section::query()->find($sectionId);
+
+        if (! $section) {
+            return;
+        }
+
+        $section->leaderboard_enabled = ! $section->leaderboard_enabled;
+        $section->save();
+
+        $notification = Notification::make()
+            ->title($section->leaderboard_enabled
+                ? 'Leaderboard visible to students'
+                : 'Leaderboard hidden from students')
+            ->body($section->leaderboard_enabled
+                ? "Students in {$section->name} can now see their leaderboard again."
+                : "Students in {$section->name} will no longer see their leaderboard.");
+
+        if ($section->leaderboard_enabled) {
+            $notification->success();
+        } else {
+            $notification->warning();
+        }
+
+        $notification->send();
     }
 
     public function updatedSeasonId(): void
