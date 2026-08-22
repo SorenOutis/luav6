@@ -11,14 +11,14 @@ import {
 } from 'vue';
 import { useMobile } from '@/composables/useMobile';
 import { getTourStatus, setTourStatus } from '@/lib/onboarding';
-import type { TourStep } from '@/lib/onboarding';
+import type { OnboardingProps, TourStep } from '@/lib/onboarding';
 
 /**
  * OnboardingTour — a lightweight spotlight walkthrough.
  *
- * - Persists completion per user + per device (localStorage), so logging in
- *   on a new device shows the tour again while finished/skipped devices
- *   stay quiet.
+ * - Persists completion on the user's account (and in localStorage for an
+ *   instant/offline result), so a tour that was finished *or* skipped never
+ *   auto-starts again — on any device, browser or after clearing site data.
  * - Steps whose `target` element is missing or hidden are skipped silently,
  *   so conditional UI (daily reward card, section tabs…) never breaks a tour.
  * - Uses theme tokens (bg-card / text-foreground / primary) so it renders
@@ -62,6 +62,11 @@ const { isMobile, prefersReducedMotion, isLowEndDevice } = useMobile();
 /** All motion collapses on reduced-motion / low-end hardware. */
 const instant = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
+);
+
+/** Account-level record shared by HandleInertiaRequests. */
+const onboardingProps = computed<OnboardingProps | null>(
+    () => (page.props as { onboarding?: OnboardingProps }).onboarding ?? null,
 );
 
 const resolvedScope = computed(() => {
@@ -301,10 +306,15 @@ const skip = () => {
     emit('skip');
 };
 
+/** Already finished or skipped — on this device or on the account. */
+const isResolved = () =>
+    getTourStatus(props.tourId, resolvedScope.value, onboardingProps.value) !==
+    null;
+
 const maybeAutoStart = () => {
     if (typeof window === 'undefined') return;
     if (hasStartedOnce || active.value) return;
-    if (getTourStatus(props.tourId, resolvedScope.value)) return;
+    if (isResolved()) return;
     if (startTimer) clearTimeout(startTimer);
     startTimer = setTimeout(() => {
         startTimer = null;

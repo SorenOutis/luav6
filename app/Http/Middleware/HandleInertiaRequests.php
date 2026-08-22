@@ -101,6 +101,11 @@ class HandleInertiaRequests extends Middleware
                     ],
             ],
             'studentPageControls' => fn () => StudentPageRegistry::sharedForPath($request->path()),
+            // Account-level onboarding state: a tour listed here is already
+            // done/skipped and must never auto-start again.
+            'onboarding' => fn () => [
+                'tours' => (object) ($request->user()?->onboardingTours() ?? []),
+            ],
             'schoolBranding' => fn () => [
                 'name' => Setting::get('school_name', 'LSI Engine'),
                 'tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),

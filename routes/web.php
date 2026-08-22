@@ -29,6 +29,7 @@ use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
 use App\Http\Controllers\LeaveImpersonationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PendingAiActionController;
 use App\Http\Controllers\ProfileKudoController;
 use App\Http\Controllers\PublicProfileController;
@@ -107,6 +108,15 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         ->name('workspaces.inspect');
     Route::delete('workspaces/inspection', [WorkspaceController::class, 'stopInspecting'])
         ->name('workspaces.inspection.stop');
+
+    // Onboarding tours: recorded on the account so a finished/skipped tour
+    // never replays, on any device.
+    Route::post('onboarding/{tour}', [OnboardingController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('onboarding.store');
+    Route::delete('onboarding/{tour}', [OnboardingController::class, 'destroy'])
+        ->middleware('throttle:30,1')
+        ->name('onboarding.destroy');
 
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');

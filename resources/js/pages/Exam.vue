@@ -14,6 +14,7 @@ import {
     Zap,
     Timer,
     Search,
+    Lock,
 } from 'lucide-vue-next';
 import {
     ref,
@@ -108,6 +109,7 @@ interface Exam {
     total_parts?: number;
     is_locked?: boolean;
     has_submissions?: boolean;
+    results_available?: boolean;
     submissions?: ExamSubmission[];
     section_name?: string;
     season_name?: string;
@@ -282,6 +284,19 @@ const filteredExamsBySeason = computed(() => {
 const hasSubmitted = (exam: Exam) =>
     exam.has_submissions ?? (exam.submissions?.length ?? 0) > 0;
 
+// Results stay sealed until the exam closes, even for a student who already
+// finished every part — otherwise they could pass the questions and their
+// answers to classmates who are still working. `is_locked` is true as soon as
+// the last part is submitted, so it is NOT sufficient on its own. The server
+// enforces the same rule; the `??` fallback covers cached page props served
+// during a rolling deploy.
+const canReviewResults = (exam: Exam) =>
+    exam.results_available ?? (exam.status === 'closed' && hasSubmitted(exam));
+
+// Finished, but the exam is still open for everyone else.
+const isAwaitingClose = (exam: Exam) =>
+    !canReviewResults(exam) && hasSubmitted(exam) && exam.is_locked === true;
+
 // --- Exam Time Info (countdown/overdue) ---
 const getExamTimeInfo = (exam: Exam) => {
     if (!exam.exam_date && !exam.exam_date_iso) {
@@ -427,7 +442,7 @@ const loadMoreExams = async () => {
 };
 
 const openReview = async (exam: Exam) => {
-    if (!hasSubmitted(exam) || isLoadingReview.value) {
+    if (!canReviewResults(exam) || isLoadingReview.value) {
         return;
     }
 
@@ -468,9 +483,10 @@ const openReview = async (exam: Exam) => {
 
 const openExam = (exam: Exam) => {
     if (exam.is_locked) {
-        // A closed exam the student never answered has no review results —
-        // do not open the modal, or they would see the questions.
-        if (hasSubmitted(exam)) {
+        // Only a closed exam the student actually answered has results to
+        // show. A closed exam they skipped would leak the questions, and an
+        // exam they merely finished is still live for their classmates.
+        if (canReviewResults(exam)) {
             openReview(exam);
         }
         return;
@@ -572,7 +588,7 @@ const activitiesTourSteps: TourStep[] = [
         id: 'card',
         target: 'exams-card',
         title: 'Everything on the card',
-        body: 'Each card shows status, parts submitted, duration and score. Tap a card to open the exam — completed ones open a full review of your answers.',
+        body: 'Each card shows status, parts submitted, duration and score. Tap a card to open the exam — once your teacher closes it, the card opens a full review of your answers.',
     },
 ];
 
@@ -811,8 +827,8 @@ watch(selectedPartId, () => {
                             "
                             class="exam-card flex min-h-[6.25rem] min-w-0 flex-col justify-between rounded-xl border border-l-[3px] p-3 transition-colors duration-200 sm:min-h-[7.5rem] sm:rounded-[1.25rem] sm:p-5"
                             :class="[
-                                exam.is_locked
-                                    ? 'cursor-pointer opacity-80'
+                                exam.is_locked && !canReviewResults(exam)
+                                    ? 'cursor-default opacity-80'
                                     : 'cursor-pointer hover:bg-muted/30',
                                 getCardStatusClass(exam),
                             ]"
@@ -975,21 +991,42 @@ watch(selectedPartId, () => {
                                     </div>
                                 </div>
 
-                                <!-- Chevron for list style on mobile -->
+                                <!-- Chevron for list style on mobile. Swapped for
+                                     a lock when the card has nothing to open yet
+                                     (finished, but the exam is still running). -->
                                 <ArrowRight
+                                    v-if="
+                                        !exam.is_locked ||
+                                        canReviewResults(exam)
+                                    "
                                     class="h-5 w-5 flex-shrink-0 text-muted-foreground/50 sm:hidden"
+                                />
+                                <Lock
+                                    v-else-if="isAwaitingClose(exam)"
+                                    class="h-4 w-4 flex-shrink-0 text-muted-foreground/50 sm:hidden"
                                 />
                             </div>
 
                             <!-- Action Button (only show on sm+) -->
                             <div class="mt-3 hidden sm:block">
                                 <button
-                                    v-if="exam.is_locked && hasSubmitted(exam)"
+                                    v-if="canReviewResults(exam)"
                                     type="button"
                                     class="dash-btn w-full bg-[#D97757]/10 text-[15px] text-[#D97757] hover:bg-[#D97757]/15"
                                     @click.stop="openReview(exam)"
                                 >
                                     Review results
+                                </button>
+                                <button
+                                    v-else-if="isAwaitingClose(exam)"
+                                    type="button"
+                                    disabled
+                                    title="Your answers unlock once your teacher closes this exam."
+                                    class="dash-btn flex w-full cursor-not-allowed items-center justify-center gap-1.5 bg-muted/20 text-[15px] text-muted-foreground"
+                                    @click.stop
+                                >
+                                    <Lock class="h-3.5 w-3.5" />
+                                    Results locked
                                 </button>
                                 <span
                                     v-else-if="exam.is_locked"

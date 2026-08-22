@@ -19,6 +19,28 @@ describe('exams and parts student shell', () => {
         expect(page).not.toContain('REMAINING');
     });
 
+    it('keeps "Review results" locked until the exam is closed', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Exam.vue'),
+            'utf8',
+        );
+
+        // Finishing every part flips `is_locked`, which is not enough on its
+        // own — the card must wait for the exam to close.
+        expect(page).toContain('const canReviewResults');
+        expect(page).toContain("exam.status === 'closed'");
+        expect(page).toContain('v-if="canReviewResults(exam)"');
+        expect(page).toContain('Results locked');
+        expect(page).toContain('isAwaitingClose(exam)');
+
+        // The review fetch and the whole-card tap obey the same gate.
+        expect(page).toContain('if (!canReviewResults(exam) ||');
+        expect(page).toContain('if (canReviewResults(exam)) {');
+        expect(page).not.toContain(
+            'v-if="exam.is_locked && hasSubmitted(exam)"\n',
+        );
+    });
+
     it('applies the student shell to the exam parts page', () => {
         const page = readFileSync(
             join(process.cwd(), 'resources/js/pages/Exams/Show.vue'),

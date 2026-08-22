@@ -1,3 +1,4 @@
+import type { OnboardingProps } from '@/lib/onboarding';
 import type { AiChatSettings } from '@/types/aiChat';
 import type { Auth } from '@/types/auth';
 import type { StudentPageControls } from '@/types/studentPageControls';
@@ -22,6 +23,7 @@ declare module '@inertiajs/core' {
             auth: Auth;
             aiChat: AiChatSettings;
             studentPageControls: StudentPageControls;
+            onboarding: OnboardingProps;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

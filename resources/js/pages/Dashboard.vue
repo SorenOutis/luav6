@@ -463,12 +463,17 @@ const userStats = computed(() => props.userStats);
 // Declared above claimXpForPrompt so the computed can reference it safely.
 const claimPromptReady = ref(Boolean(props.sectionName));
 
-// Whether the onboarding walkthrough still needs to run on this device.
-// Checked once at setup so the claim prompt isn't blocked forever on devices
-// that already finished (or skipped) the tour.
+// Whether the onboarding walkthrough still needs to run. Resolved from the
+// account record first (shared as `onboarding.tours`) and localStorage second,
+// so the claim prompt isn't blocked forever for users who already finished or
+// skipped the tour — on this device or any other.
 dashboardTourPending.value =
     typeof window !== 'undefined' &&
-    getTourStatus('dashboard', page.props.auth.user?.public_id ?? '') === null;
+    getTourStatus(
+        'dashboard',
+        page.props.auth.user?.public_id ?? '',
+        page.props.onboarding,
+    ) === null;
 
 // The tour waits for boot + the section flow, and never runs for banned users.
 const tourCanStart = computed(

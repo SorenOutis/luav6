@@ -26,6 +26,26 @@ describe('mobile navigation', () => {
         expect(source).not.toContain("label: 'Games'");
     });
 
+    it('keeps long labels inside their slot so items never overlap', () => {
+        const source = readFileSync(
+            join(process.cwd(), 'resources/js/components/MobileNav.vue'),
+            'utf8',
+        );
+
+        // Equal slots + a hard truncation guard: no label can paint outside
+        // its share of the bar, however many items are enabled.
+        expect(source).toContain('flex-1 basis-0');
+        expect(source).toContain('truncate');
+
+        // Crowded bars fall back to short labels at a tighter type scale.
+        expect(source).toContain('isCompact');
+        expect(source).toContain("shortLabel: 'Agenda'");
+        expect(source).toContain("shortLabel: 'Tasks'");
+
+        // Full names stay available to screen readers and tooltips.
+        expect(source).toContain(':aria-label="item.label"');
+    });
+
     it('keeps the chats workspace compact on small screens', () => {
         const source = readFileSync(
             join(process.cwd(), 'resources/js/pages/Chats.vue'),

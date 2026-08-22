@@ -107,6 +107,7 @@ class User extends Authenticatable implements FilamentUser
         'profile_show_social',
         'profile_show_achievements',
         'blur_leaderboard',
+        'onboarding_tours',
     ];
 
     public function isSuperAdmin(): bool
@@ -266,7 +267,66 @@ class User extends Authenticatable implements FilamentUser
             'profile_show_social' => 'boolean',
             'profile_show_achievements' => 'boolean',
             'banned_at' => 'datetime',
+            'onboarding_tours' => 'array',
         ];
+    }
+
+    /**
+     * Onboarding tours this account has already resolved, keyed by tour id
+     * with a value of 'done' or 'skipped'.
+     *
+     * @return array<string, string>
+     */
+    public function onboardingTours(): array
+    {
+        $tours = $this->onboarding_tours;
+
+        if (! is_array($tours)) {
+            return [];
+        }
+
+        return array_filter(
+            $tours,
+            fn ($status, $tourId) => is_string($tourId)
+                && in_array($status, ['done', 'skipped'], true),
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
+    /**
+     * Record a tour as finished/skipped. Once set, the tour never auto-starts
+     * again on any device — the first resolution wins, so a later visit can't
+     * downgrade a 'done' to 'skipped' or replay the walkthrough.
+     */
+    public function markOnboardingTour(string $tourId, string $status): void
+    {
+        if (! in_array($status, ['done', 'skipped'], true)) {
+            return;
+        }
+
+        $tours = $this->onboardingTours();
+
+        if (isset($tours[$tourId])) {
+            return;
+        }
+
+        $tours[$tourId] = $status;
+
+        $this->forceFill(['onboarding_tours' => $tours])->save();
+    }
+
+    /** Clear one tour (or all of them) so it can play again. */
+    public function resetOnboardingTour(?string $tourId = null): void
+    {
+        $tours = $this->onboardingTours();
+
+        if ($tourId === null) {
+            $tours = [];
+        } else {
+            unset($tours[$tourId]);
+        }
+
+        $this->forceFill(['onboarding_tours' => $tours])->save();
     }
 
     public function badges()
