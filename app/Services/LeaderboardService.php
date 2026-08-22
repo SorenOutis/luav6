@@ -308,7 +308,7 @@ class LeaderboardService
         // "Your rank" card remains useful when they are outside the top rows.
         $visibleRows = DB::query()
             ->fromSub($ranked, 'ranked_users')
-            ->where(function ($query) use ($user): void {
+            ->where(function ($query) use ($user, $maxVisibleUsers): void {
                 $query->where('row_position', '<=', $maxVisibleUsers)
                     ->orWhere('user_id', $user->id);
             })
