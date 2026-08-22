@@ -45,20 +45,14 @@ class AssignmentForm
                     ->placeholder('e.g. 100')
                     ->helperText('Optional. Students see what the work is worth, and grades display as earned / possible.')
                     ->columnSpan(1),
-                Select::make('group_size')
+                TextInput::make('group_size')
                     ->label('Group size')
-                    ->options([
-                        1 => '1 — Individual',
-                        2 => '2 — Pair',
-                        3 => '3 — Trio',
-                        4 => '4 — Quartet',
-                    ])
-                    ->searchable()
-                    ->allowCustomValue()
+                    ->numeric()
+                    ->minValue(1)
+                    ->maxValue(20)
                     ->default(1)
                     ->required()
-                    ->rules(['required', 'integer', 'between:1,20'])
-                    ->helperText('How many students work together per group. Pick 1 for an individual assignment, or type any number up to 20 for a larger group.')
+                    ->helperText('Number of students per group. 1 = individual; groups form up to this size (max 20).')
                     ->formatStateUsing(fn ($record) => $record?->max_group_size ?? 1)
                     ->columnSpan(1),
                 Select::make('course_id')
