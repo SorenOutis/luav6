@@ -28,6 +28,23 @@ class Assignment extends Model
     }
 
     /**
+     * Due date for the browser, as a wall-clock value with NO timezone offset.
+     *
+     * The admin's Filament DateTimePicker is timezone-naive: whatever the
+     * admin enters ("Aug 25, 2:30 PM") is meant to be seen by every student
+     * verbatim. Shipping an offset here (e.g. toIso8601String() →
+     * "2026-08-25T14:30:00+00:00") makes the browser treat it as an absolute
+     * instant and convert it into each student's local zone, shifting the
+     * displayed time by the offset. A bare ISO datetime ("2026-08-25T14:30:00")
+     * is parsed by the browser as local time, so it renders exactly as the
+     * admin entered it and matches the admin Filament table.
+     */
+    public function dueDateForClient(): ?string
+    {
+        return $this->due_date?->format('Y-m-d\TH:i:s');
+    }
+
+    /**
      * The sections this assignment is given to.
      *
      * An assignment with no sections is unassigned: it is visible to nobody

@@ -91,7 +91,7 @@ class AssignmentController extends Controller
                     'id' => $assignment->id,
                     'title' => $assignment->title,
                     'description' => $assignment->description,
-                    'due_date' => $assignment->due_date?->toIso8601String(),
+                    'due_date' => $assignment->dueDateForClient(),
                     'points_possible' => $assignment->points_possible,
                     'group_rules' => [
                         'min' => $assignment->min_group_size,
