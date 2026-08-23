@@ -377,36 +377,7 @@ class ActivityHubController extends Controller
 
     private function buildUnifiedTimeline($exams, $assignments, $courses): array
     {
-        $items = collect();
-
-        foreach ($exams as $exam) {
-            $items->push([
-                'kind' => 'exam',
-                'id' => $exam['id'],
-                'title' => $exam['title'],
-                'href' => '/exams/' . $exam['id'],
-            ]);
-        }
-
-        foreach ($assignments as $assignment) {
-            $items->push([
-                'kind' => 'assignment',
-                'id' => $assignment['id'],
-                'title' => $assignment['title'],
-                'href' => '/assignments',
-            ]);
-        }
-
-        foreach ($courses as $course) {
-            $items->push([
-                'kind' => 'course',
-                'id' => $course['id'],
-                'title' => $course['name'],
-                'href' => '/courses/' . $course['id'],
-            ]);
-        }
-
-        return $items->values()->all();
+        return [];
     }
 
     public function listing(Request $request): JsonResponse
