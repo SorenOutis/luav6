@@ -16,7 +16,7 @@ final class AvatarGallery
      */
     public static function paths(): array
     {
-        return collect(glob(storage_path('app/public/avatars/avatar-*.svg')) ?: [])
+        return collect(glob(public_path('avatars/avatar-*.svg')) ?: [])
             ->filter(fn (string $file): bool => preg_match('/avatar-\d+\.svg$/i', basename($file)) === 1)
             ->sortBy(fn (string $file): int => (int) preg_replace('/\D+/', '', basename($file)))
             ->map(fn (string $file): string => 'avatars/'.basename($file))
