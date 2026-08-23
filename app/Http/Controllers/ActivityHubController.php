@@ -377,7 +377,57 @@ class ActivityHubController extends Controller
 
     private function buildUnifiedTimeline($exams, $assignments, $courses): array
     {
-        return [];
+        $items = collect();
+
+        foreach ($exams as $exam) {
+            $items->push([
+                'kind' => 'exam',
+                'id' => $exam['id'],
+                'title' => $exam['title'],
+                'due_at' => $exam['exam_date_iso'] ?? null,
+                'is_completed' => ($exam['is_locked'] ?? false) && ($exam['has_submissions'] ?? false),
+                'href' => '/exams/' . $exam['id'],
+            ]);
+        }
+
+        foreach ($assignments as $assignment) {
+            $items->push([
+                'kind' => 'assignment',
+                'id' => $assignment['id'],
+                'title' => $assignment['title'],
+                'due_at' => $assignment['due_date_iso'] ?? null,
+                'is_completed' => (bool) ($assignment['submission']['submitted'] ?? false),
+                'href' => '/assignments',
+            ]);
+        }
+
+        foreach ($courses as $course) {
+            $items->push([
+                'kind' => 'course',
+                'id' => $course['id'],
+                'title' => $course['name'],
+                'due_at' => null,
+                'is_completed' => ($course['progress'] ?? 0) >= 100,
+                'href' => '/courses/' . $course['id'],
+            ]);
+        }
+
+        return $items
+            ->sortBy(function ($item) {
+                if ($item['is_completed']) {
+                    return 9999999999;
+                }
+
+                if (! $item['due_at']) {
+                    return 9999999998;
+                }
+
+                $ts = strtotime($item['due_at']);
+
+                return $ts ?: 9999999998;
+            })
+            ->values()
+            ->all();
     }
 
     public function listing(Request $request): JsonResponse
