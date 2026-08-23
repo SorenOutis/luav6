@@ -23,24 +23,106 @@ class ActivityHubController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+
         $examPage = $this->examPage($user, $request->query('cursor'));
         $assignmentsPayload = $this->assignmentsForUser($user);
         $coursesPayload = $this->coursesForUser($user);
+
+        $allExams = collect($examPage['data'])
+            ->flatMap(fn ($g) => $g['exams']);
+
+        $pendingExams = $allExams
+            ->filter(fn ($e) => ! ($e['is_locked'] ?? false))
+            ->count();
+
+        $pendingAssignments = collect($assignmentsPayload)
+            ->filter(fn ($a) => ! ($a['submission']['submitted'] ?? false))
+            ->count();
+
+        $pendingCourses = collect($coursesPayload)
+            ->filter(fn ($c) => ($c['progress'] ?? 0) < 100)
+            ->count();
+
+        $totalCount = $allExams->count() + count($assignmentsPayload) + count($coursesPayload);
+
+        $completedExams = $allExams
+            ->filter(fn ($e) => ($e['is_locked'] ?? false) && ($e['has_submissions'] ?? false))
+            ->count();
+
+        $completedAssignments = collect($assignmentsPayload)
+            ->filter(fn ($a) => ($a['submission']['submitted'] ?? false))
+            ->count();
+
+        $completedCourses = collect($coursesPayload)
+            ->filter(fn ($c) => ($c['progress'] ?? 0) >= 100)
+            ->count();
+
+        $sectionNames = collect()
+            ->merge($allExams->pluck('section_name')->filter())
+            ->merge(
+                collect($assignmentsPayload)
+                    ->flatMap(fn ($a) => collect($a['sections'] ?? [])->pluck('name'))
+                    ->filter()
+            )
+            ->unique()
+            ->sort()
+            ->values();
+
+        $sectionTabs = collect([
+            ['key' => 'all', 'label' => 'All sections', 'count' => $totalCount],
+        ])
+            ->merge(
+                $sectionNames->map(function ($name) use ($allExams, $assignmentsPayload) {
+                    $examCount = $allExams
+                        ->filter(fn ($e) => ($e['section_name'] ?? '') === $name)
+                        ->count();
+
+                    $assignCount = collect($assignmentsPayload)
+                        ->filter(fn ($a) => collect($a['sections'] ?? [])->pluck('name')->contains($name))
+                        ->count();
+
+                    return [
+                        'key' => $name,
+                        'label' => $name,
+                        'count' => $examCount + $assignCount,
+                    ];
+                })
+            )
+            ->values()
+            ->all();
+
+        $unified = $this->buildUnifiedTimeline(
+            $allExams,
+            collect($assignmentsPayload),
+            collect($coursesPayload)
+        );
 
         return Inertia::render('Activities/Index', [
             'examsBySeason' => $examPage['data'],
             'examPagination' => $examPage['meta'],
             'assignments' => $assignmentsPayload,
             'courses' => $coursesPayload,
-            'sectionTabs' => [['key' => 'all', 'label' => 'All sections', 'count' => 0]],
-            'unifiedTimeline' => [],
+            'sectionTabs' => $sectionTabs,
+            'unifiedTimeline' => $unified,
             'hubStats' => [
-                'total' => 0,
-                'pending' => 0,
-                'completed' => 0,
-                'exams' => ['total' => 0, 'pending' => 0, 'completed' => 0],
-                'assignments' => ['total' => 0, 'pending' => 0, 'completed' => 0],
-                'courses' => ['total' => 0, 'pending' => 0, 'completed' => 0],
+                'total' => $totalCount,
+                'pending' => $pendingExams + $pendingAssignments + $pendingCourses,
+                'completed' => $completedExams + $completedAssignments + $completedCourses,
+                'exams' => [
+                    'total' => $allExams->count(),
+                    'pending' => $pendingExams,
+                    'completed' => $completedExams,
+                ],
+                'assignments' => [
+                    'total' => count($assignmentsPayload),
+                    'pending' => $pendingAssignments,
+                    'completed' => $completedAssignments,
+                ],
+                'courses' => [
+                    'total' => count($coursesPayload),
+                    'pending' => $pendingCourses,
+                    'completed' => $completedCourses,
+                ],
             ],
         ]);
     }
@@ -291,6 +373,93 @@ class ActivityHubController extends Controller
                     'modulesCount' => (int) $course->modules_count,
                 ];
             })->values()->all();
+    }
+
+    private function buildUnifiedTimeline($exams, $assignments, $courses): array
+    {
+        $items = collect();
+
+        foreach ($exams as $exam) {
+            $dueAt = $exam['exam_date_iso'] ?? $exam['exam_date'] ?? null;
+            $isCompleted = ($exam['is_locked'] ?? false) && ($exam['has_submissions'] ?? false);
+
+            $items->push([
+                'kind' => 'exam',
+                'id' => $exam['id'],
+                'title' => $exam['title'],
+                'description' => $exam['description'] ?? '',
+                'due_at' => $dueAt,
+                'section_name' => $exam['section_name'] ?? null,
+                'season_name' => $exam['season_name'] ?? null,
+                'is_completed' => $isCompleted,
+                'is_locked' => $exam['is_locked'] ?? false,
+                'status' => $exam['status'] ?? 'published',
+                'meta' => ($exam['submitted_parts_count'] ?? 0) . '/' . ($exam['total_parts'] ?? 0) . ' parts · ' . ($exam['duration_minutes'] ?? 0) . 'm',
+                'href' => '/exams/' . $exam['id'],
+                'score' => collect($exam['submissions'] ?? [])->sum(fn ($s) => (float) ($s['score'] ?? 0)),
+            ]);
+        }
+
+        foreach ($assignments as $assignment) {
+            $dueAt = $assignment['due_date_iso'] ?? null;
+            $isCompleted = (bool) ($assignment['submission']['submitted'] ?? false);
+
+            $items->push([
+                'kind' => 'assignment',
+                'id' => $assignment['id'],
+                'title' => $assignment['title'],
+                'description' => $assignment['description'] ?? '',
+                'due_at' => $dueAt,
+                'section_name' => $assignment['sections'][0]['name'] ?? null,
+                'season_name' => null,
+                'is_completed' => $isCompleted,
+                'is_locked' => $isCompleted && (($assignment['submission']['status'] ?? '') === 'Graded'),
+                'status' => $assignment['submission']['status'] ?? 'Pending',
+                'meta' => $assignment['course']['name'] ?? null,
+                'href' => '/assignments',
+                'points_possible' => $assignment['points_possible'],
+                'submission' => $assignment['submission'],
+            ]);
+        }
+
+        foreach ($courses as $course) {
+            $progress = $course['progress'] ?? 0;
+            $isCompleted = $progress >= 100;
+
+            $items->push([
+                'kind' => 'course',
+                'id' => $course['id'],
+                'title' => $course['name'],
+                'description' => $course['description'] ?? '',
+                'due_at' => null,
+                'section_name' => null,
+                'season_name' => null,
+                'is_completed' => $isCompleted,
+                'is_locked' => false,
+                'status' => $isCompleted ? 'Completed' : 'In Progress',
+                'meta' => ($course['completedLessons'] ?? 0) . '/' . ($course['totalLessons'] ?? 0) . ' lessons · ' . $progress . '%',
+                'href' => '/courses/' . $course['id'],
+                'progress' => $progress,
+                'cover_photo' => $course['cover_photo'] ?? null,
+            ]);
+        }
+
+        return $items
+            ->sortBy(function ($item) {
+                if ($item['is_completed']) {
+                    return 9999999999;
+                }
+
+                if (! $item['due_at']) {
+                    return 9999999998;
+                }
+
+                $ts = strtotime($item['due_at']);
+
+                return $ts ?: 9999999998;
+            })
+            ->values()
+            ->all();
     }
 
     public function listing(Request $request): JsonResponse
