@@ -394,7 +394,7 @@ class ActivityHubController extends Controller
                 'is_completed' => $isCompleted,
                 'is_locked' => $exam['is_locked'] ?? false,
                 'status' => $exam['status'] ?? 'published',
-                'meta' => ($exam['submitted_parts_count'] ?? 0) . '/' . ($exam['total_parts'] ?? 0) . ' parts · ' . ($exam['duration_minutes'] ?? 0) . 'm',
+                'meta' => ($exam['submitted_parts_count'] ?? 0) . ' / ' . ($exam['total_parts'] ?? 0) . ' parts',
                 'href' => '/exams/' . $exam['id'],
                 'score' => collect($exam['submissions'] ?? [])->sum(fn ($s) => (float) ($s['score'] ?? 0)),
             ]);
@@ -437,7 +437,7 @@ class ActivityHubController extends Controller
                 'is_completed' => $isCompleted,
                 'is_locked' => false,
                 'status' => $isCompleted ? 'Completed' : 'In Progress',
-                'meta' => ($course['completedLessons'] ?? 0) . '/' . ($course['totalLessons'] ?? 0) . ' lessons · ' . $progress . '%',
+                'meta' => ($course['completedLessons'] ?? 0) . ' / ' . ($course['totalLessons'] ?? 0) . ' lessons',
                 'href' => '/courses/' . $course['id'],
                 'progress' => $progress,
                 'cover_photo' => $course['cover_photo'] ?? null,
