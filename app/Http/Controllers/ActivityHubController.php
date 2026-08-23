@@ -25,12 +25,13 @@ class ActivityHubController extends Controller
         $user = $request->user();
         $examPage = $this->examPage($user, $request->query('cursor'));
         $assignmentsPayload = $this->assignmentsForUser($user);
+        $coursesPayload = $this->coursesForUser($user);
 
         return Inertia::render('Activities/Index', [
             'examsBySeason' => $examPage['data'],
             'examPagination' => $examPage['meta'],
             'assignments' => $assignmentsPayload,
-            'courses' => [],
+            'courses' => $coursesPayload,
             'sectionTabs' => [['key' => 'all', 'label' => 'All sections', 'count' => 0]],
             'unifiedTimeline' => [],
             'hubStats' => [
@@ -268,6 +269,28 @@ class ActivityHubController extends Controller
         }
 
         return $submission->graded_at !== null && $submission->feedback_seen_at->lt($submission->graded_at);
+    }
+
+    private function coursesForUser(User $user): array
+    {
+        return $user->courses()
+            ->withCount('modules')
+            ->get()
+            ->map(function ($course) {
+                return [
+                    'id' => $course->id,
+                    'name' => $course->name,
+                    'description' => $course->description,
+                    'cover_photo' => $course->cover_photo_url,
+                    'totalLessons' => $course->total_lessons,
+                    'completedLessons' => $course->pivot->completed_lessons ?? 0,
+                    'progress' => $course->total_lessons > 0
+                        ? round((($course->pivot->completed_lessons ?? 0) / $course->total_lessons) * 100)
+                        : 0,
+                    'xpEarned' => $course->pivot->xp_earned ?? 0,
+                    'modulesCount' => (int) $course->modules_count,
+                ];
+            })->values()->all();
     }
 
     public function listing(Request $request): JsonResponse
