@@ -35,15 +35,15 @@ class ActivityHubController extends Controller
         $assignmentsPayload = $this->assignmentsForUser($user);
         $coursesPayload = $this->coursesForUser($user);
 
-        $allExams = collect($examPage['data'])->flatMap(fn($g) => $g['exams']);
+        $allExams = collect($examPage['data'])->flatMap(fn ($g) => $g['exams']);
         $pendingExams = $allExams
-            ->filter(fn($e) => !($e['is_locked'] ?? false))
+            ->filter(fn ($e) => ! ($e['is_locked'] ?? false))
             ->count();
         $pendingAssignments = collect($assignmentsPayload)
-            ->filter(fn($a) => !($a['submission']['submitted'] ?? false))
+            ->filter(fn ($a) => ! ($a['submission']['submitted'] ?? false))
             ->count();
         $pendingCourses = collect($coursesPayload)
-            ->filter(fn($c) => ($c['progress'] ?? 0) < 100)
+            ->filter(fn ($c) => ($c['progress'] ?? 0) < 100)
             ->count();
 
         $totalCount =
@@ -52,15 +52,15 @@ class ActivityHubController extends Controller
             count($coursesPayload);
         $completedExams = $allExams
             ->filter(
-                fn($e) => ($e['is_locked'] ?? false) &&
+                fn ($e) => ($e['is_locked'] ?? false) &&
                     ($e['has_submissions'] ?? false),
             )
             ->count();
         $completedAssignments = collect($assignmentsPayload)
-            ->filter(fn($a) => $a['submission']['submitted'] ?? false)
+            ->filter(fn ($a) => $a['submission']['submitted'] ?? false)
             ->count();
         $completedCourses = collect($coursesPayload)
-            ->filter(fn($c) => ($c['progress'] ?? 0) >= 100)
+            ->filter(fn ($c) => ($c['progress'] ?? 0) >= 100)
             ->count();
 
         $sectionNames = collect()
@@ -68,7 +68,7 @@ class ActivityHubController extends Controller
             ->merge(
                 collect($assignmentsPayload)
                     ->flatMap(
-                        fn($a) => collect($a['sections'] ?? [])->pluck('name'),
+                        fn ($a) => collect($a['sections'] ?? [])->pluck('name'),
                     )
                     ->filter(),
             )
@@ -85,11 +85,11 @@ class ActivityHubController extends Controller
                     $assignmentsPayload,
                 ) {
                     $examCount = $allExams
-                        ->filter(fn($e) => ($e['section_name'] ?? '') === $name)
+                        ->filter(fn ($e) => ($e['section_name'] ?? '') === $name)
                         ->count();
                     $assignCount = collect($assignmentsPayload)
                         ->filter(
-                            fn($a) => collect($a['sections'] ?? [])
+                            fn ($a) => collect($a['sections'] ?? [])
                                 ->pluck('name')
                                 ->contains($name),
                         )
@@ -153,7 +153,7 @@ class ActivityHubController extends Controller
         $paginator = Exam::query()
             ->with([
                 'section.season',
-                'parts' => fn($query) => $query
+                'parts' => fn ($query) => $query
                     ->select([
                         'id',
                         'exam_id',
@@ -166,7 +166,7 @@ class ActivityHubController extends Controller
                     ->orderBy('sort_order'),
             ])
             ->where('status', '!=', 'draft')
-            ->when(!$user->is_admin, function ($query) use ($user): void {
+            ->when(! $user->is_admin, function ($query) use ($user): void {
                 $sectionIds = $user->sections()->pluck('sections.id');
                 $query->where(function ($query) use ($sectionIds): void {
                     $query
@@ -227,17 +227,17 @@ class ActivityHubController extends Controller
             ->pluck('id', 'name');
 
         $groups = $examsData
-            ->groupBy(fn($exam) => $exam['season_name'] ?? 'Other')
+            ->groupBy(fn ($exam) => $exam['season_name'] ?? 'Other')
             ->map(
-                fn($group, $seasonName) => [
+                fn ($group, $seasonName) => [
                     'seasonName' => $seasonName,
                     'exams' => $group->values()->all(),
                 ],
             )
             ->sortBy(
-                fn($group) => $seasonRank
+                fn ($group) => $seasonRank
                     ->keys()
-                    ->search(fn($name) => $name === $group['seasonName']) ??
+                    ->search(fn ($name) => $name === $group['seasonName']) ??
                     999,
             )
             ->values()
@@ -357,7 +357,7 @@ class ActivityHubController extends Controller
                     'course' => $assignment->course,
                     'sections' => $assignment->sections
                         ->map(
-                            fn($section) => [
+                            fn ($section) => [
                                 'id' => $section->id,
                                 'name' => $section->name,
                             ],
@@ -369,7 +369,7 @@ class ActivityHubController extends Controller
                             'created_by' => $group->created_by,
                             'members' => $group->members
                                 ->map(
-                                    fn(Submission $member) => [
+                                    fn (Submission $member) => [
                                         'id' => $member->user_id,
                                         'name' => $member->user?->name,
                                         'avatar' => $member->user?->avatar,
@@ -382,7 +382,7 @@ class ActivityHubController extends Controller
                                 ? $pendingByGroup
                                     ->get($group->id)
                                     ->map(
-                                        fn(AssignmentGroupInvite $invite) => [
+                                        fn (AssignmentGroupInvite $invite) => [
                                             'id' => $invite->id,
                                             'user' => [
                                                 'id' => $invite->invitee_id,
@@ -506,7 +506,7 @@ class ActivityHubController extends Controller
                     'm',
                 'href' => '/exams/' . $exam['id'],
                 'score' => collect($exam['submissions'] ?? [])->sum(
-                    fn($s) => (float) ($s['score'] ?? 0),
+                    fn ($s) => (float) ($s['score'] ?? 0),
                 ),
             ]);
         }
@@ -567,7 +567,7 @@ class ActivityHubController extends Controller
                 if ($item['is_completed']) {
                     return PHP_INT_MAX;
                 }
-                if (!$item['due_at']) {
+                if (! $item['due_at']) {
                     return PHP_INT_MAX - 1;
                 }
                 $ts = strtotime($item['due_at']);
