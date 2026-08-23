@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Assignment;
 use App\Models\AssignmentGroup;
 use App\Models\AssignmentGroupInvite;
-use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamSubmission;
 use App\Models\Season;
@@ -16,7 +15,6 @@ use App\Support\PublicFileUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -33,19 +31,13 @@ class ActivityHubController extends Controller
     {
         $user = $request->user();
 
-        // ── Exams (same as ExamController::examPage) ─────────────────────
         $examPage = $this->examPage($user, $request->query('cursor'));
-
-        // ── Assignments (same as AssignmentController@index) ───────────────
         $assignmentsPayload = $this->assignmentsForUser($user);
-
-        // ── Courses (same as CourseController@index) ───────────────────────
         $coursesPayload = $this->coursesForUser($user);
 
-        // ── Unified stats for header ───────────────────────────────────────
         $allExams = collect($examPage['data'])->flatMap(fn ($g) => $g['exams']);
-        $pendingExams = $allExams->filter(fn ($e) => !($e['is_locked'] ?? false))->count();
-        $pendingAssignments = collect($assignmentsPayload)->filter(fn ($a) => !($a['submission']['submitted'] ?? false))->count();
+        $pendingExams = $allExams->filter(fn ($e) => ! ($e['is_locked'] ?? false))->count();
+        $pendingAssignments = collect($assignmentsPayload)->filter(fn ($a) => ! ($a['submission']['submitted'] ?? false))->count();
         $pendingCourses = collect($coursesPayload)->filter(fn ($c) => ($c['progress'] ?? 0) < 100)->count();
 
         $totalCount = $allExams->count() + count($assignmentsPayload) + count($coursesPayload);
@@ -53,7 +45,6 @@ class ActivityHubController extends Controller
         $completedAssignments = collect($assignmentsPayload)->filter(fn ($a) => ($a['submission']['submitted'] ?? false))->count();
         $completedCourses = collect($coursesPayload)->filter(fn ($c) => ($c['progress'] ?? 0) >= 100)->count();
 
-        // ── Section tabs (union of exam sections + assignment sections) ────
         $sectionNames = collect()
             ->merge($allExams->pluck('section_name')->filter())
             ->merge(collect($assignmentsPayload)->flatMap(fn ($a) => collect($a['sections'] ?? [])->pluck('name'))->filter())
@@ -65,6 +56,7 @@ class ActivityHubController extends Controller
             ->merge($sectionNames->map(function ($name) use ($allExams, $assignmentsPayload) {
                 $examCount = $allExams->filter(fn ($e) => ($e['section_name'] ?? '') === $name)->count();
                 $assignCount = collect($assignmentsPayload)->filter(fn ($a) => collect($a['sections'] ?? [])->pluck('name')->contains($name))->count();
+
                 return [
                     'key' => $name,
                     'label' => $name,
@@ -74,8 +66,7 @@ class ActivityHubController extends Controller
             ->values()
             ->all();
 
-        // ── Unified due items for "All" tab (sorted by urgency) ────────────
-        $unified = $this->buildUnifiedTimeline($user, $allExams, collect($assignmentsPayload), collect($coursesPayload));
+        $unified = $this->buildUnifiedTimeline($allExams, collect($assignmentsPayload), collect($coursesPayload));
 
         return Inertia::render('Activities/Index', [
             'examsBySeason' => $examPage['data'],
@@ -112,7 +103,7 @@ class ActivityHubController extends Controller
      *
      * @return array{data: array<int, array<string, mixed>>, meta: array{hasMore: bool, nextCursor: string|null}}
      */
-    private function examPage(\App\Models\User $user, ?string $cursor = null): array
+    private function examPage(User $user, ?string $cursor = null): array
     {
         $paginator = Exam::query()
             ->with([
@@ -186,10 +177,7 @@ class ActivityHubController extends Controller
         ];
     }
 
-    /**
-     * Reuse AssignmentController@index logic verbatim (lightweight copy).
-     */
-    private function assignmentsForUser(\App\Models\User $user): array
+    private function assignmentsForUser(User $user): array
     {
         $sectionIds = $user->sections()->pluck('sections.id');
 
@@ -249,7 +237,6 @@ class ActivityHubController extends Controller
             $pivot = $submission;
             $filePath = $pivot?->file_path;
             $group = $groups->get($pivot?->group_id);
-
             $incoming = $incomingInvites->get($assignment->id);
 
             return [
@@ -332,19 +319,13 @@ class ActivityHubController extends Controller
         if ($submission->feedback_seen_at === null) {
             return true;
         }
+
         return $submission->graded_at !== null && $submission->feedback_seen_at->lt($submission->graded_at);
     }
 
-    private function coursesForUser(\App\Models\User $user): array
+    private function coursesForUser(User $user): array
     {
-        $currentSeason = Season::current();
-
-        $courses = $user->courses()
-            ->when($currentSeason, function ($query) use ($currentSeason, $user) {
-                $userSeasonIds = $user->sections()
-                    ->wherePivot('season_id', $currentSeason->id)
-                    ->pluck('sections.id');
-            })
+        return $user->courses()
             ->withCount('modules')
             ->get()
             ->map(function ($course) {
@@ -362,14 +343,9 @@ class ActivityHubController extends Controller
                     'modulesCount' => (int) $course->modules_count,
                 ];
             })->values()->all();
-
-        return $courses;
     }
 
-    /**
-     * Build a unified timeline sorted by urgency for the "All" tab.
-     */
-    private function buildUnifiedTimeline($user, $exams, $assignments, $courses): array
+    private function buildUnifiedTimeline($exams, $assignments, $courses): array
     {
         $items = collect();
 
@@ -435,22 +411,19 @@ class ActivityHubController extends Controller
             ]);
         }
 
-        // Sort: overdue first, then soonest due, then courses last
         return $items->sortBy(function ($item) {
             if ($item['is_completed']) {
                 return PHP_INT_MAX;
             }
-            if (!$item['due_at']) {
+            if (! $item['due_at']) {
                 return PHP_INT_MAX - 1;
             }
             $ts = strtotime($item['due_at']);
+
             return $ts ?: PHP_INT_MAX - 1;
         })->values()->all();
     }
 
-    /**
-     * API for loading more exams (used by hub's Exams tab).
-     */
     public function listing(Request $request): JsonResponse
     {
         return response()->json($this->examPage(

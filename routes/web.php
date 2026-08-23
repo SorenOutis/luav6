@@ -17,6 +17,7 @@ use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
+use App\Http\Controllers\ActivityHubController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\DashboardController;
@@ -146,11 +147,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('assignments/{assignment}/feedback-seen', [AssignmentController::class, 'markFeedbackSeen'])->middleware('student.page:assignments')->name('assignments.feedback.seen');
 
     // Activities Hub — unified Exams + Assignments + Courses (Option A)
-    Route::get('activities', [\App\Http\Controllers\ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('activities.index');
-    Route::get('api/activities', [\App\Http\Controllers\ActivityHubController::class, 'listing'])->middleware('student.page:exams')->name('activities.listing');
+    Route::get('activities', [ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('activities.index');
+    Route::get('api/activities', [ActivityHubController::class, 'listing'])->middleware('student.page:exams')->name('activities.listing');
 
     // Legacy /exams route kept for backward compat — now serves the same hub
-    Route::get('exams', [\App\Http\Controllers\ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
+    Route::get('exams', [ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
     Route::get('api/exams', [ExamController::class, 'listing'])->middleware('student.page:exams')->name('exams.listing');
     Route::get('exams/{exam}/review', [ExamController::class, 'review'])->middleware('student.page:exams')->name('exams.review');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->middleware('student.page:exams')->name('exams.show');
