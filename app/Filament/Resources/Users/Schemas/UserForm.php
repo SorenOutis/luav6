@@ -19,6 +19,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use MatondoJK\FilamentAvatarPicker\Components\AvatarPicker;
 
 class UserForm
 {
@@ -85,22 +86,11 @@ class UserForm
                                 Grid::make(2)
                                     ->schema([
                                         Section::make('Avatar')
+                                            ->description('Choose a curated avatar or upload a custom profile picture.')
                                             ->schema([
-                                                Flex::make([
-                                                    Image::make(fn ($record) => $record?->avatar ?? '', 'Profile Picture')
-                                                        ->imageSize(120)
-                                                        ->visible(fn ($record) => $record?->avatar),
-                                                    FileUpload::make('avatar')
-                                                        ->image()
-                                                        ->disk('public')
-                                                        ->directory('avatars')
-                                                        ->maxSize(10240)
-                                                        ->dehydrated(fn ($state) => filled($state))
-                                                        ->label('Change Profile Picture'),
-                                                ])
-                                                    ->from('md')
-                                                    ->gap()
-                                                    ->alignCenter(),
+                                                AvatarPicker::make('avatar')
+                                                    ->label('Profile Picture')
+                                                    ->maxSize(10240),
                                             ]),
                                         Section::make('Cover Photo')
                                             ->schema([

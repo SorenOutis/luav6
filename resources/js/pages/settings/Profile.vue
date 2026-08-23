@@ -3,6 +3,8 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Camera, Crop, Hash, Loader2, LogOut, Plus } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref } from 'vue';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import AvatarPickerModal from '@/components/AvatarPickerModal.vue';
+import type { AvatarGalleryItem } from '@/components/AvatarPickerModal.vue';
 import CoverPhotoCropper from '@/components/CoverPhotoCropper.vue';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
@@ -25,6 +27,7 @@ type Props = {
     mustVerifyEmail: boolean;
     status?: string;
     userSections: Array<{ id: number; name: string }>;
+    avatarGallery?: AvatarGalleryItem[];
 };
 
 const props = defineProps<Props>();
@@ -40,16 +43,61 @@ const page = usePage();
 const user = computed(() => page.props.auth.user);
 const { getInitials } = useInitials();
 
+const avatarGallery = computed(() => props.avatarGallery ?? []);
 const fileInput = ref<HTMLInputElement | null>(null);
 const previewUrl = ref<string | null>(null);
 const avatarName = ref<string | null>(null);
 const isCompressingAvatar = ref(false);
+const showAvatarPicker = ref(false);
+const selectedAvatarPath = ref<string | null>(null);
+
+const currentAvatarPresetPath = computed(
+    () =>
+        avatarGallery.value.find((avatar) => avatar.url === user.value.avatar)
+            ?.path ?? null,
+);
+
+const selectedAvatar = computed(
+    () =>
+        avatarGallery.value.find(
+            (avatar) => avatar.path === selectedAvatarPath.value,
+        ) ?? null,
+);
+
+const avatarDisplayUrl = computed(
+    () => previewUrl.value || selectedAvatar.value?.url || user.value.avatar,
+);
+
+const openAvatarPicker = () => {
+    showAvatarPicker.value = true;
+};
+
+const closeAvatarPicker = () => {
+    showAvatarPicker.value = false;
+};
+
+const applyAvatarSelection = (path: string) => {
+    selectedAvatarPath.value = path;
+
+    if (previewUrl.value) {
+        URL.revokeObjectURL(previewUrl.value);
+        previewUrl.value = null;
+    }
+
+    avatarName.value = null;
+    if (fileInput.value) {
+        fileInput.value.value = '';
+    }
+
+    closeAvatarPicker();
+};
 
 const handleFileChange = async (e: Event) => {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
+    selectedAvatarPath.value = null;
     avatarName.value = file.name;
     isCompressingAvatar.value = true;
 
@@ -212,8 +260,8 @@ const leaveSection = (sectionId: number) => {
                                 class="h-24 w-24 border-2 border-border/50 transition-colors duration-300 group-hover:border-primary/50"
                             >
                                 <AvatarImage
-                                    v-if="previewUrl || user.avatar"
-                                    :src="previewUrl || user.avatar || ''"
+                                    v-if="avatarDisplayUrl"
+                                    :src="avatarDisplayUrl"
                                     :alt="user.name"
                                     class="object-cover"
                                 />
@@ -259,9 +307,18 @@ const leaveSection = (sectionId: number) => {
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    :disabled="isCompressingAvatar"
+                                    @click="openAvatarPicker"
+                                >
+                                    Choose Avatar
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
                                     @click="triggerFileInput"
                                 >
-                                    Change Photo
+                                    Upload Photo
                                 </Button>
                                 <!-- `accept` is restricted to the formats the
                                      backend validates, so the picker cannot
@@ -275,6 +332,11 @@ const leaveSection = (sectionId: number) => {
                                     accept="image/jpeg,image/png,image/webp,image/gif"
                                     @change="handleFileChange"
                                 />
+                                <input
+                                    type="hidden"
+                                    name="avatar_preset"
+                                    :value="selectedAvatarPath || ''"
+                                />
                             </div>
                             <p
                                 v-if="isCompressingAvatar"
@@ -284,6 +346,13 @@ const leaveSection = (sectionId: number) => {
                                 Optimising image…
                             </p>
                             <p
+                                v-else-if="selectedAvatar"
+                                class="truncate text-xs text-muted-foreground"
+                            >
+                                Selected: {{ selectedAvatar.name }} — press Save
+                                to apply.
+                            </p>
+                            <p
                                 v-else-if="avatarName"
                                 class="truncate text-xs text-muted-foreground"
                             >
@@ -291,6 +360,7 @@ const leaveSection = (sectionId: number) => {
                                 apply.
                             </p>
                             <InputError :message="errors.avatar" />
+                            <InputError :message="errors.avatar_preset" />
                         </div>
                     </div>
 
@@ -695,6 +765,14 @@ const leaveSection = (sectionId: number) => {
         <SectionSelectionModal
             :show="showSectionModal"
             @close="closeSectionModal"
+        />
+
+        <AvatarPickerModal
+            :open="showAvatarPicker"
+            :avatars="avatarGallery"
+            :selected-path="selectedAvatarPath || currentAvatarPresetPath"
+            @apply="applyAvatarSelection"
+            @close="closeAvatarPicker"
         />
 
         <CoverPhotoCropper

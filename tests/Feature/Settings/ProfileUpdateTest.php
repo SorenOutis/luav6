@@ -3,6 +3,7 @@
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -12,6 +13,17 @@ test('profile page is displayed', function () {
         ->get(route('profile.edit'));
 
     $response->assertOk();
+});
+
+test('profile page exposes the curated avatar gallery', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('profile.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('settings/Profile')
+            ->has('avatarGallery', 12)
+            ->where('avatarGallery.0.path', 'avatars/avatar-01.svg'));
 });
 
 test('profile information can be updated', function () {
@@ -130,6 +142,62 @@ test('avatar is stored when the form is submitted with method spoofing', functio
         ->and($stored)->toStartWith('avatars/');
 
     Storage::disk('public')->assertExists($stored);
+});
+
+test('a student can choose a curated avatar from the profile gallery', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('profile.update'), [
+            '_method' => 'PATCH',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'email' => $user->email,
+            'avatar_preset' => 'avatars/avatar-03.svg',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('profile.edit'));
+
+    expect($user->refresh()->getRawOriginal('avatar'))
+        ->toBe('avatars/avatar-03.svg');
+});
+
+test('a profile cannot select an avatar outside the curated gallery', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->from(route('profile.edit'))
+        ->post(route('profile.update'), [
+            '_method' => 'PATCH',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'email' => $user->email,
+            'avatar_preset' => 'avatars/not-curated.svg',
+        ])
+        ->assertSessionHasErrors('avatar_preset')
+        ->assertRedirect(route('profile.edit'));
+});
+
+test('replacing a curated avatar with an upload does not delete the bundled asset', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create(['avatar' => 'avatars/avatar-03.svg']);
+
+    $this->actingAs($user)
+        ->post(route('profile.update'), [
+            '_method' => 'PATCH',
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'email' => $user->email,
+            'avatar' => UploadedFile::fake()->image('custom.jpg'),
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->refresh()->getRawOriginal('avatar'))
+        ->toStartWith('avatars/');
+    expect(is_file(storage_path('app/public/avatars/avatar-03.svg')))->toBeTrue();
 });
 
 test('cover photo is stored when the form is submitted with method spoofing', function () {

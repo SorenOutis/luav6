@@ -9,6 +9,10 @@ database/*.sqlite
 database/*.sqlite.backup-*
 storage/*
 !storage/.gitignore
+!storage/app/
+!storage/app/public/
+!storage/app/public/avatars/
+!storage/app/public/avatars/*.svg
 bootstrap/cache/*
 public/hot
 public/storage

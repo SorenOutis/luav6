@@ -7,6 +7,7 @@ use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Models\Section;
 use App\Models\Workspace;
+use App\Support\AvatarGallery;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +16,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,6 +34,7 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
             'userSections' => $user->sections()->orderBy('name')->get(['sections.id', 'name']),
+            'avatarGallery' => AvatarGallery::items(),
         ]);
     }
 
@@ -42,16 +45,34 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        // The uploaded files are handled explicitly below. They must never
-        // reach fill(): both columns are mass-assignable, so filling them
-        // would assign an UploadedFile object to a string column and persist
-        // a useless temp path (or throw) when nothing else overwrites it.
-        $user->fill(Arr::except($request->validated(), ['avatar', 'cover_photo']));
+        // The uploaded files and preset value are handled explicitly below.
+        // They must never reach fill(): both columns are mass-assignable, so
+        // filling an UploadedFile would persist a useless temp path (or
+        // throw) when nothing else overwrites it.
+        $validated = $request->validated();
+        $user->fill(Arr::except($validated, ['avatar', 'avatar_preset', 'cover_photo']));
 
-        $replaced = array_filter([
+        $replaced = [];
+        $avatarPreset = $validated['avatar_preset'] ?? null;
+
+        if (! $request->hasFile('avatar') && filled($avatarPreset)) {
+            $previous = (string) $user->getRawOriginal('avatar');
+            $user->avatar = $avatarPreset;
+
+            if (
+                filled($previous)
+                && $previous !== $avatarPreset
+                && ! AvatarGallery::isCurated($previous)
+                && ! Str::startsWith($previous, ['http://', 'https://', '//'])
+            ) {
+                $replaced[] = $previous;
+            }
+        }
+
+        $replaced = array_filter(array_merge($replaced, [
             $this->storeUpload($request, 'avatar', 'avatars'),
             $this->storeUpload($request, 'cover_photo', 'covers'),
-        ]);
+        ]));
 
         if ($user->isDirty('email')) {
             $user->email_verified_at = null;
@@ -105,7 +126,16 @@ class ProfileController extends Controller
 
         $user->{$field} = $path;
 
-        return $previous && $previous !== $path ? $previous : null;
+        if (
+            ! $previous
+            || $previous === $path
+            || ($field === 'avatar' && AvatarGallery::isCurated((string) $previous))
+            || Str::startsWith((string) $previous, ['http://', 'https://', '//'])
+        ) {
+            return null;
+        }
+
+        return (string) $previous;
     }
 
     /**
