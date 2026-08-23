@@ -5,8 +5,8 @@ namespace App\Http\Requests\Settings;
 use App\Concerns\ProfileValidationRules;
 use App\Support\AvatarGallery;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ProfileUpdateRequest extends FormRequest
 {
