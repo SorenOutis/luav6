@@ -333,6 +333,44 @@ describe('OnboardingTour', () => {
         });
         vi.useRealTimers();
     });
+
+    it('advances the same card to the next step on desktop', async () => {
+        const originalWidth = window.innerWidth;
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: 1280,
+        });
+
+        const wrapper = mountTour({
+            steps: [
+                { id: 'welcome', title: 'Welcome', body: 'Intro step.' },
+                { id: 'outro', title: 'All set', body: 'The next step.' },
+            ],
+        });
+        await flushTimers(50);
+
+        expect(document.body.textContent).toContain('Welcome');
+
+        document
+            .querySelector<HTMLButtonElement>(
+                '[data-testid="onboarding-next"]',
+            )!
+            .click();
+        await flushTimers(10);
+
+        const nextCard = document.querySelector<HTMLElement>('.ot-card');
+        expect(nextCard).not.toBeNull();
+        expect(nextCard?.textContent).toContain('2 of 2');
+        expect(nextCard?.textContent).toContain('All set');
+        expect(nextCard?.textContent).toContain('The next step.');
+
+        wrapper.unmount();
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: originalWidth,
+        });
+        vi.useRealTimers();
+    });
 });
 
 describe('page wiring', () => {
