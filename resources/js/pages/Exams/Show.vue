@@ -3128,7 +3128,7 @@ const feedbackContent = computed(() => {
                                     data-lenis-prevent
                                     data-testid="exam-progress-chart"
                                     @wheel.stop
-                                    class="group relative min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
+                                    class="group relative min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
                                 >
                                     <!-- Background Glow -->
                                     <div
