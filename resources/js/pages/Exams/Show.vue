@@ -2591,7 +2591,7 @@ const feedbackContent = computed(() => {
                             <!-- Main Question List -->
                             <!-- pb-8 on mobile gives room after the inline Submit
                                  button. md:pb-24 reserves space for the desktop
-                                 sticky footer that now holds the Submit button. -->
+                                 sticky footer (timer / progress / save status). -->
                             <div
                                 class="flex-1 space-y-6 pb-8 md:pb-24 lg:pr-[22rem]"
                             >
@@ -3085,20 +3085,50 @@ const feedbackContent = computed(() => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Tablet (md–lg): no sidebar, so submit lives
+                                     under the question grid. Desktop lg+ uses
+                                     the sidebar Submit; mobile uses the inline
+                                     button above. -->
+                                <button
+                                    @click="submitPart"
+                                    :disabled="isSubmitting"
+                                    data-testid="exam-tablet-submit"
+                                    class="submit-celebration-btn group relative mt-2 hidden w-full items-center justify-center gap-3 overflow-hidden rounded-xl bg-primary px-6 py-3.5 text-xs font-black tracking-[0.15em] text-primary-foreground uppercase shadow-2xl shadow-primary/50 transition-all hover:shadow-2xl hover:shadow-primary/70 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 md:flex lg:hidden"
+                                >
+                                    <div
+                                        class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
+                                    ></div>
+                                    {{
+                                        isSubmitting
+                                            ? currentPartHasEssay
+                                                ? 'Checking...'
+                                                : 'Submitting...'
+                                            : 'Submit this part'
+                                    }}
+                                    <ArrowRight
+                                        class="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                                    />
+                                </button>
                             </div>
 
                             <!-- Progress Navigator (Mini-Map) - Question status overview -->
                             <!-- bottom-24 leaves room for the desktop sticky
-                                 footer (which holds the Submit button), so the
-                                 sidebar's own Submit is never hidden behind it
-                                 on short screens — no zooming out required. -->
+                                 footer so the sidebar Submit stays visible on
+                                 short screens. data-lenis-prevent keeps wheel /
+                                 trackpad scroll on this chart instead of the
+                                 question list when there are many items. -->
                             <div
                                 v-if="selectedPart && examStarted"
+                                data-lenis-prevent
                                 class="fixed top-24 right-8 bottom-24 z-50 hidden w-80 lg:flex lg:flex-col lg:gap-6 lg:overflow-hidden"
                             >
                                 <div
                                     ref="progressBoxRef"
-                                    class="group relative min-h-0 flex-1 overflow-y-auto rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
+                                    data-lenis-prevent
+                                    data-testid="exam-progress-chart"
+                                    @wheel.stop
+                                    class="group relative min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y rounded-none border border-primary/20 bg-card p-8 shadow-2xl"
                                 >
                                     <!-- Background Glow -->
                                     <div
@@ -4096,8 +4126,9 @@ const feedbackContent = computed(() => {
                      progress trigger are always visible. The Submit button
                      lives inline below the Prev/Next controls instead of
                      floating over this bar.
-                     On desktop: pinned to the bottom and holds the always-
-                     visible Submit button. -->
+                     On desktop: pinned to the bottom for timer / progress /
+                     save status. Submit stays in the sidebar so it is not
+                     duplicated here. -->
                 <transition name="modal-fade">
                     <div
                         v-if="examStarted && selectedPart && !showSuccessModal"
@@ -4220,31 +4251,6 @@ const feedbackContent = computed(() => {
                                     >{{ formattedTime }}</span
                                 >
                             </div>
-
-                            <!-- Desktop submit button (md and up). Pinned in
-                                 the sticky footer so it is always visible on
-                                 screen regardless of viewport width/height —
-                                 students no longer need to zoom out. On large
-                                 screens it complements the sidebar Submit. -->
-                            <button
-                                @click="submitPart"
-                                :disabled="isSubmitting"
-                                class="submit-celebration-btn group relative hidden shrink-0 items-center justify-center gap-2 overflow-hidden rounded-xl bg-primary px-5 py-2.5 text-[11px] font-black tracking-[0.15em] text-primary-foreground uppercase shadow-lg shadow-primary/40 transition-all hover:shadow-xl hover:shadow-primary/50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 md:flex"
-                            >
-                                <div
-                                    class="absolute inset-0 w-1/3 -translate-x-full skew-x-[-12deg] bg-white/20 transition-transform duration-700 group-hover:translate-x-[400%]"
-                                ></div>
-                                <ArrowRight
-                                    class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
-                                />
-                                {{
-                                    isSubmitting
-                                        ? currentPartHasEssay
-                                            ? 'Checking...'
-                                            : 'Submitting...'
-                                        : 'Submit'
-                                }}
-                            </button>
                         </div>
                     </div>
                 </transition>
