@@ -8,13 +8,24 @@
          * avatars use the same disk but must not silently become choices for
          * every other user.
          */
-        $avatars = collect(\Illuminate\Support\Facades\Storage::disk('public')->files('avatars'))
-            ->filter(fn (string $path): bool => preg_match('/^avatar-\d+\.svg$/i', basename($path)) === 1)
+        $publicDisk = \Illuminate\Support\Facades\Storage::disk('public');
+        $bundledPaths = collect(glob(storage_path('app/public/avatars/avatar-*.svg')) ?: [])
+            ->map(fn (string $file): string => 'avatars/'.basename($file));
+        $diskPaths = collect($publicDisk->files('avatars'));
+
+        $avatars = $bundledPaths
+            ->merge($diskPaths)
+            ->unique()
+            ->filter(fn (string $path): bool => preg_match('/^avatars\/avatar-\d+\.svg$/i', $path) === 1)
             ->sortBy(fn (string $path): int => (int) preg_replace('/\D+/', '', basename($path)))
             ->map(fn (string $path): array => [
                 'path' => $path,
                 'name' => str_replace('-', ' ', ucfirst(pathinfo($path, PATHINFO_FILENAME))),
-                'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($path),
+                // Bundled assets remain available when PUBLIC_DISK is S3/R2;
+                // user uploads continue to resolve through the configured disk.
+                'url' => $bundledPaths->contains($path)
+                    ? asset('storage/'.$path)
+                    : $publicDisk->url($path),
             ])
             ->values()
             ->all();

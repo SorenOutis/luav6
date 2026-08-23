@@ -29,6 +29,16 @@ final class PublicFileUrl
             return $path;
         }
 
+        // The curated avatar gallery is shipped with the application rather
+        // than uploaded to the configured public disk. Keep these assets
+        // available when production uses S3/R2 for user uploads.
+        if (
+            preg_match('#^avatars/avatar-\d+\.svg$#i', $path) === 1
+            && is_file(storage_path('app/public/'.$path))
+        ) {
+            return asset('storage/'.$path);
+        }
+
         return Storage::disk('public')->url($path);
     }
 }
