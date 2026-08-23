@@ -381,12 +381,58 @@ class ActivityHubController extends Controller
 
         foreach ($exams as $exam) {
             $items->push([
+                'kind' => 'exam',
                 'id' => $exam['id'],
                 'title' => $exam['title'],
+                'description' => $exam['description'] ?? '',
+                'due_at' => $exam['exam_date_iso'] ?? null,
+                'section_name' => $exam['section_name'] ?? null,
+                'is_completed' => ($exam['is_locked'] ?? false) && ($exam['has_submissions'] ?? false),
+                'href' => '/exams/' . $exam['id'],
             ]);
         }
 
-        return $items->values()->all();
+        foreach ($assignments as $assignment) {
+            $items->push([
+                'kind' => 'assignment',
+                'id' => $assignment['id'],
+                'title' => $assignment['title'],
+                'description' => $assignment['description'] ?? '',
+                'due_at' => $assignment['due_date_iso'] ?? null,
+                'section_name' => $assignment['sections'][0]['name'] ?? null,
+                'is_completed' => (bool) ($assignment['submission']['submitted'] ?? false),
+                'href' => '/assignments',
+            ]);
+        }
+
+        foreach ($courses as $course) {
+            $items->push([
+                'kind' => 'course',
+                'id' => $course['id'],
+                'title' => $course['name'],
+                'description' => $course['description'] ?? '',
+                'due_at' => null,
+                'is_completed' => ($course['progress'] ?? 0) >= 100,
+                'href' => '/courses/' . $course['id'],
+            ]);
+        }
+
+        return $items
+            ->sortBy(function ($item) {
+                if ($item['is_completed']) {
+                    return 9999999999;
+                }
+
+                if (! $item['due_at']) {
+                    return 9999999998;
+                }
+
+                $ts = strtotime($item['due_at']);
+
+                return $ts ?: 9999999998;
+            })
+            ->values()
+            ->all();
     }
 
     public function listing(Request $request): JsonResponse
