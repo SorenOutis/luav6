@@ -2337,7 +2337,7 @@ const activitiesTourSteps: TourStep[] = [
 </template>
 
 <style scoped>
-@reference "../../css/app.css";
+@reference "../../../css/app.css";
 .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--color-primary) 30%, transparent)
