@@ -734,9 +734,21 @@ describe('assignments student shell and UI revamp', () => {
         await flushPromises();
 
         const card = cardFor(wrapper, 'Group lab activity')!;
-        expect(card.text()).toContain('Jose Santos');
+
+        // The roster is collapsed by default. "waiting" still shows in the
+        // compact summary ("1 member · 1 waiting") and the Invite action stays
+        // visible, but the invitee chip itself sits behind the toggle.
         expect(card.text()).toContain('waiting');
         expect(card.text()).toContain('Invite members');
+        expect(card.text()).not.toContain('Jose Santos');
+
+        await card
+            .findAll('button')
+            .find((b) => b.attributes('aria-label') === 'Show group members')!
+            .trigger('click');
+        await flushPromises();
+
+        expect(card.text()).toContain('Jose Santos');
 
         const cancel = card
             .findAll('button')
@@ -751,6 +763,48 @@ describe('assignments student shell and UI revamp', () => {
             '/assignments/1/invites/12',
             expect.objectContaining({ only: ['assignments'] }),
         );
+    });
+
+    it('collapses the group roster behind a summary and reveals it on toggle', async () => {
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Big group task',
+                due_date: '2026-09-01T23:59:59Z',
+                course: null,
+                sections: [],
+                group_rules: { min: 1, max: 5 },
+                group: {
+                    id: 9,
+                    created_by: 99,
+                    members: [
+                        { id: 99, name: 'Me', avatar: null },
+                        { id: 5, name: 'Ana Lopez', avatar: null },
+                        { id: 7, name: 'Bo Reyes', avatar: null },
+                    ],
+                    pending_invites: [],
+                },
+                submission: null,
+            },
+        ]);
+        await flushPromises();
+
+        const card = cardFor(wrapper, 'Big group task')!;
+
+        // The compact summary is visible, but the member chips stay hidden
+        // until the roster is toggled open so a full group doesn't crowd
+        // the card.
+        expect(card.text()).toContain('3 members');
+        expect(card.text()).not.toContain('Ana Lopez');
+
+        await card
+            .findAll('button')
+            .find((b) => b.attributes('aria-label') === 'Show group members')!
+            .trigger('click');
+        await flushPromises();
+
+        expect(card.text()).toContain('Ana Lopez');
+        expect(card.text()).toContain('Bo Reyes');
     });
 
     it('offers to form a group on ungrouped pending assignments', async () => {
