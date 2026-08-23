@@ -919,6 +919,21 @@ const groupMemberNames = (assignment: Assignment) =>
         .map((m) => m.name ?? 'A member')
         .join(', ');
 
+// ─── Per-card group roster expand/collapse ──────────────────────────────────
+// Member + pending-invite chips wrap and can dominate a card, so the roster
+// hides behind a compact "N members · M waiting" summary by default and opens
+// on demand — the same disclosure pattern as the "View grade" details above.
+const expandedGroupIds = ref<Set<number>>(new Set());
+const isGroupExpanded = (id: number) => expandedGroupIds.value.has(id);
+
+const toggleGroupExpanded = (assignment: Assignment) => {
+    const id = assignment.id;
+    const next = new Set(expandedGroupIds.value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    expandedGroupIds.value = next;
+};
+
 const initials = (name: string | null | undefined) =>
     (name ?? '?')
         .split(' ')
@@ -1875,7 +1890,11 @@ onMounted(() => {
                                 "
                                 class="rounded-xl border border-primary/15 bg-primary/[0.04] p-2.5"
                             >
+                                <!-- Header: a static label when there is no
+                                     group yet, or a disclosure toggle (summary
+                                     + chevron) when a roster exists to hide. -->
                                 <div
+                                    v-if="!assignment.group"
                                     class="flex flex-wrap items-center gap-1.5"
                                 >
                                     <Users
@@ -1886,150 +1905,173 @@ onMounted(() => {
                                     >
                                         Group
                                     </span>
+                                </div>
+                                <button
+                                    v-else
+                                    type="button"
+                                    class="-mx-0.5 flex w-full items-center gap-1.5 rounded-md px-0.5 py-0.5 text-left transition-colors hover:bg-primary/[0.06] focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:outline-none"
+                                    :aria-expanded="
+                                        isGroupExpanded(assignment.id)
+                                    "
+                                    :aria-label="
+                                        isGroupExpanded(assignment.id)
+                                            ? 'Hide group members'
+                                            : 'Show group members'
+                                    "
+                                    @click="toggleGroupExpanded(assignment)"
+                                >
+                                    <Users
+                                        class="h-3.5 w-3.5 shrink-0 text-primary"
+                                    />
+                                    <span
+                                        class="text-[10px] font-bold tracking-wide text-foreground/70 uppercase sm:text-[11px]"
+                                    >
+                                        Group
+                                    </span>
+                                    <span
+                                        class="text-[10px] text-muted-foreground"
+                                    >
+                                        {{ groupMembers(assignment).length }}
+                                        member{{
+                                            groupMembers(assignment).length ===
+                                            1
+                                                ? ''
+                                                : 's'
+                                        }}
+                                        <template
+                                            v-if="
+                                                pendingInviteCount(assignment) >
+                                                0
+                                            "
+                                        >
+                                            ·
+                                            {{ pendingInviteCount(assignment) }}
+                                            waiting
+                                        </template>
+                                    </span>
+                                    <ChevronDown
+                                        class="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform"
+                                        :class="
+                                            isGroupExpanded(assignment.id)
+                                                ? 'rotate-180'
+                                                : ''
+                                        "
+                                    />
+                                </button>
 
-                                    <template v-if="assignment.group">
+                                <!-- Collapsible roster: members + pending
+                                     invitees. Hidden by default so a full
+                                     group doesn't crowd the card. -->
+                                <div
+                                    v-if="
+                                        assignment.group &&
+                                        isGroupExpanded(assignment.id)
+                                    "
+                                    class="mt-1.5 flex flex-wrap items-center gap-1.5"
+                                >
+                                    <span
+                                        v-for="member in groupMembers(
+                                            assignment,
+                                        )"
+                                        :key="member.id"
+                                        class="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card py-0.5 pr-1.5 pl-0.5 text-[11px] font-medium text-foreground"
+                                    >
+                                        <Avatar class="size-5">
+                                            <AvatarImage
+                                                v-if="member.avatar"
+                                                :src="member.avatar"
+                                                :alt="
+                                                    member.name ??
+                                                    'Group member'
+                                                "
+                                            />
+                                            <AvatarFallback
+                                                class="bg-primary/10 text-[8px] font-bold text-primary"
+                                            >
+                                                {{ initials(member.name) }}
+                                            </AvatarFallback>
+                                        </Avatar>
                                         <span
-                                            v-for="member in groupMembers(
-                                                assignment,
-                                            )"
-                                            :key="member.id"
-                                            class="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card py-0.5 pr-1.5 pl-0.5 text-[11px] font-medium text-foreground"
+                                            class="max-w-24 truncate sm:max-w-32"
+                                            >{{ member.name }}</span
                                         >
-                                            <Avatar class="size-5">
-                                                <AvatarImage
-                                                    v-if="member.avatar"
-                                                    :src="member.avatar"
-                                                    :alt="
-                                                        member.name ??
-                                                        'Group member'
-                                                    "
-                                                />
-                                                <AvatarFallback
-                                                    class="bg-primary/10 text-[8px] font-bold text-primary"
-                                                >
-                                                    {{ initials(member.name) }}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span
-                                                class="max-w-24 truncate sm:max-w-32"
-                                                >{{ member.name }}</span
-                                            >
-                                            <span
-                                                v-if="
-                                                    member.id ===
-                                                    assignment.group.created_by
-                                                "
-                                                class="hidden text-[9px] font-semibold text-primary sm:inline"
-                                            >
-                                                creator
-                                            </span>
-                                            <button
-                                                v-if="
-                                                    !isGroupLocked(
-                                                        assignment,
-                                                    ) &&
-                                                    isGroupCreator(
-                                                        assignment,
-                                                    ) &&
-                                                    member.id !== currentUserId
-                                                "
-                                                type="button"
-                                                class="flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                                :title="`Remove ${member.name}`"
-                                                :aria-label="`Remove ${member.name}`"
-                                                @click="
-                                                    requestRemoveMember(
-                                                        assignment,
-                                                        member,
-                                                    )
-                                                "
-                                            >
-                                                <X class="h-3 w-3" />
-                                            </button>
-                                        </span>
-                                        <!-- Pending invitees: greyed until they respond -->
                                         <span
-                                            v-for="invite in assignment.group
-                                                .pending_invites ?? []"
-                                            :key="`invite-${invite.id}`"
-                                            class="inline-flex items-center gap-1 rounded-full border border-dashed border-border/70 bg-muted/40 py-0.5 pr-1.5 pl-0.5 text-[11px] font-medium text-muted-foreground"
+                                            v-if="
+                                                member.id ===
+                                                assignment.group.created_by
+                                            "
+                                            class="hidden text-[9px] font-semibold text-primary sm:inline"
                                         >
-                                            <Avatar class="size-5">
-                                                <AvatarImage
-                                                    v-if="invite.user.avatar"
-                                                    :src="invite.user.avatar"
-                                                    :alt="
-                                                        invite.user.name ??
-                                                        'Invitee'
-                                                    "
-                                                />
-                                                <AvatarFallback
-                                                    class="bg-muted text-[8px] font-bold text-muted-foreground"
-                                                >
-                                                    {{
-                                                        initials(
-                                                            invite.user.name,
-                                                        )
-                                                    }}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span
-                                                class="max-w-24 truncate sm:max-w-32"
-                                                >{{ invite.user.name }}</span
-                                            >
-                                            <span
-                                                class="hidden text-[9px] font-semibold tracking-wide text-muted-foreground/70 uppercase sm:inline"
-                                            >
-                                                waiting
-                                            </span>
-                                            <button
-                                                v-if="
-                                                    isGroupCreator(assignment)
-                                                "
-                                                type="button"
-                                                class="flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                                                :title="`Cancel invite for ${invite.user.name}`"
-                                                :aria-label="`Cancel invite for ${invite.user.name}`"
-                                                :disabled="groupActionLoading"
-                                                @click="
-                                                    cancelPendingInvite(
-                                                        assignment,
-                                                        invite.id,
-                                                    )
-                                                "
-                                            >
-                                                <X class="h-3 w-3" />
-                                            </button>
+                                            creator
                                         </span>
+                                        <button
+                                            v-if="
+                                                !isGroupLocked(assignment) &&
+                                                isGroupCreator(assignment) &&
+                                                member.id !== currentUserId
+                                            "
+                                            type="button"
+                                            class="flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                            :title="`Remove ${member.name}`"
+                                            :aria-label="`Remove ${member.name}`"
+                                            @click.stop="
+                                                requestRemoveMember(
+                                                    assignment,
+                                                    member,
+                                                )
+                                            "
+                                        >
+                                            <X class="h-3 w-3" />
+                                        </button>
+                                    </span>
+                                    <!-- Pending invitees: greyed until they respond -->
+                                    <span
+                                        v-for="invite in assignment.group
+                                            .pending_invites ?? []"
+                                        :key="`invite-${invite.id}`"
+                                        class="inline-flex items-center gap-1 rounded-full border border-dashed border-border/70 bg-muted/40 py-0.5 pr-1.5 pl-0.5 text-[11px] font-medium text-muted-foreground"
+                                    >
+                                        <Avatar class="size-5">
+                                            <AvatarImage
+                                                v-if="invite.user.avatar"
+                                                :src="invite.user.avatar"
+                                                :alt="
+                                                    invite.user.name ??
+                                                    'Invitee'
+                                                "
+                                            />
+                                            <AvatarFallback
+                                                class="bg-muted text-[8px] font-bold text-muted-foreground"
+                                            >
+                                                {{ initials(invite.user.name) }}
+                                            </AvatarFallback>
+                                        </Avatar>
                                         <span
-                                            class="text-[10px] text-muted-foreground"
+                                            class="max-w-24 truncate sm:max-w-32"
+                                            >{{ invite.user.name }}</span
                                         >
-                                            {{
-                                                groupMembers(assignment).length
-                                            }}
-                                            member{{
-                                                groupMembers(assignment)
-                                                    .length === 1
-                                                    ? ''
-                                                    : 's'
-                                            }}
-                                            <template
-                                                v-if="
-                                                    pendingInviteCount(
-                                                        assignment,
-                                                    ) > 0
-                                                "
-                                            >
-                                                ·
-                                                {{
-                                                    pendingInviteCount(
-                                                        assignment,
-                                                    )
-                                                }}
-                                                waiting
-                                            </template>
+                                        <span
+                                            class="hidden text-[9px] font-semibold tracking-wide text-muted-foreground/70 uppercase sm:inline"
+                                        >
+                                            waiting
                                         </span>
-                                    </template>
+                                        <button
+                                            v-if="isGroupCreator(assignment)"
+                                            type="button"
+                                            class="flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                            :title="`Cancel invite for ${invite.user.name}`"
+                                            :aria-label="`Cancel invite for ${invite.user.name}`"
+                                            :disabled="groupActionLoading"
+                                            @click.stop="
+                                                cancelPendingInvite(
+                                                    assignment,
+                                                    invite.id,
+                                                )
+                                            "
+                                        >
+                                            <X class="h-3 w-3" />
+                                        </button>
+                                    </span>
                                 </div>
 
                                 <!-- Group actions (locked once graded) -->

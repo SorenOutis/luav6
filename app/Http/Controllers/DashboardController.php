@@ -193,7 +193,7 @@ class DashboardController extends Controller
                     'title' => $assignment->title,
                     'description' => $assignment->description,
                     'dueDate' => $due ? $due->format('M d, Y') : 'No deadline',
-                    'dueAtIso' => $due?->toIso8601String(),
+                    'dueAtIso' => $assignment->dueDateForClient(),
                     'isOverdue' => $due ? $due->isPast() : false,
                     'submitted' => (bool) ($pivot?->submitted ?? false),
                     'status' => $pivot?->status ?? 'Pending',
