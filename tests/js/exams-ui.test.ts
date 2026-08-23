@@ -62,4 +62,27 @@ describe('exams and parts student shell', () => {
         expect(css).toContain('.student-ui.exam-theme-page');
         expect(css).toContain('env(safe-area-inset-left)');
     });
+
+    it('lets the desktop progress chart scroll independently of the question list', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Exams/Show.vue'),
+            'utf8',
+        );
+
+        // Many items overflow the sidebar chart; Lenis must not steal the wheel.
+        expect(page).toContain('data-testid="exam-progress-chart"');
+        expect(page).toContain('data-lenis-prevent');
+        expect(page).toContain('@wheel.stop');
+        expect(page).toContain('overflow-y-auto overscroll-contain');
+
+        // Sticky footer is timer / progress / save status only — Submit lives
+        // in the sidebar (desktop) or inline (mobile / tablet).
+        const stickyStart = page.indexOf('class="exam-sticky-header');
+        const stickyEnd = page.indexOf('</transition>', stickyStart);
+        const sticky = page.slice(stickyStart, stickyEnd);
+        expect(stickyStart).toBeGreaterThan(-1);
+        expect(sticky).not.toContain('@click="submitPart"');
+        expect(sticky).not.toContain('submit-celebration-btn');
+        expect(page).toContain('data-testid="exam-tablet-submit"');
+    });
 });

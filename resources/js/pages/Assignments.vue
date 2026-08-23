@@ -191,7 +191,7 @@ const assignmentsTourSteps: TourStep[] = [
         id: 'cards',
         target: 'assignments-grid',
         title: 'Assignment cards',
-        body: 'Review instructions, due dates, submission timestamps, grades, teacher feedback, points and file preview.',
+        body: 'Each card shows the due date, the exact time you submitted, and when it was graded — plus instructions, feedback, and your file.',
     },
     {
         id: 'submit',
@@ -383,27 +383,37 @@ const getFileName = (filePath: string | null) => {
 };
 
 // ─── Date Formatting & Helpers ──────────────────────────────────────────────
-const formatDueDate = (dateStr: string | null) => {
-    if (!dateStr) return 'No due date';
-    const date = new Date(dateStr);
-    if (Number.isNaN(date.getTime())) return 'No due date';
-    return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    });
-};
-
-const formatDateTime = (dateStr: string | null) => {
+const formatFullDateTime = (dateStr: string | null) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
+        year: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
     });
+};
+
+const formatDueDate = (dateStr: string | null) =>
+    formatFullDateTime(dateStr) || 'No due date';
+
+const formatDateTime = (dateStr: string | null) => formatFullDateTime(dateStr);
+
+const dueMeta = (assignment: Assignment) =>
+    getRelativeDueInfo(assignment.due_date, false, null);
+
+const wasSubmittedLate = (assignment: Assignment) => {
+    const submittedAt = assignment.submission?.submitted_at;
+    const dueDate = assignment.due_date;
+    if (!submittedAt || !dueDate) return false;
+    const submitted = new Date(submittedAt);
+    const due = new Date(dueDate);
+    if (Number.isNaN(submitted.getTime()) || Number.isNaN(due.getTime())) {
+        return false;
+    }
+    return submitted.getTime() > due.getTime();
 };
 
 const startOfDay = (date: Date) =>
@@ -1248,8 +1258,8 @@ onMounted(() => {
                         <p
                             class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
                         >
-                            Track your coursework, view deadlines, and submit
-                            your work.
+                            What’s due, when you turned it in, and when it was
+                            graded.
                         </p>
                     </div>
                 </div>
@@ -1698,104 +1708,146 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <!-- Top Row: Course + Status Badge + Relative Due Text -->
-                            <div
-                                class="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between"
-                            >
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span
-                                        v-if="assignment.course?.name"
-                                        class="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-foreground/80 sm:py-0.5 sm:text-xs"
-                                    >
-                                        <BookOpen
-                                            class="h-3 w-3 text-muted-foreground"
-                                        />
-                                        {{ assignment.course.name }}
-                                    </span>
-
-                                    <!-- Section Pills -->
-                                    <span
-                                        v-for="section in assignment.sections"
-                                        :key="section.id"
-                                        class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary sm:py-0.5 sm:text-xs"
-                                    >
-                                        <Users class="h-3 w-3" />
-                                        {{ section.name }}
-                                    </span>
-
-                                    <!-- Status Badge -->
-                                    <span
-                                        class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:py-0.5 sm:text-xs"
-                                        :class="
-                                            getStatusBadge(assignment).classes
-                                        "
-                                    >
-                                        {{ getStatusBadge(assignment).label }}
-                                    </span>
-
-                                    <!-- Points possible: what the work is worth -->
-                                    <span
-                                        v-if="
-                                            !assignment.submission?.submitted &&
-                                            pointsPossibleOf(assignment) > 0
-                                        "
-                                        class="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-700 sm:py-0.5 sm:text-xs dark:text-amber-400"
-                                    >
-                                        <Award class="h-3 w-3" />
-                                        Worth
-                                        {{
-                                            formatNumber(
-                                                pointsPossibleOf(assignment),
-                                            )
-                                        }}
-                                        pts
-                                    </span>
-                                </div>
-
-                                <!-- Due Date / Relative Info -->
-                                <div
-                                    class="flex items-center gap-1.5 text-[11px] font-medium sm:text-xs"
-                                    :class="
-                                        getRelativeDueInfo(
-                                            assignment.due_date,
-                                            Boolean(
-                                                assignment.submission
-                                                    ?.submitted,
-                                            ),
-                                            assignment.submission?.submitted_at,
-                                        ).color
-                                    "
+                            <!-- Title + status — the only things you need first -->
+                            <div class="flex items-start justify-between gap-3">
+                                <h2
+                                    class="line-clamp-2 min-w-0 text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[16px]"
                                 >
-                                    <Clock
-                                        v-if="!assignment.submission?.submitted"
-                                        class="h-3.5 w-3.5 shrink-0"
-                                    />
-                                    <CheckCircle2
-                                        v-else
-                                        class="h-3.5 w-3.5 shrink-0"
-                                    />
-                                    <span class="leading-tight">
-                                        {{
-                                            getRelativeDueInfo(
-                                                assignment.due_date,
-                                                Boolean(
-                                                    assignment.submission
-                                                        ?.submitted,
-                                                ),
-                                                assignment.submission
-                                                    ?.submitted_at,
-                                            ).text
-                                        }}
-                                    </span>
-                                </div>
+                                    {{ assignment.title }}
+                                </h2>
+                                <span
+                                    class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:py-0.5 sm:text-xs"
+                                    :class="getStatusBadge(assignment).classes"
+                                >
+                                    {{ getStatusBadge(assignment).label }}
+                                </span>
                             </div>
 
-                            <!-- Assignment Title -->
-                            <h2
-                                class="line-clamp-2 text-[15px] font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-[16px]"
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span
+                                    v-if="assignment.course?.name"
+                                    class="inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground"
+                                >
+                                    <BookOpen class="h-3 w-3" />
+                                    {{ assignment.course.name }}
+                                </span>
+
+                                <span
+                                    v-if="
+                                        !assignment.submission?.submitted &&
+                                        pointsPossibleOf(assignment) > 0
+                                    "
+                                    class="inline-flex items-center gap-1 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-700 sm:text-xs dark:text-amber-400"
+                                >
+                                    <Award class="h-3 w-3" />
+                                    Worth
+                                    {{
+                                        formatNumber(
+                                            pointsPossibleOf(assignment),
+                                        )
+                                    }}
+                                    pts
+                                </span>
+                            </div>
+
+                            <!-- Timeline: due, submitted, graded — always visible -->
+                            <dl
+                                class="space-y-1.5 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5"
                             >
-                                {{ assignment.title }}
-                            </h2>
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
+                                    <dt
+                                        class="shrink-0 text-[11px] font-medium text-muted-foreground"
+                                    >
+                                        Due
+                                    </dt>
+                                    <dd
+                                        class="min-w-0 text-right text-[12px] leading-snug font-medium sm:text-[13px]"
+                                        :class="
+                                            assignment.submission?.submitted
+                                                ? 'text-foreground'
+                                                : dueMeta(assignment).color
+                                        "
+                                    >
+                                        <template
+                                            v-if="
+                                                !assignment.submission
+                                                    ?.submitted
+                                            "
+                                        >
+                                            {{ dueMeta(assignment).text }}
+                                            <span
+                                                v-if="assignment.due_date"
+                                                class="mt-0.5 block text-[11px] font-normal text-muted-foreground"
+                                            >
+                                                {{
+                                                    formatFullDateTime(
+                                                        assignment.due_date,
+                                                    )
+                                                }}
+                                            </span>
+                                        </template>
+                                        <template v-else>
+                                            {{
+                                                formatFullDateTime(
+                                                    assignment.due_date,
+                                                ) || 'No due date'
+                                            }}
+                                        </template>
+                                    </dd>
+                                </div>
+
+                                <div
+                                    v-if="assignment.submission?.submitted"
+                                    class="flex items-start justify-between gap-3"
+                                >
+                                    <dt
+                                        class="shrink-0 text-[11px] font-medium text-muted-foreground"
+                                    >
+                                        Submitted
+                                    </dt>
+                                    <dd
+                                        class="min-w-0 text-right text-[12px] leading-snug font-medium text-foreground tabular-nums sm:text-[13px]"
+                                    >
+                                        {{
+                                            formatFullDateTime(
+                                                assignment.submission
+                                                    .submitted_at,
+                                            ) || '—'
+                                        }}
+                                        <span
+                                            v-if="wasSubmittedLate(assignment)"
+                                            class="mt-0.5 block text-[11px] font-medium text-red-600 dark:text-red-400"
+                                        >
+                                            After the deadline
+                                        </span>
+                                    </dd>
+                                </div>
+
+                                <div
+                                    v-if="
+                                        isGraded(assignment.submission) &&
+                                        assignment.submission?.graded_at
+                                    "
+                                    class="flex items-start justify-between gap-3"
+                                >
+                                    <dt
+                                        class="shrink-0 text-[11px] font-medium text-muted-foreground"
+                                    >
+                                        Graded
+                                    </dt>
+                                    <dd
+                                        class="min-w-0 text-right text-[12px] leading-snug font-medium text-foreground tabular-nums sm:text-[13px]"
+                                    >
+                                        {{
+                                            formatFullDateTime(
+                                                assignment.submission.graded_at,
+                                            )
+                                        }}
+                                    </dd>
+                                </div>
+                            </dl>
 
                             <!-- View instructions: opens a modal (bottom sheet on
                                  mobile) with the full assignment instructions. -->

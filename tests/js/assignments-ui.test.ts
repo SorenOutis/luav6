@@ -46,6 +46,7 @@ const sampleAssignments = [
             grade: '95',
             file_path: 'assignments/1/essay.docx',
             submitted_at: '2026-08-09T18:00:00Z',
+            graded_at: '2026-08-11T09:15:00Z',
         },
     },
 ];
@@ -362,6 +363,47 @@ describe('assignments student shell and UI revamp', () => {
         // its card even before the student taps "View grade". It should
         // include the numeric grade.
         expect(wrapper.text()).toContain('Graded · 95');
+    });
+
+    it('shows the real submitted and graded date-times on the card without expanding', async () => {
+        const wrapper = mount(Assignments, {
+            props: { assignments: sampleAssignments as any },
+            global: {
+                stubs: {
+                    Head: { render: () => null },
+                    AppLayout: {
+                        setup(_: unknown, { slots }: any) {
+                            return () => h('div', slots.default?.());
+                        },
+                    },
+                    ResponsiveModal: { render: () => null },
+                    OnboardingTour: { render: () => null },
+                },
+            },
+        });
+        await flushPromises();
+
+        const asLocal = (iso: string) =>
+            new Date(iso).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+            });
+
+        const submittedCard = wrapper
+            .findAll('.surface-card')
+            .find((c) => c.text().includes('Physics Lab Report'))!;
+        expect(submittedCard.text()).toContain('Submitted');
+        expect(submittedCard.text()).toContain(asLocal('2026-08-14T14:30:00Z'));
+
+        const gradedCard = wrapper
+            .findAll('.surface-card')
+            .find((c) => c.text().includes('Literature Essay'))!;
+        expect(gradedCard.text()).toContain('Graded');
+        expect(gradedCard.text()).toContain(asLocal('2026-08-09T18:00:00Z'));
+        expect(gradedCard.text()).toContain(asLocal('2026-08-11T09:15:00Z'));
     });
 
     it('equalizes the height of stat overview cards on mobile', async () => {
