@@ -8,6 +8,7 @@ use App\Support\PublicFileUrl;
 use App\Support\WorkspaceContext;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasAvatar;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasAvatar
 {
     public const PROFILE_VISIBILITY_SECTION = 'section';
 
@@ -377,6 +378,11 @@ class User extends Authenticatable implements FilamentUser
     public function getAvatarAttribute($value)
     {
         return PublicFileUrl::resolve($value);
+    }
+
+    public function getFilamentAvatarUrl(): ?string
+    {
+        return $this->avatar;
     }
 
     public function sections()

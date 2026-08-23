@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "cc11bb12e632789482d24e7f5f9f010a",
+    "content-hash": "06d4ee0bb2f51afaf528dbe14f19a3e6",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -4581,6 +4581,44 @@
                 }
             ],
             "time": "2026-08-10T15:24:22+00:00"
+        },
+        {
+            "name": "matondojk/filament-avatar-picker",
+            "version": "v2.0.16",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/matondojk/filament-avatar-picker.git",
+                "reference": "1633d8a452c2249c9b5d5b2084444af79e1760bf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/matondojk/filament-avatar-picker/zipball/1633d8a452c2249c9b5d5b2084444af79e1760bf",
+                "reference": "1633d8a452c2249c9b5d5b2084444af79e1760bf",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^3.0|^4.0|^5.0",
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "php": "^8.1"
+            },
+            "type": "filament-plugin",
+            "autoload": {
+                "psr-4": {
+                    "MatondoJK\\FilamentAvatarPicker\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "MatondoJK",
+                    "email": "matondo@example.com"
+                }
+            ],
+            "description": "A beautiful, highly-customizable avatar gallery and upload picker component for Filament PHP.",
+            "time": "2026-08-17T12:35:22-03:00"
         },
         {
             "name": "monolog/monolog",
