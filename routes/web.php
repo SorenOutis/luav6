@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AboutController;
+use App\Http\Controllers\ActivityHubController;
 use App\Http\Controllers\Admin\ExamAnswerReportController;
 use App\Http\Controllers\Admin\ExamSubmissionController;
 use App\Http\Controllers\AnonymousMessageController;
@@ -17,7 +18,6 @@ use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
-use App\Http\Controllers\ActivityHubController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\DashboardController;
