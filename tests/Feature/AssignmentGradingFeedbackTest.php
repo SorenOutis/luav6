@@ -27,6 +27,29 @@ beforeEach(function () {
     app(AssignmentRosterService::class)->syncAssignment($this->assignment);
 });
 
+it('ships iso submitted_at and graded_at to the student assignments page', function () {
+    $row = Submission::where('assignment_id', $this->assignment->id)
+        ->where('user_id', $this->student->id)
+        ->firstOrFail();
+
+    $row->update([
+        'submitted' => true,
+        'status' => 'Graded',
+        'grade' => 'A',
+        'file_path' => 'assignments/'.$this->student->id.'/lab.pdf',
+        'submitted_at' => now()->subDay(),
+        'graded_at' => now(),
+    ]);
+    $row->refresh();
+
+    $this->actingAs($this->student)
+        ->get(route('assignments.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('assignments.0.submission.submitted_at', $row->submitted_at->toIso8601String())
+            ->where('assignments.0.submission.graded_at', $row->graded_at->toIso8601String()));
+});
+
 it('ships points_possible to the student assignments page', function () {
     $this->actingAs($this->student)
         ->get(route('assignments.index'))
