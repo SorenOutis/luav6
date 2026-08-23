@@ -33,9 +33,9 @@ class StudentPageRegistry
                 'description' => 'Assignment listing and student submission workflow.',
             ],
             'exams' => [
-                'label' => 'Activities / Exams',
-                'path' => '/exams',
-                'description' => 'Published exams, activity list, exam taking, and submissions.',
+                'label' => 'Activities Hub',
+                'path' => '/activities',
+                'description' => 'Unified hub for exams, assignments, and courses — the student activity timeline.',
             ],
             'calendar' => [
                 'label' => 'Calendar',

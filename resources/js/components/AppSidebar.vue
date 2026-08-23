@@ -57,8 +57,8 @@ const mainNavItems = computed<NavItem[]>(() =>
             studentPageKey: 'assignments',
         },
         {
-            title: 'Activities',
-            href: '/exams',
+            title: 'Activities Hub',
+            href: '/activities',
             icon: GraduationCap,
             studentPageKey: 'exams',
         },

@@ -145,7 +145,12 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::delete('assignments/{assignment}/invites/{invite}', [AssignmentInviteController::class, 'destroy'])->middleware('student.page:assignments')->name('assignments.invites.destroy');
     Route::post('assignments/{assignment}/feedback-seen', [AssignmentController::class, 'markFeedbackSeen'])->middleware('student.page:assignments')->name('assignments.feedback.seen');
 
-    Route::get('exams', [ExamController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
+    // Activities Hub — unified Exams + Assignments + Courses (Option A)
+    Route::get('activities', [\App\Http\Controllers\ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('activities.index');
+    Route::get('api/activities', [\App\Http\Controllers\ActivityHubController::class, 'listing'])->middleware('student.page:exams')->name('activities.listing');
+
+    // Legacy /exams route kept for backward compat — now serves the same hub
+    Route::get('exams', [\App\Http\Controllers\ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('exams.index');
     Route::get('api/exams', [ExamController::class, 'listing'])->middleware('student.page:exams')->name('exams.listing');
     Route::get('exams/{exam}/review', [ExamController::class, 'review'])->middleware('student.page:exams')->name('exams.review');
     Route::get('exams/{exam}', [ExamController::class, 'show'])->middleware('student.page:exams')->name('exams.show');
