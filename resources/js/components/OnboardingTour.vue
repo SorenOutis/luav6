@@ -392,127 +392,115 @@ const cardStyle = computed(() => {
                     aria-hidden="true"
                 />
 
-                <!-- Step card. Keep the element mounted between steps on
-                     mobile. Replacing a fixed, scrollable dialog during a
-                     touch click can leave WebKit waiting on the outgoing
-                     transition, so the next card never gets inserted. -->
-                <Transition name="ot-card" :css="!instant" mode="out-in">
-                    <div
-                        :key="
-                            isMobile
-                                ? 'mobile-tour-card'
-                                : (currentStep?.id ?? stepIndex)
-                        "
-                        ref="cardRef"
-                        tabindex="-1"
-                        role="dialog"
-                        aria-modal="true"
-                        :aria-labelledby="`ot-title-${tourId}`"
-                        class="ot-card fixed flex max-h-[70vh] w-[calc(100vw-1.5rem)] flex-col overflow-y-auto rounded-2xl border border-border/70 bg-card p-4 text-card-foreground shadow-2xl outline-none sm:absolute sm:w-[380px] sm:p-5"
-                        :class="[
-                            isMobile || !cardPos
-                                ? spot
-                                    ? 'inset-x-3 mx-auto max-w-md sm:inset-auto'
-                                    : 'inset-x-3 top-1/2 mx-auto max-w-md -translate-y-1/2 sm:left-1/2 sm:w-[380px] sm:-translate-x-1/2'
-                                : '',
-                            // Hide the card for the single frame between the
-                            // spotlight appearing and its position resolving
-                            // (desktop only — mobile docks via CSS).
-                            !isMobile && spot && !cardPos ? 'opacity-0' : '',
-                        ]"
-                        :style="[
-                            cardStyle ?? {},
-                            isMobile && spot
-                                ? {
-                                      bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))',
-                                  }
-                                : {},
-                        ]"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <p
-                                class="text-[11px] font-semibold tracking-wide text-primary uppercase"
-                            >
-                                {{ stepIndex + 1 }} of {{ activeSteps.length }}
-                            </p>
-                            <button
-                                type="button"
-                                class="-mt-1 -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                                aria-label="Skip tour"
-                                data-testid="onboarding-close"
-                                @click="skip"
-                            >
-                                <X class="h-4 w-4" />
-                            </button>
-                        </div>
-
-                        <h2
-                            :id="`ot-title-${tourId}`"
-                            class="mt-0.5 text-[17px] font-semibold tracking-tight text-foreground sm:text-lg"
-                        >
-                            {{ currentStep?.title }}
-                        </h2>
+                <!-- Keep a single card mounted for every step. Remounting
+                     (Transition out-in + a per-step key) can leave the leave
+                     hook hanging, so the next step never appears. -->
+                <div
+                    ref="cardRef"
+                    tabindex="-1"
+                    role="dialog"
+                    aria-modal="true"
+                    :aria-labelledby="`ot-title-${tourId}`"
+                    class="ot-card fixed flex max-h-[70vh] w-[calc(100vw-1.5rem)] flex-col overflow-y-auto rounded-2xl border border-border/70 bg-card p-4 text-card-foreground shadow-2xl outline-none sm:absolute sm:w-[380px] sm:p-5"
+                    :class="[
+                        isMobile || !cardPos
+                            ? spot
+                                ? 'inset-x-3 mx-auto max-w-md sm:inset-auto'
+                                : 'inset-x-3 top-1/2 mx-auto max-w-md -translate-y-1/2 sm:left-1/2 sm:w-[380px] sm:-translate-x-1/2'
+                            : '',
+                        // Hide the card for the single frame between the
+                        // spotlight appearing and its position resolving
+                        // (desktop only — mobile docks via CSS).
+                        !isMobile && spot && !cardPos ? 'opacity-0' : '',
+                    ]"
+                    :style="[
+                        cardStyle ?? {},
+                        isMobile && spot
+                            ? {
+                                  bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))',
+                              }
+                            : {},
+                    ]"
+                >
+                    <div class="flex items-start justify-between gap-3">
                         <p
-                            class="mt-1.5 text-[13px] leading-5 text-muted-foreground sm:text-sm sm:leading-6"
+                            class="text-[11px] font-semibold tracking-wide text-primary uppercase"
                         >
-                            {{ currentStep?.body }}
+                            {{ stepIndex + 1 }} of {{ activeSteps.length }}
                         </p>
-
-                        <!-- Progress dots -->
-                        <div
-                            class="mt-3.5 flex items-center gap-1.5"
-                            aria-hidden="true"
+                        <button
+                            type="button"
+                            class="-mt-1 -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            aria-label="Skip tour"
+                            data-testid="onboarding-close"
+                            @click="skip"
                         >
-                            <span
-                                v-for="(s, i) in activeSteps"
-                                :key="s.id"
-                                class="h-1.5 rounded-full transition-all"
-                                :class="
-                                    i === stepIndex
-                                        ? 'w-5 bg-primary'
-                                        : 'w-1.5 bg-muted-foreground/25'
-                                "
-                                :style="{
-                                    transitionDuration: instant
-                                        ? '0ms'
-                                        : '200ms',
-                                }"
-                            />
-                        </div>
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
 
-                        <div
-                            class="mt-4 flex items-center justify-between gap-2"
+                    <h2
+                        :id="`ot-title-${tourId}`"
+                        class="mt-0.5 text-[17px] font-semibold tracking-tight text-foreground sm:text-lg"
+                    >
+                        {{ currentStep?.title }}
+                    </h2>
+                    <p
+                        class="mt-1.5 text-[13px] leading-5 text-muted-foreground sm:text-sm sm:leading-6"
+                    >
+                        {{ currentStep?.body }}
+                    </p>
+
+                    <!-- Progress dots -->
+                    <div
+                        class="mt-3.5 flex items-center gap-1.5"
+                        aria-hidden="true"
+                    >
+                        <span
+                            v-for="(s, i) in activeSteps"
+                            :key="s.id"
+                            class="h-1.5 rounded-full transition-all"
+                            :class="
+                                i === stepIndex
+                                    ? 'w-5 bg-primary'
+                                    : 'w-1.5 bg-muted-foreground/25'
+                            "
+                            :style="{
+                                transitionDuration: instant ? '0ms' : '200ms',
+                            }"
+                        />
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-between gap-2">
+                        <button
+                            type="button"
+                            class="min-h-10 rounded-full px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            data-testid="onboarding-skip"
+                            @click="skip"
                         >
+                            Skip tour
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <button
+                                v-if="stepIndex > 0"
+                                type="button"
+                                class="min-h-10 rounded-full border border-border/70 bg-background px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-muted"
+                                data-testid="onboarding-back"
+                                @click="back"
+                            >
+                                Back
+                            </button>
                             <button
                                 type="button"
-                                class="min-h-10 rounded-full px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-                                data-testid="onboarding-skip"
-                                @click="skip"
+                                class="min-h-10 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                                data-testid="onboarding-next"
+                                @click="next"
                             >
-                                Skip tour
+                                {{ isLastStep ? 'Done' : 'Next' }}
                             </button>
-                            <div class="flex items-center gap-2">
-                                <button
-                                    v-if="stepIndex > 0"
-                                    type="button"
-                                    class="min-h-10 rounded-full border border-border/70 bg-background px-4 text-[13px] font-medium text-foreground transition-colors hover:bg-muted"
-                                    data-testid="onboarding-back"
-                                    @click="back"
-                                >
-                                    Back
-                                </button>
-                                <button
-                                    type="button"
-                                    class="min-h-10 rounded-full bg-primary px-5 text-[13px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-                                    data-testid="onboarding-next"
-                                    @click="next"
-                                >
-                                    {{ isLastStep ? 'Done' : 'Next' }}
-                                </button>
-                            </div>
                         </div>
                     </div>
-                </Transition>
+                </div>
             </div>
         </Transition>
     </Teleport>
