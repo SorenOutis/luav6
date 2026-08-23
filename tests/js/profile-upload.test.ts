@@ -84,8 +84,28 @@ vi.mock('@/components/SectionSelectionModal.vue', () => ({
 
 import Profile from '@/pages/settings/Profile.vue';
 
-const mountPage = () =>
-    mount(Profile, { props: { mustVerifyEmail: false, userSections: [] } });
+const gallery = [
+    {
+        path: 'avatars/avatar-01.svg',
+        name: 'Avatar 01',
+        url: '/storage/avatars/avatar-01.svg',
+    },
+    {
+        path: 'avatars/avatar-02.svg',
+        name: 'Avatar 02',
+        url: '/storage/avatars/avatar-02.svg',
+    },
+];
+
+const mountPage = (overrides: Record<string, unknown> = {}) =>
+    mount(Profile, {
+        props: {
+            mustVerifyEmail: false,
+            userSections: [],
+            avatarGallery: gallery,
+            ...overrides,
+        },
+    });
 
 describe('profile settings upload form', () => {
     it('submits as POST with _method=PATCH so PHP parses the multipart body', () => {
@@ -116,6 +136,16 @@ describe('profile settings upload form', () => {
         // A bare image/* would let a phone hand over HEIC, which the backend
         // rejects only after the whole upload has been sent.
         expect(accept).not.toBe('image/*');
+    });
+
+    it('offers a curated avatar choice alongside custom upload', () => {
+        const wrapper = mountPage();
+
+        expect(wrapper.text()).toContain('Choose Avatar');
+        expect(wrapper.find('input[name="avatar_preset"]').exists()).toBe(true);
+        expect(
+            wrapper.find('input[name="avatar_preset"]').attributes('value'),
+        ).toBe('');
     });
 
     it('gives touch users an avatar control that is not hover-gated', () => {
