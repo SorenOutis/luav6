@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, usePoll } from '@inertiajs/vue3';
+import { Head, Link, router, usePoll } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import axios from 'axios';
 import {
@@ -82,9 +82,6 @@ const props = defineProps<{
     examPagination?: { hasMore: boolean; nextCursor: string | null };
     sectionTabs: { key: string; label: string; count: number }[];
     hubStats: {
-        total: number;
-        pending: number;
-        completed: number;
         exams: { total: number; pending: number; completed: number };
     };
 }>();
@@ -503,7 +500,8 @@ const activitiesTourSteps: TourStep[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
-            class="student-ui relative flex h-full flex-1 flex-col gap-3 overflow-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
+            data-lenis-prevent
+            class="student-ui exam-theme-page relative flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <!-- Header -->
             <Motion
@@ -716,7 +714,7 @@ const activitiesTourSteps: TourStep[] = [
                                     easing: [0.16, 1, 0.3, 1],
                                     delay: eIdx * 0.05,
                                 }"
-                                class="exam-card flex min-h-[6.25rem] min-w-0 flex-col justify-between rounded-xl border border-l-[3px] p-3 transition-colors duration-200 sm:min-h-[7.5rem] sm:rounded-[1.25rem] sm:p-5"
+                                class="exam-card flex min-h-[6.25rem] min-w-0 flex-col justify-between rounded-xl border border-l-[3px] bg-card p-3 transition-colors duration-200 sm:min-h-[7.5rem] sm:rounded-[1.25rem] sm:p-5"
                                 :class="[
                                     exam.is_locked && !canReviewResults(exam)
                                         ? 'cursor-default opacity-80'
