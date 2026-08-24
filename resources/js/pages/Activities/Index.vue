@@ -221,6 +221,23 @@ const filteredExamsBySeason = computed(() => {
         .filter((sg) => sg.exams.length > 0);
 });
 
+// The section tabs describe the *whole* catalogue (`hubSummary`), but the
+// grid only holds the pages loaded so far. Clicking a tab whose exams all sit
+// past the last loaded page used to land on "No exams found" even though the
+// tab badge counted those exams. Keep pulling pages while the current section
+// filter matches nothing yet and the catalogue still has pages — stop as soon
+// as a card appears or the pages are exhausted. An active search query is
+// left to the user: auto-loading while a query is typed would race the
+// keystrokes and could loop over unrelated pages.
+watch([filteredExamsBySeason, activeSection, hasMoreExams], () => {
+    if (searchQuery.value.trim() !== '') return;
+    const shown = filteredExamsBySeason.value.reduce(
+        (n, sg) => n + sg.exams.length,
+        0,
+    );
+    if (shown === 0) loadMoreExams();
+});
+
 // ─── Stats ──────────────────────────────────────────────────────────────────
 const completionRate = computed(() => {
     if (props.hubStats.exams.total === 0) return 0;

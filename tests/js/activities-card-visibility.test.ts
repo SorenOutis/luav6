@@ -1,8 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { flushPromises, mount } from '@vue/test-utils';
+import axios from 'axios';
 import { describe, expect, it, vi } from 'vitest';
 import { defineComponent, h, nextTick } from 'vue';
+
+vi.mock('axios', () => ({
+    default: { get: vi.fn() },
+}));
 
 vi.mock('@inertiajs/vue3', () => ({
     Head: defineComponent({ render: () => null }),
@@ -367,6 +372,59 @@ describe('activities hub — exam card visibility', () => {
         expect(tabs.length).toBeGreaterThan(0);
         await tabs[0].trigger('click');
         await nextTick();
+        const cards = wrapper.findAll('.exam-card');
+        expect(cards).toHaveLength(1);
+        expect(cards[0].text()).toContain('Exam 2');
+    });
+
+    it('auto-loads later pages when a section tab has no cards in the loaded pages yet', async () => {
+        // The tab badges come from the whole catalogue, so BSIT 1-B counts an
+        // exam that lives past the first (24-row) page.
+        const mockGet = vi.mocked(axios.get);
+        mockGet.mockResolvedValueOnce({
+            data: {
+                data: [
+                    {
+                        seasonName: 'Season 2',
+                        exams: [mkExam(2, 'Season 2', 'BSIT 1-B')],
+                    },
+                ],
+                meta: { hasMore: false, nextCursor: null },
+            },
+        });
+
+        const wrapper = mount(Activities, {
+            props: {
+                examsBySeason: [
+                    {
+                        seasonName: 'Season 1',
+                        exams: [mkExam(1, 'Season 1', 'BSIT 1-A')],
+                    },
+                ] as any,
+                examPagination: { hasMore: true, nextCursor: 'cursor-2' },
+                sectionTabs: [
+                    { key: 'all', label: 'All sections', count: 2 },
+                    { key: 'BSIT 1-A', label: 'BSIT 1-A', count: 1 },
+                    { key: 'BSIT 1-B', label: 'BSIT 1-B', count: 1 },
+                ],
+                hubStats: hubStats(2),
+            },
+            global: globalStubs,
+        });
+        await flushPromises();
+        expect(wrapper.findAll('.exam-card')).toHaveLength(1);
+
+        const tabs = wrapper
+            .findAll('button')
+            .filter((b) => b.text().includes('BSIT 1-B'));
+        await tabs[0].trigger('click');
+        await flushPromises();
+        await flushPromises();
+
+        // The hub pulled the next page instead of resting on "No exams found".
+        expect(mockGet).toHaveBeenCalledWith('/api/activities', {
+            params: { cursor: 'cursor-2' },
+        });
         const cards = wrapper.findAll('.exam-card');
         expect(cards).toHaveLength(1);
         expect(cards[0].text()).toContain('Exam 2');
