@@ -7,6 +7,7 @@ use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\User;
 use App\Support\ExamPartSerializer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
@@ -29,7 +30,7 @@ class ActivityHubController extends Controller
 
         $sectionTabs = collect([
             ['key' => 'all', 'label' => 'All sections', 'count' => $summary['total']],
-        ])->merge($summary['sections']->map(fn (int $count, string $name) => [
+        ])->merge(collect($summary['sections'])->map(fn (int $count, string $name) => [
             'key' => $name,
             'label' => $name,
             'count' => $count,
@@ -57,7 +58,7 @@ class ActivityHubController extends Controller
      * rule `examPage()` applies per card, so the overview tiles can never
      * disagree with the cards underneath them.
      *
-     * @return array{total: int, pending: int, completed: int, sections: \Illuminate\Support\Collection<string, int>}
+     * @return array{total: int, pending: int, completed: int, sections: array<string, int>}
      */
     private function hubSummary(User $user): array
     {
@@ -106,7 +107,8 @@ class ActivityHubController extends Controller
                 ->map(fn (Exam $exam) => $exam->section?->name)
                 ->filter()
                 ->countBy()
-                ->sortKeys(),
+                ->sortKeys()
+                ->all(),
         ];
     }
 
@@ -114,9 +116,9 @@ class ActivityHubController extends Controller
      * Shared visibility filter for the paginated grid and the hub totals, so
      * the two can never drift apart.
      *
-     * @return \Illuminate\Database\Eloquent\Builder<Exam>
+     * @return Builder<Exam>
      */
-    private function visibleExams(User $user): \Illuminate\Database\Eloquent\Builder
+    private function visibleExams(User $user): Builder
     {
         return Exam::query()
             ->where('status', '!=', 'draft')
