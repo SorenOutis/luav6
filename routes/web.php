@@ -146,7 +146,7 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::delete('assignments/{assignment}/invites/{invite}', [AssignmentInviteController::class, 'destroy'])->middleware('student.page:assignments')->name('assignments.invites.destroy');
     Route::post('assignments/{assignment}/feedback-seen', [AssignmentController::class, 'markFeedbackSeen'])->middleware('student.page:assignments')->name('assignments.feedback.seen');
 
-    // Activities Hub — unified Exams + Assignments + Courses (Option A)
+    // Activities Hub — focused exam workspace.
     Route::get('activities', [ActivityHubController::class, 'index'])->middleware('student.page:exams')->name('activities.index');
     Route::get('api/activities', [ActivityHubController::class, 'listing'])->middleware('student.page:exams')->name('activities.listing');
 
