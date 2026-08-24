@@ -38,7 +38,10 @@ if (pusherKey) {
     configureEcho({ broadcaster: 'null' });
 }
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+// APP_NAME is rendered by Laravel at request time, so changing it does not
+// require a frontend rebuild. VITE_APP_NAME remains a safe build-time fallback.
+const appName =
+    metaContent('app-name') || import.meta.env.VITE_APP_NAME || 'Laravel';
 const { isVisible, show, hide, hideWhenReady } = useLoader();
 
 // Navigation logging is a debugging aid, not a production feature. Writing to

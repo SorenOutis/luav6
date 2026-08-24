@@ -5,11 +5,14 @@ import type { DefineComponent } from 'vue';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
-
 createServer(
-    (page) =>
-        createInertiaApp({
+    (page) => {
+        // `name` is shared from Laravel's config('app.name'), which reads APP_NAME.
+        const appName = String(
+            page.props.name || import.meta.env.VITE_APP_NAME || 'Laravel',
+        );
+
+        return createInertiaApp({
             page,
             render: renderToString,
             title: (title) => (title ? `${title} - ${appName}` : appName),
@@ -20,6 +23,7 @@ createServer(
                 ),
             setup: ({ App, props, plugin }) =>
                 createSSRApp({ render: () => h(App, props) }).use(plugin),
-        }),
+        });
+    },
     { cluster: true },
 );

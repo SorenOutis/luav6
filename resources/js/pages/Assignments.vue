@@ -14,7 +14,6 @@ import {
     Search,
     X,
     AlertTriangle,
-    GraduationCap,
     UploadCloud,
     ChevronDown,
     Loader2,
@@ -1279,36 +1278,32 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Stat Overview Cards -->
-                <div
+                <!-- Overview — restrained, editorial hierarchy; two columns on small screens -->
+                <section
                     data-tour="assignments-overview"
-                    class="animate-section mb-6 grid grid-cols-2 items-stretch gap-3 sm:mb-8 sm:gap-4 lg:grid-cols-4"
+                    aria-label="Assignment overview"
+                    class="animate-section grid grid-cols-2 items-stretch divide-x divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card sm:mb-8 lg:grid-cols-4 lg:rounded-2xl"
                 >
-                    <!-- Pending Card -->
                     <Card
-                        class="surface-card h-full gap-2 py-3 sm:gap-6 sm:py-5"
+                        class="surface-card h-full min-w-0 gap-0 rounded-none border-0 bg-transparent p-3.5 shadow-none sm:p-5"
                     >
-                        <CardHeader
-                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
-                        >
-                            <CardTitle class="dash-label">Pending</CardTitle>
-                            <div
-                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        <CardHeader class="p-0">
+                            <CardTitle
+                                class="dash-label text-xs font-medium text-muted-foreground"
+                                >Pending</CardTitle
                             >
-                                <Clock class="h-4 w-4" />
-                            </div>
                         </CardHeader>
-                        <CardContent class="px-3.5 sm:px-5">
-                            <div
-                                class="dash-metric text-[26px] leading-none text-foreground sm:text-[32px]"
+                        <CardContent class="p-0 pt-2">
+                            <p
+                                class="dash-metric text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
                             >
                                 {{ pendingCount }}
-                            </div>
+                            </p>
                             <p
-                                class="mt-1 text-[12px] sm:text-[13px]"
+                                class="mt-1 truncate text-xs"
                                 :class="
                                     overdueCount > 0
-                                        ? 'font-medium text-red-600 dark:text-red-400'
+                                        ? 'font-medium text-destructive'
                                         : 'text-muted-foreground'
                                 "
                             >
@@ -1320,102 +1315,81 @@ onMounted(() => {
                             </p>
                         </CardContent>
                     </Card>
-
-                    <!-- Submitted Card -->
                     <Card
-                        class="surface-card h-full gap-2 py-3 sm:gap-6 sm:py-5"
+                        class="surface-card h-full min-w-0 gap-0 rounded-none border-0 bg-transparent p-3.5 shadow-none sm:p-5"
                     >
-                        <CardHeader
-                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
-                        >
-                            <CardTitle class="dash-label">Submitted</CardTitle>
-                            <div
-                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                        <CardHeader class="p-0">
+                            <CardTitle
+                                class="dash-label text-xs font-medium text-muted-foreground"
+                                >Submitted</CardTitle
                             >
-                                <FileText class="h-4 w-4" />
-                            </div>
                         </CardHeader>
-                        <CardContent class="px-3.5 sm:px-5">
-                            <div
-                                class="dash-metric text-[26px] leading-none text-foreground sm:text-[32px]"
+                        <CardContent class="p-0 pt-2">
+                            <p
+                                class="dash-metric text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
                             >
                                 {{ submittedCount }}
-                            </div>
+                            </p>
                             <p
-                                class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
+                                class="mt-1 truncate text-xs text-muted-foreground"
                             >
                                 Turned in for review
                             </p>
                         </CardContent>
                     </Card>
-
-                    <!-- Graded Card -->
                     <Card
-                        class="surface-card h-full gap-2 py-3 sm:gap-6 sm:py-5"
+                        class="surface-card h-full min-w-0 gap-0 rounded-none border-0 bg-transparent p-3.5 shadow-none sm:p-5"
                     >
-                        <CardHeader
-                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
-                        >
-                            <CardTitle class="dash-label">Graded</CardTitle>
-                            <div
-                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        <CardHeader class="p-0">
+                            <CardTitle
+                                class="dash-label text-xs font-medium text-muted-foreground"
+                                >Graded</CardTitle
                             >
-                                <GraduationCap class="h-4 w-4" />
-                            </div>
                         </CardHeader>
-                        <CardContent class="px-3.5 sm:px-5">
-                            <div
-                                class="dash-metric text-[26px] leading-none text-emerald-700 sm:text-[32px] dark:text-emerald-400"
+                        <CardContent class="p-0 pt-2">
+                            <p
+                                class="dash-metric text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
                             >
                                 {{ gradedCount }}
-                            </div>
+                            </p>
                             <p
-                                class="mt-1 text-[12px] text-muted-foreground sm:text-[13px]"
+                                class="mt-1 truncate text-xs text-muted-foreground"
                             >
                                 Evaluated by teacher
                             </p>
                         </CardContent>
                     </Card>
-
-                    <!-- Progress / Completion Card -->
                     <Card
-                        class="surface-card col-span-2 h-full gap-2 py-3 sm:col-span-1 sm:gap-6 sm:py-5"
+                        class="surface-card col-span-2 h-full min-w-0 gap-0 rounded-none border-0 bg-transparent p-3.5 shadow-none sm:col-span-1 sm:p-5"
                     >
-                        <CardHeader
-                            class="flex flex-row items-center justify-between space-y-0 px-3.5 pb-1 sm:px-5 sm:pb-2"
-                        >
-                            <CardTitle class="dash-label">Completion</CardTitle>
-                            <div
-                                class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                        <CardHeader class="p-0">
+                            <CardTitle
+                                class="dash-label text-xs font-medium text-muted-foreground"
+                                >Completion</CardTitle
                             >
-                                <TrendingUp class="h-4 w-4" />
-                            </div>
                         </CardHeader>
-                        <CardContent class="px-3.5 sm:px-5">
-                            <div class="flex items-baseline justify-between">
-                                <div
-                                    class="dash-metric text-[26px] leading-none text-foreground sm:text-[32px]"
+                        <CardContent class="p-0 pt-2">
+                            <div
+                                class="flex items-baseline justify-between gap-2"
+                            >
+                                <p
+                                    class="dash-metric text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
                                 >
                                     {{ completionRate }}%
-                                </div>
+                                </p>
                                 <span
-                                    class="text-[12px] text-muted-foreground sm:text-[13px]"
+                                    class="text-xs text-muted-foreground tabular-nums"
+                                    >{{ submittedCount }}/{{ totalCount }}</span
                                 >
-                                    {{ submittedCount }}/{{ totalCount }}
-                                </span>
                             </div>
                             <Progress
                                 :value="completionRate"
-                                class="mt-2 h-1.5 w-full bg-muted"
-                                :indicator-class="
-                                    completionRate === 100
-                                        ? 'bg-emerald-600 dark:bg-emerald-400'
-                                        : 'bg-primary'
-                                "
+                                class="mt-3 h-1 w-full bg-muted"
+                                indicator-class="bg-foreground"
                             />
                         </CardContent>
                     </Card>
-                </div>
+                </section>
 
                 <!-- Filters & Search Bar -->
                 <div

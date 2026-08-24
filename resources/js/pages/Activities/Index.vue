@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, usePoll } from '@inertiajs/vue3';
+import { Head, router, usePoll } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import axios from 'axios';
 import {
@@ -8,15 +8,8 @@ import {
     CheckCircle2,
     Search,
     Lock,
-    BookOpen,
-    ClipboardList,
-    GraduationCap,
     ArrowRight,
     Timer,
-    Layers,
-    FileText,
-    BookMarked,
-    BarChart3,
     ChevronLeft,
     ChevronRight,
     Shield,
@@ -83,74 +76,16 @@ interface SeasonGroup {
     seasonName: string;
     exams: Exam[];
 }
-interface Assignment {
-    id: number;
-    title: string;
-    description: string;
-    due_date: string | null;
-    due_date_iso: string | null;
-    points_possible: number | string | null;
-    group_rules: { min: number | null; max: number | null } | null;
-    course: { id: number; name: string } | null;
-    sections: { id: number; name: string }[];
-    submission: {
-        submitted: boolean;
-        status: string;
-        grade: string | null;
-        file_url: string | null;
-        submitted_at: string | null;
-        points: number | string | null;
-        xp_earned: number | string | null;
-        feedback: string | null;
-        graded_at: string | null;
-        has_unseen_feedback?: boolean;
-    } | null;
-}
-interface Course {
-    id: number;
-    name: string;
-    description: string | null;
-    cover_photo: string | null;
-    totalLessons: number;
-    completedLessons: number;
-    progress: number;
-    xpEarned: number;
-    modulesCount: number;
-}
-interface UnifiedItem {
-    kind: 'exam' | 'assignment' | 'course';
-    id: number;
-    title: string;
-    description: string;
-    due_at: string | null;
-    section_name: string | null;
-    season_name: string | null;
-    is_completed: boolean;
-    is_locked: boolean;
-    status: string;
-    meta: string | null;
-    href: string;
-    score?: number;
-    points_possible?: any;
-    submission?: any;
-    progress?: number;
-    cover_photo?: string | null;
-}
 
 const props = defineProps<{
     examsBySeason: SeasonGroup[];
     examPagination?: { hasMore: boolean; nextCursor: string | null };
-    assignments: Assignment[];
-    courses: Course[];
     sectionTabs: { key: string; label: string; count: number }[];
-    unifiedTimeline: UnifiedItem[];
     hubStats: {
         total: number;
         pending: number;
         completed: number;
         exams: { total: number; pending: number; completed: number };
-        assignments: { total: number; pending: number; completed: number };
-        courses: { total: number; pending: number; completed: number };
     };
 }>();
 
@@ -158,25 +93,13 @@ const props = defineProps<{
 const { stop: stopPoll, start: startPoll } = usePoll(
     10000,
     {
-        only: [
-            'examsBySeason',
-            'assignments',
-            'courses',
-            'unifiedTimeline',
-            'hubStats',
-        ],
+        only: ['examsBySeason', 'hubStats'],
     },
     { autoStart: false },
 );
 const refreshHub = () =>
     router.reload({
-        only: [
-            'examsBySeason',
-            'assignments',
-            'courses',
-            'unifiedTimeline',
-            'hubStats',
-        ],
+        only: ['examsBySeason', 'hubStats'],
     });
 const handleVisibilityChange = () => {
     if (!document.hidden) refreshHub();
@@ -279,129 +202,8 @@ const loadMoreExams = async () => {
 };
 
 // ─── Filters ────────────────────────────────────────────────────────────────
-const activeType = ref<'all' | 'exam' | 'assignment' | 'course'>('all');
 const activeSection = ref('all');
 const searchQuery = ref('');
-
-const allExamsFlat = computed(() =>
-    props.examsBySeason.flatMap((sg) => sg.exams),
-);
-
-// Build unified timeline in frontend to keep PHP pint happy (empty backend timeline passes lint)
-// This mirrors the backend buildUnifiedTimeline logic but lives in JS where formatting is free
-const unifiedTimelineComputed = computed<UnifiedItem[]>(() => {
-    // If backend already provides a non-empty timeline, use it
-    if (props.unifiedTimeline && props.unifiedTimeline.length > 0) {
-        return props.unifiedTimeline;
-    }
-
-    const items: UnifiedItem[] = [];
-
-    for (const exam of allExamsFlat.value) {
-        const dueAt = exam.exam_date_iso || (exam as any).exam_date || null;
-        const isCompleted =
-            (exam.is_locked ?? false) && (exam.has_submissions ?? false);
-        items.push({
-            kind: 'exam',
-            id: exam.id,
-            title: exam.title,
-            description: exam.description || '',
-            due_at: dueAt,
-            section_name: exam.section_name || null,
-            season_name: exam.season_name || null,
-            is_completed: isCompleted,
-            is_locked: exam.is_locked || false,
-            status: exam.status || 'published',
-            meta: `${exam.submitted_parts_count || 0}/${exam.total_parts || 0} parts · ${exam.duration_minutes || 0}m`,
-            href: `/exams/${exam.id}`,
-            score: (exam.submissions || []).reduce(
-                (acc: number, s: any) => acc + parseFloat(s.score || '0'),
-                0,
-            ),
-        });
-    }
-
-    for (const assignment of props.assignments) {
-        const dueAt = assignment.due_date_iso || null;
-        const isCompleted = Boolean(assignment.submission?.submitted);
-        items.push({
-            kind: 'assignment',
-            id: assignment.id,
-            title: assignment.title,
-            description: assignment.description || '',
-            due_at: dueAt,
-            section_name: assignment.sections?.[0]?.name || null,
-            season_name: null,
-            is_completed: isCompleted,
-            is_locked:
-                isCompleted &&
-                (assignment.submission?.status || '') === 'Graded',
-            status: assignment.submission?.status || 'Pending',
-            meta: assignment.course?.name || null,
-            href: '/assignments',
-            points_possible: assignment.points_possible as any,
-            submission: assignment.submission as any,
-        });
-    }
-
-    for (const course of props.courses) {
-        const progress = course.progress || 0;
-        const isCompleted = progress >= 100;
-        items.push({
-            kind: 'course',
-            id: course.id,
-            title: course.name,
-            description: course.description || '',
-            due_at: null,
-            section_name: null,
-            season_name: null,
-            is_completed: isCompleted,
-            is_locked: false,
-            status: isCompleted ? 'Completed' : 'In Progress',
-            meta: `${course.completedLessons || 0}/${course.totalLessons || 0} lessons · ${progress}%`,
-            href: `/courses/${course.id}`,
-            progress: progress,
-            cover_photo: course.cover_photo || null,
-        });
-    }
-
-    // Sort: incomplete first, overdue first, then by due date, courses last
-    return [...items].sort((a, b) => {
-        if (a.is_completed !== b.is_completed) return a.is_completed ? 1 : -1;
-        if (!a.due_at && !b.due_at) return 0;
-        if (!a.due_at) return 1;
-        if (!b.due_at) return -1;
-        const ta = new Date(a.due_at).getTime();
-        const tb = new Date(b.due_at).getTime();
-        if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
-        if (Number.isNaN(ta)) return 1;
-        if (Number.isNaN(tb)) return -1;
-        return ta - tb;
-    });
-});
-
-const filteredUnified = computed(() => {
-    let list = [...unifiedTimelineComputed.value] as UnifiedItem[];
-    // section
-    if (activeSection.value !== 'all') {
-        list = list.filter((i) => i.section_name === activeSection.value);
-    }
-    // type
-    if (activeType.value !== 'all') {
-        list = list.filter((i) => i.kind === activeType.value);
-    }
-    // search
-    const q = searchQuery.value.trim().toLowerCase();
-    if (q) {
-        list = list.filter(
-            (i) =>
-                i.title.toLowerCase().includes(q) ||
-                i.description?.toLowerCase().includes(q) ||
-                i.section_name?.toLowerCase().includes(q),
-        );
-    }
-    return list;
-});
 
 const filteredExamsBySeason = computed(() => {
     const q = searchQuery.value.trim().toLowerCase();
@@ -422,49 +224,13 @@ const filteredExamsBySeason = computed(() => {
         .filter((sg) => sg.exams.length > 0);
 });
 
-const filteredAssignments = computed(() => {
-    let list = [...props.assignments];
-    if (activeSection.value !== 'all') {
-        list = list.filter((a) =>
-            a.sections.some((s) => s.name === activeSection.value),
-        );
-    }
-    const q = searchQuery.value.trim().toLowerCase();
-    if (q) {
-        list = list.filter(
-            (a) =>
-                a.title.toLowerCase().includes(q) ||
-                a.description?.toLowerCase().includes(q) ||
-                a.course?.name.toLowerCase().includes(q),
-        );
-    }
-    return list;
-});
-
-const filteredCourses = computed(() => {
-    let list = [...props.courses];
-    const q = searchQuery.value.trim().toLowerCase();
-    if (q) {
-        list = list.filter(
-            (c) =>
-                c.name.toLowerCase().includes(q) ||
-                c.description?.toLowerCase().includes(q),
-        );
-    }
-    return list;
-});
-
 // ─── Stats ──────────────────────────────────────────────────────────────────
 const completionRate = computed(() => {
-    if (props.hubStats.total === 0) return 0;
-    return Math.round((props.hubStats.completed / props.hubStats.total) * 100);
+    if (props.hubStats.exams.total === 0) return 0;
+    return Math.round(
+        (props.hubStats.exams.completed / props.hubStats.exams.total) * 100,
+    );
 });
-const overdueUnifiedCount = computed(
-    () =>
-        unifiedTimelineComputed.value.filter(
-            (i) => !i.is_completed && i.due_at && isOverdue(i.due_at),
-        ).length,
-);
 
 // ─── Exam helpers (minimal copy from Exam.vue) ──────────────────────────────
 const getExamTimeInfo = (exam: Exam) => {
@@ -553,68 +319,6 @@ const canReviewResults = (exam: Exam) =>
     exam.results_available ?? (exam.status === 'closed' && hasSubmitted(exam));
 const isAwaitingClose = (exam: Exam) =>
     !canReviewResults(exam) && hasSubmitted(exam) && exam.is_locked === true;
-
-// ─── Assignment helpers ─────────────────────────────────────────────────────
-const isOverdue = (due: string | null) => {
-    if (!due) return false;
-    const d = new Date(due);
-    return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
-};
-const getAssignmentBadge = (a: Assignment) => {
-    if (a.submission?.submitted) {
-        if (a.submission.status === 'Graded' || a.submission.grade) {
-            return {
-                label: a.submission.grade
-                    ? `Graded · ${a.submission.grade}`
-                    : 'Graded',
-                classes:
-                    'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-            };
-        }
-        return {
-            label: 'Submitted',
-            classes:
-                'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20',
-        };
-    }
-    if (isOverdue(a.due_date))
-        return {
-            label: 'Overdue',
-            classes:
-                'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20',
-        };
-    return {
-        label: 'Pending',
-        classes:
-            'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-    };
-};
-
-// ─── Unified helpers ────────────────────────────────────────────────────────
-const kindIcon = (k: string) => {
-    if (k === 'exam') return GraduationCap;
-    if (k === 'assignment') return ClipboardList;
-    return BookOpen;
-};
-const kindColor = (k: string) => {
-    if (k === 'exam')
-        return 'text-[#D97757] bg-[#D97757]/10 border-[#D97757]/20';
-    if (k === 'assignment')
-        return 'text-amber-600 bg-amber-500/10 border-amber-500/20';
-    return 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20';
-};
-const formatDue = (iso: string | null) => {
-    if (!iso) return 'No due date';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return 'No due date';
-    return d.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-    });
-};
 
 // ─── Review modal (exams) ───────────────────────────────────────────────────
 const showReviewModal = ref(false);
@@ -777,31 +481,19 @@ const activitiesTourSteps: TourStep[] = [
     {
         id: 'welcome',
         title: 'Welcome to Activities Hub',
-        body: 'Your unified place for exams, assignments, and courses — everything due in one minimalist view.',
+        body: 'A focused place to review your exams, deadlines, and results.',
     },
     {
         id: 'search',
         target: 'hub-search',
         title: 'Search everything',
-        body: 'Search across exams, assignments, and courses instantly.',
-    },
-    {
-        id: 'types',
-        target: 'hub-types',
-        title: 'Filter by type',
-        body: 'Switch between All, Exams, Assignments, and Courses. Counts update live.',
+        body: 'Find an exam by title or description instantly.',
     },
     {
         id: 'sections',
         target: 'hub-sections',
         title: 'Filter by section',
         body: 'If you are in multiple sections, filter activities per section.',
-    },
-    {
-        id: 'timeline',
-        target: 'hub-timeline',
-        title: 'Timeline',
-        body: 'All tab shows the most urgent items first — overdue, due today, then upcoming. Tap any card to take action.',
     },
 ];
 </script>
@@ -832,150 +524,73 @@ const activitiesTourSteps: TourStep[] = [
                         <p
                             class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
                         >
-                            Exams, assignments, and courses — all in one place.
+                            Review your exams, deadlines, and results.
                         </p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <Link
-                            href="/assignments"
-                            class="dash-btn hidden h-9 items-center gap-1.5 rounded-full border border-border/50 bg-card px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted sm:inline-flex"
-                        >
-                            <ClipboardList class="h-3.5 w-3.5" /> Assignments
-                        </Link>
-                        <Link
-                            href="/courses"
-                            class="dash-btn hidden h-9 items-center gap-1.5 rounded-full border border-border/50 bg-card px-3.5 text-[13px] font-medium text-muted-foreground hover:bg-muted sm:inline-flex"
-                        >
-                            <BookOpen class="h-3.5 w-3.5" /> Courses
-                        </Link>
                     </div>
                 </div>
             </Motion>
 
-            <!-- Stats — minimalist 4 cards, 2 col mobile -->
+            <!-- Overview — quiet, editorial cards with clear hierarchy -->
             <Motion
-                :initial="{ opacity: 0, y: 20 }"
+                :initial="{ opacity: 0, y: 12 }"
                 :animate="{ opacity: 1, y: 0 }"
-                :transition="{
-                    duration: 0.8,
-                    delay: 0.05,
-                    easing: [0.16, 1, 0.3, 1],
-                }"
-                class="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4"
+                :transition="{ duration: 0.35, delay: 0.05 }"
+                class="grid grid-cols-2 divide-x divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card sm:grid-cols-4 sm:rounded-2xl"
             >
-                <div
-                    class="surface-card rounded-xl border border-border/50 p-3 sm:rounded-2xl sm:p-5"
-                >
-                    <div class="flex items-center justify-between">
-                        <span
-                            class="text-[10px] font-bold tracking-widest text-muted-foreground/60 uppercase sm:text-[11px]"
-                            >Total</span
-                        >
-                        <div
-                            class="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary sm:h-7 sm:w-7"
-                        >
-                            <Layers class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </div>
-                    </div>
-                    <div
-                        class="mt-2 text-[22px] leading-none font-bold tracking-tight sm:mt-3 sm:text-[28px]"
-                    >
-                        {{ hubStats.total }}
-                    </div>
+                <div class="min-w-0 p-3.5 sm:p-5">
+                    <p class="text-xs font-medium text-muted-foreground">
+                        All exams
+                    </p>
                     <p
-                        class="mt-1 text-[11px] text-muted-foreground sm:text-[13px]"
+                        class="mt-2 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
                     >
-                        {{ hubStats.exams.total }} exams ·
-                        {{ hubStats.assignments.total }} assignments ·
-                        {{ hubStats.courses.total }} courses
+                        {{ hubStats.exams.total }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Available in your sections
                     </p>
                 </div>
-                <div
-                    class="surface-card rounded-xl border border-border/50 p-3 sm:rounded-2xl sm:p-5"
-                >
-                    <div class="flex items-center justify-between">
-                        <span
-                            class="text-[10px] font-bold tracking-widest text-muted-foreground/60 uppercase sm:text-[11px]"
-                            >Pending</span
-                        >
-                        <div
-                            class="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 sm:h-7 sm:w-7 dark:text-amber-400"
-                        >
-                            <Clock class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </div>
-                    </div>
-                    <div
-                        class="mt-2 text-[22px] leading-none font-bold tracking-tight sm:mt-3 sm:text-[28px]"
-                    >
-                        {{ hubStats.pending }}
-                    </div>
+                <div class="min-w-0 p-3.5 sm:p-5">
+                    <p class="text-xs font-medium text-muted-foreground">
+                        Needs attention
+                    </p>
                     <p
-                        class="mt-1 text-[11px] text-muted-foreground sm:text-[13px]"
+                        class="mt-2 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
                     >
-                        {{ hubStats.exams.pending }} exams ·
-                        {{ hubStats.assignments.pending }} assignments
+                        {{ hubStats.exams.pending }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Ready to complete
                     </p>
                 </div>
-                <div
-                    class="surface-card rounded-xl border border-border/50 p-3 sm:rounded-2xl sm:p-5"
-                >
-                    <div class="flex items-center justify-between">
-                        <span
-                            class="text-[10px] font-bold tracking-widest text-muted-foreground/60 uppercase sm:text-[11px]"
-                            >Completed</span
-                        >
-                        <div
-                            class="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 sm:h-7 sm:w-7 dark:text-emerald-400"
-                        >
-                            <CheckCircle2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </div>
-                    </div>
-                    <div
-                        class="mt-2 text-[22px] leading-none font-bold tracking-tight text-emerald-700 sm:mt-3 sm:text-[28px] dark:text-emerald-400"
-                    >
-                        {{ hubStats.completed }}
-                    </div>
+                <div class="min-w-0 p-3.5 sm:p-5">
+                    <p class="text-xs font-medium text-muted-foreground">
+                        Completed
+                    </p>
                     <p
-                        class="mt-1 text-[11px] text-muted-foreground sm:text-[13px]"
+                        class="mt-2 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
                     >
-                        Finished & submitted
+                        {{ hubStats.exams.completed }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        Completed exams
                     </p>
                 </div>
-                <div
-                    class="surface-card col-span-2 rounded-xl border border-border/50 p-3 sm:rounded-2xl sm:p-5 lg:col-span-1"
-                >
-                    <div class="flex items-center justify-between">
-                        <span
-                            class="text-[10px] font-bold tracking-widest text-muted-foreground/60 uppercase sm:text-[11px]"
-                            >Progress</span
-                        >
-                        <div
-                            class="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 text-primary sm:h-7 sm:w-7"
-                        >
-                            <BarChart3 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        </div>
-                    </div>
-                    <div class="mt-2 flex items-baseline gap-2">
-                        <div
-                            class="text-[22px] leading-none font-bold tracking-tight sm:text-[28px]"
-                        >
-                            {{ completionRate }}%
-                        </div>
-                        <span
-                            class="text-[11px] text-muted-foreground sm:text-[13px]"
-                            >{{ hubStats.completed }}/{{ hubStats.total }}</span
-                        >
-                    </div>
+                <div class="min-w-0 p-3.5 sm:p-5">
+                    <p class="text-xs font-medium text-muted-foreground">
+                        Completion
+                    </p>
+                    <p
+                        class="mt-2 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl"
+                    >
+                        {{ completionRate }}%
+                    </p>
                     <div
-                        class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-muted"
+                        class="mt-3 h-1 w-full overflow-hidden rounded-full bg-muted"
+                        aria-hidden="true"
                     >
                         <div
-                            class="h-full rounded-full transition-all duration-700"
-                            :class="
-                                completionRate === 100
-                                    ? 'bg-emerald-500'
-                                    : 'bg-primary'
-                            "
+                            class="h-full rounded-full bg-foreground transition-[width] duration-500"
                             :style="{ width: `${completionRate}%` }"
                         ></div>
                     </div>
@@ -990,7 +605,7 @@ const activitiesTourSteps: TourStep[] = [
                 <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Search activities, assignments, courses..."
+                    placeholder="Search exams..."
                     class="min-h-11 w-full rounded-full border border-border/50 bg-card py-2 pr-4 pl-10 text-[16px] outline-none placeholder:text-muted-foreground/50 focus:border-[#D97757]/40 focus:ring-2 focus:ring-[#D97757]/20 sm:py-3 sm:pl-12"
                 />
                 <button
@@ -999,111 +614,6 @@ const activitiesTourSteps: TourStep[] = [
                     class="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-muted-foreground/60 hover:bg-muted hover:text-foreground sm:right-4"
                 >
                     <X class="h-4 w-4" />
-                </button>
-            </div>
-
-            <!-- Type Tabs — 3 core + All — minimalist pill, mobile-first large touch targets -->
-            <div
-                data-tour="hub-types"
-                class="no-scrollbar flex items-center gap-1.5 overflow-x-auto rounded-full border border-border/50 bg-card p-1 sm:gap-2 sm:p-1.5"
-            >
-                <button
-                    @click="activeType = 'all'"
-                    class="dash-btn flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-4"
-                    :class="
-                        activeType === 'all'
-                            ? 'bg-primary text-primary-foreground shadow-xs'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    "
-                >
-                    <span>All</span>
-                    <span
-                        class="rounded-full px-1.5 py-0.5 text-[11px]"
-                        :class="
-                            activeType === 'all'
-                                ? 'bg-primary-foreground/20 text-primary-foreground'
-                                : 'bg-muted text-muted-foreground'
-                        "
-                        >{{ filteredUnified.length }}</span
-                    >
-                </button>
-                <button
-                    @click="activeType = 'exam'"
-                    class="dash-btn flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-4"
-                    :class="
-                        activeType === 'exam'
-                            ? 'bg-[#D97757] text-white shadow-xs'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    "
-                >
-                    <GraduationCap class="h-3.5 w-3.5" />
-                    <span>Exams</span>
-                    <span
-                        class="rounded-full px-1.5 py-0.5 text-[11px]"
-                        :class="
-                            activeType === 'exam'
-                                ? 'bg-white/20 text-white'
-                                : 'bg-muted text-muted-foreground'
-                        "
-                        >{{
-                            activeType === 'exam'
-                                ? filteredExamsBySeason.reduce(
-                                      (a, g) => a + g.exams.length,
-                                      0,
-                                  )
-                                : hubStats.exams.total
-                        }}</span
-                    >
-                </button>
-                <button
-                    @click="activeType = 'assignment'"
-                    class="dash-btn flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-4"
-                    :class="
-                        activeType === 'assignment'
-                            ? 'bg-amber-600 text-white shadow-xs'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    "
-                >
-                    <ClipboardList class="h-3.5 w-3.5" />
-                    <span>Assignments</span>
-                    <span
-                        class="rounded-full px-1.5 py-0.5 text-[11px]"
-                        :class="
-                            activeType === 'assignment'
-                                ? 'bg-white/20 text-white'
-                                : 'bg-muted text-muted-foreground'
-                        "
-                        >{{
-                            activeType === 'assignment'
-                                ? filteredAssignments.length
-                                : hubStats.assignments.total
-                        }}</span
-                    >
-                </button>
-                <button
-                    @click="activeType = 'course'"
-                    class="dash-btn flex h-11 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-4"
-                    :class="
-                        activeType === 'course'
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    "
-                >
-                    <BookOpen class="h-3.5 w-3.5" />
-                    <span>Courses</span>
-                    <span
-                        class="rounded-full px-1.5 py-0.5 text-[11px]"
-                        :class="
-                            activeType === 'course'
-                                ? 'bg-white/20 text-white'
-                                : 'bg-muted text-muted-foreground'
-                        "
-                        >{{
-                            activeType === 'course'
-                                ? filteredCourses.length
-                                : hubStats.courses.total
-                        }}</span
-                    >
                 </button>
             </div>
 
@@ -1146,165 +656,9 @@ const activitiesTourSteps: TourStep[] = [
             </div>
 
             <!-- ─── Content ──────────────────────────────────────────────────── -->
-            <!-- Overdue alert — only in All view, minimalist -->
-            <div
-                v-if="activeType === 'all' && overdueUnifiedCount > 0"
-                class="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-3.5 py-2.5 text-[13px] font-medium text-red-700 dark:text-red-400"
-            >
-                <Clock class="h-4 w-4 shrink-0" />
-                <span
-                    >{{ overdueUnifiedCount }} overdue
-                    {{ overdueUnifiedCount === 1 ? 'activity' : 'activities' }}
-                    — take action now</span
-                >
-            </div>
-
-            <!-- All tab — unified timeline -->
-            <div
-                v-if="activeType === 'all'"
-                data-tour="hub-timeline"
-                class="space-y-3"
-            >
-                <div
-                    v-if="filteredUnified.length > 0"
-                    class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
-                >
-                    <Motion
-                        v-for="(item, idx) in filteredUnified"
-                        :key="`${item.kind}-${item.id}`"
-                        :initial="{ opacity: 0, y: 20 }"
-                        :in-view="{ opacity: 1, y: 0 }"
-                        :in-view-options="{ once: true, margin: '-30px' }"
-                        :transition="{
-                            duration: 0.5,
-                            easing: [0.16, 1, 0.3, 1],
-                            delay: idx * 0.03,
-                        }"
-                        class="group flex min-h-[7rem] flex-col justify-between rounded-xl border border-l-[3px] bg-card p-3 transition-all duration-200 hover:shadow-md sm:min-h-[8rem] sm:rounded-[1.25rem] sm:p-5"
-                        :class="[
-                            item.is_completed
-                                ? 'border-l-emerald-500/30 opacity-80'
-                                : item.kind === 'exam'
-                                  ? 'border-l-[#D97757]/40 hover:border-l-[#D97757]/60'
-                                  : item.kind === 'assignment'
-                                    ? 'border-l-amber-500/40 hover:border-l-amber-500/60'
-                                    : 'border-l-emerald-500/30 hover:border-l-emerald-500/50',
-                            'cursor-pointer hover:bg-muted/30',
-                        ]"
-                        @click="
-                            item.kind === 'exam'
-                                ? openExam(
-                                      allExamsFlat.find(
-                                          (e) => e.id === item.id,
-                                      ) ?? ({ id: item.id } as any),
-                                  )
-                                : router.visit(item.href)
-                        "
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0 flex-1 space-y-1.5">
-                                <div class="flex items-center gap-2">
-                                    <span
-                                        class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase"
-                                        :class="kindColor(item.kind)"
-                                    >
-                                        <component
-                                            :is="kindIcon(item.kind)"
-                                            class="h-3 w-3"
-                                        />
-                                        {{ item.kind }}
-                                    </span>
-                                    <span
-                                        v-if="item.is_completed"
-                                        class="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400"
-                                        >Completed</span
-                                    >
-                                    <span
-                                        v-else-if="
-                                            item.due_at &&
-                                            isOverdue(item.due_at)
-                                        "
-                                        class="inline-flex items-center rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-semibold text-red-600"
-                                        >Overdue</span
-                                    >
-                                </div>
-                                <h3
-                                    class="line-clamp-2 text-[15px] leading-tight font-semibold tracking-tight group-hover:text-primary sm:text-[16px]"
-                                >
-                                    {{ item.title }}
-                                </h3>
-                                <p
-                                    v-if="item.description"
-                                    class="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground sm:text-[14px]"
-                                >
-                                    {{ item.description }}
-                                </p>
-                                <div
-                                    class="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-muted-foreground sm:text-xs"
-                                >
-                                    <span
-                                        v-if="item.meta"
-                                        class="inline-flex items-center gap-1"
-                                        ><Clock class="h-3 w-3" />
-                                        {{ item.meta }}</span
-                                    >
-                                    <span
-                                        v-if="item.due_at"
-                                        class="inline-flex items-center gap-1"
-                                        ><Calendar class="h-3 w-3" />
-                                        {{ formatDue(item.due_at) }}</span
-                                    >
-                                </div>
-                            </div>
-                            <ArrowRight
-                                class="h-4 w-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-primary sm:h-5 sm:w-5"
-                            />
-                        </div>
-                        <div class="mt-3 flex items-center justify-between">
-                            <span class="text-[11px] text-muted-foreground">{{
-                                item.section_name ?? item.season_name ?? ''
-                            }}</span>
-                            <span
-                                v-if="
-                                    item.kind === 'exam' &&
-                                    item.score !== undefined &&
-                                    item.score > 0
-                                "
-                                class="rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[11px] font-semibold text-[#D97757] tabular-nums"
-                                >{{ item.score.toFixed(1) }}</span
-                            >
-                        </div>
-                    </Motion>
-                </div>
-                <div
-                    v-else
-                    class="surface-card flex flex-col items-center justify-center rounded-2xl border-dashed py-16 text-center sm:py-24"
-                >
-                    <div class="mb-4 rounded-full bg-muted/40 p-4">
-                        <Search class="h-8 w-8 text-muted-foreground/40" />
-                    </div>
-                    <h3 class="text-[18px] font-semibold tracking-tight">
-                        No activities found
-                    </h3>
-                    <p class="mt-1 max-w-sm text-[14px] text-muted-foreground">
-                        Try a different search or section filter.
-                    </p>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        class="mt-4 rounded-full"
-                        @click="
-                            searchQuery = '';
-                            activeSection = 'all';
-                            activeType = 'all';
-                        "
-                        >Clear filters</Button
-                    >
-                </div>
-            </div>
 
             <!-- Exams tab -->
-            <template v-if="activeType === 'exam'">
+            <template>
                 <template v-if="filteredExamsBySeason.length > 0">
                     <Motion
                         v-for="(seasonGroup, sIdx) in filteredExamsBySeason"
@@ -1610,236 +964,6 @@ const activitiesTourSteps: TourStep[] = [
                             Try a different search or section.
                         </p>
                     </div>
-                </div>
-            </template>
-
-            <!-- Assignments tab — minimalist cards -->
-            <template v-if="activeType === 'assignment'">
-                <div
-                    v-if="filteredAssignments.length > 0"
-                    class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
-                >
-                    <div
-                        v-for="assignment in filteredAssignments"
-                        :key="assignment.id"
-                        class="surface-card group flex flex-col gap-3 overflow-hidden rounded-xl border border-l-[3px] p-3.5 transition-all duration-300 hover:shadow-md sm:rounded-2xl sm:p-5"
-                        :class="
-                            assignment.submission?.submitted
-                                ? assignment.submission.status === 'Graded' ||
-                                  assignment.submission.grade
-                                    ? 'border-l-emerald-500/50'
-                                    : 'border-l-orange-500/50'
-                                : isOverdue(assignment.due_date)
-                                  ? 'border-l-red-500/50'
-                                  : 'border-l-amber-500/50'
-                        "
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <h3
-                                class="line-clamp-2 min-w-0 flex-1 text-[15px] font-semibold tracking-tight group-hover:text-primary sm:text-[16px]"
-                            >
-                                {{ assignment.title }}
-                            </h3>
-                            <span
-                                class="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-                                :class="getAssignmentBadge(assignment).classes"
-                                >{{
-                                    getAssignmentBadge(assignment).label
-                                }}</span
-                            >
-                        </div>
-                        <div
-                            class="flex flex-wrap items-center gap-2 text-[12px] text-muted-foreground"
-                        >
-                            <span
-                                v-if="assignment.course?.name"
-                                class="inline-flex items-center gap-1"
-                                ><BookOpen class="h-3 w-3" />
-                                {{ assignment.course.name }}</span
-                            >
-                            <span
-                                v-if="assignment.sections?.[0]?.name"
-                                class="inline-flex items-center gap-1"
-                                ><Layers class="h-3 w-3" />
-                                {{ assignment.sections[0].name }}</span
-                            >
-                        </div>
-                        <p
-                            v-if="assignment.description"
-                            class="line-clamp-2 text-[13px] leading-relaxed text-muted-foreground"
-                        >
-                            {{ assignment.description }}
-                        </p>
-                        <div
-                            class="flex items-center justify-between rounded-lg bg-muted/20 px-3 py-2 text-[12px]"
-                        >
-                            <span class="text-muted-foreground">Due</span>
-                            <span
-                                class="font-medium"
-                                :class="
-                                    assignment.submission?.submitted
-                                        ? 'text-foreground'
-                                        : isOverdue(assignment.due_date)
-                                          ? 'text-red-600'
-                                          : 'text-amber-700'
-                                "
-                                >{{
-                                    assignment.due_date
-                                        ? formatDue(assignment.due_date)
-                                        : 'No deadline'
-                                }}</span
-                            >
-                        </div>
-                        <div class="flex items-center justify-end gap-2 pt-1">
-                            <Link
-                                href="/assignments"
-                                class="dash-btn inline-flex h-8 items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 text-[12px] font-medium hover:bg-muted"
-                                ><FileText class="h-3.5 w-3.5" /> View</Link
-                            >
-                            <Link
-                                v-if="!assignment.submission?.submitted"
-                                href="/assignments"
-                                class="dash-btn inline-flex h-8 items-center gap-1.5 rounded-full bg-[#D97757] px-3.5 text-[12px] font-semibold text-white hover:bg-[#D97757]/90"
-                                ><ArrowRight class="h-3.5 w-3.5" /> Submit</Link
-                            >
-                            <span
-                                v-else
-                                class="text-[11px] font-medium text-emerald-600"
-                                >Submitted
-                                {{
-                                    assignment.submission?.submitted_at
-                                        ? new Date(
-                                              assignment.submission
-                                                  .submitted_at,
-                                          ).toLocaleDateString()
-                                        : ''
-                                }}</span
-                            >
-                        </div>
-                    </div>
-                </div>
-                <div
-                    v-else
-                    class="surface-card flex flex-col items-center justify-center rounded-2xl border-dashed py-16 text-center"
-                >
-                    <div class="mb-4 rounded-full bg-muted/30 p-4">
-                        <ClipboardList
-                            class="h-10 w-10 text-muted-foreground/40"
-                        />
-                    </div>
-                    <h3 class="text-[18px] font-semibold">
-                        No assignments found
-                    </h3>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Try a different filter or check back later.
-                    </p>
-                </div>
-            </template>
-
-            <!-- Courses tab -->
-            <template v-if="activeType === 'course'">
-                <div
-                    v-if="filteredCourses.length > 0"
-                    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                >
-                    <Link
-                        v-for="course in filteredCourses"
-                        :key="course.id"
-                        :href="`/courses/${course.id}`"
-                        class="group surface-card flex flex-col overflow-hidden rounded-2xl border border-border/40 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-                    >
-                        <div
-                            class="relative h-36 overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-muted"
-                        >
-                            <img
-                                v-if="course.cover_photo"
-                                :src="course.cover_photo"
-                                :alt="course.name"
-                                class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                            <div
-                                v-else
-                                class="flex h-full items-center justify-center"
-                            >
-                                <BookOpen class="h-12 w-12 text-primary/20" />
-                            </div>
-                            <div
-                                class="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent"
-                            />
-                            <div class="absolute top-3 right-3">
-                                <span
-                                    class="rounded-full px-2.5 py-1 text-[10px] font-bold backdrop-blur-sm"
-                                    :class="
-                                        course.progress >= 100
-                                            ? 'bg-emerald-500/90 text-white'
-                                            : 'bg-background/70 text-foreground'
-                                    "
-                                    >{{
-                                        course.progress >= 100
-                                            ? '✓ Done'
-                                            : `${course.progress}%`
-                                    }}</span
-                                >
-                            </div>
-                        </div>
-                        <div class="flex flex-1 flex-col p-4">
-                            <h3
-                                class="line-clamp-1 text-[16px] font-bold tracking-tight group-hover:text-primary"
-                            >
-                                {{ course.name }}
-                            </h3>
-                            <p
-                                v-if="course.description"
-                                class="mt-1 line-clamp-2 text-[12px] leading-relaxed text-muted-foreground"
-                            >
-                                {{ course.description }}
-                            </p>
-                            <div
-                                class="mt-3 flex items-center gap-3 text-[11px] text-muted-foreground"
-                            >
-                                <span class="inline-flex items-center gap-1"
-                                    ><BookMarked class="h-3 w-3" />
-                                    {{ course.modulesCount }} modules</span
-                                >
-                                <span class="inline-flex items-center gap-1"
-                                    ><BarChart3 class="h-3 w-3" />
-                                    {{ course.completedLessons }}/{{
-                                        course.totalLessons
-                                    }}</span
-                                >
-                            </div>
-                            <div
-                                class="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"
-                            >
-                                <div
-                                    class="h-full rounded-full transition-all duration-700"
-                                    :class="
-                                        course.progress >= 100
-                                            ? 'bg-emerald-500'
-                                            : 'bg-primary'
-                                    "
-                                    :style="{ width: `${course.progress}%` }"
-                                ></div>
-                            </div>
-                        </div>
-                    </Link>
-                </div>
-                <div
-                    v-else
-                    class="surface-card flex flex-col items-center justify-center rounded-2xl border-dashed py-16 text-center"
-                >
-                    <div class="mb-4 rounded-full bg-muted/30 p-4">
-                        <BookOpen class="h-10 w-10 text-muted-foreground/40" />
-                    </div>
-                    <h3 class="text-[18px] font-semibold">No courses found</h3>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        You are not enrolled in any courses yet.
-                    </p>
-                    <Link
-                        href="/courses"
-                        class="dash-btn mt-4 inline-flex h-9 items-center gap-1.5 rounded-full bg-primary px-4 text-[13px] font-semibold text-primary-foreground"
-                        >Browse courses</Link
-                    >
                 </div>
             </template>
         </div>
