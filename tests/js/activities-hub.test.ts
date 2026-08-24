@@ -25,6 +25,17 @@ describe('activities hub', () => {
         );
     });
 
+    it('uses immediate animations for cards inside the nested scroll container', () => {
+        const contentStart = page.indexOf('<!-- Exams tab -->');
+        const contentEnd = page.indexOf('<OnboardingTour', contentStart);
+        const examContent = page.slice(contentStart, contentEnd);
+
+        // The hub owns its scroll container. Viewport-only in-view animations
+        // can leave the whole season group at opacity 0, hiding every card.
+        expect(examContent).toContain(':animate="{ opacity: 1, y: 0 }"');
+        expect(examContent).not.toContain(':in-view=');
+    });
+
     it('uses the nested hub stats shape returned by the controller', () => {
         expect(page).toContain(
             'hubStats: {\n        exams: { total: number; pending: number; completed: number };\n    };',

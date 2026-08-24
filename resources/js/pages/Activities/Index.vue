@@ -662,8 +662,7 @@ const activitiesTourSteps: TourStep[] = [
                         v-for="(seasonGroup, sIdx) in filteredExamsBySeason"
                         :key="sIdx"
                         :initial="{ opacity: 0, y: 30 }"
-                        :in-view="{ opacity: 1, y: 0 }"
-                        :in-view-options="{ once: true, margin: '-40px' }"
+                        :animate="{ opacity: 1, y: 0 }"
                         :transition="{
                             duration: 0.8,
                             easing: [0.16, 1, 0.3, 1],
@@ -704,11 +703,7 @@ const activitiesTourSteps: TourStep[] = [
                                 v-for="(exam, eIdx) in seasonGroup.exams"
                                 :key="exam.id"
                                 :initial="{ opacity: 0, y: 20 }"
-                                :in-view="{ opacity: 1, y: 0 }"
-                                :in-view-options="{
-                                    once: true,
-                                    margin: '-30px',
-                                }"
+                                :animate="{ opacity: 1, y: 0 }"
                                 :transition="{
                                     duration: 0.5,
                                     easing: [0.16, 1, 0.3, 1],
