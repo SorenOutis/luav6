@@ -26,6 +26,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Cursor;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -123,13 +124,7 @@ class ExamController extends Controller
                     ->orderBy('sort_order'),
             ])
             ->where('status', '!=', 'draft')
-            ->when(! $user->is_admin, function ($query) use ($user): void {
-                $sectionIds = $user->sections()->pluck('sections.id');
-                $query->where(function ($query) use ($sectionIds): void {
-                    $query->whereNull('section_id')
-                        ->orWhereIn('section_id', $sectionIds);
-                });
-            })
+            ->visibleTo($user)
             ->latest('created_at')
             ->latest('id')
             ->cursorPaginate(24, ['*'], 'cursor', Cursor::fromEncoded($cursor));
@@ -386,6 +381,8 @@ class ExamController extends Controller
 
     public function monitorProgress(Request $request, Exam $exam)
     {
+        $this->assertCanAccess($exam);
+
         $validated = $request->validate([
             'status' => ['required', 'string', Rule::in(['starting', 'in_progress', 'submitting', 'finished'])],
             'exam_part_id' => [
@@ -718,6 +715,10 @@ class ExamController extends Controller
 
     /**
      * A student may only touch exams that are unassigned or in one of their sections.
+     *
+     * The check reads the `section_user` pivot directly: the workspace-scoped
+     * `sections()` relation can miss legitimate enrollments when the student's
+     * workspace bookkeeping is absent or points at another tenant.
      */
     private function assertCanAccess(Exam $exam): void
     {
@@ -728,7 +729,10 @@ class ExamController extends Controller
         }
 
         abort_unless(
-            $user->sections()->where('sections.id', $exam->section_id)->exists(),
+            DB::table('section_user')
+                ->where('user_id', $user->id)
+                ->where('section_id', $exam->section_id)
+                ->exists(),
             403,
             'You do not have access to this exam.',
         );

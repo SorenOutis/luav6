@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkspace;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class Exam extends Model
 {
@@ -74,5 +76,72 @@ class Exam extends Model
     public function xpAwards()
     {
         return $this->hasMany(ExamXpAward::class);
+    }
+
+    /**
+     * Student-facing visibility, derived from enrollment rather than from the
+     * active workspace context.
+     *
+     * An exam is visible to a student when it targets one of the sections they
+     * are enrolled in, or when it is unassigned ("global") and either predates
+     * tenants or belongs to a tenant that owns one of their sections.
+     *
+     * The workspace global scope is deliberately bypassed here: `section_user`
+     * is the source of truth for what a student may see, while workspace
+     * membership and `current_workspace_id` are tenant bookkeeping that can lag
+     * behind enrollment (restored dumps, rows created before tenants shipped,
+     * admin-assigned memberships) and may legitimately span several workspaces
+     * for one student. Tying reads to the bookkeeping hid every exam from
+     * enrolled students whenever the two drifted apart. Admins keep the
+     * workspace-scoped tenant view untouched.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->is_admin) {
+            return $query;
+        }
+
+        $sectionIds = DB::table('section_user')
+            ->where('user_id', $user->id)
+            ->pluck('section_id');
+
+        $workspaceIds = DB::table('sections')
+            ->whereIn('id', $sectionIds)
+            ->whereNotNull('workspace_id')
+            ->pluck('workspace_id')
+            ->unique()
+            ->values();
+
+        return $query
+            ->withoutGlobalScope('workspace')
+            ->where(function (Builder $query) use ($sectionIds, $workspaceIds): void {
+                $query->whereIn('section_id', $sectionIds)
+                    ->orWhere(function (Builder $query) use ($workspaceIds): void {
+                        $query->whereNull('section_id')
+                            ->where(function (Builder $query) use ($workspaceIds): void {
+                                $query->whereNull('workspace_id')
+                                    ->orWhereIn('workspace_id', $workspaceIds);
+                            });
+                    });
+            });
+    }
+
+    /**
+     * Route binding must not depend on the viewer's workspace bookkeeping:
+     * students resolve exams across every tenant they are enrolled in (they
+     * may span several), and authorization itself is enforced per action via
+     * assertCanAccess(). Admins keep the workspace-scoped tenant view.
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $user = auth()->user();
+
+        if (! $user || $user->is_admin) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        return static::withoutGlobalScope('workspace')
+            ->where($field ?? $this->getRouteKeyName(), $value)
+            ->first();
     }
 }

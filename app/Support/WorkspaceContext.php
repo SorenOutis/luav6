@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Workspace;
 use Closure;
+use Illuminate\Support\Facades\DB;
 
 /** Request/job-scoped tenant context safe for Octane and queue workers. */
 class WorkspaceContext
@@ -137,10 +138,25 @@ class WorkspaceContext
             return;
         }
 
-        $this->workspaceId = $user->workspaces()
+        $workspaceId = $user->workspaces()
             ->whereNull('workspaces.archived_at')
             ->orderByRaw("CASE workspace_user.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END")
             ->orderBy('workspaces.id')
             ->value('workspaces.id');
+
+        // Students enrolled in sections but missing workspace linkage (restored
+        // dumps, rows created before tenants shipped) still resolve the tenant
+        // that owns their sections instead of falling through to the empty
+        // "global" view, which would hide every tenant-owned record from them.
+        if (! $workspaceId && ! $user->is_admin) {
+            $workspaceId = DB::table('sections')
+                ->join('section_user', 'section_user.section_id', '=', 'sections.id')
+                ->where('section_user.user_id', $user->id)
+                ->whereNotNull('sections.workspace_id')
+                ->orderBy('sections.id')
+                ->value('sections.workspace_id');
+        }
+
+        $this->workspaceId = $workspaceId ? (int) $workspaceId : null;
     }
 }
