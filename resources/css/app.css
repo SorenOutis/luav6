@@ -619,6 +619,35 @@
             color-mix(in srgb, var(--color-primary) 45%, transparent) !important;
 }
 
+/* — Per-status accent stripe on exam cards —
+   The base `.exam-card` rule above sets `border` as an `!important` shorthand,
+   and the hover rule resets `border-color` the same way. Both therefore wipe
+   `border-left-width` / `border-left-color`. Tailwind's `border-l-[3px]` and
+   `border-l-[#4D9375]/40` utilities live in `@layer utilities` without
+   `!important`, so they lose both cascades and every card came out with the
+   same flat neutral edge. Re-assert the left edge from the `data-accent` hook
+   the card sets, at a specificity that also beats the hover shorthand. */
+.exam-theme-page .exam-card[data-accent],
+.exam-theme-page .exam-card[data-accent]:not(.cursor-not-allowed):hover {
+    border-left-width: 3px !important;
+    border-left-color: color-mix(
+        in srgb,
+        var(--color-primary) 22%,
+        transparent
+    ) !important;
+}
+
+.exam-theme-page .exam-card[data-accent='done'],
+.exam-theme-page .exam-card[data-accent='done']:not(.cursor-not-allowed):hover {
+    border-left-color: color-mix(in srgb, #4d9375 45%, transparent) !important;
+}
+
+.exam-theme-page .exam-card[data-accent='overdue'],
+.exam-theme-page
+    .exam-card[data-accent='overdue']:not(.cursor-not-allowed):hover {
+    border-left-color: color-mix(in srgb, #cb7676 50%, transparent) !important;
+}
+
 /* — Hero: flat solid panel — */
 .exam-theme-page .exam-hero {
     background: var(--color-card) !important;

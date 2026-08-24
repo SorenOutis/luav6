@@ -90,13 +90,13 @@ const props = defineProps<{
 const { stop: stopPoll, start: startPoll } = usePoll(
     10000,
     {
-        only: ['examsBySeason', 'hubStats'],
+        only: ['examsBySeason', 'hubStats', 'sectionTabs'],
     },
     { autoStart: false },
 );
 const refreshHub = () =>
     router.reload({
-        only: ['examsBySeason', 'hubStats'],
+        only: ['examsBySeason', 'hubStats', 'sectionTabs'],
     });
 const handleVisibilityChange = () => {
     if (!document.hidden) refreshHub();
@@ -305,6 +305,32 @@ const getCardStatusClass = (exam: Exam) => {
     }
     if (allDone) return 'border-l-[#4D9375]/40 hover:border-l-[#4D9375]/60';
     return 'border-l-primary/20 hover:border-l-primary/40';
+};
+
+/**
+ * Status key for the card's left accent stripe, rendered as `data-accent`.
+ *
+ * `resources/css/app.css` restyles `.exam-theme-page .exam-card` with an
+ * unlayered `border: 1px solid … !important` shorthand, which also resets
+ * `border-left-width` / `border-left-color`. Tailwind's `border-l-[3px]` and
+ * `border-l-[#4D9375]/40` utilities live in `@layer utilities` without
+ * `!important`, so they lose that cascade and every card came out with the
+ * same flat neutral edge. A data attribute the stylesheet can target is the
+ * only hook that survives the shorthand — and unlike `:style` it does not
+ * collide with the `style` prop `Motion` declares.
+ */
+const getCardAccent = (exam: Exam): 'overdue' | 'done' | 'open' => {
+    const total = exam.total_parts ?? exam.parts?.length ?? 0;
+    const submitted =
+        exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
+    const allDone = total > 0 && submitted >= total;
+    const dateStr = exam.exam_date_iso || exam.exam_date;
+    if (dateStr && !exam.is_locked) {
+        const dd = new Date(dateStr);
+        if (!Number.isNaN(dd.getTime()) && dd.getTime() < Date.now())
+            return 'overdue';
+    }
+    return allDone ? 'done' : 'open';
 };
 const getProgressPercent = (exam: Exam) => {
     if (!exam.total_parts) return 0;
@@ -716,6 +742,7 @@ const activitiesTourSteps: TourStep[] = [
                                         : 'cursor-pointer hover:bg-muted/30',
                                     getCardStatusClass(exam),
                                 ]"
+                                :data-accent="getCardAccent(exam)"
                                 role="button"
                                 tabindex="0"
                                 @click="openExam(exam)"
