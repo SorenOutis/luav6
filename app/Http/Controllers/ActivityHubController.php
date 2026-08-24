@@ -60,14 +60,7 @@ class ActivityHubController extends Controller
                     ->orderBy('sort_order'),
             ])
             ->where('status', '!=', 'draft')
-            ->when(! $user->is_admin, function ($query) use ($user): void {
-                $sectionIds = $user->sections()->pluck('sections.id');
-
-                $query->where(function ($query) use ($sectionIds): void {
-                    $query->whereNull('section_id')
-                        ->orWhereIn('section_id', $sectionIds);
-                });
-            })
+            ->visibleTo($user)
             ->latest('created_at')
             ->latest('id')
             ->cursorPaginate(24, ['*'], 'cursor', Cursor::fromEncoded($cursor));
