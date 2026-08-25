@@ -418,13 +418,18 @@ watch(selectedPartId, () => {
 });
 watch(showReviewModal, async (open) => {
     if (open) {
-        document.body.style.overflow = 'hidden';
+        // Desktop: reka-ui's DialogOverlay locks body scroll itself. Setting
+        // body overflow here first would make reka snapshot 'hidden' as the
+        // "previous" value and restore it when the dialog closes — permanently
+        // scroll-locking the page. Only the custom mobile bottom sheet (which
+        // has no reka overlay) needs a manual lock.
+        if (isMobile.value) document.body.style.overflow = 'hidden';
         getLenis()?.stop();
         await nextTick();
         await new Promise((r) => requestAnimationFrame(r));
         scrollRef.value?.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-        document.body.style.overflow = '';
+        if (isMobile.value) document.body.style.overflow = '';
         getLenis()?.start();
     }
 });

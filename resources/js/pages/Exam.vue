@@ -603,7 +603,12 @@ watch(sectionTabs, (tabs) => {
 // Lock body scroll, stop Lenis, & reset scroll position when review modal opens
 watch(showReviewModal, async (isOpen) => {
     if (isOpen) {
-        document.body.style.overflow = 'hidden';
+        // Desktop: reka-ui's DialogOverlay locks body scroll itself. Setting
+        // body overflow here first would make reka snapshot 'hidden' as the
+        // "previous" value and restore it when the dialog closes — permanently
+        // scroll-locking the page. Only the custom mobile bottom sheet (which
+        // has no reka overlay) needs a manual lock.
+        if (isMobile.value) document.body.style.overflow = 'hidden';
         getLenis()?.stop();
         await nextTick();
         // Wait one frame for modal entrance animation to settle
@@ -612,7 +617,7 @@ watch(showReviewModal, async (isOpen) => {
             scrollRef.value.scrollTo({ top: 0, behavior: 'smooth' });
         }
     } else {
-        document.body.style.overflow = '';
+        if (isMobile.value) document.body.style.overflow = '';
         getLenis()?.start();
     }
 });
