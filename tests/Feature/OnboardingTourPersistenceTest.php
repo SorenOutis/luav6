@@ -25,6 +25,19 @@ it('records a skipped tour on the account', function () {
         ->toBe(['dashboard' => 'skipped']);
 });
 
+it('records the activities hub tour instead of 404ing', function () {
+    // Regression: Activities/Index.vue posts tour id 'activities-hub', which
+    // was missing from the controller's allowlist. The POST aborted with 404
+    // and Inertia hard-navigated the student to the "404 Not Found" page
+    // whenever they skipped or finished the hub tour.
+    $this->actingAs($this->student)
+        ->post('/onboarding/activities-hub', ['status' => 'skipped'])
+        ->assertRedirect();
+
+    expect($this->student->fresh()->onboardingTours())
+        ->toBe(['activities-hub' => 'skipped']);
+});
+
 it('keeps the first resolution when the tour is reported twice', function () {
     $this->actingAs($this->student)->post('/onboarding/grades', ['status' => 'done']);
     $this->actingAs($this->student)->post('/onboarding/grades', ['status' => 'skipped']);

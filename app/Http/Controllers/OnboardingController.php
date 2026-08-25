@@ -22,6 +22,7 @@ class OnboardingController extends Controller
         'exams',
         'exam',
         'activities',
+        'activities-hub',
         'grades',
         'chats',
         'calendar',
