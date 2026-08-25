@@ -45,3 +45,7 @@ resources/js/routes_temp/
 .rnd
 build_error.txt
 build_output.txt
+
+# Local package-manager lockfile (package-lock.json is canonical; CI/Docker use npm).
+# A stale committed bun.lock pinned vite 7 while package.json requires ^8.
+bun.lock
