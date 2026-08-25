@@ -124,6 +124,44 @@ describe('activities hub — exam card visibility', () => {
         expect(wrapper.findAll('.exam-card')).toHaveLength(3);
     });
 
+    it('renders the exam grid as visible DOM, never inside a <template> element', async () => {
+        // Regression: the exam section used to be wrapped in a bare `<template>`
+        // (no v-if/v-for). The compiler emits that as a literal `<template>`
+        // DOM element, and browsers never render content inside one — so the
+        // cards existed in the DOM (findAll saw them) while the grid painted
+        // nothing, with no console errors and every animation completing
+        // normally. `closest('template')` catches exactly that shape.
+        const wrapper = mount(Activities, {
+            props: {
+                examsBySeason: [
+                    {
+                        seasonName: 'Season 1',
+                        exams: [
+                            mkExam(1, 'Season 1', 'BSIT 1-A'),
+                            mkExam(2, 'Season 1', 'BSIT 1-A'),
+                        ],
+                    },
+                ] as any,
+                examPagination: { hasMore: false, nextCursor: null },
+                sectionTabs: [{ key: 'all', label: 'All sections', count: 2 }],
+                hubStats: hubStats(2),
+            },
+            global: globalStubs,
+        });
+        await flushPromises();
+
+        const cards = wrapper.findAll('.exam-card');
+        expect(cards).toHaveLength(2);
+        for (const card of cards) {
+            expect(card.element.closest('template')).toBeNull();
+        }
+
+        // Nothing in the hub body may be tucked inside a <template> element.
+        expect(
+            wrapper.find('.exam-theme-page').findAll('template'),
+        ).toHaveLength(0);
+    });
+
     it('keeps every card after the 10s poll replaces examsBySeason', async () => {
         const groups = [
             {
