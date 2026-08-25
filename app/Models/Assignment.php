@@ -13,13 +13,18 @@ class Assignment extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size'];
+    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size', 'is_active'];
+
+    protected $attributes = [
+        'is_active' => true,
+    ];
 
     protected $casts = [
         'due_date' => 'datetime',
         'points_possible' => 'decimal:2',
         'min_group_size' => 'integer',
         'max_group_size' => 'integer',
+        'is_active' => 'boolean',
     ];
 
     public function course()
@@ -74,7 +79,15 @@ class Assignment extends Model
     }
 
     /**
-     * Limit the query to assignments targeted at any of the given sections.
+     * Limit the query to assignments that are open to students.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Limit the query to active assignments targeted at any of the given sections.
      *
      * @param  Collection<int, int>|array<int, int>  $sectionIds
      */
@@ -86,19 +99,26 @@ class Assignment extends Model
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereHas(
-            'sections',
-            fn (Builder $sections) => $sections->whereIn('sections.id', $sectionIds)
-        );
+        return $query
+            ->active()
+            ->whereHas(
+                'sections',
+                fn (Builder $sections) => $sections->whereIn('sections.id', $sectionIds)
+            );
     }
 
     /**
-     * Whether the given user is in one of this assignment's target sections.
+     * Whether the given user can access this assignment. Administrators retain
+     * access so they can manage closed work.
      */
     public function isVisibleTo(User $user): bool
     {
         if ($user->is_admin) {
             return true;
+        }
+
+        if (! $this->is_active) {
+            return false;
         }
 
         return $this->sections()
