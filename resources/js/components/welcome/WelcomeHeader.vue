@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
-import { Command, Sun, Moon, Menu, X } from 'lucide-vue-next';
+import { Sun, Moon, Menu, X } from 'lucide-vue-next';
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import {
     Sheet,
@@ -67,12 +67,12 @@ const scrollToSection = (e: MouseEvent, targetId: string) => {
 const navItems = computed(() => {
     const allItems = [
         {
-            label: 'How It Works',
+            label: 'How it works',
             target: 'how-it-works',
             preview: 'See the teacher workflow from assessment to action',
         },
         {
-            label: 'Features',
+            label: 'Product',
             target: 'features',
             preview: 'Explore the essential classroom tools',
         },
@@ -117,7 +117,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 
 <template>
     <header
-        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border/10 bg-background/95 px-4 py-3 sm:px-6 sm:py-4 md:bg-background/60 md:backdrop-blur-xl lg:px-16 lg:py-5 dark:border-border/5 dark:bg-background/95 md:dark:bg-background/30"
+        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-[#17201f]/10 bg-[#f8f7f2]/95 px-4 py-3 sm:px-6 sm:py-4 md:bg-[#f8f7f2]/80 md:backdrop-blur-xl lg:px-16 lg:py-5 dark:border-border/5 dark:bg-background/95 md:dark:bg-background/30"
     >
         <Motion
             :initial="liteMotion ? false : { x: -20, opacity: 0 }"
@@ -134,20 +134,17 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             class="flex items-center gap-3"
         >
             <Link href="/" class="flex items-center gap-3">
-                <div
-                    class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-foreground/5 text-foreground transition-all duration-500 hover:bg-primary/10 lg:h-10 lg:w-10"
+                <img
+                    v-if="brandLogoUrl"
+                    :src="brandLogoUrl"
+                    :alt="`${brandName} logo`"
+                    class="h-8 w-8 rounded-full object-cover"
+                />
+                <span
+                    class="font-serif text-xl tracking-[-0.03em] text-foreground"
                 >
-                    <img
-                        v-if="brandLogoUrl"
-                        :src="brandLogoUrl"
-                        :alt="`${brandName} logo`"
-                        class="h-full w-full rounded-lg object-cover"
-                    />
-                    <Command v-else class="h-5 w-5 lg:h-6 lg:w-6" />
-                </div>
-                <span class="text-sm font-semibold text-foreground">{{
-                    brandName
-                }}</span>
+                    {{ brandName }}
+                </span>
             </Link>
         </Motion>
 
@@ -229,20 +226,17 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                 class="flex items-center gap-2.5"
                                 @click="closeMobileMenu"
                             >
-                                <div
-                                    class="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-foreground/5"
+                                <img
+                                    v-if="brandLogoUrl"
+                                    :src="brandLogoUrl"
+                                    :alt="`${brandName} logo`"
+                                    class="h-7 w-7 rounded-full object-cover"
+                                />
+                                <span
+                                    class="font-serif text-lg tracking-[-0.03em]"
                                 >
-                                    <img
-                                        v-if="brandLogoUrl"
-                                        :src="brandLogoUrl"
-                                        :alt="`${brandName} logo`"
-                                        class="h-full w-full rounded-lg object-cover"
-                                    />
-                                    <Command v-else class="h-4 w-4" />
-                                </div>
-                                <span class="text-sm font-semibold">{{
-                                    brandName
-                                }}</span>
+                                    {{ brandName }}
+                                </span>
                             </Link>
                             <SheetClose as-child>
                                 <button

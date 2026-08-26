@@ -16,7 +16,7 @@ const tiers = [
         audience: 'For one teacher',
         price: 'Free',
         description:
-            'Core tools to create assessments and review learner responses.',
+            'The essentials for creating assessments and reviewing responses.',
         icon: UserRound,
         features: [
             'Create exams and quizzes',
@@ -30,7 +30,7 @@ const tiers = [
         audience: 'For a class or school',
         price: 'Custom',
         description:
-            'A fuller workflow for feedback, reporting, and school-wide support.',
+            'A fuller workflow for feedback, reporting, and school support.',
         icon: School,
         features: [
             'AI-assisted feedback',
@@ -55,7 +55,7 @@ const tiers = [
 <template>
     <section
         id="pricing"
-        class="welcome-pricing scroll-mt-32 py-16 sm:py-20"
+        class="welcome-pricing scroll-mt-32 border-b border-border/70 py-16 sm:py-20"
         aria-labelledby="pricing-heading"
     >
         <div
@@ -63,13 +63,13 @@ const tiers = [
         >
             <div>
                 <p
-                    class="text-xs font-semibold tracking-[0.2em] text-primary uppercase"
+                    class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
                 >
                     Pricing
                 </p>
                 <h2
                     id="pricing-heading"
-                    class="mt-3 max-w-2xl font-serif text-3xl leading-tight tracking-[-0.03em] text-foreground sm:text-4xl"
+                    class="mt-4 max-w-2xl font-serif text-3xl leading-tight tracking-[-0.04em] text-foreground sm:text-4xl"
                 >
                     Start small. Grow with your school.
                 </h2>
@@ -81,53 +81,49 @@ const tiers = [
         </div>
 
         <div
-            class="grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-3"
+            class="grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
         >
             <article
                 v-for="tier in tiers"
                 :key="tier.name"
-                class="relative flex min-h-80 flex-col bg-background p-6 sm:p-8"
+                class="relative flex min-h-[360px] flex-col px-1 py-8 sm:px-6 md:py-9 lg:px-8"
                 :class="tier.featured ? 'bg-secondary/35' : ''"
             >
                 <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <div
-                            class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground"
-                        >
-                            <component
-                                :is="tier.icon"
-                                class="h-5 w-5"
-                                aria-hidden="true"
-                            />
-                        </div>
-                        <h3 class="mt-6 text-lg font-semibold text-foreground">
-                            {{ tier.name }}
-                        </h3>
-                        <p class="mt-1 text-xs text-muted-foreground">
-                            {{ tier.audience }}
-                        </p>
+                    <div
+                        class="flex h-10 w-10 items-center justify-center rounded-full border border-foreground/70 text-foreground"
+                    >
+                        <component
+                            :is="tier.icon"
+                            class="h-5 w-5"
+                            stroke-width="1.5"
+                            aria-hidden="true"
+                        />
                     </div>
                     <span
                         v-if="tier.featured"
-                        class="rounded-full bg-primary px-2.5 py-1 text-[10px] font-semibold text-primary-foreground"
+                        class="text-xs font-medium text-primary"
+                        >For schools</span
                     >
-                        For schools
-                    </span>
                 </div>
-
-                <div class="mt-8">
-                    <p
-                        class="font-serif text-3xl tracking-[-0.03em] text-foreground"
-                    >
-                        {{ tier.price }}
-                    </p>
-                    <p
-                        class="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground"
-                    >
-                        {{ tier.description }}
-                    </p>
-                </div>
-
+                <h3
+                    class="mt-8 font-serif text-2xl tracking-[-0.03em] text-foreground"
+                >
+                    {{ tier.name }}
+                </h3>
+                <p class="mt-1 text-xs text-muted-foreground">
+                    {{ tier.audience }}
+                </p>
+                <p
+                    class="mt-7 font-serif text-3xl tracking-[-0.03em] text-foreground"
+                >
+                    {{ tier.price }}
+                </p>
+                <p
+                    class="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground"
+                >
+                    {{ tier.description }}
+                </p>
                 <ul class="mt-6 space-y-2 text-sm text-muted-foreground">
                     <li
                         v-for="feature in tier.features"
@@ -140,24 +136,19 @@ const tiers = [
                         <span>{{ feature }}</span>
                     </li>
                 </ul>
-
                 <div class="mt-auto pt-8">
                     <Link
-                        v-if="
-                            tier.price === 'Free' &&
-                            !auth.user &&
-                            props.register
-                        "
+                        v-if="tier.price === 'Free' && !auth.user"
                         :href="props.register()"
-                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Create a free account
                         <ArrowRight class="h-4 w-4" aria-hidden="true" />
                     </Link>
                     <Link
-                        v-else-if="tier.price === 'Free' && auth.user"
+                        v-else-if="tier.price === 'Free'"
                         :href="props.dashboard()"
-                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         Open dashboard
                         <ArrowRight class="h-4 w-4" aria-hidden="true" />
@@ -165,7 +156,7 @@ const tiers = [
                     <a
                         v-else
                         href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
-                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         :class="
                             tier.featured
                                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'

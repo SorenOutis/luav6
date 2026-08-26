@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import {
+    Apple,
     ArrowRight,
+    BarChart3,
     ClipboardList,
-    MessageSquare,
-    ListChecks,
+    Lightbulb,
+    School,
+    UserRound,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
@@ -30,27 +33,55 @@ const effectiveReducedMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
 
-const processSteps = [
+const audienceGroups = [
     {
-        number: '01',
-        title: 'Create an assessment',
-        description:
-            'Choose questions that fit your class and publish when you are ready.',
+        icon: Apple,
+        title: 'Teachers',
+        description: 'Create, review, and plan with less friction.',
+    },
+    {
+        icon: UserRound,
+        title: 'Learners',
+        description: 'Get feedback that helps them keep going.',
+    },
+    {
+        icon: School,
+        title: 'Schools',
+        description: 'See what is happening across classes and cohorts.',
+    },
+];
+
+const loopSteps = [
+    {
         icon: ClipboardList,
+        title: 'A learner answers',
     },
     {
-        number: '02',
-        title: 'Review responses',
-        description:
-            'See where learners are confident and where they need support.',
-        icon: MessageSquare,
+        icon: BarChart3,
+        title: 'A teacher sees the pattern',
     },
     {
-        number: '03',
-        title: 'Plan the next lesson',
-        description:
-            'Use the evidence to assign focused follow-up and keep learning moving.',
-        icon: ListChecks,
+        icon: Lightbulb,
+        title: 'The next lesson gets clearer',
+    },
+];
+
+const faqs = [
+    {
+        question: 'What does LSI stand for?',
+        answer: 'LSI is a learning platform built around the work that happens after an assessment: understanding responses and deciding what to do next.',
+    },
+    {
+        question: 'Who is LSI for?',
+        answer: 'LSI is designed for teachers, learners, and schools that want a clearer connection between assessment and follow-up.',
+    },
+    {
+        question: 'Do teachers stay in control?',
+        answer: 'Yes. Teachers review and approve feedback and recommendations before they reach learners.',
+    },
+    {
+        question: 'How is learner data handled?',
+        answer: 'LSI is designed around school ownership and practical, reviewable use of learner information.',
     },
 ];
 
@@ -73,13 +104,8 @@ const webSiteJsonLd = {
     />
 
     <div
-        class="welcome-root relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20"
+        class="welcome-root min-h-screen overflow-x-hidden bg-[#f8f7f2] font-sans text-[#17201f] selection:bg-primary/20 dark:bg-background dark:text-foreground"
     >
-        <div
-            aria-hidden="true"
-            class="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[620px] bg-[radial-gradient(circle_at_78%_28%,color-mix(in_srgb,var(--color-primary)_7%,transparent),transparent_34%),radial-gradient(circle_at_20%_14%,color-mix(in_srgb,var(--color-secondary)_35%,transparent),transparent_30%)]"
-        ></div>
-
         <WelcomeHeader
             :can-register="props.canRegister"
             :auth="$page.props.auth"
@@ -90,7 +116,7 @@ const webSiteJsonLd = {
         />
 
         <main
-            class="relative z-10 mx-auto flex max-w-[1440px] flex-col px-4 pt-10 pb-16 sm:px-6 sm:pt-16 sm:pb-24 lg:px-16 lg:pt-20 lg:pb-32"
+            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-16 lg:pb-32"
         >
             <WelcomeHero
                 :can-register="props.canRegister"
@@ -104,86 +130,144 @@ const webSiteJsonLd = {
 
             <section
                 id="how-it-works"
-                class="welcome-process scroll-mt-32 border-y border-border/70 py-16 sm:py-20"
-                aria-labelledby="process-heading"
+                class="welcome-story grid scroll-mt-32 gap-10 border-b border-border/70 py-16 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20"
+                aria-labelledby="story-heading"
             >
-                <div
-                    class="mb-10 flex flex-col gap-3 sm:mb-12 sm:flex-row sm:items-end sm:justify-between"
-                >
-                    <div>
-                        <p
-                            class="text-xs font-semibold tracking-[0.2em] text-primary uppercase"
-                        >
-                            How it works
-                        </p>
-                        <h2
-                            id="process-heading"
-                            class="mt-3 max-w-2xl font-serif text-3xl leading-tight tracking-[-0.03em] text-foreground sm:text-4xl"
-                        >
-                            From response to next lesson.
-                        </h2>
-                    </div>
+                <div>
                     <p
-                        class="max-w-sm text-sm leading-relaxed text-muted-foreground"
+                        class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
                     >
-                        A short, practical workflow for turning classroom
-                        evidence into action.
+                        Why we built LSI
+                    </p>
+                    <h2
+                        id="story-heading"
+                        class="mt-4 max-w-xl font-serif text-3xl leading-[1.08] tracking-[-0.04em] sm:text-4xl lg:text-5xl"
+                    >
+                        Assessment should help the next lesson.
+                    </h2>
+                    <p
+                        class="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
+                    >
+                        Too often, assessment ends with a score. LSI helps
+                        teachers see the response, understand the pattern, and
+                        decide what to do while learning is still happening.
                     </p>
                 </div>
 
-                <div
-                    class="grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-3"
-                >
-                    <article
-                        v-for="step in processSteps"
-                        :key="step.number"
-                        class="min-h-56 bg-background p-6 sm:p-8"
+                <ol class="divide-y divide-border/70 border-y border-border/70">
+                    <li
+                        v-for="(step, index) in [
+                            'Response',
+                            'Understanding',
+                            'Next lesson',
+                        ]"
+                        :key="step"
+                        class="flex items-center gap-4 py-5"
                     >
-                        <div class="flex items-center justify-between">
-                            <div
-                                class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground"
-                            >
-                                <component
-                                    :is="step.icon"
-                                    class="h-5 w-5"
-                                    aria-hidden="true"
-                                />
-                            </div>
-                            <span
-                                class="text-xs font-medium text-muted-foreground"
-                                >{{ step.number }}</span
-                            >
-                        </div>
-                        <h3 class="mt-10 text-lg font-semibold text-foreground">
-                            {{ step.title }}
-                        </h3>
-                        <p
-                            class="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground"
+                        <span
+                            class="flex h-7 w-7 items-center justify-center rounded-full border border-primary text-xs font-medium text-primary"
                         >
-                            {{ step.description }}
-                        </p>
-                    </article>
-                </div>
-
-                <div class="mt-8">
-                    <Link
-                        href="/how-it-works"
-                        class="inline-flex items-center gap-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                        Read the full guide
-                        <ArrowRight class="h-4 w-4" aria-hidden="true" />
-                    </Link>
-                </div>
+                            {{ index + 1 }}
+                        </span>
+                        <span class="font-serif text-xl text-foreground">{{
+                            step
+                        }}</span>
+                    </li>
+                </ol>
             </section>
 
             <FeatureCards
-                class="mt-0"
                 :is-coarse-pointer="isLowEndDevice"
                 :prefers-reduced-motion="effectiveReducedMotion"
                 :auth="$page.props.auth"
                 :dashboard="() => dashboard().url"
                 :login="() => login().url"
             />
+
+            <section
+                class="welcome-audience border-b border-border/70 py-16 sm:py-20"
+                aria-labelledby="audience-heading"
+            >
+                <h2
+                    id="audience-heading"
+                    class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                >
+                    Built around the people doing the work.
+                </h2>
+                <div
+                    class="mt-10 grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
+                >
+                    <article
+                        v-for="group in audienceGroups"
+                        :key="group.title"
+                        class="flex flex-col items-center px-6 py-8 text-center"
+                    >
+                        <component
+                            :is="group.icon"
+                            class="h-10 w-10 text-foreground"
+                            stroke-width="1.35"
+                            aria-hidden="true"
+                        />
+                        <h3
+                            class="mt-5 text-base font-semibold text-foreground"
+                        >
+                            {{ group.title }}
+                        </h3>
+                        <p
+                            class="mt-2 max-w-[180px] text-sm leading-relaxed text-muted-foreground"
+                        >
+                            {{ group.description }}
+                        </p>
+                    </article>
+                </div>
+            </section>
+
+            <section
+                class="welcome-loop my-16 rounded-2xl bg-[#17201f] px-5 py-8 text-[#f8f7f2] sm:my-20 sm:px-10 sm:py-10"
+                aria-labelledby="loop-heading"
+            >
+                <h2
+                    id="loop-heading"
+                    class="font-serif text-2xl tracking-[-0.03em] sm:text-3xl"
+                >
+                    From response to next step.
+                </h2>
+                <div class="mt-8 grid gap-8 md:grid-cols-3 md:gap-4">
+                    <article
+                        v-for="(step, index) in loopSteps"
+                        :key="step.title"
+                        class="relative flex flex-col items-center text-center md:items-start md:text-left"
+                    >
+                        <div
+                            class="flex w-full items-center gap-4 md:flex-col md:items-start"
+                        >
+                            <div
+                                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-primary/70 text-[#b8e3d8]"
+                            >
+                                <component
+                                    :is="step.icon"
+                                    class="h-5 w-5"
+                                    stroke-width="1.4"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <ArrowRight
+                                v-if="index < loopSteps.length - 1"
+                                class="hidden h-4 w-4 text-primary md:absolute md:top-6 md:right-5 md:block"
+                                aria-hidden="true"
+                            />
+                        </div>
+                        <p
+                            class="mt-4 max-w-xs text-sm leading-relaxed text-[#f8f7f2]/80"
+                        >
+                            {{ step.title }}
+                        </p>
+                    </article>
+                </div>
+                <p class="mt-8 text-center text-xs text-[#b8e3d8] md:text-left">
+                    A clearer pattern makes a more useful next lesson.
+                </p>
+            </section>
 
             <PricingSection
                 :auth="$page.props.auth"
@@ -194,37 +278,72 @@ const webSiteJsonLd = {
             />
 
             <section
+                id="faq"
+                class="welcome-faq scroll-mt-32 border-y border-border/70 py-16 sm:py-20"
+                aria-labelledby="faq-heading"
+            >
+                <h2
+                    id="faq-heading"
+                    class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                >
+                    Questions, answered.
+                </h2>
+                <div
+                    class="mx-auto mt-8 max-w-3xl divide-y divide-border/70 border-y border-border/70"
+                >
+                    <details
+                        v-for="faq in faqs"
+                        :key="faq.question"
+                        class="group py-5"
+                    >
+                        <summary
+                            class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                        >
+                            {{ faq.question }}
+                            <span
+                                class="text-xl font-normal text-muted-foreground transition-transform group-open:rotate-45"
+                                aria-hidden="true"
+                                >+</span
+                            >
+                        </summary>
+                        <p
+                            class="max-w-2xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
+                        >
+                            {{ faq.answer }}
+                        </p>
+                    </details>
+                </div>
+            </section>
+
+            <section
                 id="contact"
-                class="welcome-cta rounded-2xl bg-foreground px-6 py-12 text-background sm:px-10 sm:py-14 lg:px-16"
+                class="welcome-cta mt-16 rounded-2xl bg-[#17201f] px-6 py-10 text-[#f8f7f2] sm:mt-20 sm:px-10 sm:py-12 lg:px-12"
                 aria-labelledby="cta-heading"
             >
                 <div
-                    class="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between"
+                    class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
                 >
-                    <div class="max-w-2xl">
+                    <div>
                         <p
-                            class="text-xs font-semibold tracking-[0.2em] text-background/60 uppercase"
+                            class="text-xs font-medium tracking-[0.16em] text-[#b8e3d8] uppercase"
                         >
-                            Ready when you are
+                            Start with the next lesson
                         </p>
                         <h2
                             id="cta-heading"
                             class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] sm:text-4xl"
                         >
-                            Know what to teach next.
+                            If assessment matters to your school, let’s talk.
                         </h2>
-                        <p
-                            class="mt-4 max-w-lg text-sm leading-relaxed text-background/70 sm:text-base"
-                        >
-                            Start with one class, one assessment, and a clearer
-                            next step.
+                        <p class="mt-4 text-sm text-[#f8f7f2]/70 sm:text-base">
+                            Start with a teacher, a class, or a whole school.
                         </p>
                     </div>
-                    <div class="flex flex-col gap-3 sm:min-w-56">
+                    <div class="flex flex-col gap-3 sm:flex-row">
                         <Link
                             v-if="$page.props.auth?.user"
                             :href="dashboard().url"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-background px-5 text-sm font-semibold text-foreground transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground active:scale-[0.98]"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
                         >
                             Open dashboard
                             <ArrowRight class="h-4 w-4" aria-hidden="true" />
@@ -232,14 +351,14 @@ const webSiteJsonLd = {
                         <Link
                             v-else-if="props.canRegister"
                             :href="register().url"
-                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-background px-5 text-sm font-semibold text-foreground transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground active:scale-[0.98]"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
                         >
                             Create a free account
                             <ArrowRight class="h-4 w-4" aria-hidden="true" />
                         </Link>
                         <a
                             href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
-                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-background/35 px-5 text-sm font-medium text-background transition-colors hover:border-background hover:bg-background/10 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground"
+                            class="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#f8f7f2]/45 px-5 text-sm font-medium text-[#f8f7f2] transition-colors hover:border-[#f8f7f2] hover:bg-[#f8f7f2]/10 focus-visible:ring-2 focus-visible:ring-[#f8f7f2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
                         >
                             Contact sales
                         </a>

@@ -45,7 +45,7 @@ describe('welcome mobile performance', () => {
         const page = read('resources/js/pages/Welcome.vue');
         const hero = read('resources/js/components/welcome/WelcomeHero.vue');
 
-        expect(hero).toContain('Make every assessment count.');
+        expect(hero).toContain('We build tools for the next lesson.');
         expect(page).not.toContain('walkthroughUnlocked');
         expect(page).not.toContain('how-it-works.mp4');
         expect(page).not.toContain('welcome-bg-grid');
@@ -67,7 +67,7 @@ describe('welcome mobile performance', () => {
 
         expect(wrapper.classes()).toContain('lite-motion');
         expect(wrapper.findAll('.fragment-bar')).toHaveLength(0);
-        expect(wrapper.text()).toContain('Assessments');
+        expect(wrapper.text()).toContain('What guides the work.');
         wrapper.unmount();
     });
 
@@ -78,8 +78,8 @@ describe('welcome mobile performance', () => {
             'resources/js/components/welcome/WelcomeFooter.vue',
         );
 
-        expect(hero).toContain('Make every assessment count.');
-        expect(page).toContain('From response to next lesson.');
+        expect(hero).toContain('We build tools for the next lesson.');
+        expect(page).toContain('From response to next step.');
         expect(page).toContain('id="how-it-works"');
         expect(page).toContain('id="contact"');
         expect(page).not.toContain('TechStackCarousel');

@@ -19,7 +19,7 @@ const scrollTop = () => {
 
 <template>
     <footer
-        class="welcome-footer border-t border-border/70 bg-background"
+        class="welcome-footer border-t border-[#17201f]/10 bg-[#f8f7f2] dark:border-border/70 dark:bg-background"
         :data-low-end="isLowEndDevice ? 'true' : undefined"
     >
         <div
