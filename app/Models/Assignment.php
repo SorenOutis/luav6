@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssignmentStatus;
 use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -13,10 +14,11 @@ class Assignment extends Model
 {
     use BelongsToWorkspace;
 
-    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size', 'is_active'];
+    protected $fillable = ['title', 'description', 'due_date', 'course_id', 'workspace_id', 'admin_id', 'points_possible', 'min_group_size', 'max_group_size', 'is_active', 'status'];
 
     protected $attributes = [
         'is_active' => true,
+        'status' => AssignmentStatus::Published->value,
     ];
 
     protected $casts = [
@@ -26,6 +28,19 @@ class Assignment extends Model
         'max_group_size' => 'integer',
         'is_active' => 'boolean',
     ];
+
+    /**
+     * The lifecycle status as an enum.
+     *
+     * The attribute itself stays a plain string (as Exam::status does) so the
+     * Filament select and table badge work without enum casts; code paths use
+     * this helper for the typed behavior. Missing or unknown values behave as
+     * "no status" and are treated as hidden at the call sites.
+     */
+    public function status(): ?AssignmentStatus
+    {
+        return AssignmentStatus::tryFrom((string) $this->getAttribute('status'));
+    }
 
     public function course()
     {
@@ -79,15 +94,17 @@ class Assignment extends Model
     }
 
     /**
-     * Limit the query to assignments that are open to students.
+     * Limit the query to assignments students may see (published and closed;
+     * drafts stay hidden).
      */
-    public function scopeActive(Builder $query): Builder
+    public function scopeVisibleToStudents(Builder $query): Builder
     {
-        return $query->where('is_active', true);
+        return $query->where('status', '!=', AssignmentStatus::Draft);
     }
 
     /**
-     * Limit the query to active assignments targeted at any of the given sections.
+     * Limit the query to student-visible assignments targeted at any of the
+     * given sections.
      *
      * @param  Collection<int, int>|array<int, int>  $sectionIds
      */
@@ -100,7 +117,7 @@ class Assignment extends Model
         }
 
         return $query
-            ->active()
+            ->visibleToStudents()
             ->whereHas(
                 'sections',
                 fn (Builder $sections) => $sections->whereIn('sections.id', $sectionIds)
@@ -109,7 +126,9 @@ class Assignment extends Model
 
     /**
      * Whether the given user can access this assignment. Administrators retain
-     * access so they can manage closed work.
+     * access so they can manage closed work. Drafts are hidden from students
+     * entirely; closed ones stay visible but read-only (see
+     * AssignmentStatus::acceptsSubmissions()).
      */
     public function isVisibleTo(User $user): bool
     {
@@ -117,7 +136,9 @@ class Assignment extends Model
             return true;
         }
 
-        if (! $this->is_active) {
+        $status = $this->status();
+
+        if ($status === null || ! $status->isVisibleToStudents()) {
             return false;
         }
 

@@ -29,14 +29,15 @@ class AssignmentsTool implements Tool
             return 'No user is currently authenticated.';
         }
 
-        // Assignments are targeted at sections; students see active ones given
-        // to a section they belong to, plus any active ones they already
-        // interacted with (pivot rows hold their submission state).
+        // Assignments are targeted at sections; students see ones given to a
+        // section they belong to, plus any they already interacted with (pivot
+        // rows hold their submission state). Drafts are excluded, matching the
+        // student-facing listings.
         $interacted = $user->assignments()->get()->keyBy('id');
         $sectionIds = $user->sections()->pluck('sections.id');
 
         $assignments = Assignment::query()
-            ->active()
+            ->visibleToStudents()
             ->with(['course:id,name', 'sections:id,name'])
             ->where(fn ($query) => $query
                 ->whereHas('sections', fn ($sections) => $sections->whereIn('sections.id', $sectionIds))

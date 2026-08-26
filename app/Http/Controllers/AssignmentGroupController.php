@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssignmentStatus;
 use App\Models\Assignment;
 use App\Models\User;
 use App\Services\AssignmentGroupService;
@@ -19,6 +20,11 @@ class AssignmentGroupController extends Controller
     public function candidates(Request $request, Assignment $assignment)
     {
         $this->authorizeVisibility($assignment, $request->user());
+
+        // No new group activity once the assignment is closed.
+        if (! $assignment->status()?->acceptsSubmissions()) {
+            abort(403, 'This assignment is closed and no longer accepts submissions.');
+        }
 
         return response()->json([
             'candidates' => $this->groups->candidates(

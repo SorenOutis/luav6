@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssignmentStatus;
 use App\Models\Assignment;
 use App\Models\AssignmentGroupInvite;
 use App\Models\User;
@@ -20,6 +21,11 @@ class AssignmentInviteController extends Controller
     public function store(Request $request, Assignment $assignment)
     {
         $this->authorizeVisibility($assignment, $request->user());
+
+        // No new group activity once the assignment is closed.
+        if (! $assignment->status()?->acceptsSubmissions()) {
+            abort(403, 'This assignment is closed and no longer accepts submissions.');
+        }
 
         $data = $request->validate([
             'user_ids' => ['required', 'array', 'min:1'],
