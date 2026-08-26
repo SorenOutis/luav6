@@ -590,8 +590,7 @@ const getStatusBadge = (assignment: Assignment) => {
     if (isClosed(assignment)) {
         return {
             label: 'Closed',
-            classes:
-                'bg-[#CB7676]/10 text-[#CB7676] border-[#CB7676]/25',
+            classes: 'bg-[#CB7676]/10 text-[#CB7676] border-[#CB7676]/25',
         };
     }
 
