@@ -1,626 +1,253 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowRight, Play } from 'lucide-vue-next';
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
-
-gsap.registerPlugin(ScrollTrigger);
-
-// Only the essential sub-components
+import {
+    ArrowRight,
+    ClipboardList,
+    MessageSquare,
+    ListChecks,
+} from 'lucide-vue-next';
+import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
-import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
-import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
-import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
-
-// Composables & Routes
-import { useAppearance } from '@/composables/useAppearance';
-import { syncLenisWithGsap } from '@/composables/useLenis';
 import { useMobile } from '@/composables/useMobile';
 import { dashboard, login, register } from '@/routes';
-
-interface ActiveSeason {
-    name: string;
-    startDate: string | null;
-    endDate: string | null;
-    showCountdown: boolean;
-}
-
-interface SchoolBranding {
-    name?: string;
-    tagline?: string;
-    logoUrl?: string | null;
-    accentColor?: string;
-}
 
 const props = withDefaults(
     defineProps<{
         canRegister: boolean;
-        totalUsers?: number;
-        totalExams?: number;
-        totalAssignments?: number;
-        totalSubmissions?: number;
-        activeSeason?: ActiveSeason | null;
-        demoVideoUrl?: string | null;
-        schoolBranding?: SchoolBranding;
     }>(),
     {
         canRegister: true,
-        totalUsers: 0,
-        totalExams: 0,
-        totalAssignments: 0,
-        totalSubmissions: 0,
-        activeSeason: null,
-        demoVideoUrl: null,
-        schoolBranding: () => ({
-            name: 'LSI Engine',
-            tagline: 'Learning Systems Intelligence',
-            logoUrl: null,
-            accentColor: '#f59e0b',
-        }),
     },
 );
 
-const isBooted = ref(true);
-const isDemoVideoOpen = ref(false);
-const { isCoarsePointer, prefersReducedMotion, isLowEndDevice } = useMobile();
-
-// Seeded synchronously by useMobile — true on the first render for phones,
-// so the 1.6 MB walkthrough never auto-buffers on a cellular connection.
-const walkthroughUnlocked = ref(!isLowEndDevice.value);
-
-const { isTransitioningTheme } = useAppearance();
-
-// Low-end devices disable heavy animation even if the user hasn't set
-// prefers-reduced-motion. Treat both signals as one so every child component
-// (hero, feature cards, marquee, pricing) skips its continuous work on
-// coarse-pointer / low-memory / few-core devices.
+const { prefersReducedMotion, isLowEndDevice } = useMobile();
 const effectiveReducedMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
 
-const brandAccentColor = computed(
-    () => props.schoolBranding?.accentColor || '#f59e0b',
-);
+const processSteps = [
+    {
+        number: '01',
+        title: 'Create an assessment',
+        description:
+            'Choose questions that fit your class and publish when you are ready.',
+        icon: ClipboardList,
+    },
+    {
+        number: '02',
+        title: 'Review responses',
+        description:
+            'See where learners are confident and where they need support.',
+        icon: MessageSquare,
+    },
+    {
+        number: '03',
+        title: 'Plan the next lesson',
+        description:
+            'Use the evidence to assign focused follow-up and keep learning moving.',
+        icon: ListChecks,
+    },
+];
 
 const webSiteJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'LSI Learning Engine',
-    alternateName: 'Learning Systems Intelligence',
+    name: 'LSI — KOAMISHIN',
+    alternateName: 'LSI',
     description:
-        props.schoolBranding?.tagline ||
-        'School-ready online assessment, exams, and assignments',
+        'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
 };
-
-// ─── Refs for GSAP targets ───
-const pageRoot = ref<HTMLElement | null>(null);
-const howItWorksSteps = ref<HTMLElement | null>(null);
-const howItWorksVideo = ref<HTMLVideoElement | null>(null);
-let gsapCtx: gsap.Context | null = null;
-let lenisCleanup: (() => void) | null = null;
-let videoObserver: IntersectionObserver | null = null;
-
-// ─── Animated Counter Animation ───
-const animatedStats = ref({
-    users: 0,
-    exams: 0,
-    assignments: 0,
-    submissions: 0,
-});
-const statsRef = ref<HTMLElement | null>(null);
-
-const animateCounter = (
-    obj: {
-        users: number;
-        exams: number;
-        assignments: number;
-        submissions: number;
-    },
-    target: {
-        users: number;
-        exams: number;
-        assignments: number;
-        submissions: number;
-    },
-    duration: number,
-) => {
-    const start = performance.now();
-    const update = (now: number) => {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        // Ease out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        obj.users = Math.round(target.users * eased);
-        obj.exams = Math.round(target.exams * eased);
-        obj.assignments = Math.round(target.assignments * eased);
-        obj.submissions = Math.round(target.submissions * eased);
-        animatedStats.value = { ...obj };
-        if (progress < 1) requestAnimationFrame(update);
-    };
-    requestAnimationFrame(update);
-};
-
-const initPageAnimations = () => {
-    if (!pageRoot.value) return;
-
-    // On low-end devices, skip GSAP context entirely — no scroll triggers, no animations
-    if (isLowEndDevice.value) return;
-
-    gsapCtx = gsap.context(() => {
-        // ─── Section Reveals ───
-        const sections = pageRoot.value?.querySelectorAll('.reveal-section');
-        if (sections?.length) {
-            gsap.fromTo(
-                sections,
-                { y: 60, opacity: 0 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    duration: 1.2,
-                    stagger: 0.2,
-                    ease: 'expo.out',
-                    scrollTrigger: {
-                        trigger: sections,
-                        start: 'top 85%',
-                        toggleActions: 'play none none none',
-                    },
-                },
-            );
-        }
-
-        // ─── How It Works Step Cards ───
-        const stepCards = howItWorksSteps.value?.querySelectorAll('.step-card');
-        if (stepCards?.length) {
-            gsap.fromTo(
-                stepCards,
-                { y: 50, opacity: 0, scale: 0.95 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    scale: 1,
-                    duration: 0.9,
-                    stagger: 0.15,
-                    ease: 'expo.out',
-                    scrollTrigger: {
-                        trigger: howItWorksSteps.value,
-                        start: 'top 80%',
-                        toggleActions: 'play none none none',
-                    },
-                },
-            );
-
-            // Animate step numbers
-            const stepNums =
-                howItWorksSteps.value?.querySelectorAll('.step-number');
-            if (stepNums?.length) {
-                gsap.fromTo(
-                    stepNums,
-                    { scale: 0, rotation: -180 },
-                    {
-                        scale: 1,
-                        rotation: 0,
-                        duration: 0.6,
-                        stagger: 0.15,
-                        ease: 'back.out(2)',
-                        scrollTrigger: {
-                            trigger: howItWorksSteps.value,
-                            start: 'top 80%',
-                            toggleActions: 'play none none none',
-                        },
-                    },
-                );
-            }
-        }
-
-        // ─── Stats Counter ───
-        if (statsRef.value && (props.totalUsers || props.totalExams)) {
-            ScrollTrigger.create({
-                trigger: statsRef.value,
-                start: 'top 85%',
-                onEnter: () => {
-                    animateCounter(
-                        { users: 0, exams: 0, assignments: 0, submissions: 0 },
-                        {
-                            users: props.totalUsers,
-                            exams: props.totalExams,
-                            assignments: props.totalAssignments,
-                            submissions: props.totalSubmissions,
-                        },
-                        2000,
-                    );
-                },
-                once: true,
-            });
-        }
-    }, pageRoot.value);
-};
-
-// On low-end, eagerly display final animated stats without scroll-triggered animation
-const initStatsDirect = () => {
-    if (!statsRef.value) return;
-    animatedStats.value = {
-        users: props.totalUsers,
-        exams: props.totalExams,
-        assignments: props.totalAssignments,
-        submissions: props.totalSubmissions,
-    };
-};
-
-const openDemoVideo = () => {
-    isDemoVideoOpen.value = true;
-};
-
-const closeDemoVideo = () => {
-    isDemoVideoOpen.value = false;
-};
-
-const unlockWalkthrough = () => {
-    walkthroughUnlocked.value = true;
-    nextTick(() => {
-        howItWorksVideo.value?.play().catch(() => {});
-    });
-};
-
-// The walkthrough video only plays while it's actually on screen — it starts
-// when the section scrolls into view and pauses when it leaves. Low-end /
-// reduced-motion visitors keep the poster frame (no playback at all).
-const initVideoPlayback = (): void => {
-    const video = howItWorksVideo.value;
-    if (!video || effectiveReducedMotion.value) return;
-
-    videoObserver = new IntersectionObserver(
-        (entries) => {
-            const entry = entries[0];
-            if (!entry) return;
-            if (entry.isIntersecting) {
-                video.play().catch(() => {});
-            } else {
-                video.pause();
-            }
-        },
-        { threshold: 0.35 },
-    );
-    videoObserver.observe(video);
-};
-
-onMounted(() => {
-    // On low-end, show final stats directly — skip all GSAP/ScrollTrigger/lenis.
-    // (The global `data-low-end` attribute is set app-wide in app.ts.)
-    if (isLowEndDevice.value) {
-        initStatsDirect();
-    } else {
-        initPageAnimations();
-        lenisCleanup = syncLenisWithGsap(ScrollTrigger);
-    }
-    initVideoPlayback();
-});
-
-onUnmounted(() => {
-    gsapCtx?.revert();
-    lenisCleanup?.();
-    videoObserver?.disconnect();
-    videoObserver = null;
-});
 </script>
 
 <template>
-    <Head title="School-Ready Assessments & Online Exams" />
+    <Head title="LSI — KOAMISHIN | Make every assessment count" />
     <SeoHead
-        :description="'A school-ready learning platform for exams, assignments, grades, and AI feedback — with a clear path for every learner.'"
+        description="LSI helps teachers see what learners understand, give useful feedback, and plan what to teach next."
         type="website"
         :jsonld="webSiteJsonLd"
     />
 
     <div
-        ref="pageRoot"
-        class="welcome-root relative min-h-screen w-full bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
-        :style="{ '--school-accent': brandAccentColor }"
+        class="welcome-root relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20"
     >
-        <!-- Subtle background grid (desktop only — fixed full-viewport
-             repeating gradients are a continuous paint cost on phones). -->
         <div
-            class="welcome-bg-grid pointer-events-none fixed inset-0 z-0 hidden opacity-[0.025] md:block dark:opacity-[0.05]"
-        >
-            <div
-                class="absolute inset-0"
-                style="
-                    background-image:
-                        linear-gradient(
-                            var(--color-border) 1px,
-                            transparent 1px
-                        ),
-                        linear-gradient(
-                            90deg,
-                            var(--color-border) 1px,
-                            transparent 1px
-                        );
-                    background-size: 60px 60px;
-                "
-            ></div>
-        </div>
+            aria-hidden="true"
+            class="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[620px] bg-[radial-gradient(circle_at_78%_28%,color-mix(in_srgb,var(--color-primary)_7%,transparent),transparent_34%),radial-gradient(circle_at_20%_14%,color-mix(in_srgb,var(--color-secondary)_35%,transparent),transparent_30%)]"
+        ></div>
 
         <WelcomeHeader
-            :can-register="canRegister"
+            :can-register="props.canRegister"
             :auth="$page.props.auth"
             :dashboard="() => dashboard().url"
             :login="() => login().url"
             :register="() => register().url"
-            :is-booted="isBooted"
-            :branding="schoolBranding"
+            :is-booted="true"
         />
 
         <main
-            class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-4 pt-8 pb-20 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-28 lg:pb-32"
+            class="relative z-10 mx-auto flex max-w-[1440px] flex-col px-4 pt-10 pb-16 sm:px-6 sm:pt-16 sm:pb-24 lg:px-16 lg:pt-20 lg:pb-32"
         >
             <WelcomeHero
-                :can-register="canRegister"
+                :can-register="props.canRegister"
                 :auth="$page.props.auth"
                 :dashboard="() => dashboard().url"
                 :login="() => login().url"
                 :register="() => register().url"
-                :is-booted="isBooted"
-                :is-coarse-pointer="isCoarsePointer"
+                :is-booted="true"
                 :prefers-reduced-motion="effectiveReducedMotion"
-                :branding="schoolBranding"
-                @watch-demo="openDemoVideo"
-            >
-                <template #background>
-                    <NeuralParticleNetwork
-                        v-if="!isLowEndDevice"
-                        :is-coarse-pointer="isCoarsePointer"
-                        :prefers-reduced-motion="prefersReducedMotion"
-                        :paused="isTransitioningTheme"
-                    />
-                </template>
-            </WelcomeHero>
-
-            <FeatureCards
-                ref="featureCardsSection"
-                id="features"
-                class="welcome-defer reveal-section mt-16 scroll-mt-32 sm:mt-24"
-                :is-coarse-pointer="isCoarsePointer"
-                :prefers-reduced-motion="effectiveReducedMotion"
-                :auth="$page.props.auth"
-                :dashboard="() => dashboard().url"
-                :login="() => login().url"
             />
 
-            <!-- Stats Counter Bar -->
-            <div
-                ref="statsRef"
-                class="welcome-defer reveal-section mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/10 bg-border/10 sm:mt-24 lg:grid-cols-4"
-            >
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.users.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Students</span
-                    >
-                </div>
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.exams.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Exams Created</span
-                    >
-                </div>
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.assignments.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Assignments</span
-                    >
-                </div>
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.submissions.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Submissions</span
-                    >
-                </div>
-            </div>
-
-            <!-- How It Works -->
             <section
-                id="architecture"
-                class="welcome-defer reveal-section mt-20 scroll-mt-32 sm:mt-32"
+                id="how-it-works"
+                class="welcome-process scroll-mt-32 border-y border-border/70 py-16 sm:py-20"
+                aria-labelledby="process-heading"
             >
-                <div class="mb-10 flex flex-col gap-2">
-                    <div
-                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
-                    >
-                        <span class="text-sm font-medium text-primary"
-                            >How It Works</span
+                <div
+                    class="mb-10 flex flex-col gap-3 sm:mb-12 sm:flex-row sm:items-end sm:justify-between"
+                >
+                    <div>
+                        <p
+                            class="text-xs font-semibold tracking-[0.2em] text-primary uppercase"
                         >
+                            How it works
+                        </p>
+                        <h2
+                            id="process-heading"
+                            class="mt-3 max-w-2xl font-serif text-3xl leading-tight tracking-[-0.03em] text-foreground sm:text-4xl"
+                        >
+                            From response to next lesson.
+                        </h2>
                     </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
-                        From enrollment to
-                        <span class="text-primary">achievement</span>
-                    </h2>
-                    <p class="max-w-xl text-muted-foreground">
-                        Five steps from sign-up to success — no fluff, no
-                        distractions.
+                    <p
+                        class="max-w-sm text-sm leading-relaxed text-muted-foreground"
+                    >
+                        A short, practical workflow for turning classroom
+                        evidence into action.
                     </p>
                 </div>
 
-                <!-- Walkthrough: poster + tap-to-play on phones so the 1.6 MB
-                     mp4 is never auto-buffered. Desktop still autoplays
-                     while the section is on screen. -->
                 <div
-                    class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5"
+                    class="grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-3"
                 >
-                    <button
-                        v-if="!walkthroughUnlocked"
-                        type="button"
-                        class="group relative block w-full"
-                        aria-label="Play how it works walkthrough"
-                        @click="unlockWalkthrough"
+                    <article
+                        v-for="step in processSteps"
+                        :key="step.number"
+                        class="min-h-56 bg-background p-6 sm:p-8"
                     >
-                        <img
-                            src="/videos/how-it-works.png"
-                            alt="How LSI works from enrollment to achievement"
-                            class="aspect-video w-full object-cover"
-                            width="1280"
-                            height="720"
-                            decoding="async"
-                            fetchpriority="low"
-                        />
-                        <span
-                            class="absolute inset-0 flex items-center justify-center bg-black/35"
-                        >
-                            <span
-                                class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg sm:h-16 sm:w-16"
+                        <div class="flex items-center justify-between">
+                            <div
+                                class="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-foreground"
                             >
-                                <Play class="ml-0.5 h-6 w-6 fill-current" />
-                            </span>
-                        </span>
-                    </button>
-                    <video
-                        v-else
-                        ref="howItWorksVideo"
-                        class="block aspect-video w-full"
-                        src="/videos/how-it-works.mp4?v=2"
-                        poster="/videos/how-it-works.png"
-                        loop
-                        muted
-                        playsinline
-                        :preload="isLowEndDevice ? 'none' : 'metadata'"
-                        aria-label="How LSI works from enrollment to achievement"
-                    ></video>
-                </div>
-
-                <!-- Horizontal step cards: scrollable on mobile, grid on desktop -->
-                <div
-                    v-if="false"
-                    ref="howItWorksSteps"
-                    class="-mx-6 flex snap-x snap-mandatory scrollbar-none gap-4 overflow-x-auto px-6 pb-4 lg:mx-0 lg:grid lg:snap-none lg:grid-cols-5 lg:gap-px lg:overflow-visible lg:rounded-xl lg:border lg:border-border/10 lg:bg-border/10 lg:p-0"
-                >
-                    <div
-                        v-for="(step, i) in [
-                            {
-                                title: 'Enroll',
-                                description:
-                                    'Join your section and access your courses, exams, and assignments in one place.',
-                            },
-                            {
-                                title: 'Take Exams',
-                                description:
-                                    'Complete assessments in your browser with instant AI feedback on every answer.',
-                            },
-                            {
-                                title: 'Get Feedback',
-                                description:
-                                    'Know where you stand immediately — auto-graded questions and AI-powered essay reviews.',
-                            },
-                            {
-                                title: 'Track Progress',
-                                description:
-                                    'Monitor XP, streaks, and grades across all subjects on your dashboard.',
-                            },
-                            {
-                                title: 'Earn Rewards',
-                                description:
-                                    'Unlock badges, seasonal achievements, and new nodes on your learning map.',
-                            },
-                        ]"
-                        :key="step.title"
-                        class="step-card flex min-w-[260px] shrink-0 snap-start flex-col gap-3 rounded-xl border border-border/15 bg-background p-5 lg:min-w-0 lg:flex-1 lg:rounded-none lg:border-0 lg:border-r lg:border-border/10 lg:p-6 lg:last:border-r-0"
-                    >
-                        <span
-                            class="step-number text-[11px] font-semibold tracking-widest text-muted-foreground/50 uppercase"
-                        >
-                            Step {{ String(i + 1).padStart(2, '0') }}
-                        </span>
-                        <h3 class="text-sm font-semibold lg:text-base">
+                                <component
+                                    :is="step.icon"
+                                    class="h-5 w-5"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <span
+                                class="text-xs font-medium text-muted-foreground"
+                                >{{ step.number }}</span
+                            >
+                        </div>
+                        <h3 class="mt-10 text-lg font-semibold text-foreground">
                             {{ step.title }}
                         </h3>
                         <p
-                            class="text-xs leading-relaxed text-muted-foreground lg:text-sm"
+                            class="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground"
                         >
                             {{ step.description }}
                         </p>
-                    </div>
+                    </article>
                 </div>
 
-                <div class="mt-10 text-center">
+                <div class="mt-8">
                     <Link
                         href="/how-it-works"
-                        class="inline-flex items-center gap-2 rounded-lg border border-border/30 px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                        class="inline-flex items-center gap-2 text-sm font-semibold text-foreground transition-colors hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                        View full guide
-                        <ArrowRight class="h-3.5 w-3.5" />
+                        Read the full guide
+                        <ArrowRight class="h-4 w-4" aria-hidden="true" />
                     </Link>
                 </div>
             </section>
 
-            <div class="welcome-defer reveal-section">
-                <TechStackCarousel
-                    :is-coarse-pointer="isCoarsePointer"
-                    :prefers-reduced-motion="effectiveReducedMotion"
-                />
-            </div>
-
-            <PricingSection
-                class="welcome-defer"
+            <FeatureCards
+                class="mt-0"
+                :is-coarse-pointer="isLowEndDevice"
+                :prefers-reduced-motion="effectiveReducedMotion"
                 :auth="$page.props.auth"
                 :dashboard="() => dashboard().url"
                 :login="() => login().url"
+            />
+
+            <PricingSection
+                :auth="$page.props.auth"
+                :dashboard="() => dashboard().url"
                 :register="() => register().url"
-                :is-coarse-pointer="isCoarsePointer"
+                :is-coarse-pointer="isLowEndDevice"
                 :prefers-reduced-motion="effectiveReducedMotion"
             />
+
+            <section
+                id="contact"
+                class="welcome-cta rounded-2xl bg-foreground px-6 py-12 text-background sm:px-10 sm:py-14 lg:px-16"
+                aria-labelledby="cta-heading"
+            >
+                <div
+                    class="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between"
+                >
+                    <div class="max-w-2xl">
+                        <p
+                            class="text-xs font-semibold tracking-[0.2em] text-background/60 uppercase"
+                        >
+                            Ready when you are
+                        </p>
+                        <h2
+                            id="cta-heading"
+                            class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] sm:text-4xl"
+                        >
+                            Know what to teach next.
+                        </h2>
+                        <p
+                            class="mt-4 max-w-lg text-sm leading-relaxed text-background/70 sm:text-base"
+                        >
+                            Start with one class, one assessment, and a clearer
+                            next step.
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-3 sm:min-w-56">
+                        <Link
+                            v-if="$page.props.auth?.user"
+                            :href="dashboard().url"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-background px-5 text-sm font-semibold text-foreground transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground active:scale-[0.98]"
+                        >
+                            Open dashboard
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <Link
+                            v-else-if="props.canRegister"
+                            :href="register().url"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-background px-5 text-sm font-semibold text-foreground transition-transform duration-150 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground active:scale-[0.98]"
+                        >
+                            Create a free account
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <a
+                            href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
+                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-background/35 px-5 text-sm font-medium text-background transition-colors hover:border-background hover:bg-background/10 focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-offset-2 focus-visible:ring-offset-foreground"
+                        >
+                            Contact sales
+                        </a>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <WelcomeFooter />
-
-        <DemoVideoModal
-            :open="isDemoVideoOpen"
-            :video-url="demoVideoUrl"
-            @close="closeDemoVideo"
-        />
     </div>
 </template>
-
-<style>
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-}
-
-/* Force Inter on the welcome page regardless of dashboard font presets.
-   Uses higher specificity than :root[data-font-preset] .font-sans (0-3-1 vs 0-3-0).
-   The * selector ensures child elements with font-sans are also overridden. */
-html[data-font-preset] .welcome-root.font-sans,
-html[data-font-preset] .welcome-root.font-sans * {
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
-}
-</style>

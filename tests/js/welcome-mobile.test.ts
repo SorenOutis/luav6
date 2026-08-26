@@ -41,20 +41,16 @@ describe('welcome mobile performance', () => {
         expect(css).toContain('touch-action: manipulation');
     });
 
-    it('does not autoplay the welcome walkthrough on phones', () => {
+    it('keeps the welcome page free of autoplay media and expensive hero effects', () => {
         const page = read('resources/js/pages/Welcome.vue');
+        const hero = read('resources/js/components/welcome/WelcomeHero.vue');
 
-        expect(page).toContain('walkthroughUnlocked');
-        expect(page).toContain('unlockWalkthrough');
-        expect(page).toContain('welcome-bg-grid');
-        expect(page).toContain('welcome-defer');
-        expect(page).toContain(
-            ":preload=\"isLowEndDevice ? 'none' : 'metadata'\"",
-        );
-        expect(page).not.toContain(
-            ":preload=\"isLowEndDevice ? 'metadata' : 'auto'\"",
-        );
-        expect(page).toContain('v-if="!isLowEndDevice"');
+        expect(hero).toContain('Make every assessment count.');
+        expect(page).not.toContain('walkthroughUnlocked');
+        expect(page).not.toContain('how-it-works.mp4');
+        expect(page).not.toContain('welcome-bg-grid');
+        expect(page).not.toContain('NeuralParticleNetwork');
+        expect(page).not.toContain('DemoVideoModal');
     });
 
     it('skips the decorative feature-card bars when motion is reduced', () => {
@@ -71,8 +67,26 @@ describe('welcome mobile performance', () => {
 
         expect(wrapper.classes()).toContain('lite-motion');
         expect(wrapper.findAll('.fragment-bar')).toHaveLength(0);
-        expect(wrapper.text()).toContain('Assessment Intelligence');
+        expect(wrapper.text()).toContain('Assessments');
         wrapper.unmount();
+    });
+
+    it('keeps the welcome page content practical and link-safe', () => {
+        const page = read('resources/js/pages/Welcome.vue');
+        const hero = read('resources/js/components/welcome/WelcomeHero.vue');
+        const footer = read(
+            'resources/js/components/welcome/WelcomeFooter.vue',
+        );
+
+        expect(hero).toContain('Make every assessment count.');
+        expect(page).toContain('From response to next lesson.');
+        expect(page).toContain('id="how-it-works"');
+        expect(page).toContain('id="contact"');
+        expect(page).not.toContain('TechStackCarousel');
+        expect(page).not.toContain('NeuralParticleNetwork');
+        expect(page).not.toContain('DemoVideoModal');
+        expect(footer).not.toContain("href: '#'");
+        expect(footer).not.toContain('LSI Academic Engine');
     });
 
     it('renders a static tech-stack grid on coarse-pointer devices', () => {

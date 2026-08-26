@@ -39,7 +39,7 @@ const { prefersReducedMotion, isLowEndDevice } = useMobile();
 const liteMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
-const brandName = computed(() => props.branding?.name || 'LSI Engine');
+const brandName = computed(() => props.branding?.name || 'LSI — KOAMISHIN');
 const brandLogoUrl = computed(() => props.branding?.logoUrl || null);
 
 const scrollToSection = (e: MouseEvent, targetId: string) => {
@@ -67,28 +67,29 @@ const scrollToSection = (e: MouseEvent, targetId: string) => {
 const navItems = computed(() => {
     const allItems = [
         {
-            label: 'Home',
-            target: 'top',
-            preview: 'Back to the top of the page',
-        },
-        {
             label: 'How It Works',
-            target: 'architecture',
-            preview: 'Learn how LSI works from start to finish',
+            target: 'how-it-works',
+            preview: 'See the teacher workflow from assessment to action',
         },
         {
             label: 'Features',
             target: 'features',
-            preview: 'Explore key capabilities and tools',
+            preview: 'Explore the essential classroom tools',
         },
         {
             label: 'Pricing',
             target: 'pricing',
-            preview: 'View plans and pricing options',
+            preview: 'View plans for teachers and schools',
         },
     ];
     if (props.hideScrollNav) {
-        return allItems.filter((item) => item.target === 'top');
+        return [
+            {
+                label: 'Home',
+                target: 'top',
+                preview: 'Back to the welcome page',
+            },
+        ];
     }
     return allItems;
 });
@@ -169,13 +170,13 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                 :key="item.label"
                 :href="`#${item.target}`"
                 @click="(e) => scrollToSection(e, item.target)"
-                class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
                 {{ item.label }}
             </a>
             <Link
                 href="/about"
-                class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
                 About
             </Link>
@@ -307,7 +308,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                                         @click="closeMobileMenu"
                                         class="flex items-center justify-center rounded-lg bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-primary"
                                     >
-                                        Start for free
+                                        Create a free account
                                     </Link>
                                 </div>
                             </template>
@@ -336,7 +337,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                     :href="register()"
                     class="hidden rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-primary lg:inline-flex"
                 >
-                    Start for free
+                    Create a free account
                 </Link>
             </template>
         </Motion>
