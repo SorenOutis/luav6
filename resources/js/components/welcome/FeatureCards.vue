@@ -21,20 +21,20 @@ withDefaults(
 const principles = [
     {
         icon: Check,
-        title: 'Useful before impressive',
-        description: 'Every feature should make classroom work clearer.',
+        title: 'Create assessments',
+        description: 'Build quizzes and assignments that fit your class.',
     },
     {
         icon: UserRound,
-        title: 'Teacher control',
+        title: 'Review responses',
         description:
-            'Recommendations stay reviewable, adjustable, and yours to approve.',
+            'See what learners understand before you decide what comes next.',
     },
     {
         icon: ShieldCheck,
-        title: 'Privacy by default',
+        title: 'Plan next steps',
         description:
-            'Schools keep ownership of their content and learner data.',
+            'Give focused feedback and follow-up while learning is still happening.',
     },
 ];
 </script>
@@ -50,7 +50,7 @@ const principles = [
             id="principles-heading"
             class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
         >
-            What guides the work.
+            The work stays clear.
         </h2>
 
         <div

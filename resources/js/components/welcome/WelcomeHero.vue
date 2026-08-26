@@ -38,22 +38,22 @@ withDefaults(
             <p
                 class="mb-7 text-xs font-medium tracking-[0.16em] text-primary uppercase"
             >
-                Welcome to LSI
+                A school-ready learning platform
             </p>
             <h1
                 id="welcome-heading"
                 class="max-w-2xl font-serif text-[3.25rem] leading-[0.95] tracking-[-0.055em] text-foreground sm:text-6xl lg:text-[5.6rem]"
             >
-                We build tools for the next lesson.
+                Make every assessment count.
             </h1>
             <p
                 class="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
             >
-                LSI — KOAMISHIN helps teachers turn classroom evidence into
-                clearer decisions, useful feedback, and better follow-up.
+                Create assessments, review responses, and plan what to teach
+                next—with less work for teachers.
             </p>
             <p class="mt-5 text-sm font-medium text-foreground/80">
-                Built for teachers. Designed for schools.
+                Teacher-controlled. Built for schools.
             </p>
 
             <div class="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">

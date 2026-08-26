@@ -137,20 +137,20 @@ const webSiteJsonLd = {
                     <p
                         class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
                     >
-                        Why we built LSI
+                        How LSI helps
                     </p>
                     <h2
                         id="story-heading"
                         class="mt-4 max-w-xl font-serif text-3xl leading-[1.08] tracking-[-0.04em] sm:text-4xl lg:text-5xl"
                     >
-                        Assessment should help the next lesson.
+                        Turn assessment into a clear next step.
                     </h2>
                     <p
                         class="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
                     >
-                        Too often, assessment ends with a score. LSI helps
-                        teachers see the response, understand the pattern, and
-                        decide what to do while learning is still happening.
+                        LSI brings assessment, feedback, and follow-up into one
+                        practical workflow—so teachers can act while learning is
+                        still happening.
                     </p>
                 </div>
 
@@ -192,7 +192,7 @@ const webSiteJsonLd = {
                     id="audience-heading"
                     class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
                 >
-                    Built around the people doing the work.
+                    One clear workflow for every class.
                 </h2>
                 <div
                     class="mt-10 grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
@@ -265,7 +265,7 @@ const webSiteJsonLd = {
                     </article>
                 </div>
                 <p class="mt-8 text-center text-xs text-[#b8e3d8] md:text-left">
-                    A clearer pattern makes a more useful next lesson.
+                    The point is not more data. It is a more useful next lesson.
                 </p>
             </section>
 
