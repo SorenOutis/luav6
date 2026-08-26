@@ -72,6 +72,39 @@ it('hides an unassigned assignment from everyone', function () {
         ->assertInertia(fn (Assert $page) => $page->has('assignments', 0));
 });
 
+it('hides inactive assignments and blocks student actions', function () {
+    Storage::fake('public');
+
+    $student = User::factory()->create();
+    $student->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
+
+    $activeAssignment = makeSectionAssignment([$this->sectionA->id], ['title' => 'Open task']);
+    $inactiveAssignment = makeSectionAssignment([
+        $this->sectionA->id,
+    ], [
+        'title' => 'Closed task',
+        'is_active' => false,
+    ]);
+
+    expect($activeAssignment->is_active)->toBeTrue()
+        ->and($inactiveAssignment->is_active)->toBeFalse();
+
+    $this->actingAs($student)
+        ->get(route('assignments.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('assignments', 1)
+            ->where('assignments.0.id', $activeAssignment->id)
+            ->where('assignments.0.title', 'Open task'));
+
+    $this->post(route('assignments.submit', $inactiveAssignment), [
+        'file' => UploadedFile::fake()->create('work.pdf', 10, 'application/pdf'),
+    ])->assertForbidden();
+
+    $this->post(route('assignments.feedback.seen', $inactiveAssignment))
+        ->assertForbidden();
+});
+
 it('rejects a submission for an assignment from another section', function () {
     Storage::fake('public');
 

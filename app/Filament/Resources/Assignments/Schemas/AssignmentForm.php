@@ -6,6 +6,7 @@ use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class AssignmentForm
@@ -28,6 +29,11 @@ class AssignmentForm
                     ->required()
                     ->minItems(1)
                     ->helperText('Only students in the selected sections receive this assignment and can submit to it.')
+                    ->columnSpanFull(),
+                Toggle::make('is_active')
+                    ->label('Active')
+                    ->default(true)
+                    ->helperText('When off, this assignment is closed and hidden from students.')
                     ->columnSpanFull(),
                 Textarea::make('description')
                     ->label('Instructions')

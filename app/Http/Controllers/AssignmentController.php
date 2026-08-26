@@ -183,6 +183,10 @@ class AssignmentController extends Controller
      */
     public function markFeedbackSeen(Request $request, Assignment $assignment)
     {
+        if (! $assignment->isVisibleTo($request->user())) {
+            abort(403, 'This assignment is not available to you.');
+        }
+
         Submission::query()
             ->where('assignment_id', $assignment->id)
             ->where('user_id', $request->user()->id)
@@ -201,7 +205,7 @@ class AssignmentController extends Controller
 
         // Never accept work for an assignment the student was not given.
         if (! $assignment->isVisibleTo($user)) {
-            abort(403, 'This assignment was not assigned to your section.');
+            abort(403, 'This assignment is not available to you.');
         }
 
         $service = app(AssignmentGroupService::class);
