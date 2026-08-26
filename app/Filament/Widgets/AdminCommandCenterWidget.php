@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Enums\AssignmentStatus;
 use App\Models\Assignment;
 use App\Models\Exam;
 use App\Models\ExamSubmission;
@@ -29,8 +30,10 @@ class AdminCommandCenterWidget extends Widget
             ->first();
 
         $students = User::query()->where('is_admin', false)->forWorkspace();
+        // Drafts are not student work, so their roster rows never count as
+        // pending assignments.
         $assignmentTargets = DB::table('assignment_user')
-            ->whereIn('assignment_id', Assignment::query()->select('id'));
+            ->whereIn('assignment_id', Assignment::query()->visibleToStudents()->select('id'));
         $submittedAssignments = (clone $assignmentTargets)->where('submitted', true)->count();
         $totalAssignmentTargets = $assignmentTargets->count();
 
@@ -85,6 +88,7 @@ class AdminCommandCenterWidget extends Widget
                 ->where('created_at', '>=', now()->startOfDay())
                 ->count(),
             'upcomingAssignments' => Assignment::query()
+                ->where('status', AssignmentStatus::Published)
                 ->whereNotNull('due_date')
                 ->where('due_date', '>=', now()->startOfDay())
                 ->orderBy('due_date')

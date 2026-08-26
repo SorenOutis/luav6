@@ -7,7 +7,6 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -22,8 +21,15 @@ class AssignmentsTable
                 WorkspaceTable::column(),
                 TextColumn::make('title')
                     ->searchable(),
-                ToggleColumn::make('is_active')
-                    ->label('Active'),
+                TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'draft' => 'warning',
+                        'published' => 'success',
+                        'closed' => 'danger',
+                        default => 'secondary',
+                    })
+                    ->sortable(),
                 TextColumn::make('sections.name')
                     ->label('Assigned sections')
                     ->badge()

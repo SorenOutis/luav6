@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AssignmentStatus;
 use App\Models\Assignment;
 use App\Models\AssignmentGroup;
 use App\Models\AssignmentGroupInvite;
@@ -91,6 +92,7 @@ class AssignmentController extends Controller
                     'id' => $assignment->id,
                     'title' => $assignment->title,
                     'description' => $assignment->description,
+                    'status' => $assignment->status()?->value ?? AssignmentStatus::Draft->value,
                     'due_date' => $assignment->dueDateForClient(),
                     'points_possible' => $assignment->points_possible,
                     'group_rules' => [
@@ -206,6 +208,11 @@ class AssignmentController extends Controller
         // Never accept work for an assignment the student was not given.
         if (! $assignment->isVisibleTo($user)) {
             abort(403, 'This assignment is not available to you.');
+        }
+
+        // Closed assignments stay visible but final: no new or repeat work.
+        if (! $assignment->status()?->acceptsSubmissions()) {
+            abort(403, 'This assignment is closed and no longer accepts submissions.');
         }
 
         $service = app(AssignmentGroupService::class);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AssignmentStatus;
 use App\Models\Assignment;
 use App\Models\Season;
 use App\Models\Section;
@@ -72,37 +73,94 @@ it('hides an unassigned assignment from everyone', function () {
         ->assertInertia(fn (Assert $page) => $page->has('assignments', 0));
 });
 
-it('hides inactive assignments and blocks student actions', function () {
+it('hides draft assignments and blocks student actions', function () {
     Storage::fake('public');
 
     $student = User::factory()->create();
     $student->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
 
-    $activeAssignment = makeSectionAssignment([$this->sectionA->id], ['title' => 'Open task']);
-    $inactiveAssignment = makeSectionAssignment([
+    $publishedAssignment = makeSectionAssignment([$this->sectionA->id], ['title' => 'Open task']);
+    $draftAssignment = makeSectionAssignment([
         $this->sectionA->id,
     ], [
-        'title' => 'Closed task',
-        'is_active' => false,
+        'title' => 'Hidden task',
+        'status' => 'draft',
     ]);
 
-    expect($activeAssignment->is_active)->toBeTrue()
-        ->and($inactiveAssignment->is_active)->toBeFalse();
+    expect($publishedAssignment->status())->toBe(AssignmentStatus::Published)
+        ->and($draftAssignment->status())->toBe(AssignmentStatus::Draft);
 
     $this->actingAs($student)
         ->get(route('assignments.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->has('assignments', 1)
-            ->where('assignments.0.id', $activeAssignment->id)
+            ->where('assignments.0.id', $publishedAssignment->id)
             ->where('assignments.0.title', 'Open task'));
 
-    $this->post(route('assignments.submit', $inactiveAssignment), [
+    $this->post(route('assignments.submit', $draftAssignment), [
         'file' => UploadedFile::fake()->create('work.pdf', 10, 'application/pdf'),
     ])->assertForbidden();
 
-    $this->post(route('assignments.feedback.seen', $inactiveAssignment))
+    $this->post(route('assignments.feedback.seen', $draftAssignment))
         ->assertForbidden();
+});
+
+it('shows closed assignments but blocks new submissions', function () {
+    Storage::fake('public');
+
+    $student = User::factory()->create();
+    $student->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
+
+    $closedAssignment = makeSectionAssignment([
+        $this->sectionA->id,
+    ], [
+        'title' => 'Finished task',
+        'status' => 'closed',
+    ]);
+
+    $this->actingAs($student)
+        ->get(route('assignments.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('assignments', 1)
+            ->where('assignments.0.id', $closedAssignment->id)
+            ->where('assignments.0.status', 'closed'));
+
+    $this->post(route('assignments.submit', $closedAssignment), [
+        'file' => UploadedFile::fake()->create('work.pdf', 10, 'application/pdf'),
+    ])->assertForbidden();
+
+    expect(DB::table('assignment_user')
+        ->where('assignment_id', $closedAssignment->id)
+        ->where('user_id', $student->id)
+        ->where('submitted', true)
+        ->exists())->toBeFalse();
+
+    // Closed work stays viewable: acknowledging feedback is still allowed.
+    $this->post(route('assignments.feedback.seen', $closedAssignment))
+        ->assertRedirect();
+});
+
+it('accepts a submission for a published assignment', function () {
+    Storage::fake('public');
+
+    $student = User::factory()->create();
+    $student->sections()->attach($this->sectionA->id, ['season_id' => $this->season->id]);
+
+    $assignment = makeSectionAssignment([$this->sectionA->id], ['title' => 'Open task']);
+
+    $this->actingAs($student)
+        ->post(route('assignments.submit', $assignment), [
+            'file' => UploadedFile::fake()->create('work.pdf', 10, 'application/pdf'),
+        ])
+        ->assertRedirect();
+
+    expect(DB::table('assignment_user')
+        ->where('assignment_id', $assignment->id)
+        ->where('user_id', $student->id)
+        ->where('submitted', true)
+        ->exists())->toBeTrue();
 });
 
 it('rejects a submission for an assignment from another section', function () {

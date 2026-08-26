@@ -289,7 +289,7 @@ describe('assignments student shell and UI revamp', () => {
         expect(page).toContain('v-if="assignment.course?.name"');
 
         const submittedBlock =
-            /v-if="assignment.submission\?\.submitted"[\s\S]*?v-if="!assignment.submission\?\.submitted"/m.exec(
+            /v-if="assignment.submission\?\.submitted"[\s\S]*?v-if="\s*!assignment\.submission\?\.submitted/m.exec(
                 page,
             );
         expect(submittedBlock).not.toBeNull();
@@ -298,6 +298,61 @@ describe('assignments student shell and UI revamp', () => {
         expect(submittedBlock![0]).toContain(
             'flex flex-wrap items-center gap-2',
         );
+    });
+
+    it('locks closed assignments: badge shown, submit hidden, group actions hidden', async () => {
+        const wrapper = mountPage([
+            {
+                id: 1,
+                title: 'Finished project',
+                due_date: '2026-08-20T23:59:59Z',
+                status: 'closed',
+                course: null,
+                sections: [],
+                group_rules: { min: 2, max: 4 },
+                group: null,
+                incoming_invite: null,
+                submission: null,
+            },
+            {
+                id: 2,
+                title: 'Closed with a submission',
+                due_date: '2026-08-20T23:59:59Z',
+                status: 'closed',
+                course: null,
+                sections: [],
+                group_rules: null,
+                submission: {
+                    submitted: true,
+                    status: 'Submitted',
+                    grade: null,
+                    file_path: 'assignments/1/work.pdf',
+                    submitted_at: '2026-08-18T14:30:00Z',
+                },
+            },
+        ]);
+        await flushPromises();
+
+        const pendingCard = cardFor(wrapper, 'Finished project')!;
+        const submittedCard = cardFor(wrapper, 'Closed with a submission')!;
+
+        // Unsubmitted closed work shows the Closed badge, like closed exams.
+        expect(pendingCard.text()).toContain('Closed');
+
+        // A closed submission still shows its submission state first (the
+        // exam hub does the same: "Completed" beats "Closed").
+        expect(submittedCard.text()).toContain('Submitted');
+
+        // No Submit action for a closed assignment without a submission.
+        expect(pendingCard.text()).not.toContain('Submit');
+        expect(pendingCard.text()).not.toContain('Form a group');
+
+        // A closed submission stays viewable, but resubmitting is locked.
+        const resubmit = submittedCard
+            .findAll('button')
+            .find((b) => b.text().includes('Resubmit'))!;
+        expect(resubmit.attributes('disabled')).toBeDefined();
+        expect(resubmit.attributes('title')).toMatch(/closed/i);
     });
 
     it('disables the resubmit button on graded assignments', async () => {

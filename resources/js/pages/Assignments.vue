@@ -87,6 +87,7 @@ interface Assignment {
     id: number;
     title: string;
     description: string;
+    status: 'draft' | 'published' | 'closed';
     due_date: string | null;
     points_possible: number | string | null;
     group_rules: {
@@ -585,6 +586,14 @@ const getStatusBadge = (assignment: Assignment) => {
         };
     }
 
+    // Closed: same muted rose the exam hub uses for closed exams.
+    if (isClosed(assignment)) {
+        return {
+            label: 'Closed',
+            classes: 'bg-[#CB7676]/10 text-[#CB7676] border-[#CB7676]/25',
+        };
+    }
+
     if (isOverdue(assignment.due_date)) {
         return {
             label: 'Overdue',
@@ -609,6 +618,9 @@ const getCardBorderClass = (assignment: Assignment) => {
             return 'border-l-[3px] border-l-emerald-600/70 hover:border-l-emerald-600 dark:border-l-emerald-400/70';
         }
         return 'border-l-[3px] border-l-orange-600/70 hover:border-l-orange-600 dark:border-l-orange-400/70';
+    }
+    if (isClosed(assignment)) {
+        return 'border-l-[3px] border-l-[#CB7676]/70 hover:border-l-[#CB7676]';
     }
     if (isOverdue(assignment.due_date)) {
         return 'border-l-[3px] border-l-red-600/70 hover:border-l-red-600 dark:border-l-red-400/70';
@@ -732,7 +744,7 @@ const closeInstructions = () => {
 const openUploadFromInstructions = () => {
     const assignment = instructionsAssignment.value;
     closeInstructions();
-    if (assignment) {
+    if (assignment && !isClosed(assignment)) {
         openModalForAssignment(assignment);
     }
 };
@@ -903,9 +915,15 @@ if (currentUserId.value) {
     );
 }
 
-/** A graded group is locked: no add/remove/leave/resubmit. */
+/**
+ * A closed or graded assignment is locked: no add/remove/leave/resubmit.
+ * Closed mirrors the exam behavior — the card stays visible (with any
+ * submission and grade), but no new work is possible.
+ */
+const isClosed = (assignment: Assignment) => assignment.status === 'closed';
+
 const isGroupLocked = (assignment: Assignment) =>
-    isGraded(assignment.submission);
+    isGraded(assignment.submission) || isClosed(assignment);
 
 const isGroupCreator = (assignment: Assignment) =>
     assignment.group?.created_by === currentUserId.value;
@@ -2152,12 +2170,15 @@ onMounted(() => {
                                         size="sm"
                                         class="dash-btn h-8 rounded-full border-border/60 px-3 text-[11px] sm:text-xs"
                                         :disabled="
-                                            isGraded(assignment.submission)
+                                            isGraded(assignment.submission) ||
+                                            isClosed(assignment)
                                         "
                                         :title="
                                             isGraded(assignment.submission)
                                                 ? 'This assignment has already been graded and cannot be resubmitted.'
-                                                : undefined
+                                                : isClosed(assignment)
+                                                  ? 'This assignment is closed and no longer accepts submissions.'
+                                                  : undefined
                                         "
                                         @click="
                                             openModalForAssignment(assignment)
@@ -2424,7 +2445,10 @@ onMounted(() => {
                             </div>
 
                             <div
-                                v-if="!assignment.submission?.submitted"
+                                v-if="
+                                    !assignment.submission?.submitted &&
+                                    !isClosed(assignment)
+                                "
                                 class="mt-1 flex items-center justify-end gap-2 border-t border-border/50 pt-2.5"
                             >
                                 <Button
@@ -2864,7 +2888,8 @@ onMounted(() => {
                     <Button
                         v-if="
                             instructionsAssignment &&
-                            !instructionsAssignment.submission?.submitted
+                            !instructionsAssignment.submission?.submitted &&
+                            !isClosed(instructionsAssignment)
                         "
                         type="button"
                         class="dash-btn w-full rounded-xl bg-[#D97757] text-white hover:bg-[#D97757]/90 sm:w-auto"

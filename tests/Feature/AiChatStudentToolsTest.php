@@ -146,13 +146,13 @@ it('lists section assignments with submission state', function () {
     $section = Section::factory()->create();
     $assignment = Assignment::create(['title' => 'Cell Model Project', 'course_id' => $course->id, 'due_date' => now()->addWeek()]);
     $assignment->sections()->attach($section->id);
-    $inactiveAssignment = Assignment::create([
-        'title' => 'Closed Cell Model Project',
+    $draftAssignment = Assignment::create([
+        'title' => 'Hidden Cell Model Project',
         'course_id' => $course->id,
         'due_date' => now()->addWeek(),
-        'is_active' => false,
+        'status' => 'draft',
     ]);
-    $inactiveAssignment->sections()->attach($section->id);
+    $draftAssignment->sections()->attach($section->id);
 
     $student = User::factory()->create();
     $student->sections()->attach($section->id);
@@ -163,7 +163,7 @@ it('lists section assignments with submission state', function () {
 
     expect($result)->toContain('Cell Model Project')
         ->toContain('"submitted":false')
-        ->not->toContain('Closed Cell Model Project');
+        ->not->toContain('Hidden Cell Model Project');
 });
 
 it('hides assignments targeted at other sections', function () {

@@ -21,6 +21,11 @@ class AssignmentInviteController extends Controller
     {
         $this->authorizeVisibility($assignment, $request->user());
 
+        // No new group activity once the assignment is closed.
+        if (! $assignment->status()?->acceptsSubmissions()) {
+            abort(403, 'This assignment is closed and no longer accepts submissions.');
+        }
+
         $data = $request->validate([
             'user_ids' => ['required', 'array', 'min:1'],
             'user_ids.*' => ['required', 'integer', 'exists:users,id'],
