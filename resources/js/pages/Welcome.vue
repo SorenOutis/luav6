@@ -1,626 +1,372 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { ArrowRight, Play } from 'lucide-vue-next';
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
-
-gsap.registerPlugin(ScrollTrigger);
-
-// Only the essential sub-components
+import {
+    Apple,
+    ArrowRight,
+    BarChart3,
+    ClipboardList,
+    Lightbulb,
+    School,
+    UserRound,
+} from 'lucide-vue-next';
+import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
-import DemoVideoModal from '@/components/welcome/DemoVideoModal.vue';
 import FeatureCards from '@/components/welcome/FeatureCards.vue';
-import NeuralParticleNetwork from '@/components/welcome/NeuralParticleNetwork.vue';
 import PricingSection from '@/components/welcome/PricingSection.vue';
-import TechStackCarousel from '@/components/welcome/TechStackCarousel.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
 import WelcomeHero from '@/components/welcome/WelcomeHero.vue';
-
-// Composables & Routes
-import { useAppearance } from '@/composables/useAppearance';
-import { syncLenisWithGsap } from '@/composables/useLenis';
 import { useMobile } from '@/composables/useMobile';
 import { dashboard, login, register } from '@/routes';
-
-interface ActiveSeason {
-    name: string;
-    startDate: string | null;
-    endDate: string | null;
-    showCountdown: boolean;
-}
-
-interface SchoolBranding {
-    name?: string;
-    tagline?: string;
-    logoUrl?: string | null;
-    accentColor?: string;
-}
 
 const props = withDefaults(
     defineProps<{
         canRegister: boolean;
-        totalUsers?: number;
-        totalExams?: number;
-        totalAssignments?: number;
-        totalSubmissions?: number;
-        activeSeason?: ActiveSeason | null;
-        demoVideoUrl?: string | null;
-        schoolBranding?: SchoolBranding;
     }>(),
     {
         canRegister: true,
-        totalUsers: 0,
-        totalExams: 0,
-        totalAssignments: 0,
-        totalSubmissions: 0,
-        activeSeason: null,
-        demoVideoUrl: null,
-        schoolBranding: () => ({
-            name: 'LSI Engine',
-            tagline: 'Learning Systems Intelligence',
-            logoUrl: null,
-            accentColor: '#f59e0b',
-        }),
     },
 );
 
-const isBooted = ref(true);
-const isDemoVideoOpen = ref(false);
-const { isCoarsePointer, prefersReducedMotion, isLowEndDevice } = useMobile();
-
-// Seeded synchronously by useMobile — true on the first render for phones,
-// so the 1.6 MB walkthrough never auto-buffers on a cellular connection.
-const walkthroughUnlocked = ref(!isLowEndDevice.value);
-
-const { isTransitioningTheme } = useAppearance();
-
-// Low-end devices disable heavy animation even if the user hasn't set
-// prefers-reduced-motion. Treat both signals as one so every child component
-// (hero, feature cards, marquee, pricing) skips its continuous work on
-// coarse-pointer / low-memory / few-core devices.
+const { prefersReducedMotion, isLowEndDevice } = useMobile();
 const effectiveReducedMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
 
-const brandAccentColor = computed(
-    () => props.schoolBranding?.accentColor || '#f59e0b',
-);
+const audienceGroups = [
+    {
+        icon: Apple,
+        title: 'Teachers',
+        description: 'Create, review, and plan with less friction.',
+    },
+    {
+        icon: UserRound,
+        title: 'Learners',
+        description: 'Get feedback that helps them keep going.',
+    },
+    {
+        icon: School,
+        title: 'Schools',
+        description: 'See what is happening across classes and cohorts.',
+    },
+];
+
+const loopSteps = [
+    {
+        icon: ClipboardList,
+        title: 'A learner answers',
+    },
+    {
+        icon: BarChart3,
+        title: 'A teacher sees the pattern',
+    },
+    {
+        icon: Lightbulb,
+        title: 'The next lesson gets clearer',
+    },
+];
+
+const faqs = [
+    {
+        question: 'What does LSI stand for?',
+        answer: 'LSI is a learning platform built around the work that happens after an assessment: understanding responses and deciding what to do next.',
+    },
+    {
+        question: 'Who is LSI for?',
+        answer: 'LSI is designed for teachers, learners, and schools that want a clearer connection between assessment and follow-up.',
+    },
+    {
+        question: 'Do teachers stay in control?',
+        answer: 'Yes. Teachers review and approve feedback and recommendations before they reach learners.',
+    },
+    {
+        question: 'How is learner data handled?',
+        answer: 'LSI is designed around school ownership and practical, reviewable use of learner information.',
+    },
+];
 
 const webSiteJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'LSI Learning Engine',
-    alternateName: 'Learning Systems Intelligence',
+    name: 'LSI — KOAMISHIN',
+    alternateName: 'LSI',
     description:
-        props.schoolBranding?.tagline ||
-        'School-ready online assessment, exams, and assignments',
+        'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
 };
-
-// ─── Refs for GSAP targets ───
-const pageRoot = ref<HTMLElement | null>(null);
-const howItWorksSteps = ref<HTMLElement | null>(null);
-const howItWorksVideo = ref<HTMLVideoElement | null>(null);
-let gsapCtx: gsap.Context | null = null;
-let lenisCleanup: (() => void) | null = null;
-let videoObserver: IntersectionObserver | null = null;
-
-// ─── Animated Counter Animation ───
-const animatedStats = ref({
-    users: 0,
-    exams: 0,
-    assignments: 0,
-    submissions: 0,
-});
-const statsRef = ref<HTMLElement | null>(null);
-
-const animateCounter = (
-    obj: {
-        users: number;
-        exams: number;
-        assignments: number;
-        submissions: number;
-    },
-    target: {
-        users: number;
-        exams: number;
-        assignments: number;
-        submissions: number;
-    },
-    duration: number,
-) => {
-    const start = performance.now();
-    const update = (now: number) => {
-        const elapsed = now - start;
-        const progress = Math.min(elapsed / duration, 1);
-        // Ease out cubic
-        const eased = 1 - Math.pow(1 - progress, 3);
-        obj.users = Math.round(target.users * eased);
-        obj.exams = Math.round(target.exams * eased);
-        obj.assignments = Math.round(target.assignments * eased);
-        obj.submissions = Math.round(target.submissions * eased);
-        animatedStats.value = { ...obj };
-        if (progress < 1) requestAnimationFrame(update);
-    };
-    requestAnimationFrame(update);
-};
-
-const initPageAnimations = () => {
-    if (!pageRoot.value) return;
-
-    // On low-end devices, skip GSAP context entirely — no scroll triggers, no animations
-    if (isLowEndDevice.value) return;
-
-    gsapCtx = gsap.context(() => {
-        // ─── Section Reveals ───
-        const sections = pageRoot.value?.querySelectorAll('.reveal-section');
-        if (sections?.length) {
-            gsap.fromTo(
-                sections,
-                { y: 60, opacity: 0 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    duration: 1.2,
-                    stagger: 0.2,
-                    ease: 'expo.out',
-                    scrollTrigger: {
-                        trigger: sections,
-                        start: 'top 85%',
-                        toggleActions: 'play none none none',
-                    },
-                },
-            );
-        }
-
-        // ─── How It Works Step Cards ───
-        const stepCards = howItWorksSteps.value?.querySelectorAll('.step-card');
-        if (stepCards?.length) {
-            gsap.fromTo(
-                stepCards,
-                { y: 50, opacity: 0, scale: 0.95 },
-                {
-                    y: 0,
-                    opacity: 1,
-                    scale: 1,
-                    duration: 0.9,
-                    stagger: 0.15,
-                    ease: 'expo.out',
-                    scrollTrigger: {
-                        trigger: howItWorksSteps.value,
-                        start: 'top 80%',
-                        toggleActions: 'play none none none',
-                    },
-                },
-            );
-
-            // Animate step numbers
-            const stepNums =
-                howItWorksSteps.value?.querySelectorAll('.step-number');
-            if (stepNums?.length) {
-                gsap.fromTo(
-                    stepNums,
-                    { scale: 0, rotation: -180 },
-                    {
-                        scale: 1,
-                        rotation: 0,
-                        duration: 0.6,
-                        stagger: 0.15,
-                        ease: 'back.out(2)',
-                        scrollTrigger: {
-                            trigger: howItWorksSteps.value,
-                            start: 'top 80%',
-                            toggleActions: 'play none none none',
-                        },
-                    },
-                );
-            }
-        }
-
-        // ─── Stats Counter ───
-        if (statsRef.value && (props.totalUsers || props.totalExams)) {
-            ScrollTrigger.create({
-                trigger: statsRef.value,
-                start: 'top 85%',
-                onEnter: () => {
-                    animateCounter(
-                        { users: 0, exams: 0, assignments: 0, submissions: 0 },
-                        {
-                            users: props.totalUsers,
-                            exams: props.totalExams,
-                            assignments: props.totalAssignments,
-                            submissions: props.totalSubmissions,
-                        },
-                        2000,
-                    );
-                },
-                once: true,
-            });
-        }
-    }, pageRoot.value);
-};
-
-// On low-end, eagerly display final animated stats without scroll-triggered animation
-const initStatsDirect = () => {
-    if (!statsRef.value) return;
-    animatedStats.value = {
-        users: props.totalUsers,
-        exams: props.totalExams,
-        assignments: props.totalAssignments,
-        submissions: props.totalSubmissions,
-    };
-};
-
-const openDemoVideo = () => {
-    isDemoVideoOpen.value = true;
-};
-
-const closeDemoVideo = () => {
-    isDemoVideoOpen.value = false;
-};
-
-const unlockWalkthrough = () => {
-    walkthroughUnlocked.value = true;
-    nextTick(() => {
-        howItWorksVideo.value?.play().catch(() => {});
-    });
-};
-
-// The walkthrough video only plays while it's actually on screen — it starts
-// when the section scrolls into view and pauses when it leaves. Low-end /
-// reduced-motion visitors keep the poster frame (no playback at all).
-const initVideoPlayback = (): void => {
-    const video = howItWorksVideo.value;
-    if (!video || effectiveReducedMotion.value) return;
-
-    videoObserver = new IntersectionObserver(
-        (entries) => {
-            const entry = entries[0];
-            if (!entry) return;
-            if (entry.isIntersecting) {
-                video.play().catch(() => {});
-            } else {
-                video.pause();
-            }
-        },
-        { threshold: 0.35 },
-    );
-    videoObserver.observe(video);
-};
-
-onMounted(() => {
-    // On low-end, show final stats directly — skip all GSAP/ScrollTrigger/lenis.
-    // (The global `data-low-end` attribute is set app-wide in app.ts.)
-    if (isLowEndDevice.value) {
-        initStatsDirect();
-    } else {
-        initPageAnimations();
-        lenisCleanup = syncLenisWithGsap(ScrollTrigger);
-    }
-    initVideoPlayback();
-});
-
-onUnmounted(() => {
-    gsapCtx?.revert();
-    lenisCleanup?.();
-    videoObserver?.disconnect();
-    videoObserver = null;
-});
 </script>
 
 <template>
-    <Head title="School-Ready Assessments & Online Exams" />
+    <Head title="LSI — KOAMISHIN | Make every assessment count" />
     <SeoHead
-        :description="'A school-ready learning platform for exams, assignments, grades, and AI feedback — with a clear path for every learner.'"
+        description="LSI helps teachers see what learners understand, give useful feedback, and plan what to teach next."
         type="website"
         :jsonld="webSiteJsonLd"
     />
 
     <div
-        ref="pageRoot"
-        class="welcome-root relative min-h-screen w-full bg-background font-sans text-foreground transition-colors duration-500 selection:bg-primary/20"
-        :style="{ '--school-accent': brandAccentColor }"
+        class="welcome-root min-h-screen overflow-x-hidden bg-[#f8f7f2] font-sans text-[#17201f] selection:bg-primary/20 dark:bg-background dark:text-foreground"
     >
-        <!-- Subtle background grid (desktop only — fixed full-viewport
-             repeating gradients are a continuous paint cost on phones). -->
-        <div
-            class="welcome-bg-grid pointer-events-none fixed inset-0 z-0 hidden opacity-[0.025] md:block dark:opacity-[0.05]"
-        >
-            <div
-                class="absolute inset-0"
-                style="
-                    background-image:
-                        linear-gradient(
-                            var(--color-border) 1px,
-                            transparent 1px
-                        ),
-                        linear-gradient(
-                            90deg,
-                            var(--color-border) 1px,
-                            transparent 1px
-                        );
-                    background-size: 60px 60px;
-                "
-            ></div>
-        </div>
-
         <WelcomeHeader
-            :can-register="canRegister"
+            :can-register="props.canRegister"
             :auth="$page.props.auth"
             :dashboard="() => dashboard().url"
             :login="() => login().url"
             :register="() => register().url"
-            :is-booted="isBooted"
-            :branding="schoolBranding"
+            :is-booted="true"
         />
 
         <main
-            class="relative z-10 mx-auto flex max-w-[1500px] flex-col px-4 pt-8 pb-20 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-28 lg:pb-32"
+            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-16 lg:pb-32"
         >
             <WelcomeHero
-                :can-register="canRegister"
+                :can-register="props.canRegister"
                 :auth="$page.props.auth"
                 :dashboard="() => dashboard().url"
                 :login="() => login().url"
                 :register="() => register().url"
-                :is-booted="isBooted"
-                :is-coarse-pointer="isCoarsePointer"
+                :is-booted="true"
                 :prefers-reduced-motion="effectiveReducedMotion"
-                :branding="schoolBranding"
-                @watch-demo="openDemoVideo"
-            >
-                <template #background>
-                    <NeuralParticleNetwork
-                        v-if="!isLowEndDevice"
-                        :is-coarse-pointer="isCoarsePointer"
-                        :prefers-reduced-motion="prefersReducedMotion"
-                        :paused="isTransitioningTheme"
-                    />
-                </template>
-            </WelcomeHero>
-
-            <FeatureCards
-                ref="featureCardsSection"
-                id="features"
-                class="welcome-defer reveal-section mt-16 scroll-mt-32 sm:mt-24"
-                :is-coarse-pointer="isCoarsePointer"
-                :prefers-reduced-motion="effectiveReducedMotion"
-                :auth="$page.props.auth"
-                :dashboard="() => dashboard().url"
-                :login="() => login().url"
             />
 
-            <!-- Stats Counter Bar -->
-            <div
-                ref="statsRef"
-                class="welcome-defer reveal-section mt-16 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/10 bg-border/10 sm:mt-24 lg:grid-cols-4"
-            >
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.users.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Students</span
-                    >
-                </div>
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.exams.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Exams Created</span
-                    >
-                </div>
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.assignments.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Assignments</span
-                    >
-                </div>
-                <div
-                    class="flex flex-col items-center justify-center gap-1.5 bg-background py-8 lg:py-10"
-                >
-                    <span
-                        class="text-3xl font-black tracking-tight text-foreground tabular-nums lg:text-4xl"
-                        >{{ animatedStats.submissions.toLocaleString() }}</span
-                    >
-                    <span
-                        class="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase"
-                        >Submissions</span
-                    >
-                </div>
-            </div>
-
-            <!-- How It Works -->
             <section
-                id="architecture"
-                class="welcome-defer reveal-section mt-20 scroll-mt-32 sm:mt-32"
+                id="how-it-works"
+                class="welcome-story grid scroll-mt-32 gap-10 border-b border-border/70 py-16 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20"
+                aria-labelledby="story-heading"
             >
-                <div class="mb-10 flex flex-col gap-2">
-                    <div
-                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                <div>
+                    <p
+                        class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
                     >
-                        <span class="text-sm font-medium text-primary"
-                            >How It Works</span
-                        >
-                    </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
-                        From enrollment to
-                        <span class="text-primary">achievement</span>
+                        Why we built LSI
+                    </p>
+                    <h2
+                        id="story-heading"
+                        class="mt-4 max-w-xl font-serif text-3xl leading-[1.08] tracking-[-0.04em] sm:text-4xl lg:text-5xl"
+                    >
+                        Assessment should help the next lesson.
                     </h2>
-                    <p class="max-w-xl text-muted-foreground">
-                        Five steps from sign-up to success — no fluff, no
-                        distractions.
+                    <p
+                        class="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
+                    >
+                        Too often, assessment ends with a score. LSI helps
+                        teachers see the response, understand the pattern, and
+                        decide what to do while learning is still happening.
                     </p>
                 </div>
 
-                <!-- Walkthrough: poster + tap-to-play on phones so the 1.6 MB
-                     mp4 is never auto-buffered. Desktop still autoplays
-                     while the section is on screen. -->
-                <div
-                    class="mb-10 overflow-hidden rounded-2xl border border-border/20 bg-black shadow-2xl shadow-primary/5"
-                >
-                    <button
-                        v-if="!walkthroughUnlocked"
-                        type="button"
-                        class="group relative block w-full"
-                        aria-label="Play how it works walkthrough"
-                        @click="unlockWalkthrough"
-                    >
-                        <img
-                            src="/videos/how-it-works.png"
-                            alt="How LSI works from enrollment to achievement"
-                            class="aspect-video w-full object-cover"
-                            width="1280"
-                            height="720"
-                            decoding="async"
-                            fetchpriority="low"
-                        />
-                        <span
-                            class="absolute inset-0 flex items-center justify-center bg-black/35"
-                        >
-                            <span
-                                class="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg sm:h-16 sm:w-16"
-                            >
-                                <Play class="ml-0.5 h-6 w-6 fill-current" />
-                            </span>
-                        </span>
-                    </button>
-                    <video
-                        v-else
-                        ref="howItWorksVideo"
-                        class="block aspect-video w-full"
-                        src="/videos/how-it-works.mp4?v=2"
-                        poster="/videos/how-it-works.png"
-                        loop
-                        muted
-                        playsinline
-                        :preload="isLowEndDevice ? 'none' : 'metadata'"
-                        aria-label="How LSI works from enrollment to achievement"
-                    ></video>
-                </div>
-
-                <!-- Horizontal step cards: scrollable on mobile, grid on desktop -->
-                <div
-                    v-if="false"
-                    ref="howItWorksSteps"
-                    class="-mx-6 flex snap-x snap-mandatory scrollbar-none gap-4 overflow-x-auto px-6 pb-4 lg:mx-0 lg:grid lg:snap-none lg:grid-cols-5 lg:gap-px lg:overflow-visible lg:rounded-xl lg:border lg:border-border/10 lg:bg-border/10 lg:p-0"
-                >
-                    <div
-                        v-for="(step, i) in [
-                            {
-                                title: 'Enroll',
-                                description:
-                                    'Join your section and access your courses, exams, and assignments in one place.',
-                            },
-                            {
-                                title: 'Take Exams',
-                                description:
-                                    'Complete assessments in your browser with instant AI feedback on every answer.',
-                            },
-                            {
-                                title: 'Get Feedback',
-                                description:
-                                    'Know where you stand immediately — auto-graded questions and AI-powered essay reviews.',
-                            },
-                            {
-                                title: 'Track Progress',
-                                description:
-                                    'Monitor XP, streaks, and grades across all subjects on your dashboard.',
-                            },
-                            {
-                                title: 'Earn Rewards',
-                                description:
-                                    'Unlock badges, seasonal achievements, and new nodes on your learning map.',
-                            },
+                <ol class="divide-y divide-border/70 border-y border-border/70">
+                    <li
+                        v-for="(step, index) in [
+                            'Response',
+                            'Understanding',
+                            'Next lesson',
                         ]"
-                        :key="step.title"
-                        class="step-card flex min-w-[260px] shrink-0 snap-start flex-col gap-3 rounded-xl border border-border/15 bg-background p-5 lg:min-w-0 lg:flex-1 lg:rounded-none lg:border-0 lg:border-r lg:border-border/10 lg:p-6 lg:last:border-r-0"
+                        :key="step"
+                        class="flex items-center gap-4 py-5"
                     >
                         <span
-                            class="step-number text-[11px] font-semibold tracking-widest text-muted-foreground/50 uppercase"
+                            class="flex h-7 w-7 items-center justify-center rounded-full border border-primary text-xs font-medium text-primary"
                         >
-                            Step {{ String(i + 1).padStart(2, '0') }}
+                            {{ index + 1 }}
                         </span>
-                        <h3 class="text-sm font-semibold lg:text-base">
-                            {{ step.title }}
-                        </h3>
-                        <p
-                            class="text-xs leading-relaxed text-muted-foreground lg:text-sm"
-                        >
-                            {{ step.description }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="mt-10 text-center">
-                    <Link
-                        href="/how-it-works"
-                        class="inline-flex items-center gap-2 rounded-lg border border-border/30 px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-                    >
-                        View full guide
-                        <ArrowRight class="h-3.5 w-3.5" />
-                    </Link>
-                </div>
+                        <span class="font-serif text-xl text-foreground">{{
+                            step
+                        }}</span>
+                    </li>
+                </ol>
             </section>
 
-            <div class="welcome-defer reveal-section">
-                <TechStackCarousel
-                    :is-coarse-pointer="isCoarsePointer"
-                    :prefers-reduced-motion="effectiveReducedMotion"
-                />
-            </div>
-
-            <PricingSection
-                class="welcome-defer"
+            <FeatureCards
+                :is-coarse-pointer="isLowEndDevice"
+                :prefers-reduced-motion="effectiveReducedMotion"
                 :auth="$page.props.auth"
                 :dashboard="() => dashboard().url"
                 :login="() => login().url"
+            />
+
+            <section
+                class="welcome-audience border-b border-border/70 py-16 sm:py-20"
+                aria-labelledby="audience-heading"
+            >
+                <h2
+                    id="audience-heading"
+                    class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                >
+                    Built around the people doing the work.
+                </h2>
+                <div
+                    class="mt-10 grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
+                >
+                    <article
+                        v-for="group in audienceGroups"
+                        :key="group.title"
+                        class="flex flex-col items-center px-6 py-8 text-center"
+                    >
+                        <component
+                            :is="group.icon"
+                            class="h-10 w-10 text-foreground"
+                            stroke-width="1.35"
+                            aria-hidden="true"
+                        />
+                        <h3
+                            class="mt-5 text-base font-semibold text-foreground"
+                        >
+                            {{ group.title }}
+                        </h3>
+                        <p
+                            class="mt-2 max-w-[180px] text-sm leading-relaxed text-muted-foreground"
+                        >
+                            {{ group.description }}
+                        </p>
+                    </article>
+                </div>
+            </section>
+
+            <section
+                class="welcome-loop my-16 rounded-2xl bg-[#17201f] px-5 py-8 text-[#f8f7f2] sm:my-20 sm:px-10 sm:py-10"
+                aria-labelledby="loop-heading"
+            >
+                <h2
+                    id="loop-heading"
+                    class="font-serif text-2xl tracking-[-0.03em] sm:text-3xl"
+                >
+                    From response to next step.
+                </h2>
+                <div class="mt-8 grid gap-8 md:grid-cols-3 md:gap-4">
+                    <article
+                        v-for="(step, index) in loopSteps"
+                        :key="step.title"
+                        class="relative flex flex-col items-center text-center md:items-start md:text-left"
+                    >
+                        <div
+                            class="flex w-full items-center gap-4 md:flex-col md:items-start"
+                        >
+                            <div
+                                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-primary/70 text-[#b8e3d8]"
+                            >
+                                <component
+                                    :is="step.icon"
+                                    class="h-5 w-5"
+                                    stroke-width="1.4"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <ArrowRight
+                                v-if="index < loopSteps.length - 1"
+                                class="hidden h-4 w-4 text-primary md:absolute md:top-6 md:right-5 md:block"
+                                aria-hidden="true"
+                            />
+                        </div>
+                        <p
+                            class="mt-4 max-w-xs text-sm leading-relaxed text-[#f8f7f2]/80"
+                        >
+                            {{ step.title }}
+                        </p>
+                    </article>
+                </div>
+                <p class="mt-8 text-center text-xs text-[#b8e3d8] md:text-left">
+                    A clearer pattern makes a more useful next lesson.
+                </p>
+            </section>
+
+            <PricingSection
+                :auth="$page.props.auth"
+                :dashboard="() => dashboard().url"
                 :register="() => register().url"
-                :is-coarse-pointer="isCoarsePointer"
+                :is-coarse-pointer="isLowEndDevice"
                 :prefers-reduced-motion="effectiveReducedMotion"
             />
+
+            <section
+                id="faq"
+                class="welcome-faq scroll-mt-32 border-y border-border/70 py-16 sm:py-20"
+                aria-labelledby="faq-heading"
+            >
+                <h2
+                    id="faq-heading"
+                    class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                >
+                    Questions, answered.
+                </h2>
+                <div
+                    class="mx-auto mt-8 max-w-3xl divide-y divide-border/70 border-y border-border/70"
+                >
+                    <details
+                        v-for="faq in faqs"
+                        :key="faq.question"
+                        class="group py-5"
+                    >
+                        <summary
+                            class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                        >
+                            {{ faq.question }}
+                            <span
+                                class="text-xl font-normal text-muted-foreground transition-transform group-open:rotate-45"
+                                aria-hidden="true"
+                                >+</span
+                            >
+                        </summary>
+                        <p
+                            class="max-w-2xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
+                        >
+                            {{ faq.answer }}
+                        </p>
+                    </details>
+                </div>
+            </section>
+
+            <section
+                id="contact"
+                class="welcome-cta mt-16 rounded-2xl bg-[#17201f] px-6 py-10 text-[#f8f7f2] sm:mt-20 sm:px-10 sm:py-12 lg:px-12"
+                aria-labelledby="cta-heading"
+            >
+                <div
+                    class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
+                >
+                    <div>
+                        <p
+                            class="text-xs font-medium tracking-[0.16em] text-[#b8e3d8] uppercase"
+                        >
+                            Start with the next lesson
+                        </p>
+                        <h2
+                            id="cta-heading"
+                            class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] sm:text-4xl"
+                        >
+                            If assessment matters to your school, let’s talk.
+                        </h2>
+                        <p class="mt-4 text-sm text-[#f8f7f2]/70 sm:text-base">
+                            Start with a teacher, a class, or a whole school.
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row">
+                        <Link
+                            v-if="$page.props.auth?.user"
+                            :href="dashboard().url"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                        >
+                            Open dashboard
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <Link
+                            v-else-if="props.canRegister"
+                            :href="register().url"
+                            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                        >
+                            Create a free account
+                            <ArrowRight class="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <a
+                            href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
+                            class="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#f8f7f2]/45 px-5 text-sm font-medium text-[#f8f7f2] transition-colors hover:border-[#f8f7f2] hover:bg-[#f8f7f2]/10 focus-visible:ring-2 focus-visible:ring-[#f8f7f2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                        >
+                            Contact sales
+                        </a>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <WelcomeFooter />
-
-        <DemoVideoModal
-            :open="isDemoVideoOpen"
-            :video-url="demoVideoUrl"
-            @close="closeDemoVideo"
-        />
     </div>
 </template>
-
-<style>
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-}
-
-/* Force Inter on the welcome page regardless of dashboard font presets.
-   Uses higher specificity than :root[data-font-preset] .font-sans (0-3-1 vs 0-3-0).
-   The * selector ensures child elements with font-sans are also overridden. */
-html[data-font-preset] .welcome-root.font-sans,
-html[data-font-preset] .welcome-root.font-sans * {
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
-}
-</style>
