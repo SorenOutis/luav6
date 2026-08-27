@@ -549,7 +549,7 @@ const activitiesTourSteps: TourStep[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
-            class="student-ui mobile-ui-page exam-theme-page relative flex flex-col gap-3 overflow-x-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
+            class="student-ui activities-ui-page mobile-ui-page exam-theme-page relative flex flex-col gap-3 overflow-x-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <MobilePageHeader
                 title="Activities Hub"
@@ -587,7 +587,7 @@ const activitiesTourSteps: TourStep[] = [
                 :initial="{ opacity: 0, y: 12 }"
                 :animate="{ opacity: 1, y: 0 }"
                 :transition="{ duration: 0.35, delay: 0.05 }"
-                class="grid grid-cols-2 divide-x divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card sm:grid-cols-4 sm:rounded-2xl"
+                class="activities-mobile-stats grid grid-cols-2 divide-x divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card sm:grid-cols-4 sm:rounded-2xl"
             >
                 <div class="min-w-0 p-3.5 sm:p-5">
                     <p class="text-xs font-medium text-muted-foreground">
@@ -650,7 +650,10 @@ const activitiesTourSteps: TourStep[] = [
             </Motion>
 
             <!-- Search -->
-            <div class="relative" data-tour="hub-search">
+            <div
+                class="activities-mobile-search relative"
+                data-tour="hub-search"
+            >
                 <Search
                     class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 sm:left-4 sm:h-5 sm:w-5"
                 />

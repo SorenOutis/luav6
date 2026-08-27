@@ -363,6 +363,7 @@ const filteredCourses = computed(() => {
                 class="mobile-ui-page relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10"
             >
                 <MobilePageHeader
+                    class="hidden"
                     title="My Courses"
                     subtitle="Pick up where you left off and keep your learning moving."
                     eyebrow="Learn at your pace"
@@ -443,8 +444,115 @@ const filteredCourses = computed(() => {
                     </div>
                 </Motion>
 
+                <section
+                    class="mobile-course-catalog md:hidden"
+                    aria-label="Course catalog"
+                >
+                    <div class="mobile-course-catalog__heading">
+                        <div>
+                            <span class="mobile-dashboard-kicker"
+                                >Keep learning</span
+                            >
+                            <h1 class="mobile-dashboard-title">My courses</h1>
+                        </div>
+                        <span class="mobile-course-count"
+                            >{{ filteredCourses.length }} courses</span
+                        >
+                    </div>
+                    <label class="mobile-course-search">
+                        <Search class="h-4 w-4" />
+                        <span class="sr-only">Search courses</span>
+                        <input
+                            v-model="searchQuery"
+                            type="search"
+                            placeholder="Search courses"
+                        />
+                    </label>
+                    <div
+                        class="mobile-course-filters"
+                        role="tablist"
+                        aria-label="Course status"
+                    >
+                        <button
+                            type="button"
+                            :class="{ 'is-active': filterStatus === 'all' }"
+                            @click="filterStatus = 'all'"
+                        >
+                            All
+                        </button>
+                        <button
+                            type="button"
+                            :class="{
+                                'is-active': filterStatus === 'in-progress',
+                            }"
+                            @click="filterStatus = 'in-progress'"
+                        >
+                            Active
+                        </button>
+                        <button
+                            type="button"
+                            :class="{
+                                'is-active': filterStatus === 'completed',
+                            }"
+                            @click="filterStatus = 'completed'"
+                        >
+                            Done
+                        </button>
+                    </div>
+                    <div
+                        v-if="filteredCourses.length"
+                        class="mobile-course-list"
+                    >
+                        <Link
+                            v-for="course in filteredCourses"
+                            :key="course.id"
+                            :href="`/courses/${course.id}`"
+                            class="mobile-course-row"
+                        >
+                            <span class="mobile-course-cover">
+                                <img
+                                    v-if="course.cover_photo"
+                                    :src="course.cover_photo"
+                                    :alt="course.name"
+                                />
+                                <BookOpen v-else class="h-5 w-5" />
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <strong class="mobile-course-row__title">{{
+                                    course.name
+                                }}</strong>
+                                <span class="mobile-course-row__meta"
+                                    >{{ course.completedLessons }}/{{
+                                        course.totalLessons
+                                    }}
+                                    lessons ·
+                                    {{ course.modulesCount }} modules</span
+                                >
+                                <span class="mobile-course-progress"
+                                    ><span
+                                        :style="{
+                                            width: `${course.progress}%`,
+                                        }"
+                                /></span>
+                            </span>
+                            <span class="mobile-course-row__percent"
+                                >{{ course.progress }}%</span
+                            >
+                            <ChevronRight
+                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                            />
+                        </Link>
+                    </div>
+                    <div v-else class="mobile-course-empty">
+                        <BookOpen class="h-5 w-5" />
+                        <strong>No courses found</strong>
+                        <span>Try another search or status.</span>
+                    </div>
+                </section>
+
                 <!-- Search, Filter & Sort Bar -->
                 <Motion
+                    class="courses-desktop-filter relative z-10"
                     :initial="{ opacity: 0, y: 20 }"
                     :animate="isBooted ? { opacity: 1, y: 0 } : {}"
                     :transition="{
@@ -452,7 +560,6 @@ const filteredCourses = computed(() => {
                         easing: [0.16, 1, 0.3, 1],
                         delay: 0.4,
                     }"
-                    class="relative z-10"
                 >
                     <div
                         class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -527,7 +634,7 @@ const filteredCourses = computed(() => {
                 <!-- Course Grid -->
                 <div
                     v-if="filteredCourses.length > 0"
-                    class="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+                    class="courses-desktop-grid relative z-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
                 >
                     <Motion
                         v-for="(course, idx) in filteredCourses"

@@ -26,6 +26,7 @@ import {
     Users,
     UserPlus,
     LogOut,
+    Sparkles,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
 import MobilePageHeader from '@/components/mobile/MobilePageHeader.vue';
@@ -1279,14 +1280,50 @@ onMounted(() => {
                 class="student-ui mobile-ui-page container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
             >
                 <MobilePageHeader
+                    class="hidden"
                     title="Assignments"
                     subtitle="What’s due, when you turned it in, and when it was graded."
                     eyebrow="Keep moving"
                 />
 
+                <section
+                    class="mobile-assignment-mobile-intro md:hidden"
+                    aria-label="Assignment summary"
+                >
+                    <div class="mobile-assignment-mobile-intro__topline">
+                        <div>
+                            <span class="mobile-dashboard-kicker"
+                                >Your work</span
+                            >
+                            <h1 class="mobile-dashboard-title">Assignments</h1>
+                        </div>
+                        <span class="mobile-assignment-count-pill"
+                            >{{ pendingCount }} pending</span
+                        >
+                    </div>
+                    <p class="mobile-assignment-mobile-intro__copy">
+                        Keep an eye on what is due, what is submitted, and what
+                        needs your attention next.
+                    </p>
+                    <div class="mobile-assignment-mobile-stats">
+                        <div>
+                            <strong>{{ pendingCount }}</strong
+                            ><span>Pending</span>
+                        </div>
+                        <div>
+                            <strong>{{ submittedCount }}</strong
+                            ><span>Submitted</span>
+                        </div>
+                        <div :class="{ 'is-alert': overdueCount > 0 }">
+                            <strong>{{ overdueCount }}</strong
+                            ><span>Overdue</span>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Page Header -->
                 <div
-                    class="mobile-existing-header animate-section mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between"
+                    class="mobile-existing-header assignment-desktop-only animate-section mb-6 hidden flex-col gap-4 sm:mb-8 sm:flex sm:flex-row sm:items-start sm:justify-between md:flex"
                 >
                     <div>
                         <h1
@@ -1307,7 +1344,7 @@ onMounted(() => {
                 <section
                     data-tour="assignments-overview"
                     aria-label="Assignment overview"
-                    class="animate-section grid grid-cols-2 items-stretch divide-x divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card sm:mb-8 lg:grid-cols-4 lg:rounded-2xl"
+                    class="assignment-desktop-only animate-section grid grid-cols-2 items-stretch divide-x divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card sm:mb-8 lg:grid-cols-4 lg:rounded-2xl"
                 >
                     <Card
                         class="surface-card h-full min-w-0 gap-0 rounded-none border-0 bg-transparent p-3.5 shadow-none sm:p-5"
@@ -1419,7 +1456,7 @@ onMounted(() => {
                 <!-- Filters & Search Bar -->
                 <div
                     data-tour="assignments-search"
-                    class="animate-section mb-6 space-y-3"
+                    class="assignment-desktop-only animate-section mb-6 hidden space-y-3 md:block"
                 >
                     <div
                         class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
@@ -1629,11 +1666,221 @@ onMounted(() => {
                     </div>
                 </div>
 
+                <div
+                    class="mobile-assignment-mobile-list md:hidden"
+                    data-tour="assignments-grid"
+                >
+                    <div class="mobile-assignment-list-heading">
+                        <div>
+                            <span class="mobile-dashboard-kicker"
+                                >Your queue</span
+                            >
+                            <h2 class="mobile-dashboard-section-title">
+                                All assignments
+                            </h2>
+                        </div>
+                        <button
+                            v-if="hasActiveFilters"
+                            type="button"
+                            class="mobile-assignment-reset"
+                            @click="clearAllFilters"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                    <div class="mobile-assignment-filter-row">
+                        <div
+                            class="mobile-assignment-tabs"
+                            role="tablist"
+                            aria-label="Assignment status"
+                        >
+                            <button
+                                type="button"
+                                :class="{ 'is-active': activeTab === 'all' }"
+                                @click="activeTab = 'all'"
+                            >
+                                All <span>{{ totalCount }}</span>
+                            </button>
+                            <button
+                                type="button"
+                                :class="{
+                                    'is-active': activeTab === 'pending',
+                                }"
+                                @click="activeTab = 'pending'"
+                            >
+                                Pending <span>{{ pendingCount }}</span>
+                            </button>
+                            <button
+                                type="button"
+                                :class="{
+                                    'is-active': activeTab === 'submitted',
+                                }"
+                                @click="activeTab = 'submitted'"
+                            >
+                                Done <span>{{ submittedCount }}</span>
+                            </button>
+                        </div>
+                        <input
+                            v-model="searchQuery"
+                            class="mobile-assignment-search"
+                            type="search"
+                            placeholder="Search"
+                            aria-label="Search assignments"
+                        />
+                    </div>
+                    <div
+                        v-if="filteredAssignments.length"
+                        class="mobile-assignment-cards"
+                    >
+                        <article
+                            v-for="assignment in filteredAssignments"
+                            :key="assignment.id"
+                            class="mobile-assignment-card"
+                            :class="getCardBorderClass(assignment)"
+                        >
+                            <div class="mobile-assignment-card__topline">
+                                <span class="mobile-assignment-course">{{
+                                    assignment.course?.name || 'Assignment'
+                                }}</span>
+                                <span
+                                    class="mobile-assignment-status"
+                                    :class="getStatusBadge(assignment).classes"
+                                    >{{
+                                        getStatusBadge(assignment).label
+                                    }}</span
+                                >
+                            </div>
+                            <h3 class="mobile-assignment-card__title">
+                                {{ assignment.title }}
+                            </h3>
+                            <p
+                                v-if="assignment.description"
+                                class="mobile-assignment-card__description"
+                            >
+                                {{ assignment.description }}
+                            </p>
+                            <div class="mobile-assignment-card__meta">
+                                <span>{{ dueMeta(assignment).text }}</span>
+                                <span v-if="pointsPossibleOf(assignment) > 0"
+                                    >{{
+                                        formatNumber(
+                                            pointsPossibleOf(assignment),
+                                        )
+                                    }}
+                                    pts</span
+                                >
+                            </div>
+                            <div
+                                v-if="
+                                    assignment.incoming_invite &&
+                                    !isGroupLocked(assignment)
+                                "
+                                class="mobile-assignment-invite"
+                            >
+                                <span
+                                    >{{
+                                        assignment.incoming_invite.inviter.name
+                                    }}
+                                    invited you</span
+                                >
+                                <div>
+                                    <button
+                                        type="button"
+                                        @click="
+                                            respondToIncomingInvite(
+                                                assignment,
+                                                'accept',
+                                            )
+                                        "
+                                    >
+                                        Accept
+                                    </button>
+                                    <button
+                                        type="button"
+                                        @click="
+                                            respondToIncomingInvite(
+                                                assignment,
+                                                'decline',
+                                            )
+                                        "
+                                    >
+                                        Decline
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mobile-assignment-card__actions">
+                                <button
+                                    type="button"
+                                    class="mobile-assignment-secondary-action"
+                                    @click="openInstructions(assignment)"
+                                >
+                                    View details
+                                </button>
+                                <button
+                                    v-if="!assignment.submission?.submitted"
+                                    type="button"
+                                    class="mobile-assignment-primary-action"
+                                    :disabled="isClosed(assignment)"
+                                    @click="openModalForAssignment(assignment)"
+                                >
+                                    Submit work
+                                </button>
+                                <button
+                                    v-else
+                                    type="button"
+                                    class="mobile-assignment-primary-action"
+                                    @click="toggleGradeExpanded(assignment)"
+                                >
+                                    {{
+                                        isGradeExpanded(assignment.id)
+                                            ? 'Hide grade'
+                                            : 'View grade'
+                                    }}
+                                </button>
+                            </div>
+                            <div
+                                v-if="
+                                    assignment.group &&
+                                    !isGroupLocked(assignment)
+                                "
+                                class="mobile-assignment-group-row"
+                            >
+                                <span>Group activity</span>
+                                <button
+                                    v-if="
+                                        isGroupCreator(assignment) &&
+                                        canInviteMore(assignment)
+                                    "
+                                    type="button"
+                                    @click="openInviteModal(assignment)"
+                                >
+                                    Invite
+                                </button>
+                                <button
+                                    v-else-if="!isGroupCreator(assignment)"
+                                    type="button"
+                                    @click="requestLeaveGroup(assignment)"
+                                >
+                                    Leave
+                                </button>
+                            </div>
+                        </article>
+                    </div>
+                    <div v-else class="mobile-assignment-empty">
+                        <Sparkles class="h-5 w-5" />
+                        <strong>No assignments found</strong>
+                        <span>Try another status or search term.</span>
+                    </div>
+                </div>
+
                 <!-- Assignments Grid -->
-                <div data-tour="assignments-grid" class="animate-section">
+                <div
+                    data-tour="assignments-grid"
+                    class="assignment-desktop-only animate-section"
+                >
                     <div
                         v-if="filteredAssignments.length > 0"
-                        class="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3"
+                        class="assignment-desktop-only grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3"
                     >
                         <Card
                             v-for="assignment in filteredAssignments"

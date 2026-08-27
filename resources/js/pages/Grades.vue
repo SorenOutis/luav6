@@ -588,14 +588,73 @@ onMounted(() => {
             class="student-ui mobile-ui-page container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
         >
             <MobilePageHeader
+                class="hidden"
                 title="Grades"
                 subtitle="Your academic performance across enrolled subjects."
                 eyebrow="Track your progress"
             />
 
+            <section
+                class="mobile-grades-intro md:hidden"
+                aria-label="Grades overview"
+            >
+                <div class="mobile-grades-intro__topline">
+                    <div>
+                        <span class="mobile-dashboard-kicker"
+                            >Your progress</span
+                        >
+                        <h1 class="mobile-dashboard-title">Grades</h1>
+                    </div>
+                    <button
+                        type="button"
+                        class="mobile-grades-export"
+                        :disabled="isExporting"
+                        @click="exportPdf"
+                    >
+                        <Loader2
+                            v-if="isExporting"
+                            class="h-4 w-4 animate-spin"
+                        />
+                        <Printer v-else class="h-4 w-4" />
+                        Export
+                    </button>
+                </div>
+                <p class="mobile-grades-intro__copy">
+                    See your current averages and the subjects that need your
+                    attention.
+                </p>
+                <div class="mobile-grades-summary-row">
+                    <div>
+                        <strong>{{
+                            averageSemesterGrade === null
+                                ? '—'
+                                : formatGrade(averageSemesterGrade)
+                        }}</strong
+                        ><span>Overall</span>
+                    </div>
+                    <div>
+                        <strong>{{ totalSubjectCount }}</strong
+                        ><span>Subjects</span>
+                    </div>
+                    <div>
+                        <strong>{{ completedCount }}</strong
+                        ><span>Completed</span>
+                    </div>
+                </div>
+                <label class="mobile-grades-search">
+                    <Search class="h-4 w-4" />
+                    <span class="sr-only">Search subjects</span>
+                    <input
+                        v-model="searchQuery"
+                        type="search"
+                        placeholder="Search subjects"
+                    />
+                </label>
+            </section>
+
             <!-- Header -->
             <div
-                class="mobile-existing-header animate-section mb-4 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4"
+                class="mobile-existing-header grades-desktop-header animate-section mb-4 hidden flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4 md:flex"
             >
                 <div>
                     <h1

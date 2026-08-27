@@ -49,12 +49,53 @@ defineProps<{
     <AppLayout :breadcrumbs="[{ title: 'Leaderboard', href: '/leaderboard' }]">
         <div class="mobile-ui-page w-full space-y-6 p-4 sm:p-6 lg:p-8">
             <MobilePageHeader
+                class="hidden"
                 title="Leaderboard"
                 subtitle="See how you rank in each section and track your XP progress."
                 eyebrow="Compete and grow"
             />
+            <section
+                class="mobile-leaderboard-intro md:hidden"
+                aria-label="Leaderboard summary"
+            >
+                <div class="mobile-leaderboard-intro__topline">
+                    <div>
+                        <span class="mobile-dashboard-kicker"
+                            >Compete and grow</span
+                        >
+                        <h1 class="mobile-dashboard-title">Leaderboard</h1>
+                    </div>
+                    <Trophy class="h-6 w-6 text-primary" />
+                </div>
+                <p class="mobile-leaderboard-intro__copy">
+                    See your rank, compare progress, and celebrate every step
+                    up.
+                </p>
+                <div
+                    v-if="sectionLeaderboards[0]"
+                    class="mobile-leaderboard-rank-card"
+                >
+                    <span class="mobile-leaderboard-rank-card__icon"
+                        ><Trophy class="h-4 w-4"
+                    /></span>
+                    <span class="min-w-0 flex-1">
+                        <span class="mobile-dashboard-card-kicker">{{
+                            sectionLeaderboards[0].sectionName
+                        }}</span>
+                        <strong
+                            >Ranked #{{
+                                sectionLeaderboards[0].userRank
+                            }}</strong
+                        >
+                        <span
+                            >{{ sectionLeaderboards[0].totalPlayers }} students
+                            in this section</span
+                        >
+                    </span>
+                </div>
+            </section>
             <div
-                class="mobile-existing-header flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+                class="mobile-existing-header leaderboard-desktop-header flex hidden flex-col justify-between gap-4 sm:flex-row sm:items-end md:flex"
             >
                 <div>
                     <Link
