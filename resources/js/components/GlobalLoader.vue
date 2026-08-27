@@ -178,61 +178,162 @@ watch(pendingHide, (isPending) => {
         aria-live="polite"
         aria-busy="true"
         :aria-label="`${message}, ${progress}%`"
-        class="global-loader fixed inset-0 z-[9999] bg-background font-sans text-foreground"
+        class="global-loader fixed inset-0 z-[9999] bg-[#f8f7f2] font-sans text-[#17201f] dark:bg-background dark:text-foreground"
         style="display: none"
     >
         <div
             ref="contentWrap"
-            class="relative flex h-full w-full flex-col items-center justify-center px-6 py-8 sm:px-10 sm:py-10"
+            data-test="global-loader-editorial"
+            class="relative mx-auto flex min-h-full w-full max-w-[1440px] flex-col px-6 pt-28 pb-10 sm:px-10 sm:pt-32 sm:pb-14 lg:px-16"
         >
             <!-- Upper-left brand treatment -->
             <div
-                class="absolute top-8 left-6 flex flex-col items-start gap-2 sm:top-10 sm:left-10"
+                class="absolute top-8 left-6 flex flex-col items-start gap-2 sm:top-10 sm:left-10 lg:left-16"
             >
                 <PublicBrandMark :logo-url="brandLogoUrl" size="loader" />
                 <span
                     v-if="branding.tagline"
-                    class="ml-12 max-w-[14rem] truncate text-[10px] font-medium tracking-[0.18em] text-muted-foreground/50 uppercase"
+                    class="ml-12 max-w-[14rem] truncate text-[10px] font-medium tracking-[0.18em] text-[#17201f]/45 uppercase dark:text-muted-foreground/50"
                 >
                     {{ branding.tagline }}
                 </span>
             </div>
 
-            <!-- Loading Status -->
-            <div class="flex w-full max-w-md flex-col items-center gap-4">
-                <div
-                    class="flex w-full items-center justify-between text-xs font-medium text-muted-foreground/60"
-                >
-                    <span>{{ message }}</span>
-                    <span class="tabular-nums">{{ progress }}%</span>
-                </div>
-
-                <!-- Progress bar -->
-                <div
-                    class="h-1 w-full overflow-hidden rounded-full bg-border/30"
-                    role="progressbar"
-                    :aria-valuenow="progress"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                >
-                    <div
-                        class="h-full rounded-full bg-primary transition-[width] duration-200"
-                        :style="{ width: `${progress}%` }"
-                    ></div>
-                </div>
-
-                <!-- Subtle pulse dot -->
-                <div class="flex items-center gap-2">
-                    <div
-                        class="h-1.5 w-1.5 animate-pulse rounded-full bg-primary/60"
-                    ></div>
-                    <span
-                        class="text-[10px] font-medium tracking-widest text-muted-foreground/30 uppercase"
+            <main
+                class="grid flex-1 content-center items-center gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.75fr)] lg:gap-24"
+            >
+                <section class="max-w-xl">
+                    <p
+                        class="mb-5 text-[10px] font-semibold tracking-[0.22em] text-primary uppercase"
                     >
-                        {{ isTerminating ? 'Cleaning up...' : 'Loading...' }}
-                    </span>
-                </div>
-            </div>
+                        LSI / SYSTEM NOTE
+                    </p>
+                    <h1
+                        class="max-w-lg font-serif text-4xl leading-[1.02] tracking-[-0.045em] text-[#17201f] sm:text-6xl dark:text-foreground"
+                    >
+                        Making room for what comes next.
+                    </h1>
+                    <p
+                        class="mt-6 max-w-md text-sm leading-7 text-[#17201f]/60 sm:text-base dark:text-muted-foreground"
+                    >
+                        Your workspace is getting ready. We are bringing the
+                        next clear step into view.
+                    </p>
+
+                    <div
+                        data-test="global-loader-status"
+                        class="mt-12 max-w-md border-t border-[#17201f]/20 pt-4 dark:border-border/40"
+                    >
+                        <div
+                            class="flex items-center justify-between gap-4 text-xs font-medium"
+                        >
+                            <span
+                                class="truncate text-[#17201f]/65 dark:text-muted-foreground/70"
+                            >
+                                {{ message }}
+                            </span>
+                            <span
+                                class="shrink-0 font-mono text-[11px] text-[#17201f]/55 tabular-nums dark:text-muted-foreground/60"
+                            >
+                                {{ progress }}%
+                            </span>
+                        </div>
+
+                        <!-- Editorial progress rule -->
+                        <div
+                            class="mt-5 h-px w-full bg-[#17201f]/15 dark:bg-border/50"
+                            role="progressbar"
+                            :aria-valuenow="progress"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        >
+                            <div
+                                class="h-full bg-primary transition-[width] duration-200"
+                                :style="{ width: `${progress}%` }"
+                            ></div>
+                        </div>
+
+                        <div
+                            class="mt-4 flex items-center gap-2 text-[10px] font-medium tracking-[0.18em] text-[#17201f]/40 uppercase dark:text-muted-foreground/45"
+                        >
+                            <span
+                                class="h-1.5 w-1.5 rounded-full bg-primary/70"
+                                :class="{
+                                    'animate-pulse': !prefersReducedMotion,
+                                }"
+                            ></span>
+                            <span>
+                                {{
+                                    isTerminating
+                                        ? 'Cleaning up...'
+                                        : 'Loading...'
+                                }}
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Note artifact, echoing the classroom workflow -->
+                <aside
+                    aria-label="Assessment workflow note"
+                    class="relative mx-auto w-full max-w-sm lg:mt-10"
+                >
+                    <div
+                        class="absolute -top-3 -right-3 h-10 w-10 rounded-full border border-primary/25 bg-primary/10"
+                        aria-hidden="true"
+                    ></div>
+                    <div
+                        class="relative rotate-[-2deg] border border-[#17201f]/15 bg-[#fffdf7] p-6 shadow-[0_18px_50px_rgba(23,32,31,0.08)] dark:border-border/40 dark:bg-card"
+                    >
+                        <div
+                            class="flex items-center justify-between border-b border-[#17201f]/15 pb-4 text-[10px] font-semibold tracking-[0.2em] text-[#17201f]/45 uppercase dark:border-border/40 dark:text-muted-foreground/55"
+                        >
+                            <span>Today's note</span>
+                            <span>01</span>
+                        </div>
+                        <div class="space-y-5 py-6">
+                            <div>
+                                <p
+                                    class="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase"
+                                >
+                                    Assessment / feedback / next step
+                                </p>
+                                <p
+                                    class="mt-3 font-serif text-2xl leading-tight tracking-[-0.03em] text-[#17201f] dark:text-foreground"
+                                >
+                                    Keep the signal. Lose the noise.
+                                </p>
+                            </div>
+                            <div
+                                class="space-y-3 text-xs leading-5 text-[#17201f]/60 dark:text-muted-foreground"
+                            >
+                                <div class="flex gap-3">
+                                    <span
+                                        class="font-mono text-[10px] text-primary/75"
+                                        >01</span
+                                    >
+                                    <span
+                                        >Read what the response is telling
+                                        you.</span
+                                    >
+                                </div>
+                                <div class="flex gap-3">
+                                    <span
+                                        class="font-mono text-[10px] text-primary/75"
+                                        >02</span
+                                    >
+                                    <span>Choose the next useful move.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div
+                            class="border-t border-[#17201f]/15 pt-4 text-[10px] font-medium tracking-[0.16em] text-[#17201f]/40 uppercase dark:border-border/40 dark:text-muted-foreground/45"
+                        >
+                            A clearer class is close.
+                        </div>
+                    </div>
+                </aside>
+            </main>
         </div>
     </div>
 </template>

@@ -118,7 +118,11 @@ describe('welcome mobile performance', () => {
         expect(header).toContain('PublicBrandMark');
         expect(header).toContain('aria-label="KOAMISHIN home"');
         expect(loader).toContain('PublicBrandMark');
+        expect(loader).toContain('data-test="global-loader-editorial"');
         expect(loader).toContain('absolute top-8 left-6');
+        expect(loader).toContain('LSI / SYSTEM NOTE');
+        expect(loader).toContain('Assessment workflow note');
+        expect(loader).toContain('data-test="global-loader-status"');
         expect(loader).toContain('aria-live="polite"');
         expect(loader).toContain('role="progressbar"');
         expect(loader).not.toContain('—');
