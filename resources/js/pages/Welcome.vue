@@ -138,7 +138,7 @@ const webSiteJsonLd = {
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
                 "
-                :while-in-view="
+                :in-view="
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
@@ -199,7 +199,7 @@ const webSiteJsonLd = {
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
                 "
-                :while-in-view="
+                :in-view="
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
@@ -218,7 +218,7 @@ const webSiteJsonLd = {
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
                 "
-                :while-in-view="
+                :in-view="
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
@@ -267,7 +267,7 @@ const webSiteJsonLd = {
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
                 "
-                :while-in-view="
+                :in-view="
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
@@ -328,7 +328,7 @@ const webSiteJsonLd = {
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
                 "
-                :while-in-view="
+                :in-view="
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
@@ -347,7 +347,7 @@ const webSiteJsonLd = {
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
                 "
-                :while-in-view="
+                :in-view="
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"
@@ -396,7 +396,7 @@ const webSiteJsonLd = {
                 :initial="
                     effectiveReducedMotion ? false : { opacity: 0, y: 24 }
                 "
-                :while-in-view="
+                :in-view="
                     effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
                 "
                 :in-view-options="{ once: true, margin: '-80px' }"

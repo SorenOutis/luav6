@@ -221,7 +221,7 @@ const revealTransition = (delay = 0) =>
 
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition()"
             >
@@ -276,7 +276,7 @@ const revealTransition = (delay = 0) =>
 
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition()"
             >
@@ -327,7 +327,7 @@ const revealTransition = (delay = 0) =>
 
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition()"
             >
@@ -372,7 +372,7 @@ const revealTransition = (delay = 0) =>
 
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition()"
             >
@@ -438,7 +438,7 @@ const revealTransition = (delay = 0) =>
 
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition()"
             >
@@ -483,7 +483,7 @@ const revealTransition = (delay = 0) =>
 
             <Motion
                 :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
-                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
                 :in-view-options="{ once: true, margin: '-80px' }"
                 :transition="revealTransition()"
             >
