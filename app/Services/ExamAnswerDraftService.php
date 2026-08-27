@@ -72,6 +72,11 @@ class ExamAnswerDraftService
 
             $value = $answer['answer'] ?? null;
 
+            if (is_array($value)) {
+                return count($value) > 0
+                    && collect($value)->every(fn ($item): bool => is_string($item) && trim($item) !== '');
+            }
+
             return $value !== null && (! is_string($value) || trim($value) !== '');
         })->count();
     }

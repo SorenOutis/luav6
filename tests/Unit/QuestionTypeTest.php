@@ -8,14 +8,16 @@ test('question types expose the admin selector options in product order', functi
     expect(QuestionType::options())->toBe([
         'multiple_choice' => 'Multiple Choice',
         'identification' => 'Identification',
-        'essay' => 'Essay',
+        'enumeration' => 'Enumeration',
         'true_false' => 'True/False',
+        'essay' => 'Essay',
     ]);
 });
 
 test('question types classify choice and text answers', function () {
     expect(QuestionType::MultipleChoice->usesChoiceAnswer())->toBeTrue()
         ->and(QuestionType::TrueFalse->usesChoiceAnswer())->toBeTrue()
+        ->and(QuestionType::Enumeration->usesEnumerationAnswer())->toBeTrue()
         ->and(QuestionType::Identification->usesTextAnswer())->toBeTrue()
         ->and(QuestionType::Essay->usesTextAnswer())->toBeTrue();
 });
@@ -46,4 +48,30 @@ it('serializes the readable question type for students without exposing the answ
             ['text' => 'Earth'],
             ['text' => 'Mars'],
         ]);
+});
+
+it('serializes Enumeration slots with points but not expected answers', function () {
+    $part = new ExamPart([
+        'questions' => [[
+            'text' => 'List the three pillars of SEO.',
+            'type' => 'enumeration',
+            'points' => 999,
+            'enumeration_items' => [
+                ['answer' => 'Technical SEO', 'points' => 2],
+                ['answer' => 'On-page SEO', 'points' => 3],
+                ['answer' => 'Off-page SEO', 'points' => 5],
+            ],
+        ]],
+    ]);
+
+    $question = ExamPartSerializer::one($part, false)['questions'][0];
+
+    expect($question['type_label'])->toBe('Enumeration')
+        ->and($question['points'])->toBe(10.0)
+        ->and($question['enumeration_items'])->toBe([
+            ['points' => 2.0],
+            ['points' => 3.0],
+            ['points' => 5.0],
+        ])
+        ->and($question)->not->toHaveKey('correct_answer');
 });

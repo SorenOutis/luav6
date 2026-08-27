@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -12,6 +13,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class SubmitExamPartRequest extends FormRequest
 {
+    private const MAX_TEXT_LENGTH = 50000;
+
     /**
      * Authorization is handled by ExamController::assertCanSubmit(), which needs
      * both route models and is shared with other actions.
@@ -31,7 +34,26 @@ class SubmitExamPartRequest extends FormRequest
             'answers.*.question_number' => ['required', 'integer', 'min:1'],
             // `present` (not `required`) — a deliberately blank answer is valid
             // and must still be recorded as attempted.
-            'answers.*.answer' => ['present'],
+            'answers.*.answer' => [
+                'present',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $values = is_array($value) ? $value : [$value];
+
+                    foreach ($values as $item) {
+                        if ($item !== null && ! is_scalar($item)) {
+                            $fail('Each answer must be text or a selected option.');
+
+                            return;
+                        }
+
+                        if (is_string($item) && mb_strlen($item) > self::MAX_TEXT_LENGTH) {
+                            $fail('The answer is too long to submit.');
+
+                            return;
+                        }
+                    }
+                },
+            ],
         ];
     }
 

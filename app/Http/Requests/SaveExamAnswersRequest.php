@@ -29,14 +29,20 @@ class SaveExamAnswersRequest extends FormRequest
                 'present',
                 'nullable',
                 function (string $attribute, mixed $value, Closure $fail): void {
-                    if (! is_scalar($value)) {
-                        $fail('The answer must be text or a selected option.');
+                    $values = is_array($value) ? $value : [$value];
 
-                        return;
-                    }
+                    foreach ($values as $item) {
+                        if ($item !== null && ! is_scalar($item)) {
+                            $fail('The answer must be text or a selected option.');
 
-                    if (is_string($value) && mb_strlen($value) > self::MAX_TEXT_LENGTH) {
-                        $fail('The answer is too long to save.');
+                            return;
+                        }
+
+                        if (is_string($item) && mb_strlen($item) > self::MAX_TEXT_LENGTH) {
+                            $fail('The answer is too long to save.');
+
+                            return;
+                        }
                     }
                 },
             ],
@@ -85,7 +91,24 @@ class SaveExamAnswersRequest extends FormRequest
                 }
 
                 $type = QuestionType::tryFromStored($question['type'] ?? null);
-                if ($type?->usesChoiceAnswer()) {
+                if ($type?->usesEnumerationAnswer()) {
+                    $enumerationAnswers = is_array($answer) ? $answer : null;
+                    $expectedItems = is_array($question['enumeration_items'] ?? null)
+                        ? $question['enumeration_items']
+                        : [];
+
+                    if ($enumerationAnswers === null || count($enumerationAnswers) > count($expectedItems)) {
+                        $validator->errors()->add(
+                            "answers.{$index}.answer",
+                            'Enumeration answers must match the available answer fields.',
+                        );
+                    } elseif (collect($enumerationAnswers)->contains(fn ($item): bool => $item !== null && ! is_string($item))) {
+                        $validator->errors()->add(
+                            "answers.{$index}.answer",
+                            'Each enumeration answer must be text.',
+                        );
+                    }
+                } elseif ($type?->usesChoiceAnswer()) {
                     $optionCount = count($question['options'] ?? []);
                     if (! is_int($answer) || $answer < 0 || $answer >= $optionCount) {
                         $validator->errors()->add(

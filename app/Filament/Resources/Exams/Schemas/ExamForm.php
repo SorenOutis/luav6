@@ -130,7 +130,8 @@ class ExamForm
                                             ->label('Points')
                                             ->numeric()
                                             ->default(fn ($get) => $get('../../points') ?? 1)
-                                            ->required()
+                                            ->required(fn ($get): bool => $get('type') !== QuestionType::Enumeration->value)
+                                            ->visible(fn ($get): bool => $get('type') !== QuestionType::Enumeration->value)
                                             ->columnSpan(1),
                                         Radio::make('grading_method')
                                             ->label('Essay Grading')
@@ -161,6 +162,26 @@ class ExamForm
                                             ->visible(fn ($get) => $get('type') === 'identification')
                                             ->maxLength(255)
                                             ->columnSpan(1),
+                                        Repeater::make('enumeration_items')
+                                            ->label('Enumeration Answers')
+                                            ->helperText('Add each expected item and its individual points. Students may answer these in any order.')
+                                            ->schema([
+                                                TextInput::make('answer')
+                                                    ->label('Expected Answer')
+                                                    ->required()
+                                                    ->maxLength(255),
+                                                TextInput::make('points')
+                                                    ->label('Points')
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->required()
+                                                    ->default(1),
+                                            ])
+                                            ->minItems(1)
+                                            ->columns(2)
+                                            ->visible(fn ($get): bool => $get('type') === QuestionType::Enumeration->value)
+                                            ->dehydrated(fn ($get): bool => $get('type') === QuestionType::Enumeration->value)
+                                            ->columnSpanFull(),
                                     ])
                                     ->itemLabel(fn (array $state): ?string => $state['text'] ?? 'New Question')
                                     ->collapsible()

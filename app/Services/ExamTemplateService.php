@@ -60,7 +60,18 @@ class ExamTemplateService
         ]);
 
         fputcsv($handle, [
-            'Part III - Identification',
+            'Part III - Enumeration',
+            'List the three pillars of SEO.',
+            'What are the three pillars of SEO?',
+            'enumeration',
+            '',
+            'Technical SEO::2|On-page SEO::3|Off-page SEO::5',
+            '10',
+            '',
+        ]);
+
+        fputcsv($handle, [
+            'Part IV - Identification',
             'Identify the following.',
             'Who wrote "Noli Me Tangere"?',
             'identification',
@@ -71,7 +82,7 @@ class ExamTemplateService
         ]);
 
         fputcsv($handle, [
-            'Part IV - Essay',
+            'Part V - Essay',
             'Answer in complete sentences.',
             'Explain why photosynthesis is important to life on Earth.',
             'essay',
@@ -146,7 +157,20 @@ class ExamTemplateService
                     'points' => (int) ($row['Points'] ?? 1),
                 ];
 
-                if ($type->usesChoiceAnswer()) {
+                if ($type->usesEnumerationAnswer()) {
+                    $questionData['enumeration_items'] = collect(explode('|', $correctInput))
+                        ->map(function (string $item): array {
+                            [$answer, $points] = array_pad(explode('::', trim($item), 2), 2, '1');
+
+                            return [
+                                'answer' => trim($answer),
+                                'points' => (float) ($points !== '' ? $points : 1),
+                            ];
+                        })
+                        ->filter(fn (array $item): bool => $item['answer'] !== '')
+                        ->values()
+                        ->all();
+                } elseif ($type->usesChoiceAnswer()) {
                     $choices = array_filter(array_map('trim', explode('|', $choicesStr)));
                     foreach ($choices as $choiceText) {
                         // Case-insensitive comparison for correct answer

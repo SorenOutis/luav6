@@ -6,16 +6,18 @@ enum QuestionType: string
 {
     case MultipleChoice = 'multiple_choice';
     case Identification = 'identification';
-    case Essay = 'essay';
+    case Enumeration = 'enumeration';
     case TrueFalse = 'true_false';
+    case Essay = 'essay';
 
     public function label(): string
     {
         return match ($this) {
             self::MultipleChoice => 'Multiple Choice',
             self::Identification => 'Identification',
-            self::Essay => 'Essay',
+            self::Enumeration => 'Enumeration',
             self::TrueFalse => 'True/False',
+            self::Essay => 'Essay',
         };
     }
 
@@ -46,6 +48,11 @@ enum QuestionType: string
     public function usesChoiceAnswer(): bool
     {
         return $this === self::MultipleChoice || $this === self::TrueFalse;
+    }
+
+    public function usesEnumerationAnswer(): bool
+    {
+        return $this === self::Enumeration;
     }
 
     public function usesTextAnswer(): bool

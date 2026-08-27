@@ -74,6 +74,10 @@ describe('exams and parts student shell', () => {
         expect(page).toContain(
             'question.type_label ?? formatType(question.type)',
         );
+        expect(page).toContain("question.type === 'enumeration'");
+        expect(page).toContain('setEnumerationAnswer');
+        expect(page).toContain('getQuestionMaxPoints');
+        expect(page).toContain('enumeration_items');
         expect(page).not.toContain('{{ formatType(type) }}');
     });
 

@@ -125,6 +125,7 @@ class ExamAnswerReportService
         $correct = 0;
         $wrong = 0;
         $unanswered = 0;
+        $partial = 0;
         $pending = 0;
         $essaysScored = 0;
         $essayPoints = 0.0;
@@ -149,6 +150,7 @@ class ExamAnswerReportService
                         'correct' => $correct++,
                         'wrong' => $wrong++,
                         'unanswered' => $unanswered++,
+                        'partial' => $partial++,
                         default => $pending++,
                     };
                 }
@@ -209,6 +211,7 @@ class ExamAnswerReportService
                 'essays_scored' => $essaysScored,
                 'essay_points' => round($essayPoints, 2),
                 'unanswered' => $unanswered,
+                'partial' => $partial,
                 'pending' => $pending,
                 'parts_submitted' => $submissions->count(),
                 'parts_total' => count($structure),
@@ -229,7 +232,7 @@ class ExamAnswerReportService
     private function buildItem(array $question, ?array $row, ?ExamSubmission $submission): array
     {
         $answer = $row['answer'] ?? null;
-        $hasAnswer = ! ($answer === null || (is_string($answer) && trim($answer) === ''));
+        $hasAnswer = ! $this->isBlankAnswer($answer);
 
         $item = [
             'question' => $question,
@@ -271,6 +274,21 @@ class ExamAnswerReportService
         }
 
         if (! $hasAnswer) {
+            return $item;
+        }
+
+        if ($type === QuestionType::Enumeration) {
+            $breakdown = $this->enumerationBreakdown($question['enumeration_items'] ?? [], $answer);
+            $earned = array_sum(array_column($breakdown, 'earned'));
+            $item['student_answer'] = is_array($answer)
+                ? implode(', ', array_values(array_map(fn ($value): string => trim((string) $value), $answer)))
+                : null;
+            $item['enumeration_breakdown'] = $breakdown;
+            $item['earned'] = $earned;
+            $item['result'] = $earned >= (float) $question['points']
+                ? 'correct'
+                : ($earned > 0 ? 'partial' : 'wrong');
+
             return $item;
         }
 
@@ -319,7 +337,20 @@ class ExamAnswerReportService
             }
 
             $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
-            $points = (int) ($question['points'] ?? $defaultPoints);
+            $enumerationItems = $type === QuestionType::Enumeration
+                ? collect($question['enumeration_items'] ?? [])
+                    ->filter(fn ($item): bool => is_array($item))
+                    ->map(fn (array $item): array => [
+                        'answer' => (string) ($item['answer'] ?? ''),
+                        'points' => (float) ($item['points'] ?? 0),
+                    ])
+                    ->filter(fn (array $item): bool => trim($item['answer']) !== '')
+                    ->values()
+                    ->all()
+                : [];
+            $points = $type === QuestionType::Enumeration
+                ? array_sum(array_column($enumerationItems, 'points'))
+                : (int) ($question['points'] ?? $defaultPoints);
             $totalPoints += $points;
 
             $options = [];
@@ -350,6 +381,7 @@ class ExamAnswerReportService
                 'type_label' => $type->label(),
                 'points' => $points,
                 'options' => $options,
+                'enumeration_items' => $enumerationItems,
                 'correct_index' => $correctIndex,
                 'correct_answer' => $type === QuestionType::Identification
                     ? (string) ($question['correct_answer'] ?? '')
@@ -384,10 +416,63 @@ class ExamAnswerReportService
             QuestionType::Identification => trim((string) ($question['correct_answer'] ?? '')) !== ''
                 ? (string) $question['correct_answer']
                 : 'No answer key set',
+            QuestionType::Enumeration => collect($question['enumeration_items'] ?? [])
+                ->map(fn (array $item): string => $item['answer'].' ('.$item['points'].' pts)')
+                ->implode(', ') ?: 'No answer key set',
             QuestionType::Essay => ($question['grading_method'] ?? 'ai') === 'manual'
                 ? 'Graded by the teacher (no fixed key)'
                 : 'Graded automatically by AI (no fixed key)',
         };
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<int, array{answer: string, points: float, earned: float, matched: bool}>
+     */
+    private function enumerationBreakdown(array $items, mixed $submittedAnswer): array
+    {
+        $submitted = is_array($submittedAnswer) ? array_values($submittedAnswer) : [];
+        $matchedIndexes = [];
+
+        return collect($items)
+            ->filter(fn ($item): bool => is_array($item))
+            ->map(function (array $item) use ($submitted, &$matchedIndexes): array {
+                $expectedAnswer = (string) ($item['answer'] ?? '');
+                $points = (float) ($item['points'] ?? 0);
+                $matchedAnswer = null;
+
+                foreach ($submitted as $submittedIndex => $answer) {
+                    if (in_array($submittedIndex, $matchedIndexes, true)) {
+                        continue;
+                    }
+
+                    if ($this->normalizeText((string) $answer) === $this->normalizeText($expectedAnswer)
+                        && $this->normalizeText($expectedAnswer) !== '') {
+                        $matchedIndexes[] = $submittedIndex;
+                        $matchedAnswer = trim((string) $answer);
+
+                        break;
+                    }
+                }
+
+                return [
+                    'answer' => $expectedAnswer,
+                    'points' => $points,
+                    'earned' => $matchedAnswer !== null ? $points : 0.0,
+                    'matched' => $matchedAnswer !== null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function isBlankAnswer(mixed $answer): bool
+    {
+        if (is_array($answer)) {
+            return count($answer) === 0 || collect($answer)->every(fn ($item): bool => $this->isBlankAnswer($item));
+        }
+
+        return $answer === null || (is_string($answer) && trim($answer) === '');
     }
 
     /**

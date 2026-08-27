@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\EssayGradingMethod;
 use App\Enums\ExamStatus;
+use App\Enums\QuestionType;
 use App\Events\ExamAnswersSaved;
 use App\Http\Requests\SaveExamAnswersRequest;
 use App\Http\Requests\SubmitExamPartRequest;
@@ -465,8 +466,9 @@ class ExamController extends Controller
         foreach ($questions as $index => $question) {
             $questionNumber = $index + 1;
             $submittedAnswer = $submittedAnswers->get($questionNumber)['answer'] ?? null;
+            $questionType = QuestionType::tryFromStored($question['type'] ?? null);
 
-            if ($submittedAnswer === null || trim((string) $submittedAnswer) === '' || ($question['type'] ?? null) !== 'essay') {
+            if ($this->isBlankAnswer($submittedAnswer) || $questionType !== QuestionType::Essay) {
                 continue;
             }
 
@@ -487,11 +489,12 @@ class ExamController extends Controller
             $question = $questions[$questionNumber - 1] ?? null;
 
             if ($question) {
-                $answer['question_type'] = $question['type'] ?? '';
+                $questionType = QuestionType::tryFromStored($question['type'] ?? null);
+                $answer['question_type'] = $questionType?->value ?? QuestionType::MultipleChoice->value;
                 $answer['question_text'] = $question['text'] ?? '';
-                $answer['points'] = (int) ($question['points'] ?? 1);
+                $answer['points'] = $this->questionPoints($question, (int) ($examPart->points ?? 1));
 
-                if (($question['type'] ?? null) === 'essay') {
+                if ($questionType === QuestionType::Essay) {
                     $answer['grading_method'] = EssayGradingMethod::forQuestion($question)->value;
                 }
             }
@@ -501,29 +504,36 @@ class ExamController extends Controller
 
         foreach ($questions as $index => $question) {
             $questionNumber = $index + 1;
-            $questionPoints = (int) ($question['points'] ?? $examPart->points ?? 1);
+            $questionType = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
+            $questionPoints = $this->questionPoints($question, (int) ($examPart->points ?? 1));
             $totalPossible += $questionPoints;
 
             $submittedAnswerData = $enrichedAnswers->get($questionNumber);
             $submittedAnswer = $submittedAnswerData['answer'] ?? null;
 
-            if ($submittedAnswer === null) {
+            if ($this->isBlankAnswer($submittedAnswer)) {
                 continue;
             }
 
-            if ($question['type'] === 'essay') {
+            if ($questionType === QuestionType::Essay) {
                 // Scored asynchronously by GradeExamSubmissionEssays, which adds
                 // its marks to $score once the provider responds.
                 continue;
             }
 
+            if ($questionType === QuestionType::Enumeration) {
+                $score += $this->scoreEnumeration($question, $submittedAnswer);
+
+                continue;
+            }
+
             $isCorrect = false;
-            if ($question['type'] === 'multiple_choice' || $question['type'] === 'true_false') {
+            if ($questionType->usesChoiceAnswer()) {
                 $correctIndex = collect($question['options'] ?? [])->search(fn ($opt) => ($opt['is_correct'] ?? false) === true);
                 if ($correctIndex !== false && (int) $submittedAnswer === (int) $correctIndex) {
                     $isCorrect = true;
                 }
-            } elseif ($question['type'] === 'identification') {
+            } elseif ($questionType === QuestionType::Identification) {
                 $normalize = function (string $text): string {
                     // Convert to lowercase, trim, collapse multiple spaces, remove common punctuation
                     $text = strtolower(trim($text));
@@ -693,7 +703,7 @@ class ExamController extends Controller
         // another essay in the same part is still waiting for manual grading.
         $automaticEssays = collect($submission->answers ?? [])
             ->filter(fn ($answer): bool => is_array($answer)
-                && ($answer['question_type'] ?? null) === 'essay'
+                && QuestionType::tryFromStored($answer['question_type'] ?? null) === QuestionType::Essay
                 && EssayGradingMethod::forAnswer($answer) === EssayGradingMethod::Ai
                 && trim((string) ($answer['answer'] ?? '')) !== '');
         $essaysScored = $submission->status === 'graded'
@@ -711,6 +721,87 @@ class ExamController extends Controller
             'awaiting_teacher_review' => $awaitingTeacherReview,
             'xp_award' => $this->examXpAwardService->serialize($xpAward),
         ]);
+    }
+
+    /**
+     * Return the maximum points for a question, including each Enumeration item.
+     *
+     * @param  array<string, mixed>  $question
+     */
+    private function questionPoints(array $question, int $default): float
+    {
+        $type = QuestionType::tryFromStored($question['type'] ?? null);
+
+        if ($type === QuestionType::Enumeration) {
+            return (float) collect($question['enumeration_items'] ?? [])
+                ->filter(fn ($item): bool => is_array($item))
+                ->sum(fn (array $item): float => (float) ($item['points'] ?? 0));
+        }
+
+        return (float) ($question['points'] ?? $default);
+    }
+
+    /**
+     * Score each submitted Enumeration item at most once, regardless of order.
+     *
+     * @param  array<string, mixed>  $question
+     */
+    private function scoreEnumeration(array $question, mixed $submittedAnswer): float
+    {
+        if (! is_array($submittedAnswer)) {
+            return 0.0;
+        }
+
+        $expectedItems = collect($question['enumeration_items'] ?? [])
+            ->filter(fn ($item): bool => is_array($item))
+            ->map(fn (array $item): array => [
+                'answer' => $this->normalizeEnumerationText((string) ($item['answer'] ?? '')),
+                'points' => (float) ($item['points'] ?? 0),
+            ])
+            ->filter(fn (array $item): bool => $item['answer'] !== '')
+            ->values();
+        $matchedIndexes = [];
+        $score = 0.0;
+
+        foreach ($submittedAnswer as $answer) {
+            $normalizedAnswer = $this->normalizeEnumerationText((string) $answer);
+            if ($normalizedAnswer === '') {
+                continue;
+            }
+
+            foreach ($expectedItems as $expectedIndex => $expectedItem) {
+                if (in_array($expectedIndex, $matchedIndexes, true)) {
+                    continue;
+                }
+
+                if ($normalizedAnswer === $expectedItem['answer']) {
+                    $score += $expectedItem['points'];
+                    $matchedIndexes[] = $expectedIndex;
+
+                    break;
+                }
+            }
+        }
+
+        return $score;
+    }
+
+    private function isBlankAnswer(mixed $answer): bool
+    {
+        if (is_array($answer)) {
+            return count($answer) === 0 || collect($answer)->every(fn ($item): bool => $this->isBlankAnswer($item));
+        }
+
+        return $answer === null || (is_string($answer) && trim($answer) === '');
+    }
+
+    private function normalizeEnumerationText(string $text): string
+    {
+        $text = strtolower(trim($text));
+        $text = preg_replace('/\\s+/', ' ', $text) ?? '';
+        $text = preg_replace('/[^\\w\\s]/u', '', $text) ?? '';
+
+        return trim($text);
     }
 
     /**
@@ -798,7 +889,7 @@ class ExamController extends Controller
     {
         return collect($submission->answers ?? [])->contains(
             fn ($answer): bool => is_array($answer)
-                && ($answer['question_type'] ?? null) === 'essay'
+                && QuestionType::tryFromStored($answer['question_type'] ?? null) === QuestionType::Essay
                 && EssayGradingMethod::forAnswer($answer) === EssayGradingMethod::Manual
                 && trim((string) ($answer['answer'] ?? '')) !== '',
         );
