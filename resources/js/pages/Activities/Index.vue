@@ -548,8 +548,7 @@ const activitiesTourSteps: TourStep[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
-            data-lenis-prevent
-            class="student-ui exam-theme-page relative flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
+            class="student-ui exam-theme-page relative flex flex-col gap-3 overflow-x-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <!-- Header -->
             <Motion
