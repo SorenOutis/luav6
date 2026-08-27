@@ -20,6 +20,7 @@ import DailyRewardCard from '@/components/dashboard/DailyRewardCard.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
+import MobileDashboard from '@/components/dashboard/MobileDashboard.vue';
 import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
 import TodayStrip from '@/components/dashboard/TodayStrip.vue';
@@ -739,223 +740,291 @@ const handleLogout = () => {
             <!-- Skeleton loader (shown while booting) -->
             <DashboardSkeleton v-if="!isBooted" />
 
-            <!-- Real content (shown after booted) -->
-            <template v-if="isBooted">
-                <!-- Hero Banner Section -->
-                <Motion
-                    :initial="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? false
-                            : { opacity: 0, y: 30 }
-                    "
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? { duration: 0 }
-                            : {
-                                  duration: 0.7,
-                                  easing: [0.16, 1, 0.3, 1],
-                                  delay: 0.05,
-                              }
-                    "
-                    class="relative space-y-3 sm:space-y-6"
-                >
-                    <DashboardHero
-                        class="dashboard-hero"
-                        data-tour="dashboard-hero"
-                        :user-name="userName"
-                        :user-avatar="userAvatar"
-                        :profile-href="userProfileHref"
-                        :user-stats="userStats"
-                        :announcements="announcements"
-                        :time-based-greeting="personalizedGreeting"
-                        :greeting-theme="greetingTheme"
-                        :status-color="statusColor"
-                        :smarter-status="smarterStatus"
-                        :is-refreshing="isRefreshing"
-                        @close-announcement="
-                            (id: number) => dismissedAnnouncementIds.add(id)
+            <!-- Dedicated mobile composition; desktop content below remains intact. -->
+            <MobileDashboard
+                v-if="isBooted"
+                :user-name="userName"
+                :user-avatar="userAvatar"
+                :profile-href="userProfileHref"
+                :user-stats="userStats"
+                :announcements="announcements"
+                :time-based-greeting="personalizedGreeting"
+                :greeting-theme="greetingTheme"
+                :status-color="statusColor"
+                :smarter-status="smarterStatus"
+                :is-refreshing="isRefreshing"
+                :due-today-count="todaySummary.dueTodayCount"
+                :overdue-count="todaySummary.overdueCount"
+                :upcoming24h-count="todaySummary.upcoming24hCount"
+                :next-item="nextItem"
+                :claim-xp="claimXpForPrompt"
+                :bonus-xp="props.bonusXp"
+                :stats-breakdown="props.statsBreakdown"
+                :xp-history="props.xpHistory"
+                :login-dates="streak.loginDates"
+                :section-leaderboards="sectionLeaderboards"
+                :active-season="activeSeason"
+                :available-seasons="props.availableSeasons ?? []"
+                :primary-leaderboard="primaryLeaderboard"
+                :leaderboard-expanded="isLeaderboardExpanded"
+                @close-announcement="
+                    (id: number) => dismissedAnnouncementIds.add(id)
+                "
+                @refresh="manualRefresh"
+                @open-section-modal="showSectionModal = true"
+                @claimed="manualRefresh"
+                @toggle-leaderboard="
+                    isLeaderboardExpanded = !isLeaderboardExpanded
+                "
+            />
+
+            <!-- Desktop composition; hidden below the mobile breakpoint. -->
+            <div class="hidden md:block">
+                <!-- Real content (shown after booted) -->
+                <template v-if="isBooted">
+                    <!-- Hero Banner Section -->
+                    <Motion
+                        :initial="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? false
+                                : { opacity: 0, y: 30 }
                         "
-                        @refresh="manualRefresh"
-                        @open-section-modal="showSectionModal = true"
-                    />
-                </Motion>
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? { duration: 0 }
+                                : {
+                                      duration: 0.7,
+                                      easing: [0.16, 1, 0.3, 1],
+                                      delay: 0.05,
+                                  }
+                        "
+                        class="relative space-y-3 sm:space-y-6"
+                    >
+                        <DashboardHero
+                            class="dashboard-hero"
+                            data-tour="dashboard-hero"
+                            :user-name="userName"
+                            :user-avatar="userAvatar"
+                            :profile-href="userProfileHref"
+                            :user-stats="userStats"
+                            :announcements="announcements"
+                            :time-based-greeting="personalizedGreeting"
+                            :greeting-theme="greetingTheme"
+                            :status-color="statusColor"
+                            :smarter-status="smarterStatus"
+                            :is-refreshing="isRefreshing"
+                            @close-announcement="
+                                (id: number) => dismissedAnnouncementIds.add(id)
+                            "
+                            @refresh="manualRefresh"
+                            @open-section-modal="showSectionModal = true"
+                        />
+                    </Motion>
 
-                <!-- Focus Strip: What's due / next up -->
-                <Motion
-                    :initial="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? false
-                            : { opacity: 0, y: 20 }
-                    "
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? { duration: 0 }
-                            : {
-                                  duration: 0.7,
-                                  easing: [0.16, 1, 0.3, 1],
-                                  delay: 0.08,
-                              }
-                    "
-                >
-                    <TodayStrip
-                        class="dashboard-focus"
-                        data-tour="dashboard-today"
-                        :due-today-count="todaySummary.dueTodayCount"
-                        :overdue-count="todaySummary.overdueCount"
-                        :upcoming-24h-count="todaySummary.upcoming24hCount"
-                        :next-item="nextItem"
-                    />
-                </Motion>
+                    <!-- Focus Strip: What's due / next up -->
+                    <Motion
+                        :initial="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? false
+                                : { opacity: 0, y: 20 }
+                        "
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? { duration: 0 }
+                                : {
+                                      duration: 0.7,
+                                      easing: [0.16, 1, 0.3, 1],
+                                      delay: 0.08,
+                                  }
+                        "
+                    >
+                        <TodayStrip
+                            class="dashboard-focus"
+                            data-tour="dashboard-today"
+                            :due-today-count="todaySummary.dueTodayCount"
+                            :overdue-count="todaySummary.overdueCount"
+                            :upcoming-24h-count="todaySummary.upcoming24hCount"
+                            :next-item="nextItem"
+                        />
+                    </Motion>
 
-                <!-- Daily Reward (Claim XP) -->
-                <Motion
-                    :initial="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? false
-                            : { opacity: 0, y: 20 }
-                    "
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? { duration: 0 }
-                            : {
-                                  duration: 0.7,
-                                  easing: [0.16, 1, 0.3, 1],
-                                  delay: 0.1,
-                              }
-                    "
-                >
-                    <DailyRewardCard
-                        class="dashboard-reward"
-                        data-tour="dashboard-daily-reward"
-                        :claim-xp="claimXpForPrompt"
-                        :streak="userStats.streak"
-                        @claimed="manualRefresh"
-                    />
-                </Motion>
+                    <!-- Daily Reward (Claim XP) -->
+                    <Motion
+                        :initial="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? false
+                                : { opacity: 0, y: 20 }
+                        "
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? { duration: 0 }
+                                : {
+                                      duration: 0.7,
+                                      easing: [0.16, 1, 0.3, 1],
+                                      delay: 0.1,
+                                  }
+                        "
+                    >
+                        <DailyRewardCard
+                            class="dashboard-reward"
+                            data-tour="dashboard-daily-reward"
+                            :claim-xp="claimXpForPrompt"
+                            :streak="userStats.streak"
+                            @claimed="manualRefresh"
+                        />
+                    </Motion>
 
-                <!-- Progress Row: Level / Streak / Season -->
-                <Motion
-                    :initial="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? false
-                            : { opacity: 0, y: 20 }
-                    "
-                    :animate="isBooted ? { opacity: 1, y: 0 } : {}"
-                    :transition="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? { duration: 0 }
-                            : {
-                                  duration: 0.7,
-                                  easing: [0.16, 1, 0.3, 1],
-                                  delay: 0.15,
-                              }
-                    "
-                    class="dashboard-progress grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
-                >
-                    <LevelProgressCard
-                        class="col-span-2"
-                        data-tour="dashboard-level-card"
-                        :user-stats="userStats"
-                        :breakdown="props.statsBreakdown?.xp ?? []"
-                        :xp-history="props.xpHistory ?? []"
-                        :claim-xp="claimXpForPrompt"
-                        :bonus-xp="props.bonusXp"
-                    />
-                    <StreakCard
-                        data-tour="dashboard-streak-card"
-                        :current-streak="userStats.streak"
-                        :longest-streak="userStats.longestStreak"
-                        :login-dates="streak.loginDates"
-                    />
-                    <SeasonProgressBand
-                        data-tour="dashboard-season"
-                        :name="activeSeason?.name ?? null"
-                        :start-date="activeSeason?.startDate ?? null"
-                        :end-date="activeSeason?.endDate ?? null"
-                    />
-                </Motion>
+                    <!-- Progress Row: Level / Streak / Season -->
+                    <Motion
+                        :initial="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? false
+                                : { opacity: 0, y: 20 }
+                        "
+                        :animate="isBooted ? { opacity: 1, y: 0 } : {}"
+                        :transition="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? { duration: 0 }
+                                : {
+                                      duration: 0.7,
+                                      easing: [0.16, 1, 0.3, 1],
+                                      delay: 0.15,
+                                  }
+                        "
+                        class="dashboard-progress grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-4"
+                    >
+                        <LevelProgressCard
+                            class="col-span-2"
+                            data-tour="dashboard-level-card"
+                            :user-stats="userStats"
+                            :breakdown="props.statsBreakdown?.xp ?? []"
+                            :xp-history="props.xpHistory ?? []"
+                            :claim-xp="claimXpForPrompt"
+                            :bonus-xp="props.bonusXp"
+                        />
+                        <StreakCard
+                            data-tour="dashboard-streak-card"
+                            :current-streak="userStats.streak"
+                            :longest-streak="userStats.longestStreak"
+                            :login-dates="streak.loginDates"
+                        />
+                        <SeasonProgressBand
+                            data-tour="dashboard-season"
+                            :name="activeSeason?.name ?? null"
+                            :start-date="activeSeason?.startDate ?? null"
+                            :end-date="activeSeason?.endDate ?? null"
+                        />
+                    </Motion>
 
-                <!-- Main Content Grid -->
-                <Motion
-                    :initial="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? false
-                            : { opacity: 0, y: 40 }
-                    "
-                    :in-view="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? undefined
-                            : isBooted
-                              ? { opacity: 1, y: 0 }
-                              : {}
-                    "
-                    :in-view-options="{ once: true, margin: '-50px' }"
-                    :transition="
-                        isMobile || prefersReducedMotion || isLowEndDevice
-                            ? { duration: 0 }
-                            : { duration: 0.8, easing: [0.16, 1, 0.3, 1] }
-                    "
-                    class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-3 sm:gap-8 lg:grid-cols-3"
-                >
-                    <!-- Main Section: Leaderboard -->
-                    <div class="min-w-0 space-y-4 sm:space-y-8 lg:col-span-2">
-                        <!-- Mobile: Collapsible Leaderboard -->
+                    <!-- Main Content Grid -->
+                    <Motion
+                        :initial="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? false
+                                : { opacity: 0, y: 40 }
+                        "
+                        :in-view="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? undefined
+                                : isBooted
+                                  ? { opacity: 1, y: 0 }
+                                  : {}
+                        "
+                        :in-view-options="{ once: true, margin: '-50px' }"
+                        :transition="
+                            isMobile || prefersReducedMotion || isLowEndDevice
+                                ? { duration: 0 }
+                                : { duration: 0.8, easing: [0.16, 1, 0.3, 1] }
+                        "
+                        class="dashboard-main-grid grid min-w-0 grid-cols-1 items-start gap-3 sm:gap-8 lg:grid-cols-3"
+                    >
+                        <!-- Main Section: Leaderboard -->
                         <div
-                            v-if="!isDesktop"
-                            class="lg:hidden"
-                            data-tour="dashboard-leaderboard"
+                            class="min-w-0 space-y-4 sm:space-y-8 lg:col-span-2"
                         >
-                            <button
-                                @click="
-                                    isLeaderboardExpanded =
-                                        !isLeaderboardExpanded
-                                "
-                                :aria-expanded="isLeaderboardExpanded"
-                                :aria-controls="'mobile-leaderboard-panel'"
-                                class="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border/50 bg-card px-3 py-2.5 text-left transition-colors active:bg-muted/50 sm:rounded-[1.25rem] sm:px-4 sm:py-3.5"
-                            >
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <Trophy class="h-4 w-4 text-[#D97757]" />
-                                    <div class="min-w-0">
-                                        <span
-                                            class="text-[15px] font-semibold tracking-tight text-foreground"
-                                            >Leaderboard</span
-                                        >
-                                        <p
-                                            v-if="primaryLeaderboard"
-                                            class="truncate text-[13px] text-muted-foreground"
-                                        >
-                                            {{ primaryLeaderboard.sectionName }}
-                                            ·
-                                            {{
-                                                primaryLeaderboard.totalPlayers
-                                            }}
-                                            students
-                                        </p>
-                                    </div>
-                                </div>
-                                <span
-                                    v-if="primaryLeaderboard"
-                                    class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-semibold text-[#D97757] tabular-nums"
-                                >
-                                    #{{ primaryLeaderboard.userRank }}
-                                </span>
-                                <component
-                                    :is="
-                                        isLeaderboardExpanded
-                                            ? ChevronUp
-                                            : ChevronDown
-                                    "
-                                    class="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300"
-                                />
-                            </button>
+                            <!-- Mobile: Collapsible Leaderboard -->
                             <div
-                                v-show="isLeaderboardExpanded"
-                                id="mobile-leaderboard-panel"
-                                class="mt-3"
+                                v-if="!isDesktop"
+                                class="lg:hidden"
+                                data-tour="dashboard-leaderboard"
+                            >
+                                <button
+                                    @click="
+                                        isLeaderboardExpanded =
+                                            !isLeaderboardExpanded
+                                    "
+                                    :aria-expanded="isLeaderboardExpanded"
+                                    :aria-controls="'mobile-leaderboard-panel'"
+                                    class="flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-border/50 bg-card px-3 py-2.5 text-left transition-colors active:bg-muted/50 sm:rounded-[1.25rem] sm:px-4 sm:py-3.5"
+                                >
+                                    <div
+                                        class="flex min-w-0 items-center gap-3"
+                                    >
+                                        <Trophy
+                                            class="h-4 w-4 text-[#D97757]"
+                                        />
+                                        <div class="min-w-0">
+                                            <span
+                                                class="text-[15px] font-semibold tracking-tight text-foreground"
+                                                >Leaderboard</span
+                                            >
+                                            <p
+                                                v-if="primaryLeaderboard"
+                                                class="truncate text-[13px] text-muted-foreground"
+                                            >
+                                                {{
+                                                    primaryLeaderboard.sectionName
+                                                }}
+                                                ·
+                                                {{
+                                                    primaryLeaderboard.totalPlayers
+                                                }}
+                                                students
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span
+                                        v-if="primaryLeaderboard"
+                                        class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#D97757]/10 px-2.5 py-1 text-[13px] font-semibold text-[#D97757] tabular-nums"
+                                    >
+                                        #{{ primaryLeaderboard.userRank }}
+                                    </span>
+                                    <component
+                                        :is="
+                                            isLeaderboardExpanded
+                                                ? ChevronUp
+                                                : ChevronDown
+                                        "
+                                        class="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300"
+                                    />
+                                </button>
+                                <div
+                                    v-show="isLeaderboardExpanded"
+                                    id="mobile-leaderboard-panel"
+                                    class="mt-3"
+                                >
+                                    <ImprovedLeaderboard
+                                        class="dashboard-leaderboard"
+                                        :section-leaderboards="
+                                            sectionLeaderboards
+                                        "
+                                        :active-season-name="activeSeason?.name"
+                                        :available-seasons="
+                                            props.availableSeasons ?? []
+                                        "
+                                        show-view-button
+                                    />
+                                </div>
+                            </div>
+
+                            <!-- Desktop: Full Leaderboard -->
+                            <div
+                                v-else
+                                class="hidden lg:block"
+                                data-tour="dashboard-leaderboard"
                             >
                                 <ImprovedLeaderboard
                                     class="dashboard-leaderboard"
@@ -965,57 +1034,44 @@ const handleLogout = () => {
                                         props.availableSeasons ?? []
                                     "
                                     show-view-button
+                                    show-join-button
+                                    @open-section-modal="
+                                        showSectionModal = true
+                                    "
                                 />
                             </div>
                         </div>
 
-                        <!-- Desktop: Full Leaderboard -->
+                        <!-- Sidebar - Activity Pulse -->
                         <div
-                            v-else
-                            class="hidden lg:block"
-                            data-tour="dashboard-leaderboard"
+                            class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
                         >
-                            <ImprovedLeaderboard
-                                class="dashboard-leaderboard"
-                                :section-leaderboards="sectionLeaderboards"
-                                :active-season-name="activeSeason?.name"
-                                :available-seasons="
-                                    props.availableSeasons ?? []
-                                "
-                                show-view-button
-                                show-join-button
-                                @open-section-modal="showSectionModal = true"
-                            />
+                            <!-- Streak Heatmap Card (compact) -->
+                            <section
+                                class="surface-card w-full min-w-0 p-4 sm:p-5"
+                                aria-label="Activity"
+                                data-tour="dashboard-activity"
+                            >
+                                <div class="mb-4 min-w-0 sm:mb-5">
+                                    <h3
+                                        class="dash-title text-[17px] text-foreground sm:text-lg"
+                                    >
+                                        Activity
+                                    </h3>
+                                    <p
+                                        class="mt-0.5 text-[13px] text-muted-foreground"
+                                    >
+                                        Your last 4 weeks at a glance.
+                                    </p>
+                                </div>
+                                <StreakHeatmap
+                                    :login-dates="streak.loginDates"
+                                />
+                            </section>
                         </div>
-                    </div>
-
-                    <!-- Sidebar - Activity Pulse -->
-                    <div
-                        class="min-w-0 space-y-6 lg:sticky lg:top-24 lg:self-start"
-                    >
-                        <!-- Streak Heatmap Card (compact) -->
-                        <section
-                            class="surface-card w-full min-w-0 p-4 sm:p-5"
-                            aria-label="Activity"
-                            data-tour="dashboard-activity"
-                        >
-                            <div class="mb-4 min-w-0 sm:mb-5">
-                                <h3
-                                    class="dash-title text-[17px] text-foreground sm:text-lg"
-                                >
-                                    Activity
-                                </h3>
-                                <p
-                                    class="mt-0.5 text-[13px] text-muted-foreground"
-                                >
-                                    Your last 4 weeks at a glance.
-                                </p>
-                            </div>
-                            <StreakHeatmap :login-dates="streak.loginDates" />
-                        </section>
-                    </div>
-                </Motion>
-            </template>
+                    </Motion>
+                </template>
+            </div>
         </div>
 
         <SectionSelectionModal

@@ -2438,3 +2438,156 @@ html[data-low-end] .welcome-defer {
         display: none !important;
     }
 }
+
+@media (max-width: 767px) {
+    .mobile-dashboard-composition {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.15rem 0.05rem 1.25rem;
+    }
+
+    .mobile-dashboard-composition
+        > :is(.dashboard-hero, .dashboard-focus, .dashboard-reward) {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .mobile-dashboard-composition .dashboard-hero > div {
+        gap: 0.75rem;
+    }
+
+    .mobile-dashboard-composition .dashboard-hero-avatar {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .mobile-dashboard-composition .dashboard-focus,
+    .mobile-dashboard-composition .dashboard-reward,
+    .mobile-dashboard-composition .mobile-dashboard-progress,
+    .mobile-dashboard-composition .mobile-dashboard-leaderboard,
+    .mobile-dashboard-composition .mobile-dashboard-activity {
+        border: 1px solid var(--color-border);
+        border-radius: 1.15rem;
+        background: var(--color-card);
+        box-shadow:
+            0 1px 2px rgb(0 0 0 / 0.05),
+            0 16px 30px -26px rgb(0 0 0 / 0.5);
+    }
+
+    .mobile-dashboard-composition .dashboard-focus {
+        overflow: hidden;
+    }
+
+    .mobile-dashboard-composition .dashboard-reward:empty {
+        display: none;
+    }
+
+    .mobile-dashboard-progress {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+        padding: 0.7rem;
+    }
+
+    .mobile-dashboard-progress > .dashboard-progress-level {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .mobile-dashboard-mini-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.7rem;
+    }
+
+    .mobile-dashboard-mini-grid > * {
+        min-width: 0;
+    }
+
+    .mobile-dashboard-leaderboard {
+        padding: 0.7rem;
+    }
+
+    .mobile-dashboard-section-trigger {
+        display: flex;
+        min-height: 3.15rem;
+        width: 100%;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        border: 0;
+        border-radius: 0.9rem;
+        padding: 0.7rem 0.8rem;
+        color: var(--color-foreground);
+        text-align: left;
+        transition:
+            background-color 160ms ease,
+            transform 160ms ease;
+    }
+
+    .mobile-dashboard-section-trigger:active {
+        background: var(--color-muted);
+        transform: scale(0.99);
+    }
+
+    .mobile-dashboard-section-trigger strong {
+        display: block;
+        font-size: 0.9rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .mobile-dashboard-section-trigger small {
+        display: block;
+        margin-top: 0.15rem;
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-dashboard-section-trigger__rank {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--color-primary);
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .mobile-dashboard-leaderboard__panel {
+        margin-top: 0.5rem;
+        overflow: hidden;
+        border-top: 1px solid var(--color-border);
+        padding-top: 0.65rem;
+    }
+
+    .mobile-dashboard-activity {
+        padding: 0.85rem;
+    }
+
+    .mobile-dashboard-activity h2 {
+        color: var(--color-foreground);
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+    }
+
+    .mobile-dashboard-activity p {
+        margin-top: 0.2rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+    }
+
+    .mobile-dashboard-activity > :last-child {
+        margin-top: 0.75rem;
+    }
+
+    .mobile-dashboard-composition :is(button, a, input, textarea, select) {
+        touch-action: manipulation;
+    }
+}
