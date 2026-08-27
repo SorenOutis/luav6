@@ -117,7 +117,7 @@ const isLite = computed(
 const allTech = computed(() => [...techStackTop, ...techStackBottom]);
 
 onMounted(() => {
-    // On low-end / touch, skip all GSAP — no entrance, no marquee, no scroll FX
+    // On low-end / touch, skip all GSAP - no entrance, no marquee, no scroll FX
     if (isLite.value) return;
 
     gsapCtx = gsap.context(() => {
@@ -226,7 +226,7 @@ onUnmounted(() => {
                     class="max-w-md text-[11px] tracking-wide text-muted-foreground lg:text-xs"
                 >
                     A composition of resilient frameworks and lightning tooling
-                    — purpose-built for assessment-driven learning at scale.
+                    - purpose-built for assessment-driven learning at scale.
                 </p>
             </div>
             <div class="hidden flex-col items-end gap-2 md:flex">

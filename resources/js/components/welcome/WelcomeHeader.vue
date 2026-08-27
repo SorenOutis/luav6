@@ -26,7 +26,7 @@ const props = defineProps<{
         accentColor?: string;
     };
     /**
-     * When true, only show 'Home' in the scroll nav — hides
+     * When true, only show 'Home' in the scroll nav - hides
      * section-specific items like 'How It Works' and 'Features'.
      * Use on dedicated pages (About, HowItWorks) that aren't
      * scrollable landing sections.
@@ -39,14 +39,14 @@ const { prefersReducedMotion, isLowEndDevice } = useMobile();
 const liteMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
-const brandName = computed(() => props.branding?.name || 'LSI — KOAMISHIN');
+const brandName = computed(() => props.branding?.name || 'LSI - KOAMISHIN');
 const brandLogoUrl = computed(() => props.branding?.logoUrl || null);
 
 const scrollToSection = (e: MouseEvent, targetId: string) => {
     e.preventDefault();
     if (targetId === 'top') {
         if (window.location.pathname !== '/') {
-            // Not on the home page — navigate there
+            // Not on the home page - navigate there
             window.location.href = '/';
         } else {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -59,7 +59,7 @@ const scrollToSection = (e: MouseEvent, targetId: string) => {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         history.pushState(null, '', `#${targetId}`);
     } else {
-        // Section doesn't exist on this page — navigate to home page with anchor
+        // Section doesn't exist on this page - navigate to home page with anchor
         window.location.href = `/#${targetId}`;
     }
 };
@@ -339,7 +339,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 </template>
 
 <style scoped>
-/* Hide the built-in Sheet close button — we use our own in the menu header */
+/* Hide the built-in Sheet close button - we use our own in the menu header */
 :deep([data-slot='sheet-content'] [data-dialog-close]) {
     display: none;
 }

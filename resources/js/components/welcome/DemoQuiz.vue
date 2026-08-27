@@ -38,7 +38,7 @@ const demoQuestions: DemoQuestion[] = [
         ],
         correctIndex: 0,
         explanation:
-            'HTML stands for Hyper Text Markup Language — the standard language for creating web pages.',
+            'HTML stands for Hyper Text Markup Language - the standard language for creating web pages.',
     },
     {
         id: 2,

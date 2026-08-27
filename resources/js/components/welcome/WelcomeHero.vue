@@ -34,7 +34,16 @@ withDefaults(
         aria-labelledby="welcome-heading"
         class="welcome-hero relative grid items-center gap-10 border-b border-border/70 pb-16 sm:gap-14 sm:pb-20 lg:min-h-[640px] lg:grid-cols-[1fr_0.9fr] lg:gap-20 lg:pb-24"
     >
-        <div class="relative z-10 max-w-2xl py-4 sm:py-8">
+        <Motion
+            :initial="prefersReducedMotion ? false : { opacity: 0, y: 18 }"
+            :animate="{ opacity: 1, y: 0 }"
+            :transition="
+                prefersReducedMotion
+                    ? { duration: 0 }
+                    : { duration: 0.55, easing: [0.23, 1, 0.32, 1] }
+            "
+            class="relative z-10 max-w-2xl py-4 sm:py-8"
+        >
             <p
                 class="mb-7 text-xs font-medium tracking-[0.16em] text-primary uppercase"
             >
@@ -50,7 +59,7 @@ withDefaults(
                 class="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
             >
                 Create assessments, review responses, and plan what to teach
-                next—with less work for teachers.
+                next, with less work for teachers.
             </p>
             <p class="mt-5 text-sm font-medium text-foreground/80">
                 Teacher-controlled. Built for schools.
@@ -80,7 +89,7 @@ withDefaults(
                     Log in
                 </Link>
             </div>
-        </div>
+        </Motion>
 
         <Motion
             :initial="prefersReducedMotion ? false : { opacity: 0, y: 18 }"
