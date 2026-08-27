@@ -45,6 +45,22 @@ describe('page-specific mobile compositions', () => {
         );
     });
 
+    it('does not render a duplicate generic mobile header on custom pages', () => {
+        const customPages = [
+            'resources/js/pages/Calendar.vue',
+            'resources/js/pages/Assignments.vue',
+            'resources/js/pages/Grades.vue',
+            'resources/js/pages/Courses/Index.vue',
+            'resources/js/pages/Exam.vue',
+            'resources/js/pages/Activities/Index.vue',
+            'resources/js/pages/Leaderboard.vue',
+        ];
+
+        for (const path of customPages) {
+            expect(read(path), path).not.toContain('MobilePageHeader');
+        }
+    });
+
     it('keeps the shared mobile shell and desktop navigation contracts', () => {
         const header = read('resources/js/components/AppSidebarHeader.vue');
         const navigation = read('resources/js/components/MobileNav.vue');

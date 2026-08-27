@@ -11,7 +11,6 @@ import {
     X,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted } from 'vue';
-import MobilePageHeader from '@/components/mobile/MobilePageHeader.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -362,13 +361,6 @@ const filteredCourses = computed(() => {
             <div
                 class="mobile-ui-page relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10"
             >
-                <MobilePageHeader
-                    class="hidden"
-                    title="My Courses"
-                    subtitle="Pick up where you left off and keep your learning moving."
-                    eyebrow="Learn at your pace"
-                />
-
                 <!-- Daily Tip -->
                 <Motion
                     v-if="showTip"

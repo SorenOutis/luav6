@@ -25,7 +25,6 @@ import {
     watch,
 } from 'vue';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
-import MobilePageHeader from '@/components/mobile/MobilePageHeader.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import Button from '@/components/ui/button/Button.vue';
 import Card from '@/components/ui/card/Card.vue';
@@ -587,13 +586,6 @@ onMounted(() => {
             ref="gradesContainer"
             class="student-ui mobile-ui-page container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
         >
-            <MobilePageHeader
-                class="hidden"
-                title="Grades"
-                subtitle="Your academic performance across enrolled subjects."
-                eyebrow="Track your progress"
-            />
-
             <section
                 class="mobile-grades-intro md:hidden"
                 aria-label="Grades overview"
