@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\QuestionType;
 use App\Models\ExamPart;
+use App\Support\MatchingAnswerMatcher;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -91,7 +92,29 @@ class SaveExamAnswersRequest extends FormRequest
                 }
 
                 $type = QuestionType::tryFromStored($question['type'] ?? null);
-                if ($type?->usesEnumerationAnswer()) {
+                if ($type?->usesMatchingAnswer()) {
+                    $matchingAnswers = is_array($answer) ? $answer : null;
+                    $expectedItems = is_array($question['matching_items'] ?? null)
+                        ? $question['matching_items']
+                        : [];
+
+                    if ($matchingAnswers === null || count($matchingAnswers) > count($expectedItems)) {
+                        $validator->errors()->add(
+                            "answers.{$index}.answer",
+                            'Matching answers must match the available prompts.',
+                        );
+                    } elseif (collect($matchingAnswers)->contains(fn ($item): bool => $item !== null && ! is_string($item))) {
+                        $validator->errors()->add(
+                            "answers.{$index}.answer",
+                            'Each matching answer must be a text choice.',
+                        );
+                    } elseif (collect($matchingAnswers)->contains(fn ($item): bool => ! MatchingAnswerMatcher::isValidSelection($item, $question))) {
+                        $validator->errors()->add(
+                            "answers.{$index}.answer",
+                            'Each matching answer must be one of the available choices.',
+                        );
+                    }
+                } elseif ($type?->usesEnumerationAnswer()) {
                     $enumerationAnswers = is_array($answer) ? $answer : null;
                     $expectedItems = is_array($question['enumeration_items'] ?? null)
                         ? $question['enumeration_items']

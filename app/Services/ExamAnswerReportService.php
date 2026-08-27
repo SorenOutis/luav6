@@ -8,6 +8,7 @@ use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use App\Support\IdentificationAnswerMatcher;
+use App\Support\MatchingAnswerMatcher;
 use Illuminate\Support\Collection;
 
 /**
@@ -293,6 +294,21 @@ class ExamAnswerReportService
             return $item;
         }
 
+        if ($type === QuestionType::Matching) {
+            $breakdown = MatchingAnswerMatcher::breakdown($question, $answer);
+            $earned = array_sum(array_column($breakdown, 'earned'));
+            $item['student_answer'] = collect($breakdown)
+                ->map(fn (array $pair): string => $pair['prompt'].': '.($pair['submitted'] !== '' ? $pair['submitted'] : 'No answer'))
+                ->implode('; ');
+            $item['matching_breakdown'] = $breakdown;
+            $item['earned'] = $earned;
+            $item['result'] = $earned >= (float) $question['points']
+                ? 'correct'
+                : ($earned > 0 ? 'partial' : 'wrong');
+
+            return $item;
+        }
+
         if ($type === QuestionType::Identification) {
             $item['student_answer'] = (string) $answer;
             $item['result'] = IdentificationAnswerMatcher::matches($answer, $question)
@@ -354,9 +370,14 @@ class ExamAnswerReportService
                     ->values()
                     ->all()
                 : [];
+            $matchingItems = $type === QuestionType::Matching
+                ? MatchingAnswerMatcher::items($question)
+                : [];
             $points = $type === QuestionType::Enumeration
                 ? array_sum(array_column($enumerationItems, 'points'))
-                : (int) ($question['points'] ?? $defaultPoints);
+                : ($type === QuestionType::Matching
+                    ? array_sum(array_column($matchingItems, 'points'))
+                    : (int) ($question['points'] ?? $defaultPoints));
             $totalPoints += $points;
 
             $options = [];
@@ -388,6 +409,7 @@ class ExamAnswerReportService
                 'points' => $points,
                 'options' => $options,
                 'enumeration_items' => $enumerationItems,
+                'matching_items' => $matchingItems,
                 'correct_index' => $correctIndex,
                 'correct_answer' => $type === QuestionType::Identification
                     ? (string) ($question['correct_answer'] ?? '')
@@ -426,6 +448,9 @@ class ExamAnswerReportService
             QuestionType::Enumeration => collect($question['enumeration_items'] ?? [])
                 ->map(fn (array $item): string => $item['answer'].' ('.$item['points'].' pts)')
                 ->implode(', ') ?: 'No answer key set',
+            QuestionType::Matching => collect(MatchingAnswerMatcher::items($question))
+                ->map(fn (array $item): string => $item['prompt'].' → '.$item['answer'].' ('.$item['points'].' pts)')
+                ->implode('; ') ?: 'No answer key set',
             QuestionType::Essay => ($question['grading_method'] ?? 'ai') === 'manual'
                 ? 'Graded by the teacher (no fixed key)'
                 : 'Graded automatically by AI (no fixed key)',

@@ -412,6 +412,22 @@
                                                     @endforeach
                                                 </ul>
                                             </div>
+                                        @elseif ($question['type'] === 'matching')
+                                            <div class="q__row">
+                                                <span class="q__label">Pair breakdown</span>
+                                                <ul class="options">
+                                                    @foreach ($item['matching_breakdown'] ?? [] as $matchingPair)
+                                                        <li class="{{ $matchingPair['matched'] ? 'is-correct' : '' }}">
+                                                            <strong>{{ $matchingPair['prompt'] }}</strong>
+                                                            <span class="meta">
+                                                                Student: {{ $matchingPair['submitted'] !== '' ? $matchingPair['submitted'] : 'No answer' }}
+                                                                | Expected: {{ $matchingPair['expected'] }}
+                                                                | {{ $matchingPair['earned'] }} / {{ $matchingPair['points'] }} pts
+                                                            </span>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
                                         @else
                                             <div class="q__row">
                                                 <span class="q__label">Correct answer</span>

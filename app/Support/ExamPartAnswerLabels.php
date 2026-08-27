@@ -123,7 +123,7 @@ class ExamPartAnswerLabels
 
             if ($type?->usesChoiceAnswer()) {
                 $data['answers'][$key]['response_choice'] = self::normalizeChoiceState($answer);
-            } elseif ($type?->usesEnumerationAnswer()) {
+            } elseif ($type?->usesEnumerationAnswer() || $type?->usesMatchingAnswer()) {
                 $data['answers'][$key]['response_text'] = is_array($answer)
                     ? implode("\n", array_map('strval', $answer))
                     : (string) ($answer ?? '');
@@ -161,7 +161,7 @@ class ExamPartAnswerLabels
                 $data['answers'][$key]['answer'] = ($choice === null || $choice === '')
                     ? null
                     : (int) $choice;
-            } elseif ($type?->usesEnumerationAnswer()) {
+            } elseif ($type?->usesEnumerationAnswer() || $type?->usesMatchingAnswer()) {
                 $text = trim((string) ($row['response_text'] ?? ''));
                 $data['answers'][$key]['answer'] = $text === ''
                     ? []

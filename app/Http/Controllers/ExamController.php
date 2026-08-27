@@ -22,6 +22,7 @@ use App\Services\ExamXpAwardService;
 use App\Support\AiQueueWorker;
 use App\Support\ExamPartSerializer;
 use App\Support\IdentificationAnswerMatcher;
+use App\Support\MatchingAnswerMatcher;
 use Carbon\CarbonInterface as Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -528,6 +529,12 @@ class ExamController extends Controller
                 continue;
             }
 
+            if ($questionType === QuestionType::Matching) {
+                $score += MatchingAnswerMatcher::score($question, $submittedAnswer);
+
+                continue;
+            }
+
             $isCorrect = false;
             if ($questionType->usesChoiceAnswer()) {
                 $correctIndex = collect($question['options'] ?? [])->search(fn ($opt) => ($opt['is_correct'] ?? false) === true);
@@ -723,6 +730,10 @@ class ExamController extends Controller
             return (float) collect($question['enumeration_items'] ?? [])
                 ->filter(fn ($item): bool => is_array($item))
                 ->sum(fn (array $item): float => (float) ($item['points'] ?? 0));
+        }
+
+        if ($type === QuestionType::Matching) {
+            return MatchingAnswerMatcher::maxPoints($question);
         }
 
         return (float) ($question['points'] ?? $default);

@@ -9,6 +9,7 @@ test('question types expose the admin selector options in product order', functi
         'multiple_choice' => 'Multiple Choice',
         'identification' => 'Identification',
         'enumeration' => 'Enumeration',
+        'matching' => 'Matching Type',
         'true_false' => 'True/False',
         'essay' => 'Essay',
     ]);
@@ -18,6 +19,8 @@ test('question types classify choice and text answers', function () {
     expect(QuestionType::MultipleChoice->usesChoiceAnswer())->toBeTrue()
         ->and(QuestionType::TrueFalse->usesChoiceAnswer())->toBeTrue()
         ->and(QuestionType::Enumeration->usesEnumerationAnswer())->toBeTrue()
+        ->and(QuestionType::Matching->usesMatchingAnswer())->toBeTrue()
+        ->and(QuestionType::Matching->usesTextAnswer())->toBeFalse()
         ->and(QuestionType::Identification->usesTextAnswer())->toBeTrue()
         ->and(QuestionType::Essay->usesTextAnswer())->toBeTrue();
 });
@@ -92,4 +95,28 @@ it('reveals accepted Identification answers only during review', function () {
 
     expect($activeQuestion)->not->toHaveKey('accepted_answers')
         ->and($reviewQuestion['accepted_answers'])->toBe(['Virus', 'Malware']);
+});
+
+it('serializes Matching Type prompts and choices without exposing the correct mapping', function () {
+    $part = new ExamPart([
+        'questions' => [[
+            'text' => 'Match each SEO pillar with its description.',
+            'type' => 'matching',
+            'matching_items' => [
+                ['prompt' => 'Technical SEO', 'answer' => 'Crawlability', 'points' => 2],
+                ['prompt' => 'On-page SEO', 'answer' => 'Content and headings', 'points' => 3],
+            ],
+        ]],
+    ]);
+
+    $question = ExamPartSerializer::one($part, false)['questions'][0];
+
+    expect($question['points'])->toBe(5.0)
+        ->and($question['matching_items'])->toMatchArray([
+            ['index' => 0, 'prompt' => 'Technical SEO', 'points' => 2.0],
+            ['index' => 1, 'prompt' => 'On-page SEO', 'points' => 3.0],
+        ])
+        ->and($question['matching_items'][0])->not->toHaveKey('answer')
+        ->and($question['matching_options'])->toHaveCount(2)
+        ->and($question['matching_options'])->toContain(['value' => 'Crawlability', 'text' => 'Crawlability']);
 });

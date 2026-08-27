@@ -46,6 +46,8 @@ interface Question {
     type: string;
     type_label?: string;
     enumeration_items?: { points: number }[] | null;
+    matching_items?: { index: number; prompt: string; points: number }[] | null;
+    matching_options?: { value: string; text: string }[] | null;
     // The answer key is stripped server-side while an exam is in progress and
     // is only present once the exam is closed (review mode). Never rely on it
     // here — this screen is used for *taking* the exam.
@@ -951,7 +953,7 @@ const totalPossiblePoints = computed(() =>
         (sum, p) =>
             sum +
             (p.questions?.reduce(
-                (qSum, q) => qSum + (q.points ?? p.points ?? 1),
+                (qSum, q) => qSum + getQuestionMaxPoints(q, p.points ?? 1),
                 0,
             ) ?? 0),
         0,
@@ -1006,7 +1008,12 @@ const getQuestionMaxPoints = (question: Question, fallback = 1): number =>
               (sum, item) => sum + (item.points ?? 0),
               0,
           )
-        : (question.points ?? fallback);
+        : question.type === 'matching'
+          ? (question.matching_items ?? []).reduce(
+                (sum, item) => sum + (item.points ?? 0),
+                0,
+            )
+          : (question.points ?? fallback);
 
 const getQuestionTypes = (part: ExamPart) => [
     ...new Set(part.questions?.map(getQuestionTypeLabel) ?? []),
@@ -1168,6 +1175,29 @@ const setEnumerationAnswer = (
     answers[questionIndex] = current;
 };
 
+const getMatchingAnswer = (
+    questionIndex: number,
+    itemIndex: number,
+): string => {
+    const answer = answers[questionIndex];
+
+    return Array.isArray(answer) ? String(answer[itemIndex] ?? '') : '';
+};
+
+const setMatchingAnswer = (
+    questionIndex: number,
+    itemIndex: number,
+    event: Event,
+) => {
+    const select = event.target as HTMLSelectElement;
+    const current = Array.isArray(answers[questionIndex])
+        ? [...answers[questionIndex]]
+        : [];
+
+    current[itemIndex] = select.value;
+    answers[questionIndex] = current;
+};
+
 const initializeEnumerationAnswers = () => {
     selectedPart.value?.questions?.forEach((question, index) => {
         if (question.type !== 'enumeration') return;
@@ -1183,6 +1213,24 @@ const initializeEnumerationAnswers = () => {
         answers[index] = Array.from(
             { length: itemCount },
             (_, itemIndex) => values[itemIndex] ?? '',
+        );
+    });
+};
+
+const initializeMatchingAnswers = () => {
+    selectedPart.value?.questions?.forEach((question, index) => {
+        if (question.type !== 'matching') return;
+
+        const itemCount = question.matching_items?.length ?? 0;
+        const current = answers[index];
+        const values = Array.isArray(current)
+            ? current
+            : typeof current === 'string' && current.trim() !== ''
+              ? [current]
+              : [];
+
+        answers[index] = Array.from({ length: itemCount }, (_, itemIndex) =>
+            String(values[itemIndex] ?? ''),
         );
     });
 };
@@ -1209,6 +1257,7 @@ const startPart = () => {
     examStarted.value = true;
     loadDraft(); // Load any saved progress
     initializeEnumerationAnswers();
+    initializeMatchingAnswers();
     void sendMonitorProgress('starting');
 
     // Anchor the per-part clock on the server, then run the countdown from the
@@ -2520,9 +2569,10 @@ const feedbackContent = computed(() => {
                                                 part.questions?.reduce(
                                                     (sum, q) =>
                                                         sum +
-                                                        (q.points ??
-                                                            part.points ??
-                                                            1),
+                                                        getQuestionMaxPoints(
+                                                            q,
+                                                            part.points ?? 1,
+                                                        ),
                                                     0,
                                                 ) ?? 0
                                             }}
@@ -2581,9 +2631,11 @@ const feedbackContent = computed(() => {
                                                     part.questions?.reduce(
                                                         (sum, q) =>
                                                             sum +
-                                                            (q.points ||
-                                                                part.points ||
-                                                                1),
+                                                            getQuestionMaxPoints(
+                                                                q,
+                                                                part.points ??
+                                                                    1,
+                                                            ),
                                                         0,
                                                     ) ?? 0
                                                 }}</span
@@ -2920,6 +2972,78 @@ const feedbackContent = computed(() => {
                                                 </div>
                                             </div>
 
+                                            <!-- Matching Type -->
+                                            <div
+                                                v-else-if="
+                                                    selectedPart!.questions![
+                                                        mobileQuestionIndex
+                                                    ].type === 'matching'
+                                                "
+                                                class="w-full space-y-3"
+                                            >
+                                                <div
+                                                    v-for="(
+                                                        item, itemIndex
+                                                    ) in selectedPart!
+                                                        .questions![
+                                                        mobileQuestionIndex
+                                                    ].matching_items"
+                                                    :key="item.index"
+                                                    class="space-y-1.5"
+                                                >
+                                                    <label
+                                                        :for="`matching-mobile-${mobileQuestionIndex}-${itemIndex}`"
+                                                        class="flex items-start justify-between gap-3 text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        <span
+                                                            class="leading-relaxed text-foreground"
+                                                        >
+                                                            {{ itemIndex + 1 }}.
+                                                            {{ item.prompt }}
+                                                        </span>
+                                                        <span class="shrink-0"
+                                                            >{{
+                                                                item.points
+                                                            }}
+                                                            pts</span
+                                                        >
+                                                    </label>
+                                                    <select
+                                                        :id="`matching-mobile-${mobileQuestionIndex}-${itemIndex}`"
+                                                        :value="
+                                                            getMatchingAnswer(
+                                                                mobileQuestionIndex,
+                                                                itemIndex,
+                                                            )
+                                                        "
+                                                        @change="
+                                                            setMatchingAnswer(
+                                                                mobileQuestionIndex,
+                                                                itemIndex,
+                                                                $event,
+                                                            )
+                                                        "
+                                                        class="w-full rounded-lg border border-border/60 bg-muted/20 px-3 py-3 text-sm transition-all outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                                    >
+                                                        <option value="">
+                                                            Select a match
+                                                        </option>
+                                                        <option
+                                                            v-for="option in selectedPart!
+                                                                .questions![
+                                                                mobileQuestionIndex
+                                                            ].matching_options"
+                                                            :key="option.value"
+                                                            :value="
+                                                                option.value
+                                                            "
+                                                        >
+                                                            {{ option.text }}
+                                                        </option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
                                             <!-- Essay -->
                                             <div
                                                 v-else-if="
@@ -3023,7 +3147,8 @@ const feedbackContent = computed(() => {
                                             'answered'
                                                 ? 'border-primary/20 border-l-primary bg-primary/[0.02] shadow-xl shadow-primary/5'
                                                 : 'border-border/40 border-l-muted bg-card/40',
-                                            question.type === 'essay'
+                                            question.type === 'essay' ||
+                                            question.type === 'matching'
                                                 ? 'md:col-span-2'
                                                 : '',
                                         ]"
@@ -3083,16 +3208,20 @@ const feedbackContent = computed(() => {
                                                         class="text-xs text-muted-foreground"
                                                     >
                                                         {{
-                                                            question.points ??
-                                                            selectedPart!
-                                                                .points ??
-                                                            1
-                                                        }}
-                                                        {{
-                                                            (question.points ??
+                                                            getQuestionMaxPoints(
+                                                                question,
                                                                 selectedPart!
                                                                     .points ??
-                                                                1) === 1
+                                                                    1,
+                                                            )
+                                                        }}
+                                                        {{
+                                                            getQuestionMaxPoints(
+                                                                question,
+                                                                selectedPart!
+                                                                    .points ??
+                                                                    1,
+                                                            ) === 1
                                                                 ? 'point'
                                                                 : 'points'
                                                         }}
@@ -3224,6 +3353,72 @@ const feedbackContent = computed(() => {
                                                         :placeholder="`List item ${itemIndex + 1}`"
                                                         class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
                                                     />
+                                                </div>
+                                            </div>
+
+                                            <!-- Matching Type -->
+                                            <div
+                                                v-else-if="
+                                                    question.type === 'matching'
+                                                "
+                                                class="max-w-2xl space-y-3"
+                                            >
+                                                <div
+                                                    v-for="(
+                                                        item, itemIndex
+                                                    ) in question.matching_items"
+                                                    :key="item.index"
+                                                    class="grid gap-2 rounded-lg border border-border/40 bg-muted/10 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,0.8fr)] sm:items-center"
+                                                >
+                                                    <label
+                                                        :for="`matching-desktop-${qIndex}-${itemIndex}`"
+                                                        class="text-sm leading-relaxed text-foreground"
+                                                    >
+                                                        <span
+                                                            class="mr-2 text-xs font-semibold text-muted-foreground"
+                                                            >{{
+                                                                itemIndex + 1
+                                                            }}.</span
+                                                        >
+                                                        {{ item.prompt }}
+                                                        <span
+                                                            class="ml-2 text-[11px] text-muted-foreground"
+                                                            >{{
+                                                                item.points
+                                                            }}
+                                                            pts</span
+                                                        >
+                                                    </label>
+                                                    <select
+                                                        :id="`matching-desktop-${qIndex}-${itemIndex}`"
+                                                        :value="
+                                                            getMatchingAnswer(
+                                                                qIndex,
+                                                                itemIndex,
+                                                            )
+                                                        "
+                                                        @change="
+                                                            setMatchingAnswer(
+                                                                qIndex,
+                                                                itemIndex,
+                                                                $event,
+                                                            )
+                                                        "
+                                                        class="w-full rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 text-sm transition-all outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                                                    >
+                                                        <option value="">
+                                                            Select a match
+                                                        </option>
+                                                        <option
+                                                            v-for="option in question.matching_options"
+                                                            :key="option.value"
+                                                            :value="
+                                                                option.value
+                                                            "
+                                                        >
+                                                            {{ option.text }}
+                                                        </option>
+                                                    </select>
                                                 </div>
                                             </div>
 

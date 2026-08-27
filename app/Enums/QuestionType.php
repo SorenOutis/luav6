@@ -7,6 +7,7 @@ enum QuestionType: string
     case MultipleChoice = 'multiple_choice';
     case Identification = 'identification';
     case Enumeration = 'enumeration';
+    case Matching = 'matching';
     case TrueFalse = 'true_false';
     case Essay = 'essay';
 
@@ -16,6 +17,7 @@ enum QuestionType: string
             self::MultipleChoice => 'Multiple Choice',
             self::Identification => 'Identification',
             self::Enumeration => 'Enumeration',
+            self::Matching => 'Matching Type',
             self::TrueFalse => 'True/False',
             self::Essay => 'Essay',
         };
@@ -55,8 +57,13 @@ enum QuestionType: string
         return $this === self::Enumeration;
     }
 
+    public function usesMatchingAnswer(): bool
+    {
+        return $this === self::Matching;
+    }
+
     public function usesTextAnswer(): bool
     {
-        return ! $this->usesChoiceAnswer();
+        return $this === self::Identification || $this === self::Essay;
     }
 }

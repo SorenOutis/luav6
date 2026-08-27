@@ -78,6 +78,12 @@ describe('exams and parts student shell', () => {
         expect(page).toContain('setEnumerationAnswer');
         expect(page).toContain('getQuestionMaxPoints');
         expect(page).toContain('enumeration_items');
+        expect(page).toContain("question.type === 'matching'");
+        expect(page).toContain('getMatchingAnswer');
+        expect(page).toContain('setMatchingAnswer');
+        expect(page).toContain('matching_items');
+        expect(page).toContain('matching_options');
+        expect(page).toContain('Select a match');
         expect(page).not.toContain('{{ formatType(type) }}');
     });
 

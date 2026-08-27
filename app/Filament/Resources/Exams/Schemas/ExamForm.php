@@ -130,8 +130,8 @@ class ExamForm
                                             ->label('Points')
                                             ->numeric()
                                             ->default(fn ($get) => $get('../../points') ?? 1)
-                                            ->required(fn ($get): bool => $get('type') !== QuestionType::Enumeration->value)
-                                            ->visible(fn ($get): bool => $get('type') !== QuestionType::Enumeration->value)
+                                            ->required(fn ($get): bool => ! in_array($get('type'), [QuestionType::Enumeration->value, QuestionType::Matching->value], true))
+                                            ->visible(fn ($get): bool => ! in_array($get('type'), [QuestionType::Enumeration->value, QuestionType::Matching->value], true))
                                             ->columnSpan(1),
                                         Radio::make('grading_method')
                                             ->label('Essay Grading')
@@ -175,6 +175,33 @@ class ExamForm
                                             ->dehydrated(fn ($get): bool => $get('type') === QuestionType::Identification->value)
                                             ->itemLabel(fn (array $state): ?string => $state['answer'] ?? null)
                                             ->addActionLabel('Add accepted answer')
+                                            ->collapsible()
+                                            ->columnSpanFull(),
+                                        Repeater::make('matching_items')
+                                            ->label('Matching Pairs')
+                                            ->helperText('Add each prompt, its correct match, and the points for that pair. Students will see the right-side choices in a different order.')
+                                            ->schema([
+                                                TextInput::make('prompt')
+                                                    ->label('Left Item')
+                                                    ->required()
+                                                    ->maxLength(255),
+                                                TextInput::make('answer')
+                                                    ->label('Correct Match')
+                                                    ->required()
+                                                    ->maxLength(255),
+                                                TextInput::make('points')
+                                                    ->label('Points')
+                                                    ->numeric()
+                                                    ->minValue(0)
+                                                    ->required()
+                                                    ->default(1),
+                                            ])
+                                            ->minItems(1)
+                                            ->columns(3)
+                                            ->visible(fn ($get): bool => $get('type') === QuestionType::Matching->value)
+                                            ->dehydrated(fn ($get): bool => $get('type') === QuestionType::Matching->value)
+                                            ->itemLabel(fn (array $state): ?string => $state['prompt'] ?? null)
+                                            ->addActionLabel('Add matching pair')
                                             ->collapsible()
                                             ->columnSpanFull(),
                                         Repeater::make('enumeration_items')

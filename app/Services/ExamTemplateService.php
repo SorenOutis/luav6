@@ -82,7 +82,18 @@ class ExamTemplateService
         ]);
 
         fputcsv($handle, [
-            'Part V - Essay',
+            'Part V - Matching Type',
+            'Match each item on the left with the best answer on the right.',
+            'Match each SEO pillar with its description.',
+            'matching',
+            '',
+            'Technical SEO=>Crawlability and site structure::2|On-page SEO=>Content and headings::3|Off-page SEO=>External authority signals::5',
+            '10',
+            '',
+        ]);
+
+        fputcsv($handle, [
+            'Part VI - Essay',
             'Answer in complete sentences.',
             'Explain why photosynthesis is important to life on Earth.',
             'essay',
@@ -168,6 +179,21 @@ class ExamTemplateService
                             ];
                         })
                         ->filter(fn (array $item): bool => $item['answer'] !== '')
+                        ->values()
+                        ->all();
+                } elseif ($type->usesMatchingAnswer()) {
+                    $questionData['matching_items'] = collect(explode('|', $correctInput))
+                        ->map(function (string $item): array {
+                            [$prompt, $answerAndPoints] = array_pad(explode('=>', trim($item), 2), 2, '');
+                            [$answer, $points] = array_pad(explode('::', trim($answerAndPoints), 2), 2, '1');
+
+                            return [
+                                'prompt' => trim($prompt),
+                                'answer' => trim($answer),
+                                'points' => (float) ($points !== '' ? $points : 1),
+                            ];
+                        })
+                        ->filter(fn (array $item): bool => $item['prompt'] !== '' && $item['answer'] !== '')
                         ->values()
                         ->all();
                 } elseif ($type->usesChoiceAnswer()) {
