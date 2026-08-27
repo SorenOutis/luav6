@@ -1,854 +1,553 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Head, Link } from '@inertiajs/vue3';
+import { Motion } from '@motionone/vue';
 import {
-    Target,
-    Compass,
-    Sparkles,
-    ShieldCheck,
-    Layers,
-    Mail,
-    Github,
-    Twitter,
-    Linkedin,
-    ArrowUp,
-    GraduationCap,
-    Users,
-    UserCog,
-    CheckCircle2,
-    XCircle,
-    RotateCcw,
     ArrowRight,
+    Check,
+    ClipboardList,
+    Lightbulb,
+    MessageSquare,
+    School,
+    ShieldCheck,
+    UserRound,
 } from 'lucide-vue-next';
-import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue';
+import { computed } from 'vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import WelcomeFooter from '@/components/welcome/WelcomeFooter.vue';
 import WelcomeHeader from '@/components/welcome/WelcomeHeader.vue';
-import { syncLenisWithGsap } from '@/composables/useLenis';
-import { isLowEndDeviceSignal } from '@/lib/device';
-gsap.registerPlugin(ScrollTrigger);
+import { useMobile } from '@/composables/useMobile';
+import { dashboard, login, register } from '@/routes';
 
-defineProps<{
-    canRegister: boolean;
-    totalUsers?: number;
-    totalExams?: number;
-    totalSubmissions?: number;
-}>();
+const props = withDefaults(
+    defineProps<{
+        canRegister: boolean;
+    }>(),
+    {
+        canRegister: true,
+    },
+);
 
-const root = ref<HTMLElement | null>(null);
-let ctx: gsap.Context | null = null;
-let lenisCleanup: (() => void) | null = null;
+const { prefersReducedMotion, isLowEndDevice } = useMobile();
+const reduceMotion = computed(
+    () => prefersReducedMotion.value || isLowEndDevice.value,
+);
 
 const principles = [
     {
-        icon: Target,
-        title: 'Clarity over cleverness',
-        body: 'Interfaces that disappear so the learning shows through. No noise, no spectacle for its own sake.',
+        icon: Check,
+        title: 'Useful before impressive',
+        body: 'Every part of LSI should make classroom work clearer.',
+    },
+    {
+        icon: UserRound,
+        title: 'Teacher control',
+        body: 'Feedback stays reviewable, adjustable, and yours to approve.',
     },
     {
         icon: ShieldCheck,
-        title: 'Trust by design',
-        body: 'Privacy, integrity, and accessibility are not afterthoughts — they shape every decision we make.',
+        title: 'Privacy by default',
+        body: 'Schools keep ownership of their content and learner data.',
+    },
+];
+
+const audiences = [
+    {
+        icon: UserRound,
+        title: 'Teachers',
+        body: 'Create, review, and plan with less friction.',
     },
     {
-        icon: Layers,
-        title: 'Modular at every layer',
-        body: 'From auth to assessment, components compose. Institutions deploy what they need, scale when they want.',
+        icon: MessageSquare,
+        title: 'Learners',
+        body: 'Get feedback that helps them keep going.',
     },
     {
-        icon: Sparkles,
-        title: 'Joyful by default',
-        body: 'Clear progress signals and a Learning Map make achievement feel inevitable — without ever being patronizing.',
+        icon: School,
+        title: 'Schools',
+        body: 'See what is happening across classes and cohorts.',
     },
 ];
 
 const faqs = [
     {
-        q: 'What does LSI stand for?',
-        a: 'Learning Systems Infrastructure — the underlying engine powering everything you see in this product.',
+        question: 'What does LSI stand for?',
+        answer: 'LSI is a learning platform built around the work that happens after an assessment: understanding responses and deciding what to do next.',
     },
     {
-        q: 'Is LSI free for educators?',
-        a: 'Pilot programs are free for verified institutions during the v6 cycle. Get in touch via the contact link below.',
+        question: 'Who is LSI for?',
+        answer: 'LSI is designed for teachers, learners, and schools that want a clearer connection between assessment and follow-up.',
     },
     {
-        q: 'Do students need any special device or software?',
-        a: "No. LSI runs in any modern browser on phones, tablets, or laptops — no installs, no plug-ins. A reliable internet connection is all that's required.",
+        question: 'Do teachers stay in control?',
+        answer: 'Yes. Teachers review and approve feedback and recommendations before they reach learners.',
     },
     {
-        q: 'How is student data protected?',
-        a: 'All submissions are encrypted at rest and in transit. We do not sell data, and institutions retain full ownership of their content.',
+        question: 'How is learner data handled?',
+        answer: 'LSI is designed around school ownership and practical, reviewable use of learner information.',
     },
 ];
-
-// Interactive: role picker
-const activeRole = ref<'educator' | 'student' | 'admin'>('educator');
-const roles = [
-    {
-        key: 'educator' as const,
-        icon: GraduationCap,
-        label: 'Educator',
-        headline: 'Spend less time grading, more time teaching.',
-        body: 'Author exams in minutes, push assignments to whole sections, and watch real-time mastery build through the dashboard.',
-        bullets: [
-            'Section-aware leaderboards',
-            'AI-assisted feedback drafts',
-            'One-click reusable exam parts',
-        ],
-    },
-    {
-        key: 'student' as const,
-        icon: Users,
-        label: 'Student',
-        headline: 'Learn with momentum, not anxiety.',
-        body: 'A clear learning map and steady progress turn each lesson into a checkpoint on a clear journey — instead of a wall of grades.',
-        bullets: [
-            'Personal progress tracking',
-            'A personal learning map',
-            'Achievement milestones',
-        ],
-    },
-    {
-        key: 'admin' as const,
-        icon: UserCog,
-        label: 'Administrator',
-        headline: 'See your whole campus at a glance.',
-        body: 'Filament-powered admin tools give you full visibility into seasons, sections, submissions, and engagement across the institution.',
-        bullets: [
-            'Per-section analytics',
-            'Season & cohort management',
-            'Granular permissions',
-        ],
-    },
-];
-const currentRole = computed(
-    () => roles.find((r) => r.key === activeRole.value)!,
-);
-
-// Interactive: mini quiz demo
-const demoQuestion = {
-    prompt: 'Which of the following best describes formative assessment?',
-    options: [
-        { id: 'a', text: 'A high-stakes ranking exam at the end of a course.' },
-        {
-            id: 'b',
-            text: 'Ongoing checks for understanding that guide further learning.',
-            correct: true,
-        },
-        { id: 'c', text: 'A standardized test administered nationally.' },
-    ],
-};
-const selectedAnswer = ref<string | null>(null);
-const showFeedback = computed(() => selectedAnswer.value !== null);
-const isCorrect = computed(() => {
-    const opt = demoQuestion.options.find((o) => o.id === selectedAnswer.value);
-    return !!opt?.correct;
-});
-const selectAnswer = (id: string) => {
-    if (selectedAnswer.value !== null) return;
-    selectedAnswer.value = id;
-};
-const resetDemo = () => {
-    selectedAnswer.value = null;
-};
 
 const seoJsonLd = computed(() => [
     {
         '@context': 'https://schema.org',
         '@type': 'Organization',
-        name: 'LSI Learning Engine',
-        alternateName: 'Learning Systems Intelligence',
+        name: 'LSI - KOAMISHIN',
+        alternateName: 'LSI',
         description:
-            'A school-ready learning platform for exams, assignments, grades, and AI feedback.',
+            'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
         url: typeof window !== 'undefined' ? window.location.origin : undefined,
     },
     {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
-        mainEntity: faqs.map((f) => ({
+        mainEntity: faqs.map((faq) => ({
             '@type': 'Question',
-            name: f.q,
-            acceptedAnswer: { '@type': 'Answer', text: f.a },
+            name: faq.question,
+            acceptedAnswer: { '@type': 'Answer', text: faq.answer },
         })),
     },
 ]);
 
-onMounted(() => {
-    // Filter-blur scroll reveals on every <section> are a main-thread sink
-    // on phones. Skip the whole GSAP tree on low-end / coarse-pointer.
-    if (isLowEndDeviceSignal()) {
-        return;
-    }
-
-    lenisCleanup = syncLenisWithGsap(ScrollTrigger);
-
-    ctx = gsap.context(() => {
-        gsap.from('.about-hero > *', {
-            y: 40,
-            opacity: 0,
-            filter: 'blur(12px)',
-            duration: 1.1,
-            ease: 'expo.out',
-            stagger: 0.08,
-        });
-
-        gsap.utils.toArray<HTMLElement>('.reveal-block').forEach((el) => {
-            gsap.from(el, {
-                y: 40,
-                opacity: 0,
-                filter: 'blur(10px)',
-                duration: 0.9,
-                ease: 'expo.out',
-                scrollTrigger: { trigger: el, start: 'top 85%' },
-            });
-        });
-
-        // ─── About credit fade in ───
-        const creditEl = root.value?.querySelector('.about-credit');
-        if (creditEl) {
-            gsap.from(creditEl, {
-                y: 20,
-                opacity: 0,
-                filter: 'blur(4px)',
-                duration: 0.8,
-                ease: 'expo.out',
-                scrollTrigger: {
-                    trigger: creditEl,
-                    start: 'top 90%',
-                    toggleActions: 'play none none none',
-                },
-            });
-        }
-
-        nextTick(() => {
-            const sections = Array.from(
-                root.value?.querySelectorAll<HTMLElement>('main > section') ??
-                    [],
-            );
-            const viewportH = window.innerHeight;
-            sections.forEach((section) => {
-                if (section.offsetHeight < 40) return;
-                gsap.set(section, { willChange: 'transform, opacity, filter' });
-                const hideUp = () =>
-                    gsap.to(section, {
-                        opacity: 0,
-                        y: -40,
-                        filter: 'blur(10px)',
-                        duration: 0.55,
-                        ease: 'power2.in',
-                        overwrite: 'auto',
-                    });
-                const hideDown = () =>
-                    gsap.to(section, {
-                        opacity: 0,
-                        y: 40,
-                        filter: 'blur(10px)',
-                        duration: 0.55,
-                        ease: 'power2.in',
-                        overwrite: 'auto',
-                    });
-                const show = () =>
-                    gsap.to(section, {
-                        opacity: 1,
-                        y: 0,
-                        filter: 'blur(0px)',
-                        duration: 0.7,
-                        ease: 'expo.out',
-                        overwrite: 'auto',
-                    });
-
-                const rect = section.getBoundingClientRect();
-                if (rect.top > viewportH * 0.95) {
-                    gsap.set(section, {
-                        opacity: 0,
-                        y: 40,
-                        filter: 'blur(10px)',
-                    });
-                }
-                ScrollTrigger.create({
-                    trigger: section,
-                    start: 'bottom top+=40',
-                    end: 'bottom top',
-                    onLeave: hideUp,
-                    onEnterBack: show,
-                });
-                ScrollTrigger.create({
-                    trigger: section,
-                    start: 'top bottom-=40',
-                    end: 'top bottom',
-                    onEnter: show,
-                    onLeaveBack: hideDown,
-                });
-            });
-        });
-    }, root);
-});
-
-onBeforeUnmount(() => {
-    ctx?.revert();
-    ctx = null;
-    lenisCleanup?.();
-    lenisCleanup = null;
-});
-
-const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+const revealTransition = (delay = 0) =>
+    reduceMotion.value
+        ? { duration: 0 }
+        : { duration: 0.6, easing: [0.23, 1, 0.32, 1], delay };
 </script>
 
 <template>
-    <Head title="About" />
+    <Head title="About LSI - KOAMISHIN" />
     <SeoHead
-        :description="'LSI is a school-ready assessment and learning platform. We turn every exam, assignment, and quiz into a feedback loop students actually want to engage with.'"
+        description="Learn why LSI exists and how it helps schools connect assessment, feedback, and the next lesson."
         type="article"
         :jsonld="seoJsonLd"
     />
 
     <div
-        ref="root"
-        class="about-root relative min-h-screen w-full bg-background font-sans text-foreground selection:bg-primary/20"
+        class="about-root min-h-screen overflow-x-hidden bg-[#f8f7f2] font-sans text-[#17201f] selection:bg-primary/20 dark:bg-background dark:text-foreground"
     >
         <WelcomeHeader
-            :can-register="canRegister"
+            :can-register="props.canRegister"
             :auth="$page.props.auth"
-            :dashboard="() => '/dashboard'"
-            :login="() => '/login'"
-            :register="() => '/register'"
+            :dashboard="() => dashboard().url"
+            :login="() => login().url"
+            :register="() => register().url"
             :is-booted="true"
-            hide-scroll-nav
         />
 
         <main
-            class="relative z-10 mx-auto max-w-[1500px] px-6 pt-12 pb-24 lg:px-16 lg:pt-20"
+            class="mx-auto flex max-w-[1440px] flex-col px-4 pt-8 pb-16 sm:px-6 sm:pt-12 sm:pb-24 lg:px-16 lg:pt-16 lg:pb-32"
         >
-            <!-- Hero -->
             <section
-                class="about-hero grid grid-cols-1 items-start gap-10 lg:grid-cols-12 lg:gap-16"
+                class="grid items-center gap-10 border-b border-border/70 pb-16 sm:gap-14 sm:pb-20 lg:grid-cols-[1fr_0.9fr] lg:gap-20 lg:pb-24"
+                aria-labelledby="about-heading"
             >
-                <div class="flex flex-col gap-6 lg:col-span-8">
-                    <div
-                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
+                <Motion
+                    :initial="reduceMotion ? false : { opacity: 0, y: 20 }"
+                    :animate="{ opacity: 1, y: 0 }"
+                    :transition="revealTransition()"
+                    class="max-w-2xl"
+                >
+                    <p
+                        class="mb-7 text-xs font-medium tracking-[0.16em] text-primary uppercase"
                     >
-                        <span class="text-sm font-medium text-primary"
-                            >About LSI</span
-                        >
-                    </div>
+                        About LSI
+                    </p>
                     <h1
-                        class="text-4xl leading-[0.95] font-bold tracking-tighter sm:text-5xl lg:text-7xl"
+                        id="about-heading"
+                        class="max-w-2xl font-serif text-[3.25rem] leading-[0.95] tracking-[-0.055em] text-foreground sm:text-6xl lg:text-[5.6rem]"
                     >
-                        Learning,<br />
-                        <span class="text-primary">re-imagined</span><br />
-                        from the ground up.
+                        We build tools for the next lesson.
                     </h1>
                     <p
-                        class="max-w-xl text-base leading-relaxed text-muted-foreground lg:text-lg"
+                        class="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg"
                     >
-                        LSI is an academic platform built for institutions that
-                        take learning seriously. We remove friction between
-                        teachers, students, and the moments that actually
-                        matter.
+                        LSI helps teachers turn classroom evidence into clearer
+                        decisions, useful feedback, and better follow-up.
                     </p>
-                </div>
-                <div class="flex justify-end lg:col-span-4">
-                    <div class="grid w-full grid-cols-3 gap-4 lg:max-w-md">
-                        <div
-                            v-for="(stat, i) in [
-                                { label: 'Learners', value: totalUsers ?? 144 },
-                                { label: 'Exams', value: totalExams ?? 7 },
-                                {
-                                    label: 'Submissions',
-                                    value: totalSubmissions ?? 719,
-                                },
-                            ]"
-                            :key="i"
-                            class="flex flex-col gap-2 rounded-lg border border-border/20 bg-card/30 p-4 lg:p-5"
-                        >
-                            <span
-                                class="text-xs font-medium text-muted-foreground/70"
-                                >{{ stat.label }}</span
-                            >
-                            <span
-                                class="text-2xl font-bold tracking-tight tabular-nums lg:text-3xl"
-                            >
-                                {{ stat.value.toLocaleString() }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Mission / Vision -->
-            <section
-                class="reveal-block mt-24 grid grid-cols-1 gap-12 lg:mt-40 lg:grid-cols-2 lg:gap-20"
-            >
-                <article
-                    class="flex flex-col gap-4 border-l-2 border-primary pl-6 lg:pl-8"
-                >
-                    <div class="flex items-center gap-3">
-                        <Compass class="h-4 w-4 text-primary" />
-                        <span class="text-sm font-semibold text-primary"
-                            >Mission</span
-                        >
-                    </div>
-                    <h2
-                        class="text-2xl leading-tight font-bold tracking-tight lg:text-4xl"
-                    >
-                        Make assessment a tool for<br />
-                        <span class="text-primary">growth</span>, not
-                        surveillance.
-                    </h2>
-                    <p
-                        class="max-w-lg text-sm leading-relaxed text-muted-foreground/80 lg:text-base"
-                    >
-                        We believe great assessment is generous: it teaches as
-                        it measures. Our platform turns every exam, assignment,
-                        and quiz into a feedback loop students actually want to
-                        engage with.
+                    <p class="mt-5 text-sm font-medium text-foreground/80">
+                        Built for teachers. Designed for schools.
                     </p>
-                </article>
+                </Motion>
 
-                <article
-                    class="flex flex-col gap-4 border-l-2 border-border/20 pl-6 lg:pl-8"
-                >
-                    <div class="flex items-center gap-3">
-                        <Layers class="h-4 w-4 text-muted-foreground/40" />
-                        <span
-                            class="text-sm font-semibold text-muted-foreground/50"
-                            >Vision</span
-                        >
-                    </div>
-                    <h2
-                        class="text-2xl leading-tight font-bold tracking-tight lg:text-4xl"
-                    >
-                        A learning platform that feels less like software and
-                        more like a <span class="text-primary">place</span>.
-                    </h2>
-                    <p
-                        class="max-w-lg text-sm leading-relaxed text-muted-foreground/80 lg:text-base"
-                    >
-                        Classrooms, dashboards, and learning maps that fade into
-                        the background — leaving the human relationships at the
-                        center of every cohort.
-                    </p>
-                </article>
-            </section>
-
-            <!-- Principles -->
-            <section class="mt-24 lg:mt-40">
-                <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div
-                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
-                    >
-                        <span class="text-sm font-medium text-primary"
-                            >Principles</span
-                        >
-                    </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
-                        What we believe
-                    </h2>
-                </div>
-                <div
-                    class="grid grid-cols-1 gap-px bg-border/10 sm:grid-cols-2 lg:grid-cols-4"
+                <Motion
+                    :initial="reduceMotion ? false : { opacity: 0, y: 20 }"
+                    :animate="{ opacity: 1, y: 0 }"
+                    :transition="revealTransition(0.08)"
+                    class="flex justify-center lg:justify-end"
                 >
                     <div
-                        v-for="p in principles"
-                        :key="p.title"
-                        class="reveal-block flex flex-col gap-4 bg-background p-6 transition-colors hover:bg-muted/[0.03] lg:p-8"
+                        class="w-full max-w-[430px] rotate-[1deg] border border-border/50 bg-card px-7 py-8 shadow-[0_18px_28px_-20px_rgba(26,26,30,0.5)] sm:px-10 sm:py-10"
                     >
-                        <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg border border-primary/20 bg-primary/5"
-                        >
-                            <component
-                                :is="p.icon"
-                                class="h-5 w-5 text-primary"
-                            />
-                        </div>
-                        <h3
-                            class="text-base font-bold tracking-tight lg:text-lg"
-                        >
-                            {{ p.title }}
-                        </h3>
                         <p
-                            class="text-sm leading-relaxed text-muted-foreground"
+                            class="font-serif text-xl tracking-[0.04em] text-foreground"
                         >
-                            {{ p.body }}
+                            A BETTER QUESTION
                         </p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Interactive: Role Picker -->
-            <section class="mt-24 lg:mt-40">
-                <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div
-                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
-                    >
-                        <span class="text-sm font-medium text-primary"
-                            >For Everyone</span
-                        >
-                    </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
-                        What LSI does for <span class="text-primary">you</span>
-                    </h2>
-                    <p class="max-w-xl text-muted-foreground">
-                        Pick the role that fits — see what changes on day one.
-                    </p>
-                </div>
-                <div
-                    class="reveal-block overflow-hidden rounded-xl border border-border/20 bg-gradient-to-br from-muted/[0.03] to-transparent"
-                >
-                    <!-- Tabs -->
-                    <div
-                        role="tablist"
-                        class="grid grid-cols-3 border-b border-border/15"
-                    >
-                        <button
-                            v-for="r in roles"
-                            :key="r.key"
-                            role="tab"
-                            :aria-selected="activeRole === r.key"
-                            @click="activeRole = r.key"
-                            class="group relative flex items-center justify-center gap-2 px-3 py-4 text-sm font-semibold transition-colors"
-                            :class="
-                                activeRole === r.key
-                                    ? 'bg-background text-foreground'
-                                    : 'text-muted-foreground hover:text-foreground'
-                            "
-                        >
-                            <component
-                                :is="r.icon"
-                                class="h-4 w-4"
-                                :class="
-                                    activeRole === r.key ? 'text-primary' : ''
-                                "
-                            />
-                            <span>{{ r.label }}</span>
-                            <span
-                                class="absolute inset-x-0 bottom-0 h-0.5 bg-primary transition-transform duration-300"
-                                :class="
-                                    activeRole === r.key
-                                        ? 'scale-x-100'
-                                        : 'scale-x-0'
-                                "
-                            ></span>
-                        </button>
-                    </div>
-                    <!-- Panel -->
-                    <div
-                        :key="activeRole"
-                        class="role-panel grid grid-cols-1 gap-8 p-6 lg:grid-cols-[1.4fr_1fr] lg:gap-12 lg:p-10"
-                    >
-                        <div class="flex flex-col gap-4">
-                            <span class="text-xs font-semibold text-primary">{{
-                                currentRole.label
-                            }}</span>
-                            <h3
-                                class="text-2xl leading-tight font-bold tracking-tight lg:text-3xl"
-                            >
-                                {{ currentRole.headline }}
-                            </h3>
-                            <p
-                                class="max-w-xl text-sm leading-relaxed text-muted-foreground lg:text-base"
-                            >
-                                {{ currentRole.body }}
-                            </p>
-                        </div>
-                        <ul
-                            class="flex flex-col gap-3 lg:border-l lg:border-border/20 lg:pl-8"
-                        >
-                            <li
-                                v-for="(b, i) in currentRole.bullets"
-                                :key="b"
-                                class="flex items-start gap-3 text-sm"
-                                :style="{ animationDelay: `${i * 80}ms` }"
-                            >
-                                <span
-                                    class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
-                                ></span>
-                                <span class="text-foreground/90">{{ b }}</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Interactive: Try a question -->
-            <section class="mt-24 lg:mt-40">
-                <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div
-                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
-                    >
-                        <span class="text-sm font-medium text-primary"
-                            >Try It</span
-                        >
-                    </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
-                        A taste of the platform
-                    </h2>
-                    <p class="max-w-xl text-muted-foreground">
-                        A 10-second demo of what an LSI question feels like —
-                        instant feedback, no scoreboard.
-                    </p>
-                </div>
-                <div
-                    class="reveal-block grid grid-cols-1 overflow-hidden rounded-xl border border-border/15 bg-border/15 lg:grid-cols-[1fr_320px]"
-                >
-                    <div class="flex flex-col gap-6 bg-background p-6 lg:p-10">
-                        <div class="flex items-center justify-between">
-                            <span
-                                class="text-xs font-medium text-muted-foreground"
-                                >Question · 01</span
-                            >
-                            <span class="text-xs font-semibold text-primary"
-                                >Pedagogy 101</span
-                            >
-                        </div>
-                        <h3
-                            class="text-lg leading-snug font-bold tracking-tight lg:text-xl"
-                        >
-                            {{ demoQuestion.prompt }}
-                        </h3>
-                        <div class="flex flex-col gap-3">
-                            <button
-                                v-for="opt in demoQuestion.options"
-                                :key="opt.id"
-                                type="button"
-                                @click="selectAnswer(opt.id)"
-                                :disabled="selectedAnswer !== null"
-                                class="group relative flex items-start gap-4 rounded-lg border p-4 text-left transition-all"
-                                :class="[
-                                    selectedAnswer === null &&
-                                        'cursor-pointer border-border/30 hover:border-primary/60 hover:bg-primary/5',
-                                    selectedAnswer !== null &&
-                                        opt.correct &&
-                                        'border-emerald-500/60 bg-emerald-500/5',
-                                    selectedAnswer === opt.id &&
-                                        !opt.correct &&
-                                        'border-rose-500/60 bg-rose-500/5',
-                                    selectedAnswer !== null &&
-                                        selectedAnswer !== opt.id &&
-                                        !opt.correct &&
-                                        'border-border/20 opacity-50',
-                                ]"
-                            >
-                                <span
-                                    class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border/40 text-xs font-medium"
-                                    >{{ opt.id }}</span
-                                >
-                                <span
-                                    class="flex-1 text-sm leading-snug font-medium lg:text-[15px]"
-                                    >{{ opt.text }}</span
-                                >
-                                <CheckCircle2
-                                    v-if="
-                                        selectedAnswer !== null && opt.correct
-                                    "
-                                    class="h-5 w-5 shrink-0 text-emerald-500"
+                        <div class="mt-2 h-px w-36 bg-foreground/70"></div>
+                        <div class="mt-9 space-y-7">
+                            <div class="flex gap-4">
+                                <ClipboardList
+                                    class="mt-1 h-5 w-5 shrink-0 text-primary"
+                                    stroke-width="1.4"
+                                    aria-hidden="true"
                                 />
-                                <XCircle
-                                    v-else-if="
-                                        selectedAnswer === opt.id &&
-                                        !opt.correct
-                                    "
-                                    class="h-5 w-5 shrink-0 text-rose-500"
-                                />
-                            </button>
-                        </div>
-                    </div>
-                    <aside
-                        class="flex flex-col justify-between gap-4 bg-background p-6 lg:p-8"
-                    >
-                        <div class="flex flex-col gap-3">
-                            <span
-                                class="text-xs font-semibold text-muted-foreground"
-                                >Live feedback</span
-                            >
-                            <div
-                                v-if="!showFeedback"
-                                class="text-sm leading-relaxed text-muted-foreground"
-                            >
-                                Pick an answer to see how LSI replies — students
-                                get the same kind of instant, supportive
-                                feedback after every prompt.
-                            </div>
-                            <div
-                                v-else-if="isCorrect"
-                                class="flex flex-col gap-2"
-                            >
-                                <div
-                                    class="flex items-center gap-2 text-emerald-500"
-                                >
-                                    <CheckCircle2 class="h-5 w-5" />
-                                    <span class="text-sm font-semibold"
-                                        >Correct</span
-                                    >
-                                </div>
                                 <p
-                                    class="text-sm leading-relaxed text-muted-foreground"
+                                    class="font-serif text-xl leading-snug text-foreground"
                                 >
-                                    Exactly. Formative assessment is about
-                                    <span class="font-semibold text-foreground"
-                                        >guiding</span
-                                    >
-                                    learning while it's still happening — not
-                                    ranking it after.
+                                    What did learners understand?
                                 </p>
                             </div>
-                            <div v-else class="flex flex-col gap-2">
-                                <div
-                                    class="flex items-center gap-2 text-rose-500"
-                                >
-                                    <XCircle class="h-5 w-5" />
-                                    <span class="text-sm font-semibold"
-                                        >Not quite</span
-                                    >
-                                </div>
+                            <div class="flex gap-4">
+                                <Lightbulb
+                                    class="mt-1 h-5 w-5 shrink-0 text-primary"
+                                    stroke-width="1.4"
+                                    aria-hidden="true"
+                                />
                                 <p
-                                    class="text-sm leading-relaxed text-muted-foreground"
+                                    class="font-serif text-xl leading-snug text-foreground"
                                 >
-                                    That describes
-                                    <span class="font-semibold text-foreground"
-                                        >summative</span
-                                    >
-                                    assessment. Formative happens
-                                    <em>during</em> learning to inform what
-                                    comes next.
+                                    What should we teach next?
                                 </p>
                             </div>
                         </div>
-                        <button
-                            v-if="showFeedback"
-                            @click="resetDemo"
-                            class="inline-flex items-center gap-2 self-start rounded-lg border border-border/30 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
-                        >
-                            <RotateCcw class="h-3.5 w-3.5" />
-                            Try again
-                        </button>
-                    </aside>
-                </div>
-            </section>
-
-            <!-- FAQ -->
-            <section class="mt-24 lg:mt-40">
-                <div class="reveal-block mb-8 flex flex-col gap-2 lg:mb-10">
-                    <div
-                        class="inline-flex items-center gap-2 self-start rounded-full bg-primary/10 px-4 py-1.5"
-                    >
-                        <span class="text-sm font-medium text-primary"
-                            >FAQ</span
-                        >
-                    </div>
-                    <h2 class="text-3xl font-bold tracking-tight lg:text-5xl">
-                        Common questions
-                    </h2>
-                </div>
-                <div
-                    class="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border/15 bg-border/15 lg:grid-cols-2"
-                >
-                    <details
-                        v-for="f in faqs"
-                        :key="f.q"
-                        class="group cursor-pointer bg-background p-6 lg:p-8"
-                    >
-                        <summary
-                            class="flex list-none items-center justify-between gap-4"
-                        >
-                            <h3 class="text-sm font-semibold lg:text-base">
-                                {{ f.q }}
-                            </h3>
-                            <span
-                                class="text-xl font-semibold text-primary transition-transform group-open:rotate-45"
-                                >+</span
-                            >
-                        </summary>
                         <p
-                            class="mt-3 text-sm leading-relaxed text-muted-foreground"
+                            class="mt-10 border-t border-border/60 pt-4 text-xs text-muted-foreground"
                         >
-                            {{ f.a }}
+                            Assessment is the beginning of the conversation.
                         </p>
-                    </details>
-                </div>
+                    </div>
+                </Motion>
             </section>
 
-            <!-- CTA -->
-            <section
-                class="reveal-block relative mt-24 overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.06] via-transparent to-transparent p-8 lg:mt-40 lg:p-16"
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
             >
-                <div
-                    class="relative grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.4fr_1fr]"
+                <section
+                    class="grid gap-10 border-b border-border/70 py-16 sm:py-20 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20"
+                    aria-labelledby="why-heading"
                 >
-                    <div class="flex flex-col gap-4">
-                        <span class="text-xs font-semibold text-primary"
-                            >Get in touch</span
+                    <div>
+                        <p
+                            class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
                         >
+                            Why LSI exists
+                        </p>
                         <h2
-                            class="text-3xl leading-tight font-bold tracking-tight lg:text-5xl"
+                            id="why-heading"
+                            class="mt-4 max-w-xl font-serif text-3xl leading-[1.08] tracking-[-0.04em] text-foreground sm:text-4xl lg:text-5xl"
                         >
-                            Bring LSI to your<br />institution.
+                            Assessment should help the next lesson.
                         </h2>
                         <p
-                            class="max-w-xl text-sm leading-relaxed text-muted-foreground"
+                            class="mt-6 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base"
                         >
-                            We pilot with a small number of institutions every
-                            cycle. If your school cares about meaningful
-                            assessment, we'd love to talk.
+                            Too often, assessment ends with a score. LSI helps
+                            teachers see the response, understand the pattern,
+                            and decide what to do while learning is still
+                            happening.
                         </p>
                     </div>
-                    <div class="flex flex-col gap-4">
-                        <a
-                            href="mailto:hello@koamishin.dev"
-                            class="group inline-flex items-center justify-between gap-3 rounded-lg bg-foreground px-5 py-4 text-sm font-semibold text-background transition-colors hover:bg-primary"
+                    <ol
+                        class="divide-y divide-border/70 border-y border-border/70"
+                    >
+                        <li
+                            v-for="(step, index) in [
+                                'Response',
+                                'Understanding',
+                                'Next lesson',
+                            ]"
+                            :key="step"
+                            class="flex items-center gap-4 py-5"
                         >
-                            <span class="flex items-center gap-2">
-                                <Mail class="h-4 w-4" />
-                                hello@koamishin.dev
-                            </span>
-                            <ArrowRight
-                                class="h-4 w-4 transition-transform group-hover:translate-x-1"
-                            />
-                        </a>
-                        <div class="flex items-center gap-2">
-                            <a
-                                v-for="s in [
-                                    { icon: Github, label: 'GitHub' },
-                                    { icon: Twitter, label: 'Twitter' },
-                                    { icon: Linkedin, label: 'LinkedIn' },
-                                ]"
-                                :key="s.label"
-                                href="#"
-                                :aria-label="s.label"
-                                class="flex h-10 w-10 items-center justify-center rounded-lg border border-border/30 transition-colors hover:border-primary/60 hover:bg-primary/5"
+                            <span
+                                class="flex h-7 w-7 items-center justify-center rounded-full border border-primary text-xs font-medium text-primary"
+                                >{{ index + 1 }}</span
+                            >
+                            <span class="font-serif text-xl text-foreground">{{
+                                step
+                            }}</span>
+                        </li>
+                    </ol>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    class="border-b border-border/70 py-16 sm:py-20"
+                    aria-labelledby="principles-heading"
+                >
+                    <h2
+                        id="principles-heading"
+                        class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                    >
+                        What guides the work.
+                    </h2>
+                    <div
+                        class="mt-10 grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
+                    >
+                        <article
+                            v-for="principle in principles"
+                            :key="principle.title"
+                            class="flex gap-5 px-2 py-7 sm:px-6 md:flex-col md:py-8 lg:px-8"
+                        >
+                            <div
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-foreground/70 text-foreground"
                             >
                                 <component
-                                    :is="s.icon"
-                                    class="h-4 w-4 text-muted-foreground"
+                                    :is="principle.icon"
+                                    class="h-5 w-5"
+                                    stroke-width="1.5"
+                                    aria-hidden="true"
                                 />
-                            </a>
-                            <button
-                                @click="scrollTop"
-                                class="ml-auto inline-flex items-center gap-2 rounded-lg border border-border/30 px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                            </div>
+                            <div>
+                                <h3
+                                    class="text-sm font-semibold text-foreground"
+                                >
+                                    {{ principle.title }}
+                                </h3>
+                                <p
+                                    class="mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground"
+                                >
+                                    {{ principle.body }}
+                                </p>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    class="border-b border-border/70 py-16 sm:py-20"
+                    aria-labelledby="audience-heading"
+                >
+                    <h2
+                        id="audience-heading"
+                        class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                    >
+                        Built around the people doing the work.
+                    </h2>
+                    <div
+                        class="mt-10 grid divide-y divide-border/70 border-y border-border/70 md:grid-cols-3 md:divide-x md:divide-y-0"
+                    >
+                        <article
+                            v-for="audience in audiences"
+                            :key="audience.title"
+                            class="flex flex-col items-center px-6 py-8 text-center"
+                        >
+                            <component
+                                :is="audience.icon"
+                                class="h-10 w-10 text-foreground"
+                                stroke-width="1.35"
+                                aria-hidden="true"
+                            />
+                            <h3
+                                class="mt-5 text-base font-semibold text-foreground"
                             >
-                                <span>Top</span>
-                                <ArrowUp class="h-3.5 w-3.5" />
-                            </button>
+                                {{ audience.title }}
+                            </h3>
+                            <p
+                                class="mt-2 max-w-[180px] text-sm leading-relaxed text-muted-foreground"
+                            >
+                                {{ audience.body }}
+                            </p>
+                        </article>
+                    </div>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    class="my-16 rounded-2xl bg-[#17201f] px-5 py-8 text-[#f8f7f2] sm:my-20 sm:px-10 sm:py-10"
+                    aria-labelledby="loop-heading"
+                >
+                    <h2
+                        id="loop-heading"
+                        class="font-serif text-2xl tracking-[-0.03em] sm:text-3xl"
+                    >
+                        From response to next step.
+                    </h2>
+                    <div class="mt-8 grid gap-8 md:grid-cols-3 md:gap-4">
+                        <article
+                            v-for="(step, index) in [
+                                {
+                                    icon: ClipboardList,
+                                    text: 'A learner answers.',
+                                },
+                                {
+                                    icon: MessageSquare,
+                                    text: 'A teacher sees the pattern.',
+                                },
+                                {
+                                    icon: Lightbulb,
+                                    text: 'The next lesson gets clearer.',
+                                },
+                            ]"
+                            :key="step.text"
+                            class="relative flex flex-col items-center text-center md:items-start md:text-left"
+                        >
+                            <div
+                                class="flex h-12 w-12 items-center justify-center rounded-full border border-primary/70 text-[#b8e3d8]"
+                            >
+                                <component
+                                    :is="step.icon"
+                                    class="h-5 w-5"
+                                    stroke-width="1.4"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <ArrowRight
+                                v-if="index < 2"
+                                class="hidden h-4 w-4 text-primary md:absolute md:top-6 md:right-5 md:block"
+                                aria-hidden="true"
+                            />
+                            <p
+                                class="mt-4 max-w-xs text-sm leading-relaxed text-[#f8f7f2]/80"
+                            >
+                                {{ step.text }}
+                            </p>
+                        </article>
+                    </div>
+                    <p
+                        class="mt-8 text-center text-xs text-[#b8e3d8] md:text-left"
+                    >
+                        The point is not more data. It is a more useful next
+                        lesson.
+                    </p>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    id="faq"
+                    class="scroll-mt-32 border-y border-border/70 py-16 sm:py-20"
+                    aria-labelledby="faq-heading"
+                >
+                    <h2
+                        id="faq-heading"
+                        class="text-center font-serif text-3xl tracking-[-0.035em] text-foreground sm:text-4xl"
+                    >
+                        Questions, answered.
+                    </h2>
+                    <div
+                        class="mx-auto mt-8 max-w-3xl divide-y divide-border/70 border-y border-border/70"
+                    >
+                        <details
+                            v-for="faq in faqs"
+                            :key="faq.question"
+                            class="group py-5"
+                        >
+                            <summary
+                                class="flex cursor-pointer list-none items-center justify-between gap-6 text-sm font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                            >
+                                {{ faq.question }}
+                                <span
+                                    class="text-xl font-normal text-muted-foreground transition-transform group-open:rotate-45"
+                                    aria-hidden="true"
+                                    >+</span
+                                >
+                            </summary>
+                            <p
+                                class="max-w-2xl pt-3 pr-10 text-sm leading-relaxed text-muted-foreground"
+                            >
+                                {{ faq.answer }}
+                            </p>
+                        </details>
+                    </div>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="reduceMotion ? false : { opacity: 0, y: 24 }"
+                :while-in-view="reduceMotion ? undefined : { opacity: 1, y: 0 }"
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition()"
+            >
+                <section
+                    id="contact"
+                    class="mt-16 scroll-mt-32 rounded-2xl bg-[#17201f] px-6 py-10 text-[#f8f7f2] sm:mt-20 sm:px-10 sm:py-12 lg:px-12"
+                    aria-labelledby="contact-heading"
+                >
+                    <div
+                        class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between"
+                    >
+                        <div>
+                            <p
+                                class="text-xs font-medium tracking-[0.16em] text-[#b8e3d8] uppercase"
+                            >
+                                Start with the next lesson
+                            </p>
+                            <h2
+                                id="contact-heading"
+                                class="mt-3 max-w-xl font-serif text-3xl leading-tight tracking-[-0.03em] sm:text-4xl"
+                            >
+                                If assessment matters to your school, let’s
+                                talk.
+                            </h2>
+                            <p
+                                class="mt-4 text-sm text-[#f8f7f2]/70 sm:text-base"
+                            >
+                                Start with a teacher, a class, or a whole
+                                school.
+                            </p>
+                        </div>
+                        <div class="flex flex-col gap-3 sm:flex-row">
+                            <Link
+                                v-if="$page.props.auth?.user"
+                                :href="dashboard().url"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                            >
+                                Open dashboard
+                                <ArrowRight
+                                    class="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                            <Link
+                                v-else-if="props.canRegister"
+                                :href="register().url"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                            >
+                                Create a free account
+                                <ArrowRight
+                                    class="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            </Link>
+                            <a
+                                href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
+                                class="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#f8f7f2]/45 px-5 text-sm font-medium text-[#f8f7f2] transition-colors hover:border-[#f8f7f2] hover:bg-[#f8f7f2]/10 focus-visible:ring-2 focus-visible:ring-[#f8f7f2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                                >Contact sales</a
+                            >
                         </div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </Motion>
         </main>
-
-        <!-- Developed by credit -->
-        <div class="about-credit flex justify-center pb-8">
-            <span
-                class="inline-flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] text-muted-foreground/60 uppercase"
-            >
-                <span class="h-px w-6 bg-border/40"></span>
-                Developed by
-                <span
-                    class="font-black tracking-[0.3em] text-muted-foreground/80"
-                    >KOAMISHIN</span
-                >
-            </span>
-        </div>
 
         <WelcomeFooter />
     </div>
@@ -857,50 +556,5 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 <style scoped>
 details > summary::-webkit-details-marker {
     display: none;
-}
-
-.role-panel {
-    animation: rolePanelIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-.role-panel li {
-    animation: roleBulletIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-@keyframes rolePanelIn {
-    from {
-        opacity: 0;
-        transform: translateY(12px);
-        filter: blur(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-        filter: blur(0);
-    }
-}
-@keyframes roleBulletIn {
-    from {
-        opacity: 0;
-        transform: translateX(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-@media (prefers-reduced-motion: reduce) {
-    .role-panel,
-    .role-panel li {
-        animation: none;
-    }
-}
-</style>
-
-<style>
-/* Force Inter on the about page regardless of dashboard font presets.
-   Uses higher specificity than :root[data-font-preset] .font-sans (0-3-1 vs 0-3-0).
-   The * selector ensures child elements with font-sans are also overridden. */
-html[data-font-preset] .about-root.font-sans,
-html[data-font-preset] .about-root.font-sans * {
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
 }
 </style>

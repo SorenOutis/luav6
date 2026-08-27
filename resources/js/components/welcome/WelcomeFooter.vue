@@ -33,7 +33,7 @@ const scrollTop = () => {
                         href="/"
                         class="font-serif text-2xl tracking-[-0.03em] text-foreground"
                     >
-                        LSI — KOAMISHIN
+                        LSI - KOAMISHIN
                     </Link>
                     <p
                         class="mt-4 text-sm leading-relaxed text-muted-foreground"

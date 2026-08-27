@@ -34,84 +34,84 @@ const terminalQueue: any[] = [];
 const terminalPool = [
     {
         module: 'ASSESSMENT',
-        message: 'Assessment batch processed — 12 learner submissions reviewed',
+        message: 'Assessment batch processed - 12 learner submissions reviewed',
         type: 'success' as const,
     },
     {
         module: 'INSIGHTS',
-        message: 'Progress trends refreshed — weak skill clusters detected',
+        message: 'Progress trends refreshed - weak skill clusters detected',
         type: 'info' as const,
     },
     {
         module: 'AI_REVIEW',
         message:
-            'Rubric-aligned scoring engine loaded — confidence within threshold',
+            'Rubric-aligned scoring engine loaded - confidence within threshold',
         type: 'success' as const,
     },
     {
         module: 'SESSION',
-        message: 'Active classroom session synced — learner activity updated',
+        message: 'Active classroom session synced - learner activity updated',
         type: 'info' as const,
     },
     {
         module: 'RESULTS',
-        message: 'Timed assessment finalized — results and feedback released',
+        message: 'Timed assessment finalized - results and feedback released',
         type: 'success' as const,
     },
     {
         module: 'FEEDBACK',
-        message: 'Targeted feedback generated — next-step suggestions prepared',
+        message: 'Targeted feedback generated - next-step suggestions prepared',
         type: 'success' as const,
     },
     {
         module: 'NOTICE',
-        message: 'Pending submissions detected — teacher review queue updated',
+        message: 'Pending submissions detected - teacher review queue updated',
         type: 'warn' as const,
     },
     {
         module: 'ANALYTICS',
         message:
-            'Performance dashboard recalculated — mastery indicators refreshed',
+            'Performance dashboard recalculated - mastery indicators refreshed',
         type: 'info' as const,
     },
     {
         module: 'ASSIGNMENT',
-        message: 'Assignment checkpoint reached — submission status tracked',
+        message: 'Assignment checkpoint reached - submission status tracked',
         type: 'warn' as const,
     },
     {
         module: 'CACHE',
-        message: 'Learning snapshot cached — analytics ready for inspection',
+        message: 'Learning snapshot cached - analytics ready for inspection',
         type: 'info' as const,
     },
     {
         module: 'QUEUE',
         message:
-            'Background evaluation jobs completed — no failed tasks reported',
+            'Background evaluation jobs completed - no failed tasks reported',
         type: 'success' as const,
     },
     {
         module: 'SCORING',
         message:
-            'Rubric criteria applied — explanation trace attached to results',
+            'Rubric criteria applied - explanation trace attached to results',
         type: 'success' as const,
     },
     {
         module: 'MONITOR',
         message:
-            'Learning services stable — assessment and feedback flows healthy',
+            'Learning services stable - assessment and feedback flows healthy',
         type: 'success' as const,
     },
     {
         module: 'AI_REVIEW',
         message:
-            'Short-answer analysis completed — response intent matched successfully',
+            'Short-answer analysis completed - response intent matched successfully',
         type: 'info' as const,
     },
     {
         module: 'PROFILE',
         message:
-            'New learner profile initialized — baseline progress tracking enabled',
+            'New learner profile initialized - baseline progress tracking enabled',
         type: 'success' as const,
     },
 ];
@@ -158,7 +158,7 @@ const processTerminalQueue = async () => {
         }
 
         let delay = 20 + Math.random() * 50;
-        if ([' ', ',', '.', '—'].includes(message[i]))
+        if ([' ', ',', '.', '-'].includes(message[i]))
             delay += 60 + Math.random() * 40;
 
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -255,7 +255,7 @@ onBeforeUnmount(() => {
                         />
                         <span
                             class="text-[9px] font-black tracking-[0.3em] text-muted-foreground/60 uppercase dark:text-white/30"
-                            >LEARNING_INTEL — LIVE STREAM</span
+                            >LEARNING_INTEL - LIVE STREAM</span
                         >
                     </div>
                 </div>
