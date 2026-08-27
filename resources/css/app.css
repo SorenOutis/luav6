@@ -4476,6 +4476,7 @@ html[data-low-end] .welcome-defer {
     html.touch-mobile .courses-desktop-filter,
     html.touch-mobile .courses-desktop-grid,
     html.touch-mobile .grades-desktop-header,
+    html.touch-mobile .grades-desktop-layout,
     html.touch-mobile .leaderboard-desktop-header,
     html.touch-mobile .activities-ui-page > .mobile-existing-header {
         display: none !important;
@@ -4483,5 +4484,54 @@ html[data-low-end] .welcome-defer {
 
     html.touch-mobile .mobile-ui-tabbar {
         display: block !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .calendar-desktop-only {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .grades-desktop-overview {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1023px) {
+    html.touch-mobile .grades-desktop-overview {
+        display: none !important;
+    }
+}
+
+/* Desktop dashboard rhythm. Kept above the phone breakpoint so the dedicated
+   mobile composition and its spacing remain independent. */
+@media (min-width: 1024px) {
+    .dashboard-ui .dashboard-desktop-composition {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .dashboard-ui .dashboard-desktop-composition .dashboard-progress {
+        column-gap: 1rem;
+        row-gap: 1rem;
+    }
+
+    .dashboard-ui .dashboard-desktop-composition .dashboard-main-grid {
+        column-gap: 1.5rem;
+        row-gap: 1.5rem;
+    }
+
+    .dashboard-ui .dashboard-desktop-composition .dashboard-main-grid > div {
+        min-width: 0;
+    }
+
+    .dashboard-ui
+        .dashboard-desktop-composition
+        .dashboard-main-grid
+        > div:last-child {
+        align-self: start;
     }
 }

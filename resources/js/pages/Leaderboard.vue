@@ -2,7 +2,6 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, Trophy } from 'lucide-vue-next';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
-import MobilePageHeader from '@/components/mobile/MobilePageHeader.vue';
 import SpotlightCard from '@/components/ui/spotlight-card/SpotlightCard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 
@@ -48,12 +47,6 @@ defineProps<{
 
     <AppLayout :breadcrumbs="[{ title: 'Leaderboard', href: '/leaderboard' }]">
         <div class="mobile-ui-page w-full space-y-6 p-4 sm:p-6 lg:p-8">
-            <MobilePageHeader
-                class="hidden"
-                title="Leaderboard"
-                subtitle="See how you rank in each section and track your XP progress."
-                eyebrow="Compete and grow"
-            />
             <section
                 class="mobile-leaderboard-intro md:hidden"
                 aria-label="Leaderboard summary"
