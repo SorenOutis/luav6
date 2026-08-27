@@ -63,6 +63,8 @@ describe('dashboard student shell', () => {
         expect(css).toContain('system-ui');
         expect(css).toContain('min-height: 44px');
         expect(css).toContain('env(safe-area-inset-left)');
+        expect(css).toContain('.dashboard-ui .dashboard-desktop-composition');
+        expect(css).toContain('@media (min-width: 1024px)');
     });
 
     it('renders a readable hero with 44px actions on mobile', () => {

@@ -4504,3 +4504,34 @@ html[data-low-end] .welcome-defer {
         display: none !important;
     }
 }
+
+/* Desktop dashboard rhythm. Kept above the phone breakpoint so the dedicated
+   mobile composition and its spacing remain independent. */
+@media (min-width: 1024px) {
+    .dashboard-ui .dashboard-desktop-composition {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .dashboard-ui .dashboard-desktop-composition .dashboard-progress {
+        column-gap: 1rem;
+        row-gap: 1rem;
+    }
+
+    .dashboard-ui .dashboard-desktop-composition .dashboard-main-grid {
+        column-gap: 1.5rem;
+        row-gap: 1.5rem;
+    }
+
+    .dashboard-ui .dashboard-desktop-composition .dashboard-main-grid > div {
+        min-width: 0;
+    }
+
+    .dashboard-ui
+        .dashboard-desktop-composition
+        .dashboard-main-grid
+        > div:last-child {
+        align-self: start;
+    }
+}
