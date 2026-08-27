@@ -2615,3 +2615,1873 @@ html[data-low-end] .welcome-defer {
         display: none !important;
     }
 }
+
+/* Dedicated native-style dashboard composition. The layout is intentionally
+   phone-only; the desktop dashboard tree remains unchanged. */
+@media (max-width: 767px) {
+    .mobile-dashboard-composition {
+        display: flex;
+        flex-direction: column;
+        gap: 0.875rem;
+        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    }
+
+    .mobile-dashboard-greeting,
+    .mobile-dashboard-today,
+    .mobile-dashboard-announcement,
+    .mobile-dashboard-reward,
+    .mobile-dashboard-streak-summary,
+    .mobile-dashboard-progress,
+    .mobile-dashboard-secondary-card,
+    .mobile-dashboard-leaderboard,
+    .mobile-dashboard-activity {
+        border: 1px solid var(--color-border);
+        background: var(--color-card);
+        box-shadow:
+            0 1px 2px rgb(0 0 0 / 0.04),
+            0 12px 28px -22px rgb(0 0 0 / 0.28);
+    }
+
+    .mobile-dashboard-greeting {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .mobile-dashboard-greeting__topline,
+    .mobile-dashboard-section-heading,
+    .mobile-dashboard-progress-summary,
+    .mobile-dashboard-next-item,
+    .mobile-dashboard-section-trigger {
+        display: flex;
+        align-items: center;
+    }
+
+    .mobile-dashboard-greeting__topline,
+    .mobile-dashboard-section-heading,
+    .mobile-dashboard-progress-summary {
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .mobile-dashboard-greeting__topline {
+        margin-bottom: 0.7rem;
+    }
+
+    .mobile-dashboard-greeting__body {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .mobile-dashboard-kicker,
+    .mobile-dashboard-card-kicker {
+        color: var(--color-muted-foreground);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        line-height: 1.1;
+        text-transform: uppercase;
+    }
+
+    .mobile-dashboard-avatar {
+        display: grid;
+        height: 3.25rem;
+        width: 3.25rem;
+        flex: 0 0 auto;
+        place-items: center;
+        overflow: hidden;
+        border: 2px solid var(--color-card);
+        border-radius: 1.15rem;
+        background: var(--color-primary);
+        color: var(--color-primary-foreground);
+        font-size: 1.15rem;
+        font-weight: 800;
+        box-shadow: 0 0 0 1px var(--color-border);
+    }
+
+    .mobile-dashboard-title,
+    .mobile-dashboard-section-title,
+    .mobile-dashboard-card-title {
+        color: var(--color-foreground);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+    }
+
+    .mobile-dashboard-title {
+        margin-top: 0.15rem;
+        font-size: 1.35rem;
+        line-height: 1.05;
+    }
+
+    .mobile-dashboard-eyebrow {
+        color: var(--color-foreground);
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .mobile-dashboard-status {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.35rem;
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.75rem;
+        line-height: 1.3;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-dashboard-status-dot {
+        height: 0.45rem;
+        width: 0.45rem;
+        flex: 0 0 auto;
+        border-radius: 999px;
+    }
+
+    .mobile-dashboard-icon-button,
+    .mobile-dashboard-bell,
+    .mobile-dashboard-dismiss {
+        display: inline-flex;
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--color-border);
+        border-radius: 0.9rem;
+        color: var(--color-muted-foreground);
+        transition:
+            background-color 150ms ease,
+            color 150ms ease,
+            transform 150ms ease;
+    }
+
+    .mobile-dashboard-icon-button:active,
+    .mobile-dashboard-bell:active,
+    .mobile-dashboard-dismiss:active,
+    .mobile-dashboard-section-trigger:active,
+    .mobile-dashboard-next-item:active {
+        transform: scale(0.98);
+        background: var(--color-muted);
+    }
+
+    .mobile-dashboard-bell {
+        border: 0;
+        color: var(--color-foreground);
+    }
+
+    .mobile-dashboard-announcement {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.9rem;
+        border-color: color-mix(
+            in srgb,
+            var(--color-primary) 30%,
+            var(--color-border)
+        );
+        background: color-mix(
+            in srgb,
+            var(--color-primary) 7%,
+            var(--color-card)
+        );
+    }
+
+    .mobile-dashboard-announcement__icon,
+    .mobile-dashboard-reward__icon,
+    .mobile-dashboard-section-trigger__icon {
+        display: inline-flex;
+        height: 2.25rem;
+        width: 2.25rem;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.8rem;
+        background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+        color: var(--color-primary);
+    }
+
+    .mobile-dashboard-card-title {
+        margin-top: 0.25rem;
+        font-size: 0.95rem;
+    }
+
+    .mobile-dashboard-card-copy {
+        margin-top: 0.3rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.78rem;
+        line-height: 1.45;
+    }
+
+    .mobile-dashboard-inline-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.55rem;
+        color: var(--color-primary);
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .mobile-dashboard-dismiss {
+        min-height: 2rem;
+        min-width: 2rem;
+        border: 0;
+        border-radius: 0.65rem;
+    }
+
+    .mobile-dashboard-today,
+    .mobile-dashboard-progress,
+    .mobile-dashboard-leaderboard,
+    .mobile-dashboard-activity {
+        padding: 1rem;
+        border-radius: 1.25rem;
+    }
+
+    .mobile-dashboard-section-title {
+        margin-top: 0.2rem;
+        font-size: 1.05rem;
+        line-height: 1.1;
+    }
+
+    .mobile-dashboard-metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.9rem;
+    }
+
+    .mobile-dashboard-metric {
+        min-width: 0;
+        padding: 0.75rem 0.45rem;
+        border-radius: 0.9rem;
+        background: var(--color-muted);
+        text-align: center;
+    }
+
+    .mobile-dashboard-metric.is-alert {
+        background: color-mix(
+            in srgb,
+            var(--color-destructive) 10%,
+            var(--color-muted)
+        );
+    }
+
+    .mobile-dashboard-metric__value,
+    .mobile-dashboard-progress-summary strong {
+        display: block;
+        color: var(--color-foreground);
+        font-size: 1.35rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1;
+    }
+
+    .mobile-dashboard-metric.is-alert .mobile-dashboard-metric__value {
+        color: var(--color-destructive);
+    }
+
+    .mobile-dashboard-metric__label {
+        display: block;
+        margin-top: 0.32rem;
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.66rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-dashboard-next-item {
+        gap: 0.7rem;
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.95rem;
+    }
+
+    .mobile-dashboard-next-item__icon {
+        display: inline-flex;
+        height: 2.25rem;
+        width: 2.25rem;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.8rem;
+        background: var(--color-primary);
+        color: var(--color-primary-foreground);
+    }
+
+    .mobile-dashboard-next-item__title,
+    .mobile-dashboard-next-item__meta {
+        display: block;
+    }
+
+    .mobile-dashboard-next-item__title {
+        margin-top: 0.2rem;
+        color: var(--color-foreground);
+        font-size: 0.86rem;
+    }
+
+    .mobile-dashboard-next-item__meta,
+    .mobile-dashboard-empty-next {
+        margin-top: 0.18rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+    }
+
+    .mobile-dashboard-empty-next {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        padding-top: 0.8rem;
+    }
+
+    .mobile-dashboard-reward-grid,
+    .mobile-dashboard-secondary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+    }
+
+    .mobile-dashboard-reward,
+    .mobile-dashboard-streak-summary {
+        min-width: 0;
+        padding: 0.9rem;
+        border-radius: 1.15rem;
+    }
+
+    .mobile-dashboard-reward {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+    }
+
+    .mobile-dashboard-reward__icon.is-warm {
+        background: color-mix(in srgb, #d97757 18%, transparent);
+        color: #d97757;
+    }
+
+    .mobile-dashboard-reward__value,
+    .mobile-dashboard-streak-summary strong {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--color-foreground);
+        font-size: 1.05rem;
+        line-height: 1.05;
+    }
+
+    .mobile-dashboard-reward__copy,
+    .mobile-dashboard-streak-summary > span:last-child {
+        display: block;
+        margin-top: 0.28rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.68rem;
+        line-height: 1.25;
+    }
+
+    .mobile-dashboard-reward__action {
+        position: absolute;
+        right: 0.5rem;
+        bottom: 0.5rem;
+        max-width: 2.3rem;
+        overflow: hidden;
+        opacity: 0.02;
+    }
+
+    .mobile-dashboard-level-pill,
+    .mobile-dashboard-activity-badge,
+    .mobile-dashboard-section-trigger__rank {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+        color: var(--color-primary);
+        font-size: 0.7rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .mobile-dashboard-level-pill,
+    .mobile-dashboard-activity-badge {
+        padding: 0.38rem 0.62rem;
+    }
+
+    .mobile-dashboard-progress-summary {
+        margin-top: 0.9rem;
+    }
+
+    .mobile-dashboard-progress-summary > div > span {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+    }
+
+    .mobile-dashboard-progress-summary > span {
+        color: var(--color-primary);
+        font-size: 0.8rem;
+        font-weight: 800;
+    }
+
+    .mobile-dashboard-progress-track {
+        height: 0.5rem;
+        margin-top: 0.7rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--color-muted);
+    }
+
+    .mobile-dashboard-progress-track > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--color-primary);
+        transition: width 250ms ease;
+    }
+
+    .mobile-dashboard-progress-card {
+        margin-top: 0.75rem;
+        overflow: hidden;
+        border: 1px solid var(--color-border);
+        border-radius: 1rem;
+    }
+
+    .mobile-dashboard-progress-card :is(.p-4, .p-5, .p-6) {
+        padding: 0.85rem !important;
+    }
+
+    .mobile-dashboard-secondary-card {
+        min-width: 0;
+        overflow: hidden;
+        border-radius: 1.15rem;
+    }
+
+    .mobile-dashboard-secondary-card :is([data-slot='card'], .surface-card) {
+        min-height: 100%;
+        border: 0 !important;
+        border-radius: 1.15rem !important;
+        box-shadow: none !important;
+    }
+
+    .mobile-dashboard-section-trigger {
+        width: 100%;
+        gap: 0.65rem;
+        padding: 0.95rem;
+        color: var(--color-foreground);
+        text-align: left;
+    }
+
+    .mobile-dashboard-section-trigger strong,
+    .mobile-dashboard-section-trigger small {
+        display: block;
+    }
+
+    .mobile-dashboard-section-trigger strong {
+        font-size: 0.9rem;
+    }
+
+    .mobile-dashboard-section-trigger small {
+        margin-top: 0.22rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+    }
+
+    .mobile-dashboard-section-trigger__rank {
+        padding: 0.35rem 0.55rem;
+        font-size: 0.72rem;
+    }
+
+    .mobile-dashboard-leaderboard__panel {
+        border-top: 1px solid var(--color-border);
+        padding: 0.75rem;
+    }
+
+    .mobile-dashboard-leaderboard__panel :is(.rounded-2xl, .rounded-xl) {
+        border-radius: 0.85rem;
+    }
+
+    .mobile-dashboard-activity-badge {
+        color: var(--color-muted-foreground);
+        background: var(--color-muted);
+    }
+
+    .mobile-dashboard-activity :is(svg, canvas) {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-assignment-mobile-intro {
+        display: block;
+        padding: 0.25rem 0 0.25rem;
+    }
+
+    .mobile-assignment-mobile-intro__topline,
+    .mobile-assignment-list-heading,
+    .mobile-assignment-filter-row,
+    .mobile-assignment-card__topline,
+    .mobile-assignment-card__meta,
+    .mobile-assignment-card__actions,
+    .mobile-assignment-group-row,
+    .mobile-assignment-invite,
+    .mobile-assignment-invite > div {
+        display: flex;
+        align-items: center;
+    }
+
+    .mobile-assignment-mobile-intro__topline,
+    .mobile-assignment-list-heading,
+    .mobile-assignment-card__topline,
+    .mobile-assignment-card__meta,
+    .mobile-assignment-card__actions,
+    .mobile-assignment-group-row {
+        justify-content: space-between;
+        gap: 0.65rem;
+    }
+
+    .mobile-assignment-mobile-intro__copy {
+        max-width: 30rem;
+        margin-top: 0.45rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+
+    .mobile-assignment-count-pill,
+    .mobile-assignment-reset {
+        border-radius: 999px;
+        padding: 0.4rem 0.65rem;
+        color: var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 11%, transparent);
+        font-size: 0.7rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .mobile-assignment-mobile-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.55rem;
+        margin-top: 0.9rem;
+    }
+
+    .mobile-assignment-mobile-stats > div {
+        padding: 0.7rem 0.55rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.95rem;
+        background: var(--color-card);
+    }
+
+    .mobile-assignment-mobile-stats strong,
+    .mobile-assignment-mobile-stats span {
+        display: block;
+    }
+
+    .mobile-assignment-mobile-stats strong {
+        color: var(--color-foreground);
+        font-size: 1.15rem;
+        line-height: 1;
+    }
+
+    .mobile-assignment-mobile-stats span {
+        margin-top: 0.3rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.66rem;
+    }
+
+    .mobile-assignment-mobile-stats .is-alert strong {
+        color: var(--color-destructive);
+    }
+
+    .mobile-assignment-mobile-list {
+        display: block;
+        margin-top: 0.5rem;
+    }
+
+    .mobile-assignment-filter-row {
+        gap: 0.55rem;
+        margin-top: 0.8rem;
+    }
+
+    .mobile-assignment-tabs {
+        display: flex;
+        min-width: 0;
+        gap: 0.3rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .mobile-assignment-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mobile-assignment-tabs button {
+        display: inline-flex;
+        min-height: 2.65rem;
+        align-items: center;
+        gap: 0.3rem;
+        flex: 0 0 auto;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        padding: 0 0.7rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .mobile-assignment-tabs button span {
+        display: inline-flex;
+        min-width: 1.15rem;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0.12rem 0.25rem;
+        background: var(--color-muted);
+        font-size: 0.62rem;
+    }
+
+    .mobile-assignment-tabs button.is-active {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: var(--color-primary-foreground);
+    }
+
+    .mobile-assignment-tabs button.is-active span {
+        background: color-mix(
+            in srgb,
+            var(--color-primary-foreground) 20%,
+            transparent
+        );
+    }
+
+    .mobile-assignment-search {
+        width: 5.25rem;
+        min-height: 2.65rem;
+        flex: 0 0 auto;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        background: var(--color-card);
+        padding: 0 0.75rem;
+        color: var(--color-foreground);
+        font-size: 0.8rem;
+        outline: none;
+    }
+
+    .mobile-assignment-search:focus {
+        width: 7rem;
+        border-color: var(--color-ring);
+    }
+
+    .mobile-assignment-cards {
+        display: grid;
+        gap: 0.75rem;
+        margin-top: 0.8rem;
+    }
+
+    .mobile-assignment-card {
+        padding: 0.95rem;
+        border: 1px solid var(--color-border);
+        border-left-width: 3px;
+        border-radius: 1.2rem;
+        background: var(--color-card);
+        box-shadow: 0 8px 25px -22px rgb(0 0 0 / 0.38);
+    }
+
+    .mobile-assignment-course {
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-assignment-status {
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 999px;
+        padding: 0.28rem 0.5rem;
+        font-size: 0.64rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .mobile-assignment-card__title {
+        margin-top: 0.65rem;
+        color: var(--color-foreground);
+        font-size: 1rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+    }
+
+    .mobile-assignment-card__description {
+        display: -webkit-box;
+        margin-top: 0.35rem;
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.76rem;
+        line-height: 1.4;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .mobile-assignment-card__meta {
+        margin-top: 0.75rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .mobile-assignment-card__actions {
+        margin-top: 0.85rem;
+    }
+
+    .mobile-assignment-card__actions button,
+    .mobile-assignment-group-row button,
+    .mobile-assignment-invite button {
+        min-height: 2.65rem;
+        border-radius: 0.8rem;
+        padding: 0 0.8rem;
+        font-size: 0.7rem;
+        font-weight: 800;
+    }
+
+    .mobile-assignment-secondary-action {
+        border: 1px solid var(--color-border);
+        color: var(--color-foreground);
+    }
+
+    .mobile-assignment-primary-action {
+        background: var(--color-primary);
+        color: var(--color-primary-foreground);
+    }
+
+    .mobile-assignment-primary-action:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+    }
+
+    .mobile-assignment-invite {
+        justify-content: space-between;
+        gap: 0.55rem;
+        margin-top: 0.75rem;
+        padding: 0.6rem;
+        border-radius: 0.85rem;
+        background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+        color: var(--color-foreground);
+        font-size: 0.7rem;
+        font-weight: 700;
+    }
+
+    .mobile-assignment-invite > div {
+        gap: 0.35rem;
+    }
+
+    .mobile-assignment-invite button {
+        min-height: 2.2rem;
+        padding: 0 0.55rem;
+    }
+
+    .mobile-assignment-invite button:first-child {
+        background: var(--color-primary);
+        color: var(--color-primary-foreground);
+    }
+
+    .mobile-assignment-invite button:last-child {
+        border: 1px solid var(--color-border);
+        color: var(--color-muted-foreground);
+    }
+
+    .mobile-assignment-group-row {
+        margin-top: 0.65rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.68rem;
+    }
+
+    .mobile-assignment-group-row button {
+        min-height: 2.1rem;
+        border: 1px solid var(--color-border);
+        padding: 0 0.6rem;
+        color: var(--color-primary);
+    }
+
+    .mobile-assignment-empty {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+        margin-top: 1rem;
+        padding: 2rem 1rem;
+        border: 1px dashed var(--color-border);
+        border-radius: 1.2rem;
+        color: var(--color-muted-foreground);
+        text-align: center;
+    }
+
+    .mobile-assignment-empty strong {
+        color: var(--color-foreground);
+        font-size: 0.9rem;
+    }
+
+    .mobile-assignment-empty span {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-calendar-agenda {
+        display: block;
+        padding: 0.25rem 0 0.2rem;
+    }
+
+    .mobile-calendar-agenda__topline,
+    .mobile-calendar-filter-row,
+    .mobile-calendar-upcoming-card {
+        display: flex;
+        align-items: center;
+    }
+
+    .mobile-calendar-agenda__topline {
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .mobile-calendar-month-pill {
+        border-radius: 999px;
+        padding: 0.4rem 0.65rem;
+        background: var(--color-card);
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .mobile-calendar-agenda__copy {
+        margin-top: 0.45rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+
+    .mobile-calendar-filter-row {
+        gap: 0.45rem;
+        margin-top: 0.85rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .mobile-calendar-filter-row::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mobile-calendar-filter-row button {
+        display: inline-flex;
+        min-height: 2.5rem;
+        align-items: center;
+        gap: 0.3rem;
+        flex: 0 0 auto;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        padding: 0 0.75rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        font-weight: 800;
+    }
+
+    .mobile-calendar-filter-row button span {
+        color: inherit;
+        opacity: 0.7;
+    }
+
+    .mobile-calendar-filter-row button.is-active {
+        border-color: var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 11%, transparent);
+        color: var(--color-primary);
+    }
+
+    .mobile-calendar-upcoming-list {
+        display: grid;
+        gap: 0.65rem;
+        margin-top: 0.9rem;
+    }
+
+    .mobile-calendar-upcoming-card {
+        gap: 0.7rem;
+        min-height: 4.6rem;
+        padding: 0.8rem;
+        border: 1px solid var(--color-border);
+        border-radius: 1.1rem;
+        background: var(--color-card);
+        box-shadow: 0 8px 22px -22px rgb(0 0 0 / 0.4);
+    }
+
+    .mobile-calendar-upcoming-card:active {
+        background: var(--color-muted);
+        transform: scale(0.99);
+    }
+
+    .mobile-calendar-upcoming-card__dot {
+        height: 0.65rem;
+        width: 0.65rem;
+        flex: 0 0 auto;
+        border-radius: 999px;
+    }
+
+    .mobile-calendar-upcoming-card__type,
+    .mobile-calendar-upcoming-card__title,
+    .mobile-calendar-upcoming-card__meta {
+        display: block;
+    }
+
+    .mobile-calendar-upcoming-card__type {
+        color: var(--color-muted-foreground);
+        font-size: 0.65rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .mobile-calendar-upcoming-card__title {
+        margin-top: 0.15rem;
+        overflow: hidden;
+        color: var(--color-foreground);
+        font-size: 0.88rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-calendar-upcoming-card__meta {
+        margin-top: 0.2rem;
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.68rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-calendar-empty {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+        margin-top: 0.9rem;
+        padding: 1.8rem 1rem;
+        border: 1px dashed var(--color-border);
+        border-radius: 1.1rem;
+        color: var(--color-muted-foreground);
+        text-align: center;
+    }
+
+    .mobile-calendar-empty strong {
+        color: var(--color-foreground);
+        font-size: 0.9rem;
+    }
+
+    .mobile-calendar-empty span {
+        font-size: 0.74rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-grades-intro {
+        display: block;
+        padding: 0.25rem 0 0.2rem;
+    }
+
+    .mobile-grades-intro__topline,
+    .mobile-grades-summary-row,
+    .mobile-grades-export {
+        display: flex;
+        align-items: center;
+    }
+
+    .mobile-grades-intro__topline {
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .mobile-grades-export {
+        min-height: 2.75rem;
+        gap: 0.35rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.85rem;
+        padding: 0 0.7rem;
+        color: var(--color-foreground);
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    .mobile-grades-export:disabled {
+        opacity: 0.55;
+    }
+
+    .mobile-grades-intro__copy {
+        margin-top: 0.45rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+
+    .mobile-grades-summary-row {
+        gap: 0.55rem;
+        margin-top: 0.9rem;
+    }
+
+    .mobile-grades-summary-row > div {
+        min-width: 0;
+        flex: 1;
+        padding: 0.7rem 0.55rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.9rem;
+        background: var(--color-card);
+    }
+
+    .mobile-grades-summary-row strong,
+    .mobile-grades-summary-row span {
+        display: block;
+    }
+
+    .mobile-grades-summary-row strong {
+        overflow: hidden;
+        color: var(--color-foreground);
+        font-size: 1rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-grades-summary-row span {
+        margin-top: 0.28rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.66rem;
+    }
+
+    .mobile-grades-search {
+        display: flex;
+        min-height: 2.75rem;
+        align-items: center;
+        gap: 0.55rem;
+        margin-top: 0.75rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.9rem;
+        padding: 0 0.75rem;
+        background: var(--color-card);
+        color: var(--color-muted-foreground);
+    }
+
+    .mobile-grades-search input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--color-foreground);
+        font-size: 0.85rem;
+    }
+
+    .grades-mobile-layout {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .grades-mobile-layout > [data-slot='card'] {
+        overflow: hidden;
+        border-color: var(--color-border);
+        border-radius: 1.05rem;
+        background: var(--color-card);
+    }
+
+    .grades-mobile-layout [data-slot='card-header'] {
+        border-color: var(--color-border);
+        background: color-mix(
+            in srgb,
+            var(--color-primary) 5%,
+            var(--color-card)
+        );
+    }
+}
+
+@media (max-width: 767px) {
+    .assignment-desktop-only {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-native-tabbar-surface {
+        height: 4rem;
+        border-color: color-mix(
+            in srgb,
+            var(--color-border) 90%,
+            transparent
+        ) !important;
+        background: color-mix(
+            in srgb,
+            var(--color-card) 94%,
+            transparent
+        ) !important;
+        box-shadow: 0 14px 35px -18px rgb(0 0 0 / 0.55) !important;
+        backdrop-filter: blur(18px);
+    }
+
+    .mobile-native-tabbar-surface > a {
+        min-height: 3.5rem;
+        border-radius: 0.95rem;
+    }
+
+    .mobile-native-tabbar-surface > a:active {
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
+}
+
+@media (max-width: 767px) {
+    .courses-desktop-filter,
+    .courses-desktop-grid {
+        display: none !important;
+    }
+
+    .mobile-course-catalog {
+        display: block;
+        padding: 0.25rem 0 0.2rem;
+    }
+
+    .mobile-course-catalog__heading,
+    .mobile-course-row,
+    .mobile-course-filters {
+        display: flex;
+        align-items: center;
+    }
+
+    .mobile-course-catalog__heading {
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .mobile-course-count {
+        border-radius: 999px;
+        padding: 0.4rem 0.65rem;
+        background: var(--color-card);
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .mobile-course-search {
+        display: flex;
+        min-height: 2.8rem;
+        align-items: center;
+        gap: 0.55rem;
+        margin-top: 0.8rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.95rem;
+        padding: 0 0.8rem;
+        background: var(--color-card);
+        color: var(--color-muted-foreground);
+    }
+
+    .mobile-course-search input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: var(--color-foreground);
+        font-size: 0.85rem;
+    }
+
+    .mobile-course-filters {
+        gap: 0.4rem;
+        margin-top: 0.7rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .mobile-course-filters::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mobile-course-filters button {
+        min-height: 2.35rem;
+        flex: 0 0 auto;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        padding: 0 0.75rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        font-weight: 800;
+    }
+
+    .mobile-course-filters button.is-active {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: var(--color-primary-foreground);
+    }
+
+    .mobile-course-list {
+        display: grid;
+        gap: 0.65rem;
+        margin-top: 0.85rem;
+    }
+
+    .mobile-course-row {
+        gap: 0.65rem;
+        min-height: 4.9rem;
+        padding: 0.7rem;
+        border: 1px solid var(--color-border);
+        border-radius: 1.1rem;
+        background: var(--color-card);
+        box-shadow: 0 8px 22px -22px rgb(0 0 0 / 0.4);
+    }
+
+    .mobile-course-row:active {
+        background: var(--color-muted);
+        transform: scale(0.99);
+    }
+
+    .mobile-course-cover {
+        display: grid;
+        height: 3rem;
+        width: 3rem;
+        flex: 0 0 auto;
+        place-items: center;
+        overflow: hidden;
+        border-radius: 0.85rem;
+        background: color-mix(
+            in srgb,
+            var(--color-primary) 13%,
+            var(--color-muted)
+        );
+        color: var(--color-primary);
+    }
+
+    .mobile-course-cover img {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
+
+    .mobile-course-row__title,
+    .mobile-course-row__meta {
+        display: block;
+    }
+
+    .mobile-course-row__title {
+        overflow: hidden;
+        color: var(--color-foreground);
+        font-size: 0.85rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-course-row__meta {
+        margin-top: 0.2rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.67rem;
+    }
+
+    .mobile-course-progress {
+        display: block;
+        height: 0.35rem;
+        margin-top: 0.5rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--color-muted);
+    }
+
+    .mobile-course-progress > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--color-primary);
+    }
+
+    .mobile-course-row__percent {
+        flex: 0 0 auto;
+        color: var(--color-primary);
+        font-size: 0.7rem;
+        font-weight: 800;
+    }
+
+    .mobile-course-empty {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+        margin-top: 1rem;
+        padding: 2rem 1rem;
+        border: 1px dashed var(--color-border);
+        border-radius: 1.1rem;
+        color: var(--color-muted-foreground);
+        text-align: center;
+    }
+
+    .mobile-course-empty strong {
+        color: var(--color-foreground);
+        font-size: 0.9rem;
+    }
+
+    .mobile-course-empty span {
+        font-size: 0.74rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-shell-header {
+        min-height: 3.5rem;
+        border-color: var(--color-border) !important;
+        background: color-mix(in srgb, var(--color-card) 92%, transparent);
+    }
+
+    .mobile-shell-header :is(button, [role='button']) {
+        min-height: 2.75rem;
+        min-width: 2.75rem;
+        border-radius: 0.85rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .exams-desktop-filter,
+    .exams-desktop-groups,
+    .exam-theme-page > .mobile-existing-header {
+        display: none !important;
+    }
+
+    .mobile-exams-queue {
+        display: block;
+        min-height: 0;
+        padding: 0.25rem 0 0.2rem;
+    }
+
+    .mobile-exams-queue__topline,
+    .mobile-exam-row,
+    .mobile-exam-row__meta {
+        display: flex;
+        align-items: center;
+    }
+
+    .mobile-exams-queue__topline {
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .mobile-exams-count {
+        border-radius: 999px;
+        padding: 0.4rem 0.65rem;
+        background: var(--color-card);
+        color: var(--color-muted-foreground);
+        font-size: 0.7rem;
+        font-weight: 800;
+    }
+
+    .mobile-exams-queue__copy {
+        margin-top: 0.45rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+
+    .mobile-exams-search {
+        display: flex;
+        min-height: 2.8rem;
+        align-items: center;
+        gap: 0.55rem;
+        margin-top: 0.8rem;
+        border: 1px solid var(--color-border);
+        border-radius: 0.95rem;
+        padding: 0 0.8rem;
+        background: var(--color-card);
+        color: var(--color-muted-foreground);
+    }
+
+    .mobile-exams-search input {
+        min-width: 0;
+        flex: 1;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: var(--color-foreground);
+        font-size: 0.85rem;
+    }
+
+    .mobile-exams-list {
+        display: grid;
+        gap: 0.6rem;
+        margin-top: 0.9rem;
+    }
+
+    .mobile-exams-season {
+        margin-top: 0.25rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+
+    .mobile-exam-row {
+        width: 100%;
+        gap: 0.65rem;
+        min-height: 5.35rem;
+        border: 1px solid var(--color-border);
+        border-radius: 1.15rem;
+        padding: 0.75rem;
+        background: var(--color-card);
+        text-align: left;
+        box-shadow: 0 8px 24px -23px rgb(0 0 0 / 0.4);
+    }
+
+    .mobile-exam-row:active:not(:disabled) {
+        background: var(--color-muted);
+        transform: scale(0.99);
+    }
+
+    .mobile-exam-row:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    .mobile-exam-row__icon {
+        display: inline-flex;
+        height: 2.35rem;
+        width: 2.35rem;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.85rem;
+        background: color-mix(
+            in srgb,
+            var(--color-primary) 13%,
+            var(--color-muted)
+        );
+        color: var(--color-primary);
+    }
+
+    .mobile-exam-row__status,
+    .mobile-exam-row__title,
+    .mobile-exam-row__meta {
+        display: block;
+    }
+
+    .mobile-exam-row__status {
+        color: var(--color-primary);
+        font-size: 0.63rem;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .mobile-exam-row__title {
+        margin-top: 0.18rem;
+        overflow: hidden;
+        color: var(--color-foreground);
+        font-size: 0.88rem;
+        font-weight: 800;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-exam-row__meta {
+        gap: 0.3rem;
+        margin-top: 0.25rem;
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.67rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mobile-exam-row__progress {
+        display: block;
+        height: 0.32rem;
+        margin-top: 0.45rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--color-muted);
+    }
+
+    .mobile-exam-row__progress > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--color-primary);
+    }
+
+    .mobile-exams-empty {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+        margin-top: 1rem;
+        padding: 2rem 1rem;
+        border: 1px dashed var(--color-border);
+        border-radius: 1.1rem;
+        color: var(--color-muted-foreground);
+        text-align: center;
+    }
+
+    .mobile-exams-empty strong {
+        color: var(--color-foreground);
+        font-size: 0.9rem;
+    }
+
+    .mobile-exams-empty span {
+        font-size: 0.74rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .activities-ui-page .mobile-page-header {
+        display: none;
+    }
+
+    .activities-mobile-stats {
+        border-radius: 1.15rem;
+        background: var(--color-card);
+    }
+
+    .activities-mobile-stats > div {
+        padding: 0.8rem;
+    }
+
+    .activities-mobile-stats p:first-child {
+        color: var(--color-muted-foreground);
+        font-size: 0.68rem;
+    }
+
+    .activities-mobile-stats p:nth-child(2) {
+        margin-top: 0.35rem;
+        color: var(--color-foreground);
+        font-size: 1.25rem;
+        font-weight: 800;
+    }
+
+    .activities-mobile-stats p:last-child {
+        margin-top: 0.2rem;
+        overflow: hidden;
+        color: var(--color-muted-foreground);
+        font-size: 0.64rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .activities-mobile-search input {
+        min-height: 2.8rem;
+        border-color: var(--color-border);
+        background: var(--color-card);
+        font-size: 0.85rem;
+    }
+
+    .activities-ui-page .exam-card {
+        min-height: 5.25rem;
+        border-radius: 1.1rem;
+        border-color: var(--color-border);
+        background: var(--color-card);
+        padding: 0.8rem;
+    }
+
+    .activities-ui-page .exam-card h2 {
+        font-size: 0.88rem;
+    }
+
+    .activities-ui-page .exam-card p {
+        font-size: 0.72rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .leaderboard-desktop-header {
+        display: none !important;
+    }
+
+    .mobile-leaderboard-intro {
+        display: block;
+        padding: 0.25rem 0 0.2rem;
+    }
+
+    .mobile-leaderboard-intro__topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .mobile-leaderboard-intro__copy {
+        margin-top: 0.45rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.8rem;
+        line-height: 1.45;
+    }
+
+    .mobile-leaderboard-rank-card {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        margin-top: 0.85rem;
+        padding: 0.8rem;
+        border: 1px solid
+            color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+        border-radius: 1.1rem;
+        background: color-mix(
+            in srgb,
+            var(--color-primary) 7%,
+            var(--color-card)
+        );
+    }
+
+    .mobile-leaderboard-rank-card__icon {
+        display: inline-flex;
+        height: 2.45rem;
+        width: 2.45rem;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.85rem;
+        background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+        color: var(--color-primary);
+    }
+
+    .mobile-leaderboard-rank-card strong,
+    .mobile-leaderboard-rank-card > span:last-child {
+        display: block;
+    }
+
+    .mobile-leaderboard-rank-card strong {
+        margin-top: 0.25rem;
+        color: var(--color-foreground);
+        font-size: 0.95rem;
+    }
+
+    .mobile-leaderboard-rank-card > span:last-child {
+        margin-top: 0.2rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.68rem;
+    }
+
+    .mobile-ui-page .leaderboard-card,
+    .mobile-ui-page [data-slot='card'] {
+        border-radius: 1.15rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-ui-settings {
+        padding: 1rem !important;
+        background: var(--color-background);
+    }
+
+    .mobile-ui-settings > h2,
+    .mobile-ui-settings > div:first-of-type {
+        color: var(--color-foreground);
+    }
+
+    .mobile-ui-settings aside {
+        max-width: none;
+        overflow: hidden;
+    }
+
+    .mobile-ui-settings aside nav {
+        display: flex;
+        flex-direction: row;
+        gap: 0.45rem;
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+        scrollbar-width: none;
+    }
+
+    .mobile-ui-settings aside nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .mobile-ui-settings aside nav a {
+        min-height: 2.65rem;
+        flex: 0 0 auto;
+        justify-content: center;
+        border: 1px solid var(--color-border);
+        border-radius: 999px;
+        padding: 0 0.85rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    .mobile-ui-settings aside nav a[aria-current='page'],
+    .mobile-ui-settings aside nav a.bg-muted {
+        border-color: var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+        color: var(--color-primary);
+    }
+
+    .mobile-ui-settings > div > div > section {
+        max-width: none;
+        gap: 2rem;
+    }
+
+    .mobile-ui-settings [data-slot='card'] {
+        border-radius: 1.1rem;
+    }
+
+    .mobile-ui-settings button,
+    .mobile-ui-settings a {
+        min-height: 2.75rem;
+    }
+
+    .mobile-ui-settings input,
+    .mobile-ui-settings textarea,
+    .mobile-ui-settings select {
+        min-height: 2.75rem;
+        border-radius: 0.85rem;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 767px) {
+    [data-testid='chat-workspace'] {
+        border-radius: 1.15rem !important;
+        border: 1px solid var(--color-border) !important;
+        background: var(--color-card) !important;
+    }
+
+    [data-testid='chat-workspace'] > [data-slot='card-header'] {
+        min-height: 3.8rem;
+        border-color: var(--color-border);
+        background: var(--color-card);
+        padding: 0.65rem 0.75rem;
+    }
+
+    [data-testid='chat-workspace'] > [data-slot='card-content'] {
+        background: color-mix(
+            in srgb,
+            var(--color-background) 70%,
+            var(--color-card)
+        );
+        padding: 0.75rem;
+    }
+
+    [data-testid='chat-workspace'] .message-enter {
+        max-width: 92%;
+    }
+
+    [data-testid='chat-workspace'] .message-enter [class*='rounded-2xl'] {
+        border-radius: 1rem;
+    }
+
+    [data-testid='chat-workspace'] > [data-slot='card-footer'] {
+        border-color: var(--color-border);
+        background: var(--color-card);
+        padding: 0.6rem;
+        padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
+    }
+
+    [data-testid='chat-workspace'] > [data-slot='card-footer'] textarea {
+        min-height: 3.2rem;
+        border-radius: 1rem;
+        background: var(--color-background);
+    }
+}
+
+@media (max-width: 767px) {
+    .exam-theme-page {
+        gap: 0 !important;
+        padding: 0.75rem !important;
+        padding-bottom: max(
+            5rem,
+            calc(4.5rem + env(safe-area-inset-bottom))
+        ) !important;
+    }
+
+    .exam-theme-page .exam-sticky-header {
+        border-color: var(--color-border) !important;
+        border-radius: 1.1rem;
+        background: var(--color-card) !important;
+        box-shadow: 0 8px 24px -22px rgb(0 0 0 / 0.5);
+    }
+
+    .exam-theme-page .exam-card,
+    .exam-theme-page .question-card,
+    .exam-theme-page .exam-part-card {
+        background: var(--color-card) !important;
+        box-shadow: 0 8px 24px -22px rgb(0 0 0 / 0.45);
+    }
+
+    .exam-theme-page .exam-answer-option {
+        display: flex;
+        align-items: center;
+        min-height: 3.25rem;
+        border-radius: 1rem;
+        background: color-mix(
+            in srgb,
+            var(--color-card) 92%,
+            var(--color-muted)
+        );
+    }
+
+    .exam-theme-page .exam-answer-option:active {
+        transform: scale(0.99);
+    }
+
+    .exam-theme-page .exam-progress-chart,
+    .exam-theme-page [data-testid='exam-progress-chart'] {
+        border-radius: 1.1rem;
+        border-color: var(--color-border);
+        background: var(--color-card);
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-dashboard-reward {
+        flex-wrap: wrap;
+    }
+
+    .mobile-dashboard-reward__action {
+        position: static;
+        width: 100%;
+        max-width: none;
+        margin-top: 0.55rem;
+        overflow: visible;
+        opacity: 1;
+    }
+
+    .mobile-dashboard-reward__action > button,
+    .mobile-dashboard-reward__action > div > button {
+        width: 100%;
+        min-height: 2.7rem;
+        border-radius: 0.85rem;
+    }
+}
+
+/* Browser phone simulators can expose a CSS viewport between 768px and 1023px
+   while still representing a touch phone. Keep the dedicated mobile trees
+   active in that mode without changing ordinary desktop presentation. */
+@media (max-width: 1023px) {
+    html.touch-mobile .mobile-dashboard-composition,
+    html.touch-mobile .mobile-assignment-mobile-intro,
+    html.touch-mobile .mobile-assignment-mobile-list,
+    html.touch-mobile .mobile-calendar-agenda,
+    html.touch-mobile .mobile-exams-queue,
+    html.touch-mobile .mobile-grades-intro,
+    html.touch-mobile .mobile-course-catalog,
+    html.touch-mobile .mobile-leaderboard-intro {
+        display: block !important;
+    }
+
+    html.touch-mobile .mobile-dashboard-composition {
+        display: flex !important;
+    }
+
+    html.touch-mobile .dashboard-desktop-composition,
+    html.touch-mobile .assignment-desktop-only,
+    html.touch-mobile .calendar-desktop-only,
+    html.touch-mobile .exams-desktop-filter,
+    html.touch-mobile .exams-desktop-groups,
+    html.touch-mobile .courses-desktop-filter,
+    html.touch-mobile .courses-desktop-grid,
+    html.touch-mobile .grades-desktop-header,
+    html.touch-mobile .leaderboard-desktop-header,
+    html.touch-mobile .activities-ui-page > .mobile-existing-header {
+        display: none !important;
+    }
+
+    html.touch-mobile .mobile-ui-tabbar {
+        display: block !important;
+    }
+}

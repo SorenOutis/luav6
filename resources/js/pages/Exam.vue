@@ -15,6 +15,7 @@ import {
     Timer,
     Search,
     Lock,
+    GraduationCap,
 } from 'lucide-vue-next';
 import {
     ref,
@@ -693,10 +694,110 @@ watch(selectedPartId, () => {
             class="student-ui mobile-ui-page exam-theme-page relative flex h-full flex-1 flex-col gap-3 overflow-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <MobilePageHeader
+                class="hidden"
                 title="Activities"
                 subtitle="View and take your assessments."
                 eyebrow="Stay on track"
             />
+
+            <section
+                class="mobile-exams-queue md:hidden"
+                aria-label="Exam queue"
+            >
+                <div class="mobile-exams-queue__topline">
+                    <div>
+                        <span class="mobile-dashboard-kicker"
+                            >Stay on track</span
+                        >
+                        <h1 class="mobile-dashboard-title">Your exams</h1>
+                    </div>
+                    <span class="mobile-exams-count"
+                        >{{
+                            filteredExamsBySeason.reduce(
+                                (count, group) => count + group.exams.length,
+                                0,
+                            )
+                        }}
+                        total</span
+                    >
+                </div>
+                <p class="mobile-exams-queue__copy">
+                    Choose an assessment to start, continue, or review your
+                    work.
+                </p>
+                <label class="mobile-exams-search">
+                    <Search class="h-4 w-4" />
+                    <span class="sr-only">Search exams</span>
+                    <input
+                        v-model="searchQuery"
+                        type="search"
+                        placeholder="Search exams"
+                    />
+                </label>
+                <div
+                    v-if="filteredExamsBySeason.length"
+                    class="mobile-exams-list"
+                >
+                    <template
+                        v-for="seasonGroup in filteredExamsBySeason"
+                        :key="`mobile-${seasonGroup.seasonName}`"
+                    >
+                        <p class="mobile-exams-season">
+                            {{ seasonGroup.seasonName }}
+                        </p>
+                        <button
+                            v-for="exam in seasonGroup.exams"
+                            :key="exam.id"
+                            type="button"
+                            class="mobile-exam-row"
+                            :class="getCardStatusClass(exam)"
+                            :disabled="
+                                exam.is_locked && !canReviewResults(exam)
+                            "
+                            @click="openExam(exam)"
+                        >
+                            <span class="mobile-exam-row__icon"
+                                ><GraduationCap class="h-4 w-4"
+                            /></span>
+                            <span class="min-w-0 flex-1 text-left">
+                                <span class="mobile-exam-row__status">{{
+                                    getStatusBadgeInfo(exam).label
+                                }}</span>
+                                <strong class="mobile-exam-row__title">{{
+                                    exam.title
+                                }}</strong>
+                                <span class="mobile-exam-row__meta"
+                                    >{{ exam.duration_minutes }} min ·
+                                    {{ getExamTimeInfo(exam).label }}</span
+                                >
+                                <span
+                                    v-if="
+                                        exam.total_parts && exam.total_parts > 0
+                                    "
+                                    class="mobile-exam-row__progress"
+                                    ><span
+                                        :style="{
+                                            width: `${getProgressPercent(exam)}%`,
+                                        }"
+                                /></span>
+                            </span>
+                            <ArrowRight
+                                v-if="!exam.is_locked || canReviewResults(exam)"
+                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                            />
+                            <Lock
+                                v-else
+                                class="h-4 w-4 shrink-0 text-muted-foreground"
+                            />
+                        </button>
+                    </template>
+                </div>
+                <div v-else class="mobile-exams-empty">
+                    <Search class="h-5 w-5" />
+                    <strong>No exams found</strong>
+                    <span>Try another search term.</span>
+                </div>
+            </section>
 
             <!-- Header Section -->
             <Motion
@@ -720,7 +821,7 @@ watch(selectedPartId, () => {
             </Motion>
 
             <!-- Search Input -->
-            <div class="relative" data-tour="exams-search">
+            <div class="exams-desktop-filter relative" data-tour="exams-search">
                 <Search
                     class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground/50 sm:left-4 sm:h-5 sm:w-5"
                 />
@@ -736,7 +837,7 @@ watch(selectedPartId, () => {
             <div
                 v-if="sectionTabs.length > 1"
                 data-tour="exams-sections"
-                class="no-scrollbar sticky top-0 z-20 -mx-3 flex items-center gap-2 overflow-x-auto border-b border-transparent bg-background/80 px-3 pt-1.5 pb-2 backdrop-blur-md sm:gap-3 sm:pt-3 sm:pb-4 md:-mx-8 md:px-8"
+                class="exams-desktop-filter no-scrollbar sticky top-0 z-20 -mx-3 flex items-center gap-2 overflow-x-auto border-b border-transparent bg-background/80 px-3 pt-1.5 pb-2 backdrop-blur-md sm:gap-3 sm:pt-3 sm:pb-4 md:-mx-8 md:px-8"
             >
                 <button
                     v-for="section in sectionTabs"
@@ -785,7 +886,7 @@ watch(selectedPartId, () => {
                         easing: [0.16, 1, 0.3, 1],
                         delay: sIdx * 0.1,
                     }"
-                    class="space-y-3 sm:space-y-5"
+                    class="exams-desktop-groups space-y-3 sm:space-y-5"
                 >
                     <!-- Season Header -->
                     <div

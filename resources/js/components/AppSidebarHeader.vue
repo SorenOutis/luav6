@@ -124,7 +124,7 @@ const markAllNotificationsAsRead = () => {
 
 <template>
     <header
-        class="flex h-12 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border/70 px-3 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:h-16 md:px-4"
+        class="mobile-shell-header flex h-12 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border/70 px-3 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:h-16 md:px-4"
     >
         <div class="flex items-center gap-2">
             <SidebarTrigger class="-ml-1" />

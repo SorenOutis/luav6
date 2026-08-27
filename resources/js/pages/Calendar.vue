@@ -221,12 +221,93 @@ const eventTooltip = (event: CalendarEvent) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="mobile-ui-page w-full space-y-6 p-4 sm:p-6 lg:p-8">
             <MobilePageHeader
+                class="hidden"
                 title="Calendar"
                 subtitle="Every exam and assignment deadline for your sections in one monthly view."
                 eyebrow="Never miss a deadline"
             />
+            <section
+                class="mobile-calendar-agenda md:hidden"
+                aria-label="Upcoming agenda"
+            >
+                <div class="mobile-calendar-agenda__topline">
+                    <div>
+                        <span class="mobile-dashboard-kicker">Plan ahead</span>
+                        <h1 class="mobile-dashboard-title">Your agenda</h1>
+                    </div>
+                    <span class="mobile-calendar-month-pill">{{
+                        monthLabel
+                    }}</span>
+                </div>
+                <p class="mobile-calendar-agenda__copy">
+                    Deadlines and exams are sorted by what needs your attention
+                    first.
+                </p>
+                <div class="mobile-calendar-filter-row">
+                    <button
+                        type="button"
+                        :class="{ 'is-active': showExams }"
+                        @click="showExams = !showExams"
+                    >
+                        Exams <span>{{ monthExamCount }}</span>
+                    </button>
+                    <button
+                        type="button"
+                        :class="{ 'is-active': showAssignments }"
+                        @click="showAssignments = !showAssignments"
+                    >
+                        Assignments <span>{{ monthAssignmentCount }}</span>
+                    </button>
+                    <button
+                        type="button"
+                        :class="{ 'is-active': !hideSubmitted }"
+                        @click="hideSubmitted = !hideSubmitted"
+                    >
+                        Submitted
+                    </button>
+                </div>
+                <div
+                    v-if="upcomingEvents.length"
+                    class="mobile-calendar-upcoming-list"
+                >
+                    <Link
+                        v-for="event in upcomingEvents.slice(0, 6)"
+                        :key="`mobile-upcoming-${event.type}-${event.id}`"
+                        :href="event.href"
+                        class="mobile-calendar-upcoming-card"
+                    >
+                        <span
+                            class="mobile-calendar-upcoming-card__dot"
+                            :class="dotClasses(event)"
+                        />
+                        <span class="min-w-0 flex-1">
+                            <span class="mobile-calendar-upcoming-card__type">{{
+                                event.type === 'exam' ? 'Exam' : 'Assignment'
+                            }}</span>
+                            <strong
+                                class="mobile-calendar-upcoming-card__title"
+                                >{{ event.title }}</strong
+                            >
+                            <span class="mobile-calendar-upcoming-card__meta"
+                                >{{ formatDayLabel(event.dateKey)
+                                }}<template v-if="event.courseName">
+                                    · {{ event.courseName }}</template
+                                ></span
+                            >
+                        </span>
+                        <ArrowRight
+                            class="h-4 w-4 shrink-0 text-muted-foreground"
+                        />
+                    </Link>
+                </div>
+                <div v-else class="mobile-calendar-empty">
+                    <CalendarDays class="h-5 w-5" />
+                    <strong>Nothing scheduled next</strong>
+                    <span>You are all caught up.</span>
+                </div>
+            </section>
             <div
-                class="mobile-existing-header flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+                class="mobile-existing-header calendar-desktop-only flex hidden flex-col justify-between gap-4 sm:flex-row sm:items-end md:flex"
             >
                 <div>
                     <Link

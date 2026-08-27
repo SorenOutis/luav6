@@ -1,10 +1,24 @@
 <script setup lang="ts">
-import DailyRewardCard from '@/components/dashboard/DailyRewardCard.vue';
-import DashboardHero from '@/components/dashboard/DashboardHero.vue';
+import { Link } from '@inertiajs/vue3';
+import {
+    ArrowRight,
+    Bell,
+    BookOpenCheck,
+    CalendarClock,
+    ChevronDown,
+    Flame,
+    RefreshCw,
+    Sparkles,
+    Trophy,
+    X,
+    Zap,
+} from 'lucide-vue-next';
+import { computed } from 'vue';
+
+import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
-import TodayStrip from '@/components/dashboard/TodayStrip.vue';
 import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
@@ -74,7 +88,7 @@ interface ClaimXp {
     showPrompt?: boolean;
 }
 
-withDefaults(
+const props = withDefaults(
     defineProps<{
         userName: string;
         userAvatar?: string;
@@ -135,64 +149,298 @@ const emit = defineEmits<{
     claimed: [];
     toggleLeaderboard: [];
 }>();
+
+const firstAnnouncement = computed(() => props.announcements[0] ?? null);
+const xpProgress = computed(() => {
+    if (props.userStats.maxXPForLevel <= 0) return 0;
+
+    return Math.min(
+        100,
+        Math.round(
+            (props.userStats.currentXP / props.userStats.maxXPForLevel) * 100,
+        ),
+    );
+});
+
+const formatNextDue = (item: NextUpItem) => {
+    const date = new Date(item.dueAt);
+    if (Number.isNaN(date.getTime())) return 'Upcoming';
+
+    return new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    }).format(date);
+};
+
+const itemTypeLabel = (item: NextUpItem) =>
+    item.kind === 'exam' ? 'Next exam' : 'Next assignment';
 </script>
 
 <template>
     <div class="mobile-dashboard-composition md:hidden">
-        <DashboardHero
-            class="dashboard-hero"
-            data-tour="dashboard-hero"
-            :user-name="userName"
-            :user-avatar="userAvatar"
-            :profile-href="profileHref"
-            :user-stats="userStats"
-            :announcements="announcements"
-            :time-based-greeting="timeBasedGreeting"
-            :greeting-theme="greetingTheme"
-            :status-color="statusColor"
-            :smarter-status="smarterStatus"
-            :is-refreshing="isRefreshing"
-            @close-announcement="emit('closeAnnouncement', $event)"
-            @refresh="emit('refresh')"
-            @open-section-modal="emit('openSectionModal')"
-        />
+        <section class="mobile-dashboard-greeting" data-tour="dashboard-hero">
+            <div class="mobile-dashboard-greeting__topline">
+                <span class="mobile-dashboard-kicker">Your learning space</span>
+                <button
+                    type="button"
+                    class="mobile-dashboard-icon-button"
+                    aria-label="Refresh dashboard"
+                    :disabled="isRefreshing"
+                    @click="emit('refresh')"
+                >
+                    <RefreshCw
+                        class="h-4 w-4"
+                        :class="{ 'animate-spin': isRefreshing }"
+                    />
+                </button>
+            </div>
+            <div class="mobile-dashboard-greeting__body">
+                <Link
+                    v-if="profileHref"
+                    :href="profileHref"
+                    class="mobile-dashboard-avatar"
+                    aria-label="Open your profile"
+                >
+                    <img
+                        v-if="userAvatar"
+                        :src="userAvatar"
+                        :alt="userName"
+                        class="h-full w-full object-cover"
+                    />
+                    <span v-else>{{ userName.slice(0, 1).toUpperCase() }}</span>
+                </Link>
+                <div v-else class="mobile-dashboard-avatar">
+                    <img
+                        v-if="userAvatar"
+                        :src="userAvatar"
+                        :alt="userName"
+                        class="h-full w-full object-cover"
+                    />
+                    <span v-else>{{ userName.slice(0, 1).toUpperCase() }}</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="mobile-dashboard-eyebrow">
+                        {{ timeBasedGreeting }}
+                    </p>
+                    <h1 class="mobile-dashboard-title truncate">
+                        {{ userName }}
+                    </h1>
+                    <p class="mobile-dashboard-status">
+                        <span
+                            class="mobile-dashboard-status-dot"
+                            :class="statusColor"
+                        />
+                        {{ smarterStatus }}
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    class="mobile-dashboard-bell"
+                    aria-label="Open notifications"
+                    @click="emit('refresh')"
+                >
+                    <Bell class="h-5 w-5" />
+                </button>
+            </div>
+        </section>
 
-        <TodayStrip
-            class="dashboard-focus"
-            data-tour="dashboard-today"
-            :due-today-count="dueTodayCount"
-            :overdue-count="overdueCount"
-            :upcoming-24h-count="upcoming24hCount"
-            :next-item="nextItem"
-        />
+        <section
+            v-if="firstAnnouncement"
+            class="mobile-dashboard-announcement"
+            aria-label="Announcement"
+        >
+            <div class="mobile-dashboard-announcement__icon">
+                <Sparkles class="h-4 w-4" />
+            </div>
+            <div class="min-w-0 flex-1">
+                <p class="mobile-dashboard-card-kicker">
+                    {{ firstAnnouncement.sectionName || 'Announcement' }}
+                </p>
+                <h2 class="mobile-dashboard-card-title truncate">
+                    {{ firstAnnouncement.title }}
+                </h2>
+                <p class="mobile-dashboard-card-copy line-clamp-2">
+                    {{ firstAnnouncement.description }}
+                </p>
+                <a
+                    v-if="firstAnnouncement.link"
+                    :href="firstAnnouncement.link"
+                    class="mobile-dashboard-inline-link"
+                >
+                    Read announcement <ArrowRight class="h-3.5 w-3.5" />
+                </a>
+            </div>
+            <button
+                type="button"
+                class="mobile-dashboard-dismiss"
+                aria-label="Dismiss announcement"
+                @click="emit('closeAnnouncement', firstAnnouncement.id)"
+            >
+                <X class="h-4 w-4" />
+            </button>
+        </section>
 
-        <DailyRewardCard
-            class="dashboard-reward"
-            data-tour="dashboard-daily-reward"
-            :claim-xp="claimXp"
-            :streak="userStats.streak"
-            @claimed="emit('claimed')"
-        />
+        <section class="mobile-dashboard-today" data-tour="dashboard-today">
+            <div class="mobile-dashboard-section-heading">
+                <div>
+                    <span class="mobile-dashboard-kicker">Your snapshot</span>
+                    <h2 class="mobile-dashboard-section-title">
+                        Today at a glance
+                    </h2>
+                </div>
+                <CalendarClock class="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div class="mobile-dashboard-metric-grid">
+                <div class="mobile-dashboard-metric">
+                    <span class="mobile-dashboard-metric__value">{{
+                        dueTodayCount
+                    }}</span>
+                    <span class="mobile-dashboard-metric__label"
+                        >Due today</span
+                    >
+                </div>
+                <div
+                    class="mobile-dashboard-metric"
+                    :class="{ 'is-alert': overdueCount > 0 }"
+                >
+                    <span class="mobile-dashboard-metric__value">{{
+                        overdueCount
+                    }}</span>
+                    <span class="mobile-dashboard-metric__label">Overdue</span>
+                </div>
+                <div class="mobile-dashboard-metric">
+                    <span class="mobile-dashboard-metric__value">{{
+                        upcoming24hCount
+                    }}</span>
+                    <span class="mobile-dashboard-metric__label">Next 24h</span>
+                </div>
+            </div>
+            <Link
+                v-if="nextItem"
+                :href="nextItem.href"
+                class="mobile-dashboard-next-item"
+            >
+                <span class="mobile-dashboard-next-item__icon">
+                    <BookOpenCheck class="h-4 w-4" />
+                </span>
+                <span class="min-w-0 flex-1">
+                    <span class="mobile-dashboard-card-kicker">{{
+                        itemTypeLabel(nextItem)
+                    }}</span>
+                    <strong
+                        class="mobile-dashboard-next-item__title truncate"
+                        >{{ nextItem.title }}</strong
+                    >
+                    <span class="mobile-dashboard-next-item__meta">{{
+                        formatNextDue(nextItem)
+                    }}</span>
+                </span>
+                <ArrowRight class="h-4 w-4 shrink-0 text-muted-foreground" />
+            </Link>
+            <div v-else class="mobile-dashboard-empty-next">
+                <Sparkles class="h-4 w-4" />
+                <span>You are all caught up for now.</span>
+            </div>
+        </section>
+
+        <section class="mobile-dashboard-reward-grid">
+            <div
+                class="mobile-dashboard-reward"
+                data-tour="dashboard-daily-reward"
+            >
+                <div class="mobile-dashboard-reward__icon">
+                    <Zap class="h-4 w-4" />
+                </div>
+                <div class="min-w-0">
+                    <span class="mobile-dashboard-card-kicker"
+                        >Daily reward</span
+                    >
+                    <strong class="mobile-dashboard-reward__value"
+                        >+{{ claimXp.amount }} XP</strong
+                    >
+                    <span class="mobile-dashboard-reward__copy">
+                        {{
+                            claimXp.canClaim
+                                ? 'Ready to claim'
+                                : 'Come back tomorrow'
+                        }}
+                    </span>
+                </div>
+                <ClaimXpButton
+                    class="mobile-dashboard-reward__action"
+                    :can-claim="claimXp.canClaim"
+                    :amount="claimXp.amount"
+                    :base-xp="claimXp.baseXp"
+                    :next-claim-at="claimXp.nextClaimAt"
+                    :streak="userStats.streak"
+                    :show-prompt="claimXp.showPrompt"
+                    @claimed="emit('claimed')"
+                />
+            </div>
+            <div class="mobile-dashboard-streak-summary">
+                <div class="mobile-dashboard-reward__icon is-warm">
+                    <Flame class="h-4 w-4" />
+                </div>
+                <span class="mobile-dashboard-card-kicker">Current streak</span>
+                <strong>{{ userStats.streak }} days</strong>
+                <span>{{ userStats.longestStreak }} day best</span>
+            </div>
+        </section>
 
         <section class="mobile-dashboard-progress" aria-label="Your progress">
-            <LevelProgressCard
-                class="dashboard-progress-level"
-                data-tour="dashboard-level-card"
-                :user-stats="userStats"
-                :breakdown="statsBreakdown?.xp ?? []"
-                :xp-history="xpHistory ?? []"
-                :claim-xp="claimXp"
-                :bonus-xp="bonusXp"
-            />
-            <div class="mobile-dashboard-mini-grid">
+            <div class="mobile-dashboard-section-heading">
+                <div>
+                    <span class="mobile-dashboard-kicker">Keep going</span>
+                    <h2 class="mobile-dashboard-section-title">
+                        Level progress
+                    </h2>
+                </div>
+                <span class="mobile-dashboard-level-pill"
+                    >Level {{ userStats.level }}</span
+                >
+            </div>
+            <div class="mobile-dashboard-progress-summary">
+                <div>
+                    <strong>{{ userStats.currentXP }} XP</strong>
+                    <span
+                        >of {{ userStats.maxXPForLevel }} XP to next level</span
+                    >
+                </div>
+                <span>{{ xpProgress }}%</span>
+            </div>
+            <div class="mobile-dashboard-progress-track" aria-hidden="true">
+                <span :style="{ width: `${xpProgress}%` }" />
+            </div>
+            <div class="mobile-dashboard-progress-card">
+                <LevelProgressCard
+                    data-tour="dashboard-level-card"
+                    :user-stats="userStats"
+                    :breakdown="statsBreakdown?.xp ?? []"
+                    :xp-history="xpHistory ?? []"
+                    :claim-xp="claimXp"
+                    :bonus-xp="bonusXp"
+                />
+            </div>
+        </section>
+
+        <section class="mobile-dashboard-secondary-grid">
+            <div
+                class="mobile-dashboard-secondary-card"
+                data-tour="dashboard-streak-card"
+            >
                 <StreakCard
-                    data-tour="dashboard-streak-card"
                     :current-streak="userStats.streak"
                     :longest-streak="userStats.longestStreak"
                     :login-dates="loginDates ?? []"
                 />
+            </div>
+            <div
+                class="mobile-dashboard-secondary-card"
+                data-tour="dashboard-season"
+            >
                 <SeasonProgressBand
-                    data-tour="dashboard-season"
                     :name="activeSeason?.name ?? null"
                     :start-date="activeSeason?.startDate ?? null"
                     :end-date="activeSeason?.endDate ?? null"
@@ -211,19 +459,26 @@ const emit = defineEmits<{
                 aria-controls="mobile-dashboard-leaderboard-panel"
                 @click="emit('toggleLeaderboard')"
             >
-                <span>
-                    <strong>Leaderboard</strong>
+                <span class="mobile-dashboard-section-trigger__icon"
+                    ><Trophy class="h-4 w-4"
+                /></span>
+                <span class="min-w-0 flex-1 text-left">
+                    <strong>Class leaderboard</strong>
                     <small v-if="primaryLeaderboard">
                         {{ primaryLeaderboard.sectionName }} ·
                         {{ primaryLeaderboard.totalPlayers }} students
                     </small>
                 </span>
-                <span class="mobile-dashboard-section-trigger__rank">
-                    <template v-if="primaryLeaderboard">
-                        #{{ primaryLeaderboard.userRank }}
-                    </template>
-                    <span aria-hidden="true">›</span>
+                <span
+                    v-if="primaryLeaderboard"
+                    class="mobile-dashboard-section-trigger__rank"
+                >
+                    #{{ primaryLeaderboard.userRank }}
                 </span>
+                <ChevronDown
+                    class="h-4 w-4 shrink-0 transition-transform"
+                    :class="{ 'rotate-180': leaderboardExpanded }"
+                />
             </button>
             <div
                 v-show="leaderboardExpanded"
@@ -245,9 +500,16 @@ const emit = defineEmits<{
             aria-label="Activity"
             data-tour="dashboard-activity"
         >
-            <div>
-                <h2>Activity</h2>
-                <p>Your last 4 weeks at a glance.</p>
+            <div class="mobile-dashboard-section-heading">
+                <div>
+                    <span class="mobile-dashboard-kicker"
+                        >Your consistency</span
+                    >
+                    <h2 class="mobile-dashboard-section-title">Activity</h2>
+                </div>
+                <span class="mobile-dashboard-activity-badge"
+                    >Last 4 weeks</span
+                >
             </div>
             <StreakHeatmap :login-dates="loginDates ?? []" />
         </section>
