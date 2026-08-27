@@ -465,3 +465,51 @@ it('scores Enumeration items independently of order and does not award duplicate
             'Technical SEO',
         ]);
 });
+
+it('scores Matching Type pairs with per-pair points and normalization', function () {
+    [$student, $exam] = examContext();
+    $part = ExamPart::factory()->forExam($exam)->matching([
+        ['prompt' => 'Technical SEO', 'answer' => 'Crawlability', 'points' => 2],
+        ['prompt' => 'On-page SEO', 'answer' => 'Content and headings', 'points' => 3],
+        ['prompt' => 'Off-page SEO', 'answer' => 'External authority signals', 'points' => 5],
+    ])->create();
+
+    submitAnswers($student, $exam, $part, [1 => [
+        'crawlability',
+        ' Content   and headings! ',
+        'Content and headings',
+    ]]);
+
+    expect(ExamSubmission::first()->score)->toEqual('5.00')
+        ->and(ExamSubmission::first()->answers[0]['answer'])->toBe([
+            'crawlability',
+            'Content   and headings!',
+            'Content and headings',
+        ]);
+});
+
+it('rejects malformed Matching Type answer payloads', function () {
+    $payloads = [
+        ['answers' => 'not-an-array'],
+        ['answers' => [[
+            'question_number' => 1,
+            'answer' => ['Crawlability', 'Content and headings', 'Extra choice'],
+        ]]],
+        ['answers' => [[
+            'question_number' => 1,
+            'answer' => ['Crawlability', 'Not a configured choice'],
+        ]]],
+    ];
+
+    foreach ($payloads as $payload) {
+        [$student, $exam] = examContext();
+        $part = ExamPart::factory()->forExam($exam)->matching([
+            ['prompt' => 'Technical SEO', 'answer' => 'Crawlability', 'points' => 2],
+            ['prompt' => 'On-page SEO', 'answer' => 'Content and headings', 'points' => 3],
+        ])->create();
+
+        actingAs($student)
+            ->postJson("/exams/{$exam->id}/parts/{$part->id}/submit", $payload)
+            ->assertStatus(422);
+    }
+});

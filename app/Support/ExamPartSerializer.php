@@ -89,14 +89,21 @@ class ExamPartSerializer
             $enumerationItems = $type->usesEnumerationAnswer()
                 ? self::enumerationItems($question)
                 : null;
+            $matchingItems = $type->usesMatchingAnswer()
+                ? self::matchingItems($question, $revealAnswers)
+                : null;
             $safe = [
                 'text' => $question['text'] ?? '',
                 'type' => $type->value,
                 'type_label' => $type->label(),
                 'points' => $enumerationItems !== null
                     ? array_sum(array_column($enumerationItems, 'points'))
-                    : $question['points'] ?? null,
+                    : ($matchingItems !== null
+                        ? array_sum(array_column($matchingItems, 'points'))
+                        : $question['points'] ?? null),
                 'enumeration_items' => $enumerationItems,
+                'matching_items' => $matchingItems,
+                'matching_options' => $matchingItems !== null ? self::matchingOptions($question) : null,
                 'options' => self::options($question, $revealAnswers),
             ];
 
@@ -133,6 +140,54 @@ class ExamPartSerializer
                 'points' => (float) ($item['points'] ?? 1),
             ])
             ->values()
+            ->all();
+    }
+
+    /**
+     * Expose Matching Type prompts and points, keeping the expected match hidden
+     * until answer review is permitted.
+     *
+     * @param  array<string, mixed>  $question
+     * @return array<int, array<string, mixed>>
+     */
+    private static function matchingItems(array $question, bool $revealAnswers): array
+    {
+        return collect($question['matching_items'] ?? [])
+            ->filter(fn ($item): bool => is_array($item))
+            ->map(function (array $item, int $index) use ($revealAnswers): array {
+                $safe = [
+                    'index' => $index,
+                    'prompt' => (string) ($item['prompt'] ?? ''),
+                    'points' => (float) ($item['points'] ?? 1),
+                ];
+
+                if ($revealAnswers) {
+                    $safe['answer'] = (string) ($item['answer'] ?? '');
+                }
+
+                return $safe;
+            })
+            ->filter(fn (array $item): bool => $item['prompt'] !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Provide a stable, reordered list of visible right-column choices. The
+     * selected value is the visible answer text, not a hidden correct index.
+     *
+     * @param  array<string, mixed>  $question
+     * @return array<int, array{value: string, text: string}>
+     */
+    private static function matchingOptions(array $question): array
+    {
+        return collect($question['matching_items'] ?? [])
+            ->filter(fn ($item): bool => is_array($item) && trim((string) ($item['answer'] ?? '')) !== '')
+            ->map(fn (array $item): string => trim((string) $item['answer']))
+            ->unique()
+            ->sortBy(fn (string $answer): string => hash('sha256', (string) ($question['text'] ?? '').'|'.$answer))
+            ->values()
+            ->map(fn (string $answer): array => ['value' => $answer, 'text' => $answer])
             ->all();
     }
 

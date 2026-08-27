@@ -207,3 +207,45 @@ it('reports Enumeration partial credit and per-item point breakdowns', function 
         ->assertSee('Partial')
         ->assertSee('Item breakdown');
 });
+
+it('reports Matching Type partial credit and pair breakdowns', function () {
+    [$admin, $exam, , $student] = answerReportContext();
+    $part = ExamPart::factory()->forExam($exam)->matching([
+        ['prompt' => 'Technical SEO', 'answer' => 'Crawlability', 'points' => 2],
+        ['prompt' => 'On-page SEO', 'answer' => 'Content and headings', 'points' => 3],
+    ])->create();
+
+    ExamSubmission::factory()->forSubmission($student, $exam, $part)->create([
+        'status' => 'graded',
+        'score' => 2,
+        'answers' => [[
+            'question_number' => 1,
+            'question_type' => 'matching',
+            'question_text' => 'Match each item.',
+            'points' => 5,
+            'answer' => ['Crawlability', 'Wrong answer'],
+        ]],
+    ]);
+
+    $report = app(ExamAnswerReportService::class)->build($exam, 'students', [$student->id]);
+    $partReport = collect($report['students'][0]['parts'])
+        ->first(fn (array $partReport): bool => $partReport['part']['id'] === $part->id);
+    $item = $partReport['items'][0];
+
+    expect($item['result'])->toBe('partial')
+        ->and($item['earned'])->toBe(2.0)
+        ->and($item['matching_breakdown'])->toMatchArray([
+            ['prompt' => 'Technical SEO', 'expected' => 'Crawlability', 'submitted' => 'Crawlability', 'points' => 2.0, 'earned' => 2.0, 'matched' => true],
+            ['prompt' => 'On-page SEO', 'expected' => 'Content and headings', 'submitted' => 'Wrong answer', 'points' => 3.0, 'earned' => 0.0, 'matched' => false],
+        ]);
+
+    actingAs($admin)
+        ->get(route('admin.exams.answer-report', [
+            'exam' => $exam->id,
+            'mode' => 'students',
+            'students' => [$student->id],
+        ]))
+        ->assertOk()
+        ->assertSee('Pair breakdown')
+        ->assertSee('Crawlability');
+});

@@ -14,8 +14,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  * shape that ExamController::submitPart() reads:
  *
  *   multiple_choice / true_false -> options[] with exactly one is_correct
- *   identification               -> correct_answer string
- *   essay                        -> graded by AIService, no key
+ *   identification               -> correct_answer string plus accepted alternatives
+ *   enumeration / matching       -> structured scored answer items
+ *   essay                       -> graded by AIService, no key
  */
 class ExamPartFactory extends Factory
 {
@@ -116,6 +117,28 @@ class ExamPartFactory extends Factory
                 'type' => QuestionType::Enumeration->value,
                 'points' => $totalPoints,
                 'enumeration_items' => $items,
+            ]],
+        ]);
+    }
+
+    /**
+     * @param  array<int, array{prompt: string, answer: string, points: int|float}>  $items
+     */
+    public function matching(array $items = [
+        ['prompt' => 'Technical SEO', 'answer' => 'Crawlability', 'points' => 2],
+        ['prompt' => 'On-page SEO', 'answer' => 'Content and headings', 'points' => 3],
+    ]): static
+    {
+        $totalPoints = array_sum(array_column($items, 'points'));
+
+        return $this->state(fn (array $attributes) => [
+            'type' => QuestionType::Matching->value,
+            'points' => $totalPoints,
+            'questions' => [[
+                'text' => 'Match each item with its description.',
+                'type' => QuestionType::Matching->value,
+                'points' => $totalPoints,
+                'matching_items' => $items,
             ]],
         ]);
     }

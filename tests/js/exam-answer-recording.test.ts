@@ -101,10 +101,52 @@ const makeExam = () => ({
     ],
 });
 
-const mountShow = async (answerDrafts: Record<number, unknown> = {}) => {
+const makeMatchingExam = () => ({
+    id: 2,
+    title: 'Matching Exam',
+    description: 'desc',
+    exam_date: '2026-08-12',
+    duration_minutes: 60,
+    status: 'published',
+    url: null,
+    parts: [
+        {
+            id: 202,
+            title: 'Part I - Matching Type',
+            instructions: null,
+            type: 'section',
+            points: 5,
+            questions: [
+                {
+                    text: 'Match each SEO concept.',
+                    type: 'matching',
+                    type_label: 'Matching Type',
+                    points: 5,
+                    options: null,
+                    matching_items: [
+                        { index: 0, prompt: 'Technical SEO', points: 2 },
+                        { index: 1, prompt: 'On-page SEO', points: 3 },
+                    ],
+                    matching_options: [
+                        { value: 'Crawlability', text: 'Crawlability' },
+                        {
+                            value: 'Content and headings',
+                            text: 'Content and headings',
+                        },
+                    ],
+                },
+            ],
+        },
+    ],
+});
+
+const mountShow = async (
+    answerDrafts: Record<number, unknown> = {},
+    exam = makeExam(),
+) => {
     const wrapper = mount(Show, {
         props: {
-            exam: makeExam() as any,
+            exam: exam as any,
             submissions: {},
             submittedPartId: null,
             partDeadlines: {},
@@ -243,6 +285,92 @@ describe('Exams/Show.vue answer recording', () => {
                 { question_number: 3, answer: 'Jose Rizal' },
             ]),
         });
+    });
+
+    it('records and restores Matching Type answers as an aligned string array', async () => {
+        const wrapper = await mountShow({}, makeMatchingExam());
+        await startPart(wrapper);
+
+        const selects = wrapper
+            .findAll('select')
+            .filter((select: any) =>
+                select.attributes('id')?.startsWith('matching-mobile-'),
+            );
+        expect(selects).toHaveLength(2);
+        await selects[0].setValue('Crawlability');
+        await selects[1].setValue('Content and headings');
+        await flushPromises();
+
+        const submitBtn = wrapper
+            .findAll('button')
+            .find((b: any) => b.text().includes('Submit this part'));
+        expect(submitBtn, 'submit button should exist').toBeTruthy();
+        await submitBtn!.trigger('click');
+        await flushPromises();
+
+        const anywayBtn = wrapper
+            .findAll('button')
+            .find((b: any) => b.text().includes('Submit Anyway'));
+        if (anywayBtn) {
+            await anywayBtn.trigger('click');
+            await flushPromises();
+        }
+
+        const [url, payload] = postMock.mock.calls.find(
+            (c: any) => typeof c[0] === 'string' && c[0].includes('/submit'),
+        ) as [string, any];
+        expect(url).toContain('/exams/2/parts/202/submit');
+        expect(payload.answers[0].answer).toEqual([
+            'Crawlability',
+            'Content and headings',
+        ]);
+        expect(payload.answers[0].question_type).toBe('matching');
+
+        const axiosMod = await import('axios');
+        const autosaveCall = vi
+            .mocked(axiosMod.default.put)
+            .mock.calls.find((call: any[]) =>
+                String(call[0]).includes('/parts/202/answers'),
+            );
+        expect(autosaveCall?.[1]).toMatchObject({
+            answers: expect.arrayContaining([
+                {
+                    question_number: 1,
+                    answer: ['Crawlability', 'Content and headings'],
+                },
+            ]),
+        });
+
+        const restored = await mountShow(
+            {
+                202: {
+                    answers: [
+                        {
+                            question_number: 1,
+                            answer: ['Crawlability', 'Content and headings'],
+                        },
+                    ],
+                    saved_at: new Date().toISOString(),
+                },
+            },
+            makeMatchingExam(),
+        );
+        await startPart(restored);
+
+        expect(
+            restored
+                .findAll('select')
+                .find((select: any) =>
+                    select.attributes('id') === 'matching-mobile-0-0',
+                )?.element.value,
+        ).toBe('Crawlability');
+        expect(
+            restored
+                .findAll('select')
+                .find((select: any) =>
+                    select.attributes('id') === 'matching-mobile-0-1',
+                )?.element.value,
+        ).toBe('Content and headings');
     });
 
     it('restores database-backed answers when a part is reopened after reload', async () => {
