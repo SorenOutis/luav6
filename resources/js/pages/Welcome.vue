@@ -37,7 +37,7 @@ const effectiveReducedMotion = computed(
 const revealTransition = (delay = 0) =>
     effectiveReducedMotion.value
         ? { duration: 0 }
-        : { duration: 0.55, easing: [0.23, 1, 0.32, 1], delay };
+        : { duration: 0.55, easing: [0.23, 1, 0.32, 1] as const, delay };
 
 const audienceGroups = [
     {
