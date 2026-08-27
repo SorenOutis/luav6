@@ -88,8 +88,12 @@ final class MatchingAnswerMatcher
 
     public static function isValidSelection(mixed $answer, array $question): bool
     {
-        if (! is_string($answer) || trim($answer) === '') {
+        if ($answer === null || (is_string($answer) && trim($answer) === '')) {
             return true;
+        }
+
+        if (! is_string($answer)) {
+            return false;
         }
 
         $normalized = self::normalize($answer);

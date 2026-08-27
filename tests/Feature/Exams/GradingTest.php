@@ -477,14 +477,14 @@ it('scores Matching Type pairs with per-pair points and normalization', function
     submitAnswers($student, $exam, $part, [1 => [
         'crawlability',
         ' Content   and headings! ',
-        'Wrong answer',
+        'Content and headings',
     ]]);
 
     expect(ExamSubmission::first()->score)->toEqual('5.00')
         ->and(ExamSubmission::first()->answers[0]['answer'])->toBe([
             'crawlability',
             'Content   and headings!',
-            'Wrong answer',
+            'Content and headings',
         ]);
 });
 
@@ -509,7 +509,7 @@ it('rejects malformed Matching Type answer payloads', function () {
         ])->create();
 
         actingAs($student)
-            ->post("/exams/{$exam->id}/parts/{$part->id}/submit", $payload)
+            ->postJson("/exams/{$exam->id}/parts/{$part->id}/submit", $payload)
             ->assertStatus(422);
     }
 });
