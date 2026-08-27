@@ -43,6 +43,12 @@
                         || (typeof cores === 'number' && cores <= 4)
                         || conn === 'slow-2g'
                         || conn === '2g';
+                    var updateTouchMobile = function() {
+                        var touchMobile = coarse && window.innerWidth < 1024;
+                        document.documentElement.classList.toggle('touch-mobile', touchMobile);
+                    };
+                    updateTouchMobile();
+                    window.addEventListener('resize', updateTouchMobile, { passive: true });
                     if (lowEnd) {
                         document.documentElement.setAttribute('data-low-end', '');
                     }

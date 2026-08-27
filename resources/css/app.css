@@ -2591,3 +2591,27 @@ html[data-low-end] .welcome-defer {
         touch-action: manipulation;
     }
 }
+
+/*
+ * Some mobile browsers can report a 980px CSS viewport when desktop-site mode
+ * is enabled. Keep the mobile composition visible for touch devices in that
+ * range without changing ordinary desktop or tablet layouts.
+ */
+@media (max-width: 1023px) {
+    html.touch-mobile .mobile-dashboard-composition,
+    html.touch-mobile .mobile-page-header {
+        display: flex !important;
+    }
+
+    html.touch-mobile .mobile-page-header {
+        display: block !important;
+    }
+
+    html.touch-mobile .mobile-existing-header {
+        display: none !important;
+    }
+
+    html.touch-mobile .dashboard-desktop-composition {
+        display: none !important;
+    }
+}

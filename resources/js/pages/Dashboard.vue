@@ -779,7 +779,7 @@ const handleLogout = () => {
             />
 
             <!-- Desktop composition; hidden below the mobile breakpoint. -->
-            <div class="hidden md:block">
+            <div class="dashboard-desktop-composition hidden md:block">
                 <!-- Real content (shown after booted) -->
                 <template v-if="isBooted">
                     <!-- Hero Banner Section -->
