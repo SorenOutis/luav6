@@ -39,9 +39,13 @@ const { isDyslexiaFriendly, toggleDyslexiaMode, updateDyslexiaMode } =
     useAccessibility();
 const isBooted = ref(false);
 
+type AnswerValue = string | number | string[] | null;
+
 interface Question {
     text: string;
     type: string;
+    type_label?: string;
+    enumeration_items?: { points: number }[] | null;
     // The answer key is stripped server-side while an exam is in progress and
     // is only present once the exam is closed (review mode). Never rely on it
     // here — this screen is used for *taking* the exam.
@@ -86,7 +90,7 @@ interface ExamXpAward {
 interface ExamAnswerDraft {
     answers: Array<{
         question_number: number;
-        answer: string | number | null;
+        answer: AnswerValue;
     }>;
     saved_at: string | null;
 }
@@ -124,7 +128,7 @@ const selectedPart = ref<ExamPart | null>(null);
 const examStarted = ref(false);
 const container = ref<HTMLElement | null>(null);
 
-const answers = reactive<Record<number, string | number | null>>({}); // Store answers by question index
+const answers = reactive<Record<number, AnswerValue>>({}); // Store answers by question index
 // Track submitted part IDs locally to handle stale server data after redirect
 const locallySubmittedPartIds = ref(
     new Set<number>(Object.keys(props.submissions).map(Number)),
@@ -214,18 +218,25 @@ useEcho<ExamAnswersSavedEvent>(
     },
 );
 
+const isAnswerComplete = (answer: AnswerValue | undefined): boolean => {
+    if (Array.isArray(answer)) {
+        return answer.length > 0 && answer.every((item) => item.trim() !== '');
+    }
+
+    return (
+        answer !== undefined &&
+        answer !== null &&
+        (typeof answer !== 'string' || answer.trim() !== '')
+    );
+};
+
 const unansweredCount = computed(() => {
     if (!selectedPart.value || !selectedPart.value.questions) return 0;
 
     let count = 0;
     selectedPart.value.questions.forEach((q, index) => {
         const answer = answers[index];
-        // Count as unanswered if answer is undefined, null, or an empty string (for essays/identification)
-        if (
-            answer === undefined ||
-            answer === null ||
-            (typeof answer === 'string' && answer.trim() === '')
-        ) {
+        if (!isAnswerComplete(answer)) {
             count++;
         }
     });
@@ -585,14 +596,9 @@ watch(isSubmitting, (submitting) => {
 // Find the first unanswered question index (for the jump-to-unanswered button)
 const firstUnansweredIndex = computed(() => {
     if (!selectedPart.value?.questions) return -1;
-    return selectedPart.value.questions.findIndex((_, i) => {
-        const a = answers[i];
-        return (
-            a === undefined ||
-            a === null ||
-            (typeof a === 'string' && a.trim() === '')
-        );
-    });
+    return selectedPart.value.questions.findIndex(
+        (_, i) => !isAnswerComplete(answers[i]),
+    );
 });
 
 // Find the first flagged question index (for the review-flagged button)
@@ -604,13 +610,7 @@ const firstFlaggedIndex = computed(() => {
 // ─── PROGRESS NAVIGATOR LOGIC ──────────────────────────────────
 const getQuestionStatus = (index: number) => {
     if (flaggedQuestions.value.has(index)) return 'flagged';
-    if (
-        answers[index] !== undefined &&
-        answers[index] !== '' &&
-        answers[index] !== null
-    )
-        return 'answered';
-    return 'pending';
+    return isAnswerComplete(answers[index]) ? 'answered' : 'pending';
 };
 
 const toggleFlag = (index: number) => {
@@ -665,12 +665,12 @@ const jumpToNextFlagged = () => {
     scrollToQuestion(flagged[nextIdx]);
 };
 
-const answerFingerprint = (answer: string | number | null) =>
+const answerFingerprint = (answer: AnswerValue | undefined) =>
     JSON.stringify(answer);
 const queuedAnswerFingerprints = new Map<number, string>();
 const pendingAnswerChanges = new Map<
     number,
-    { question_number: number; answer: string | number | null }
+    { question_number: number; answer: AnswerValue }
 >();
 let answerSaveRequest: Promise<void> | null = null;
 let answerSaveRetryTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -702,7 +702,7 @@ const loadDraft = () => {
     if (saved) {
         try {
             const draft = JSON.parse(saved) as {
-                answers?: Record<number, string | number | null>;
+                answers?: Record<number, AnswerValue>;
                 flagged?: number[];
                 timestamp?: number;
             };
@@ -995,11 +995,22 @@ const isPartLocked = (index: number) => {
     return !isPartSubmitted(previousPart.id);
 };
 
-const getQuestionTypes = (part: ExamPart) => [
-    ...new Set(part.questions?.map((q) => q.type) ?? []),
-];
-
 const formatType = (type: string) => type.replace(/_/g, ' ');
+
+const getQuestionTypeLabel = (question: Question) =>
+    question.type_label ?? formatType(question.type);
+
+const getQuestionMaxPoints = (question: Question, fallback = 1): number =>
+    question.type === 'enumeration'
+        ? (question.enumeration_items ?? []).reduce(
+              (sum, item) => sum + (item.points ?? 0),
+              0,
+          )
+        : (question.points ?? fallback);
+
+const getQuestionTypes = (part: ExamPart) => [
+    ...new Set(part.questions?.map(getQuestionTypeLabel) ?? []),
+];
 
 const formatDateTime = (dateStr: string) => {
     if (!dateStr) return '';
@@ -1134,6 +1145,48 @@ const handleBeforeUnload = (e: BeforeUnloadEvent) => {
     }
 };
 
+const getEnumerationAnswer = (
+    questionIndex: number,
+    itemIndex: number,
+): string => {
+    const answer = answers[questionIndex];
+
+    return Array.isArray(answer) ? (answer[itemIndex] ?? '') : '';
+};
+
+const setEnumerationAnswer = (
+    questionIndex: number,
+    itemIndex: number,
+    event: Event,
+) => {
+    const input = event.target as HTMLInputElement;
+    const current = Array.isArray(answers[questionIndex])
+        ? [...answers[questionIndex]]
+        : [];
+
+    current[itemIndex] = input.value;
+    answers[questionIndex] = current;
+};
+
+const initializeEnumerationAnswers = () => {
+    selectedPart.value?.questions?.forEach((question, index) => {
+        if (question.type !== 'enumeration') return;
+
+        const itemCount = question.enumeration_items?.length ?? 0;
+        const current = answers[index];
+        const values = Array.isArray(current)
+            ? current
+            : typeof current === 'string' && current.trim() !== ''
+              ? [current]
+              : [];
+
+        answers[index] = Array.from(
+            { length: itemCount },
+            (_, itemIndex) => values[itemIndex] ?? '',
+        );
+    });
+};
+
 const startPart = () => {
     // Reset state for the new part
     Object.keys(answers).forEach((key) => delete answers[Number(key)]);
@@ -1155,6 +1208,7 @@ const startPart = () => {
 
     examStarted.value = true;
     loadDraft(); // Load any saved progress
+    initializeEnumerationAnswers();
     void sendMonitorProgress('starting');
 
     // Anchor the per-part clock on the server, then run the countdown from the
@@ -1476,7 +1530,10 @@ const submitPart = async () => {
             question_number: index + 1,
             question_text: question.text,
             question_type: question.type,
-            points: question.points ?? selectedPart.value?.points ?? 1,
+            points: getQuestionMaxPoints(
+                question,
+                selectedPart.value?.points ?? 1,
+            ),
             answer:
                 answers[index] !== undefined && answers[index] !== null
                     ? answers[index]
@@ -2495,7 +2552,7 @@ const feedbackContent = computed(() => {
                                             :key="type"
                                             class="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
                                         >
-                                            {{ formatType(type) }}
+                                            {{ type }}
                                         </span>
                                     </div>
                                 </div>
@@ -2669,11 +2726,11 @@ const feedbackContent = computed(() => {
                                                         class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
                                                     >
                                                         {{
-                                                            formatType(
+                                                            getQuestionTypeLabel(
                                                                 selectedPart!
                                                                     .questions![
                                                                     mobileQuestionIndex
-                                                                ].type,
+                                                                ],
                                                             )
                                                         }}
                                                     </span>
@@ -2805,6 +2862,62 @@ const feedbackContent = computed(() => {
                                                     placeholder="Type your answer here..."
                                                     class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
                                                 />
+                                            </div>
+
+                                            <!-- Enumeration -->
+                                            <div
+                                                v-else-if="
+                                                    selectedPart!.questions![
+                                                        mobileQuestionIndex
+                                                    ].type === 'enumeration'
+                                                "
+                                                class="w-full space-y-3"
+                                            >
+                                                <div
+                                                    v-for="(
+                                                        item, itemIndex
+                                                    ) in selectedPart!
+                                                        .questions![
+                                                        mobileQuestionIndex
+                                                    ].enumeration_items"
+                                                    :key="itemIndex"
+                                                    class="space-y-1"
+                                                >
+                                                    <label
+                                                        class="flex items-center justify-between text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        <span
+                                                            >Answer
+                                                            {{
+                                                                itemIndex + 1
+                                                            }}</span
+                                                        >
+                                                        <span
+                                                            >{{
+                                                                item.points
+                                                            }}
+                                                            pts</span
+                                                        >
+                                                    </label>
+                                                    <input
+                                                        :value="
+                                                            getEnumerationAnswer(
+                                                                mobileQuestionIndex,
+                                                                itemIndex,
+                                                            )
+                                                        "
+                                                        @input="
+                                                            setEnumerationAnswer(
+                                                                mobileQuestionIndex,
+                                                                itemIndex,
+                                                                $event,
+                                                            )
+                                                        "
+                                                        type="text"
+                                                        :placeholder="`List item ${itemIndex + 1}`"
+                                                        class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                                    />
+                                                </div>
                                             </div>
 
                                             <!-- Essay -->
@@ -2961,8 +3074,8 @@ const feedbackContent = computed(() => {
                                                         class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
                                                     >
                                                         {{
-                                                            formatType(
-                                                                question.type,
+                                                            getQuestionTypeLabel(
+                                                                question,
                                                             )
                                                         }}
                                                     </span>
@@ -3057,6 +3170,58 @@ const feedbackContent = computed(() => {
                                                         "
                                                         type="text"
                                                         placeholder="Type your answer here..."
+                                                        class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <!-- Enumeration -->
+                                            <div
+                                                v-else-if="
+                                                    question.type ===
+                                                    'enumeration'
+                                                "
+                                                class="max-w-xl space-y-3"
+                                            >
+                                                <div
+                                                    v-for="(
+                                                        item, itemIndex
+                                                    ) in question.enumeration_items"
+                                                    :key="itemIndex"
+                                                    class="space-y-1"
+                                                >
+                                                    <label
+                                                        class="flex items-center justify-between text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        <span
+                                                            >Answer
+                                                            {{
+                                                                itemIndex + 1
+                                                            }}</span
+                                                        >
+                                                        <span
+                                                            >{{
+                                                                item.points
+                                                            }}
+                                                            pts</span
+                                                        >
+                                                    </label>
+                                                    <input
+                                                        :value="
+                                                            getEnumerationAnswer(
+                                                                qIndex,
+                                                                itemIndex,
+                                                            )
+                                                        "
+                                                        @input="
+                                                            setEnumerationAnswer(
+                                                                qIndex,
+                                                                itemIndex,
+                                                                $event,
+                                                            )
+                                                        "
+                                                        type="text"
+                                                        :placeholder="`List item ${itemIndex + 1}`"
                                                         class="w-full rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm transition-all outline-none placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1 focus:ring-primary"
                                                     />
                                                 </div>

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\EssayGradingMethod;
+use App\Enums\QuestionType;
 use App\Models\ExamPart;
 
 class ExamPartAnswerLabels
@@ -113,15 +114,19 @@ class ExamPartAnswerLabels
                 continue;
             }
 
-            $type = $row['question_type'] ?? '';
+            $type = QuestionType::tryFromStored($row['question_type'] ?? null);
             $answer = $row['answer'] ?? null;
 
-            if ($type === 'essay') {
+            if ($type === QuestionType::Essay) {
                 $data['answers'][$key]['grading_method'] = EssayGradingMethod::forAnswer($row)->value;
             }
 
-            if (in_array($type, ['multiple_choice', 'true_false'], true)) {
+            if ($type?->usesChoiceAnswer()) {
                 $data['answers'][$key]['response_choice'] = self::normalizeChoiceState($answer);
+            } elseif ($type?->usesEnumerationAnswer()) {
+                $data['answers'][$key]['response_text'] = is_array($answer)
+                    ? implode("\n", array_map('strval', $answer))
+                    : (string) ($answer ?? '');
             } else {
                 $data['answers'][$key]['response_text'] = $answer === null || is_scalar($answer)
                     ? (string) $answer
@@ -149,13 +154,18 @@ class ExamPartAnswerLabels
                 continue;
             }
 
-            $type = $row['question_type'] ?? '';
+            $type = QuestionType::tryFromStored($row['question_type'] ?? '');
 
-            if (in_array($type, ['multiple_choice', 'true_false'], true)) {
+            if ($type?->usesChoiceAnswer()) {
                 $choice = $row['response_choice'] ?? null;
                 $data['answers'][$key]['answer'] = ($choice === null || $choice === '')
                     ? null
                     : (int) $choice;
+            } elseif ($type?->usesEnumerationAnswer()) {
+                $text = trim((string) ($row['response_text'] ?? ''));
+                $data['answers'][$key]['answer'] = $text === ''
+                    ? []
+                    : preg_split('/\r?\n/', $text) ?: [];
             } else {
                 $text = $row['response_text'] ?? null;
                 $data['answers'][$key]['answer'] = ($text === null || $text === '')

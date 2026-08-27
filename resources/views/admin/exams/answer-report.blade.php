@@ -8,6 +8,7 @@
 
     $resultBadge = static fn (string $result): array => match ($result) {
         'correct' => ['Correct', 'ok'],
+        'partial' => ['Partial', 'warn'],
         'wrong' => ['Wrong', 'bad'],
         'scored' => ['Scored', 'ok'],
         'pending' => ['Awaiting grading', 'warn'],
@@ -317,6 +318,7 @@
                         <div class="ok"><span>Correct</span><strong>{{ $student['summary']['correct'] }}</strong></div>
                         <div class="bad"><span>Wrong</span><strong>{{ $student['summary']['wrong'] }}</strong></div>
                         <div><span>Essay points</span><strong>{{ $student['summary']['essay_points'] }}</strong></div>
+                        <div><span>Partial credit</span><strong>{{ $student['summary']['partial'] }}</strong></div>
                         <div><span>No answer / pending</span><strong>{{ $student['summary']['unanswered'] }} / {{ $student['summary']['pending'] }}</strong></div>
                     </div>
 
@@ -398,10 +400,24 @@
                                                 {{ $item['student_answer'] ?? '— no answer —' }}
                                             </span>
                                         </div>
-                                        <div class="q__row">
-                                            <span class="q__label">Correct answer</span>
-                                            <span class="q__value--ok">{{ $question['correct_display'] }}</span>
-                                        </div>
+                                        @if ($question['type'] === 'enumeration')
+                                            <div class="q__row">
+                                                <span class="q__label">Item breakdown</span>
+                                                <ul class="options">
+                                                    @foreach ($item['enumeration_breakdown'] ?? [] as $enumerationItem)
+                                                        <li class="{{ $enumerationItem['matched'] ? 'is-correct' : '' }}">
+                                                            {{ $enumerationItem['answer'] }}
+                                                            <span class="meta">{{ $enumerationItem['earned'] }} / {{ $enumerationItem['points'] }} pts</span>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @else
+                                            <div class="q__row">
+                                                <span class="q__label">Correct answer</span>
+                                                <span class="q__value--ok">{{ $question['correct_display'] }}</span>
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
                             @endforeach

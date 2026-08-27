@@ -428,3 +428,25 @@ it('stores one submission row per part', function () {
     expect(ExamSubmission::count())->toBe(1)
         ->and(ExamSubmission::first()->exam_part_id)->toBe($part->id);
 });
+
+it('scores Enumeration items independently of order and does not award duplicate credit', function () {
+    [$student, $exam] = examContext();
+    $part = ExamPart::factory()->forExam($exam)->enumeration([
+        ['answer' => 'Technical SEO', 'points' => 2],
+        ['answer' => 'On-page SEO', 'points' => 3],
+        ['answer' => 'Off-page SEO', 'points' => 5],
+    ])->create();
+
+    submitAnswers($student, $exam, $part, [1 => [
+        ' off-page seo ',
+        'Technical SEO',
+        'Technical SEO',
+    ]]);
+
+    expect(ExamSubmission::first()->score)->toEqual('7.00')
+        ->and(ExamSubmission::first()->answers[0]['answer'])->toBe([
+            'off-page seo',
+            'Technical SEO',
+            'Technical SEO',
+        ]);
+});

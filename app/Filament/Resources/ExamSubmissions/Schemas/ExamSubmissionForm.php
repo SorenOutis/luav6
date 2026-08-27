@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ExamSubmissions\Schemas;
 
 use App\Enums\EssayGradingMethod;
+use App\Enums\QuestionType;
 use App\Support\ExamPartAnswerLabels;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -67,12 +68,7 @@ class ExamSubmissionForm
                             ->required()
                             ->live(onBlur: true),
                         Select::make('question_type')
-                            ->options([
-                                'multiple_choice' => 'Multiple choice',
-                                'true_false' => 'True / false',
-                                'essay' => 'Essay',
-                                'identification' => 'Identification',
-                            ])
+                            ->options(QuestionType::options())
                             ->required()
                             ->live(),
                         Select::make('grading_method')
@@ -106,6 +102,7 @@ class ExamSubmissionForm
                                 ->dehydrated(fn (callable $get): bool => ! in_array($get('question_type'), ['multiple_choice', 'true_false'], true))
                                 ->placeholder(fn (callable $get): string => match ($get('question_type')) {
                                     'essay' => 'Student essay response',
+                                    'enumeration' => 'One answer per line',
                                     default => 'Student answer',
                                 }),
                             TextInput::make('ai_score')

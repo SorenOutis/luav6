@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
@@ -124,6 +125,7 @@ class ExamAnswerReportService
         $correct = 0;
         $wrong = 0;
         $unanswered = 0;
+        $partial = 0;
         $pending = 0;
         $essaysScored = 0;
         $essayPoints = 0.0;
@@ -148,6 +150,7 @@ class ExamAnswerReportService
                         'correct' => $correct++,
                         'wrong' => $wrong++,
                         'unanswered' => $unanswered++,
+                        'partial' => $partial++,
                         default => $pending++,
                     };
                 }
@@ -164,7 +167,7 @@ class ExamAnswerReportService
 
             if ($teacherFeedback !== null) {
                 foreach ($items as $index => $candidate) {
-                    if ($candidate['question']['type'] === 'essay') {
+                    if (QuestionType::tryFromStored($candidate['question']['type'] ?? null) === QuestionType::Essay) {
                         $items[$index]['teacher_feedback'] = $teacherFeedback;
                         $teacherFeedbackShownInline = true;
 
@@ -208,6 +211,7 @@ class ExamAnswerReportService
                 'essays_scored' => $essaysScored,
                 'essay_points' => round($essayPoints, 2),
                 'unanswered' => $unanswered,
+                'partial' => $partial,
                 'pending' => $pending,
                 'parts_submitted' => $submissions->count(),
                 'parts_total' => count($structure),
@@ -228,7 +232,7 @@ class ExamAnswerReportService
     private function buildItem(array $question, ?array $row, ?ExamSubmission $submission): array
     {
         $answer = $row['answer'] ?? null;
-        $hasAnswer = ! ($answer === null || (is_string($answer) && trim($answer) === ''));
+        $hasAnswer = ! $this->isBlankAnswer($answer);
 
         $item = [
             'question' => $question,
@@ -241,7 +245,9 @@ class ExamAnswerReportService
             'teacher_feedback' => null,
         ];
 
-        if ($question['type'] === 'essay') {
+        $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
+
+        if ($type === QuestionType::Essay) {
             // Essays are reported as: question, answer, feedback, score.
             // There is no key to compare against, so no correct/wrong verdict.
             $item['student_answer'] = $hasAnswer ? (string) $answer : null;
@@ -271,7 +277,22 @@ class ExamAnswerReportService
             return $item;
         }
 
-        if (in_array($question['type'], ['multiple_choice', 'true_false'], true)) {
+        if ($type === QuestionType::Enumeration) {
+            $breakdown = $this->enumerationBreakdown($question['enumeration_items'] ?? [], $answer);
+            $earned = array_sum(array_column($breakdown, 'earned'));
+            $item['student_answer'] = is_array($answer)
+                ? implode(', ', array_values(array_map(fn ($value): string => trim((string) $value), $answer)))
+                : null;
+            $item['enumeration_breakdown'] = $breakdown;
+            $item['earned'] = $earned;
+            $item['result'] = $earned >= (float) $question['points']
+                ? 'correct'
+                : ($earned > 0 ? 'partial' : 'wrong');
+
+            return $item;
+        }
+
+        if ($type->usesChoiceAnswer()) {
             $chosen = (int) $answer;
             $item['student_answer'] = $this->optionLabel($question['options'], $chosen);
             $item['result'] = ($question['correct_index'] !== null && $chosen === $question['correct_index'])
@@ -315,8 +336,21 @@ class ExamAnswerReportService
                 continue;
             }
 
-            $type = (string) ($question['type'] ?? 'multiple_choice');
-            $points = (int) ($question['points'] ?? $defaultPoints);
+            $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
+            $enumerationItems = $type === QuestionType::Enumeration
+                ? collect($question['enumeration_items'] ?? [])
+                    ->filter(fn ($item): bool => is_array($item))
+                    ->map(fn (array $item): array => [
+                        'answer' => (string) ($item['answer'] ?? ''),
+                        'points' => (float) ($item['points'] ?? 0),
+                    ])
+                    ->filter(fn (array $item): bool => trim($item['answer']) !== '')
+                    ->values()
+                    ->all()
+                : [];
+            $points = $type === QuestionType::Enumeration
+                ? array_sum(array_column($enumerationItems, 'points'))
+                : (int) ($question['points'] ?? $defaultPoints);
             $totalPoints += $points;
 
             $options = [];
@@ -343,16 +377,17 @@ class ExamAnswerReportService
             $normalized[] = [
                 'number' => $questionIndex + 1,
                 'text' => (string) ($question['text'] ?? ''),
-                'type' => $type,
-                'type_label' => $this->typeLabel($type),
+                'type' => $type->value,
+                'type_label' => $type->label(),
                 'points' => $points,
                 'options' => $options,
+                'enumeration_items' => $enumerationItems,
                 'correct_index' => $correctIndex,
-                'correct_answer' => $type === 'identification'
+                'correct_answer' => $type === QuestionType::Identification
                     ? (string) ($question['correct_answer'] ?? '')
                     : null,
                 'correct_display' => $this->correctDisplay($type, $options, $correctIndex, $question),
-                'grading_method' => $type === 'essay'
+                'grading_method' => $type === QuestionType::Essay
                     ? (string) ($question['grading_method'] ?? 'ai')
                     : null,
             ];
@@ -372,20 +407,72 @@ class ExamAnswerReportService
      * @param  array<int, array<string, mixed>>  $options
      * @param  array<string, mixed>  $question
      */
-    private function correctDisplay(string $type, array $options, ?int $correctIndex, array $question): string
+    private function correctDisplay(QuestionType $type, array $options, ?int $correctIndex, array $question): string
     {
         return match ($type) {
-            'multiple_choice', 'true_false' => $correctIndex !== null
+            QuestionType::MultipleChoice, QuestionType::TrueFalse => $correctIndex !== null
                 ? $this->optionLabel($options, $correctIndex)
                 : 'No correct option marked',
-            'identification' => trim((string) ($question['correct_answer'] ?? '')) !== ''
+            QuestionType::Identification => trim((string) ($question['correct_answer'] ?? '')) !== ''
                 ? (string) $question['correct_answer']
                 : 'No answer key set',
-            'essay' => ($question['grading_method'] ?? 'ai') === 'manual'
+            QuestionType::Enumeration => collect($question['enumeration_items'] ?? [])
+                ->map(fn (array $item): string => $item['answer'].' ('.$item['points'].' pts)')
+                ->implode(', ') ?: 'No answer key set',
+            QuestionType::Essay => ($question['grading_method'] ?? 'ai') === 'manual'
                 ? 'Graded by the teacher (no fixed key)'
                 : 'Graded automatically by AI (no fixed key)',
-            default => '—',
         };
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<int, array{answer: string, points: float, earned: float, matched: bool}>
+     */
+    private function enumerationBreakdown(array $items, mixed $submittedAnswer): array
+    {
+        $submitted = is_array($submittedAnswer) ? array_values($submittedAnswer) : [];
+        $matchedIndexes = [];
+
+        return collect($items)
+            ->filter(fn ($item): bool => is_array($item))
+            ->map(function (array $item) use ($submitted, &$matchedIndexes): array {
+                $expectedAnswer = (string) ($item['answer'] ?? '');
+                $points = (float) ($item['points'] ?? 0);
+                $matchedAnswer = null;
+
+                foreach ($submitted as $submittedIndex => $answer) {
+                    if (in_array($submittedIndex, $matchedIndexes, true)) {
+                        continue;
+                    }
+
+                    if ($this->normalizeText((string) $answer) === $this->normalizeText($expectedAnswer)
+                        && $this->normalizeText($expectedAnswer) !== '') {
+                        $matchedIndexes[] = $submittedIndex;
+                        $matchedAnswer = trim((string) $answer);
+
+                        break;
+                    }
+                }
+
+                return [
+                    'answer' => $expectedAnswer,
+                    'points' => $points,
+                    'earned' => $matchedAnswer !== null ? $points : 0.0,
+                    'matched' => $matchedAnswer !== null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function isBlankAnswer(mixed $answer): bool
+    {
+        if (is_array($answer)) {
+            return count($answer) === 0 || collect($answer)->every(fn ($item): bool => $this->isBlankAnswer($item));
+        }
+
+        return $answer === null || (is_string($answer) && trim($answer) === '');
     }
 
     /**
@@ -447,17 +534,6 @@ class ExamAnswerReportService
         return $index < 26
             ? chr(65 + $index)
             : (string) ($index + 1);
-    }
-
-    private function typeLabel(string $type): string
-    {
-        return match ($type) {
-            'multiple_choice' => 'Multiple choice',
-            'true_false' => 'True / false',
-            'identification' => 'Identification',
-            'essay' => 'Essay',
-            default => ucfirst(str_replace('_', ' ', $type)),
-        };
     }
 
     private function statusLabel(?string $status): string

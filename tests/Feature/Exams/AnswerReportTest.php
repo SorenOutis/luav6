@@ -162,3 +162,48 @@ it('requires authentication', function () {
     get(route('admin.exams.answer-report', ['exam' => $exam->id]))
         ->assertRedirect();
 });
+
+it('reports Enumeration partial credit and per-item point breakdowns', function () {
+    [$admin, $exam, , $student] = answerReportContext();
+    $part = ExamPart::factory()->forExam($exam)->enumeration([
+        ['answer' => 'Technical SEO', 'points' => 2],
+        ['answer' => 'On-page SEO', 'points' => 3],
+        ['answer' => 'Off-page SEO', 'points' => 5],
+    ])->create();
+
+    ExamSubmission::factory()->forSubmission($student, $exam, $part)->create([
+        'status' => 'graded',
+        'score' => 7,
+        'answers' => [[
+            'question_number' => 1,
+            'question_type' => 'enumeration',
+            'question_text' => 'List the required items.',
+            'points' => 10,
+            'answer' => ['off-page seo', 'Technical SEO', 'Technical SEO'],
+        ]],
+    ]);
+
+    $report = app(ExamAnswerReportService::class)->build($exam, 'students', [$student->id]);
+    $partReport = collect($report['students'][0]['parts'])
+        ->first(fn (array $partReport): bool => $partReport['part']['id'] === $part->id);
+    $item = $partReport['items'][0];
+
+    expect($item['result'])->toBe('partial')
+        ->and($item['earned'])->toBe(7.0)
+        ->and($item['enumeration_breakdown'])->toMatchArray([
+            ['answer' => 'Technical SEO', 'points' => 2.0, 'earned' => 2.0, 'matched' => true],
+            ['answer' => 'On-page SEO', 'points' => 3.0, 'earned' => 0.0, 'matched' => false],
+            ['answer' => 'Off-page SEO', 'points' => 5.0, 'earned' => 5.0, 'matched' => true],
+        ])
+        ->and($report['students'][0]['summary']['partial'])->toBe(1);
+
+    actingAs($admin)
+        ->get(route('admin.exams.answer-report', [
+            'exam' => $exam->id,
+            'mode' => 'students',
+            'students' => [$student->id],
+        ]))
+        ->assertOk()
+        ->assertSee('Partial')
+        ->assertSee('Item breakdown');
+});

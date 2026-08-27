@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -94,6 +95,28 @@ class ExamPartFactory extends Factory
                 'points' => $points,
                 'correct_answer' => $answer,
             ])->all(),
+        ]);
+    }
+
+    /**
+     * @param  array<int, array{answer: string, points: int|float}>  $items
+     */
+    public function enumeration(array $items = [
+        ['answer' => 'Item one', 'points' => 2],
+        ['answer' => 'Item two', 'points' => 3],
+    ]): static
+    {
+        $totalPoints = array_sum(array_column($items, 'points'));
+
+        return $this->state(fn (array $attributes) => [
+            'type' => QuestionType::Enumeration->value,
+            'points' => $totalPoints,
+            'questions' => [[
+                'text' => 'List the required items.',
+                'type' => QuestionType::Enumeration->value,
+                'points' => $totalPoints,
+                'enumeration_items' => $items,
+            ]],
         ]);
     }
 

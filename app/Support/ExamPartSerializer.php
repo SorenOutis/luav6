@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use Illuminate\Support\Collection;
@@ -84,10 +85,18 @@ class ExamPartSerializer
         $questions = is_array($part->questions) ? $part->questions : [];
 
         return collect($questions)->map(function ($question) use ($revealAnswers) {
+            $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
+            $enumerationItems = $type->usesEnumerationAnswer()
+                ? self::enumerationItems($question)
+                : null;
             $safe = [
                 'text' => $question['text'] ?? '',
-                'type' => $question['type'] ?? 'multiple_choice',
-                'points' => $question['points'] ?? null,
+                'type' => $type->value,
+                'type_label' => $type->label(),
+                'points' => $enumerationItems !== null
+                    ? array_sum(array_column($enumerationItems, 'points'))
+                    : $question['points'] ?? null,
+                'enumeration_items' => $enumerationItems,
                 'options' => self::options($question, $revealAnswers),
             ];
 
@@ -100,6 +109,27 @@ class ExamPartSerializer
 
             return $safe;
         })->values()->all();
+    }
+
+    /**
+     * Expose Enumeration item counts and points without leaking expected answers.
+     *
+     * @param  array<string, mixed>  $question
+     * @return array<int, array{points: float}>
+     */
+    private static function enumerationItems(array $question): array
+    {
+        if (! isset($question['enumeration_items']) || ! is_array($question['enumeration_items'])) {
+            return [];
+        }
+
+        return collect($question['enumeration_items'])
+            ->filter(fn ($item): bool => is_array($item))
+            ->map(fn (array $item): array => [
+                'points' => (float) ($item['points'] ?? 1),
+            ])
+            ->values()
+            ->all();
     }
 
     /**
