@@ -184,7 +184,9 @@ it('reports Enumeration partial credit and per-item point breakdowns', function 
     ]);
 
     $report = app(ExamAnswerReportService::class)->build($exam, 'students', [$student->id]);
-    $item = $report['students'][0]['parts'][0]['items'][0];
+    $partReport = collect($report['students'][0]['parts'])
+        ->first(fn (array $partReport): bool => $partReport['part']['id'] === $part->id);
+    $item = $partReport['items'][0];
 
     expect($item['result'])->toBe('partial')
         ->and($item['earned'])->toBe(7.0)
