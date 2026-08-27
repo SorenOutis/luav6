@@ -778,7 +778,7 @@ onMounted(() => {
             <div
                 v-show="!isLoading && !fetchError && totalSubjectCount > 0"
                 data-tour="grades-overview"
-                class="mb-4 grid grid-cols-2 gap-3 sm:mb-6 sm:gap-4 lg:grid-cols-4"
+                class="grades-desktop-overview mb-4 grid grid-cols-2 gap-3 sm:mb-6 sm:gap-4 lg:grid-cols-4"
             >
                 <Card class="animate-card gap-2 py-3 sm:gap-6 sm:py-6">
                     <CardHeader

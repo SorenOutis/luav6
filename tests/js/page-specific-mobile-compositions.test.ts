@@ -36,6 +36,13 @@ describe('page-specific mobile compositions', () => {
             const source = read(path);
             expect(source, path).toContain(marker);
         }
+
+        expect(read('resources/js/pages/Calendar.vue')).toContain(
+            'calendar-desktop-only grid',
+        );
+        expect(read('resources/js/pages/Grades.vue')).toContain(
+            'grades-desktop-overview',
+        );
     });
 
     it('keeps the shared mobile shell and desktop navigation contracts', () => {

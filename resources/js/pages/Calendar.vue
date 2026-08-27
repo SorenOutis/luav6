@@ -346,7 +346,7 @@ const eventTooltip = (event: CalendarEvent) => {
             </div>
 
             <div
-                class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]"
+                class="calendar-desktop-only grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]"
             >
                 <Card class="border-border/60 bg-card/40">
                     <CardHeader class="gap-4">

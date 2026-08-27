@@ -4476,6 +4476,7 @@ html[data-low-end] .welcome-defer {
     html.touch-mobile .courses-desktop-filter,
     html.touch-mobile .courses-desktop-grid,
     html.touch-mobile .grades-desktop-header,
+    html.touch-mobile .grades-desktop-layout,
     html.touch-mobile .leaderboard-desktop-header,
     html.touch-mobile .activities-ui-page > .mobile-existing-header {
         display: none !important;
@@ -4483,5 +4484,23 @@ html[data-low-end] .welcome-defer {
 
     html.touch-mobile .mobile-ui-tabbar {
         display: block !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .calendar-desktop-only {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .grades-desktop-overview {
+        display: none !important;
+    }
+}
+
+@media (max-width: 1023px) {
+    html.touch-mobile .grades-desktop-overview {
+        display: none !important;
     }
 }
