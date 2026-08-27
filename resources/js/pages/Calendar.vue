@@ -11,6 +11,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import CalendarEventCard from '@/components/calendar/CalendarEventCard.vue';
+import MobilePageHeader from '@/components/mobile/MobilePageHeader.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
@@ -219,8 +220,13 @@ const eventTooltip = (event: CalendarEvent) => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="mobile-ui-page w-full space-y-6 p-4 sm:p-6 lg:p-8">
+            <MobilePageHeader
+                title="Calendar"
+                subtitle="Every exam and assignment deadline for your sections in one monthly view."
+                eyebrow="Never miss a deadline"
+            />
             <div
-                class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+                class="mobile-existing-header flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
             >
                 <div>
                     <Link

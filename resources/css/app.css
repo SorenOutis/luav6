@@ -2384,3 +2384,57 @@ html[data-low-end] .welcome-defer {
         border-radius: 0.875rem;
     }
 }
+
+/* Dedicated mobile composition primitives. They are hidden above the mobile
+   breakpoint and reuse the existing page data/actions through the host pages. */
+@media (max-width: 767px) {
+    .mobile-page-header {
+        display: block;
+        padding: 0.5rem 0.25rem 0.25rem;
+    }
+
+    .mobile-page-header__eyebrow {
+        margin-bottom: 0.3rem;
+        color: var(--color-primary);
+        font-size: 0.625rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        line-height: 1;
+        text-transform: uppercase;
+    }
+
+    .mobile-page-header__title {
+        color: var(--color-foreground);
+        font-size: 1.35rem;
+        font-weight: 750;
+        letter-spacing: -0.035em;
+        line-height: 1.12;
+    }
+
+    .mobile-page-header__subtitle {
+        max-width: 32rem;
+        margin-top: 0.35rem;
+        color: var(--color-muted-foreground);
+        font-size: 0.75rem;
+        line-height: 1.45;
+    }
+
+    .mobile-composition-card {
+        border: 1px solid var(--color-border);
+        border-radius: 1.25rem;
+        background: var(--color-card);
+        box-shadow:
+            0 1px 2px rgb(0 0 0 / 0.04),
+            0 16px 28px -24px rgb(0 0 0 / 0.38);
+    }
+
+    .mobile-composition-card :is(button, a, [role='button']) {
+        min-height: 44px;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-existing-header {
+        display: none !important;
+    }
+}
