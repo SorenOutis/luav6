@@ -24,6 +24,7 @@ import {
     onMounted,
     onBeforeUnmount,
 } from 'vue';
+import MobilePageHeader from '@/components/mobile/MobilePageHeader.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
@@ -691,12 +692,18 @@ watch(selectedPartId, () => {
             ref="examContainer"
             class="student-ui mobile-ui-page exam-theme-page relative flex h-full flex-1 flex-col gap-3 overflow-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
+            <MobilePageHeader
+                title="Activities"
+                subtitle="View and take your assessments."
+                eyebrow="Stay on track"
+            />
+
             <!-- Header Section -->
             <Motion
+                class="mobile-existing-header space-y-2"
                 :initial="{ opacity: 0, y: 20 }"
                 :animate="{ opacity: 1, y: 0 }"
                 :transition="{ duration: 0.8, easing: [0.16, 1, 0.3, 1] }"
-                class="space-y-2"
             >
                 <div>
                     <h1

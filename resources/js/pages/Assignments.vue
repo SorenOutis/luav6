@@ -28,6 +28,7 @@ import {
     LogOut,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import MobilePageHeader from '@/components/mobile/MobilePageHeader.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
@@ -1277,9 +1278,15 @@ onMounted(() => {
                 ref="pageContainer"
                 class="student-ui mobile-ui-page container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
             >
+                <MobilePageHeader
+                    title="Assignments"
+                    subtitle="What’s due, when you turned it in, and when it was graded."
+                    eyebrow="Keep moving"
+                />
+
                 <!-- Page Header -->
                 <div
-                    class="animate-section mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between"
+                    class="mobile-existing-header animate-section mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between"
                 >
                     <div>
                         <h1
