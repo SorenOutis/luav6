@@ -1,6 +1,7 @@
 import type { OnboardingProps } from '@/lib/onboarding';
 import type { AiChatSettings } from '@/types/aiChat';
 import type { Auth } from '@/types/auth';
+import type { SchoolBranding } from '@/types/branding';
 import type { StudentPageControls } from '@/types/studentPageControls';
 
 // Extend ImportMeta interface for Vite...
@@ -21,6 +22,7 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             auth: Auth;
+            schoolBranding: SchoolBranding;
             aiChat: AiChatSettings;
             studentPageControls: StudentPageControls;
             onboarding: OnboardingProps;

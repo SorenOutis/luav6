@@ -118,6 +118,7 @@ const webSiteJsonLd = {
             :dashboard="() => dashboard().url"
             :login="() => login().url"
             :register="() => register().url"
+            :branding="$page.props.schoolBranding"
             :is-booted="true"
         />
 

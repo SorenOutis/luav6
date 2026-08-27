@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import gsap from 'gsap';
-import { Command } from 'lucide-vue-next';
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import PublicBrandMark from '@/components/PublicBrandMark.vue';
 import { useLoader } from '@/composables/useLoader';
+import type { SchoolBranding } from '@/types/branding';
 
 const props = withDefaults(
     defineProps<{
@@ -18,18 +19,9 @@ const props = withDefaults(
 const { pendingHide, hide, message } = useLoader();
 
 const page = usePage();
-const branding = computed(() => {
-    const b = (page.props as any).schoolBranding as
-        | {
-              name?: string;
-              tagline?: string;
-              logoUrl?: string | null;
-              accentColor?: string;
-          }
-        | undefined;
-    return b ?? {};
-});
-const brandName = computed(() => branding.value.name || 'LSI Engine');
+const branding = computed<SchoolBranding>(
+    () => page.props.schoolBranding ?? {},
+);
 const brandLogoUrl = computed(() => branding.value.logoUrl || null);
 
 const loaderContainer = ref<HTMLElement | null>(null);
@@ -185,41 +177,29 @@ watch(pendingHide, (isPending) => {
         role="status"
         aria-live="polite"
         aria-busy="true"
-        :aria-label="`${message} — ${progress}%`"
-        class="global-loader fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background font-sans text-foreground"
+        :aria-label="`${message}, ${progress}%`"
+        class="global-loader fixed inset-0 z-[9999] bg-background font-sans text-foreground"
         style="display: none"
     >
-        <div ref="contentWrap" class="flex flex-col items-center gap-8 px-6">
-            <!-- Logo + Name -->
-            <div class="flex items-center gap-5">
-                <div
-                    class="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-foreground/5"
+        <div
+            ref="contentWrap"
+            class="relative flex h-full w-full flex-col items-center justify-center px-6 py-8 sm:px-10 sm:py-10"
+        >
+            <!-- Upper-left brand treatment -->
+            <div
+                class="absolute top-8 left-6 flex flex-col items-start gap-2 sm:top-10 sm:left-10"
+            >
+                <PublicBrandMark :logo-url="brandLogoUrl" size="loader" />
+                <span
+                    v-if="branding.tagline"
+                    class="ml-12 max-w-[14rem] truncate text-[10px] font-medium tracking-[0.18em] text-muted-foreground/50 uppercase"
                 >
-                    <img
-                        v-if="brandLogoUrl"
-                        :src="brandLogoUrl"
-                        :alt="`${brandName} logo`"
-                        class="h-full w-full rounded-2xl object-cover"
-                    />
-                    <Command v-else class="h-7 w-7" />
-                </div>
-                <div class="flex flex-col leading-none">
-                    <span
-                        class="max-w-[14rem] truncate text-xl font-black tracking-[-0.02em] text-foreground uppercase"
-                    >
-                        {{ brandName }}
-                    </span>
-                    <span
-                        v-if="branding.tagline"
-                        class="mt-1 max-w-[14rem] truncate text-[11px] font-bold tracking-widest text-muted-foreground/40 uppercase"
-                    >
-                        {{ branding.tagline }}
-                    </span>
-                </div>
+                    {{ branding.tagline }}
+                </span>
             </div>
 
             <!-- Loading Status -->
-            <div class="flex w-64 flex-col items-center gap-4">
+            <div class="flex w-full max-w-md flex-col items-center gap-4">
                 <div
                     class="flex w-full items-center justify-between text-xs font-medium text-muted-foreground/60"
                 >

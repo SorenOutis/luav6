@@ -105,6 +105,25 @@ describe('welcome mobile performance', () => {
         wrapper.unmount();
     });
 
+    it('uses the KOAMISHIN brand mark across public surfaces', () => {
+        const brandMark = read('resources/js/components/PublicBrandMark.vue');
+        const header = read(
+            'resources/js/components/welcome/WelcomeHeader.vue',
+        );
+        const loader = read('resources/js/components/GlobalLoader.vue');
+
+        expect(brandMark).toContain('KOAMISHIN');
+        expect(brandMark).toContain('AppLogoIcon');
+        expect(brandMark).toContain('alt="KOAMISHIN logo"');
+        expect(header).toContain('PublicBrandMark');
+        expect(header).toContain('aria-label="KOAMISHIN home"');
+        expect(loader).toContain('PublicBrandMark');
+        expect(loader).toContain('absolute top-8 left-6');
+        expect(loader).toContain('aria-live="polite"');
+        expect(loader).toContain('role="progressbar"');
+        expect(loader).not.toContain('—');
+    });
+
     it('skips GSAP on the about page and auth layouts for low-end devices', () => {
         const about = read('resources/js/pages/About.vue');
         const footer = read(
