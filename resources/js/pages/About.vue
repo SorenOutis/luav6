@@ -111,7 +111,7 @@ const seoJsonLd = computed(() => [
 const revealTransition = (delay = 0) =>
     reduceMotion.value
         ? { duration: 0 }
-        : { duration: 0.6, easing: [0.23, 1, 0.32, 1], delay };
+        : { duration: 0.6, easing: [0.23, 1, 0.32, 1] as const, delay };
 </script>
 
 <template>
