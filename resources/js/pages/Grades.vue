@@ -584,7 +584,7 @@ onMounted(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="gradesContainer"
-            class="student-ui container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
+            class="student-ui mobile-ui-page container mx-auto max-w-[1600px] px-3 py-3 perspective-[1000px] sm:px-6 sm:py-6 lg:px-8 lg:py-8"
         >
             <!-- Header -->
             <div

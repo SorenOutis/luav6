@@ -731,7 +731,7 @@ const handleLogout = () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="dashboardContainer"
-            class="dashboard-ui relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden bg-background p-3 sm:gap-5 sm:p-6 md:gap-7 md:p-8"
+            class="dashboard-ui mobile-ui-page relative flex h-full w-full max-w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden bg-background p-3 sm:gap-5 sm:p-6 md:gap-7 md:p-8"
             :class="{
                 'pointer-events-none blur-sm select-none': showBanModal,
             }"

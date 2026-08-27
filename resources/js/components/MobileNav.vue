@@ -147,11 +147,11 @@ watch(activeIndex, () => {
     <!-- Bottom Navigation Bar -->
     <nav
         aria-label="Mobile navigation"
-        class="fixed right-0 bottom-0 left-0 z-50 mx-auto w-full md:hidden"
+        class="mobile-ui-tabbar fixed right-0 bottom-0 left-0 z-50 mx-auto w-full md:hidden"
         style="padding-bottom: env(safe-area-inset-bottom, 0px)"
     >
         <div
-            class="relative mx-2 mb-1.5 flex h-14 items-center justify-between gap-0.5 overflow-hidden rounded-2xl border border-border/60 bg-background/95 px-1 shadow-lg shadow-black/10 dark:bg-zinc-950 dark:shadow-black/30"
+            class="mobile-ui-tabbar-surface relative mx-2 mb-1.5 flex h-14 items-center justify-between gap-0.5 overflow-hidden rounded-2xl border border-border/60 bg-background/95 px-1 shadow-lg shadow-black/10 dark:bg-zinc-950 dark:shadow-black/30"
         >
             <!-- Sliding Active Indicator -->
             <div

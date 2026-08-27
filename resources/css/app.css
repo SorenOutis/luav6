@@ -1934,3 +1934,306 @@ html[data-low-end] .welcome-defer {
         display: none !important;
     }
 }
+
+/* ════════════════════════════════════════════════════
+   MOBILE NATIVE UI LAYER
+   Visual-only refinements for phones. Keep every rule inside
+   this media query so desktop presentation remains unchanged.
+   ════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+    .mobile-ui-page {
+        -webkit-tap-highlight-color: transparent;
+        scrollbar-gutter: stable;
+    }
+
+    .mobile-ui-page :is(a, button, [role='button']) {
+        touch-action: manipulation;
+    }
+
+    .mobile-ui-page :is(a, button, [role='button']):focus-visible {
+        outline: 2px solid var(--color-ring);
+        outline-offset: 2px;
+    }
+
+    .mobile-ui-page .surface-card,
+    .mobile-ui-page [data-slot='card'] {
+        border-color: var(--color-border);
+        background-color: var(--color-card);
+        box-shadow:
+            0 1px 2px rgb(0 0 0 / 0.04),
+            0 8px 24px -18px rgb(0 0 0 / 0.2);
+    }
+
+    .mobile-ui-page .dash-btn {
+        min-height: 44px;
+        border-radius: 0.875rem;
+    }
+
+    /* Welcome page: use the actual cream/warm-brown theme tokens rather
+       than the older hard-coded landing-page background values. */
+    .welcome-root.mobile-ui-page {
+        background-color: var(--color-background) !important;
+        color: var(--color-foreground) !important;
+    }
+
+    .welcome-root.mobile-ui-page > header {
+        border-color: var(--color-border) !important;
+        background-color: color-mix(
+            in srgb,
+            var(--color-background) 94%,
+            transparent
+        ) !important;
+    }
+
+    .welcome-root.mobile-ui-page .welcome-loop,
+    .welcome-root.mobile-ui-page .welcome-cta {
+        border: 1px solid var(--color-border);
+        background-color: var(--color-card) !important;
+        color: var(--color-card-foreground) !important;
+    }
+
+    .welcome-root.mobile-ui-page .welcome-loop [class*='text-[#f8f7f2]'],
+    .welcome-root.mobile-ui-page .welcome-cta [class*='text-[#f8f7f2]'] {
+        color: var(--color-card-foreground) !important;
+    }
+
+    .welcome-root.mobile-ui-page .welcome-loop [class*='text-[#b8e3d8]'],
+    .welcome-root.mobile-ui-page .welcome-cta [class*='text-[#b8e3d8]'] {
+        color: var(--dash-green) !important;
+    }
+
+    .welcome-root.mobile-ui-page [class*='bg-[#17201f]'] {
+        background-color: var(--color-card) !important;
+    }
+
+    .welcome-root.mobile-ui-page [class*='bg-[#b8e3d8]'] {
+        background-color: var(--color-primary) !important;
+        color: var(--color-primary-foreground) !important;
+    }
+
+    .welcome-root.mobile-ui-page [class*='border-[#f8f7f2]'] {
+        border-color: var(--color-border) !important;
+    }
+
+    /* Authenticated pages: consistent phone gutters and calmer card rhythm. */
+    .dashboard-ui.mobile-ui-page,
+    .student-ui.mobile-ui-page {
+        gap: 0.75rem;
+        padding-left: max(1rem, env(safe-area-inset-left)) !important;
+        padding-right: max(1rem, env(safe-area-inset-right)) !important;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-progress,
+    .dashboard-ui.mobile-ui-page .dashboard-main-grid {
+        gap: 0.75rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .surface-card,
+    .student-ui.mobile-ui-page .surface-card,
+    .dashboard-ui.mobile-ui-page [data-slot='card'],
+    .student-ui.mobile-ui-page [data-slot='card'] {
+        border-radius: 1rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dash-title,
+    .student-ui.mobile-ui-page .dash-title {
+        line-height: 1.2;
+    }
+
+    /* Native-inspired floating tab bar, still using the existing routes,
+       feature gating, active state, and safe-area behavior. */
+    .mobile-ui-tabbar-surface {
+        border-color: var(--color-border) !important;
+        background-color: color-mix(
+            in srgb,
+            var(--color-card) 96%,
+            transparent
+        ) !important;
+        box-shadow:
+            0 8px 24px -12px rgb(0 0 0 / 0.28),
+            0 1px 2px rgb(0 0 0 / 0.08) !important;
+    }
+
+    .mobile-ui-tabbar-surface > a {
+        min-height: 44px;
+    }
+
+    /* Active exam: preserve timer, autosave, question state, and submission
+       handlers while making answer controls more comfortable to tap. */
+    .student-ui.mobile-ui-page.exam-theme-page .exam-card,
+    .student-ui.mobile-ui-page.exam-theme-page .question-card,
+    .student-ui.mobile-ui-page.exam-theme-page .exam-part-card {
+        border-color: var(--color-border);
+        border-radius: 1rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-answer-option {
+        min-height: 48px;
+        border-color: var(--color-border);
+        border-radius: 0.875rem;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-flag-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-text-input,
+    .student-ui.mobile-ui-page.exam-theme-page .exam-essay-input {
+        font-size: 1rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .submit-celebration-btn {
+        min-height: 48px;
+        border-radius: 0.875rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-sticky-header {
+        padding-top: max(0.75rem, env(safe-area-inset-top)) !important;
+        padding-bottom: 0.75rem !important;
+    }
+}
+
+@media (max-width: 374px) {
+    .mobile-ui-tabbar-surface > a {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .mobile-ui-tabbar-surface > a span {
+        font-size: 0.5625rem !important;
+        letter-spacing: 0 !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mobile-ui-tabbar-surface * {
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Page-level mobile composition refinements. These selectors intentionally
+   require the mobile-ui-page hook and never run at desktop widths. */
+@media (max-width: 767px) {
+    .welcome-root.mobile-ui-page main {
+        padding-top: 1.5rem !important;
+        padding-bottom: max(2.5rem, env(safe-area-inset-bottom)) !important;
+    }
+
+    .welcome-root.mobile-ui-page main > * {
+        scroll-margin-top: 5rem;
+    }
+
+    .welcome-root.mobile-ui-page .welcome-story,
+    .welcome-root.mobile-ui-page .welcome-audience,
+    .welcome-root.mobile-ui-page .welcome-faq {
+        padding-top: 2.75rem !important;
+        padding-bottom: 2.75rem !important;
+    }
+
+    .welcome-root.mobile-ui-page .welcome-loop,
+    .welcome-root.mobile-ui-page .welcome-cta {
+        margin-top: 2.75rem !important;
+        margin-bottom: 2.75rem !important;
+        padding: 1.25rem !important;
+    }
+
+    .mobile-ui-page :is(input, textarea, select) {
+        font-size: 1rem;
+    }
+
+    .mobile-ui-page :is(input, textarea, select):focus {
+        border-color: var(--color-ring);
+        outline: 2px solid
+            color-mix(in srgb, var(--color-ring) 20%, transparent);
+        outline-offset: 0;
+    }
+
+    /* Agenda, leaderboard, and other secondary pages use the same phone
+       gutter and card rhythm as Dashboard without changing desktop spacing. */
+    .mobile-ui-page > :is(.space-y-6, .space-y-8),
+    .mobile-ui-page > .container {
+        padding-left: max(1rem, env(safe-area-inset-left)) !important;
+        padding-right: max(1rem, env(safe-area-inset-right)) !important;
+    }
+
+    .mobile-ui-page :is(.grid, .flex).overflow-x-auto {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .mobile-ui-page :is(.grid, .flex).overflow-x-auto::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Chat workspace: retain the existing session and message structure but
+       make the phone composer and chat header visually native and legible. */
+    .mobile-ui-page [data-testid='chat-workspace'] {
+        background-color: var(--color-card);
+        border-color: var(--color-border);
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] textarea {
+        min-height: 44px;
+        border-radius: 0.875rem;
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Cards that contain filters or dense status metadata should remain
+       readable at 320px without changing their desktop grid. */
+    .mobile-ui-page .truncate,
+    .mobile-ui-page .line-clamp-2,
+    .mobile-ui-page .line-clamp-3 {
+        overflow-wrap: anywhere;
+    }
+
+    .mobile-ui-page .dash-btn:active,
+    .mobile-ui-page button:active,
+    .mobile-ui-page a:active {
+        transform: scale(0.98);
+    }
+}
+
+@media (max-width: 374px) {
+    .welcome-root.mobile-ui-page main {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-progress {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-progress > .col-span-2 {
+        grid-column: span 1 / span 1;
+    }
+}
+
+@media (max-width: 767px) {
+    .mobile-ui-settings {
+        padding-top: 1.25rem;
+        padding-right: max(1rem, env(safe-area-inset-right));
+        padding-bottom: max(2rem, env(safe-area-inset-bottom));
+        padding-left: max(1rem, env(safe-area-inset-left));
+    }
+
+    .mobile-ui-settings nav {
+        gap: 0.25rem;
+    }
+
+    .mobile-ui-settings nav a,
+    .mobile-ui-settings nav button {
+        min-height: 44px;
+        border-radius: 0.875rem;
+    }
+
+    .mobile-ui-settings section {
+        gap: 2rem;
+    }
+}

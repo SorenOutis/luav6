@@ -46,7 +46,7 @@ defineProps<{
     <Head title="Leaderboard" />
 
     <AppLayout :breadcrumbs="[{ title: 'Leaderboard', href: '/leaderboard' }]">
-        <div class="w-full space-y-6 p-4 sm:p-6 lg:p-8">
+        <div class="mobile-ui-page w-full space-y-6 p-4 sm:p-6 lg:p-8">
             <div
                 class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
             >

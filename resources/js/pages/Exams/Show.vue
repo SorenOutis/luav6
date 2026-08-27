@@ -2102,7 +2102,7 @@ const feedbackContent = computed(() => {
         <!-- Skeleton Loading State -->
         <template v-if="!isBooted">
             <div
-                class="student-ui exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8"
+                class="student-ui mobile-ui-page exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background p-4 md:p-8"
             >
                 <PageSkeleton
                     :hero="true"
@@ -2133,7 +2133,7 @@ const feedbackContent = computed(() => {
         <template v-if="isBooted">
             <div
                 ref="container"
-                class="student-ui exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
+                class="student-ui mobile-ui-page exam-theme-page relative flex min-h-full flex-col gap-0 overflow-hidden bg-background"
             >
                 <div
                     class="relative z-10 flex flex-1 flex-col gap-6 p-4 md:p-8"

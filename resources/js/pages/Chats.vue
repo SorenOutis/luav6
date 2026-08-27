@@ -1059,7 +1059,7 @@ onBeforeUnmount(() => {
         </template>
 
         <div
-            class="flex h-[calc(100dvh-7.25rem)] min-h-0 w-full md:h-[calc(100dvh-4.5rem)]"
+            class="mobile-ui-page flex h-[calc(100dvh-7.25rem)] min-h-0 w-full md:h-[calc(100dvh-4.5rem)]"
         >
             <!-- ─── Chat Pane ─── -->
             <Card
