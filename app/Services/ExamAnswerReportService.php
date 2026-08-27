@@ -7,6 +7,7 @@ use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\User;
+use App\Support\IdentificationAnswerMatcher;
 use Illuminate\Support\Collection;
 
 /**
@@ -292,7 +293,12 @@ class ExamAnswerReportService
             return $item;
         }
 
-        if ($type->usesChoiceAnswer()) {
+        if ($type === QuestionType::Identification) {
+            $item['student_answer'] = (string) $answer;
+            $item['result'] = IdentificationAnswerMatcher::matches($answer, $question)
+                ? 'correct'
+                : 'wrong';
+        } elseif ($type->usesChoiceAnswer()) {
             $chosen = (int) $answer;
             $item['student_answer'] = $this->optionLabel($question['options'], $chosen);
             $item['result'] = ($question['correct_index'] !== null && $chosen === $question['correct_index'])
@@ -386,6 +392,9 @@ class ExamAnswerReportService
                 'correct_answer' => $type === QuestionType::Identification
                     ? (string) ($question['correct_answer'] ?? '')
                     : null,
+                'accepted_answers' => $type === QuestionType::Identification
+                    ? IdentificationAnswerMatcher::acceptedAnswers($question)
+                    : [],
                 'correct_display' => $this->correctDisplay($type, $options, $correctIndex, $question),
                 'grading_method' => $type === QuestionType::Essay
                     ? (string) ($question['grading_method'] ?? 'ai')
@@ -413,9 +422,7 @@ class ExamAnswerReportService
             QuestionType::MultipleChoice, QuestionType::TrueFalse => $correctIndex !== null
                 ? $this->optionLabel($options, $correctIndex)
                 : 'No correct option marked',
-            QuestionType::Identification => trim((string) ($question['correct_answer'] ?? '')) !== ''
-                ? (string) $question['correct_answer']
-                : 'No answer key set',
+            QuestionType::Identification => IdentificationAnswerMatcher::display($question),
             QuestionType::Enumeration => collect($question['enumeration_items'] ?? [])
                 ->map(fn (array $item): string => $item['answer'].' ('.$item['points'].' pts)')
                 ->implode(', ') ?: 'No answer key set',

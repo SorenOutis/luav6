@@ -146,6 +146,21 @@ it('rejects a genuinely different identification answer', function () {
     expect(ExamSubmission::first()->score)->toEqual('0.00');
 });
 
+it('accepts any configured Identification alternative for full credit', function () {
+    [$student, $exam] = examContext();
+    $part = ExamPart::factory()->forExam($exam)->withQuestions([[
+        'text' => 'What general term describes software designed to disrupt or gain unauthorized access to a computer system?',
+        'type' => 'identification',
+        'points' => 3,
+        'correct_answer' => 'Virus',
+        'accepted_answers' => [['answer' => 'Malware']],
+    ]])->create();
+
+    submitAnswers($student, $exam, $part, [1 => ' malware! ']);
+
+    expect(ExamSubmission::first()->score)->toEqual('3.00');
+});
+
 // ─────────────────────────────────────────────
 //  Essay
 // ─────────────────────────────────────────────

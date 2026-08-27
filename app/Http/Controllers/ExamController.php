@@ -21,6 +21,7 @@ use App\Services\ExamAnswerDraftService;
 use App\Services\ExamXpAwardService;
 use App\Support\AiQueueWorker;
 use App\Support\ExamPartSerializer;
+use App\Support\IdentificationAnswerMatcher;
 use Carbon\CarbonInterface as Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -534,21 +535,7 @@ class ExamController extends Controller
                     $isCorrect = true;
                 }
             } elseif ($questionType === QuestionType::Identification) {
-                $normalize = function (string $text): string {
-                    // Convert to lowercase, trim, collapse multiple spaces, remove common punctuation
-                    $text = strtolower(trim($text));
-                    $text = preg_replace('/\s+/', ' ', $text); // collapse multiple spaces
-                    $text = preg_replace('/[^\w\s]/u', '', $text); // remove punctuation except word chars and spaces
-
-                    return trim($text);
-                };
-
-                $normalizedSubmitted = $normalize((string) $submittedAnswer);
-                $normalizedCorrect = $normalize((string) ($question['correct_answer'] ?? ''));
-
-                if ($normalizedSubmitted === $normalizedCorrect) {
-                    $isCorrect = true;
-                }
+                $isCorrect = IdentificationAnswerMatcher::matches($submittedAnswer, $question);
             }
 
             if ($isCorrect) {

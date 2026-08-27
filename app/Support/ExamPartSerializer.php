@@ -105,6 +105,10 @@ class ExamPartSerializer
             // can't be mistaken for "no answer recorded".
             if ($revealAnswers && array_key_exists('correct_answer', $question)) {
                 $safe['correct_answer'] = $question['correct_answer'];
+
+                if ($type === QuestionType::Identification) {
+                    $safe['accepted_answers'] = IdentificationAnswerMatcher::acceptedAnswers($question);
+                }
             }
 
             return $safe;
