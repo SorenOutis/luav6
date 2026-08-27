@@ -689,7 +689,7 @@ watch(selectedPartId, () => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
             ref="examContainer"
-            class="student-ui exam-theme-page relative flex h-full flex-1 flex-col gap-3 overflow-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
+            class="student-ui mobile-ui-page exam-theme-page relative flex h-full flex-1 flex-col gap-3 overflow-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <!-- Header Section -->
             <Motion

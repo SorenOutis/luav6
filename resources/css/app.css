@@ -2321,3 +2321,66 @@ html[data-low-end] .welcome-defer {
         font-size: 1rem;
     }
 }
+
+/* Remaining mobile page alignment. This is presentation-only and scoped to
+   pages explicitly marked with mobile-ui-page. */
+@media (max-width: 767px) {
+    .student-ui.mobile-ui-page.exam-theme-page {
+        min-height: 100%;
+        padding-top: max(0.75rem, env(safe-area-inset-top));
+        padding-bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4rem));
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-hero {
+        border-radius: 1.25rem;
+        padding: 1rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-part-card,
+    .student-ui.mobile-ui-page.exam-theme-page .exam-card {
+        min-height: 0;
+        border-radius: 1rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-part-card a,
+    .student-ui.mobile-ui-page.exam-theme-page .exam-card a {
+        min-height: 44px;
+    }
+
+    .mobile-ui-page .grades-desktop-layout {
+        display: none !important;
+    }
+
+    .mobile-ui-page :is(.overflow-x-auto, .overflow-y-auto) {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    .mobile-ui-page [class*='grid-cols-7'] {
+        gap: 0.25rem;
+    }
+
+    .mobile-ui-page [class*='grid-cols-7'] button {
+        min-height: 2.5rem;
+        min-width: 0;
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] {
+        min-height: 0;
+        border-radius: 1.25rem;
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] [data-slot='card-header'] {
+        min-height: 3.5rem;
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] [data-slot='card-content'] {
+        min-height: 0;
+    }
+
+    .mobile-ui-page [data-slot='input'],
+    .mobile-ui-page [data-slot='textarea'] {
+        min-height: 44px;
+        border-radius: 0.875rem;
+    }
+}
