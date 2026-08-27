@@ -63,6 +63,20 @@ describe('exams and parts student shell', () => {
         expect(css).toContain('env(safe-area-inset-left)');
     });
 
+    it('uses enum-derived readable question type labels on the student page', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Exams/Show.vue'),
+            'utf8',
+        );
+
+        expect(page).toContain('type_label?: string;');
+        expect(page).toContain('getQuestionTypeLabel');
+        expect(page).toContain(
+            'question.type_label ?? formatType(question.type)',
+        );
+        expect(page).not.toContain('{{ formatType(type) }}');
+    });
+
     it('lets the desktop progress chart scroll independently of the question list', () => {
         const page = readFileSync(
             join(process.cwd(), 'resources/js/pages/Exams/Show.vue'),

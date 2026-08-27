@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use Illuminate\Support\Collection;
@@ -84,9 +85,11 @@ class ExamPartSerializer
         $questions = is_array($part->questions) ? $part->questions : [];
 
         return collect($questions)->map(function ($question) use ($revealAnswers) {
+            $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
             $safe = [
                 'text' => $question['text'] ?? '',
-                'type' => $question['type'] ?? 'multiple_choice',
+                'type' => $type->value,
+                'type_label' => $type->label(),
                 'points' => $question['points'] ?? null,
                 'options' => self::options($question, $revealAnswers),
             ];

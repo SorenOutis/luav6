@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\EssayGradingMethod;
+use App\Enums\QuestionType;
 use App\Models\Exam;
 use Illuminate\Support\Facades\DB;
 
@@ -132,20 +133,20 @@ class ExamTemplateService
                     ];
                 }
 
-                $type = $row['Type'] ?? 'multiple_choice';
+                $type = QuestionType::tryFromStored($row['Type'] ?? null) ?? QuestionType::MultipleChoice;
                 $questionText = $row['Question Text'] ?? '';
                 $choicesStr = $row['Choices (Pipe | Separated)'] ?? '';
                 $correctInput = $row['Correct Choice/Answer'] ?? '';
 
                 $questionData = [
                     'text' => $questionText,
-                    'type' => $type,
+                    'type' => $type->value,
                     'options' => [],
                     'correct_answer' => null,
                     'points' => (int) ($row['Points'] ?? 1),
                 ];
 
-                if (in_array($type, ['multiple_choice', 'true_false'])) {
+                if ($type->usesChoiceAnswer()) {
                     $choices = array_filter(array_map('trim', explode('|', $choicesStr)));
                     foreach ($choices as $choiceText) {
                         // Case-insensitive comparison for correct answer
@@ -156,9 +157,9 @@ class ExamTemplateService
                             'is_correct' => $isCorrect,
                         ];
                     }
-                } elseif ($type === 'identification') {
+                } elseif ($type === QuestionType::Identification) {
                     $questionData['correct_answer'] = $correctInput;
-                } elseif ($type === 'essay') {
+                } elseif ($type === QuestionType::Essay) {
                     $gradingMethod = str((string) ($row['Essay Grading (ai|manual)'] ?? ''))
                         ->trim()
                         ->lower()

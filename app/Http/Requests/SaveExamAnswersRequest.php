@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\QuestionType;
 use App\Models\ExamPart;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
@@ -83,8 +84,8 @@ class SaveExamAnswersRequest extends FormRequest
                     continue;
                 }
 
-                $type = $question['type'] ?? null;
-                if (in_array($type, ['multiple_choice', 'true_false'], true)) {
+                $type = QuestionType::tryFromStored($question['type'] ?? null);
+                if ($type?->usesChoiceAnswer()) {
                     $optionCount = count($question['options'] ?? []);
                     if (! is_int($answer) || $answer < 0 || $answer >= $optionCount) {
                         $validator->errors()->add(
@@ -92,7 +93,7 @@ class SaveExamAnswersRequest extends FormRequest
                             'The selected option is not valid for this question.',
                         );
                     }
-                } elseif (in_array($type, ['identification', 'essay'], true) && ! is_string($answer)) {
+                } elseif ($type?->usesTextAnswer() && ! is_string($answer)) {
                     $validator->errors()->add(
                         "answers.{$index}.answer",
                         'This question requires a text answer.',

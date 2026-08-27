@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Exams\Schemas;
 
 use App\Enums\EssayGradingMethod;
+use App\Enums\QuestionType;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -121,12 +122,7 @@ class ExamForm
                                             ->columnSpanFull(),
                                         Select::make('type')
                                             ->label('Type')
-                                            ->options([
-                                                'multiple_choice' => 'Multiple Choice',
-                                                'identification' => 'Identification',
-                                                'essay' => 'Essay',
-                                                'true_false' => 'True/False',
-                                            ])
+                                            ->options(QuestionType::options())
                                             ->required()
                                             ->live()
                                             ->columnSpan(1),

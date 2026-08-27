@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
@@ -164,7 +165,7 @@ class ExamAnswerReportService
 
             if ($teacherFeedback !== null) {
                 foreach ($items as $index => $candidate) {
-                    if ($candidate['question']['type'] === 'essay') {
+                    if (QuestionType::tryFromStored($candidate['question']['type'] ?? null) === QuestionType::Essay) {
                         $items[$index]['teacher_feedback'] = $teacherFeedback;
                         $teacherFeedbackShownInline = true;
 
@@ -241,7 +242,9 @@ class ExamAnswerReportService
             'teacher_feedback' => null,
         ];
 
-        if ($question['type'] === 'essay') {
+        $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
+
+        if ($type === QuestionType::Essay) {
             // Essays are reported as: question, answer, feedback, score.
             // There is no key to compare against, so no correct/wrong verdict.
             $item['student_answer'] = $hasAnswer ? (string) $answer : null;
@@ -271,7 +274,7 @@ class ExamAnswerReportService
             return $item;
         }
 
-        if (in_array($question['type'], ['multiple_choice', 'true_false'], true)) {
+        if ($type->usesChoiceAnswer()) {
             $chosen = (int) $answer;
             $item['student_answer'] = $this->optionLabel($question['options'], $chosen);
             $item['result'] = ($question['correct_index'] !== null && $chosen === $question['correct_index'])
@@ -315,7 +318,7 @@ class ExamAnswerReportService
                 continue;
             }
 
-            $type = (string) ($question['type'] ?? 'multiple_choice');
+            $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
             $points = (int) ($question['points'] ?? $defaultPoints);
             $totalPoints += $points;
 
@@ -343,16 +346,16 @@ class ExamAnswerReportService
             $normalized[] = [
                 'number' => $questionIndex + 1,
                 'text' => (string) ($question['text'] ?? ''),
-                'type' => $type,
-                'type_label' => $this->typeLabel($type),
+                'type' => $type->value,
+                'type_label' => $type->label(),
                 'points' => $points,
                 'options' => $options,
                 'correct_index' => $correctIndex,
-                'correct_answer' => $type === 'identification'
+                'correct_answer' => $type === QuestionType::Identification
                     ? (string) ($question['correct_answer'] ?? '')
                     : null,
                 'correct_display' => $this->correctDisplay($type, $options, $correctIndex, $question),
-                'grading_method' => $type === 'essay'
+                'grading_method' => $type === QuestionType::Essay
                     ? (string) ($question['grading_method'] ?? 'ai')
                     : null,
             ];
@@ -372,19 +375,18 @@ class ExamAnswerReportService
      * @param  array<int, array<string, mixed>>  $options
      * @param  array<string, mixed>  $question
      */
-    private function correctDisplay(string $type, array $options, ?int $correctIndex, array $question): string
+    private function correctDisplay(QuestionType $type, array $options, ?int $correctIndex, array $question): string
     {
         return match ($type) {
-            'multiple_choice', 'true_false' => $correctIndex !== null
+            QuestionType::MultipleChoice, QuestionType::TrueFalse => $correctIndex !== null
                 ? $this->optionLabel($options, $correctIndex)
                 : 'No correct option marked',
-            'identification' => trim((string) ($question['correct_answer'] ?? '')) !== ''
+            QuestionType::Identification => trim((string) ($question['correct_answer'] ?? '')) !== ''
                 ? (string) $question['correct_answer']
                 : 'No answer key set',
-            'essay' => ($question['grading_method'] ?? 'ai') === 'manual'
+            QuestionType::Essay => ($question['grading_method'] ?? 'ai') === 'manual'
                 ? 'Graded by the teacher (no fixed key)'
                 : 'Graded automatically by AI (no fixed key)',
-            default => '—',
         };
     }
 
@@ -447,17 +449,6 @@ class ExamAnswerReportService
         return $index < 26
             ? chr(65 + $index)
             : (string) ($index + 1);
-    }
-
-    private function typeLabel(string $type): string
-    {
-        return match ($type) {
-            'multiple_choice' => 'Multiple choice',
-            'true_false' => 'True / false',
-            'identification' => 'Identification',
-            'essay' => 'Essay',
-            default => ucfirst(str_replace('_', ' ', $type)),
-        };
     }
 
     private function statusLabel(?string $status): string

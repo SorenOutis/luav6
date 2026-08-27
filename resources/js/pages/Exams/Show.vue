@@ -42,6 +42,7 @@ const isBooted = ref(false);
 interface Question {
     text: string;
     type: string;
+    type_label?: string;
     // The answer key is stripped server-side while an exam is in progress and
     // is only present once the exam is closed (review mode). Never rely on it
     // here — this screen is used for *taking* the exam.
@@ -995,11 +996,14 @@ const isPartLocked = (index: number) => {
     return !isPartSubmitted(previousPart.id);
 };
 
-const getQuestionTypes = (part: ExamPart) => [
-    ...new Set(part.questions?.map((q) => q.type) ?? []),
-];
-
 const formatType = (type: string) => type.replace(/_/g, ' ');
+
+const getQuestionTypeLabel = (question: Question) =>
+    question.type_label ?? formatType(question.type);
+
+const getQuestionTypes = (part: ExamPart) => [
+    ...new Set(part.questions?.map(getQuestionTypeLabel) ?? []),
+];
 
 const formatDateTime = (dateStr: string) => {
     if (!dateStr) return '';
@@ -2495,7 +2499,7 @@ const feedbackContent = computed(() => {
                                             :key="type"
                                             class="inline-flex items-center rounded-md bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
                                         >
-                                            {{ formatType(type) }}
+                                            {{ type }}
                                         </span>
                                     </div>
                                 </div>
@@ -2669,11 +2673,11 @@ const feedbackContent = computed(() => {
                                                         class="rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary"
                                                     >
                                                         {{
-                                                            formatType(
+                                                            getQuestionTypeLabel(
                                                                 selectedPart!
                                                                     .questions![
                                                                     mobileQuestionIndex
-                                                                ].type,
+                                                                ],
                                                             )
                                                         }}
                                                     </span>
@@ -2961,8 +2965,8 @@ const feedbackContent = computed(() => {
                                                         class="rounded-md bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
                                                     >
                                                         {{
-                                                            formatType(
-                                                                question.type,
+                                                            getQuestionTypeLabel(
+                                                                question,
                                                             )
                                                         }}
                                                     </span>
