@@ -62,9 +62,12 @@ export function readDeviceSnapshot(): DeviceSnapshot {
     const navConn = navigator as NavigatorWithConnection;
     const isTouchDevice =
         'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isMobileViewport =
+        window.innerWidth < BREAKPOINT_MOBILE ||
+        (isTouchDevice && window.innerWidth < BREAKPOINT_DESKTOP);
 
     return {
-        isMobile: window.innerWidth < BREAKPOINT_MOBILE,
+        isMobile: isMobileViewport,
         isDesktop: window.innerWidth >= BREAKPOINT_DESKTOP,
         isTouchDevice,
         isCoarsePointer:

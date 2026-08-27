@@ -10,6 +10,7 @@ import type { DeviceSnapshot } from '@/lib/device';
 const originalMatchMedia = window.matchMedia;
 const originalMaxTouchPoints = navigator.maxTouchPoints;
 const originalHardwareConcurrency = navigator.hardwareConcurrency;
+const originalInnerWidth = window.innerWidth;
 
 function stubMatchMedia(impl: (query: string) => boolean): void {
     window.matchMedia = ((query: string) => ({
@@ -59,6 +60,10 @@ afterEach(() => {
     Object.defineProperty(navigator, 'hardwareConcurrency', {
         configurable: true,
         value: originalHardwareConcurrency,
+    });
+    Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalInnerWidth,
     });
     document.documentElement.removeAttribute('data-low-end');
 });
@@ -110,6 +115,21 @@ describe('device snapshot', () => {
 
     it('does not flag a capable desktop mouse setup', () => {
         expect(isLowEndDeviceFrom(desktopSnapshot())).toBe(false);
+    });
+
+    it('treats a touch device with a tablet-sized CSS viewport as mobile', () => {
+        Object.defineProperty(window, 'innerWidth', {
+            configurable: true,
+            value: 800,
+        });
+        stubNavigator({ maxTouchPoints: 5, hardwareConcurrency: 8 });
+        stubMatchMedia(() => false);
+
+        const snapshot = readDeviceSnapshot();
+
+        expect(snapshot.isMobile).toBe(true);
+        expect(snapshot.isDesktop).toBe(false);
+        expect(snapshot.isTouchDevice).toBe(true);
     });
 
     it('reads coarse pointer synchronously from matchMedia', () => {
