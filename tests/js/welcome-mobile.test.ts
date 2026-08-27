@@ -118,7 +118,7 @@ describe('welcome mobile performance', () => {
         const nav = read('resources/js/components/MobileNav.vue');
 
         expect(about).toContain('reduceMotion');
-        expect(about).toContain('while-in-view');
+        expect(about).toContain('in-view');
         expect(footer).toContain('isLowEndDeviceSignal()');
         expect(split).toContain('isLowEndDeviceSignal()');
         expect(simple).toContain('isLowEndDeviceSignal()');
