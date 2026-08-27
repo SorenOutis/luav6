@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import { Sun, Moon, Menu, X } from 'lucide-vue-next';
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import PublicBrandMark from '@/components/PublicBrandMark.vue';
 import {
     Sheet,
     SheetClose,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/sheet';
 import { useAppearance } from '@/composables/useAppearance';
 import { useMobile } from '@/composables/useMobile';
+import type { SchoolBranding } from '@/types/branding';
 
 const props = defineProps<{
     canRegister: boolean;
@@ -19,12 +21,7 @@ const props = defineProps<{
     login: () => string;
     register: () => string;
     isBooted?: boolean;
-    branding?: {
-        name?: string;
-        tagline?: string;
-        logoUrl?: string | null;
-        accentColor?: string;
-    };
+    branding?: SchoolBranding;
     /**
      * When true, only show 'Home' in the scroll nav - hides
      * section-specific items like 'How It Works' and 'Features'.
@@ -39,7 +36,6 @@ const { prefersReducedMotion, isLowEndDevice } = useMobile();
 const liteMotion = computed(
     () => prefersReducedMotion.value || isLowEndDevice.value,
 );
-const brandName = computed(() => props.branding?.name || 'LSI - KOAMISHIN');
 const brandLogoUrl = computed(() => props.branding?.logoUrl || null);
 
 const scrollToSection = (e: MouseEvent, targetId: string) => {
@@ -133,18 +129,8 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
             "
             class="flex items-center gap-3"
         >
-            <Link href="/" class="flex items-center gap-3">
-                <img
-                    v-if="brandLogoUrl"
-                    :src="brandLogoUrl"
-                    :alt="`${brandName} logo`"
-                    class="h-8 w-8 rounded-full object-cover"
-                />
-                <span
-                    class="font-serif text-xl tracking-[-0.03em] text-foreground"
-                >
-                    {{ brandName }}
-                </span>
+            <Link href="/" aria-label="KOAMISHIN home">
+                <PublicBrandMark :logo-url="brandLogoUrl" />
             </Link>
         </Motion>
 
@@ -223,20 +209,13 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
                         >
                             <Link
                                 href="/"
-                                class="flex items-center gap-2.5"
+                                aria-label="KOAMISHIN home"
                                 @click="closeMobileMenu"
                             >
-                                <img
-                                    v-if="brandLogoUrl"
-                                    :src="brandLogoUrl"
-                                    :alt="`${brandName} logo`"
-                                    class="h-7 w-7 rounded-full object-cover"
+                                <PublicBrandMark
+                                    :logo-url="brandLogoUrl"
+                                    size="mobile"
                                 />
-                                <span
-                                    class="font-serif text-lg tracking-[-0.03em]"
-                                >
-                                    {{ brandName }}
-                                </span>
                             </Link>
                             <SheetClose as-child>
                                 <button
