@@ -162,6 +162,21 @@ class ExamForm
                                             ->visible(fn ($get) => $get('type') === 'identification')
                                             ->maxLength(255)
                                             ->columnSpan(1),
+                                        Repeater::make('accepted_answers')
+                                            ->label('Other Accepted Answers')
+                                            ->helperText('Optional alternatives that should also receive full credit, such as Virus or Malware.')
+                                            ->schema([
+                                                TextInput::make('answer')
+                                                    ->label('Accepted Answer')
+                                                    ->required()
+                                                    ->maxLength(255),
+                                            ])
+                                            ->visible(fn ($get): bool => $get('type') === QuestionType::Identification->value)
+                                            ->dehydrated(fn ($get): bool => $get('type') === QuestionType::Identification->value)
+                                            ->itemLabel(fn (array $state): ?string => $state['answer'] ?? null)
+                                            ->addActionLabel('Add accepted answer')
+                                            ->collapsible()
+                                            ->columnSpanFull(),
                                         Repeater::make('enumeration_items')
                                             ->label('Enumeration Answers')
                                             ->helperText('Add each expected item and its individual points. Students may answer these in any order.')

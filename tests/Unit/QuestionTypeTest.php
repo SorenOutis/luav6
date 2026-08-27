@@ -75,3 +75,21 @@ it('serializes Enumeration slots with points but not expected answers', function
         ])
         ->and($question)->not->toHaveKey('correct_answer');
 });
+
+it('reveals accepted Identification answers only during review', function () {
+    $part = new ExamPart([
+        'questions' => [[
+            'text' => 'What general term describes disruptive or unauthorized-access software?',
+            'type' => 'identification',
+            'points' => 3,
+            'correct_answer' => 'Virus',
+            'accepted_answers' => [['answer' => 'Malware']],
+        ]],
+    ]);
+
+    $activeQuestion = ExamPartSerializer::one($part, false)['questions'][0];
+    $reviewQuestion = ExamPartSerializer::one($part, true)['questions'][0];
+
+    expect($activeQuestion)->not->toHaveKey('accepted_answers')
+        ->and($reviewQuestion['accepted_answers'])->toBe(['Virus', 'Malware']);
+});

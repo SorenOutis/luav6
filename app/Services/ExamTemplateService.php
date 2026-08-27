@@ -76,7 +76,7 @@ class ExamTemplateService
             'Who wrote "Noli Me Tangere"?',
             'identification',
             '',
-            'Jose Rizal',
+            'Jose Rizal|J. Rizal',
             '5',
             '',
         ]);
@@ -182,7 +182,20 @@ class ExamTemplateService
                         ];
                     }
                 } elseif ($type === QuestionType::Identification) {
-                    $questionData['correct_answer'] = $correctInput;
+                    $acceptedAnswers = collect(preg_split('/\s*\|\s*/', $correctInput) ?: [])
+                        ->map(fn (string $answer): string => trim($answer))
+                        ->filter()
+                        ->values();
+
+                    $questionData['correct_answer'] = $acceptedAnswers->first() ?? '';
+                    $alternatives = $acceptedAnswers->skip(1)
+                        ->map(fn (string $answer): array => ['answer' => $answer])
+                        ->values()
+                        ->all();
+
+                    if ($alternatives !== []) {
+                        $questionData['accepted_answers'] = $alternatives;
+                    }
                 } elseif ($type === QuestionType::Essay) {
                     $gradingMethod = str((string) ($row['Essay Grading (ai|manual)'] ?? ''))
                         ->trim()
