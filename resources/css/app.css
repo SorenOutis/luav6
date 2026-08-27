@@ -2237,3 +2237,150 @@ html[data-low-end] .welcome-defer {
         gap: 2rem;
     }
 }
+
+/* Approved concept alignment: keep the existing dashboard data and event
+   handlers, but make the phone composition visibly match the reference. */
+@media (max-width: 767px) {
+    .dashboard-ui.mobile-ui-page {
+        min-height: 100%;
+        background-color: var(--color-background);
+        padding-top: max(0.75rem, env(safe-area-inset-top));
+        padding-bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4rem));
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-hero {
+        padding: 0.25rem 0 0.5rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-hero > div:last-child {
+        border-radius: 1.25rem;
+        border: 1px solid var(--color-border);
+        background-color: var(--color-card);
+        padding: 0.875rem;
+        box-shadow:
+            0 1px 2px rgb(0 0 0 / 0.04),
+            0 12px 28px -20px rgb(0 0 0 / 0.26);
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-hero .dash-title {
+        font-size: 1.0625rem;
+        line-height: 1.15;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-hero .dashboard-hero-avatar {
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-focus {
+        border-radius: 1.25rem;
+        background-color: var(--color-card);
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-focus > div:last-child {
+        padding: 0.875rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-focus [class*='min-h-[72px]'] {
+        min-height: 4.5rem;
+        border-radius: 0.875rem;
+        padding: 0.625rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-reward {
+        border-radius: 1.25rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-progress {
+        gap: 0.625rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-progress > * {
+        min-width: 0;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-progress .col-span-2 {
+        border-radius: 1.25rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-main-grid {
+        gap: 0.75rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-main-grid > div {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 374px) {
+    .dashboard-ui.mobile-ui-page .dashboard-hero > div:last-child {
+        padding: 0.75rem;
+    }
+
+    .dashboard-ui.mobile-ui-page .dashboard-hero .dash-title {
+        font-size: 1rem;
+    }
+}
+
+/* Remaining mobile page alignment. This is presentation-only and scoped to
+   pages explicitly marked with mobile-ui-page. */
+@media (max-width: 767px) {
+    .student-ui.mobile-ui-page.exam-theme-page {
+        min-height: 100%;
+        padding-top: max(0.75rem, env(safe-area-inset-top));
+        padding-bottom: max(5rem, calc(env(safe-area-inset-bottom) + 4rem));
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-hero {
+        border-radius: 1.25rem;
+        padding: 1rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-part-card,
+    .student-ui.mobile-ui-page.exam-theme-page .exam-card {
+        min-height: 0;
+        border-radius: 1rem;
+    }
+
+    .student-ui.mobile-ui-page.exam-theme-page .exam-part-card a,
+    .student-ui.mobile-ui-page.exam-theme-page .exam-card a {
+        min-height: 44px;
+    }
+
+    .mobile-ui-page .grades-desktop-layout {
+        display: none !important;
+    }
+
+    .mobile-ui-page :is(.overflow-x-auto, .overflow-y-auto) {
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    .mobile-ui-page [class*='grid-cols-7'] {
+        gap: 0.25rem;
+    }
+
+    .mobile-ui-page [class*='grid-cols-7'] button {
+        min-height: 2.5rem;
+        min-width: 0;
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] {
+        min-height: 0;
+        border-radius: 1.25rem;
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] [data-slot='card-header'] {
+        min-height: 3.5rem;
+    }
+
+    .mobile-ui-page [data-testid='chat-workspace'] [data-slot='card-content'] {
+        min-height: 0;
+    }
+
+    .mobile-ui-page [data-slot='input'],
+    .mobile-ui-page [data-slot='textarea'] {
+        min-height: 44px;
+        border-radius: 0.875rem;
+    }
+}

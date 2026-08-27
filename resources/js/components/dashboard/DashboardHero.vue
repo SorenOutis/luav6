@@ -194,7 +194,7 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                                     "
                                 >
                                     <Avatar
-                                        class="relative size-12 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
+                                        class="dashboard-hero-avatar relative size-12 overflow-hidden rounded-full border border-border/50 bg-card sm:size-16 lg:size-20"
                                     >
                                         <AvatarImage
                                             v-if="userAvatar"
