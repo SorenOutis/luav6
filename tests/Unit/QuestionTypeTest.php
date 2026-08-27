@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\QuestionType;
+use App\Models\ExamPart;
+use App\Support\ExamPartSerializer;
 
 test('question types expose the admin selector options in product order', function () {
     expect(QuestionType::options())->toBe([
@@ -24,7 +26,7 @@ test('unknown stored values fall back to the safe multiple choice label', functi
 });
 
 it('serializes the readable question type for students without exposing the answer key', function () {
-    $part = \App\Models\ExamPart::factory()->make([
+    $part = ExamPart::factory()->make([
         'questions' => [[
             'text' => 'Which planet is known as the Red Planet?',
             'type' => 'multiple_choice',
@@ -36,7 +38,7 @@ it('serializes the readable question type for students without exposing the answ
         ]],
     ]);
 
-    $question = \App\Support\ExamPartSerializer::one($part, false)['questions'][0];
+    $question = ExamPartSerializer::one($part, false)['questions'][0];
 
     expect($question['type'])->toBe('multiple_choice')
         ->and($question['type_label'])->toBe('Multiple Choice')
