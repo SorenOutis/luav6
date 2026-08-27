@@ -26,7 +26,7 @@ test('unknown stored values fall back to the safe multiple choice label', functi
 });
 
 it('serializes the readable question type for students without exposing the answer key', function () {
-    $part = ExamPart::factory()->make([
+    $part = new ExamPart([
         'questions' => [[
             'text' => 'Which planet is known as the Red Planet?',
             'type' => 'multiple_choice',
