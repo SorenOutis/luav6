@@ -336,7 +336,7 @@ const filteredCourses = computed(() => {
         <!-- Skeleton Loading -->
         <template v-if="!isBooted">
             <div
-                class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10"
+                class="mobile-ui-page relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10"
             >
                 <PageSkeleton
                     :hero="true"
@@ -359,7 +359,7 @@ const filteredCourses = computed(() => {
         <!-- Real Content -->
         <template v-if="isBooted">
             <div
-                class="relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10"
+                class="mobile-ui-page relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10"
             >
                 <!-- Daily Tip -->
                 <Motion

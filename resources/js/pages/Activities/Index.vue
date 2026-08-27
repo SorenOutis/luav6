@@ -548,7 +548,7 @@ const activitiesTourSteps: TourStep[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
-            class="student-ui exam-theme-page relative flex flex-col gap-3 overflow-x-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
+            class="student-ui mobile-ui-page exam-theme-page relative flex flex-col gap-3 overflow-x-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <!-- Header -->
             <Motion

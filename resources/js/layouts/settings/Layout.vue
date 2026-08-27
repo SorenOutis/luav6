@@ -38,7 +38,7 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="px-4 py-6">
+    <div class="mobile-ui-settings px-4 py-6">
         <Heading
             title="Settings"
             description="Manage your profile and account settings"

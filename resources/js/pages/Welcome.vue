@@ -110,7 +110,7 @@ const webSiteJsonLd = {
     />
 
     <div
-        class="welcome-root min-h-screen overflow-x-hidden bg-[#f8f7f2] font-sans text-[#17201f] selection:bg-primary/20 dark:bg-background dark:text-foreground"
+        class="welcome-root mobile-ui-page min-h-screen overflow-x-hidden bg-[#f8f7f2] font-sans text-[#17201f] selection:bg-primary/20 dark:bg-background dark:text-foreground"
     >
         <WelcomeHeader
             :can-register="props.canRegister"
