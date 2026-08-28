@@ -174,8 +174,8 @@ return [
             'models' => [
                 'text' => [
                     'default' => env('KOAMISHIN_AI_MODEL'),
-                ]
-            ]
+                ],
+            ],
         ],
     ],
 
