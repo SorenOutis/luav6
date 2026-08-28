@@ -43,6 +43,13 @@ describe('page-specific mobile compositions', () => {
         expect(read('resources/js/pages/Grades.vue')).toContain(
             'grades-desktop-overview',
         );
+
+        const dashboard = read(
+            'resources/js/components/dashboard/MobileDashboard.vue',
+        );
+        expect(dashboard).toContain('mobile-dashboard-reward-grid');
+        expect(dashboard).toContain('mobile-dashboard-progress-band');
+        expect(dashboard).not.toContain('mobile-dashboard-secondary-grid');
     });
 
     it('does not render a duplicate generic mobile header on custom pages', () => {
