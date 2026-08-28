@@ -14,7 +14,6 @@ import {
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
-import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
 import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
@@ -422,16 +421,6 @@ const seasonDateLabel = computed(() => {
                         }}
                     </span>
                 </div>
-                <ClaimXpButton
-                    class="mobile-dashboard-reward__action"
-                    :can-claim="claimXp.canClaim"
-                    :amount="claimXp.amount"
-                    :base-xp="claimXp.baseXp"
-                    :next-claim-at="claimXp.nextClaimAt"
-                    :streak="userStats.streak"
-                    :show-prompt="claimXp.showPrompt"
-                    @claimed="emit('claimed')"
-                />
             </div>
             <StreakCard
                 class="mobile-dashboard-streak-summary"

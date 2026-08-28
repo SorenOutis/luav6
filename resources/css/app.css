@@ -4544,7 +4544,7 @@ html[data-low-end] .welcome-defer {
 
 .mobile-dashboard-reward,
 .mobile-dashboard-streak-summary {
-    min-height: 14rem;
+    min-height: 9.5rem;
     padding: 0.75rem;
     border-radius: 1.1rem;
 }
@@ -4703,6 +4703,6 @@ html[data-low-end] .welcome-defer {
 
     .mobile-dashboard-reward,
     .mobile-dashboard-streak-summary {
-        min-height: 12rem;
+        min-height: 8.5rem;
     }
 }
