@@ -9,12 +9,12 @@ import {
     RefreshCw,
     Sparkles,
     Trophy,
+    TrendingUp,
     X,
     Zap,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
-import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
 import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
@@ -422,16 +422,6 @@ const seasonDateLabel = computed(() => {
                         }}
                     </span>
                 </div>
-                <ClaimXpButton
-                    class="mobile-dashboard-reward__action"
-                    :can-claim="claimXp.canClaim"
-                    :amount="claimXp.amount"
-                    :base-xp="claimXp.baseXp"
-                    :next-claim-at="claimXp.nextClaimAt"
-                    :streak="userStats.streak"
-                    :show-prompt="claimXp.showPrompt"
-                    @claimed="emit('claimed')"
-                />
             </div>
             <StreakCard
                 class="mobile-dashboard-streak-summary"
@@ -439,6 +429,7 @@ const seasonDateLabel = computed(() => {
                 :current-streak="userStats.streak"
                 :longest-streak="userStats.longestStreak"
                 :login-dates="loginDates ?? []"
+                compact
             />
         </section>
 
@@ -447,27 +438,44 @@ const seasonDateLabel = computed(() => {
             aria-label="Level and season progress"
         >
             <div class="mobile-dashboard-progress-band__level">
-                <span class="mobile-dashboard-card-kicker">Level progress</span>
-                <strong>Level {{ userStats.level }}</strong>
-                <span
-                    >{{ userStats.currentXP.toLocaleString() }} /
-                    {{ userStats.maxXPForLevel.toLocaleString() }} XP</span
-                >
-                <div class="mobile-dashboard-progress-track" aria-hidden="true">
-                    <span :style="{ width: `${xpProgress}%` }" />
+                <div class="mobile-dashboard-progress-band__icon">
+                    <TrendingUp class="h-4 w-4" />
+                </div>
+                <div class="mobile-dashboard-progress-band__content">
+                    <span class="mobile-dashboard-card-kicker"
+                        >Level progress</span
+                    >
+                    <strong>Level {{ userStats.level }}</strong>
+                    <span
+                        >{{ userStats.currentXP.toLocaleString() }} /
+                        {{ userStats.maxXPForLevel.toLocaleString() }} XP</span
+                    >
+                    <div
+                        class="mobile-dashboard-progress-track"
+                        aria-hidden="true"
+                    >
+                        <span :style="{ width: `${xpProgress}%` }" />
+                    </div>
                 </div>
             </div>
             <span class="mobile-dashboard-progress-band__divider" />
             <div class="mobile-dashboard-progress-band__season">
-                <span class="mobile-dashboard-card-kicker"
-                    >Season progress</span
-                >
-                <strong>{{
-                    seasonProgress === null ? '—' : `${seasonProgress}%`
-                }}</strong>
-                <span v-if="activeSeason">{{ seasonDaysLeft }} days left</span>
-                <span v-else>No active season</span>
-                <small v-if="seasonDateLabel">{{ seasonDateLabel }}</small>
+                <div class="mobile-dashboard-progress-band__icon">
+                    <Trophy class="h-4 w-4" />
+                </div>
+                <div class="mobile-dashboard-progress-band__content">
+                    <span class="mobile-dashboard-card-kicker"
+                        >Season progress</span
+                    >
+                    <strong>{{
+                        seasonProgress === null ? '—' : `${seasonProgress}%`
+                    }}</strong>
+                    <span v-if="activeSeason"
+                        >{{ seasonDaysLeft }} days left</span
+                    >
+                    <span v-else>No active season</span>
+                    <small v-if="seasonDateLabel">{{ seasonDateLabel }}</small>
+                </div>
             </div>
         </section>
 
