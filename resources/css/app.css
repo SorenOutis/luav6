@@ -4535,3 +4535,171 @@ html[data-low-end] .welcome-defer {
         align-self: start;
     }
 }
+
+/* Compact mobile dashboard band: reward + streak, then level + season. */
+.mobile-dashboard-reward-grid {
+    align-items: stretch;
+    gap: 0.625rem;
+}
+
+.mobile-dashboard-reward,
+.mobile-dashboard-streak-summary {
+    min-height: 9.5rem;
+    padding: 0.55rem;
+    border-radius: 1.1rem;
+}
+
+.mobile-dashboard-reward {
+    display: flex;
+    align-items: stretch;
+    background: var(--color-card);
+}
+
+.mobile-dashboard-reward__action {
+    position: static;
+    display: flex;
+    width: 100%;
+    max-width: none;
+    flex: 1;
+    align-items: stretch;
+    overflow: visible;
+    opacity: 1;
+}
+
+.mobile-dashboard-reward__action > div {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+.mobile-dashboard-reward__action > :is(button, [role='status']),
+.mobile-dashboard-reward__action > div > :is(button, [role='status']) {
+    min-height: 100%;
+    border-radius: 0.9rem;
+}
+
+.mobile-dashboard-streak-summary {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    background: var(--color-card);
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.04),
+        0 12px 28px -22px rgb(0 0 0 / 0.28);
+}
+
+.mobile-dashboard-streak-summary {
+    display: block;
+}
+
+.mobile-dashboard-streak-summary :is(.surface-card, [data-slot='card']) {
+    min-height: 100%;
+    padding: 0.85rem !important;
+    border: 0 !important;
+    border-radius: 0.8rem !important;
+    box-shadow: none !important;
+}
+
+.mobile-dashboard-progress-band {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 0.9fr);
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 1.25rem;
+    background: var(--color-card);
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / 0.04),
+        0 12px 28px -22px rgb(0 0 0 / 0.28);
+}
+
+.mobile-dashboard-progress-band__level,
+.mobile-dashboard-progress-band__season {
+    min-width: 0;
+}
+
+.mobile-dashboard-progress-band__level strong,
+.mobile-dashboard-progress-band__season strong {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--color-foreground);
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+}
+
+.mobile-dashboard-progress-band__level
+    > span:not(.mobile-dashboard-card-kicker),
+.mobile-dashboard-progress-band__season
+    > span:not(.mobile-dashboard-card-kicker),
+.mobile-dashboard-progress-band__season small {
+    display: block;
+    margin-top: 0.28rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.68rem;
+    line-height: 1.25;
+}
+
+.mobile-dashboard-progress-band__season strong {
+    color: var(--color-primary);
+}
+
+.mobile-dashboard-progress-band__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--color-border);
+}
+
+.mobile-dashboard-progress-band .mobile-dashboard-progress-track {
+    height: 0.4rem;
+    margin-top: 0.55rem;
+}
+
+.mobile-dashboard-progress-details {
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--color-card) 72%, transparent);
+}
+
+.mobile-dashboard-progress-details summary {
+    display: flex;
+    min-height: 2.75rem;
+    cursor: pointer;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0.9rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 700;
+    list-style: none;
+}
+
+.mobile-dashboard-progress-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.mobile-dashboard-progress-details[open] summary svg {
+    transform: rotate(180deg);
+}
+
+.mobile-dashboard-progress-details .mobile-dashboard-progress-card {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+}
+
+@media (max-width: 360px) {
+    .mobile-dashboard-reward-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mobile-dashboard-reward,
+    .mobile-dashboard-streak-summary {
+        min-height: 8.5rem;
+    }
+}

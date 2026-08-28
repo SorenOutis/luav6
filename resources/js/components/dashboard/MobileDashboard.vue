@@ -6,18 +6,15 @@ import {
     BookOpenCheck,
     CalendarClock,
     ChevronDown,
-    Flame,
     RefreshCw,
     Sparkles,
     Trophy,
     X,
-    Zap,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
-import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
 import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
@@ -176,6 +173,59 @@ const formatNextDue = (item: NextUpItem) => {
 
 const itemTypeLabel = (item: NextUpItem) =>
     item.kind === 'exam' ? 'Next exam' : 'Next assignment';
+
+const seasonProgress = computed(() => {
+    const start = props.activeSeason?.startDate
+        ? new Date(props.activeSeason.startDate).getTime()
+        : Number.NaN;
+    const end = props.activeSeason?.endDate
+        ? new Date(props.activeSeason.endDate).getTime()
+        : Number.NaN;
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+        return null;
+    }
+
+    return Math.min(
+        100,
+        Math.max(0, Math.round(((Date.now() - start) / (end - start)) * 100)),
+    );
+});
+
+const seasonDaysLeft = computed(() => {
+    const end = props.activeSeason?.endDate
+        ? new Date(props.activeSeason.endDate).getTime()
+        : Number.NaN;
+
+    if (!Number.isFinite(end)) return null;
+
+    return Math.max(0, Math.ceil((end - Date.now()) / 86_400_000));
+});
+
+const seasonDateLabel = computed(() => {
+    const start = props.activeSeason?.startDate
+        ? new Date(props.activeSeason.startDate)
+        : null;
+    const end = props.activeSeason?.endDate
+        ? new Date(props.activeSeason.endDate)
+        : null;
+
+    if (
+        !start ||
+        !end ||
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime())
+    ) {
+        return '';
+    }
+
+    const format = new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric',
+    });
+
+    return `${format.format(start)} – ${format.format(end)}`;
+});
 </script>
 
 <template>
@@ -345,29 +395,14 @@ const itemTypeLabel = (item: NextUpItem) =>
             </div>
         </section>
 
-        <section class="mobile-dashboard-reward-grid">
+        <section
+            class="mobile-dashboard-reward-grid"
+            aria-label="Daily reward and current streak"
+        >
             <div
                 class="mobile-dashboard-reward"
                 data-tour="dashboard-daily-reward"
             >
-                <div class="mobile-dashboard-reward__icon">
-                    <Zap class="h-4 w-4" />
-                </div>
-                <div class="min-w-0">
-                    <span class="mobile-dashboard-card-kicker"
-                        >Daily reward</span
-                    >
-                    <strong class="mobile-dashboard-reward__value"
-                        >+{{ claimXp.amount }} XP</strong
-                    >
-                    <span class="mobile-dashboard-reward__copy">
-                        {{
-                            claimXp.canClaim
-                                ? 'Ready to claim'
-                                : 'Come back tomorrow'
-                        }}
-                    </span>
-                </div>
                 <ClaimXpButton
                     class="mobile-dashboard-reward__action"
                     :can-claim="claimXp.canClaim"
@@ -379,40 +414,49 @@ const itemTypeLabel = (item: NextUpItem) =>
                     @claimed="emit('claimed')"
                 />
             </div>
-            <div class="mobile-dashboard-streak-summary">
-                <div class="mobile-dashboard-reward__icon is-warm">
-                    <Flame class="h-4 w-4" />
+            <StreakCard
+                class="mobile-dashboard-streak-summary"
+                data-tour="dashboard-streak-card"
+                :current-streak="userStats.streak"
+                :longest-streak="userStats.longestStreak"
+                :login-dates="loginDates ?? []"
+            />
+        </section>
+
+        <section
+            class="mobile-dashboard-progress-band"
+            aria-label="Level and season progress"
+        >
+            <div class="mobile-dashboard-progress-band__level">
+                <span class="mobile-dashboard-card-kicker">Level progress</span>
+                <strong>Level {{ userStats.level }}</strong>
+                <span
+                    >{{ userStats.currentXP.toLocaleString() }} /
+                    {{ userStats.maxXPForLevel.toLocaleString() }} XP</span
+                >
+                <div class="mobile-dashboard-progress-track" aria-hidden="true">
+                    <span :style="{ width: `${xpProgress}%` }" />
                 </div>
-                <span class="mobile-dashboard-card-kicker">Current streak</span>
-                <strong>{{ userStats.streak }} days</strong>
-                <span>{{ userStats.longestStreak }} day best</span>
+            </div>
+            <span class="mobile-dashboard-progress-band__divider" />
+            <div class="mobile-dashboard-progress-band__season">
+                <span class="mobile-dashboard-card-kicker"
+                    >Season progress</span
+                >
+                <strong>{{
+                    seasonProgress === null ? '—' : `${seasonProgress}%`
+                }}</strong>
+                <span v-if="activeSeason">{{ seasonDaysLeft }} days left</span>
+                <span v-else>No active season</span>
+                <small v-if="seasonDateLabel">{{ seasonDateLabel }}</small>
             </div>
         </section>
 
-        <section class="mobile-dashboard-progress" aria-label="Your progress">
-            <div class="mobile-dashboard-section-heading">
-                <div>
-                    <span class="mobile-dashboard-kicker">Keep going</span>
-                    <h2 class="mobile-dashboard-section-title">
-                        Level progress
-                    </h2>
-                </div>
-                <span class="mobile-dashboard-level-pill"
-                    >Level {{ userStats.level }}</span
-                >
-            </div>
-            <div class="mobile-dashboard-progress-summary">
-                <div>
-                    <strong>{{ userStats.currentXP }} XP</strong>
-                    <span
-                        >of {{ userStats.maxXPForLevel }} XP to next level</span
-                    >
-                </div>
-                <span>{{ xpProgress }}%</span>
-            </div>
-            <div class="mobile-dashboard-progress-track" aria-hidden="true">
-                <span :style="{ width: `${xpProgress}%` }" />
-            </div>
+        <details class="mobile-dashboard-progress-details">
+            <summary>
+                <span>XP history and details</span>
+                <ChevronDown class="h-4 w-4" />
+            </summary>
             <div class="mobile-dashboard-progress-card">
                 <LevelProgressCard
                     data-tour="dashboard-level-card"
@@ -423,30 +467,7 @@ const itemTypeLabel = (item: NextUpItem) =>
                     :bonus-xp="bonusXp"
                 />
             </div>
-        </section>
-
-        <section class="mobile-dashboard-secondary-grid">
-            <div
-                class="mobile-dashboard-secondary-card"
-                data-tour="dashboard-streak-card"
-            >
-                <StreakCard
-                    :current-streak="userStats.streak"
-                    :longest-streak="userStats.longestStreak"
-                    :login-dates="loginDates ?? []"
-                />
-            </div>
-            <div
-                class="mobile-dashboard-secondary-card"
-                data-tour="dashboard-season"
-            >
-                <SeasonProgressBand
-                    :name="activeSeason?.name ?? null"
-                    :start-date="activeSeason?.startDate ?? null"
-                    :end-date="activeSeason?.endDate ?? null"
-                />
-            </div>
-        </section>
+        </details>
 
         <section
             class="mobile-dashboard-leaderboard"
