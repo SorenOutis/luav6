@@ -4539,19 +4539,21 @@ html[data-low-end] .welcome-defer {
 /* Compact mobile dashboard band: reward + streak, then level + season. */
 .mobile-dashboard-reward-grid {
     align-items: stretch;
-    gap: 0.625rem;
+    gap: 0.75rem;
 }
 
 .mobile-dashboard-reward,
 .mobile-dashboard-streak-summary {
-    min-height: 9.5rem;
-    padding: 0.55rem;
+    min-height: 14rem;
+    padding: 0.75rem;
     border-radius: 1.1rem;
 }
 
 .mobile-dashboard-reward {
     display: flex;
+    flex-direction: column;
     align-items: stretch;
+    gap: 0.6rem;
     background: var(--color-card);
 }
 
@@ -4560,8 +4562,9 @@ html[data-low-end] .welcome-defer {
     display: flex;
     width: 100%;
     max-width: none;
-    flex: 1;
+    flex: 0 0 auto;
     align-items: stretch;
+    margin-top: auto;
     overflow: visible;
     opacity: 1;
 }
@@ -4700,6 +4703,6 @@ html[data-low-end] .welcome-defer {
 
     .mobile-dashboard-reward,
     .mobile-dashboard-streak-summary {
-        min-height: 8.5rem;
+        min-height: 12rem;
     }
 }

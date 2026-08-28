@@ -10,6 +10,7 @@ import {
     Sparkles,
     Trophy,
     X,
+    Zap,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -403,6 +404,24 @@ const seasonDateLabel = computed(() => {
                 class="mobile-dashboard-reward"
                 data-tour="dashboard-daily-reward"
             >
+                <div class="mobile-dashboard-reward__icon">
+                    <Zap class="h-5 w-5" />
+                </div>
+                <div class="min-w-0">
+                    <span class="mobile-dashboard-card-kicker"
+                        >Daily reward</span
+                    >
+                    <strong class="mobile-dashboard-reward__value"
+                        >+{{ claimXp.amount }} XP</strong
+                    >
+                    <span class="mobile-dashboard-reward__copy">
+                        {{
+                            claimXp.canClaim
+                                ? 'Ready to claim'
+                                : 'Come back tomorrow'
+                        }}
+                    </span>
+                </div>
                 <ClaimXpButton
                     class="mobile-dashboard-reward__action"
                     :can-claim="claimXp.canClaim"
@@ -452,9 +471,9 @@ const seasonDateLabel = computed(() => {
             </div>
         </section>
 
-        <details class="mobile-dashboard-progress-details">
+        <details class="mobile-dashboard-progress-details" open>
             <summary>
-                <span>XP history and details</span>
+                <span>XP history, claims, and details</span>
                 <ChevronDown class="h-4 w-4" />
             </summary>
             <div class="mobile-dashboard-progress-card">
