@@ -18,6 +18,7 @@ use App\Models\Season;
 use App\Models\User;
 use App\Services\AIService;
 use App\Services\ExamAnswerDraftService;
+use App\Services\ExamSetAssignmentService;
 use App\Services\ExamXpAwardService;
 use App\Support\AiQueueWorker;
 use App\Support\ExamPartSerializer;
@@ -38,6 +39,7 @@ class ExamController extends Controller
     public function __construct(
         protected AIService $aiService,
         protected ExamXpAwardService $examXpAwardService,
+        protected ExamSetAssignmentService $examSets,
     ) {}
 
     /**
@@ -94,9 +96,11 @@ class ExamController extends Controller
             'There are no results to review for this exam.',
         );
 
-        $parts = Cache::remember("exam_structure_{$exam->id}", 3600, function () use ($exam) {
-            return $exam->parts()->orderBy('sort_order')->get();
-        });
+        // Review shows the questions the student actually answered, i.e. the
+        // parts of the set they were handed — never every set of the exam.
+        // Admins review every set, so nothing is filtered for them.
+        $parts = $this->examSets->partsFor($exam, $request->user());
+        $set = $this->examSets->resolveSet($exam, $request->user());
         $revealAnswers = ExamPartSerializer::mayRevealAnswers(
             $exam,
             (bool) $request->user()->is_admin,
@@ -106,6 +110,7 @@ class ExamController extends Controller
         return response()->json([
             'exam' => array_merge($exam->withoutRelations()->toArray(), [
                 'parts' => ExamPartSerializer::many($parts, $revealAnswers),
+                'set' => $set !== null ? ['id' => $set->id, 'title' => $set->title] : null,
             ]),
             'submissions' => $submissions->values()->all(),
         ]);
@@ -122,8 +127,9 @@ class ExamController extends Controller
         $paginator = Exam::query()
             ->with([
                 'section.season',
+                'sets',
                 'parts' => fn ($query) => $query
-                    ->select(['id', 'exam_id', 'title', 'instructions', 'type', 'sort_order', 'points'])
+                    ->select(['id', 'exam_id', 'exam_set_id', 'title', 'instructions', 'type', 'sort_order', 'points'])
                     ->orderBy('sort_order'),
             ])
             ->where('status', '!=', 'draft')
@@ -140,17 +146,32 @@ class ExamController extends Controller
             ->get(['id', 'exam_id', 'exam_part_id', 'status', 'score', 'is_late', 'grading_failed'])
             ->groupBy('exam_id');
 
-        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions) {
+        // One row per exam: the set this student was handed (if any) and the
+        // number of parts in the set they will work through. Reading this from
+        // summariesFor() keeps the listing at a fixed number of queries and —
+        // because it never assigns — browsing cannot consume a rotation slot.
+        $summaries = $this->examSets->summariesFor($user, $examIds->all());
+
+        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions, $summaries) {
             $submissions = $allSubmissions->get($exam->id, collect());
             $submittedPartsCount = $submissions->unique('exam_part_id')->count();
+
+            // A student only ever works through one set, so the card counts
+            // and the set label must come from that set — not from every set
+            // the exam ships.
+            $set = $summaries[$exam->id]['set'] ?? null;
+            $parts = $this->examSets->filterParts($exam, $exam->parts, $set);
 
             return array_merge($exam->withoutRelations()->toArray(), [
                 // Cards only need part metadata and counts. Questions are the
                 // dominant payload and are fetched only for taking/reviewing.
-                'parts' => ExamPartSerializer::many($exam->parts, false, false),
+                'parts' => ExamPartSerializer::many($parts, false, false),
                 'submitted_parts_count' => $submittedPartsCount,
-                'total_parts' => $exam->parts->count(),
-                'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->isNotEmpty())
+                'total_parts' => $parts->count(),
+                'set' => $set !== null ? ['id' => $set->id, 'title' => $set->title] : null,
+                // Unassigned students are told which set they will get only
+                // once they open the exam; the count above already reflects it.
+                'is_locked' => ($submittedPartsCount === $parts->count() && $parts->isNotEmpty())
                     || $exam->status === 'closed',
                 'has_submissions' => $submissions->isNotEmpty(),
                 // Drives the "Review results" affordance: the student took part
@@ -198,13 +219,18 @@ class ExamController extends Controller
             abort(404);
         }
 
-        // Cache only the raw structure. The serialized payload is per-user
-        // (answer visibility depends on the viewer), so it must never be cached.
-        $parts = Cache::remember("exam_structure_{$exam->id}", 3600, function () use ($exam) {
-            return $exam->parts()->orderBy('sort_order')->get();
-        });
+        $user = auth()->user();
 
-        $userId = auth()->id();
+        // Opening the exam is what hands a student their set, and the set is
+        // sticky from then on: reloading or resuming always shows the same
+        // questions. Cache only the raw structure — the serialized payload is
+        // per-user (answer visibility depends on the viewer), so it must never
+        // be cached.
+        // Admins auditing the page still see every set.
+        $set = $this->examSets->resolveSet($exam, $user);
+        $parts = $this->examSets->partsFor($exam, $user);
+
+        $userId = $user->id;
         $userSubmissions = ExamSubmission::where('user_id', $userId)
             ->where('exam_id', $exam->id)
             ->get(['exam_part_id', 'status', 'score']);
@@ -265,13 +291,15 @@ class ExamController extends Controller
         return Inertia::render('Exams/Show', [
             'exam' => array_merge($exam->withoutRelations()->toArray(), [
                 'parts' => ExamPartSerializer::many($parts, $reveal, $includeQuestions),
+                // Students see which set they are taking on the exam page too.
+                'set' => $set !== null ? ['id' => $set->id, 'title' => $set->title] : null,
             ]),
             'submissions' => $submissions,
             'submittedPartId' => $submittedPartId,
             'partDeadlines' => $partDeadlines,
             'answerDrafts' => $answerDrafts,
             'xpAward' => $this->examXpAwardService->serialize(
-                $this->examXpAwardService->awardIfEligible(auth()->user(), $exam)
+                $this->examXpAwardService->awardIfEligible($user, $exam, $set)
             ),
             'realtimeChannel' => "exam.{$exam->id}.student.{$userId}",
         ]);

@@ -6,6 +6,7 @@ use App\Models\Exam;
 use App\Models\ExamSubmission;
 use App\Models\Season;
 use App\Models\User;
+use App\Services\ExamSetAssignmentService;
 use App\Support\ExamPartSerializer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class ActivityHubController extends Controller
 {
+    public function __construct(protected ExamSetAssignmentService $examSets) {}
+
     public function index(Request $request): Response
     {
         $user = $request->user();
@@ -65,8 +68,12 @@ class ActivityHubController extends Controller
         $exams = $this->visibleExams($user)
             ->select(['exams.id', 'exams.status', 'exams.section_id'])
             ->with('section:id,name')
-            ->withCount('parts')
             ->get();
+
+        // An exam can ship as several interchangeable sets, so a student's
+        // progress is measured against the set they were handed — not against
+        // every set the teacher wrote.
+        $summaries = $this->examSets->summariesFor($user, $exams->pluck('id')->all());
 
         // One row per exam the student has attempted. `submission_rows` mirrors
         // the `isNotEmpty()` check `examPage()` uses for `has_submissions`, and
@@ -84,7 +91,7 @@ class ActivityHubController extends Controller
         $completed = 0;
 
         foreach ($exams as $exam) {
-            $totalParts = (int) $exam->parts_count;
+            $totalParts = (int) ($summaries[$exam->id]['total_parts'] ?? 0);
             $totals = $submissionTotals->get($exam->id);
             $submitted = (int) ($totals->submitted_parts ?? 0);
             $hasSubmissions = (int) ($totals->submission_rows ?? 0) > 0;
@@ -133,8 +140,9 @@ class ActivityHubController extends Controller
         $paginator = $this->visibleExams($user)
             ->with([
                 'section.season',
+                'sets',
                 'parts' => fn ($query) => $query
-                    ->select(['id', 'exam_id', 'title', 'instructions', 'type', 'sort_order', 'points'])
+                    ->select(['id', 'exam_id', 'exam_set_id', 'title', 'instructions', 'type', 'sort_order', 'points'])
                     ->orderBy('sort_order'),
             ])
             ->latest('created_at')
@@ -150,15 +158,23 @@ class ActivityHubController extends Controller
             ->get(['id', 'exam_id', 'exam_part_id', 'status', 'score', 'is_late', 'grading_failed'])
             ->groupBy('exam_id');
 
-        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions) {
+        $summaries = $this->examSets->summariesFor($user, $examIds->all());
+
+        $examsData = $exams->map(function (Exam $exam) use ($allSubmissions, $summaries) {
             $submissions = $allSubmissions->get($exam->id, collect());
             $submittedPartsCount = $submissions->unique('exam_part_id')->count();
 
+            // Cards describe the set this student will actually take: the set
+            // they were handed, or the first set until they open the exam.
+            $set = $summaries[$exam->id]['set'] ?? null;
+            $parts = $this->examSets->filterParts($exam, $exam->parts, $set);
+
             return array_merge($exam->withoutRelations()->toArray(), [
-                'parts' => ExamPartSerializer::many($exam->parts, false, false),
+                'parts' => ExamPartSerializer::many($parts, false, false),
                 'submitted_parts_count' => $submittedPartsCount,
-                'total_parts' => $exam->parts->count(),
-                'is_locked' => ($submittedPartsCount === $exam->parts->count() && $exam->parts->isNotEmpty())
+                'total_parts' => $parts->count(),
+                'set' => $set !== null ? ['id' => $set->id, 'title' => $set->title] : null,
+                'is_locked' => ($submittedPartsCount === $parts->count() && $parts->isNotEmpty())
                     || $exam->status === 'closed',
                 'has_submissions' => $submissions->isNotEmpty(),
                 'results_available' => $exam->status === 'closed' && $submissions->isNotEmpty(),

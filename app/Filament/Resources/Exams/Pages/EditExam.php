@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Exams\Pages;
 
 use App\Filament\Resources\Exams\ExamResource;
+use App\Filament\Resources\Exams\Schemas\ExamForm;
+use App\Models\ExamSet;
 use App\Services\ExamAnswerReportService;
 use App\Services\ExamTemplateService;
 use Filament\Actions\Action;
@@ -22,6 +24,15 @@ class EditExam extends EditRecord
 
     /** @var array<int, string>|null Memoised so one render doesn't re-query per field. */
     private ?array $studentOptions = null;
+
+    /**
+     * Growing or shrinking the number of sets is done here, from the repeater's
+     * actual items, so the counter can never remove a set that is on screen.
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return ExamForm::syncSetCount($data);
+    }
 
     protected function getHeaderActions(): array
     {
@@ -46,6 +57,19 @@ class EditExam extends EditRecord
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('warning')
                 ->form([
+                    // Importing replaces the questions of ONE set, so a
+                    // multi-set exam can be filled set by set.
+                    Select::make('exam_set_id')
+                        ->label('Import into set')
+                        ->options(fn (): array => $this->record
+                            ->sets()
+                            ->orderBy('sort_order')
+                            ->pluck('title', 'id')
+                            ->all())
+                        ->default(fn (): ?int => $this->record->sets()->first()?->id)
+                        ->visible(fn (): bool => $this->record->sets()->count() > 1)
+                        ->required(fn (): bool => $this->record->sets()->count() > 1)
+                        ->helperText('The CSV replaces every question in the chosen set.'),
                     FileUpload::make('questions_file')
                         ->label('Select CSV File')
                         ->required()
@@ -55,14 +79,16 @@ class EditExam extends EditRecord
                 ])
                 ->action(function (array $data) {
                     $file = Storage::disk('local')->path($data['questions_file']);
-                    (new ExamTemplateService)->uploadFromCsv($this->record, $file);
+                    $set = $this->resolveTargetSet($data['exam_set_id'] ?? null);
+                    (new ExamTemplateService)->uploadFromCsv($this->record, $file, $set);
 
                     Notification::make()
                         ->title('Questions uploaded successfully')
+                        ->body("Imported into {$set->title}.")
                         ->success()
                         ->send();
 
-                    $this->refreshFormData(['parts']);
+                    $this->refreshFormData(['sets']);
                 }),
 
             DeleteAction::make(),
@@ -94,6 +120,17 @@ class EditExam extends EditRecord
                     ->default('answer_key')
                     ->required()
                     ->live(),
+
+                Select::make('set')
+                    ->label('Exam set')
+                    ->options(fn (): array => $this->record
+                        ->sets()
+                        ->orderBy('sort_order')
+                        ->pluck('title', 'id')
+                        ->all())
+                    ->placeholder('All sets')
+                    ->visible(fn (): bool => $this->record->sets()->count() > 1)
+                    ->helperText('Each student only ever answers one set, so a per-set report keeps the answer key and the marks aligned.'),
 
                 Select::make('student_id')
                     ->label('Student')
@@ -157,6 +194,7 @@ class EditExam extends EditRecord
                         : ExamAnswerReportService::MODE_STUDENTS,
                     'students' => $students === [] ? null : $students,
                     'include_key' => $scope === 'answer_key' || ($data['include_key'] ?? true) ? 1 : 0,
+                    'set' => filled($data['set'] ?? null) ? (int) $data['set'] : null,
                 ], fn ($value): bool => $value !== null));
 
                 // Open in a new tab so the admin keeps this page. If the browser
@@ -168,6 +206,21 @@ class EditExam extends EditRecord
 
                 return null;
             });
+    }
+
+    /**
+     * The set an upload should land in: the one the admin picked, else the
+     * exam's first set (created on demand for exams predating sets).
+     */
+    private function resolveTargetSet(mixed $setId): ExamSet
+    {
+        $setId = (int) ($setId ?? 0);
+
+        if ($setId > 0) {
+            $set = $this->record->sets()->whereKey($setId)->first();
+        }
+
+        return $set ?? ExamSet::ensureDefaultForExam($this->record->getKey());
     }
 
     /**

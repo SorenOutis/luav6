@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\EssayGradingMethod;
 use App\Enums\QuestionType;
 use App\Models\Exam;
+use App\Models\ExamSet;
 use Illuminate\Support\Facades\DB;
 
 class ExamTemplateService
@@ -110,8 +111,17 @@ class ExamTemplateService
         return $csv;
     }
 
-    public function uploadFromCsv(Exam $exam, string $csvPath): void
+    /**
+     * Replace the questions of one set with the contents of a CSV.
+     *
+     * Only the target set is touched, so a multi-set exam is filled one upload
+     * at a time (Set A, then Set B, …). Without a set the exam's first set is
+     * used, which keeps single-set imports working exactly as before.
+     */
+    public function uploadFromCsv(Exam $exam, string $csvPath, ?ExamSet $set = null): ExamSet
     {
+        $set ??= ExamSet::ensureDefaultForExam($exam->getKey());
+
         $rows = [];
         if (($handle = fopen($csvPath, 'r')) !== false) {
             // Check for BOM and skip it if present
@@ -136,9 +146,10 @@ class ExamTemplateService
             fclose($handle);
         }
 
-        DB::transaction(function () use ($exam, $rows) {
-            // Delete existing parts for a clean slate
-            $exam->parts()->delete();
+        DB::transaction(function () use ($exam, $rows, $set) {
+            // Delete existing parts of THIS set for a clean slate — importing
+            // Set B must not wipe the questions already written for Set A.
+            $exam->parts()->where('exam_set_id', $set->getKey())->delete();
 
             $partsData = [];
             $sortOrder = 0;
@@ -236,6 +247,7 @@ class ExamTemplateService
 
             foreach ($partsData as $title => $data) {
                 $exam->parts()->create([
+                    'exam_set_id' => $set->getKey(),
                     'title' => $title,
                     'instructions' => $data['instructions'],
                     'questions' => $data['questions'],
@@ -245,6 +257,8 @@ class ExamTemplateService
                 ]);
             }
         });
+
+        return $set;
     }
 
     /**

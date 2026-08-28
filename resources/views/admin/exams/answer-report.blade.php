@@ -200,6 +200,7 @@
 
         <div class="meta-grid">
             <div><span>Section</span><strong>{{ $exam['section'] ?? 'All sections' }}</strong></div>
+            <div><span>Set</span><strong>{{ $exam['set'] ?? 'All sets' }}</strong></div>
             <div><span>Exam date</span><strong>{{ $exam['exam_date']?->format('M d, Y H:i') ?? '—' }}</strong></div>
             <div><span>Duration</span><strong>{{ $exam['duration_minutes'] ? $exam['duration_minutes'].' min' : '—' }}</strong></div>
             <div><span>Status</span><strong>{{ ucfirst($exam['status'] ?? 'draft') }}</strong></div>

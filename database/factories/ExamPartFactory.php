@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\ExamSet;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -42,6 +43,20 @@ class ExamPartFactory extends Factory
     public function forExam(Exam $exam): static
     {
         return $this->state(fn (array $attributes) => ['exam_id' => $exam->id]);
+    }
+
+    /**
+     * Attach the part to a specific set of an exam.
+     *
+     * Without this the part lands in the exam's first set, which is what
+     * single-set exams (and everything written before sets shipped) want.
+     */
+    public function forSet(ExamSet $set): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'exam_id' => $set->exam_id,
+            'exam_set_id' => $set->id,
+        ]);
     }
 
     /**

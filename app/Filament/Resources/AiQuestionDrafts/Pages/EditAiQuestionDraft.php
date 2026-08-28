@@ -10,6 +10,7 @@ use App\Jobs\RefineAiQuestions;
 use App\Models\AiQuestionDraft;
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\ExamSet;
 use App\Models\User;
 use App\Services\AiReviewService;
 use App\Services\AiSdkProviderService;
@@ -21,6 +22,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Resources\Pages\EditRecord;
 
 class EditAiQuestionDraft extends EditRecord
@@ -189,7 +191,19 @@ class EditAiQuestionDraft extends EditRecord
                         ->options(fn () => Exam::query()->orderByDesc('exam_date')->pluck('title', 'id')->all())
                         ->default(fn () => $this->record?->target_exam_id)
                         ->searchable()
-                        ->required(),
+                        ->required()
+                        ->live(),
+                    Select::make('exam_set_id')
+                        ->label('Exam set')
+                        ->options(fn (Get $get): array => ExamSet::query()
+                            ->where('exam_id', (int) ($get('exam_id') ?? 0))
+                            ->orderBy('sort_order')
+                            ->pluck('title', 'id')
+                            ->all())
+                        ->visible(fn (Get $get): bool => ExamSet::query()
+                            ->where('exam_id', (int) ($get('exam_id') ?? 0))
+                            ->count() > 1)
+                        ->helperText('Questions are added to this set only. Each student is handed one set when they start the exam.'),
                     Textarea::make('instructions')
                         ->label('Instructions (applied to each new part)')
                         ->rows(2)
@@ -214,6 +228,11 @@ class EditAiQuestionDraft extends EditRecord
                     }
 
                     $exam = Exam::query()->findOrFail((int) $data['exam_id']);
+                    $set = ExamSet::query()
+                        ->where('exam_id', $exam->getKey())
+                        ->whereKey((int) ($data['exam_set_id'] ?? 0))
+                        ->first()
+                        ?? ExamSet::ensureDefaultForExam($exam->getKey());
                     $default = (int) ($data['points'] ?? 1) ?: 1;
                     $customInstructions = trim((string) ($data['instructions'] ?? ''));
 
@@ -268,6 +287,7 @@ class EditAiQuestionDraft extends EditRecord
 
                         ExamPart::create([
                             'exam_id' => $exam->id,
+                            'exam_set_id' => $set->id,
                             'title' => "Part {$roman} - {$labels[$type]}",
                             'instructions' => $customInstructions !== '' ? $customInstructions : $defaultInstructions[$type],
                             'type' => 'section',

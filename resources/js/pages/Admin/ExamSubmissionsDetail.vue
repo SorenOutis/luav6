@@ -20,6 +20,8 @@ interface Submission {
     user_id: number;
     part_title: string;
     part_id: number;
+    // Which set of the exam this answer belongs to (null before sets ship).
+    set_title?: string | null;
     answers: Answer[];
     status: string;
     submitted_at: string;
@@ -110,6 +112,11 @@ const formatType = (type: string) => type.replace(/_/g, ' ').toUpperCase();
                                 </div>
                                 <div class="mt-1 font-semibold">
                                     {{ submission.part_title }}
+                                    <span
+                                        v-if="submission.set_title"
+                                        class="ml-1 text-xs font-medium text-muted-foreground"
+                                        >({{ submission.set_title }})</span
+                                    >
                                 </div>
                             </div>
                             <div>

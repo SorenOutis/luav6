@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\ExamSet;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use App\Support\IdentificationAnswerMatcher;
@@ -33,13 +34,22 @@ class ExamAnswerReportService
 
     /**
      * @param  list<int>  $studentIds  Empty means "every student with a submission".
+     * @param  ExamSet|null  $set  Restrict the report to one exam set. Null
+     *                             reports on every set at once.
      * @return array<string, mixed>
      */
-    public function build(Exam $exam, string $mode = self::MODE_STUDENTS, array $studentIds = [], bool $includeKey = true): array
+    public function build(Exam $exam, string $mode = self::MODE_STUDENTS, array $studentIds = [], bool $includeKey = true, ?ExamSet $set = null): array
     {
         $exam->loadMissing('section');
 
-        $parts = $exam->parts()->orderBy('sort_order')->orderBy('id')->get();
+        // A set-scoped report mirrors what the students on that set saw: only
+        // its questions, and only the students who were handed that set.
+        $parts = ($set !== null
+            ? $exam->parts()->where('exam_set_id', $set->getKey())
+            : $exam->parts())
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
         $structure = $parts->map(fn (ExamPart $part, int $index): array => $this->normalizePart($part, $index))->all();
 
         $totalPoints = collect($structure)->sum('total_points');
@@ -98,8 +108,14 @@ class ExamAnswerReportService
      */
     private function buildStudentReports(Exam $exam, array $structure, array $studentIds): array
     {
+        // Only submissions for the parts in this report: with several sets,
+        // a student's answers belong to the set they were handed, so the other
+        // sets' students (and their blanks) stay out of the report.
+        $partIds = collect($structure)->pluck('id')->all();
+
         $submissions = ExamSubmission::query()
             ->where('exam_id', $exam->id)
+            ->when($partIds !== [], fn ($query) => $query->whereIn('exam_part_id', $partIds))
             ->when($studentIds !== [], fn ($query) => $query->whereIn('user_id', $studentIds))
             ->with('user:id,name,email')
             ->orderBy('created_at')
