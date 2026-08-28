@@ -47,6 +47,7 @@ class ExamAnswerReportService
         $parts = ($set !== null
             ? $exam->parts()->where('exam_set_id', $set->getKey())
             : $exam->parts())
+            ->with('examSet')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -71,6 +72,12 @@ class ExamAnswerReportService
                 'total_points' => $totalPoints,
                 'question_count' => $questionCount,
                 'part_count' => count($structure),
+                // Null means "every set at once"; the report header prints
+                // "All sets" in that case, and hides the row entirely while
+                // the exam only ever had one set.
+                'set' => $set?->title,
+                'set_id' => $set?->getKey(),
+                'set_count' => $exam->sets()->count(),
             ],
             'mode' => $mode,
             'include_key' => $mode === self::MODE_KEY ? true : $includeKey,
@@ -85,12 +92,20 @@ class ExamAnswerReportService
     /**
      * Students who have at least one submission for this exam, for the picker.
      *
+     * Passing a set narrows the picker to the students who were handed that
+     * set, so a per-set report can never be asked for a student who never saw
+     * those questions.
+     *
      * @return array<int, string>
      */
-    public function studentOptions(Exam $exam): array
+    public function studentOptions(Exam $exam, ?ExamSet $set = null): array
     {
         return ExamSubmission::query()
             ->where('exam_id', $exam->id)
+            ->when(
+                $set !== null,
+                fn ($query) => $query->whereIn('exam_part_id', $this->partIdsFor($exam, $set))
+            )
             ->with('user:id,name')
             ->get()
             ->pluck('user')
@@ -98,6 +113,20 @@ class ExamAnswerReportService
             ->unique('id')
             ->sortBy('name')
             ->mapWithKeys(fn (User $user): array => [$user->id => $user->name])
+            ->all();
+    }
+
+    /**
+     * The exam parts that belong to one set.
+     *
+     * @return list<int>
+     */
+    private function partIdsFor(Exam $exam, ExamSet $set): array
+    {
+        return $exam->parts()
+            ->where('exam_set_id', $set->getKey())
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
             ->all();
     }
 
@@ -444,6 +473,9 @@ class ExamAnswerReportService
             'id' => $part->id,
             'number' => $index + 1,
             'title' => $part->title,
+            // Set titles disambiguate a report that covers several sets: the
+            // parts of different sets usually carry the same names.
+            'set' => $part->examSet?->title,
             'instructions' => $part->instructions,
             'total_points' => $totalPoints,
             'questions' => $normalized,

@@ -16,14 +16,15 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Facades\Storage;
 
 class EditExam extends EditRecord
 {
     protected static string $resource = ExamResource::class;
 
-    /** @var array<int, string>|null Memoised so one render doesn't re-query per field. */
-    private ?array $studentOptions = null;
+    /** @var array<string, array<int, string>> Memoised per set so one render doesn't re-query per field. */
+    private array $studentOptions = [];
 
     /**
      * Growing or shrinking the number of sets is done here, from the repeater's
@@ -129,24 +130,31 @@ class EditExam extends EditRecord
                         ->pluck('title', 'id')
                         ->all())
                     ->placeholder('All sets')
+                    ->live()
+                    // The student lists below are per set: a student who never
+                    // saw these questions would only produce an empty report.
+                    ->afterStateUpdated(function (Set $set): void {
+                        $set('student_id', null);
+                        $set('student_ids', []);
+                    })
                     ->visible(fn (): bool => $this->record->sets()->count() > 1)
                     ->helperText('Each student only ever answers one set, so a per-set report keeps the answer key and the marks aligned.'),
 
                 Select::make('student_id')
                     ->label('Student')
-                    ->options(fn (): array => $this->studentOptions())
+                    ->options(fn (callable $get): array => $this->studentOptions($this->selectedSetId($get)))
                     ->searchable()
                     ->preload()
                     ->native(false)
                     ->required()
                     ->visible(fn (callable $get): bool => $get('scope') === 'single')
-                    ->helperText(fn (): ?string => $this->studentOptions() === []
-                        ? 'No student has submitted this exam yet.'
+                    ->helperText(fn (callable $get): ?string => $this->studentOptions($this->selectedSetId($get)) === []
+                        ? 'No student has submitted this set yet.'
                         : null),
 
                 CheckboxList::make('student_ids')
                     ->label('Students')
-                    ->options(fn (): array => $this->studentOptions())
+                    ->options(fn (callable $get): array => $this->studentOptions($this->selectedSetId($get)))
                     ->columns(2)
                     ->searchable()
                     ->bulkToggleable()
@@ -177,10 +185,12 @@ class EditExam extends EditRecord
                     return null;
                 }
 
-                if ($scope === 'all' && $this->studentOptions() === []) {
+                $setId = filled($data['set'] ?? null) ? (int) $data['set'] : null;
+
+                if ($scope === 'all' && $this->studentOptions($setId) === []) {
                     Notification::make()
                         ->title('No submissions yet')
-                        ->body('Nobody has submitted this exam, so there is nothing to grade.')
+                        ->body('Nobody has submitted this set, so there is nothing to grade.')
                         ->warning()
                         ->send();
 
@@ -194,7 +204,7 @@ class EditExam extends EditRecord
                         : ExamAnswerReportService::MODE_STUDENTS,
                     'students' => $students === [] ? null : $students,
                     'include_key' => $scope === 'answer_key' || ($data['include_key'] ?? true) ? 1 : 0,
-                    'set' => filled($data['set'] ?? null) ? (int) $data['set'] : null,
+                    'set' => $setId,
                 ], fn ($value): bool => $value !== null));
 
                 // Open in a new tab so the admin keeps this page. If the browser
@@ -224,10 +234,27 @@ class EditExam extends EditRecord
     }
 
     /**
+     * Students to pick from, optionally narrowed to one set.
+     *
      * @return array<int, string>
      */
-    private function studentOptions(): array
+    private function studentOptions(?int $setId = null): array
     {
-        return $this->studentOptions ??= app(ExamAnswerReportService::class)->studentOptions($this->record);
+        $key = (string) ($setId ?? 0);
+
+        return $this->studentOptions[$key] ??= app(ExamAnswerReportService::class)->studentOptions(
+            $this->record,
+            $setId === null ? null : $this->record->sets()->find($setId),
+        );
+    }
+
+    /**
+     * @param  callable(string): mixed  $get
+     */
+    private function selectedSetId(callable $get): ?int
+    {
+        $setId = (int) ($get('set') ?? 0);
+
+        return $setId > 0 ? $setId : null;
     }
 }
