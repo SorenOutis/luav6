@@ -19,7 +19,7 @@
         return 'Part '.$part['number'].' — '.$prefix.$part['title'];
     };
 
-    $studentPartLabel = static fn (array $part): string => 'Part '.$part['number'].' — '.$part['title'];
+    $studentPartLabel = static fn (array $part): string => $part['title'];
 
     $resultBadge = static fn (string $result): array => match ($result) {
         'correct' => ['Correct', 'ok'],

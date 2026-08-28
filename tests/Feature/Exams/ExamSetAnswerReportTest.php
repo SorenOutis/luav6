@@ -217,6 +217,24 @@ it('prints every set when the report is not scoped to one', function () {
         ->assertSee('Ben Santos');
 });
 
+it('shows each student only their set without a part number prefix', function () {
+    $admin = setReportAdmin();
+    [$exam] = setReportContext(2);
+
+    actingAs($admin)
+        ->get(route('admin.exams.answer-report', [
+            'exam' => $exam->id,
+            'include_key' => 0,
+        ]))
+        ->assertOk()
+        ->assertSee('Ana Cruz')
+        ->assertSee('Set A')
+        ->assertSee('Ben Santos')
+        ->assertSee('Set B')
+        ->assertDontSee('Part 1 — Part I')
+        ->assertDontSee('No submission for this part.');
+});
+
 it('leaves the set out of a single-set exam report', function () {
     $admin = setReportAdmin();
     [$exam] = setReportContext(1);
