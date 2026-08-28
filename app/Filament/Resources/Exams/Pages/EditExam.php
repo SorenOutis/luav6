@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Exams\Pages;
 
 use App\Filament\Resources\Exams\ExamResource;
+use App\Filament\Resources\Exams\Schemas\ExamForm;
+use App\Models\ExamSet;
 use App\Services\ExamAnswerReportService;
 use App\Services\ExamTemplateService;
 use Filament\Actions\Action;
@@ -14,14 +16,24 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Facades\Storage;
 
 class EditExam extends EditRecord
 {
     protected static string $resource = ExamResource::class;
 
-    /** @var array<int, string>|null Memoised so one render doesn't re-query per field. */
-    private ?array $studentOptions = null;
+    /** @var array<string, array<int, string>> Memoised per set so one render doesn't re-query per field. */
+    private array $studentOptions = [];
+
+    /**
+     * Growing or shrinking the number of sets is done here, from the repeater's
+     * actual items, so the counter can never remove a set that is on screen.
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return ExamForm::syncSetCount($data);
+    }
 
     protected function getHeaderActions(): array
     {
@@ -46,6 +58,19 @@ class EditExam extends EditRecord
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('warning')
                 ->form([
+                    // Importing replaces the questions of ONE set, so a
+                    // multi-set exam can be filled set by set.
+                    Select::make('exam_set_id')
+                        ->label('Import into set')
+                        ->options(fn (): array => $this->record
+                            ->sets()
+                            ->orderBy('sort_order')
+                            ->pluck('title', 'id')
+                            ->all())
+                        ->default(fn (): ?int => $this->record->sets()->first()?->id)
+                        ->visible(fn (): bool => $this->record->sets()->count() > 1)
+                        ->required(fn (): bool => $this->record->sets()->count() > 1)
+                        ->helperText('The CSV replaces every question in the chosen set.'),
                     FileUpload::make('questions_file')
                         ->label('Select CSV File')
                         ->required()
@@ -55,14 +80,16 @@ class EditExam extends EditRecord
                 ])
                 ->action(function (array $data) {
                     $file = Storage::disk('local')->path($data['questions_file']);
-                    (new ExamTemplateService)->uploadFromCsv($this->record, $file);
+                    $set = $this->resolveTargetSet($data['exam_set_id'] ?? null);
+                    (new ExamTemplateService)->uploadFromCsv($this->record, $file, $set);
 
                     Notification::make()
                         ->title('Questions uploaded successfully')
+                        ->body("Imported into {$set->title}.")
                         ->success()
                         ->send();
 
-                    $this->refreshFormData(['parts']);
+                    $this->refreshFormData(['sets']);
                 }),
 
             DeleteAction::make(),
@@ -95,21 +122,39 @@ class EditExam extends EditRecord
                     ->required()
                     ->live(),
 
+                Select::make('set')
+                    ->label('Exam set')
+                    ->options(fn (): array => $this->record
+                        ->sets()
+                        ->orderBy('sort_order')
+                        ->pluck('title', 'id')
+                        ->all())
+                    ->placeholder('All sets')
+                    ->live()
+                    // The student lists below are per set: a student who never
+                    // saw these questions would only produce an empty report.
+                    ->afterStateUpdated(function (Set $set): void {
+                        $set('student_id', null);
+                        $set('student_ids', []);
+                    })
+                    ->visible(fn (): bool => $this->record->sets()->count() > 1)
+                    ->helperText('Each student only ever answers one set, so a per-set report keeps the answer key and the marks aligned.'),
+
                 Select::make('student_id')
                     ->label('Student')
-                    ->options(fn (): array => $this->studentOptions())
+                    ->options(fn (callable $get): array => $this->studentOptions($this->selectedSetId($get)))
                     ->searchable()
                     ->preload()
                     ->native(false)
                     ->required()
                     ->visible(fn (callable $get): bool => $get('scope') === 'single')
-                    ->helperText(fn (): ?string => $this->studentOptions() === []
-                        ? 'No student has submitted this exam yet.'
+                    ->helperText(fn (callable $get): ?string => $this->studentOptions($this->selectedSetId($get)) === []
+                        ? 'No student has submitted this set yet.'
                         : null),
 
                 CheckboxList::make('student_ids')
                     ->label('Students')
-                    ->options(fn (): array => $this->studentOptions())
+                    ->options(fn (callable $get): array => $this->studentOptions($this->selectedSetId($get)))
                     ->columns(2)
                     ->searchable()
                     ->bulkToggleable()
@@ -140,10 +185,12 @@ class EditExam extends EditRecord
                     return null;
                 }
 
-                if ($scope === 'all' && $this->studentOptions() === []) {
+                $setId = filled($data['set'] ?? null) ? (int) $data['set'] : null;
+
+                if ($scope === 'all' && $this->studentOptions($setId) === []) {
                     Notification::make()
                         ->title('No submissions yet')
-                        ->body('Nobody has submitted this exam, so there is nothing to grade.')
+                        ->body('Nobody has submitted this set, so there is nothing to grade.')
                         ->warning()
                         ->send();
 
@@ -157,6 +204,7 @@ class EditExam extends EditRecord
                         : ExamAnswerReportService::MODE_STUDENTS,
                     'students' => $students === [] ? null : $students,
                     'include_key' => $scope === 'answer_key' || ($data['include_key'] ?? true) ? 1 : 0,
+                    'set' => $setId,
                 ], fn ($value): bool => $value !== null));
 
                 // Open in a new tab so the admin keeps this page. If the browser
@@ -171,10 +219,42 @@ class EditExam extends EditRecord
     }
 
     /**
+     * The set an upload should land in: the one the admin picked, else the
+     * exam's first set (created on demand for exams predating sets).
+     */
+    private function resolveTargetSet(mixed $setId): ExamSet
+    {
+        $setId = (int) ($setId ?? 0);
+
+        if ($setId > 0) {
+            $set = $this->record->sets()->whereKey($setId)->first();
+        }
+
+        return $set ?? ExamSet::ensureDefaultForExam($this->record->getKey());
+    }
+
+    /**
+     * Students to pick from, optionally narrowed to one set.
+     *
      * @return array<int, string>
      */
-    private function studentOptions(): array
+    private function studentOptions(?int $setId = null): array
     {
-        return $this->studentOptions ??= app(ExamAnswerReportService::class)->studentOptions($this->record);
+        $key = (string) ($setId ?? 0);
+
+        return $this->studentOptions[$key] ??= app(ExamAnswerReportService::class)->studentOptions(
+            $this->record,
+            $setId === null ? null : $this->record->sets()->find($setId),
+        );
+    }
+
+    /**
+     * @param  callable(string): mixed  $get
+     */
+    private function selectedSetId(callable $get): ?int
+    {
+        $setId = (int) ($get('set') ?? 0);
+
+        return $setId > 0 ? $setId : null;
     }
 }

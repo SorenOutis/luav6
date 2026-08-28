@@ -73,6 +73,9 @@ interface Exam {
     duration_minutes: number;
     status: string;
     parts: ExamPart[];
+    // The set of the exam this student was handed. Exams can ship as several
+    // interchangeable sets; students only ever see the one they were given.
+    set?: { id: number; title: string } | null;
 }
 
 interface ExamSubmissionSummary {
@@ -2286,7 +2289,7 @@ const feedbackContent = computed(() => {
                             class="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center"
                         >
                             <div class="max-w-3xl space-y-4">
-                                <div class="flex items-center gap-4">
+                                <div class="flex flex-wrap items-center gap-4">
                                     <div class="space-y-0.5">
                                         <span class="dash-label">Exam</span>
                                         <h1
@@ -2295,6 +2298,17 @@ const feedbackContent = computed(() => {
                                             {{ exam.title }}
                                         </h1>
                                     </div>
+
+                                    <!-- Which set of the exam this student is
+                                         taking, so they can tell the teacher
+                                         exactly which version they got. -->
+                                    <span
+                                        v-if="exam.set?.title"
+                                        class="inline-flex items-center gap-1.5 rounded-full border border-[#D97757]/25 bg-[#D97757]/10 px-3 py-1 text-[13px] font-semibold text-[#D97757]"
+                                    >
+                                        <Layers class="h-3.5 w-3.5" />
+                                        {{ exam.set.title }}
+                                    </span>
                                 </div>
 
                                 <div
@@ -4524,6 +4538,13 @@ const feedbackContent = computed(() => {
                                         class="truncate text-sm leading-tight font-bold text-foreground"
                                         >{{ selectedPart.title }}</span
                                     >
+                                    <span
+                                        v-if="exam.set?.title"
+                                        class="mt-0.5 inline-flex items-center gap-1 text-[10px] leading-none font-bold text-[#D97757]"
+                                    >
+                                        <Layers class="h-3 w-3" />
+                                        {{ exam.set.title }}
+                                    </span>
                                 </div>
                             </div>
 

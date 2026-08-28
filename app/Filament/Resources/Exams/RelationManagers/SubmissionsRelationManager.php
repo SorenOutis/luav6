@@ -87,6 +87,12 @@ class SubmissionsRelationManager extends RelationManager
                     ->label('Part')
                     ->searchable()
                     ->sortable(),
+                // Which version of the exam this submission belongs to — part
+                // titles repeat across sets.
+                Tables\Columns\TextColumn::make('examPart.examSet.title')
+                    ->label('Set')
+                    ->placeholder('—')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {

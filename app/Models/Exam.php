@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -63,9 +64,31 @@ class Exam extends Model
         return $this->belongsTo(Section::class);
     }
 
+    /**
+     * Every part of this exam, across all sets.
+     *
+     * Student-facing code must use App\Services\ExamSetAssignmentService
+     * instead: a student only ever sees the parts of the set they were handed.
+     */
     public function parts()
     {
         return $this->hasMany(ExamPart::class)->orderBy('sort_order');
+    }
+
+    /**
+     * Interchangeable versions of this exam, in rotation order.
+     */
+    public function sets(): HasMany
+    {
+        return $this->hasMany(ExamSet::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
+     * The set each student was handed (one row per student, at most).
+     */
+    public function setAssignments(): HasMany
+    {
+        return $this->hasMany(ExamSetAssignment::class);
     }
 
     public function submissions()

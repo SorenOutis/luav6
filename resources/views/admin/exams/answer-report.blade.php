@@ -6,6 +6,21 @@
     $classSummary = $report['class_summary'];
     $includeKey = $report['include_key'];
 
+    // A report that covers every set mixes parts that usually share the same
+    // titles, so the set has to lead the heading. A set-scoped report names
+    // its set once, in the header, and leaves the part titles alone.
+    $partLabel = static function (array $part) use ($exam): string {
+        $prefix = ($exam['set'] ?? null) === null
+            && ($exam['set_count'] ?? 1) > 1
+            && filled($part['set'] ?? null)
+                ? $part['set'].' · '
+                : '';
+
+        return 'Part '.$part['number'].' — '.$prefix.$part['title'];
+    };
+
+    $studentPartLabel = static fn (array $part): string => $part['title'];
+
     $resultBadge = static fn (string $result): array => match ($result) {
         'correct' => ['Correct', 'ok'],
         'partial' => ['Partial', 'warn'],
@@ -200,6 +215,9 @@
 
         <div class="meta-grid">
             <div><span>Section</span><strong>{{ $exam['section'] ?? 'All sections' }}</strong></div>
+            @if (($exam['set'] ?? null) !== null || ($exam['set_count'] ?? 0) > 1)
+                <div><span>Set</span><strong>{{ $exam['set'] ?? 'All sets' }}</strong></div>
+            @endif
             <div><span>Exam date</span><strong>{{ $exam['exam_date']?->format('M d, Y H:i') ?? '—' }}</strong></div>
             <div><span>Duration</span><strong>{{ $exam['duration_minutes'] ? $exam['duration_minutes'].' min' : '—' }}</strong></div>
             <div><span>Status</span><strong>{{ ucfirst($exam['status'] ?? 'draft') }}</strong></div>
@@ -261,7 +279,7 @@
             <h2>Answer key</h2>
 
             @forelse ($report['parts'] as $part)
-                <h3>Part {{ $part['number'] }} — {{ $part['title'] }} ({{ $part['total_points'] }} pts)</h3>
+                <h3>{{ $partLabel($part) }} ({{ $part['total_points'] }} pts)</h3>
                 @if ($part['instructions'])
                     <p class="meta">{{ $part['instructions'] }}</p>
                 @endif
@@ -300,7 +318,13 @@
         @if ($report['mode'] !== 'key')
             @forelse ($students as $student)
                 <div class="student">
-                    <h2>{{ $student['student']['name'] }} — graded answers</h2>
+                    <h2>
+                        {{ $student['student']['name'] }}
+                        @if (filled($student['student']['set'] ?? null))
+                            <span class="meta">— {{ $student['student']['set'] }}</span>
+                        @endif
+                        — graded answers
+                    </h2>
                     <p class="meta">
                         {{ $student['student']['email'] }}
                         · submitted {{ $student['summary']['submitted_at']?->format('M d, Y H:i') ?? '—' }}
@@ -326,7 +350,7 @@
                         @php $part = $partReport['part']; @endphp
                         <div class="student-part">
                             <h3>
-                                Part {{ $part['number'] }} — {{ $part['title'] }}
+                                {{ $studentPartLabel($part) }}
                                 <span class="meta">
                                     ({{ $partReport['score'] !== null ? $partReport['score'] : 0 }} / {{ $partReport['total_points'] }} pts ·
                                     {{ $partReport['status_label'] }}@if ($partReport['is_late']) · late @endif)

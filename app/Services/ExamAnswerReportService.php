@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\QuestionType;
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\ExamSet;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use App\Support\IdentificationAnswerMatcher;
@@ -33,13 +34,23 @@ class ExamAnswerReportService
 
     /**
      * @param  list<int>  $studentIds  Empty means "every student with a submission".
+     * @param  ExamSet|null  $set  Restrict the report to one exam set. Null
+     *                             reports on every set at once.
      * @return array<string, mixed>
      */
-    public function build(Exam $exam, string $mode = self::MODE_STUDENTS, array $studentIds = [], bool $includeKey = true): array
+    public function build(Exam $exam, string $mode = self::MODE_STUDENTS, array $studentIds = [], bool $includeKey = true, ?ExamSet $set = null): array
     {
         $exam->loadMissing('section');
 
-        $parts = $exam->parts()->orderBy('sort_order')->orderBy('id')->get();
+        // A set-scoped report mirrors what the students on that set saw: only
+        // its questions, and only the students who were handed that set.
+        $parts = ($set !== null
+            ? $exam->parts()->where('exam_set_id', $set->getKey())
+            : $exam->parts())
+            ->with('examSet')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
         $structure = $parts->map(fn (ExamPart $part, int $index): array => $this->normalizePart($part, $index))->all();
 
         $totalPoints = collect($structure)->sum('total_points');
@@ -61,6 +72,12 @@ class ExamAnswerReportService
                 'total_points' => $totalPoints,
                 'question_count' => $questionCount,
                 'part_count' => count($structure),
+                // Null means "every set at once"; the report header prints
+                // "All sets" in that case, and hides the row entirely while
+                // the exam only ever had one set.
+                'set' => $set?->title,
+                'set_id' => $set?->getKey(),
+                'set_count' => $exam->sets()->count(),
             ],
             'mode' => $mode,
             'include_key' => $mode === self::MODE_KEY ? true : $includeKey,
@@ -75,12 +92,20 @@ class ExamAnswerReportService
     /**
      * Students who have at least one submission for this exam, for the picker.
      *
+     * Passing a set narrows the picker to the students who were handed that
+     * set, so a per-set report can never be asked for a student who never saw
+     * those questions.
+     *
      * @return array<int, string>
      */
-    public function studentOptions(Exam $exam): array
+    public function studentOptions(Exam $exam, ?ExamSet $set = null): array
     {
         return ExamSubmission::query()
             ->where('exam_id', $exam->id)
+            ->when(
+                $set !== null,
+                fn ($query) => $query->whereIn('exam_part_id', $this->partIdsFor($exam, $set))
+            )
             ->with('user:id,name')
             ->get()
             ->pluck('user')
@@ -92,23 +117,66 @@ class ExamAnswerReportService
     }
 
     /**
+     * The exam parts that belong to one set.
+     *
+     * @return list<int>
+     */
+    private function partIdsFor(Exam $exam, ExamSet $set): array
+    {
+        return $exam->parts()
+            ->where('exam_set_id', $set->getKey())
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
+    }
+
+    /**
      * @param  array<int, array<string, mixed>>  $structure
      * @param  list<int>  $studentIds
      * @return array<int, array<string, mixed>>
      */
     private function buildStudentReports(Exam $exam, array $structure, array $studentIds): array
     {
+        // Only submissions for the parts in this report: with several sets,
+        // a student's answers belong to the set they were handed, so the other
+        // sets' students (and their blanks) stay out of the report.
+        $partIds = collect($structure)->pluck('id')->all();
+
         $submissions = ExamSubmission::query()
             ->where('exam_id', $exam->id)
+            ->when($partIds !== [], fn ($query) => $query->whereIn('exam_part_id', $partIds))
             ->when($studentIds !== [], fn ($query) => $query->whereIn('user_id', $studentIds))
             ->with('user:id,name,email')
             ->orderBy('created_at')
             ->get();
 
+        $partsById = collect($structure)->keyBy('id');
+
         return $submissions
             ->filter(fn (ExamSubmission $submission): bool => $submission->user !== null)
             ->groupBy('user_id')
-            ->map(fn (Collection $rows): array => $this->buildStudentReport($rows->first()->user, $rows, $structure))
+            ->map(function (Collection $rows) use ($partsById): array {
+                $studentParts = $rows
+                    ->map(fn (ExamSubmission $submission): ?array => $partsById->get($submission->exam_part_id))
+                    ->filter()
+                    ->unique('id')
+                    ->values();
+                $setIds = $studentParts->pluck('set_id')->filter()->unique()->values();
+                $setTitle = $setIds->count() === 1 ? $studentParts->first()['set'] : null;
+                $studentStructure = $setIds->count() === 1
+                    ? $partsById
+                        ->filter(fn (array $part): bool => (int) ($part['set_id'] ?? 0) === (int) $setIds->first())
+                        ->values()
+                        ->all()
+                    : $studentParts->all();
+
+                return $this->buildStudentReport(
+                    $rows->first()->user,
+                    $rows,
+                    $studentStructure,
+                    $setTitle,
+                );
+            })
             ->sortBy(fn (array $report): string => (string) $report['student']['name'])
             ->values()
             ->all();
@@ -119,7 +187,7 @@ class ExamAnswerReportService
      * @param  array<int, array<string, mixed>>  $structure
      * @return array<string, mixed>
      */
-    private function buildStudentReport(User $student, Collection $submissions, array $structure): array
+    private function buildStudentReport(User $student, Collection $submissions, array $structure, ?string $setTitle): array
     {
         $byPart = $submissions->keyBy('exam_part_id');
 
@@ -202,6 +270,7 @@ class ExamAnswerReportService
                 'id' => $student->id,
                 'name' => $student->name,
                 'email' => $student->email,
+                'set' => $setTitle,
             ],
             'parts' => $parts,
             'summary' => [
@@ -428,6 +497,10 @@ class ExamAnswerReportService
             'id' => $part->id,
             'number' => $index + 1,
             'title' => $part->title,
+            // Set titles disambiguate a report that covers several sets: the
+            // parts of different sets usually carry the same names.
+            'set' => $part->examSet?->title,
+            'set_id' => $part->exam_set_id,
             'instructions' => $part->instructions,
             'total_points' => $totalPoints,
             'questions' => $normalized,

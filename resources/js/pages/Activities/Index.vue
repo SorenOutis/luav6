@@ -16,6 +16,7 @@ import {
     XCircle,
     Zap,
     X,
+    Layers,
 } from 'lucide-vue-next';
 import {
     ref,
@@ -71,6 +72,8 @@ interface Exam {
     section_name?: string;
     season_name?: string;
     exam_date_iso?: string;
+    // The set of the exam this student was handed (null until they open it).
+    set?: { id: number; title: string } | null;
 }
 interface SeasonGroup {
     seasonName: string;
@@ -815,6 +818,21 @@ const activitiesTourSteps: TourStep[] = [
                                         >
                                             {{ exam.title }}
                                         </h2>
+
+                                        <!-- Which version of the exam this
+                                             student was handed. Populated once
+                                             they open the exam. -->
+                                        <div
+                                            v-if="exam.set?.title"
+                                            class="flex items-center gap-1.5"
+                                        >
+                                            <span
+                                                class="inline-flex items-center gap-1 rounded-full border border-[#D97757]/25 bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-semibold text-[#D97757]"
+                                            >
+                                                <Layers class="h-3 w-3" />
+                                                {{ exam.set.title }}
+                                            </span>
+                                        </div>
                                         <p
                                             class="line-clamp-2 text-[14px] leading-relaxed text-muted-foreground sm:text-[15px]"
                                         >

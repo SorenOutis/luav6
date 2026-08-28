@@ -17,6 +17,8 @@ use Illuminate\Support\Collection;
  */
 class UpcomingExamsService
 {
+    public function __construct(protected ExamSetAssignmentService $examSets) {}
+
     /**
      * Get open exams for the user, scoped to the given section IDs.
      *
@@ -43,7 +45,14 @@ class UpcomingExamsService
             ->limit($limit)
             ->get();
 
-        return $exams->map(function ($exam) {
+        // An exam can ship as several interchangeable sets: the student only
+        // ever answers one of them, so "3 parts" must mean 3 parts of THEIR
+        // set, not of every set the teacher wrote.
+        $summaries = $this->examSets->summariesFor($user, $exams->pluck('id')->all());
+
+        return $exams->map(function ($exam) use ($summaries) {
+            $partsCount = (int) ($summaries[$exam->id]['total_parts'] ?? $exam->parts_count);
+
             return [
                 'id' => $exam->id,
                 'title' => $exam->title,
@@ -52,9 +61,10 @@ class UpcomingExamsService
                 'exam_date_iso' => $exam->exam_date->toIso8601String(),
                 'duration_minutes' => $exam->duration_minutes,
                 'status' => $exam->status,
-                'parts_count' => (int) $exam->parts_count,
+                'parts_count' => $partsCount,
                 'submitted_parts' => (int) $exam->submitted_parts,
-                'is_completed' => (int) $exam->submitted_parts === (int) $exam->parts_count && (int) $exam->parts_count > 0,
+                'is_completed' => (int) $exam->submitted_parts === $partsCount && $partsCount > 0,
+                'set' => $summaries[$exam->id]['set']?->title ?? null,
             ];
         });
     }

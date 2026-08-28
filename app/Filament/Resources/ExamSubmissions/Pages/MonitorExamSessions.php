@@ -5,6 +5,8 @@ namespace App\Filament\Resources\ExamSubmissions\Pages;
 use App\Filament\Resources\ExamSubmissions\ExamSubmissionResource;
 use App\Models\Exam;
 use App\Models\ExamLiveSession;
+use App\Models\ExamPart;
+use App\Models\ExamSetAssignment;
 use Filament\Resources\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -23,10 +25,41 @@ class MonitorExamSessions extends Page implements HasTable
 
     public int $totalParts = 0;
 
+    /** @var array<int, int> Parts each student has to finish, keyed by user id. */
+    public array $partCountsByUser = [];
+
+    /** @var array<int, string> Set each student was handed, keyed by user id. */
+    public array $setTitlesByUser = [];
+
     public function mount(Exam $exam): void
     {
-        $this->exam = $exam;
+        $this->exam = $exam->loadMissing('sets');
         $this->totalParts = max(1, $exam->parts()->count());
+
+        // With several sets, a student only works through the parts of the set
+        // they were handed — counting every set would under-report progress.
+        $sets = $exam->sets;
+
+        if ($sets->isEmpty()) {
+            return;
+        }
+
+        $counts = ExamPart::query()
+            ->where('exam_id', $exam->getKey())
+            ->selectRaw('exam_set_id, COUNT(*) as total')
+            ->groupBy('exam_set_id')
+            ->pluck('total', 'exam_set_id');
+
+        $defaultCount = max(1, (int) ($counts[(int) $sets->first()->id] ?? $this->totalParts));
+
+        foreach (ExamSetAssignment::query()->where('exam_id', $exam->getKey())->get() as $assignment) {
+            $setId = (int) $assignment->exam_set_id;
+
+            $this->partCountsByUser[$assignment->user_id] = max(1, (int) ($counts[$setId] ?? $defaultCount));
+            $this->setTitlesByUser[$assignment->user_id] = (string) ($sets->firstWhere('id', $setId)?->title ?? '');
+        }
+
+        $this->totalParts = $defaultCount;
     }
 
     public function table(Table $table): Table
@@ -63,12 +96,16 @@ class MonitorExamSessions extends Page implements HasTable
                         'finished' => 'gray',
                         default => 'gray',
                     }),
+                TextColumn::make('exam_set')
+                    ->label('Set')
+                    ->state(fn (ExamLiveSession $record): string => $this->setTitlesByUser[$record->user_id] ?? '—')
+                    ->placeholder('—'),
                 TextColumn::make('aggregate_progress')
                     ->label('Aggregate Progress')
                     ->state(fn (ExamLiveSession $record): string => sprintf(
                         '%d/%d parts | %d/%d questions',
                         $record->submitted_parts_count,
-                        $this->totalParts,
+                        $this->partCountsByUser[$record->user_id] ?? $this->totalParts,
                         $record->current_part_answered_count,
                         $record->current_part_total_questions
                     )),

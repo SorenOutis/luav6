@@ -35,7 +35,7 @@ class ExamSubmissionController extends Controller
 
         // Get all submissions for this exam
         $submissions = ExamSubmission::where('exam_id', $exam->id)
-            ->with(['user', 'examPart'])
+            ->with(['user', 'examPart.examSet'])
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($submission) {
@@ -48,6 +48,8 @@ class ExamSubmissionController extends Controller
                     'user_id' => $submission->user->id,
                     'part_title' => $submission->examPart->title,
                     'part_id' => $submission->examPart->id,
+                    // Which version of the exam this answer belongs to.
+                    'set_title' => $submission->examPart->examSet?->title,
                     'answers' => $answers,
                     'status' => $submission->status,
                     'submitted_at' => $submission->created_at->format('M d, Y H:i'),

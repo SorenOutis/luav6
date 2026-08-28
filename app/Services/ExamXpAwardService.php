@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Exam;
+use App\Models\ExamSet;
 use App\Models\ExamSubmission;
 use App\Models\ExamXpAward;
 use App\Models\SectionProgress;
@@ -12,19 +13,30 @@ use Illuminate\Support\Facades\DB;
 
 class ExamXpAwardService
 {
+    public function __construct(protected ExamSetAssignmentService $examSets) {}
+
     /**
      * Grant any newly eligible XP components and return the durable award.
      * This method is intentionally idempotent: it is called by the final submit,
      * asynchronous essay grading, and the student's grading-status poll.
      */
-    public function awardIfEligible(User $user, Exam $exam): ?ExamXpAward
+    public function awardIfEligible(User $user, Exam $exam, ?ExamSet $set = null): ?ExamXpAward
     {
-        if (! $exam->xp_rewards_enabled || $exam->parts()->count() === 0) {
+        if (! $exam->xp_rewards_enabled) {
             return null;
         }
 
-        return DB::transaction(function () use ($user, $exam): ?ExamXpAward {
-            $partIds = $exam->parts()->pluck('id');
+        // XP is earned against the set the student actually took, so a student
+        // on a two-part set is not held to the part count of another set.
+        $set ??= $this->examSets->resolveSet($exam, $user);
+        $parts = $this->examSets->filterParts($exam, $this->examSets->structure($exam), $set);
+
+        if ($parts->isEmpty()) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($user, $exam, $parts): ?ExamXpAward {
+            $partIds = $parts->pluck('id');
             $submissions = ExamSubmission::query()
                 ->where('user_id', $user->id)
                 ->where('exam_id', $exam->id)
@@ -63,7 +75,7 @@ class ExamXpAwardService
             );
 
             if ($gradingComplete && ! $award->accuracy_finalized_at) {
-                $possible = $exam->parts->sum(function ($part): float {
+                $possible = $parts->sum(function ($part): float {
                     return collect($part->questions ?? [])->sum(
                         fn (array $question): float => (float) ($question['points'] ?? $part->points ?? 1)
                     );

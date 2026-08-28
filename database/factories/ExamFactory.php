@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Exam;
+use App\Models\ExamSet;
 use App\Models\Section;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -63,5 +64,24 @@ class ExamFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'duration_minutes' => $minutes,
         ]);
+    }
+
+    /**
+     * Ship the exam as several interchangeable sets (Set A, Set B, …).
+     *
+     * Students are rotated through the sets in order, so tests that create
+     * parts afterwards must attach them to the set they mean — see
+     * ExamPartFactory::forSet().
+     */
+    public function withSets(int $count = 2): static
+    {
+        return $this->afterCreating(function (Exam $exam) use ($count): void {
+            foreach (range(0, max(1, $count) - 1) as $index) {
+                ExamSet::factory()
+                    ->forExam($exam)
+                    ->titled(ExamSet::titleForIndex($index))
+                    ->create();
+            }
+        });
     }
 }
