@@ -2,6 +2,8 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/components/**/*';
+@source '../../../../resources/views/vendor/**/*';
 
 :root {
     --admin-surface: color-mix(in oklab, var(--gray-50) 76%, white);
