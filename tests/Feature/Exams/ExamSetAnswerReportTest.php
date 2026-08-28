@@ -229,6 +229,9 @@ it('lets the admin pick a set in the View Answer dialog', function () {
         ->assertSee('Exam set')
         ->assertSee($setA->title)
         ->assertSee($setB->title)
+        // Filled explicitly rather than trusting the modal's defaults: only
+        // the set choice is under test here, not the scope radio.
+        ->set('mountedActions.0.data.scope', 'answer_key')
         ->set('mountedActions.0.data.set', $setB->id)
         ->callMountedAction()
         ->assertHasNoActionErrors();
@@ -241,6 +244,7 @@ it('hides the set picker when the exam has only one set', function () {
     Livewire::test(EditExam::class, ['record' => $exam->getRouteKey()])
         ->mountAction('viewAnswer')
         ->assertDontSee('Exam set')
+        ->set('mountedActions.0.data.scope', 'answer_key')
         ->callMountedAction()
         ->assertHasNoActionErrors();
 });
