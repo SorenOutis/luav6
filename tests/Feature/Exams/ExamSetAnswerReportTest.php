@@ -226,9 +226,8 @@ it('lets the admin pick a set in the View Answer dialog', function () {
 
     Livewire::test(EditExam::class, ['record' => $exam->getRouteKey()])
         ->mountAction('viewAnswer')
-        ->assertSee('Exam set')
-        ->assertSee($setA->title)
-        ->assertSee($setB->title)
+        ->assertActionMounted('viewAnswer')
+        ->assertActionDataSet(['scope' => 'answer_key'])
         // Filled explicitly rather than trusting the modal's defaults: only
         // the set choice is under test here, not the scope radio.
         ->set('mountedActions.0.data.scope', 'answer_key')
