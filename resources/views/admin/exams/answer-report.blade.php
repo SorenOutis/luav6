@@ -19,6 +19,8 @@
         return 'Part '.$part['number'].' — '.$prefix.$part['title'];
     };
 
+    $studentPartLabel = static fn (array $part): string => 'Part '.$part['number'].' — '.$part['title'];
+
     $resultBadge = static fn (string $result): array => match ($result) {
         'correct' => ['Correct', 'ok'],
         'partial' => ['Partial', 'warn'],
@@ -316,7 +318,13 @@
         @if ($report['mode'] !== 'key')
             @forelse ($students as $student)
                 <div class="student">
-                    <h2>{{ $student['student']['name'] }} — graded answers</h2>
+                    <h2>
+                        {{ $student['student']['name'] }}
+                        @if (filled($student['student']['set'] ?? null))
+                            <span class="meta">— {{ $student['student']['set'] }}</span>
+                        @endif
+                        — graded answers
+                    </h2>
                     <p class="meta">
                         {{ $student['student']['email'] }}
                         · submitted {{ $student['summary']['submitted_at']?->format('M d, Y H:i') ?? '—' }}
@@ -342,7 +350,7 @@
                         @php $part = $partReport['part']; @endphp
                         <div class="student-part">
                             <h3>
-                                {{ $partLabel($part) }}
+                                {{ $studentPartLabel($part) }}
                                 <span class="meta">
                                     ({{ $partReport['score'] !== null ? $partReport['score'] : 0 }} / {{ $partReport['total_points'] }} pts ·
                                     {{ $partReport['status_label'] }}@if ($partReport['is_late']) · late @endif)

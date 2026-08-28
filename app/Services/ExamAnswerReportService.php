@@ -150,10 +150,33 @@ class ExamAnswerReportService
             ->orderBy('created_at')
             ->get();
 
+        $partsById = collect($structure)->keyBy('id');
+
         return $submissions
             ->filter(fn (ExamSubmission $submission): bool => $submission->user !== null)
             ->groupBy('user_id')
-            ->map(fn (Collection $rows): array => $this->buildStudentReport($rows->first()->user, $rows, $structure))
+            ->map(function (Collection $rows) use ($partsById): array {
+                $studentParts = $rows
+                    ->map(fn (ExamSubmission $submission): ?array => $partsById->get($submission->exam_part_id))
+                    ->filter()
+                    ->unique('id')
+                    ->values();
+                $setIds = $studentParts->pluck('set_id')->filter()->unique()->values();
+                $setTitle = $setIds->count() === 1 ? $studentParts->first()['set'] : null;
+                $studentStructure = $setIds->count() === 1
+                    ? $partsById
+                        ->filter(fn (array $part): bool => (int) ($part['set_id'] ?? 0) === (int) $setIds->first())
+                        ->values()
+                        ->all()
+                    : $studentParts->all();
+
+                return $this->buildStudentReport(
+                    $rows->first()->user,
+                    $rows,
+                    $studentStructure,
+                    $setTitle,
+                );
+            })
             ->sortBy(fn (array $report): string => (string) $report['student']['name'])
             ->values()
             ->all();
@@ -164,7 +187,7 @@ class ExamAnswerReportService
      * @param  array<int, array<string, mixed>>  $structure
      * @return array<string, mixed>
      */
-    private function buildStudentReport(User $student, Collection $submissions, array $structure): array
+    private function buildStudentReport(User $student, Collection $submissions, array $structure, ?string $setTitle): array
     {
         $byPart = $submissions->keyBy('exam_part_id');
 
@@ -247,6 +270,7 @@ class ExamAnswerReportService
                 'id' => $student->id,
                 'name' => $student->name,
                 'email' => $student->email,
+                'set' => $setTitle,
             ],
             'parts' => $parts,
             'summary' => [
@@ -476,6 +500,7 @@ class ExamAnswerReportService
             // Set titles disambiguate a report that covers several sets: the
             // parts of different sets usually carry the same names.
             'set' => $part->examSet?->title,
+            'set_id' => $part->exam_set_id,
             'instructions' => $part->instructions,
             'total_points' => $totalPoints,
             'questions' => $normalized,

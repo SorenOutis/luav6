@@ -130,7 +130,13 @@ it('only reports the students who were handed that set', function () {
     $everything = $reports->build($exam, ExamAnswerReportService::MODE_STUDENTS);
     $setOnly = $reports->build($exam, ExamAnswerReportService::MODE_STUDENTS, [], true, $setA);
 
-    expect($everything['students'])->toHaveCount(2);
+    expect($everything['students'])->toHaveCount(2)
+        ->and($everything['students'][0]['student']['set'])->toBe('Set A')
+        ->and($everything['students'][0]['parts'])->toHaveCount(1)
+        ->and($everything['students'][0]['parts'][0]['part']['set'])->toBe('Set A')
+        ->and($everything['students'][1]['student']['set'])->toBe('Set B')
+        ->and($everything['students'][1]['parts'])->toHaveCount(1)
+        ->and($everything['students'][1]['parts'][0]['part']['set'])->toBe('Set B');
 
     expect($setOnly['students'])->toHaveCount(1)
         ->and($setOnly['students'][0]['student']['name'])->toBe('Ana Cruz')
@@ -142,6 +148,25 @@ it('only reports the students who were handed that set', function () {
         ->and($setOnly['students'][0]['summary']['correct'])->toBe(1);
 
     expect(collect($setOnly['students'])->pluck('student.name')->all())->not->toContain($ben->name);
+});
+
+it('keeps unanswered parts from the student\'s own set', function () {
+    setReportAdmin();
+    [$exam, $examSets, $ana] = setReportContext(2);
+    [$setA] = $examSets->all();
+
+    ExamPart::factory()
+        ->forSet($setA)
+        ->multipleChoice(count: 1, correctIndex: 1, points: 3)
+        ->create(['title' => 'Part II', 'sort_order' => 1]);
+
+    $student = app(ExamAnswerReportService::class)->build($exam, ExamAnswerReportService::MODE_STUDENTS)['students'][0];
+
+    expect($student['student']['name'])->toBe($ana->name)
+        ->and($student['student']['set'])->toBe('Set A')
+        ->and($student['parts'])->toHaveCount(2)
+        ->and($student['parts'][1]['submitted'])->toBeFalse()
+        ->and($student['parts'][1]['part']['set'])->toBe('Set A');
 });
 
 it('offers only the students of the chosen set in the picker', function () {
