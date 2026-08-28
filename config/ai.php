@@ -166,6 +166,17 @@ return [
             'url' => env('XAI_URL', 'https://api.x.ai/v1'),
             'env_url' => env('XAI_URL', 'https://api.x.ai/v1'),
         ],
+
+        'koamishin' => [
+            'driver' => 'openai-compatible',
+            'key' => env('KOAMISHIN_API_KEY'),
+            'url' => env('KOAMISHIN_URL', 'https://9router.koamishin.com/v1'),
+            'models' => [
+                'text' => [
+                    'default' => env('KOAMISHIN_AI_MODEL'),
+                ]
+            ]
+        ],
     ],
 
 ];
