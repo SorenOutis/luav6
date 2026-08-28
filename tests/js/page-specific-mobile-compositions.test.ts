@@ -49,6 +49,10 @@ describe('page-specific mobile compositions', () => {
         );
         expect(dashboard).toContain('mobile-dashboard-reward-grid');
         expect(dashboard).toContain('mobile-dashboard-progress-band');
+        expect(dashboard).toContain(
+            '<details class="mobile-dashboard-progress-details" open>',
+        );
+        expect(dashboard).toContain('XP history, claims, and details');
         expect(dashboard).not.toContain('mobile-dashboard-secondary-grid');
     });
 
