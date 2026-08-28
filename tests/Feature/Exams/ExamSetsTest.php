@@ -15,6 +15,7 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\ExamXpAwardService;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia as Assert;
 
 use function Pest\Laravel\actingAs;
@@ -26,7 +27,7 @@ use function Pest\Laravel\actingAs;
  * Part titles are used as the marker because they are serialized for a
  * published exam, whereas the answer key is deliberately not.
  *
- * @return array{0: Exam, 1: \Illuminate\Support\Collection<int, ExamSet>, 2: Section}
+ * @return array{0: Exam, 1: Collection<int, ExamSet>, 2: Section}
  */
 function examSetsContext(int $sets = 2): array
 {

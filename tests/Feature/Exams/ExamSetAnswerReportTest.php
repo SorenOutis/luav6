@@ -15,6 +15,7 @@ use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
 use App\Services\ExamAnswerReportService;
+use Illuminate\Support\Collection;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -24,7 +25,7 @@ use function Pest\Laravel\actingAs;
  * ("Part I"), plus one student who submitted each set — exactly what the
  * rotation produces, and exactly why the report has to name the set.
  *
- * @return array{0: Exam, 1: \Illuminate\Support\Collection<int, ExamSet>, 2: User, 3: User}
+ * @return array{0: Exam, 1: Collection<int, ExamSet>, 2: User, 3: User}
  */
 function setReportContext(int $sets = 2): array
 {
