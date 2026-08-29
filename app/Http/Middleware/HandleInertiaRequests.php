@@ -68,7 +68,7 @@ class HandleInertiaRequests extends Middleware
                         'type' => $notification->data['type'] ?? 'system',
                         'icon' => $notification->data['icon'] ?? 'bell',
                         'title' => $notification->data['title'] ?? 'Notification',
-                        'message' => $notification->data['message'] ?? null,
+                        'message' => $notification->data['message'] ?? $notification->data['body'] ?? null,
                         'meta' => $notification->data['meta'] ?? null,
                         'image' => $notification->data['image'] ?? null,
                         'href' => $notification->data['href'] ?? '/dashboard',
