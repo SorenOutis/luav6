@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Shared helpers for Expo skills PostHog telemetry.
 //
 // Zero npm dependencies — Node.js built-ins only (crypto, fs, https, os, path).

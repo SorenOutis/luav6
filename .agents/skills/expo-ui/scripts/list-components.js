@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * List available @expo/ui components and modifiers installed in a project.
  *
@@ -35,7 +36,7 @@ let version = 'unknown';
 try {
   const pkg = JSON.parse(fs.readFileSync(path.join(pkgRoot, 'package.json'), 'utf8'));
   version = pkg.version || 'unknown';
-} catch (_) {}
+} catch {}
 
 // ---------------------------------------------------------------------------
 // Component extraction — parse `export * from './Name'` in an index.d.ts

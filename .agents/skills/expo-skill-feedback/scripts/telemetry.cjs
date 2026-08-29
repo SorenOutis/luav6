@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Turn Expo skills usage telemetry on or off, or check its status.
 //
 // Telemetry is OFF by default (opt-in) — nothing is sent until you enable it here or

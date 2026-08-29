@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 // Submit a `skill_invoked` event to PostHog — fire-and-forget.
 //
 // Invoked two ways, both cross-platform (plain `node`, no shell wrapper, so it runs the
