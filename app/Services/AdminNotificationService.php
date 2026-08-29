@@ -121,18 +121,11 @@ class AdminNotificationService
     ): void {
         $workspaceAdmins = User::query()
             ->where('is_admin', true)
-            ->where(function ($q): void {
-                $q->where('is_super_admin', false)->orWhereNull('is_super_admin');
-            })
-            ->where(function ($q) use ($workspaceId): void {
-                $q->where('current_workspace_id', $workspaceId)
-                    ->orWhereHas('workspaces', function ($wq) use ($workspaceId): void {
-                        $wq->where('workspaces.id', $workspaceId);
-                    })
-                    ->orWhereHas('sections', function ($sq) use ($workspaceId): void {
-                        $sq->where('sections.workspace_id', $workspaceId);
-                    });
-            })
+            ->where(fn ($q) => $q->where('is_super_admin', false)->orWhereNull('is_super_admin'))
+            ->where(fn ($q) => $q
+                ->where('current_workspace_id', $workspaceId)
+                ->orWhereHas('workspaces', fn ($wq) => $wq->where('workspaces.id', $workspaceId))
+                ->orWhereHas('sections', fn ($sq) => $sq->where('sections.workspace_id', $workspaceId)))
             ->get();
 
         foreach ($workspaceAdmins as $admin) {
