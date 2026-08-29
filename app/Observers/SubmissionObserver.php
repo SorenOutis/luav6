@@ -13,7 +13,7 @@ class SubmissionObserver
     public function created(Submission $submission): void
     {
         $studentName = $submission->user?->name ?? 'A student';
-        $assignment = $submission->assignment()->withoutGlobalScope('workspace')->first();
+        $assignment = $submission->assignment_id ? $submission->assignment()->withoutGlobalScope('workspace')->first() : null;
         $assignmentTitle = $assignment?->title ?? 'an assignment';
         $workspace = $assignment ? AdminNotificationService::resolveWorkspace($assignment) : $submission->user;
 
