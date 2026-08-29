@@ -12,10 +12,12 @@ class SectionObserver
      */
     public function created(Section $section): void
     {
+        $workspace = AdminNotificationService::resolveWorkspace($section);
+
         AdminNotificationService::notifyAdmins(
             title: 'New Section Created',
             body: "Section '{$section->name}' was created.",
-            workspace: $section->workspace,
+            workspace: $workspace,
             icon: 'heroicon-o-folder-plus',
             color: 'primary',
         );

@@ -126,13 +126,14 @@ class AdminNotificationService
         string $color,
         ?string $url,
     ): void {
-        $workspaceAdmins = User::query()
+        $workspace = Workspace::query()->find($workspaceId);
+        if (! $workspace) {
+            return;
+        }
+
+        $workspaceAdmins = $workspace->admins()
             ->where('is_admin', true)
             ->where(fn ($q) => $q->where('is_super_admin', false)->orWhereNull('is_super_admin'))
-            ->where(fn ($q) => $q
-                ->where('current_workspace_id', $workspaceId)
-                ->orWhereHas('workspaces', fn ($wq) => $wq->where('workspaces.id', $workspaceId))
-                ->orWhereHas('sections', fn ($sq) => $sq->where('sections.workspace_id', $workspaceId)))
             ->get();
 
         foreach ($workspaceAdmins as $admin) {
