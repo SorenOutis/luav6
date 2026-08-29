@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "06d4ee0bb2f51afaf528dbe14f19a3e6",
+    "content-hash": "a01f721d0235ce96aa94ebc519f6c56f",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -276,6 +276,78 @@
                 "source": "https://github.com/Bacon/BaconQrCode/tree/v3.1.1"
             },
             "time": "2026-04-05T21:06:35+00:00"
+        },
+        {
+            "name": "benriadh1/filament-notification-bell",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/benriadh1/filament-notification-bell.git",
+                "reference": "d89f46a019f2e7e0188680f1f19dbb20b7b5a96c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/benriadh1/filament-notification-bell/zipball/d89f46a019f2e7e0188680f1f19dbb20b7b5a96c",
+                "reference": "d89f46a019f2e7e0188680f1f19dbb20b7b5a96c",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^5.0",
+                "laravel/framework": "^11.0|^12.0|^13.0",
+                "livewire/livewire": "^4.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "orchestra/testbench": "^9.0",
+                "pestphp/pest": "^2.0",
+                "pestphp/pest-plugin-laravel": "^2.0",
+                "pestphp/pest-plugin-livewire": "^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "YourVendor\\FilamentNotificationBell\\FilamentNotificationBellServiceProvider"
+                    ]
+                },
+                "filament": {
+                    "plugins": [
+                        "YourVendor\\FilamentNotificationBell\\FilamentNotificationBellPlugin"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "YourVendor\\FilamentNotificationBell\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Your Vendor",
+                    "email": "hello@your-vendor.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "A real-time notification bell for Filament v5 powered by Laravel Reverb and Livewire v4.",
+            "keywords": [
+                "bell",
+                "filament",
+                "laravel",
+                "livewire",
+                "notification",
+                "plugin",
+                "realtime",
+                "reverb"
+            ],
+            "support": {
+                "issues": "https://github.com/benriadh1/filament-notification-bell/issues",
+                "source": "https://github.com/benriadh1/filament-notification-bell/tree/v1.0.0"
+            },
+            "time": "2026-03-24T13:37:38+00:00"
         },
         {
             "name": "blade-ui-kit/blade-heroicons",
@@ -1914,14 +1986,14 @@
             "description": "A simple library to encode and decode JSON Web Tokens (JWT) in PHP. Should conform to the current spec.",
             "homepage": "https://github.com/googleapis/php-jwt",
             "keywords": [
-                "php",
-                "jwt"
+                "jwt",
+                "php"
             ],
             "support": {
                 "issues": "https://github.com/firebase/php-jwt/issues",
                 "source": "https://github.com/firebase/php-jwt/tree/v7.1.0"
             },
-            "time": "2026-06-11 17:54:14"
+            "time": "2026-06-11T17:54:14+00:00"
         },
         {
             "name": "fruitcake/php-cors",
@@ -3495,14 +3567,14 @@
             "description": "Laravel wrapper around OAuth 1 & OAuth 2 libraries.",
             "homepage": "https://laravel.com",
             "keywords": [
-                "oauth",
-                "laravel"
+                "laravel",
+                "oauth"
             ],
             "support": {
                 "issues": "https://github.com/laravel/socialite/issues",
                 "source": "https://github.com/laravel/socialite/tree/v5.30.0"
             },
-            "time": "2026-08-13 23:01:33"
+            "time": "2026-08-13T23:01:33+00:00"
         },
         {
             "name": "laravel/tinker",
@@ -4221,15 +4293,15 @@
             ],
             "description": "OAuth 1.0 Client Library",
             "keywords": [
+                "authentication",
+                "authorization",
+                "bitbucket",
+                "identity",
+                "idp",
                 "oauth",
                 "oauth1",
-                "authorization",
-                "authentication",
-                "idp",
-                "identity",
-                "sso",
                 "single sign on",
-                "bitbucket",
+                "sso",
                 "trello",
                 "tumblr",
                 "twitter"
@@ -4238,7 +4310,7 @@
                 "issues": "https://github.com/thephpleague/oauth1-client/issues",
                 "source": "https://github.com/thephpleague/oauth1-client/tree/v1.11.0"
             },
-            "time": "2024-12-10 19:59:05"
+            "time": "2024-12-10T19:59:05+00:00"
         },
         {
             "name": "league/uri",
@@ -5471,16 +5543,16 @@
             "description": "PHP 5.x polyfill for random_bytes() and random_int() from PHP 7",
             "keywords": [
                 "csprng",
-                "random",
                 "polyfill",
-                "pseudorandom"
+                "pseudorandom",
+                "random"
             ],
             "support": {
                 "issues": "https://github.com/paragonie/random_compat/issues",
                 "email": "info@paragonie.com",
                 "source": "https://github.com/paragonie/random_compat/tree/v9.99.100"
             },
-            "time": "2020-10-15 08:29:30"
+            "time": "2020-10-15T08:29:30+00:00"
         },
         {
             "name": "phpdocumentor/reflection-common",
@@ -5970,23 +6042,23 @@
             "description": "PHP Secure Communications Library - Pure-PHP implementations of RSA, AES, SSH2, SFTP, X.509 etc.",
             "homepage": "http://phpseclib.sourceforge.net",
             "keywords": [
-                "security",
+                "BigInteger",
+                "aes",
+                "asn.1",
+                "asn1",
+                "blowfish",
                 "crypto",
                 "cryptography",
                 "encryption",
+                "rsa",
+                "security",
+                "sftp",
                 "signature",
                 "signing",
-                "rsa",
-                "aes",
-                "blowfish",
-                "twofish",
                 "ssh",
-                "sftp",
-                "x509",
+                "twofish",
                 "x.509",
-                "asn1",
-                "asn.1",
-                "BigInteger"
+                "x509"
             ],
             "support": {
                 "issues": "https://github.com/phpseclib/phpseclib/issues",
@@ -6006,7 +6078,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-08-03 04:36:50"
+            "time": "2026-08-03T04:36:50+00:00"
         },
         {
             "name": "phpstan/phpdoc-parser",

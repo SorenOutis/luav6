@@ -195,6 +195,7 @@ class AdminNotificationService
 
             $notificationData = [
                 'id' => (string) Str::uuid(),
+                'format' => 'filament',
                 'title' => $title,
                 'body' => $body,
                 'icon' => $icon,

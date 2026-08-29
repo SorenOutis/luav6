@@ -17,6 +17,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use YourVendor\FilamentNotificationBell\Concerns\HasNotificationBell;
 
 class User extends Authenticatable implements FilamentUser, HasAvatar
 {
@@ -25,7 +26,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public const PROFILE_VISIBILITY_PRIVATE = 'private';
 
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, HasNotificationBell, Notifiable, TwoFactorAuthenticatable;
 
     protected static function booted(): void
     {
@@ -516,13 +517,5 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function getCoverPhotoAttribute($value)
     {
         return PublicFileUrl::resolve($value);
-    }
-
-    public function notifyBell(): void
-    {
-        if (class_exists('Benriadh1\\FilamentNotificationBell\\Events\\NotificationSent')) {
-            $eventClass = 'Benriadh1\\FilamentNotificationBell\\Events\\NotificationSent';
-            event(new $eventClass($this));
-        }
     }
 }
