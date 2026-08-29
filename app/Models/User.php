@@ -520,8 +520,9 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
 
     public function notifyBell(): void
     {
-        if (class_exists(\Benriadh1\FilamentNotificationBell\Events\NotificationSent::class)) {
-            event(new \Benriadh1\FilamentNotificationBell\Events\NotificationSent($this));
+        if (class_exists('Benriadh1\FilamentNotificationBell\Events\NotificationSent')) {
+            $eventClass = 'Benriadh1\FilamentNotificationBell\Events\NotificationSent';
+            event(new $eventClass($this));
         }
     }
 }
