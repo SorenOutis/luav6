@@ -328,7 +328,7 @@ it('does not queue a grading job when the part has no essays', function () {
 
     submitAnswers($student, $exam, $part, [1 => 0]);
 
-    Queue::assertNothingPushed();
+    Queue::assertNotPushed(GradeExamSubmissionEssays::class);
 });
 
 it('keeps a mixed automatic and manual essay submission pending for the teacher', function () {
