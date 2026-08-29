@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
-use Filament\Notifications\Actions\Action;
-use Filament\Notifications\Notification as FilamentNotification;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class AdminNotificationService
@@ -145,21 +145,37 @@ class AdminNotificationService
         ?string $url,
     ): void {
         try {
-            $notification = FilamentNotification::make()
-                ->title($title)
-                ->body($body)
-                ->icon($icon)
-                ->color($color);
-
+            $actions = [];
             if ($url) {
-                $notification->actions([
-                    Action::make('view')
-                        ->button()
-                        ->url($url),
-                ]);
+                $actions[] = [
+                    'name' => 'view',
+                    'label' => 'View',
+                    'url' => $url,
+                    'color' => null,
+                    'isOutlined' => false,
+                    'isDisabled' => false,
+                    'size' => 'md',
+                ];
             }
 
-            $notification->sendToDatabase($user);
+            $notificationData = [
+                'id' => (string) Str::uuid(),
+                'title' => $title,
+                'body' => $body,
+                'icon' => $icon,
+                'iconColor' => $color,
+                'actions' => $actions,
+                'duration' => 'persistent',
+            ];
+
+            DatabaseNotification::query()->create([
+                'id' => $notificationData['id'],
+                'type' => \Filament\Notifications\DatabaseNotification::class,
+                'notifiable_type' => $user->getMorphClass(),
+                'notifiable_id' => $user->getKey(),
+                'data' => $notificationData,
+                'read_at' => null,
+            ]);
 
             if (method_exists($user, 'notifyBell')) {
                 $user->notifyBell();

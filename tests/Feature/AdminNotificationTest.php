@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Exam;
+use App\Models\ExamPart;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use App\Models\Workspace;
@@ -34,7 +35,8 @@ class AdminNotificationTest extends TestCase
 
         $notification = DatabaseNotification::query()
             ->where('notifiable_id', $superAdmin->id)
-            ->first();
+            ->get()
+            ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Test Event'));
 
         $this->assertNotNull($notification);
         $this->assertStringContainsString('[Math Workspace]', $notification->data['title']);
@@ -51,12 +53,14 @@ class AdminNotificationTest extends TestCase
             'is_super_admin' => false,
             'current_workspace_id' => $workspaceA->id,
         ]);
+        $adminA->workspaces()->attach($workspaceA->id, ['role' => Workspace::ROLE_ADMIN]);
 
         $adminB = User::factory()->create([
             'is_admin' => true,
             'is_super_admin' => false,
             'current_workspace_id' => $workspaceB->id,
         ]);
+        $adminB->workspaces()->attach($workspaceB->id, ['role' => Workspace::ROLE_ADMIN]);
 
         AdminNotificationService::notifyAdmins(
             title: 'Workspace A Event',
@@ -66,11 +70,13 @@ class AdminNotificationTest extends TestCase
 
         $notificationA = DatabaseNotification::query()
             ->where('notifiable_id', $adminA->id)
-            ->first();
+            ->get()
+            ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Workspace A Event'));
 
         $notificationB = DatabaseNotification::query()
             ->where('notifiable_id', $adminB->id)
-            ->first();
+            ->get()
+            ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Workspace A Event'));
 
         $this->assertNotNull($notificationA);
         $this->assertNull($notificationB);
@@ -92,8 +98,8 @@ class AdminNotificationTest extends TestCase
 
         $notification = DatabaseNotification::query()
             ->where('notifiable_id', $superAdmin->id)
-            ->where('data->title', 'like', '%New User Registered%')
-            ->first();
+            ->get()
+            ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'New User Registered'));
 
         $this->assertNotNull($notification);
         $this->assertStringContainsString('John Doe', $notification->data['body']);
@@ -115,8 +121,8 @@ class AdminNotificationTest extends TestCase
 
         $notification = DatabaseNotification::query()
             ->where('notifiable_id', $superAdmin->id)
-            ->where('data->title', 'like', '%User Logged In%')
-            ->first();
+            ->get()
+            ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'User Logged In'));
 
         $this->assertNotNull($notification);
         $this->assertStringContainsString('Jane Smith', $notification->data['body']);
@@ -132,17 +138,19 @@ class AdminNotificationTest extends TestCase
         $workspace = Workspace::factory()->create(['name' => 'Physics Class']);
         $student = User::factory()->create(['name' => 'Physics Student']);
         $exam = Exam::factory()->create(['title' => 'Physics Final', 'workspace_id' => $workspace->id]);
+        $examPart = ExamPart::factory()->create(['exam_id' => $exam->id]);
 
         ExamSubmission::query()->create([
             'user_id' => $student->id,
             'exam_id' => $exam->id,
+            'exam_part_id' => $examPart->id,
             'status' => 'submitted',
         ]);
 
         $notification = DatabaseNotification::query()
             ->where('notifiable_id', $superAdmin->id)
-            ->where('data->title', 'like', '%Exam Submitted%')
-            ->first();
+            ->get()
+            ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Exam Submitted'));
 
         $this->assertNotNull($notification);
         $this->assertStringContainsString('[Physics Class]', $notification->data['title']);
