@@ -12,8 +12,7 @@ class AnonymousMessageObserver
      */
     public function created(AnonymousMessage $message): void
     {
-        $workspace = AdminNotificationService::resolveWorkspace($message->section)
-            ?? AdminNotificationService::resolveWorkspace($message->user);
+        $workspace = AdminNotificationService::resolveWorkspace($message);
 
         AdminNotificationService::notifyAdmins(
             title: 'New Anonymous Message',
