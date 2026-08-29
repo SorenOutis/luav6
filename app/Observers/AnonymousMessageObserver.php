@@ -19,7 +19,7 @@ class AnonymousMessageObserver
             body: 'A new anonymous message was posted.',
             workspace: $workspace,
             icon: 'heroicon-o-chat-bubble-left-ellipsis',
-            color: 'warning'
+            color: 'warning',
         );
     }
 }

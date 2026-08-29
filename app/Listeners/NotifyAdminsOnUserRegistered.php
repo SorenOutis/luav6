@@ -26,7 +26,7 @@ class NotifyAdminsOnUserRegistered
             workspace: $workspace,
             icon: 'heroicon-o-user-plus',
             color: 'success',
-            url: '/admin/users'
+            url: '/admin/users',
         );
     }
 }

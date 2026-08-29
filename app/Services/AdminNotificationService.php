@@ -14,13 +14,6 @@ class AdminNotificationService
 {
     /**
      * Send an event notification to Super Admins and Workspace Admins.
-     *
-     * @param  string  $title Short title of the event
-     * @param  string  $body Detailed description of the event
-     * @param  Workspace|int|User|null  $workspace Workspace instance, ID, User, or null
-     * @param  string  $icon Heroicon name
-     * @param  string  $color Color (info, success, warning, danger, primary)
-     * @param  string|null  $url Action URL (optional)
      */
     public static function notifyAdmins(
         string $title,
@@ -28,7 +21,7 @@ class AdminNotificationService
         Workspace|int|User|null $workspace = null,
         string $icon = 'heroicon-o-bell',
         string $color = 'info',
-        ?string $url = null
+        ?string $url = null,
     ): void {
         $resolvedWorkspace = self::resolveWorkspace($workspace);
         $workspaceName = $resolvedWorkspace ? $resolvedWorkspace->name : 'Global';
@@ -100,7 +93,7 @@ class AdminNotificationService
         string $workspaceName,
         string $icon,
         string $color,
-        ?string $url
+        ?string $url,
     ): void {
         $superAdmins = User::query()
             ->where('is_admin', true)
@@ -124,7 +117,7 @@ class AdminNotificationService
         int $workspaceId,
         string $icon,
         string $color,
-        ?string $url
+        ?string $url,
     ): void {
         $workspaceAdmins = User::query()
             ->where('is_admin', true)
@@ -156,7 +149,7 @@ class AdminNotificationService
         string $body,
         string $icon,
         string $color,
-        ?string $url
+        ?string $url,
     ): void {
         try {
             $notification = FilamentNotification::make()

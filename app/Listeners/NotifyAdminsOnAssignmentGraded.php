@@ -26,7 +26,7 @@ class NotifyAdminsOnAssignmentGraded
                 body: "Assignment '{$assignment->title}' was graded for {$studentName}.",
                 workspace: $workspace,
                 icon: 'heroicon-o-academic-cap',
-                color: 'success'
+                color: 'success',
             );
         }
     }

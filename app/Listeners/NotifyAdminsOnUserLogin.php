@@ -25,7 +25,7 @@ class NotifyAdminsOnUserLogin
             body: "User {$user->name} ({$user->email}) logged in.",
             workspace: $workspace,
             icon: 'heroicon-o-arrow-right-on-rectangle',
-            color: 'info'
+            color: 'info',
         );
     }
 }

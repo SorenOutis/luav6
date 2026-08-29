@@ -17,7 +17,7 @@ class WorkspaceObserver
             body: "Workspace '{$workspace->name}' was created.",
             workspace: $workspace,
             icon: 'heroicon-o-building-office-2',
-            color: 'primary'
+            color: 'primary',
         );
     }
 }

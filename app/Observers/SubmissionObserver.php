@@ -21,7 +21,7 @@ class SubmissionObserver
             body: "{$studentName} submitted assignment '{$assignmentTitle}'.",
             workspace: $workspace,
             icon: 'heroicon-o-clipboard-document-check',
-            color: 'info'
+            color: 'info',
         );
     }
 }

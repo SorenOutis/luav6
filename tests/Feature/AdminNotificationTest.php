@@ -29,7 +29,7 @@ class AdminNotificationTest extends TestCase
         AdminNotificationService::notifyAdmins(
             title: 'Test Event',
             body: 'Something happened in math workspace.',
-            workspace: $workspace
+            workspace: $workspace,
         );
 
         $notification = DatabaseNotification::query()
@@ -61,7 +61,7 @@ class AdminNotificationTest extends TestCase
         AdminNotificationService::notifyAdmins(
             title: 'Workspace A Event',
             body: 'Event in Workspace A',
-            workspace: $workspaceA
+            workspace: $workspaceA,
         );
 
         $notificationA = DatabaseNotification::query()

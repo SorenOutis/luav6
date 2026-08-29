@@ -17,7 +17,7 @@ class SectionObserver
             body: "Section '{$section->name}' was created.",
             workspace: $section->workspace,
             icon: 'heroicon-o-folder-plus',
-            color: 'primary'
+            color: 'primary',
         );
     }
 }

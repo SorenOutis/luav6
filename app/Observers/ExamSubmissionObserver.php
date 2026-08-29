@@ -21,7 +21,7 @@ class ExamSubmissionObserver
             body: "{$studentName} submitted exam '{$examTitle}'.",
             workspace: $workspace,
             icon: 'heroicon-o-document-check',
-            color: 'success'
+            color: 'success',
         );
     }
 }
