@@ -517,4 +517,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     {
         return PublicFileUrl::resolve($value);
     }
+
+    public function notifyBell(): void
+    {
+        if (class_exists(\Benriadh1\FilamentNotificationBell\Events\NotificationSent::class)) {
+            event(new \Benriadh1\FilamentNotificationBell\Events\NotificationSent($this));
+        }
+    }
 }

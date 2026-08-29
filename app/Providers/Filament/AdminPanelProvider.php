@@ -17,6 +17,7 @@ use App\Filament\Widgets\StudentRiskWidget;
 use App\Filament\Widgets\TopStudentsWidget;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\FaviconUrl;
+use Benriadh1\FilamentNotificationBell\FilamentNotificationBellPlugin;
 use Croustibat\FilamentJobsMonitor\FilamentJobsMonitorPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -67,9 +68,13 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 AdminDashboard::class,
             ])
-            ->plugins([
+            ->databaseNotifications()
+            ->plugins(array_filter([
                 FilamentJobsMonitorPlugin::make(),
-            ])
+                class_exists(FilamentNotificationBellPlugin::class)
+                    ? FilamentNotificationBellPlugin::make()->withPolling(30)
+                    : null,
+            ]))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 AdminCommandCenterWidget::class,

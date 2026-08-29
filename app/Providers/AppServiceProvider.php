@@ -3,13 +3,29 @@
 namespace App\Providers;
 
 use App\Ai\Providers\HeaderAwareOpenAiCompatibleProvider;
+use App\Events\AssignmentGraded;
+use App\Listeners\NotifyAdminsOnAssignmentGraded;
+use App\Listeners\NotifyAdminsOnUserLogin;
+use App\Listeners\NotifyAdminsOnUserRegistered;
+use App\Models\AnonymousMessage;
+use App\Models\ExamSubmission;
+use App\Models\Section;
+use App\Models\Submission;
 use App\Models\User;
+use App\Models\Workspace;
+use App\Observers\AnonymousMessageObserver;
+use App\Observers\ExamSubmissionObserver;
+use App\Observers\SectionObserver;
+use App\Observers\SubmissionObserver;
+use App\Observers\WorkspaceObserver;
 use App\Policies\UserPolicy;
 use App\Services\AiSdkProviderService;
 use App\Support\GamificationSyncContext;
 use App\Support\RequestCache;
 use App\Support\WorkspaceContext;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobExceptionOccurred;
@@ -18,6 +34,7 @@ use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
@@ -74,6 +91,24 @@ class AppServiceProvider extends ServiceProvider
         // posts to /broadcasting/auth, gets a 404, and the realtime "saved"
         // acknowledgement silently never arrives.
         Broadcast::routes();
+
+        $this->configureAdminNotifications();
+    }
+
+    /**
+     * Register listeners and observers for super admin and workspace admin notifications.
+     */
+    protected function configureAdminNotifications(): void
+    {
+        Event::listen(Registered::class, NotifyAdminsOnUserRegistered::class);
+        Event::listen(Login::class, NotifyAdminsOnUserLogin::class);
+        Event::listen(AssignmentGraded::class, NotifyAdminsOnAssignmentGraded::class);
+
+        ExamSubmission::observe(ExamSubmissionObserver::class);
+        Submission::observe(SubmissionObserver::class);
+        Section::observe(SectionObserver::class);
+        Workspace::observe(WorkspaceObserver::class);
+        AnonymousMessage::observe(AnonymousMessageObserver::class);
     }
 
     /**
