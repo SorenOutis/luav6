@@ -1,5 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type RouteDefinition<TMethod = any> = any;
+/* eslint-disable */
+export type RouteDefinition<_TMethod = unknown> = unknown;
 
 const stub: any = new Proxy(() => '', {
     get: () => stub,
