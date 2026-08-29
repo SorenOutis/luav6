@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Section;
 use App\Services\AdminNotificationService;
+use Throwable;
 
 class SectionObserver
 {
@@ -12,14 +13,17 @@ class SectionObserver
      */
     public function created(Section $section): void
     {
-        $workspace = AdminNotificationService::resolveWorkspace($section);
+        try {
+            $workspace = AdminNotificationService::resolveWorkspace($section);
 
-        AdminNotificationService::notifyAdmins(
-            title: 'New Section Created',
-            body: "Section '{$section->name}' was created.",
-            workspace: $workspace,
-            icon: 'heroicon-o-folder-plus',
-            color: 'primary',
-        );
+            AdminNotificationService::notifyAdmins(
+                title: 'New Section Created',
+                body: "Section '{$section->name}' was created.",
+                workspace: $workspace,
+                icon: 'heroicon-o-folder-plus',
+                color: 'primary',
+            );
+        } catch (Throwable) {
+        }
     }
 }

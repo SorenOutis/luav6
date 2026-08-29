@@ -24,16 +24,20 @@ class AdminNotificationService
         string $color = 'info',
         ?string $url = null,
     ): void {
-        $resolvedWorkspace = self::resolveWorkspace($workspace);
-        $workspaceName = $resolvedWorkspace ? $resolvedWorkspace->name : 'Global';
-        $workspaceId = $resolvedWorkspace?->id;
+        try {
+            $resolvedWorkspace = self::resolveWorkspace($workspace);
+            $workspaceName = $resolvedWorkspace ? $resolvedWorkspace->name : 'Global';
+            $workspaceId = $resolvedWorkspace?->id;
 
-        // 1. Notify Super Admins with Workspace metadata clearly visible
-        self::notifySuperAdmins($title, $body, $workspaceName, $icon, $color, $url);
+            // 1. Notify Super Admins with Workspace metadata clearly visible
+            self::notifySuperAdmins($title, $body, $workspaceName, $icon, $color, $url);
 
-        // 2. Notify Workspace Admins (only if associated with this workspace)
-        if ($workspaceId) {
-            self::notifyWorkspaceAdmins($title, $body, $workspaceId, $icon, $color, $url);
+            // 2. Notify Workspace Admins (only if associated with this workspace)
+            if ($workspaceId) {
+                self::notifyWorkspaceAdmins($title, $body, $workspaceId, $icon, $color, $url);
+            }
+        } catch (Throwable $e) {
+            Log::error('Failed to notify admins: '.$e->getMessage());
         }
     }
 
