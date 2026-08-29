@@ -940,7 +940,7 @@ const activitiesTourSteps: TourStep[] = [
                                     class="h-4 w-4 shrink-0 text-muted-foreground/50 sm:hidden"
                                 />
                             </div>
-                            <div class="mt-3 hidden sm:block">
+                            <div class="mt-3 sm:block">
                                 <button
                                     v-if="canReviewResults(exam)"
                                     type="button"

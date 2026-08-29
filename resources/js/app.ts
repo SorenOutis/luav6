@@ -4,6 +4,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import '../css/app.css';
+import '../css/activities-mobile.css';
 import GlobalLoader from '@/components/GlobalLoader.vue';
 import { initializeTheme } from '@/composables/useAppearance';
 import { initLenis } from '@/composables/useLenis';
