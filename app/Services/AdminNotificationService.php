@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -178,7 +179,7 @@ class AdminNotificationService
 
             DatabaseNotification::query()->create([
                 'id' => $notificationData['id'],
-                'type' => \Filament\Notifications\DatabaseNotification::class,
+                'type' => FilamentNotification::class,
                 'notifiable_type' => $user->getMorphClass(),
                 'notifiable_id' => $user->getKey(),
                 'data' => $notificationData,
