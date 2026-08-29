@@ -82,23 +82,15 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "@php -r \"echo '=== STEP 1: npm run lint:check ===\n';\"",
-            "npm run lint:check",
-            "@php -r \"echo '=== STEP 2: npm run format:check ===\n';\"",
-            "npm run format:check",
-            "@php -r \"echo '=== STEP 3: npm run types:check ===\n';\"",
-            "npm run types:check",
-            "@php -r \"echo '=== STEP 4: npm run test:js ===\n';\"",
-            "npm run test:js",
-            "@php -r \"echo '=== STEP 5: @test ===\n';\"",
-            "@test"
+            "@php -r \"echo '>>> STEP 1: npm run lint:check\n'; passthru('npm run lint:check', \$c); if (\$c !== 0) exit(\$c);\"",
+            "@php -r \"echo '>>> STEP 2: npm run format:check\n'; passthru('npm run format:check', \$c); if (\$c !== 0) exit(\$c);\"",
+            "@php -r \"echo '>>> STEP 3: npm run types:check\n'; passthru('npm run types:check', \$c); if (\$c !== 0) exit(\$c);\"",
+            "@php -r \"echo '>>> STEP 4: npm run test:js\n'; passthru('npm run test:js', \$c); if (\$c !== 0) exit(\$c);\"",
+            "@php -r \"echo '>>> STEP 5: @test\n'; passthru('composer test', \$c); if (\$c !== 0) exit(\$c);\""
         ],
         "test": [
-            "@php -r \"echo '=== TEST 5A: config:clear ===\n';\"",
             "@php artisan config:clear --ansi",
-            "@php -r \"echo '=== TEST 5B: lint:check ===\n';\"",
             "@lint:check",
-            "@php -r \"echo '=== TEST 5C: php artisan test ===\n';\"",
             "@php artisan test"
         ],
         "test:preflight": [

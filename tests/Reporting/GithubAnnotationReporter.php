@@ -84,7 +84,9 @@ final class GithubAnnotationReporter implements ExtensionInterface
         $fileAttr = '';
         if ($throwable !== null) {
             $where = $throwable->stackTrace();
-            if (preg_match('/^(.+?):(\d+)/m', $where, $m)) {
+            if (preg_match('/#\d+\s+(.+?)\((\d+)\)/', $where, $m)) {
+                $fileAttr = 'file='.rawurlencode($m[1]).',line='.$m[2].',';
+            } elseif (preg_match('/^(.+?):(\d+)/m', $where, $m)) {
                 $fileAttr = 'file='.rawurlencode($m[1]).',line='.$m[2].',';
             }
         }
