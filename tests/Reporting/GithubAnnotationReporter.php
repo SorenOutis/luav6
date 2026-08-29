@@ -34,36 +34,31 @@ final class GithubAnnotationReporter implements ExtensionInterface
 
         try {
             $facade->registerSubscribers(
-                new class implements FailedSubscriber
-                {
+                new class implements FailedSubscriber {
                     public function notify(Failed $event): void
                     {
                         GithubAnnotationReporter::annotate($event->test(), $event->throwable(), 'failure');
                     }
                 },
-                new class implements ErroredSubscriber
-                {
+                new class implements ErroredSubscriber {
                     public function notify(Errored $event): void
                     {
                         GithubAnnotationReporter::annotate($event->test(), $event->throwable(), 'error');
                     }
                 },
-                new class implements WarningTriggeredSubscriber
-                {
+                new class implements WarningTriggeredSubscriber {
                     public function notify(WarningTriggered $event): void
                     {
                         GithubAnnotationReporter::annotate($event->test(), null, 'warning');
                     }
                 },
-                new class implements PhpWarningTriggeredSubscriber
-                {
+                new class implements PhpWarningTriggeredSubscriber {
                     public function notify(PhpWarningTriggered $event): void
                     {
                         GithubAnnotationReporter::annotate($event->test(), null, 'php-warning');
                     }
                 },
-                new class implements ConsideredRiskySubscriber
-                {
+                new class implements ConsideredRiskySubscriber {
                     public function notify(ConsideredRisky $event): void
                     {
                         GithubAnnotationReporter::annotate($event->test(), null, 'risky');
