@@ -82,11 +82,11 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "@php -r \"echo '>>> STEP 1: npm run lint:check\n'; passthru('npm run lint:check', \$c); if (\$c !== 0) exit(\$c);\"",
-            "@php -r \"echo '>>> STEP 2: npm run format:check\n'; passthru('npm run format:check', \$c); if (\$c !== 0) exit(\$c);\"",
-            "@php -r \"echo '>>> STEP 3: npm run types:check\n'; passthru('npm run types:check', \$c); if (\$c !== 0) exit(\$c);\"",
-            "@php -r \"echo '>>> STEP 4: npm run test:js\n'; passthru('npm run test:js', \$c); if (\$c !== 0) exit(\$c);\"",
-            "@php -r \"echo '>>> STEP 5: @test\n'; passthru('composer test', \$c); if (\$c !== 0) exit(\$c);\""
+            "npm run lint:check",
+            "npm run format:check",
+            "npm run types:check",
+            "npm run test:js",
+            "@test"
         ],
         "test": [
             "@php artisan config:clear --ansi",

@@ -81,17 +81,16 @@ final class GithubAnnotationReporter implements ExtensionInterface
         $message = str_replace(['%', "\r", "\n"], ['%25', '', '%0A'], trim($message));
         $title = str_replace(['%', "\r", "\n"], ['%25', '', '%0A'], trim($test->id().' ['.$kind.']'));
 
-        $fileAttr = '';
+        $file = '';
+        $line = '';
         if ($throwable !== null) {
             $where = $throwable->stackTrace();
-            if (preg_match('/#\d+\s+(.+?)\((\d+)\)/', $where, $m)) {
-                $fileAttr = 'file='.rawurlencode($m[1]).',line='.$m[2].',';
-            } elseif (preg_match('/^(.+?):(\d+)/m', $where, $m)) {
-                $fileAttr = 'file='.rawurlencode($m[1]).',line='.$m[2].',';
+            if (preg_match('/^(.+?):(\d+)/m', $where, $m)) {
+                $file = ' file='.rawurlencode($m[1]).',line='.$m[2];
             }
         }
 
         // phpcs:ignore
-        echo "::error {$fileAttr}title={$title}::{$message}\n";
+        echo "::error title={$title}{$file}::{$message}\n";
     }
 }
