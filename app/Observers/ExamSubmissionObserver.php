@@ -13,7 +13,7 @@ class ExamSubmissionObserver
     public function created(ExamSubmission $submission): void
     {
         $studentName = $submission->user?->name ?? 'A student';
-        $exam = $submission->exam;
+        $exam = $submission->exam()->withoutGlobalScope('workspace')->first();
         $examTitle = $exam?->title ?? 'an exam';
         $workspace = $exam ? AdminNotificationService::resolveWorkspace($exam) : $submission->user;
 
