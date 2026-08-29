@@ -78,7 +78,11 @@ class AdminNotificationService
                     return Workspace::query()->find($wsId);
                 }
 
-                $sectionWsId = $source->sections()->whereNotNull('workspace_id')->value('workspace_id');
+                $sectionWsId = $source->sections()
+                    ->withoutGlobalScope('workspace')
+                    ->whereNotNull('sections.workspace_id')
+                    ->value('sections.workspace_id');
+
                 if ($sectionWsId) {
                     return Workspace::query()->find($sectionWsId);
                 }
@@ -152,7 +156,7 @@ class AdminNotificationService
             ->where(fn ($q) => $q
                 ->where('current_workspace_id', $workspaceId)
                 ->orWhereHas('workspaces', fn ($wq) => $wq->where('workspaces.id', $workspaceId))
-                ->orWhereHas('sections', fn ($sq) => $sq->where('sections.workspace_id', $workspaceId)))
+                ->orWhereHas('sections', fn ($sq) => $sq->withoutGlobalScope('workspace')->where('sections.workspace_id', $workspaceId)))
             ->get();
 
         foreach ($workspaceAdmins as $admin) {

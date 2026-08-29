@@ -3,6 +3,7 @@
 use App\Models\Exam;
 use App\Models\ExamPart;
 use App\Models\ExamSubmission;
+use App\Models\Section;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Services\AdminNotificationService;
@@ -70,6 +71,31 @@ test('workspace admin receives notifications only for their workspace', function
 
     expect($notificationA)->not->toBeNull()
         ->and($notificationB)->toBeNull();
+});
+
+test('workspace admin associated via section receives notifications for their workspace', function () {
+    $workspace = Workspace::factory()->create(['name' => 'Section Workspace']);
+    $section = Section::factory()->create(['workspace_id' => $workspace->id]);
+
+    $sectionAdmin = User::factory()->create([
+        'is_admin' => true,
+        'is_super_admin' => false,
+        'current_workspace_id' => null,
+    ]);
+    $sectionAdmin->sections()->attach($section->id);
+
+    AdminNotificationService::notifyAdmins(
+        title: 'Section Workspace Event',
+        body: 'Event in Section Workspace',
+        workspace: $workspace,
+    );
+
+    $notification = DatabaseNotification::query()
+        ->where('notifiable_id', $sectionAdmin->id)
+        ->get()
+        ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Section Workspace Event'));
+
+    expect($notification)->not->toBeNull();
 });
 
 test('registered event triggers notifications', function () {
