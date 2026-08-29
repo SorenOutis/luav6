@@ -13,8 +13,9 @@ class ExamSubmissionObserver
     public function created(ExamSubmission $submission): void
     {
         $studentName = $submission->user?->name ?? 'A student';
-        $examTitle = $submission->exam?->title ?? 'an exam';
-        $workspace = $submission->exam?->workspace ?? $submission->user?->currentWorkspace;
+        $exam = $submission->exam;
+        $examTitle = $exam?->title ?? 'an exam';
+        $workspace = $exam ? AdminNotificationService::resolveWorkspace($exam) : $submission->user;
 
         AdminNotificationService::notifyAdmins(
             title: 'Exam Submitted',

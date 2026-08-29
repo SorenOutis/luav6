@@ -18,7 +18,7 @@ class AdminNotificationService
     public static function notifyAdmins(
         string $title,
         string $body,
-        Workspace|int|User|null $workspace = null,
+        Workspace|int|User|null|object $workspace = null,
         string $icon = 'heroicon-o-bell',
         string $color = 'info',
         ?string $url = null,
@@ -37,9 +37,9 @@ class AdminNotificationService
     }
 
     /**
-     * Resolve Workspace instance from argument, User, or active context.
+     * Resolve Workspace instance from argument, model object, User, or active context.
      */
-    public static function resolveWorkspace(Workspace|int|User|null $source): ?Workspace
+    public static function resolveWorkspace(mixed $source): ?Workspace
     {
         if ($source instanceof Workspace) {
             return $source;
@@ -47,6 +47,13 @@ class AdminNotificationService
 
         if (is_numeric($source) && $source > 0) {
             return Workspace::query()->find($source);
+        }
+
+        if (is_object($source) && isset($source->workspace_id) && $source->workspace_id) {
+            $ws = Workspace::query()->find($source->workspace_id);
+            if ($ws) {
+                return $ws;
+            }
         }
 
         if ($source instanceof User) {

@@ -13,8 +13,9 @@ class SubmissionObserver
     public function created(Submission $submission): void
     {
         $studentName = $submission->user?->name ?? 'A student';
-        $assignmentTitle = $submission->assignment?->title ?? 'an assignment';
-        $workspace = $submission->assignment?->workspace ?? $submission->user?->currentWorkspace;
+        $assignment = $submission->assignment;
+        $assignmentTitle = $assignment?->title ?? 'an assignment';
+        $workspace = $assignment ? AdminNotificationService::resolveWorkspace($assignment) : $submission->user;
 
         AdminNotificationService::notifyAdmins(
             title: 'Assignment Submitted',
