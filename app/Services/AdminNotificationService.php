@@ -172,7 +172,7 @@ class AdminNotificationService
                 $user->notifyBell();
             }
         } catch (Throwable $e) {
-            Log::error("Failed to send notification to user {$user->id}: ".$e->getMessage());
+            Log::error('Failed to send notification to user '.$user->id.': '.$e->getMessage());
         }
     }
 }

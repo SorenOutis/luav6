@@ -70,7 +70,7 @@ class AdminPanelProvider extends PanelProvider
             ->databaseNotifications()
             ->plugins(array_filter([
                 FilamentJobsMonitorPlugin::make(),
-                class_exists('Benriadh1\FilamentNotificationBell\FilamentNotificationBellPlugin')
+                class_exists('Benriadh1\\FilamentNotificationBell\\FilamentNotificationBellPlugin')
                     ? \Benriadh1\FilamentNotificationBell\FilamentNotificationBellPlugin::make()->withPolling(30)
                     : null,
             ]))
