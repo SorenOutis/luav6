@@ -19,7 +19,7 @@ class AdminNotificationService
     public static function notifyAdmins(
         string $title,
         string $body,
-        Workspace|int|User|null|object $workspace = null,
+        mixed $workspace = null,
         string $icon = 'heroicon-o-bell',
         string $color = 'info',
         ?string $url = null,
