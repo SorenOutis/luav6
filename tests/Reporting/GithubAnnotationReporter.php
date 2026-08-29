@@ -32,65 +32,73 @@ final class GithubAnnotationReporter implements ExtensionInterface
             return;
         }
 
-        $facade->registerSubscribers(
-            new class implements FailedSubscriber
-            {
-                public function notify(Failed $event): void
+        try {
+            $facade->registerSubscribers(
+                new class implements FailedSubscriber
                 {
-                    GithubAnnotationReporter::annotate($event->test(), $event->throwable(), 'failure');
-                }
-            },
-            new class implements ErroredSubscriber
-            {
-                public function notify(Errored $event): void
+                    public function notify(Failed $event): void
+                    {
+                        GithubAnnotationReporter::annotate($event->test(), $event->throwable(), 'failure');
+                    }
+                },
+                new class implements ErroredSubscriber
                 {
-                    GithubAnnotationReporter::annotate($event->test(), $event->throwable(), 'error');
-                }
-            },
-            new class implements WarningTriggeredSubscriber
-            {
-                public function notify(WarningTriggered $event): void
+                    public function notify(Errored $event): void
+                    {
+                        GithubAnnotationReporter::annotate($event->test(), $event->throwable(), 'error');
+                    }
+                },
+                new class implements WarningTriggeredSubscriber
                 {
-                    GithubAnnotationReporter::annotate($event->test(), null, 'warning');
-                }
-            },
-            new class implements PhpWarningTriggeredSubscriber
-            {
-                public function notify(PhpWarningTriggered $event): void
+                    public function notify(WarningTriggered $event): void
+                    {
+                        GithubAnnotationReporter::annotate($event->test(), null, 'warning');
+                    }
+                },
+                new class implements PhpWarningTriggeredSubscriber
                 {
-                    GithubAnnotationReporter::annotate($event->test(), null, 'php-warning');
-                }
-            },
-            new class implements ConsideredRiskySubscriber
-            {
-                public function notify(ConsideredRisky $event): void
+                    public function notify(PhpWarningTriggered $event): void
+                    {
+                        GithubAnnotationReporter::annotate($event->test(), null, 'php-warning');
+                    }
+                },
+                new class implements ConsideredRiskySubscriber
                 {
-                    GithubAnnotationReporter::annotate($event->test(), null, 'risky');
-                }
-            },
-        );
+                    public function notify(ConsideredRisky $event): void
+                    {
+                        GithubAnnotationReporter::annotate($event->test(), null, 'risky');
+                    }
+                },
+            );
+        } catch (\Throwable) {
+            // Ignore subscriber registration failures gracefully
+        }
     }
 
-    public static function annotate(Test $test, ?Throwable $throwable, string $kind): void
+    public static function annotate(mixed $test, ?Throwable $throwable, string $kind): void
     {
-        $message = $throwable !== null
-            ? $throwable->message()
-            : $test->id();
+        try {
+            $testId = is_object($test) && method_exists($test, 'id') ? $test->id() : (string) $test;
+            $message = $throwable !== null && method_exists($throwable, 'message')
+                ? $throwable->message()
+                : $testId;
 
-        // Workflow commands: newlines and % must be escaped.
-        $message = str_replace(['%', "\r", "\n"], ['%25', '', '%0A'], trim($message));
-        $title = str_replace(['%', "\r", "\n"], ['%25', '', '%0A'], trim($test->id().' ['.$kind.']'));
+            // Workflow commands: newlines and % must be escaped.
+            $message = str_replace(['%', "\r", "\n"], ['%25', '', '%0A'], trim((string) $message));
+            $title = str_replace(['%', "\r", "\n"], ['%25', '', '%0A'], trim($testId.' ['.$kind.']'));
 
-        $file = '';
-        $line = '';
-        if ($throwable !== null) {
-            $where = $throwable->stackTrace();
-            if (preg_match('/^(.+?):(\d+)/m', $where, $m)) {
-                $file = ' file='.rawurlencode($m[1]).',line='.$m[2];
+            $file = '';
+            if ($throwable !== null && method_exists($throwable, 'stackTrace')) {
+                $where = $throwable->stackTrace();
+                if (preg_match('/^(.+?):(\d+)/m', $where, $m)) {
+                    $file = ' file='.rawurlencode($m[1]).',line='.$m[2];
+                }
             }
-        }
 
-        // phpcs:ignore
-        echo "::error title={$title}{$file}::{$message}\n";
+            // phpcs:ignore
+            echo "::error title={$title}{$file}::{$message}\n";
+        } catch (\Throwable) {
+            // Guard against API variations across PHPUnit event objects
+        }
     }
 }
