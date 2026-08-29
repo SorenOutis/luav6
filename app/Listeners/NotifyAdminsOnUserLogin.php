@@ -2,6 +2,7 @@
 
 namespace App\Listeners;
 
+use App\Models\User;
 use App\Services\AdminNotificationService;
 use Illuminate\Auth\Events\Login;
 
@@ -14,7 +15,7 @@ class NotifyAdminsOnUserLogin
     {
         $user = $event->user;
 
-        if (! $user) {
+        if (! $user instanceof User) {
             return;
         }
 
