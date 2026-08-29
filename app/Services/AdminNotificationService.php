@@ -50,6 +50,16 @@ class AdminNotificationService
             return Workspace::query()->find($source);
         }
 
+        if (is_object($source) && method_exists($source, 'workspace')) {
+            try {
+                $ws = $source->workspace;
+                if ($ws instanceof Workspace) {
+                    return $ws;
+                }
+            } catch (Throwable) {
+            }
+        }
+
         if (is_object($source) && isset($source->workspace_id) && $source->workspace_id) {
             $ws = Workspace::query()->find($source->workspace_id);
             if ($ws) {
@@ -58,35 +68,44 @@ class AdminNotificationService
         }
 
         if ($source instanceof User) {
-            if ($source->currentWorkspace) {
-                return $source->currentWorkspace;
-            }
+            try {
+                if ($source->currentWorkspace) {
+                    return $source->currentWorkspace;
+                }
 
-            $wsId = $source->workspaces()->value('workspaces.id');
-            if ($wsId) {
-                return Workspace::query()->find($wsId);
-            }
+                $wsId = $source->workspaces()->value('workspaces.id');
+                if ($wsId) {
+                    return Workspace::query()->find($wsId);
+                }
 
-            $sectionWsId = $source->sections()->whereNotNull('workspace_id')->value('workspace_id');
-            if ($sectionWsId) {
-                return Workspace::query()->find($sectionWsId);
+                $sectionWsId = $source->sections()->whereNotNull('workspace_id')->value('workspace_id');
+                if ($sectionWsId) {
+                    return Workspace::query()->find($sectionWsId);
+                }
+            } catch (Throwable) {
             }
         }
 
-        $contextId = app(WorkspaceContext::class)->id();
-        if ($contextId) {
-            $ws = Workspace::query()->find($contextId);
-            if ($ws) {
-                return $ws;
+        try {
+            $contextId = app(WorkspaceContext::class)->id();
+            if ($contextId) {
+                $ws = Workspace::query()->find($contextId);
+                if ($ws) {
+                    return $ws;
+                }
             }
+        } catch (Throwable) {
         }
 
-        $authUser = auth()->user();
-        if ($authUser && $authUser->current_workspace_id) {
-            $ws = Workspace::query()->find($authUser->current_workspace_id);
-            if ($ws) {
-                return $ws;
+        try {
+            $authUser = auth()->user();
+            if ($authUser instanceof User && $authUser->current_workspace_id) {
+                $ws = Workspace::query()->find($authUser->current_workspace_id);
+                if ($ws) {
+                    return $ws;
+                }
             }
+        } catch (Throwable) {
         }
 
         return null;
