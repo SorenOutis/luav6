@@ -2742,6 +2742,7 @@ html[data-low-end] .welcome-defer {
 
     .mobile-dashboard-icon-button,
     .mobile-dashboard-bell,
+    .mobile-dashboard-join,
     .mobile-dashboard-dismiss {
         display: inline-flex;
         min-height: 2.75rem;
@@ -2759,6 +2760,7 @@ html[data-low-end] .welcome-defer {
 
     .mobile-dashboard-icon-button:active,
     .mobile-dashboard-bell:active,
+    .mobile-dashboard-join:active,
     .mobile-dashboard-dismiss:active,
     .mobile-dashboard-section-trigger:active,
     .mobile-dashboard-next-item:active {
@@ -2769,6 +2771,25 @@ html[data-low-end] .welcome-defer {
     .mobile-dashboard-bell {
         border: 0;
         color: var(--color-foreground);
+    }
+
+    .mobile-dashboard-join {
+        border: 0;
+        background: var(--color-primary);
+        color: var(--color-primary-foreground);
+        box-shadow:
+            0 1px 2px rgb(0 0 0 / 0.06),
+            0 8px 20px -12px
+                color-mix(in srgb, var(--color-primary) 55%, transparent);
+    }
+
+    .mobile-dashboard-join:hover {
+        filter: brightness(1.05);
+    }
+
+    .mobile-dashboard-join:active {
+        background: var(--color-primary);
+        filter: brightness(0.96);
     }
 
     .mobile-dashboard-announcement {

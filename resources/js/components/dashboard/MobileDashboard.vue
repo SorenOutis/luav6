@@ -2,10 +2,10 @@
 import { Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
-    Bell,
     BookOpenCheck,
     CalendarClock,
     ChevronDown,
+    Plus,
     RefreshCw,
     Sparkles,
     Trophy,
@@ -288,11 +288,12 @@ const seasonDateLabel = computed(() => {
                 </div>
                 <button
                     type="button"
-                    class="mobile-dashboard-bell"
-                    aria-label="Open notifications"
-                    @click="emit('refresh')"
+                    class="mobile-dashboard-join"
+                    aria-label="Join section"
+                    title="Join section"
+                    @click="emit('openSectionModal')"
                 >
-                    <Bell class="h-5 w-5" />
+                    <Plus class="h-5 w-5" />
                 </button>
             </div>
         </section>
