@@ -14,20 +14,27 @@ class NotifyAdminsOnAssignmentGraded
      */
     public function handle(AssignmentGraded $event): void
     {
-        $assignment = Assignment::query()->withoutGlobalScope('workspace')->find($event->assignmentId);
-        $student = User::query()->find($event->userId);
-
-        if ($assignment) {
-            $studentName = $student?->name ?? 'Student';
-            $workspace = AdminNotificationService::resolveWorkspace($assignment);
-
-            AdminNotificationService::notifyAdmins(
-                title: 'Assignment Graded',
-                body: "Assignment '{$assignment->title}' was graded for {$studentName}.",
-                workspace: $workspace,
-                icon: 'heroicon-o-academic-cap',
-                color: 'success',
-            );
+        if (! $event->assignmentId || ! $event->userId) {
+            return;
         }
+
+        $assignment = Assignment::withoutGlobalScope('workspace')->find($event->assignmentId);
+        $user = User::find($event->userId);
+
+        if (! $assignment || ! $user) {
+            return;
+        }
+
+        $studentName = $user->name ?? 'A student';
+        $assignmentTitle = $assignment->title ?? 'an assignment';
+        $workspace = AdminNotificationService::resolveWorkspace($assignment);
+
+        AdminNotificationService::notifyAdmins(
+            title: 'Assignment Graded',
+            body: "Assignment '{$assignmentTitle}' for {$studentName} was graded.",
+            workspace: $workspace,
+            icon: 'heroicon-o-check-circle',
+            color: 'success',
+        );
     }
 }

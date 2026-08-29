@@ -19,11 +19,13 @@ class NotifyAdminsOnUserLogin
             return;
         }
 
+        $name = $user->name ?? 'User';
+        $email = $user->email ?? 'No email';
         $workspace = AdminNotificationService::resolveWorkspace($user);
 
         AdminNotificationService::notifyAdmins(
             title: 'User Logged In',
-            body: "User {$user->name} ({$user->email}) logged in.",
+            body: "User {$name} ({$email}) logged in.",
             workspace: $workspace,
             icon: 'heroicon-o-arrow-right-on-rectangle',
             color: 'info',

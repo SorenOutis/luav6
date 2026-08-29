@@ -19,11 +19,13 @@ class NotifyAdminsOnUserRegistered
             return;
         }
 
+        $name = $user->name ?? 'User';
+        $email = $user->email ?? 'No email';
         $workspace = AdminNotificationService::resolveWorkspace($user);
 
         AdminNotificationService::notifyAdmins(
             title: 'New User Registered',
-            body: "User {$user->name} ({$user->email}) registered.",
+            body: "User {$name} ({$email}) registered.",
             workspace: $workspace,
             icon: 'heroicon-o-user-plus',
             color: 'success',
