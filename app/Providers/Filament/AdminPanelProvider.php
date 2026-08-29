@@ -72,7 +72,7 @@ class AdminPanelProvider extends PanelProvider
             ->plugins(array_filter([
                 FilamentJobsMonitorPlugin::make(),
                 class_exists(FilamentNotificationBellPlugin::class)
-                    ? FilamentNotificationBellPlugin::make()->withPolling(30)
+                    ? FilamentNotificationBellPlugin::make()
                     : null,
             ]))
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
