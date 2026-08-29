@@ -7,7 +7,6 @@ use App\Models\Setting;
 use App\Models\SocialAccount;
 use App\Models\User;
 use App\Support\SocialProviders;
-use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -150,7 +149,6 @@ class SocialAuthController extends Controller
         }
 
         Auth::login($user, remember: true);
-        event(new Login('web', $user, true));
         $request->session()->regenerate();
 
         return redirect()->intended(config('fortify.home', '/dashboard'));
