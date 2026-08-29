@@ -9,7 +9,6 @@ use App\Models\Workspace;
 use App\Services\AdminNotificationService;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Notifications\DatabaseNotification;
 
 test('super admin receives notifications with workspace info', function () {
     $superAdmin = User::factory()->create([
@@ -25,8 +24,7 @@ test('super admin receives notifications with workspace info', function () {
         workspace: $workspace,
     );
 
-    $notification = DatabaseNotification::query()
-        ->where('notifiable_id', $superAdmin->id)
+    $notification = $superAdmin->notifications()
         ->get()
         ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Test Event'));
 
@@ -59,13 +57,11 @@ test('workspace admin receives notifications only for their workspace', function
         workspace: $workspaceA,
     );
 
-    $notificationA = DatabaseNotification::query()
-        ->where('notifiable_id', $adminA->id)
+    $notificationA = $adminA->notifications()
         ->get()
         ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Workspace A Event'));
 
-    $notificationB = DatabaseNotification::query()
-        ->where('notifiable_id', $adminB->id)
+    $notificationB = $adminB->notifications()
         ->get()
         ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Workspace A Event'));
 
@@ -90,8 +86,7 @@ test('workspace admin associated via section receives notifications for their wo
         workspace: $workspace,
     );
 
-    $notification = DatabaseNotification::query()
-        ->where('notifiable_id', $sectionAdmin->id)
+    $notification = $sectionAdmin->notifications()
         ->get()
         ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Section Workspace Event'));
 
@@ -111,8 +106,7 @@ test('registered event triggers notifications', function () {
 
     event(new Registered($newUser));
 
-    $notification = DatabaseNotification::query()
-        ->where('notifiable_id', $superAdmin->id)
+    $notification = $superAdmin->notifications()
         ->get()
         ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'New User Registered'));
 
@@ -133,8 +127,7 @@ test('login event triggers notifications', function () {
 
     event(new Login('web', $user, false));
 
-    $notification = DatabaseNotification::query()
-        ->where('notifiable_id', $superAdmin->id)
+    $notification = $superAdmin->notifications()
         ->get()
         ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'User Logged In'));
 
@@ -160,8 +153,7 @@ test('exam submission triggers notifications', function () {
         'status' => 'submitted',
     ]);
 
-    $notification = DatabaseNotification::query()
-        ->where('notifiable_id', $superAdmin->id)
+    $notification = $superAdmin->notifications()
         ->get()
         ->first(fn ($n) => str_contains($n->data['title'] ?? '', 'Exam Submitted'));
 
