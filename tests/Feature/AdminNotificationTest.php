@@ -17,7 +17,7 @@ class AdminNotificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_super_admin_receives_notifications_with_workspace_info()
+    public function test_super_admin_receives_notifications_with_workspace_info(): void
     {
         $superAdmin = User::factory()->create([
             'is_admin' => true,
@@ -41,7 +41,7 @@ class AdminNotificationTest extends TestCase
         $this->assertStringContainsString('Workspace: Math Workspace', $notification->data['body']);
     }
 
-    public function test_workspace_admin_receives_notifications_only_for_their_workspace()
+    public function test_workspace_admin_receives_notifications_only_for_their_workspace(): void
     {
         $workspaceA = Workspace::factory()->create(['name' => 'Workspace A']);
         $workspaceB = Workspace::factory()->create(['name' => 'Workspace B']);
@@ -76,7 +76,7 @@ class AdminNotificationTest extends TestCase
         $this->assertNull($notificationB);
     }
 
-    public function test_registered_event_triggers_notifications()
+    public function test_registered_event_triggers_notifications(): void
     {
         $superAdmin = User::factory()->create([
             'is_admin' => true,
@@ -99,7 +99,7 @@ class AdminNotificationTest extends TestCase
         $this->assertStringContainsString('John Doe', $notification->data['body']);
     }
 
-    public function test_login_event_triggers_notifications()
+    public function test_login_event_triggers_notifications(): void
     {
         $superAdmin = User::factory()->create([
             'is_admin' => true,
@@ -122,7 +122,7 @@ class AdminNotificationTest extends TestCase
         $this->assertStringContainsString('Jane Smith', $notification->data['body']);
     }
 
-    public function test_exam_submission_triggers_notifications()
+    public function test_exam_submission_triggers_notifications(): void
     {
         $superAdmin = User::factory()->create([
             'is_admin' => true,
@@ -133,7 +133,7 @@ class AdminNotificationTest extends TestCase
         $student = User::factory()->create(['name' => 'Physics Student']);
         $exam = Exam::factory()->create(['title' => 'Physics Final', 'workspace_id' => $workspace->id]);
 
-        ExamSubmission::create([
+        ExamSubmission::query()->create([
             'user_id' => $student->id,
             'exam_id' => $exam->id,
             'status' => 'submitted',

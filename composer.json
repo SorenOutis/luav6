@@ -10,7 +10,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "benriadh1/filament-notification-bell": "^1.0",
+        "benriadh1/filament-notification-bell": "*",
         "croustibat/filament-jobs-monitor": "4.5.*",
         "filament/filament": "^5.6",
         "inertiajs/inertia-laravel": "^2.0",

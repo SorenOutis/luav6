@@ -8,6 +8,7 @@ use App\Support\WorkspaceContext;
 use Filament\Notifications\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class AdminNotificationService
 {
@@ -127,15 +128,15 @@ class AdminNotificationService
     ): void {
         $workspaceAdmins = User::query()
             ->where('is_admin', true)
-            ->where(function ($q) {
+            ->where(function ($q): void {
                 $q->where('is_super_admin', false)->orWhereNull('is_super_admin');
             })
-            ->where(function ($q) use ($workspaceId) {
+            ->where(function ($q) use ($workspaceId): void {
                 $q->where('current_workspace_id', $workspaceId)
-                    ->orWhereHas('workspaces', function ($wq) use ($workspaceId) {
+                    ->orWhereHas('workspaces', function ($wq) use ($workspaceId): void {
                         $wq->where('workspaces.id', $workspaceId);
                     })
-                    ->orWhereHas('sections', function ($sq) use ($workspaceId) {
+                    ->orWhereHas('sections', function ($sq) use ($workspaceId): void {
                         $sq->where('sections.workspace_id', $workspaceId);
                     });
             })
@@ -177,7 +178,7 @@ class AdminNotificationService
             if (method_exists($user, 'notifyBell')) {
                 $user->notifyBell();
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::error("Failed to send notification to user {$user->id}: ".$e->getMessage());
         }
     }
