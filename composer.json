@@ -82,23 +82,15 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "echo [ci:check] 1/5 Running lint check...",
             "npm run lint:check",
-            "echo [ci:check] 2/5 Running format check...",
             "npm run format:check",
-            "echo [ci:check] 3/5 Running types check...",
             "npm run types:check",
-            "echo [ci:check] 4/5 Running JS tests...",
             "npm run test:js",
-            "echo [ci:check] 5/5 Running PHP tests...",
             "@test"
         ],
         "test": [
-            "echo [test] 1/3 Clearing config...",
             "@php artisan config:clear --ansi",
-            "echo [test] 2/3 Checking lint...",
             "@lint:check",
-            "echo [test] 3/3 Running artisan test...",
             "@php artisan test"
         ],
         "test:preflight": [
