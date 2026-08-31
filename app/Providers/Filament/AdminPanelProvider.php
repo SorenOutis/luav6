@@ -31,7 +31,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use YourVendor\FilamentNotificationBell\FilamentNotificationBellPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -69,9 +68,9 @@ class AdminPanelProvider extends PanelProvider
                 AdminDashboard::class,
             ])
             ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->plugins([
                 FilamentJobsMonitorPlugin::make(),
-                FilamentNotificationBellPlugin::make(),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([

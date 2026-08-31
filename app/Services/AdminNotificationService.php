@@ -213,9 +213,6 @@ class AdminNotificationService
                 'read_at' => null,
             ]);
 
-            if (method_exists($user, 'notifyBell')) {
-                $user->notifyBell();
-            }
         } catch (Throwable $e) {
             Log::error('Failed to send notification to user '.$user->id.': '.$e->getMessage());
         }
