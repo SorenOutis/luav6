@@ -4,6 +4,21 @@ import importPlugin from 'eslint-plugin-import';
 import vue from 'eslint-plugin-vue';
 
 export default defineConfigWithVueTs(
+    {
+        ignores: [
+            '**/vendor/**',
+            '**/node_modules/**',
+            '**/public/**',
+            '**/bootstrap/ssr/**',
+            'tailwind.config.js',
+            'vite.config.ts',
+            'resources/js/actions/**',
+            'resources/js/components/ui/**',
+            'resources/js/routes/**',
+            'resources/js/routes_temp/**',
+            'resources/js/wayfinder/**',
+        ],
+    },
     vue.configs['flat/essential'],
     vueTsConfigs.recommended,
     {
@@ -59,21 +74,6 @@ export default defineConfigWithVueTs(
                 'prefer-top-level',
             ],
         },
-    },
-    {
-        ignores: [
-            'vendor',
-            'node_modules',
-            'public',
-            'bootstrap/ssr',
-            'tailwind.config.js',
-            'vite.config.ts',
-            'resources/js/actions/**',
-            'resources/js/components/ui/*',
-            'resources/js/routes/**',
-            'resources/js/routes_temp/**',
-            'resources/js/wayfinder/**',
-        ],
     },
     prettier, // Turn off all rules that might conflict with Prettier
 );

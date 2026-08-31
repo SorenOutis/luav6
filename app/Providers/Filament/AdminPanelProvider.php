@@ -67,6 +67,8 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 AdminDashboard::class,
             ])
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->plugins([
                 FilamentJobsMonitorPlugin::make(),
             ])

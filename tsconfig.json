@@ -35,11 +35,27 @@
         // "baseUrl": "./",                                  /* Specify the base directory to resolve non-relative module names. */
         "paths": {
             /* Specify a set of entries that re-map imports to additional lookup locations. */
-            "@/routes": ["./resources/js/routes_temp/routes/index.ts"],
-            "@/routes/*": ["./resources/js/routes_temp/routes/*"],
-            "@/actions/*": ["./resources/js/routes_temp/actions/*"],
-            "@/wayfinder": ["./resources/js/routes_temp/wayfinder/index.ts"],
-            "@/*": ["./resources/js/*"]
+            "@/routes": [
+                "./resources/js/routes_temp/routes/index.ts",
+                "./resources/js/routes_temp/routes/index"
+            ],
+            "@/routes/*": [
+                "./resources/js/routes_temp/routes/*",
+                "./resources/js/routes_temp/routes/*/index.ts",
+                "./resources/js/routes_temp/routes/*/index"
+            ],
+            "@/actions/*": [
+                "./resources/js/routes_temp/actions/*",
+                "./resources/js/routes_temp/actions/*/index.ts",
+                "./resources/js/routes_temp/actions/*/index"
+            ],
+            "@/wayfinder": [
+                "./resources/js/routes_temp/wayfinder/index.ts",
+                "./resources/js/routes_temp/wayfinder/index"
+            ],
+            "@/*": [
+                "./resources/js/*"
+            ]
         },
         // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
         // "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */
