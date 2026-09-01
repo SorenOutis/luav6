@@ -10,9 +10,8 @@ return new class extends Migration
      * One exam can ship as several interchangeable "sets" (Set A, Set B, …).
      *
      * Each set owns its own copy of the exam parts/questions, and students are
-     * rotated through the sets in order when they start the exam: the first
-     * student gets Set A, the second Set B, and so on, wrapping around once the
-     * last set is handed out.
+     * dealt a set from a shuffled deck when they start the exam — every set is
+     * handed out before the deck repeats.
      */
     public function up(): void
     {

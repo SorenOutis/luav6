@@ -19,10 +19,14 @@ use Illuminate\Support\Facades\DB;
  * Hands out exam sets and resolves which parts a student may see.
  *
  * An exam can ship as several interchangeable sets (Set A, Set B, …). A
- * student is given a set the first time they open the exam — the first student
- * gets Set A, the second Set B, the third Set A again when there are only two
- * — and keeps that set for the whole attempt, so reloading or resuming never
- * swaps their questions.
+ * student is given a set the first time they open the exam, drawn from a
+ * shuffled deck of the exam's sets, and keeps that set for the whole attempt,
+ * so reloading or resuming never swaps their questions.
+ *
+ * The deck is shuffled once per exam and section, so the order is scrambled
+ * (not the predictable "first opener always gets Set A") while still dealing
+ * every set out before repeating — a section of students is split evenly
+ * across the sets. See dealOrder().
  */
 class ExamSetAssignmentService
 {
@@ -33,7 +37,7 @@ class ExamSetAssignmentService
     private array $resolved = [];
 
     /**
-     * Sets in rotation order.
+     * Sets in stored order (sort_order, then id).
      *
      * @return Collection<int, ExamSet>
      */
@@ -50,8 +54,9 @@ class ExamSetAssignmentService
      * Per-exam set + part totals for a listing, in three queries.
      *
      * `set` is only populated once the student has actually been handed a set,
-     * so browsing the list never reserves a rotation slot. Until then the
-     * totals describe the first set, which is the set they will be given.
+     * so browsing the list never reserves a deal slot. Until then the totals
+     * describe the first set, which matches the shuffled deck's first slot
+     * whenever the sets are parallel (equal part counts).
      *
      * @param  array<int, int>  $examIds
      * @return array<int, array{set: ?ExamSet, total_parts: int}>
@@ -132,7 +137,7 @@ class ExamSetAssignmentService
      * The set this student was already given, without handing out a new one.
      *
      * Use this for read-only screens (exam listings) so that merely browsing
-     * cannot consume a rotation slot.
+     * cannot consume a deal slot.
      */
     public function assignedSet(Exam $exam, User $user): ?ExamSet
     {
@@ -140,8 +145,8 @@ class ExamSetAssignmentService
     }
 
     /**
-     * The set this student should work on, assigning one in rotation the first
-     * time they open the exam.
+     * The set this student should work on, dealing them one from the shuffled
+     * deck the first time they open the exam.
      */
     public function resolveSet(Exam $exam, User $user): ?ExamSet
     {
@@ -209,6 +214,41 @@ class ExamSetAssignmentService
         });
     }
 
+    /**
+     * The order the exam's sets are dealt in.
+     *
+     * The deck is shuffled deterministically per exam + section: every request
+     * for the same exam yields the same deal (so the Nth student to start
+     * always draws slot N, and a student's set never changes), but the order
+     * is scrambled rather than the fixed Set A, Set B, … sort order a student
+     * could otherwise predict. A single-set exam simply deals that one set.
+     *
+     * Kept public so read-only screens (and tests) can show or assert the same
+     * order the assignment uses without triggering an assignment themselves.
+     *
+     * @return Collection<int, ExamSet>
+     */
+    public function dealOrder(Exam $exam, ?Collection $sets = null): Collection
+    {
+        $items = ($sets ?? $this->sets($exam))->values()->all();
+
+        if (count($items) < 2) {
+            return collect($items);
+        }
+
+        $state = $this->rotationSeed($exam);
+
+        // Fisher–Yates driven by a self-contained PRNG: the same seed always
+        // produces the same deal, and the process-wide RNG state is untouched.
+        for ($i = count($items) - 1; $i > 0; $i--) {
+            $state = (int) ((($state * 1103515245) + 12345) & 0x7FFFFFFF);
+            $j = $state % ($i + 1);
+            [$items[$i], $items[$j]] = [$items[$j], $items[$i]];
+        }
+
+        return collect($items);
+    }
+
     private function resolve(Exam $exam, User $user, bool $assign): ?ExamSet
     {
         // Assigning is idempotent, so a request that asks for the set several
@@ -256,8 +296,9 @@ class ExamSetAssignmentService
     }
 
     /**
-     * Rotate to the next set: the Nth student to start gets set N (modulo the
-     * number of sets).
+     * Deal the next set from the exam's shuffled deck: the Nth student to
+     * start gets the Nth slot of the shuffled order (modulo the number of
+     * sets), so every set is dealt out before the deck repeats.
      *
      * The read-modify-write runs inside a transaction and the unique
      * (exam_id, user_id) index is the real guard, so two students starting at
@@ -292,7 +333,9 @@ class ExamSetAssignmentService
                     ->lockForUpdate()
                     ->count();
 
-                $set = $sets->values()->get($handedOut % $sets->count()) ?? $sets->first();
+                $deck = $this->dealOrder($exam, $sets);
+
+                $set = $deck->get($handedOut % $deck->count()) ?? $deck->first();
 
                 $this->persist($exam, $user, $set, null);
 
@@ -305,6 +348,21 @@ class ExamSetAssignmentService
                 ? $sets->firstWhere('id', (int) $existing->exam_set_id)
                 : $sets->first();
         }
+    }
+
+    /**
+     * One stable shuffle seed per exam + section.
+     *
+     * Basing the seed on the section keeps each section's deal independent
+     * (the same exam always shuffles the same way for that section), while a
+     * global exam without a section falls back to a single shuffle shared by
+     * everyone taking it.
+     */
+    private function rotationSeed(Exam $exam): int
+    {
+        $pool = $exam->section_id !== null ? 'section:'.$exam->section_id : 'exam';
+
+        return crc32($pool.':'.$exam->getKey()) & 0x7FFFFFFF;
     }
 
     /**
