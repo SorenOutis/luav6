@@ -2,6 +2,7 @@
 
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\ExamSubmission;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
