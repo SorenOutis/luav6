@@ -1494,6 +1494,8 @@ const activitiesTourSteps: TourStep[] = [
                                             >Your response</span
                                         >
                                         <p
+                                            data-lenis-prevent
+                                            @wheel.stop
                                             class="custom-scrollbar mt-1 text-sm leading-relaxed whitespace-pre-wrap text-foreground sm:max-h-52 sm:overflow-y-auto"
                                         >
                                             {{
@@ -1557,6 +1559,8 @@ const activitiesTourSteps: TourStep[] = [
                                                     qIndex + 1,
                                                 )?.ai_feedback
                                             "
+                                            data-lenis-prevent
+                                            @wheel.stop
                                             class="custom-scrollbar mt-2 text-sm leading-relaxed text-foreground/80 sm:max-h-52 sm:overflow-y-auto"
                                         >
                                             {{

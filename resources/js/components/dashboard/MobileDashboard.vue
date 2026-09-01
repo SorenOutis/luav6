@@ -230,7 +230,7 @@ const seasonDateLabel = computed(() => {
 </script>
 
 <template>
-    <div class="mobile-dashboard-composition md:hidden">
+    <div class="mobile-dashboard-composition">
         <section class="mobile-dashboard-greeting" data-tour="dashboard-hero">
             <div class="mobile-dashboard-greeting__topline">
                 <span class="mobile-dashboard-kicker">Your learning space</span>

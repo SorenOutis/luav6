@@ -80,6 +80,8 @@ const visibleSessions = computed(() => props.sessions);
                 <SidebarGroupContent class="pt-1 pl-2">
                     <SidebarMenu
                         v-if="visibleSessions.length"
+                        data-lenis-prevent
+                        @wheel.stop
                         class="max-h-72 overflow-y-auto pr-1"
                     >
                         <SidebarMenuItem

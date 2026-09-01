@@ -291,10 +291,14 @@ describe('Exams/Show.vue answer recording', () => {
         const wrapper = await mountShow({}, makeMatchingExam());
         await startPart(wrapper);
 
+        // Only one of the mobile carousel / desktop grid question layouts is
+        // ever mounted at a time (gated on the isMdUp breakpoint); jsdom's
+        // default viewport (1024px) resolves to the desktop layout, so the
+        // matching selects carry the `matching-desktop-` id prefix here.
         const selects = wrapper
             .findAll('select')
             .filter((select: any) =>
-                select.attributes('id')?.startsWith('matching-mobile-'),
+                select.attributes('id')?.startsWith('matching-desktop-'),
             );
         expect(selects).toHaveLength(2);
         await selects[0].setValue('Crawlability');
@@ -360,15 +364,17 @@ describe('Exams/Show.vue answer recording', () => {
         expect(
             restored
                 .findAll('select')
-                .find((select: any) =>
-                    select.attributes('id') === 'matching-mobile-0-0',
+                .find(
+                    (select: any) =>
+                        select.attributes('id') === 'matching-desktop-0-0',
                 )?.element.value,
         ).toBe('Crawlability');
         expect(
             restored
                 .findAll('select')
-                .find((select: any) =>
-                    select.attributes('id') === 'matching-mobile-0-1',
+                .find(
+                    (select: any) =>
+                        select.attributes('id') === 'matching-desktop-0-1',
                 )?.element.value,
         ).toBe('Content and headings');
     });

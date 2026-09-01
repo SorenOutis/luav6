@@ -297,7 +297,11 @@ const reject = async () => {
             content-class="max-w-2xl"
             @close="approvalOpen = false"
         >
-            <div class="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
+            <div
+                data-lenis-prevent
+                @wheel.stop
+                class="max-h-[55vh] space-y-2 overflow-y-auto pr-1"
+            >
                 <p class="text-sm font-semibold text-foreground">
                     {{ action.title }}
                 </p>

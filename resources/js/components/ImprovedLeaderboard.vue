@@ -1522,7 +1522,11 @@ const changeSeason = async (seasonId: number) => {
                     </div>
                 </div>
 
-                <div class="max-h-[400px] scrollbar-none overflow-y-auto">
+                <div
+                    data-lenis-prevent
+                    @wheel.stop
+                    class="max-h-[400px] scrollbar-none overflow-y-auto"
+                >
                     <div
                         v-if="isLoadingHistory"
                         class="flex flex-col items-center gap-3 py-16"
@@ -1689,6 +1693,8 @@ const changeSeason = async (seasonId: number) => {
 
                 <!-- 5 Profiles per Layer (Row) Grid -->
                 <div
+                    data-lenis-prevent
+                    @wheel.stop
                     class="max-h-[60vh] scrollbar-none overflow-y-auto px-4 py-5 sm:px-6"
                 >
                     <div
