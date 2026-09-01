@@ -18,6 +18,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class EditExam extends EditRecord
 {
@@ -39,6 +40,8 @@ class EditExam extends EditRecord
     {
         return [
             $this->viewAnswerAction(),
+
+            $this->exportQuestionsAction(),
 
             Action::make('downloadTemplate')
                 ->label('Download Template')
@@ -94,6 +97,103 @@ class EditExam extends EditRecord
 
             DeleteAction::make(),
         ];
+    }
+
+    /**
+     * Downloads the exam's questions exactly as they are right now — including
+     * every edit made on this page — in the same CSV format "Upload Questions"
+     * accepts, so the file can be re-imported (or backed up) as-is.
+     *
+     * A single-set exam downloads immediately as one CSV. A multi-set exam asks
+     * which set to export; "All sets" packages one CSV per set into a ZIP.
+     */
+    private function exportQuestionsAction(): Action
+    {
+        $action = Action::make('exportQuestions')
+            ->label('Export Questions')
+            ->icon('heroicon-o-arrow-down-tray')
+            ->color('success');
+
+        if ($this->record->sets()->count() > 1) {
+            $action
+                ->form([
+                    Select::make('set')
+                        ->label('Export set')
+                        ->options(fn (): array => $this->exportSetOptions())
+                        ->default('all')
+                        ->required()
+                        ->helperText('“All sets” packages every set into one ZIP (one CSV per set). Pick a single set to download just that CSV.'),
+                ])
+                ->action(function (array $data) {
+                    return $this->streamExport((string) ($data['set'] ?? 'all'));
+                });
+        } else {
+            $action->action(fn () => $this->streamExport('all'));
+        }
+
+        return $action;
+    }
+
+    /**
+     * The sets an export can target, with "All sets (ZIP)" offered first when
+     * the exam has more than one.
+     *
+     * @return array<string, string>
+     */
+    private function exportSetOptions(): array
+    {
+        $sets = $this->record
+            ->sets()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('title', 'id')
+            ->all();
+
+        return ['all' => 'All sets (ZIP)'] + $sets;
+    }
+
+    /**
+     * Streams the export the admin asked for. Returns the download response, or
+     * null after showing a warning when there is nothing to export.
+     *
+     * @return mixed A StreamedResponse (CSV), a BinaryFileResponse (ZIP), or null.
+     */
+    private function streamExport(string $choice)
+    {
+        $service = app(ExamTemplateService::class);
+        $exam = $this->record;
+
+        if ($choice === 'all' && $exam->sets()->count() > 1) {
+            $zipPath = $service->exportZip($exam);
+
+            return response()
+                ->download($zipPath, Str::slug($exam->title ?: 'exam').'-questions.zip')
+                ->deleteFileAfterSend(true);
+        }
+
+        $set = $exam->sets()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->when($choice !== 'all', fn ($query) => $query->whereKey((int) $choice))
+            ->first();
+
+        if ($set === null) {
+            Notification::make()
+                ->title('Nothing to export')
+                ->body('This exam has no questions yet.')
+                ->warning()
+                ->send();
+
+            return null;
+        }
+
+        $csv = $service->exportCsv($exam, $set);
+
+        return response()->streamDownload(
+            fn () => print ($csv),
+            Str::slug($set->title ?: 'set-'.$set->getKey()).'.csv',
+            ['Content-Type' => 'text/csv']
+        );
     }
 
     /**

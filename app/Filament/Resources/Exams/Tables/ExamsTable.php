@@ -18,6 +18,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ExamsTable
 {
@@ -60,6 +61,41 @@ class ExamsTable
                 ActionGroup::make([
                     EditAction::make()
                         ->label('Edit exam'),
+                    Action::make('exportQuestions')
+                        ->label('Export Questions')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('success')
+                        ->action(function (Exam $record) {
+                            $service = new ExamTemplateService;
+
+                            if ($record->sets()->count() > 1) {
+                                $zipPath = $service->exportZip($record);
+
+                                return response()
+                                    ->download($zipPath, Str::slug($record->title ?: 'exam').'-questions.zip')
+                                    ->deleteFileAfterSend(true);
+                            }
+
+                            $set = $record->sets()->first();
+
+                            if ($set === null) {
+                                Notification::make()
+                                    ->title('Nothing to export')
+                                    ->body('This exam has no questions yet.')
+                                    ->warning()
+                                    ->send();
+
+                                return null;
+                            }
+
+                            $csv = $service->exportCsv($record, $set);
+
+                            return response()->streamDownload(
+                                fn () => print ($csv),
+                                Str::slug($set->title ?: 'set-'.$set->getKey()).'.csv',
+                                ['Content-Type' => 'text/csv']
+                            );
+                        }),
                     Action::make('uploadQuestions')
                         ->label('Import Questions')
                         ->icon('heroicon-o-arrow-up-tray')
