@@ -2,7 +2,8 @@
 
 /**
  * Exam sets: an exam can ship as several interchangeable versions and each
- * student is handed one of them, in rotation, the first time they open it.
+ * student is dealt one of them from a shuffled deck the first time they open
+ * it, keeping that set for the whole attempt.
  */
 
 use App\Models\Exam;
@@ -14,6 +15,7 @@ use App\Models\ExamXpAward;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
+use App\Services\ExamSetAssignmentService;
 use App\Services\ExamXpAwardService;
 use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -67,22 +69,39 @@ function assignedSetId(Exam $exam, User $student): ?int
     return $assignment?->exam_set_id;
 }
 
-it('rotates students through the sets in order and wraps around', function () {
-    [$exam, $examSets, $section] = examSetsContext(2);
-    [$setA, $setB] = $examSets->all();
+/**
+ * The shuffled deal order for an exam, so tests can assert the Nth student
+ * receives the Nth slot without hard-coding Set A / Set B.
+ *
+ * @return Collection<int, ExamSet>
+ */
+function dealtSets(Exam $exam): Collection
+{
+    return app(ExamSetAssignmentService::class)->dealOrder($exam);
+}
 
-    $first = examSetsStudent($section);
-    $second = examSetsStudent($section);
-    $third = examSetsStudent($section);
+it('deals every set once before the deck repeats, in the shuffled order', function () {
+    [$exam, $examSets, $section] = examSetsContext(3);
+    $deck = dealtSets($exam);
 
-    actingAs($first)->get("/exams/{$exam->id}")->assertOk();
-    actingAs($second)->get("/exams/{$exam->id}")->assertOk();
-    actingAs($third)->get("/exams/{$exam->id}")->assertOk();
+    // The deal is a permutation of the exam's sets and is stable across calls
+    // (the Nth student always draws the same slot).
+    expect($deck->count())->toBe(3)
+        ->and($deck->pluck('id')->sort()->values()->all())->toBe($examSets->pluck('id')->sort()->values()->all())
+        ->and(dealtSets($exam)->pluck('id')->all())->toBe($deck->pluck('id')->all());
 
-    expect(assignedSetId($exam, $first))->toBe($setA->id)
-        ->and(assignedSetId($exam, $second))->toBe($setB->id)
-        // Only two sets exist, so the third student starts the rotation over.
-        ->and(assignedSetId($exam, $third))->toBe($setA->id);
+    $students = [
+        examSetsStudent($section),
+        examSetsStudent($section),
+        examSetsStudent($section),
+        examSetsStudent($section),
+    ];
+
+    foreach ($students as $index => $student) {
+        actingAs($student)->get("/exams/{$exam->id}")->assertOk();
+
+        expect(assignedSetId($exam, $student))->toBe($deck->get($index % 3)->id);
+    }
 });
 
 it('keeps the set a student was handed on every later visit', function () {
@@ -103,7 +122,7 @@ it('keeps the set a student was handed on every later visit', function () {
 
 it('only shows the questions of the set the student was handed', function () {
     [$exam, $examSets, $section] = examSetsContext(2);
-    [$setA, $setB] = $examSets->all();
+    $deck = dealtSets($exam);
 
     $first = examSetsStudent($section);
     $second = examSetsStudent($section);
@@ -111,21 +130,26 @@ it('only shows the questions of the set the student was handed', function () {
     $firstPage = actingAs($first)->get("/exams/{$exam->id}")->getContent();
     $secondPage = actingAs($second)->get("/exams/{$exam->id}")->getContent();
 
-    expect($firstPage)->toContain('Set A part')
-        ->and($firstPage)->not->toContain('Set B part')
-        ->and($secondPage)->toContain('Set B part')
-        ->and($secondPage)->not->toContain('Set A part');
+    $firstSet = $deck->get(0);
+    $secondSet = $deck->get(1);
+
+    expect($firstPage)->toContain($firstSet->title.' part')
+        ->and($firstPage)->not->toContain($secondSet->title.' part')
+        ->and($secondPage)->toContain($secondSet->title.' part')
+        ->and($secondPage)->not->toContain($firstSet->title.' part');
 });
 
 it('tells the student which set they are taking', function () {
     [$exam, $examSets, $section] = examSetsContext(2);
     $student = examSetsStudent($section);
 
+    $expected = dealtSets($exam)->first()->title;
+
     actingAs($student)
         ->get("/exams/{$exam->id}")
         ->assertInertia(fn (Assert $page) => $page
             ->component('Exams/Show')
-            ->where('exam.set.title', 'Set A')
+            ->where('exam.set.title', $expected)
             ->has('exam.parts', 1));
 });
 
@@ -146,10 +170,12 @@ it('shows the set on the exams page and counts only that set’s parts', functio
     // …and once the exam is opened, the card names the set and stays on it.
     actingAs($student)->get("/exams/{$exam->id}")->assertOk();
 
+    $expected = dealtSets($exam)->first()->title;
+
     actingAs($student)
         ->get('/exams')
         ->assertInertia(fn (Assert $page) => $page
-            ->where('examsBySeason.0.exams.0.set.title', 'Set A')
+            ->where('examsBySeason.0.exams.0.set.title', $expected)
             ->where('examsBySeason.0.exams.0.total_parts', 1));
 });
 
@@ -174,7 +200,8 @@ it('parks parts created without a set in the exam’s first set', function () {
     $setA = $examSets->first();
 
     // CSV imports, AI drafts and older write paths create parts with only an
-    // exam id; they belong to the first set so every student can reach them.
+    // exam id; they belong to the first set so that set's students can reach
+    // them.
     $part = ExamPart::factory()
         ->forExam($exam)
         ->identification(['Manila'])
@@ -183,9 +210,22 @@ it('parks parts created without a set in the exam’s first set', function () {
     expect($part->exam_set_id)->toBe($setA->id)
         ->and($exam->sets()->count())->toBe(2);
 
-    $student = examSetsStudent($section);
+    // The imported part lives on the first set, so whichever student the
+    // shuffled deck deals that set to is the one who can reach it — not
+    // necessarily the first to open the exam.
+    $slot = dealtSets($exam)->pluck('id')->search($setA->id);
 
-    expect(actingAs($student)->get("/exams/{$exam->id}")->getContent())->toContain('Imported part');
+    $students = [];
+    for ($i = 0; $i <= $slot; $i++) {
+        $students[] = examSetsStudent($section);
+    }
+
+    foreach ($students as $student) {
+        actingAs($student)->get("/exams/{$exam->id}")->assertOk();
+    }
+
+    expect(actingAs($students[$slot])->get("/exams/{$exam->id}")->getContent())
+        ->toContain('Imported part');
 });
 
 it('names sets automatically in rotation order', function () {
@@ -200,14 +240,14 @@ it('names sets automatically in rotation order', function () {
 
 it('awards XP once the student has finished every part of their own set', function () {
     [$exam, $examSets, $section] = examSetsContext(2);
-    $setA = $examSets->first();
+    $assigned = dealtSets($exam)->first();
     $student = examSetsStudent($section);
 
     actingAs($student)->get("/exams/{$exam->id}")->assertOk();
 
-    expect(assignedSetId($exam, $student))->toBe($setA->id);
+    expect(assignedSetId($exam, $student))->toBe($assigned->id);
 
-    actingAs($student)->post("/exams/{$exam->id}/parts/{$setA->parts()->firstOrFail()->id}/submit", [
+    actingAs($student)->post("/exams/{$exam->id}/parts/{$assigned->parts()->firstOrFail()->id}/submit", [
         'answers' => [['question_number' => 1, 'answer' => 1]],
     ])->assertRedirect();
 
@@ -218,18 +258,18 @@ it('awards XP once the student has finished every part of their own set', functi
 
 it('does not count the other sets’ parts towards a student’s completion', function () {
     [$exam, $examSets, $section] = examSetsContext(2);
-    $setA = $examSets->first();
-    $setB = $examSets->last();
+    $assigned = dealtSets($exam)->first();
+    $other = dealtSets($exam)->last();
     $student = examSetsStudent($section);
 
     actingAs($student)->get("/exams/{$exam->id}")->assertOk();
 
-    expect(assignedSetId($exam, $student))->toBe($setA->id);
+    expect(assignedSetId($exam, $student))->toBe($assigned->id);
 
-    // The student's own set (A) is untouched, so answering a part that belongs
-    // to another student's set must not complete the exam for them.
+    // The student's own set is untouched, so answering a part that belongs to
+    // another student's set must not complete the exam for them.
     ExamSubmission::factory()
-        ->forSubmission($student, $exam, $setB->parts()->firstOrFail())
+        ->forSubmission($student, $exam, $other->parts()->firstOrFail())
         ->create(['status' => 'submitted']);
 
     expect(app(ExamXpAwardService::class)->awardIfEligible($student, $exam))->toBeNull()

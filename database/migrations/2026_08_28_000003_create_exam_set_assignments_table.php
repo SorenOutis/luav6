@@ -11,8 +11,9 @@ return new class extends Migration
      *
      * The row is written the first time a student opens the exam and is never
      * rotated afterwards, so reloading or resuming always yields the same
-     * questions. The insertion order drives the rotation: the Nth student to
-     * start gets set N (modulo the number of sets).
+     * questions. The insertion order drives the deal: the Nth student to start
+     * gets the Nth slot of the exam's shuffled deck (modulo the number of
+     * sets).
      */
     public function up(): void
     {

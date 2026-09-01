@@ -129,7 +129,7 @@ class ExamForm
                             ->default(true),
                     ]),
                 Section::make('Exam Sets')
-                    ->description('Create one set per version of the exam. Students are rotated through the sets in order: the first student to start gets Set A, the second Set B, and the third gets Set A again when there are only two sets. Build or import the questions for each set separately — students only ever see the set they were given.')
+                    ->description('Create one set per version of the exam. Students are dealt a shuffled set the first time they open the exam — every set is handed out before the deck repeats, so a section is split evenly across the versions. Build or import the questions for each set separately — students only ever see the set they were given.')
                     ->columnSpanFull()
                     ->schema([
                         TextInput::make('sets_count')

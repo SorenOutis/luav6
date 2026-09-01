@@ -76,7 +76,7 @@ class Exam extends Model
     }
 
     /**
-     * Interchangeable versions of this exam, in rotation order.
+     * Interchangeable versions of this exam, in stored order.
      */
     public function sets(): HasMany
     {

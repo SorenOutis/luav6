@@ -42,7 +42,7 @@ class ExamsTable
                 TextColumn::make('sets_count')
                     ->label('Sets')
                     ->counts('sets')
-                    ->tooltip('Students are rotated through the sets: Set A, Set B, …'),
+                    ->tooltip('Students are dealt a shuffled set on their first open'),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {

@@ -69,8 +69,8 @@ class ExamFactory extends Factory
     /**
      * Ship the exam as several interchangeable sets (Set A, Set B, …).
      *
-     * Students are rotated through the sets in order, so tests that create
-     * parts afterwards must attach them to the set they mean — see
+     * Students are dealt one set each from a shuffled deck, so tests that
+     * create parts afterwards must attach them to the set they mean — see
      * ExamPartFactory::forSet().
      */
     public function withSets(int $count = 2): static

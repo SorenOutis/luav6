@@ -149,7 +149,7 @@ class ExamController extends Controller
         // One row per exam: the set this student was handed (if any) and the
         // number of parts in the set they will work through. Reading this from
         // summariesFor() keeps the listing at a fixed number of queries and —
-        // because it never assigns — browsing cannot consume a rotation slot.
+        // because it never assigns — browsing cannot consume a deal slot.
         $summaries = $this->examSets->summariesFor($user, $examIds->all());
 
         $examsData = $exams->map(function (Exam $exam) use ($allSubmissions, $summaries) {
