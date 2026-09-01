@@ -54,8 +54,14 @@ describe('dashboard student shell', () => {
 
         expect(page).toContain('dashboard-ui');
         expect(page).toContain('MobileDashboard');
+        // The mobile and desktop compositions are gated with a real v-if
+        // (isMdUp from useDashboardLayoutBreakpoint) rather than a CSS-only
+        // `hidden md:block` toggle, so only one tree is ever mounted at a
+        // time — see ACTIVITIES_AND_EXAMS_PERF_ANALYSIS.md / the dashboard
+        // dual-mount fix.
+        expect(page).toContain('v-if="isBooted && !isMdUp"');
         expect(page).toContain(
-            'class="dashboard-desktop-composition hidden md:block"',
+            'v-if="isMdUp" class="dashboard-desktop-composition"',
         );
         expect(page).toContain("e.status !== 'published'");
         expect(page).not.toContain('SpotlightCard');

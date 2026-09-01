@@ -30,6 +30,7 @@ import {
 import { onMounted, onUnmounted, ref, computed, reactive, watch } from 'vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useAccessibility } from '@/composables/useAccessibility';
+import { useMdBreakpoint } from '@/composables/useBreakpoint';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
@@ -37,6 +38,11 @@ import type { BreadcrumbItem } from '@/types';
 const { isVisible: isLoaderVisible } = useLoader();
 const { isDyslexiaFriendly, toggleDyslexiaMode, updateDyslexiaMode } =
     useAccessibility();
+// Drives which question layout mounts below (see the MOBILE / DESKTOP
+// question blocks). Mirrors Tailwind's `md:` breakpoint exactly (the same
+// boundary the old `block md:hidden` / `hidden md:grid` CSS toggle used),
+// seeded synchronously so there's no first-paint flash.
+const { isMdUp } = useMdBreakpoint();
 const isBooted = ref(false);
 
 type AnswerValue = string | number | string[] | null;
@@ -1388,11 +1394,14 @@ const handleGlobalKeydown = (e: KeyboardEvent) => {
 
     // Numbers 1-9 for picking MCQ options
     if (!isInput && /^[1-9]$/.test(e.key)) {
-        // Only VISIBLE question cards may be targeted. The mobile carousel
-        // card is always in the DOM (display:none on desktop) and used to be
-        // picked on tall viewports — its id parsed to NaN and the answer was
-        // written to answers[NaN], which the submit payload ignores, so the
-        // question silently stayed unanswered and the student answered again.
+        // Only one of the mobile carousel / desktop grid question layouts is
+        // ever mounted at a time (see the MOBILE/DESKTOP blocks below,
+        // gated on isMdUp), so `.question-card` always resolves to real,
+        // on-screen cards here. This used to also have to filter by
+        // getClientRects().length because BOTH layouts were mounted
+        // simultaneously (one merely display:none) — a hidden mobile card
+        // could get targeted, silently failing to record the answer. Kept
+        // the visibility filter anyway as cheap defense-in-depth.
         const cards = Array.from(
             document.querySelectorAll<HTMLElement>('.question-card'),
         ).filter((card) => card.getClientRects().length > 0);
@@ -1436,8 +1445,7 @@ const handleGlobalKeydown = (e: KeyboardEvent) => {
 
     // 'F' for Flagging
     if (!isInput && e.key.toLowerCase() === 'f') {
-        // Same visibility filter as the number shortcut — the hidden mobile
-        // card must never be picked (its id is q-mobile-*, not q-<index>).
+        // Same reasoning as the number shortcut above.
         const cards = Array.from(
             document.querySelectorAll<HTMLElement>('.question-card'),
         ).filter((card) => card.getClientRects().length > 0);
@@ -1471,17 +1479,15 @@ const goBackToList = () => {
 };
 
 const scrollToQuestion = (index: number) => {
-    // The mobile carousel card (q-mobile-<i>) and the desktop grid card
-    // (q-<i>) are both mounted; only one is visible at a time. Target the
-    // visible one so "jump to question" works on every breakpoint.
+    // Only one of the mobile carousel card (q-mobile-<i>) or the desktop
+    // grid card (q-<i>) is ever mounted at a time (gated by isMdUp), so
+    // whichever id exists is the one to target. Kept as a two-id lookup
+    // (rather than branching on isMdUp here) so this still works
+    // correctly across a live breakpoint change mid-scroll.
     const el =
-        [
-            document.getElementById(`q-${index}`),
-            document.getElementById(`q-mobile-${index}`),
-        ].filter(
-            (candidate): candidate is HTMLElement =>
-                !!candidate && candidate.getClientRects().length > 0,
-        )[0] ?? null;
+        document.getElementById(`q-${index}`) ??
+        document.getElementById(`q-mobile-${index}`) ??
+        null;
     if (!el) return;
 
     // Force reactivity: set to -1 first so clicking an already-highlighted
@@ -2748,8 +2754,19 @@ const feedbackContent = computed(() => {
                                     </div>
                                 </div>
 
-                                <!-- ═══ MOBILE: Single question carousel (swipeable) ═══ -->
-                                <div class="block md:hidden">
+                                <!-- ═══ MOBILE: Single question carousel (swipeable) ═══
+                                     Real v-if (not CSS hidden md:*) so the
+                                     desktop full question grid below never
+                                     mounts on phones: it used to be
+                                     display:none only, meaning every
+                                     question's inputs/textareas/selects were
+                                     still created, bound into `answers`, and
+                                     watched — and a "hidden" duplicate
+                                     .question-card was once picked by the
+                                     keyboard shortcuts below (see comments
+                                     near handleGlobalKeydown), silently
+                                     dropping an answer. -->
+                                <div v-if="!isMdUp">
                                     <!-- Current question card -->
                                     <div
                                         v-if="
@@ -3145,9 +3162,12 @@ const feedbackContent = computed(() => {
                                     </button>
                                 </div>
 
-                                <!-- ═══ DESKTOP: Full question grid ═══ -->
+                                <!-- ═══ DESKTOP: Full question grid ═══
+                                     Real v-if (see the MOBILE block above for
+                                     why this replaced `hidden md:grid`). -->
                                 <div
-                                    class="hidden gap-6 md:grid md:grid-cols-2"
+                                    v-if="isMdUp"
+                                    class="grid gap-6 md:grid-cols-2"
                                 >
                                     <div
                                         v-for="(
@@ -3827,6 +3847,8 @@ const feedbackContent = computed(() => {
                     <transition name="slide-right">
                         <div
                             v-if="showMobileProgress"
+                            data-lenis-prevent
+                            @wheel.stop
                             class="fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-[320px] overflow-y-auto rounded-l-2xl border-l border-border/50 bg-background/95 p-5 shadow-2xl backdrop-blur-2xl"
                             :style="{
                                 paddingTop:

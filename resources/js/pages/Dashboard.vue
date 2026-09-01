@@ -12,10 +12,6 @@ import {
     watch,
 } from 'vue';
 
-const dashboardContainer = ref<HTMLElement | null>(null);
-const { isMobile, isDesktop, prefersReducedMotion, isLowEndDevice } =
-    useMobile();
-
 import DailyRewardCard from '@/components/dashboard/DailyRewardCard.vue';
 import DashboardHero from '@/components/dashboard/DashboardHero.vue';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton.vue';
@@ -29,6 +25,7 @@ import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
+import { useDashboardLayoutBreakpoint } from '@/composables/useBreakpoint';
 import { useLoader } from '@/composables/useLoader';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -40,6 +37,17 @@ import { index as assignmentsIndex } from '@/routes/assignments';
 import { show as examsShow } from '@/routes/exams';
 
 import type { BreadcrumbItem } from '@/types';
+
+const dashboardContainer = ref<HTMLElement | null>(null);
+const { isMobile, isDesktop, prefersReducedMotion, isLowEndDevice } =
+    useMobile();
+// Drives which composition below mounts (see the MobileDashboard / desktop
+// composition blocks). Mirrors the exact CSS rules the old `hidden md:block`
+// / `md:hidden` toggle relied on — Tailwind's `md:` breakpoint (768px) plus
+// the `html.touch-mobile` override in app.blade.php that keeps touch
+// devices under 1024px on the mobile layout — so converting to a real v-if
+// doesn't shift the switch point for any device.
+const { isMdUp } = useDashboardLayoutBreakpoint();
 
 const { isVisible: isLoaderVisible } = useLoader();
 
@@ -740,9 +748,16 @@ const handleLogout = () => {
             <!-- Skeleton loader (shown while booting) -->
             <DashboardSkeleton v-if="!isBooted" />
 
-            <!-- Dedicated mobile composition; desktop content below remains intact. -->
+            <!-- Dedicated mobile composition. Gated on isMdUp (not just
+                 CSS) so the desktop tree below never mounts on phones —
+                 previously both compositions were always mounted and only
+                 hidden with `hidden md:block` / `md:hidden`, which meant
+                 phones paid full render/reactivity/GSAP cost for a second,
+                 invisible desktop dashboard on every poll tick. isMdUp is
+                 seeded synchronously (before mount), so this doesn't
+                 introduce a first-paint flash. -->
             <MobileDashboard
-                v-if="isBooted"
+                v-if="isBooted && !isMdUp"
                 :user-name="userName"
                 :user-avatar="userAvatar"
                 :profile-href="userProfileHref"
@@ -778,8 +793,12 @@ const handleLogout = () => {
                 "
             />
 
-            <!-- Desktop composition; hidden below the mobile breakpoint. -->
-            <div class="dashboard-desktop-composition hidden md:block">
+            <!-- Desktop composition. Real v-if="isMdUp" (see the
+                 MobileDashboard block above) instead of `hidden md:block` —
+                 isMdUp/!isMdUp are exact complements, so exactly one of the
+                 two compositions is ever mounted, with no dual-mount or gap
+                 window at any width. -->
+            <div v-if="isMdUp" class="dashboard-desktop-composition">
                 <!-- Real content (shown after booted) -->
                 <template v-if="isBooted">
                     <!-- Hero Banner Section -->
