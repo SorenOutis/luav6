@@ -42,4 +42,19 @@ describe('activities hub', () => {
         );
         expect(page).toContain('props.hubStats.exams.total');
     });
+
+    it('offers a My Scores button that opens the right-side scores drawer', () => {
+        expect(page).toContain('My Scores');
+        expect(page).toContain('@click="showScoresDrawer = true"');
+        expect(page).toContain("from '@/components/ui/sheet'");
+        expect(page).toContain(':open="showScoresDrawer"');
+        expect(page).toContain('activityScores');
+    });
+
+    it('hides the overview stat cards on mobile', () => {
+        // Mobile keeps only the My Scores button in the header; the four-tile
+        // overview strip is desktop-only now.
+        expect(page).toContain('activities-mobile-stats hidden');
+        expect(page).toContain('sm:grid sm:grid-cols-4');
+    });
 });

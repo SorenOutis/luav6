@@ -350,8 +350,10 @@ describe('activities hub — exam card visibility', () => {
 
         // `sectionTabs` describes the whole catalogue; if the poll skips it the
         // tab counts go stale the moment an exam is published or closed.
+        // `activityScores` feeds the My Scores drawer, which must stay fresh
+        // when a teacher grades a submission while the hub is open.
         expect(page).toContain(
-            "only: ['examsBySeason', 'hubStats', 'sectionTabs']",
+            "only: ['examsBySeason', 'hubStats', 'sectionTabs', 'activityScores']",
         );
     });
 

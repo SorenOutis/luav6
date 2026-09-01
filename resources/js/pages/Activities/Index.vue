@@ -17,6 +17,7 @@ import {
     Zap,
     X,
     Layers,
+    Award,
 } from 'lucide-vue-next';
 import {
     ref,
@@ -30,6 +31,13 @@ import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
 import { getLenis } from '@/composables/useLenis';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -80,6 +88,19 @@ interface SeasonGroup {
     exams: Exam[];
 }
 
+interface ActivityScore {
+    id: number;
+    title: string;
+    section_name: string | null;
+    score: number | null;
+    submitted: boolean;
+    state: 'completed' | 'in_progress' | 'open' | 'closed' | 'draft';
+}
+interface ScoreGroup {
+    seasonName: string;
+    exams: ActivityScore[];
+}
+
 const props = defineProps<{
     examsBySeason: SeasonGroup[];
     examPagination?: { hasMore: boolean; nextCursor: string | null };
@@ -87,19 +108,20 @@ const props = defineProps<{
     hubStats: {
         exams: { total: number; pending: number; completed: number };
     };
+    activityScores?: ScoreGroup[];
 }>();
 
 // ─── Polling + Visibility (reuse exam pattern) ──────────────────────────────
 const { stop: stopPoll, start: startPoll } = usePoll(
     10000,
     {
-        only: ['examsBySeason', 'hubStats', 'sectionTabs'],
+        only: ['examsBySeason', 'hubStats', 'sectionTabs', 'activityScores'],
     },
     { autoStart: false },
 );
 const refreshHub = () =>
     router.reload({
-        only: ['examsBySeason', 'hubStats', 'sectionTabs'],
+        only: ['examsBySeason', 'hubStats', 'sectionTabs', 'activityScores'],
     });
 const handleVisibilityChange = () => {
     if (!document.hidden) refreshHub();
@@ -247,6 +269,35 @@ const completionRate = computed(() => {
     return Math.round(
         (props.hubStats.exams.completed / props.hubStats.exams.total) * 100,
     );
+});
+
+// ─── My Scores drawer ───────────────────────────────────────────────────────
+const showScoresDrawer = ref(false);
+const scoreGroups = computed(() => props.activityScores ?? []);
+const scoreAll = computed(() => scoreGroups.value.flatMap((g) => g.exams));
+const gradedCount = computed(
+    () => scoreAll.value.filter((a) => a.score !== null).length,
+);
+const SCORE_STATE_META: Record<
+    ActivityScore['state'],
+    { label: string; class: string }
+> = {
+    completed: { label: 'Completed', class: 'bg-[#4D9375]/10 text-[#4D9375]' },
+    in_progress: {
+        label: 'In progress',
+        class: 'bg-[#E0AF68]/10 text-[#E0AF68]',
+    },
+    open: { label: 'Open', class: 'bg-[#D97757]/10 text-[#D97757]' },
+    closed: { label: 'Closed', class: 'bg-[#CB7676]/10 text-[#CB7676]' },
+    draft: { label: 'Draft', class: 'bg-muted text-muted-foreground' },
+};
+const scoreStateMeta = (state: ActivityScore['state']) =>
+    SCORE_STATE_META[state] ?? SCORE_STATE_META.draft;
+// Match the review modal: stop Lenis while the sheet is open so the page
+// behind it cannot scroll.
+watch(showScoresDrawer, (open) => {
+    if (open) getLenis()?.stop();
+    else getLenis()?.start();
 });
 
 // ─── Exam helpers (minimal copy from Exam.vue) ──────────────────────────────
@@ -560,9 +611,7 @@ const activitiesTourSteps: TourStep[] = [
                 :animate="{ opacity: 1, y: 0 }"
                 :transition="{ duration: 0.8, easing: [0.16, 1, 0.3, 1] }"
             >
-                <div
-                    class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-                >
+                <div class="flex items-start justify-between gap-3 sm:gap-4">
                     <div>
                         <h1
                             class="dash-title text-[22px] text-foreground sm:text-[34px]"
@@ -575,6 +624,15 @@ const activitiesTourSteps: TourStep[] = [
                             Review your exams, deadlines, and results.
                         </p>
                     </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="h-11 shrink-0 items-center gap-2 rounded-full border-border/50 bg-card px-4 text-sm font-semibold text-foreground hover:bg-muted sm:h-10 sm:px-5"
+                        @click="showScoresDrawer = true"
+                    >
+                        <Award class="h-4 w-4 text-[#D97757]" />
+                        My Scores
+                    </Button>
                 </div>
             </Motion>
 
@@ -583,7 +641,7 @@ const activitiesTourSteps: TourStep[] = [
                 :initial="{ opacity: 0, y: 12 }"
                 :animate="{ opacity: 1, y: 0 }"
                 :transition="{ duration: 0.35, delay: 0.05 }"
-                class="activities-mobile-stats grid grid-cols-2 divide-x divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70 bg-card sm:grid-cols-4 sm:rounded-2xl"
+                class="activities-mobile-stats hidden divide-x divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-card sm:grid sm:grid-cols-4"
             >
                 <div class="min-w-0 p-3.5 sm:p-5">
                     <p class="text-xs font-medium text-muted-foreground">
@@ -1019,7 +1077,7 @@ const activitiesTourSteps: TourStep[] = [
         <OnboardingTour
             tour-id="activities-hub"
             :steps="activitiesTourSteps"
-            :can-start="!showReviewModal"
+            :can-start="!showReviewModal && !showScoresDrawer"
             :start-delay="900"
         />
     </AppLayout>
@@ -1599,6 +1657,116 @@ const activitiesTourSteps: TourStep[] = [
             </div>
         </template>
     </ResponsiveModal>
+
+    <!-- My Scores drawer — every visible activity with its total score -->
+    <Sheet :open="showScoresDrawer" @update:open="showScoresDrawer = $event">
+        <SheetContent class="w-full gap-0 sm:max-w-md">
+            <SheetHeader class="pb-3">
+                <div class="flex items-center gap-2">
+                    <Award class="h-5 w-5 text-[#D97757]" />
+                    <SheetTitle class="text-lg font-bold text-foreground"
+                        >My Scores</SheetTitle
+                    >
+                </div>
+                <SheetDescription class="text-xs text-muted-foreground"
+                    >{{ gradedCount }} of {{ scoreAll.length }} activities
+                    graded</SheetDescription
+                >
+            </SheetHeader>
+            <div
+                class="custom-scrollbar flex-1 overflow-y-auto px-3 pb-4"
+                data-lenis-prevent
+            >
+                <div
+                    v-if="scoreAll.length === 0"
+                    class="flex flex-col items-center justify-center gap-2 py-16 text-center"
+                >
+                    <Calendar class="h-10 w-10 text-muted-foreground/40" />
+                    <p class="text-sm font-medium text-foreground">
+                        No activities yet
+                    </p>
+                    <p class="text-xs text-muted-foreground">
+                        Your scores will appear here once exams are published.
+                    </p>
+                </div>
+                <div v-else class="space-y-5">
+                    <div
+                        v-for="(group, gIdx) in scoreGroups"
+                        :key="gIdx"
+                        class="space-y-1.5"
+                    >
+                        <div class="flex items-center gap-2 px-1">
+                            <Calendar class="h-3.5 w-3.5 text-primary" />
+                            <h3
+                                class="text-[13px] font-semibold text-foreground"
+                            >
+                                {{ group.seasonName }}
+                            </h3>
+                            <span
+                                class="text-[11px] font-medium text-muted-foreground tabular-nums"
+                                >{{ group.exams.length }}
+                                {{
+                                    group.exams.length === 1
+                                        ? 'activity'
+                                        : 'activities'
+                                }}</span
+                            >
+                        </div>
+                        <ul
+                            class="overflow-hidden rounded-xl border border-border/60 bg-card"
+                        >
+                            <li
+                                v-for="(activity, aIdx) in group.exams"
+                                :key="activity.id"
+                                class="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4"
+                                :class="
+                                    aIdx > 0 ? 'border-t border-border/50' : ''
+                                "
+                            >
+                                <div class="min-w-0">
+                                    <p
+                                        class="truncate text-[13px] font-medium text-foreground sm:text-sm"
+                                    >
+                                        {{ activity.title }}
+                                    </p>
+                                    <p
+                                        class="mt-0.5 truncate text-[11px] text-muted-foreground"
+                                    >
+                                        {{
+                                            activity.section_name ??
+                                            'No section'
+                                        }}
+                                    </p>
+                                </div>
+                                <div class="flex shrink-0 items-center gap-2.5">
+                                    <span
+                                        class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                        :class="
+                                            scoreStateMeta(activity.state).class
+                                        "
+                                        >{{
+                                            scoreStateMeta(activity.state).label
+                                        }}</span
+                                    >
+                                    <span
+                                        v-if="activity.score !== null"
+                                        class="w-12 text-right text-sm font-bold text-foreground tabular-nums"
+                                        >{{ activity.score.toFixed(1) }}</span
+                                    >
+                                    <span
+                                        v-else
+                                        class="w-12 text-right text-sm text-muted-foreground/50"
+                                        aria-label="No score yet"
+                                        >—</span
+                                    >
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </SheetContent>
+    </Sheet>
 </template>
 
 <style scoped>

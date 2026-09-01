@@ -2,6 +2,7 @@
 
 use App\Models\Exam;
 use App\Models\ExamPart;
+use App\Models\ExamSubmission;
 use App\Models\User;
 
 use function Pest\Laravel\actingAs;
@@ -52,4 +53,49 @@ it('returns the next activities page from the hub listing endpoint', function ()
         ->assertOk()
         ->assertJsonCount(1, 'data.0.exams')
         ->assertJsonPath('meta.hasMore', false);
+});
+
+it('passes per-activity scores to the My Scores drawer prop', function () {
+    $user = User::factory()->create();
+
+    // `created_at` is not fillable, so unguard to pin the timestamp and keep
+    // the drawer's newest-first ordering deterministic.
+    $scored = Exam::unguarded(fn () => Exam::factory()->published()->create([
+        'title' => 'Scored activity',
+        'created_at' => now()->subMinute(),
+    ]));
+    $part = ExamPart::factory()->forExam($scored)->multipleChoice(1)->create();
+    ExamSubmission::factory()
+        ->forSubmission($user, $scored, $part)
+        ->graded(88.5)
+        ->create();
+
+    $untaken = Exam::factory()->published()->create([
+        'title' => 'Untaken activity',
+    ]);
+    ExamPart::factory()->forExam($untaken)->create();
+
+    actingAs($user)
+        ->get(route('activities.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Activities/Index')
+            ->has('activityScores.0.exams', 2)
+            ->where('activityScores.0.exams.0.title', 'Untaken activity')
+            ->where('activityScores.0.exams.0.score', null)
+            ->where('activityScores.0.exams.0.state', 'open')
+            ->where('activityScores.0.exams.1.title', 'Scored activity')
+            ->where('activityScores.0.exams.1.score', 88.5)
+            ->where('activityScores.0.exams.1.state', 'completed'));
+});
+
+it('passes an empty My Scores list when the student has no visible exams', function () {
+    $user = User::factory()->create();
+
+    actingAs($user)
+        ->get(route('activities.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Activities/Index')
+            ->where('activityScores', []));
 });
