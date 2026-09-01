@@ -200,7 +200,8 @@ it('parks parts created without a set in the exam’s first set', function () {
     $setA = $examSets->first();
 
     // CSV imports, AI drafts and older write paths create parts with only an
-    // exam id; they belong to the first set so every student can reach them.
+    // exam id; they belong to the first set so that set's students can reach
+    // them.
     $part = ExamPart::factory()
         ->forExam($exam)
         ->identification(['Manila'])
@@ -209,9 +210,22 @@ it('parks parts created without a set in the exam’s first set', function () {
     expect($part->exam_set_id)->toBe($setA->id)
         ->and($exam->sets()->count())->toBe(2);
 
-    $student = examSetsStudent($section);
+    // The imported part lives on the first set, so whichever student the
+    // shuffled deck deals that set to is the one who can reach it — not
+    // necessarily the first to open the exam.
+    $slot = dealtSets($exam)->pluck('id')->search($setA->id);
 
-    expect(actingAs($student)->get("/exams/{$exam->id}")->getContent())->toContain('Imported part');
+    $students = [];
+    for ($i = 0; $i <= $slot; $i++) {
+        $students[] = examSetsStudent($section);
+    }
+
+    foreach ($students as $student) {
+        actingAs($student)->get("/exams/{$exam->id}")->assertOk();
+    }
+
+    expect(actingAs($students[$slot])->get("/exams/{$exam->id}")->getContent())
+        ->toContain('Imported part');
 });
 
 it('names sets automatically in rotation order', function () {
