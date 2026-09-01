@@ -6,6 +6,7 @@ use App\Filament\Resources\Exams\ExamResource;
 use App\Filament\Resources\Exams\Schemas\ExamForm;
 use App\Models\ExamSet;
 use App\Services\ExamAnswerReportService;
+use App\Services\ExamSetAssignmentService;
 use App\Services\ExamTemplateService;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -36,10 +37,38 @@ class EditExam extends EditRecord
         return ExamForm::syncSetCount($data);
     }
 
+    /**
+     * Warn about sets that hold no questions.
+     *
+     * Empty sets are never dealt to a student (the deck only draws from sets
+     * that have questions), so an exam that looks like it ships four versions
+     * would silently hand out only the ones that were actually filled in.
+     */
+    protected function afterSave(): void
+    {
+        $empty = $this->record
+            ->sets()
+            ->whereDoesntHave('parts')
+            ->pluck('title');
+
+        if ($empty->isEmpty() || $this->record->sets()->count() < 2) {
+            return;
+        }
+
+        Notification::make()
+            ->title('Some sets have no questions yet')
+            ->body($empty->implode(', ').' will not be handed to any student until you add or import questions.')
+            ->warning()
+            ->persistent()
+            ->send();
+    }
+
     protected function getHeaderActions(): array
     {
         return [
             $this->viewAnswerAction(),
+
+            $this->reshuffleSetsAction(),
 
             $this->exportQuestionsAction(),
 
@@ -97,6 +126,39 @@ class EditExam extends EditRecord
 
             DeleteAction::make(),
         ];
+    }
+
+    /**
+     * Re-deal the sets to every student who has not answered anything yet.
+     *
+     * A student is handed a set the first time they *open* the exam, which is
+     * often days before they answer — so a class that browsed the exam while it
+     * still had one set stays on that set even after more sets are added. This
+     * releases those untouched hand-outs; students with a submission, a saved
+     * draft or a running timer keep their set.
+     */
+    private function reshuffleSetsAction(): Action
+    {
+        return Action::make('reshuffleSets')
+            ->label('Re-shuffle Sets')
+            ->icon('heroicon-o-arrows-right-left')
+            ->color('gray')
+            ->visible(fn (): bool => $this->record->sets()->count() > 1)
+            ->requiresConfirmation()
+            ->modalHeading('Re-shuffle exam sets')
+            ->modalDescription('Students who have not started this exam are handed a fresh set from the shuffled deck. Anyone who already answered, saved a draft or started a timer keeps the set they are working on.')
+            ->modalSubmitActionLabel('Re-shuffle')
+            ->action(function (): void {
+                $service = app(ExamSetAssignmentService::class);
+                $moved = $service->redealUnstarted($this->record);
+                $deck = $service->dealOrder($this->record->fresh());
+
+                Notification::make()
+                    ->title($moved === 0 ? 'Nothing to re-shuffle' : "{$moved} student(s) will be re-dealt")
+                    ->body('Deal order: '.$deck->pluck('title')->implode(' → '))
+                    ->success()
+                    ->send();
+            });
     }
 
     /**

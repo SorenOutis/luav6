@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ExamSetAssignmentService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,11 +50,38 @@ class ExamSet extends Model
             Cache::forget("exam_structure_{$set->exam_id}");
         });
 
+        // A set that has just appeared can only reach students if the ones who
+        // have not started yet are re-dealt: sets are handed out on the first
+        // page view, so a class that merely browsed the exam while it still had
+        // a single set would otherwise stay pinned to that set forever.
+        static::created(function (ExamSet $set): void {
+            $set->redealUnstartedStudents();
+        });
+
         // Deleting a set cascades to its parts (and their submissions), so the
-        // cached structure has to go too.
+        // cached structure has to go too. Students who held it but never
+        // started are re-dealt from whatever is left.
         static::deleted(function (ExamSet $set): void {
             Cache::forget("exam_structure_{$set->exam_id}");
+            $set->redealUnstartedStudents();
         });
+    }
+
+    /**
+     * Re-deal every student of this exam who has not answered anything yet.
+     *
+     * Only meaningful once the exam ships more than one set — a single-set exam
+     * would simply hand the same set back.
+     */
+    public function redealUnstartedStudents(): void
+    {
+        $exam = $this->exam()->first();
+
+        if ($exam === null || $exam->sets()->count() < 2) {
+            return;
+        }
+
+        app(ExamSetAssignmentService::class)->redealUnstarted($exam);
     }
 
     public function exam(): BelongsTo

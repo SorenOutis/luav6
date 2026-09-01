@@ -11,9 +11,11 @@ use App\Models\ExamSetAssignment;
 use App\Models\ExamSubmission;
 use App\Models\User;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Hands out exam sets and resolves which parts a student may see.
@@ -23,21 +25,28 @@ use Illuminate\Support\Facades\DB;
  * shuffled deck of the exam's sets, and keeps that set for the whole attempt,
  * so reloading or resuming never swaps their questions.
  *
- * The deck is shuffled once per exam and section, so the order is scrambled
- * (not the predictable "first opener always gets Set A") while still dealing
- * every set out before repeating — a section of students is split evenly
- * across the sets. See dealOrder().
+ * The deck holds only the sets that actually contain questions, shuffled once
+ * per exam and section, and each student is dealt the least-used set of that
+ * deck — so the order is scrambled (not the predictable "first opener always
+ * gets Set A") and a section is split evenly across the sets. See dealOrder()
+ * and dealableSets().
+ *
+ * Students who have not answered anything yet are re-dealt whenever the exam's
+ * set list changes (see redealUnstarted()), so an exam that was published with
+ * one set can still be turned into a multi-set exam afterwards.
  */
 class ExamSetAssignmentService
 {
-    /** @var array<int, Collection<int, ExamSet>> Sets memoised per exam id. */
-    private array $sets = [];
-
-    /** @var array<string, ?ExamSet> Resolved sets, keyed by "{exam}:{user}". */
-    private array $resolved = [];
-
     /**
      * Sets in stored order (sort_order, then id).
+     *
+     * ⚠️ Nothing here is memoised on the instance. Under Octane the controller
+     * that injects this service is cached on the Route object and lives for the
+     * whole worker, so an instance property would survive across requests: a
+     * worker that first saw the exam while it shipped a single set would keep
+     * dealing that one set to every later student — and a memoised assignment
+     * would make the service skip the database write entirely. The queries
+     * below are single indexed lookups; correctness wins.
      *
      * @return Collection<int, ExamSet>
      */
@@ -45,9 +54,57 @@ class ExamSetAssignmentService
     {
         // Callers that page through exams eager-load `sets`; honour that so a
         // listing does not fan out into one query per exam.
-        return $this->sets[$exam->getKey()] ??= $exam->relationLoaded('sets')
+        return $exam->relationLoaded('sets')
             ? $exam->sets
             : $exam->sets()->get();
+    }
+
+    /**
+     * The sets that may actually be dealt: the ones that own at least one part.
+     *
+     * A set with no questions is a shell the teacher has not filled in yet
+     * (raising "Number of sets" creates them empty, and every bulk write path —
+     * CSV import, AI drafts, parts created without a set — defaults to the
+     * first set). Dealing one of those hands a student a blank exam, so the
+     * deck is drawn from the sets that are genuinely available.
+     *
+     * If no set has any parts yet the exam has no questions at all; the full
+     * list is returned so the labelling behaves exactly as before.
+     *
+     * @return Collection<int, ExamSet>
+     */
+    public function dealableSets(Exam $exam): Collection
+    {
+        $sets = $this->sets($exam);
+
+        if ($sets->count() < 2) {
+            return $sets;
+        }
+
+        $withParts = ExamPart::query()
+            ->where('exam_id', $exam->getKey())
+            ->whereNotNull('exam_set_id')
+            ->distinct()
+            ->pluck('exam_set_id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+
+        // filterParts() shows parts that carry no set at all on the first set,
+        // so legacy rows keep that set dealable too.
+        $hasOrphanParts = ExamPart::query()
+            ->where('exam_id', $exam->getKey())
+            ->whereNull('exam_set_id')
+            ->exists();
+
+        if ($hasOrphanParts) {
+            $withParts[] = (int) $sets->first()->id;
+        }
+
+        $filtered = $sets->filter(
+            fn (ExamSet $set): bool => in_array((int) $set->id, $withParts, true)
+        )->values();
+
+        return $filtered->isEmpty() ? $sets : $filtered;
     }
 
     /**
@@ -111,11 +168,17 @@ class ExamSetAssignmentService
             }
 
             $firstSet = $examSets->first();
+            // An unassigned student is previewed against the first set that
+            // actually holds questions — an empty shell set would otherwise
+            // report "0 parts" on their card.
+            $previewSet = $examSets->first(
+                fn (ExamSet $set): bool => (int) ($examCounts[(int) $set->id] ?? 0) > 0
+            ) ?? $firstSet;
             $assignment = $assignments->get($examId);
             $set = $assignment !== null ? $examSets->firstWhere('id', (int) $assignment->exam_set_id) : null;
 
             if ($set === null) {
-                $set = $firstSet;
+                $set = $previewSet;
             }
 
             $total = (int) ($examCounts[(int) $set->id] ?? 0);
@@ -217,11 +280,21 @@ class ExamSetAssignmentService
     /**
      * The order the exam's sets are dealt in.
      *
-     * The deck is shuffled deterministically per exam + section: every request
-     * for the same exam yields the same deal (so the Nth student to start
-     * always draws slot N, and a student's set never changes), but the order
-     * is scrambled rather than the fixed Set A, Set B, … sort order a student
-     * could otherwise predict. A single-set exam simply deals that one set.
+     * Only sets that actually hold questions take part: the deck follows the
+     * sets that are available, so a half-built exam never hands a student a
+     * blank set.
+     *
+     * The order is a deterministic, unbiased shuffle: each set is keyed by a
+     * hash of "{seed}:{set id}" and the deck is sorted by that key. Every
+     * request for the same exam therefore yields the same deal (a student's set
+     * never changes) while the order is scrambled rather than the predictable
+     * Set A, Set B, … the students could otherwise guess. A single-set exam
+     * simply deals that one set.
+     *
+     * The previous implementation used the low bits of a linear congruential
+     * generator, which is heavily biased: with four sets the fourth one landed
+     * in the first slot roughly four times less often than the first. Hashing
+     * each set independently removes that skew.
      *
      * Kept public so read-only screens (and tests) can show or assert the same
      * order the assignment uses without triggering an assignment themselves.
@@ -230,39 +303,66 @@ class ExamSetAssignmentService
      */
     public function dealOrder(Exam $exam, ?Collection $sets = null): Collection
     {
-        $items = ($sets ?? $this->sets($exam))->values()->all();
+        $items = ($sets ?? $this->dealableSets($exam))->values();
 
-        if (count($items) < 2) {
-            return collect($items);
+        if ($items->count() < 2) {
+            return $items;
         }
 
-        $state = $this->rotationSeed($exam);
+        $seed = $this->rotationSeed($exam);
 
-        // Fisher–Yates driven by a self-contained PRNG: the same seed always
-        // produces the same deal, and the process-wide RNG state is untouched.
-        for ($i = count($items) - 1; $i > 0; $i--) {
-            $state = (int) ((($state * 1103515245) + 12345) & 0x7FFFFFFF);
-            $j = $state % ($i + 1);
-            [$items[$i], $items[$j]] = [$items[$j], $items[$i]];
-        }
+        return $items
+            ->sortBy(fn (ExamSet $set): string => hash('sha256', $seed.':'.$set->id), SORT_STRING)
+            ->values();
+    }
 
-        return collect($items);
+    /**
+     * Forget the set handed to every student who has not started this exam yet.
+     *
+     * The set is handed out the first time a student *opens* the exam, which is
+     * often days before they answer anything — so a class that peeked while the
+     * exam still had a single set stays pinned to that set forever, even after
+     * the teacher adds Set B and Set C. Dropping the untouched rows lets those
+     * students be re-dealt from the current deck on their next visit.
+     *
+     * Students with a submission, a saved draft or a running timer are never
+     * touched: resuming an attempt must always show the same questions.
+     *
+     * @return int Number of students who will be re-dealt.
+     */
+    public function redealUnstarted(Exam $exam): int
+    {
+        $examId = $exam->getKey();
+
+        $started = ExamSubmission::query()
+            ->where('exam_id', $examId)
+            ->distinct()
+            ->pluck('user_id')
+            ->merge(
+                ExamAnswerDraft::query()->where('exam_id', $examId)->distinct()->pluck('user_id')
+            )
+            ->merge(
+                ExamLiveSession::query()->where('exam_id', $examId)->distinct()->pluck('user_id')
+            )
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $deleted = ExamSetAssignment::query()
+            ->where('exam_id', $examId)
+            ->when($started !== [], fn ($query) => $query->whereNotIn('user_id', $started))
+            ->delete();
+
+        return (int) $deleted;
     }
 
     private function resolve(Exam $exam, User $user, bool $assign): ?ExamSet
     {
-        // Assigning is idempotent, so a request that asks for the set several
-        // times (show page → XP award) only runs the lookup once.
-        $key = $exam->getKey().':'.$user->getKey();
-
-        if ($assign && array_key_exists($key, $this->resolved)) {
-            return $this->resolved[$key];
-        }
-
         $sets = $this->sets($exam);
 
         if ($sets->isEmpty() || $user->is_admin) {
-            return $this->resolved[$key] ??= null;
+            return null;
         }
 
         $assignment = $this->assignmentFor($exam, $user);
@@ -271,7 +371,7 @@ class ExamSetAssignmentService
             $set = $sets->firstWhere('id', (int) $assignment->exam_set_id);
 
             if ($set !== null) {
-                return $this->resolved[$key] = $set;
+                return $set;
             }
 
             // The set was deleted underneath the student — hand them a new one.
@@ -285,20 +385,24 @@ class ExamSetAssignmentService
         if ($derived !== null) {
             $this->persist($exam, $user, $derived, $assignment);
 
-            return $this->resolved[$key] = $derived;
+            return $derived;
         }
 
         if (! $assign) {
             return null;
         }
 
-        return $this->resolved[$key] = $this->assignNext($exam, $user, $sets);
+        return $this->assignNext($exam, $user, $sets);
     }
 
     /**
-     * Deal the next set from the exam's shuffled deck: the Nth student to
-     * start gets the Nth slot of the shuffled order (modulo the number of
-     * sets), so every set is dealt out before the deck repeats.
+     * Deal a set to a student: the least-used set of the exam's shuffled deck,
+     * ties broken by the deck order.
+     *
+     * Counting what each set already holds (instead of "number of assignments
+     * modulo number of sets") keeps the split even and self-healing: it stays
+     * balanced when a set is added mid-flight, when assignments are re-dealt,
+     * or when a student is removed.
      *
      * The read-modify-write runs inside a transaction and the unique
      * (exam_id, user_id) index is the real guard, so two students starting at
@@ -307,8 +411,14 @@ class ExamSetAssignmentService
      */
     private function assignNext(Exam $exam, User $user, Collection $sets): ?ExamSet
     {
+        $deck = $this->dealOrder($exam);
+
+        if ($deck->isEmpty()) {
+            return $sets->first();
+        }
+
         try {
-            return DB::transaction(function () use ($exam, $user, $sets): ?ExamSet {
+            return DB::transaction(function () use ($exam, $user, $sets, $deck): ?ExamSet {
                 $existing = ExamSetAssignment::query()
                     ->where('exam_id', $exam->getKey())
                     ->where('user_id', $user->getKey())
@@ -316,7 +426,7 @@ class ExamSetAssignmentService
                     ->first();
 
                 if ($existing !== null) {
-                    $set = $sets->firstWhere('id', (int) $existing->exam_set_id) ?? $sets->first();
+                    $set = $sets->firstWhere('id', (int) $existing->exam_set_id) ?? $deck->first();
 
                     // The set was deleted (and its questions with it): move the
                     // student to a set that still exists so the stale id is not
@@ -328,26 +438,66 @@ class ExamSetAssignmentService
                     return $set;
                 }
 
-                $handedOut = ExamSetAssignment::query()
-                    ->where('exam_id', $exam->getKey())
-                    ->lockForUpdate()
-                    ->count();
-
-                $deck = $this->dealOrder($exam, $sets);
-
-                $set = $deck->get($handedOut % $deck->count()) ?? $deck->first();
+                $set = $this->leastUsed($exam, $deck);
 
                 $this->persist($exam, $user, $set, null);
 
                 return $set;
             });
-        } catch (QueryException) {
+        } catch (UniqueConstraintViolationException) {
+            // Two requests for the same student raced: the winner's row is the
+            // truth.
             $existing = $this->assignmentFor($exam, $user);
 
             return $existing !== null
-                ? $sets->firstWhere('id', (int) $existing->exam_set_id)
-                : $sets->first();
+                ? ($sets->firstWhere('id', (int) $existing->exam_set_id) ?? $deck->first())
+                : $deck->first();
+        } catch (QueryException $exception) {
+            // Anything else (missing migration, deadlock, lock timeout) used to
+            // degrade silently to the first set for every student, which is
+            // indistinguishable from "sets are not working". Make the noise,
+            // and spread the fallback across the deck so a failing write does
+            // not put the whole class on Set A.
+            Log::error('Exam set assignment failed; falling back to a deterministic set.', [
+                'exam_id' => $exam->getKey(),
+                'user_id' => $user->getKey(),
+                'exception' => $exception->getMessage(),
+            ]);
+
+            $existing = $this->assignmentFor($exam, $user);
+
+            if ($existing !== null) {
+                return $sets->firstWhere('id', (int) $existing->exam_set_id) ?? $deck->first();
+            }
+
+            return $deck->get(crc32('user:'.$user->getKey()) % $deck->count()) ?? $deck->first();
         }
+    }
+
+    /**
+     * The deck set that has been handed out the fewest times so far.
+     *
+     * @param  Collection<int, ExamSet>  $deck
+     */
+    private function leastUsed(Exam $exam, Collection $deck): ExamSet
+    {
+        $counts = [];
+
+        ExamSetAssignment::query()
+            ->where('exam_id', $exam->getKey())
+            ->whereIn('exam_set_id', $deck->pluck('id')->all())
+            ->selectRaw('exam_set_id, COUNT(*) as total')
+            ->groupBy('exam_set_id')
+            ->get()
+            ->each(function (object $row) use (&$counts): void {
+                $counts[(int) $row->exam_set_id] = (int) $row->total;
+            });
+
+        // sortBy() is stable, so sets that are tied keep their deck order and
+        // the first N students still walk the shuffled deck slot by slot.
+        return $deck
+            ->sortBy(fn (ExamSet $set): int => $counts[(int) $set->id] ?? 0)
+            ->first();
     }
 
     /**
