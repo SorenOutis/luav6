@@ -5,17 +5,23 @@ namespace App\Services;
 use App\Enums\EssayGradingMethod;
 use App\Enums\QuestionType;
 use App\Models\Exam;
+use App\Models\ExamPart;
 use App\Models\ExamSet;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ExamTemplateService
 {
-    public function getTemplateCsv(): string
+    /**
+     * The single source of truth for the CSV columns. Both the downloadable
+     * template and the exam export use it, so an exported file always parses
+     * with the same column names the import expects.
+     *
+     * @return array<int, string>
+     */
+    public function header(): array
     {
-        $handle = fopen('php://memory', 'r+');
-
-        // CSV Header
-        fputcsv($handle, [
+        return [
             'Part Title',
             'Part Instructions',
             'Question Text',
@@ -24,7 +30,15 @@ class ExamTemplateService
             'Correct Choice/Answer',
             'Points',
             'Essay Grading (ai|manual)',
-        ]);
+        ];
+    }
+
+    public function getTemplateCsv(): string
+    {
+        $handle = fopen('php://memory', 'r+');
+
+        // CSV Header
+        fputcsv($handle, $this->header());
 
         // Example Rows
         fputcsv($handle, [
@@ -259,6 +273,163 @@ class ExamTemplateService
         });
 
         return $set;
+    }
+
+    /**
+     * Export every question of one set back into the same CSV shape the import
+     * accepts. Without a set the whole exam (all sets) is exported into a
+     * single CSV. This is the inverse of uploadFromCsv(): whatever the admin
+     * edited on screen comes back out, ready to be imported again.
+     */
+    public function exportCsv(Exam $exam, ?ExamSet $set = null): string
+    {
+        $query = $exam->parts()->with('examSet');
+
+        if ($set !== null) {
+            $query->where('exam_set_id', $set->getKey());
+        }
+
+        $handle = fopen('php://memory', 'r+');
+        fputcsv($handle, $this->header());
+
+        foreach ($query->get() as $part) {
+            foreach ((array) ($part->questions ?? []) as $question) {
+                if (! is_array($question)) {
+                    continue;
+                }
+
+                fputcsv($handle, $this->questionToRow($part, $question));
+            }
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return $csv;
+    }
+
+    /**
+     * Package every set of an exam into a ZIP archive with one CSV per set,
+     * so a multi-set exam can be backed up (and re-imported set by set) in a
+     * single download.
+     *
+     * @return string Absolute path of the generated archive. The caller owns
+     *                the temporary file and must delete it after sending.
+     */
+    public function exportZip(Exam $exam): string
+    {
+        if (! class_exists(\ZipArchive::class)) {
+            throw new \RuntimeException('The ZIP extension is required to export multiple sets.');
+        }
+
+        $sets = $exam->sets()->orderBy('sort_order')->orderBy('id')->get();
+
+        if ($sets->isEmpty()) {
+            $sets = collect([ExamSet::ensureDefaultForExam($exam->getKey())]);
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'exam-export-');
+        if ($path === false) {
+            throw new \RuntimeException('Unable to create a temporary file for the export.');
+        }
+        @unlink($path);
+        $path .= '.zip';
+
+        $zip = new \ZipArchive;
+        if ($zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            throw new \RuntimeException('Unable to create the export archive.');
+        }
+
+        foreach ($sets as $set) {
+            $zip->addFromString($this->exportFilename($set).'.csv', $this->exportCsv($exam, $set));
+        }
+
+        $zip->close();
+
+        return $path;
+    }
+
+    /**
+     * One CSV row for a stored question, formatted exactly as uploadFromCsv()
+     * reads it back.
+     *
+     * @param  array<string, mixed>  $question
+     * @return array<int, string>
+     */
+    private function questionToRow(ExamPart $part, array $question): array
+    {
+        $type = QuestionType::tryFromStored($question['type'] ?? null) ?? QuestionType::MultipleChoice;
+        $choices = '';
+        $correct = '';
+
+        if ($type->usesChoiceAnswer()) {
+            $options = array_values((array) ($question['options'] ?? []));
+            $choices = collect($options)
+                ->map(fn (mixed $option): string => is_array($option)
+                    ? (string) ($option['text'] ?? '')
+                    : (string) $option)
+                ->filter(fn (string $text): bool => $text !== '')
+                ->implode('|');
+
+            $correctOption = collect($options)
+                ->first(fn (mixed $option): bool => is_array($option) && (bool) ($option['is_correct'] ?? false));
+            $correct = is_array($correctOption) ? (string) ($correctOption['text'] ?? '') : '';
+        } elseif ($type === QuestionType::Enumeration) {
+            $correct = collect($question['enumeration_items'] ?? [])
+                ->filter(fn (mixed $item): bool => is_array($item))
+                ->map(fn (array $item): string => trim((string) ($item['answer'] ?? '')).'::'.(string) ($item['points'] ?? 1))
+                ->implode('|');
+        } elseif ($type === QuestionType::Matching) {
+            $correct = collect($question['matching_items'] ?? [])
+                ->filter(fn (mixed $item): bool => is_array($item))
+                ->map(fn (array $item): string => trim((string) ($item['prompt'] ?? '')).'=>'.trim((string) ($item['answer'] ?? '')).'::'.(string) ($item['points'] ?? 1))
+                ->implode('|');
+        } elseif ($type === QuestionType::Identification) {
+            $answers = collect([(string) ($question['correct_answer'] ?? '')])
+                ->merge(collect($question['accepted_answers'] ?? [])
+                    ->map(fn (mixed $answer): string => is_array($answer)
+                        ? (string) ($answer['answer'] ?? '')
+                        : (string) $answer))
+                ->map(fn (string $answer): string => trim($answer))
+                ->filter()
+                ->values()
+                ->all();
+            $correct = implode('|', $answers);
+        }
+
+        $points = match (true) {
+            $type === QuestionType::Enumeration => collect($question['enumeration_items'] ?? [])
+                ->filter(fn (mixed $item): bool => is_array($item))
+                ->sum(fn (array $item): float => (float) ($item['points'] ?? 0)),
+            $type === QuestionType::Matching => collect($question['matching_items'] ?? [])
+                ->filter(fn (mixed $item): bool => is_array($item))
+                ->sum(fn (array $item): float => (float) ($item['points'] ?? 0)),
+            default => (int) ($question['points'] ?? $part->points ?? 1),
+        };
+
+        $grading = $type === QuestionType::Essay
+            ? (string) (($question['grading_method'] ?? '') ?: EssayGradingMethod::Ai->value)
+            : '';
+
+        return [
+            (string) ($part->title ?? ''),
+            (string) ($part->instructions ?? ''),
+            (string) ($question['text'] ?? ''),
+            $type->value,
+            $choices,
+            $correct,
+            (string) $points,
+            $grading,
+        ];
+    }
+
+    /**
+     * A filesystem-safe file name for one set's CSV inside the export archive.
+     */
+    private function exportFilename(ExamSet $set): string
+    {
+        return Str::slug($set->title) ?: 'set-'.$set->getKey();
     }
 
     /**
