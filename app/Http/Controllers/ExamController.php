@@ -321,6 +321,7 @@ class ExamController extends Controller
         abort_if($examPart->exam_id !== $exam->id, 404);
 
         $this->assertCanAccess($exam);
+        $this->assertPartInAssignedSet($exam, $examPart);
         abort_unless(
             ExamStatus::tryFrom($exam->status)?->acceptsSubmissions(),
             403,
@@ -379,6 +380,8 @@ class ExamController extends Controller
         $this->assertCanAccess($exam);
 
         abort_if($exam->status === 'closed', 403, 'This exam is currently closed.');
+
+        $this->assertPartInAssignedSet($exam, $examPart);
 
         $session = ExamLiveSession::firstOrCreate(
             [
@@ -466,6 +469,9 @@ class ExamController extends Controller
 
         // Phase 1.5 — the student must actually have access to this exam.
         $this->assertCanAccess($exam);
+
+        // …and the part has to belong to the set they were handed.
+        $this->assertPartInAssignedSet($exam, $examPart);
 
         // Phase 1.3 — single attempt per part.
         $alreadySubmitted = ExamSubmission::where('user_id', $request->user()->id)
@@ -852,6 +858,36 @@ class ExamController extends Controller
                 ->exists(),
             403,
             'You do not have access to this exam.',
+        );
+    }
+
+    /**
+     * The part must belong to the set this student was handed.
+     *
+     * Without this, a hand-crafted request could start, answer or submit
+     * another set's parts while assigned a different set — and that stray work
+     * would then re-pin the student to the foreign set.
+     *
+     * Admins are exempt: they audit every set.
+     */
+    private function assertPartInAssignedSet(Exam $exam, ExamPart $examPart): void
+    {
+        $user = auth()->user();
+
+        if ($user->is_admin) {
+            return;
+        }
+
+        $set = $this->examSets->resolveSet($exam, $user);
+
+        if ($set === null || $examPart->exam_set_id === null) {
+            return;
+        }
+
+        abort_unless(
+            (int) $examPart->exam_set_id === (int) $set->id,
+            403,
+            'This question belongs to another set of this exam.',
         );
     }
 

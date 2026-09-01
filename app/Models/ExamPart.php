@@ -50,6 +50,26 @@ class ExamPart extends Model
             Cache::forget("exam_structure_{$part->exam_id}");
         });
 
+        // A set only enters the deal once it holds questions, so the moment an
+        // empty set gains its first part it becomes available: students who
+        // have not started yet are re-dealt so they can actually receive it.
+        static::created(function (ExamPart $part): void {
+            if (blank($part->exam_set_id)) {
+                return;
+            }
+
+            $isFirstPartOfSet = static::query()
+                ->where('exam_set_id', $part->exam_set_id)
+                ->whereKeyNot($part->getKey())
+                ->doesntExist();
+
+            if (! $isFirstPartOfSet) {
+                return;
+            }
+
+            $part->examSet()->first()?->redealUnstartedStudents();
+        });
+
         static::deleted(function ($part) {
             Cache::forget("exam_structure_{$part->exam_id}");
         });
