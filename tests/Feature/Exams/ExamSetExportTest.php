@@ -116,7 +116,7 @@ it('round-trips every question type through export and import', function () {
 });
 
 it('packages each set into its own CSV inside a ZIP archive', function () {
-    if (! class_exists(\ZipArchive::class)) {
+    if (! class_exists(ZipArchive::class)) {
         $this->markTestSkipped('The ZIP extension is not available.');
     }
 
@@ -129,7 +129,7 @@ it('packages each set into its own CSV inside a ZIP archive', function () {
     $zipPath = (new ExamTemplateService)->exportZip($exam);
 
     try {
-        $zip = new \ZipArchive;
+        $zip = new ZipArchive;
         expect($zip->open($zipPath))->toBe(true);
 
         $names = [];

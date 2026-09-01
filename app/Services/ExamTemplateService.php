@@ -315,7 +315,7 @@ class ExamTemplateService
      * single download.
      *
      * @return string Absolute path of the generated archive. The caller owns
-     *                 the temporary file and must delete it after sending.
+     *                the temporary file and must delete it after sending.
      */
     public function exportZip(Exam $exam): string
     {
