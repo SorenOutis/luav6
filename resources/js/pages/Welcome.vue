@@ -139,7 +139,14 @@ const webSiteJsonLd = [
 </script>
 
 <template>
-    <Head title="LSI - KOAMISHIN | Make every assessment count" />
+    <Head title="LSI - KOAMISHIN | Make every assessment count">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossorigin="anonymous"
+        />
+    </Head>
     <SeoHead
         title="LSI - KOAMISHIN | Make every assessment count"
         description="LSI helps teachers see what learners understand, give useful feedback, and plan what to teach next."

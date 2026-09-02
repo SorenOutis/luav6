@@ -107,6 +107,8 @@ class LibraryHubController extends Controller
         return $disk->response($material->file_path, $sanitizedName, [
             'Content-Type' => $mime,
             'Content-Disposition' => $disposition.'; filename="'.addslashes($sanitizedName).'"',
+            'X-Robots-Tag' => 'noindex, nofollow',
+            'Cache-Control' => 'private, no-store',
         ]);
     }
 
