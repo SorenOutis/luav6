@@ -26,7 +26,6 @@ use Stringable;
  * actions. Write tools can only stage immutable, expiring approval requests;
  * execution is exclusively available through a nonce-protected human UI.
  */
-#[Provider('gemini')]
 #[MaxSteps(8)]
 class AdminAssistantAgent implements Agent, Conversational, HasTools
 {

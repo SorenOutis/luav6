@@ -21,7 +21,6 @@ use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider('gemini')]
 #[MaxSteps(8)]
 class AssistantAgent implements Agent, Conversational, HasTools
 {
