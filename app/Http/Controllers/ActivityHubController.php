@@ -258,19 +258,27 @@ class ActivityHubController extends Controller
             $set = $summaries[$exam->id]['set'] ?? null;
             $parts = $this->examSets->filterParts($exam, $exam->parts, $set);
 
+            $closedNow = $exam->isEffectivelyClosed();
+            $scheduleState = $exam->scheduleState();
+
             return array_merge($exam->withoutRelations()->toArray(), [
                 'parts' => ExamPartSerializer::many($parts, false, false),
                 'submitted_parts_count' => $submittedPartsCount,
                 'total_parts' => $parts->count(),
                 'set' => $set !== null ? ['id' => $set->id, 'title' => $set->title] : null,
                 'is_locked' => ($submittedPartsCount === $parts->count() && $parts->isNotEmpty())
-                    || $exam->status === 'closed',
+                    || $closedNow,
                 'has_submissions' => $submissions->isNotEmpty(),
-                'results_available' => $exam->status === 'closed' && $submissions->isNotEmpty(),
+                'results_available' => $closedNow && $submissions->isNotEmpty(),
                 'submissions' => $submissions->values()->all(),
                 'section_name' => $exam->section?->name,
                 'season_name' => $exam->section?->season?->name,
                 'exam_date_iso' => $exam->exam_date?->toIso8601String(),
+                'starts_at_iso' => $exam->starts_at?->toIso8601String(),
+                'ends_at_iso' => $exam->ends_at?->toIso8601String(),
+                'is_open_now' => $exam->acceptsSubmissions(),
+                'is_upcoming' => $scheduleState === 'upcoming',
+                'has_ended' => $scheduleState === 'ended',
             ]);
         });
 

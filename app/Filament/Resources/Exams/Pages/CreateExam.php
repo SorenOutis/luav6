@@ -16,6 +16,14 @@ class CreateExam extends CreateRecord
      */
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        return ExamForm::syncSetCount($data);
+        $data = ExamForm::syncSetCount($data);
+
+        // The legacy `exam_date` column is kept as an alias of starts_at so the
+        // calendar, ordering and AI tools that still read it keep working.
+        if (! empty($data['starts_at']) && empty($data['exam_date'])) {
+            $data['exam_date'] = $data['starts_at'];
+        }
+
+        return $data;
     }
 }

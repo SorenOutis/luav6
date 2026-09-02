@@ -14,6 +14,11 @@ export type CalendarEvent = {
     courseName?: string | null;
     durationMinutes?: number;
     status?: string;
+    startsAtISO?: string | null;
+    endsAtISO?: string | null;
+    isOpenNow?: boolean;
+    isUpcoming?: boolean;
+    hasEnded?: boolean;
     submitted?: boolean;
     isOverdue?: boolean;
     isCompleted?: boolean;

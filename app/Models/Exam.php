@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToWorkspace;
+use Carbon\CarbonInterface as Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,8 @@ class Exam extends Model
         'title',
         'description',
         'exam_date',
+        'starts_at',
+        'ends_at',
         'duration_minutes',
         'xp_rewards_enabled',
         'completion_xp',
@@ -34,6 +37,8 @@ class Exam extends Model
 
     protected $casts = [
         'exam_date' => 'datetime',
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
         'xp_rewards_enabled' => 'boolean',
         'accuracy_xp_enabled' => 'boolean',
         'ai_feedback_enabled' => 'boolean',
@@ -62,6 +67,84 @@ class Exam extends Model
     public function section()
     {
         return $this->belongsTo(Section::class);
+    }
+
+    /**
+     * Whether the teacher set an explicit schedule window for this exam.
+     */
+    public function isScheduled(): bool
+    {
+        return $this->starts_at !== null || $this->ends_at !== null;
+    }
+
+    /**
+     * Whether the exam window has begun.
+     *
+     * Legacy exams without a start time behave as if they were always open
+     * from the moment they are published, so a missing value never locks an
+     * existing exam out of nowhere.
+     */
+    public function hasStarted(?Carbon $now = null): bool
+    {
+        $now ??= now();
+
+        return $this->starts_at === null || $this->starts_at->lte($now);
+    }
+
+    /**
+     * Whether the exam window has finished.
+     *
+     * A missing end time means the exam stays open until a teacher closes it
+     * manually, preserving pre-schedule behaviour for existing exams.
+     */
+    public function hasEnded(?Carbon $now = null): bool
+    {
+        $now ??= now();
+
+        return $this->ends_at !== null && $this->ends_at->lte($now);
+    }
+
+    /**
+     * Published exams only accept answers inside their open window.
+     */
+    public function acceptsSubmissions(?Carbon $now = null): bool
+    {
+        return $this->status === 'published'
+            && $this->hasStarted($now)
+            && ! $this->hasEnded($now);
+    }
+
+    /**
+     * Student-facing lifecycle key for the current moment.
+     *
+     * A published exam that has not yet opened is "upcoming"; one still inside
+     * its window is "open"; one whose window ended is "ended". The enum status
+     * remains the admin-controlled lifecycle.
+     */
+    public function scheduleState(?Carbon $now = null): string
+    {
+        $now ??= now();
+
+        if ($this->hasEnded($now)) {
+            return 'ended';
+        }
+
+        if (! $this->hasStarted($now)) {
+            return 'upcoming';
+        }
+
+        return 'open';
+    }
+
+    /**
+     * Whether the exam is effectively closed for a student right now.
+     *
+     * Covers both a teacher manually closing it and the scheduled window
+     * ending, so the student UI and answer-key reveal behave the same way.
+     */
+    public function isEffectivelyClosed(?Carbon $now = null): bool
+    {
+        return $this->status === 'closed' || $this->hasEnded($now);
     }
 
     /**

@@ -34,7 +34,15 @@ class EditExam extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        return ExamForm::syncSetCount($data);
+        $data = ExamForm::syncSetCount($data);
+
+        // Keep the legacy alias in sync whenever the schedule changes; the
+        // form intentionally exposes starts_at/ends_at instead of exam_date.
+        if (! empty($data['starts_at'])) {
+            $data['exam_date'] = $data['starts_at'];
+        }
+
+        return $data;
     }
 
     /**

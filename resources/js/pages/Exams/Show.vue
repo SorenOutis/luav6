@@ -76,6 +76,11 @@ interface Exam {
     title: string;
     description: string;
     exam_date: string;
+    starts_at_iso?: string | null;
+    ends_at_iso?: string | null;
+    is_open_now?: boolean;
+    is_upcoming?: boolean;
+    has_ended?: boolean;
     duration_minutes: number;
     status: string;
     parts: ExamPart[];
@@ -138,6 +143,34 @@ const breadcrumbs: BreadcrumbItem[] = [
 const selectedPart = ref<ExamPart | null>(null);
 const examStarted = ref(false);
 const container = ref<HTMLElement | null>(null);
+
+// ─── Scheduled window ──────────────────────────────────────────────────────
+// The server sends is_open_now / is_upcoming / has_ended. The fallbacks keep
+// legacy payloads (and old cached page props) working: a published exam with
+// no schedule info stays open as before.
+const examOpenNow = computed(
+    () =>
+        props.exam.is_open_now ??
+        (props.exam.status === 'published' &&
+            !props.exam.is_upcoming &&
+            !props.exam.has_ended),
+);
+const examUpcoming = computed(() => props.exam.is_upcoming ?? false);
+const examHasEnded = computed(
+    () => props.exam.has_ended ?? props.exam.status === 'closed',
+);
+const canTakeExam = computed(() => examOpenNow.value && !examHasEnded.value);
+const formatScheduleTime = (iso?: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
 
 const answers = reactive<Record<number, AnswerValue>>({}); // Store answers by question index
 // Track submitted part IDs locally to handle stale server data after redirect
@@ -1001,6 +1034,10 @@ watch(
 );
 
 const isPartLocked = (index: number) => {
+    // Outside the schedule window the whole exam is locked, so every part
+    // shows as unavailable rather than letting a student open the start modal
+    // just to be rejected by the server.
+    if (!canTakeExam.value) return true;
     if (index === 0) return false;
     const previousPart = props.exam.parts[index - 1];
     return !isPartSubmitted(previousPart.id);
@@ -1042,12 +1079,9 @@ const formatDateTime = (dateStr: string) => {
 };
 
 const selectPart = (part: ExamPart, index: number) => {
-    // Prevent selecting if exam is closed, part is already submitted, or part is locked
-    if (
-        props.exam.status === 'closed' ||
-        isPartSubmitted(part.id) ||
-        isPartLocked(index)
-    ) {
+    // Prevent selecting if the exam is outside its window, part is already
+    // submitted, or part is locked.
+    if (!canTakeExam.value || isPartSubmitted(part.id) || isPartLocked(index)) {
         return;
     }
 
@@ -2330,10 +2364,62 @@ const feedbackContent = computed(() => {
                                         }}
                                     </p>
                                     <div
-                                        class="mt-2 flex items-center gap-2 text-xs text-muted-foreground/60"
+                                        class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground/60"
                                     >
-                                        <Calendar class="h-3.5 w-3.5" />
-                                        {{ formatDateTime(exam.exam_date) }}
+                                        <span class="flex items-center gap-2">
+                                            <Calendar class="h-3.5 w-3.5" />
+                                            {{
+                                                examUpcoming &&
+                                                exam.starts_at_iso
+                                                    ? `Starts ${formatScheduleTime(exam.starts_at_iso)}`
+                                                    : formatDateTime(
+                                                          exam.exam_date,
+                                                      )
+                                            }}
+                                        </span>
+                                        <span
+                                            v-if="
+                                                exam.starts_at_iso &&
+                                                exam.ends_at_iso
+                                            "
+                                            class="flex items-center gap-2"
+                                        >
+                                            <Clock class="h-3.5 w-3.5" />
+                                            {{
+                                                examHasEnded
+                                                    ? `Ended ${formatScheduleTime(exam.ends_at_iso)}`
+                                                    : `Ends ${formatScheduleTime(exam.ends_at_iso)}`
+                                            }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Clear take-lock state until the window opens -->
+                                    <div
+                                        v-if="
+                                            examUpcoming && exam.starts_at_iso
+                                        "
+                                        class="mt-3 rounded-lg border border-[#E0AF68]/20 bg-[#E0AF68]/10 px-3 py-2 text-[13px] font-medium text-[#E0AF68]"
+                                    >
+                                        This exam hasn't started yet. It will
+                                        open on
+                                        {{
+                                            formatScheduleTime(
+                                                exam.starts_at_iso,
+                                            )
+                                        }}.
+                                    </div>
+                                    <div
+                                        v-else-if="
+                                            examHasEnded && exam.ends_at_iso
+                                        "
+                                        class="mt-3 rounded-lg border border-[#CB7676]/20 bg-[#CB7676]/10 px-3 py-2 text-[13px] font-medium text-[#CB7676]"
+                                    >
+                                        This exam has closed. It ended on
+                                        {{
+                                            formatScheduleTime(
+                                                exam.ends_at_iso,
+                                            )
+                                        }}.
                                     </div>
                                 </div>
 
