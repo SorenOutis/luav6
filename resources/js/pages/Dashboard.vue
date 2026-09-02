@@ -33,8 +33,6 @@ import { getTourStatus } from '@/lib/onboarding';
 import type { TourStep } from '@/lib/onboarding';
 import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { logout } from '@/routes';
-import { index as assignmentsIndex } from '@/routes/assignments';
-import { show as examsShow } from '@/routes/exams';
 
 import type { BreadcrumbItem } from '@/types';
 
@@ -542,7 +540,7 @@ const dueItems = computed<DueItem[]>(() => {
             kind: 'assignment',
             title: a.title,
             dueAt,
-            href: assignmentsIndex().url,
+            href: '/activities',
             meta: a.description,
             isCompleted: a.submitted,
             isOverdue: a.isOverdue,
@@ -560,7 +558,7 @@ const dueItems = computed<DueItem[]>(() => {
             kind: 'exam',
             title: e.title,
             dueAt,
-            href: examsShow(e.id).url,
+            href: '/activities',
             meta: `${e.submitted_parts}/${e.parts_count} parts · ${e.duration_minutes}m`,
             isCompleted: e.is_completed,
             isOverdue: dueAt.getTime() < Date.now() && !e.is_completed,
