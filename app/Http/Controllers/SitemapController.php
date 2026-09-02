@@ -9,12 +9,11 @@ class SitemapController extends Controller
     public function __invoke(Request $request)
     {
         $base = rtrim((string) config('app.url'), '/');
-        $now = now()->format('Y-m-d');
 
         $pages = [
-            '/' => ['1.0', 'weekly', $now],
-            '/about' => ['0.6', 'monthly', $now],
-            '/how-it-works' => ['0.7', 'monthly', $now],
+            '/' => ['1.0', 'weekly', $this->lastmodFor('js/pages/Welcome.vue')],
+            '/about' => ['0.6', 'monthly', $this->lastmodFor('js/pages/About.vue')],
+            '/how-it-works' => ['0.7', 'monthly', $this->lastmodFor('js/pages/HowItWorks.vue')],
         ];
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
@@ -34,5 +33,22 @@ class SitemapController extends Controller
 
         return response($xml, 200)
             ->header('Content-Type', 'application/xml; charset=UTF-8');
+    }
+
+    private function lastmodFor(string $relative): string
+    {
+        $path = resource_path($relative);
+
+        if (is_file($path)) {
+            return date('Y-m-d', filemtime($path));
+        }
+
+        // Fallback to git log or now if file missing (e.g., in build)
+        $gitDate = trim((string) shell_exec('git log -1 --format=%cs -- '.escapeshellarg($path).' 2>&1'));
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $gitDate)) {
+            return $gitDate;
+        }
+
+        return now()->format('Y-m-d');
     }
 }

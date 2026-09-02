@@ -45,6 +45,8 @@ const principles = [
         class="welcome-principles scroll-mt-32 border-b border-border/70 py-14 sm:py-18"
         :class="{ 'lite-motion': prefersReducedMotion }"
         aria-labelledby="principles-heading"
+        data-lazy="true"
+        style="content-visibility: auto; contain-intrinsic-size: 0 600px"
     >
         <h2
             id="principles-heading"

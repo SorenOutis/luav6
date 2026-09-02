@@ -20,14 +20,20 @@ export function useSeoConfig(): SeoConfig {
     return (page.props.seo ?? {}) as SeoConfig;
 }
 
-/** ... */
+/** Normalize canonical: lowercase, single slash, no trailing slash except root, strip query/hash. */
 export function resolveCanonicalUrl(path: string, config: SeoConfig): string {
     const origin =
         typeof window !== 'undefined'
             ? window.location.origin
             : String(config.siteUrl ?? '').replace(/\/+$/, '');
     const base = origin.replace(/\/+$/, '');
-    const clean = path === '/' ? '' : path.split('?')[0];
+    let clean = path.split('?')[0]?.split('#')[0] ?? '';
+    clean = clean.trim();
+    if (!clean.startsWith('/')) clean = `/${clean}`;
+    clean = clean.replace(/\/+/g, '/');
+    if (clean.length > 1) clean = clean.replace(/\/$/, '');
+    clean = clean.toLowerCase();
+    if (clean === '/') return `${base}/`;
     return `${base}${clean}`;
 }
 
