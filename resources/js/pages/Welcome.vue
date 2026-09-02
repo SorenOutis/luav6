@@ -135,6 +135,31 @@ const webSiteJsonLd = [
             },
         ],
     },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'Who LSI is for',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Teachers',
+                url: 'https://lsi.koamishin.com/#features',
+            },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Learners',
+                url: 'https://lsi.koamishin.com/#features',
+            },
+            {
+                '@type': 'ListItem',
+                position: 3,
+                name: 'Schools',
+                url: 'https://lsi.koamishin.com/#features',
+            },
+        ],
+    },
 ];
 </script>
 
@@ -145,6 +170,15 @@ const webSiteJsonLd = [
             rel="preconnect"
             href="https://fonts.gstatic.com"
             crossorigin="anonymous"
+        />
+        <link rel="dns-prefetch" href="https://sockjs-mt1.pusher.com" />
+        <link rel="dns-prefetch" href="https://ws.pusherapp.com" />
+        <link
+            rel="preload"
+            as="image"
+            href="/brand/og-cover.png"
+            imagesrcset="/brand/og-cover.png 1200w"
+            fetchpriority="high"
         />
     </Head>
     <SeoHead
