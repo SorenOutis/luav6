@@ -105,7 +105,7 @@ const webSiteJsonLd = [
             width: 1200,
             height: 630,
         },
-        sameAs: ['https://github.com/SorenOutis/luav6'],
+        sameAs: ['https://github.com/SorenOutis/luav6', 'https://koamishin.com', 'https://dccp.edu.ph'],
     },
     {
         '@context': 'https://schema.org',
