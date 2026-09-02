@@ -345,15 +345,16 @@ const seasonDateLabel = computed(() => {
                 <CalendarClock class="h-5 w-5 text-muted-foreground" />
             </div>
             <div class="mobile-dashboard-metric-grid">
-                <div class="mobile-dashboard-metric">
+                <Link href="/activities" class="mobile-dashboard-metric">
                     <span class="mobile-dashboard-metric__value">{{
                         dueTodayCount
                     }}</span>
                     <span class="mobile-dashboard-metric__label"
                         >Due today</span
                     >
-                </div>
-                <div
+                </Link>
+                <Link
+                    href="/activities"
                     class="mobile-dashboard-metric"
                     :class="{ 'is-alert': overdueCount > 0 }"
                 >
@@ -361,17 +362,17 @@ const seasonDateLabel = computed(() => {
                         overdueCount
                     }}</span>
                     <span class="mobile-dashboard-metric__label">Overdue</span>
-                </div>
-                <div class="mobile-dashboard-metric">
+                </Link>
+                <Link href="/activities" class="mobile-dashboard-metric">
                     <span class="mobile-dashboard-metric__value">{{
                         upcoming24hCount
                     }}</span>
                     <span class="mobile-dashboard-metric__label">Next 24h</span>
-                </div>
+                </Link>
             </div>
             <Link
                 v-if="nextItem"
-                :href="nextItem.href"
+                href="/activities"
                 class="mobile-dashboard-next-item"
             >
                 <span class="mobile-dashboard-next-item__icon">

@@ -228,9 +228,10 @@ const accentClasses = (accent: string, active: boolean) => {
             class="flex flex-col gap-2 p-3 sm:gap-4 sm:p-5 lg:flex-row lg:items-stretch"
         >
             <div class="grid grid-cols-3 gap-1.5 sm:gap-3 lg:flex-1">
-                <div
+                <Link
                     v-for="m in metrics"
                     :key="m.key"
+                    href="/activities"
                     :class="[
                         'flex min-h-[72px] flex-col justify-between rounded-xl p-2 sm:min-h-[92px] sm:flex-row sm:items-center sm:gap-3 sm:rounded-[1.1rem] sm:p-4',
                         accentClasses(m.accent, m.active).wrap,
@@ -274,12 +275,12 @@ const accentClasses = (accent: string, active: boolean) => {
                             </span>
                         </div>
                     </div>
-                </div>
+                </Link>
             </div>
 
             <Link
                 v-if="nextItem"
-                :href="nextItem.href"
+                href="/activities"
                 class="group flex min-h-14 items-center gap-3 rounded-[1.1rem] bg-muted/40 px-4 py-3.5 transition-colors hover:bg-muted/70 lg:w-[32%] lg:min-w-[260px]"
             >
                 <div
