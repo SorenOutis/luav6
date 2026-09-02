@@ -57,11 +57,17 @@ class ExamBlockService
      * Admins are never offered — blocking an admin is meaningless, and they are
      * exempt from every block anyway.
      *
+     * Students already on the exam's block list are always included, even when
+     * they have since left the section (or the section filter would hide
+     * them). A Select silently drops values it has no option for, so leaving
+     * them out is what makes a saved block list look empty when the form is
+     * reopened.
+     *
      * @return array<int, string> student id => name
      */
-    public function optionsFor(?int $sectionId): array
+    public function optionsFor(?int $sectionId, ?Exam $exam = null): array
     {
-        return User::query()
+        $options = User::query()
             ->where('is_admin', false)
             ->when(
                 $sectionId,
@@ -73,6 +79,42 @@ class ExamBlockService
             )
             ->orderBy('name')
             ->pluck('name', 'id')
+            ->all();
+
+        if ($exam === null || ! $exam->exists) {
+            return $options;
+        }
+
+        foreach ($this->blockedOptionsFor($exam) as $userId => $name) {
+            $options[$userId] ??= $name;
+        }
+
+        return $options;
+    }
+
+    /**
+     * The exam's current block list as picker options.
+     *
+     * @return array<int, string> student id => name
+     */
+    public function blockedOptionsFor(Exam $exam): array
+    {
+        return $exam->blockedUsers()
+            ->orderBy('users.name')
+            ->pluck('users.name', 'users.id')
+            ->all();
+    }
+
+    /**
+     * The ids currently on the exam's block list, for filling the picker.
+     *
+     * @return array<int, int>
+     */
+    public function blockedUserIds(Exam $exam): array
+    {
+        return $exam->blockedUsers()
+            ->pluck('users.id')
+            ->map(fn ($id): int => (int) $id)
             ->all();
     }
 }

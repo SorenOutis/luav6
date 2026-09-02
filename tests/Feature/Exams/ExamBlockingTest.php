@@ -10,6 +10,7 @@
  * the teacher's own view (and the student's past submissions) stay intact.
  */
 
+use App\Filament\Resources\Exams\Pages\EditExam;
 use App\Filament\Resources\Exams\Schemas\ExamForm;
 use App\Models\Exam;
 use App\Models\ExamPart;
@@ -22,6 +23,7 @@ use App\Models\User;
 use App\Services\CalendarEventService;
 use App\Services\ExamBlockService;
 use Inertia\Testing\AssertableInertia as Assert;
+use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
 
@@ -304,4 +306,48 @@ it('never wipes the block list when the picker is absent from the form payload',
 
     expect(ExamForm::extractBlockedUserIds($data))->toBe([3, 5]);
     expect($data)->toBe(['title' => 'Midterm']);
+});
+
+it('lists the saved blocked students again when the exam form is reopened', function () {
+    $admin = User::factory()->admin()->create();
+    actingAs($admin);
+
+    [$exam, , $blocked] = blockingContext();
+    app(ExamBlockService::class)->sync($exam, [$blocked->id]);
+
+    Livewire::test(EditExam::class, ['record' => $exam->getRouteKey()])
+        ->assertFormSet(['blocked_user_ids' => [$blocked->id]]);
+});
+
+it('keeps the block list after saving the exam form again', function () {
+    $admin = User::factory()->admin()->create();
+    actingAs($admin);
+
+    [$exam, , $blocked] = blockingContext();
+    app(ExamBlockService::class)->sync($exam, [$blocked->id]);
+
+    Livewire::test(EditExam::class, ['record' => $exam->getRouteKey()])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($exam->fresh()->blockedUsers()->pluck('users.id')->all())->toBe([$blocked->id]);
+
+    Livewire::test(EditExam::class, ['record' => $exam->getRouteKey()])
+        ->assertFormSet(['blocked_user_ids' => [$blocked->id]]);
+});
+
+it('still offers a blocked student who has left the exam section', function () {
+    $admin = User::factory()->admin()->create();
+    actingAs($admin);
+
+    [$exam, , $blocked, , $section] = blockingContext();
+    app(ExamBlockService::class)->sync($exam, [$blocked->id]);
+
+    // The student is unenrolled, but the block (and therefore the option that
+    // renders it) must survive.
+    $blocked->sections()->detach($section->id);
+
+    $options = app(ExamBlockService::class)->optionsFor($section->id, $exam);
+
+    expect(array_keys($options))->toContain($blocked->id);
 });
