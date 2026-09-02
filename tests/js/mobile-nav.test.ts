@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('mobile navigation', () => {
-    it('exposes exactly Home, Exams, Calendar, Assignments, Grades, and Chats', () => {
+    it('exposes exactly Home, Exams, Calendar, Assignments, Library, Grades, and Chats', () => {
         const source = readFileSync(
             join(process.cwd(), 'resources/js/components/MobileNav.vue'),
             'utf8',
@@ -18,6 +18,7 @@ describe('mobile navigation', () => {
             'Exams',
             'Calendar',
             'Assignments',
+            'Library',
             'Grades',
             'Chats',
         ]);
