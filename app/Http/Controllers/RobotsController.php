@@ -42,6 +42,8 @@ class RobotsController extends Controller
             foreach ($disallows as $path) {
                 $lines[] = "Disallow: $path";
             }
+            $lines[] = 'Allow: /brand/';
+            $lines[] = 'Crawl-delay: 10';
         }
 
         $lines[] = '';

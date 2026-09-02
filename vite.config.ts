@@ -1,6 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
+import compression from 'vite-plugin-compression';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
@@ -24,6 +25,8 @@ export default defineConfig({
                 },
             },
         }),
+        compression({ algorithm: 'brotliCompress', ext: '.br', threshold: 10240, deleteOriginFile: false }),
+        compression({ algorithm: 'gzip', ext: '.gz', threshold: 10240, deleteOriginFile: false }),
     ],
     resolve: {
         alias: [
