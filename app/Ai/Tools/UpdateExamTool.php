@@ -62,7 +62,9 @@ class UpdateExamTool extends PendingWriteTool implements Tool
             }
         }
 
-        if (array_key_exists('ends_at', $request)) {
+        // `$request` is an ArrayAccess wrapper (not a PHP array), so presence
+        // must be checked with isset()/offsetExists rather than array_key_exists().
+        if (isset($request['ends_at'])) {
             if ($request['ends_at'] === '' || $request['ends_at'] === null) {
                 if ($exam->ends_at !== null) {
                     $updates['ends_at'] = null;
