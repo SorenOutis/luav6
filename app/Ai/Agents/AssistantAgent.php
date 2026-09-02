@@ -12,7 +12,6 @@ use App\Ai\Tools\ProgressTool;
 use App\Ai\Tools\UpcomingExamsTool;
 use App\Ai\Tools\UserInfoTool;
 use Laravel\Ai\Attributes\MaxSteps;
-use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
@@ -21,7 +20,6 @@ use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider('gemini')]
 #[MaxSteps(8)]
 class AssistantAgent implements Agent, Conversational, HasTools
 {
