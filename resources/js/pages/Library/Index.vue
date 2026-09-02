@@ -183,8 +183,7 @@ onMounted(() => {
                             class="max-w-2xl text-sm leading-relaxed text-muted-foreground"
                         >
                             Free PDF learning materials curated for your
-                            sections. Preview inline — download only when your
-                            teacher allows it.
+                            sections.
                         </p>
                         <div
                             class="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground"
