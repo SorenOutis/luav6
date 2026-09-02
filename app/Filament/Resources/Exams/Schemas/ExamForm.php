@@ -107,6 +107,7 @@ class ExamForm
                     ->columnSpanFull(),
                 DateTimePicker::make('starts_at')
                     ->label('Starts At')
+                    ->timezone(config('app.timezone'))
                     ->required(fn (?Exam $record): bool => $record === null)
                     ->helperText('When published, students see "Starts …" until this moment, and the exam opens for submissions then.')
                     ->beforeOrEqual('ends_at')
@@ -116,6 +117,7 @@ class ExamForm
                     ->columnSpan(1),
                 DateTimePicker::make('ends_at')
                     ->label('Ends At')
+                    ->timezone(config('app.timezone'))
                     ->required(fn (?Exam $record): bool => $record === null)
                     ->helperText('The moment the exam closes. Students can see the start/end times on the exam card and exam page.')
                     ->after('starts_at')
