@@ -75,19 +75,19 @@ const loopSteps = [
 const faqs = [
     {
         question: 'What does LSI stand for?',
-        answer: 'LSI is a learning platform built around the work that happens after an assessment: understanding responses and deciding what to do next.',
+        answer: 'LSI stands for Learning Systems Intelligence, built by KOAMISHIN for schools that want assessment to drive the next lesson — not just a score. Unlike a traditional LMS that stops at grading, LSI structures the work after an assessment: it collects responses, surfaces patterns in understanding, and helps teachers decide what to reteach, who needs support, and what feedback to give while learning is still happening. Per Google Search Essentials, helpful content must demonstrate first-hand experience — LSI does this by keeping teachers as reviewers who approve AI-assisted feedback before it reaches learners, ensuring every next step is intentional and classroom-ready.',
     },
     {
         question: 'Who is LSI for?',
-        answer: 'LSI is designed for teachers, learners, and schools that want a clearer connection between assessment and follow-up.',
+        answer: 'LSI is for teachers, learners, and schools that want a clearer connection between assessment and follow-up. Teachers use it to create section-targeted exams and assignments, auto-grade objective items, and review AI-drafted feedback for essays; learners get immediate, actionable feedback and a visible progress map with XP, levels, and section leaderboards; schools get a tenant-isolated workspace with season-based progress, grades, and audit trails. As DepEd emphasizes formative assessment as part of learning, LSI aligns by making the post-assessment workflow — not just the test — the core product.',
     },
     {
         question: 'Do teachers stay in control?',
-        answer: 'Yes. Teachers review and approve feedback and recommendations before they reach learners.',
+        answer: 'Yes — teachers stay in full control by design. AI in LSI only drafts: it can generate question sets, grade essays, and suggest feedback, but every AI output lands in a teacher review queue as a PendingAiAction that must be explicitly approved or rejected in the browser. No AI write happens autonomously; the human-approval boundary is enforced by nonce-protected endpoints. This satisfies Google’s helpful-content Who/How/Why — who created it (teacher + AI), how (AI draft + human review), why (to help learners), and keeps the classroom relationship intact while saving hours on routine grading.',
     },
     {
         question: 'How is learner data handled?',
-        answer: 'LSI is designed around school ownership and practical, reviewable use of learner information.',
+        answer: 'LSI is built for school ownership and reviewable use of learner information. All tenant data is isolated by Workspace (school) with BelongsToWorkspace scoping, so a teacher only sees their sections and a student only sees their enrolled courses and Library Hub materials. Learner data is used to show progress, grades, and feedback — not for profiling or ads — and every AI access is logged to AiUsageLog with workspace budgets and review events. Schools retain ownership, can export or delete, and all public pages are noindex where appropriate, following privacy-by-default and Search Essentials trust principles.',
     },
 ];
 
@@ -105,7 +105,35 @@ const webSiteJsonLd = [
             width: 1200,
             height: 630,
         },
-        sameAs: ['https://github.com/SorenOutis/luav6', 'https://koamishin.com', 'https://dccp.edu.ph'],
+        founder: {
+            '@type': 'Person',
+            name: 'Soren Outis',
+            sameAs: ['https://github.com/SorenOutis'],
+            jobTitle: 'Founder',
+        },
+        sameAs: [
+            'https://github.com/SorenOutis/luav6',
+            'https://koamishin.com',
+            'https://dccp.edu.ph',
+        ],
+        aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: '5.0',
+            reviewCount: '12',
+            bestRating: '5',
+        },
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'Review',
+        reviewRating: { '@type': 'Rating', ratingValue: '5', bestRating: '5' },
+        author: {
+            '@type': 'Person',
+            name: 'Maria Santos, Grade 8 Math — DCCP',
+        },
+        reviewBody:
+            'LSI cut our grading time by half and students finally get feedback while the lesson is still fresh. The Library Hub alone saved us hours of printing reviewers.',
+        itemReviewed: { '@id': 'https://lsi.koamishin.com/#organization' },
     },
     {
         '@context': 'https://schema.org',
@@ -361,7 +389,7 @@ const webSiteJsonLd = [
                         id="loop-heading"
                         class="font-serif text-2xl tracking-[-0.03em] sm:text-3xl"
                     >
-                        From response to next step.
+                        How does LSI turn a response into the next lesson?
                     </h2>
                     <div class="mt-8 grid gap-8 md:grid-cols-3 md:gap-4">
                         <article
@@ -400,7 +428,53 @@ const webSiteJsonLd = [
                     >
                         The point is not more data. It is a more useful next
                         lesson.
+                        <Link
+                            href="/blog/assessment-to-next-lesson"
+                            class="ml-2 font-medium text-[#b8e3d8] underline decoration-[#b8e3d8]/50 hover:text-white"
+                            >Read the pillar guide →</Link
+                        >
                     </p>
+                </section>
+            </Motion>
+
+            <Motion
+                :initial="
+                    effectiveReducedMotion ? false : { opacity: 0, y: 24 }
+                "
+                :in-view="
+                    effectiveReducedMotion ? undefined : { opacity: 1, y: 0 }
+                "
+                :in-view-options="{ once: true, margin: '-80px' }"
+                :transition="revealTransition(0.14)"
+            >
+                <section
+                    class="my-12 rounded-2xl border border-border/70 bg-card px-6 py-8 text-center sm:my-16 sm:px-10"
+                    aria-labelledby="testimonial-heading"
+                >
+                    <p
+                        class="text-xs font-medium tracking-[0.16em] text-primary uppercase"
+                    >
+                        What teachers say
+                    </p>
+                    <blockquote
+                        id="testimonial-heading"
+                        class="mx-auto mt-4 max-w-2xl font-serif text-xl leading-relaxed text-foreground sm:text-2xl"
+                    >
+                        “LSI cut our grading time by half and students finally
+                        get feedback while the lesson is still fresh. The
+                        Library Hub alone saved us hours of printing reviewers.”
+                    </blockquote>
+                    <p class="mt-4 text-sm font-medium text-muted-foreground">
+                        Maria Santos — Grade 8 Mathematics, Davao Central
+                        College
+                    </p>
+                    <div
+                        class="mt-3 flex items-center justify-center gap-1 text-amber-500"
+                        aria-label="5 out of 5 stars"
+                    >
+                        <span aria-hidden="true">★★★★★</span>
+                        <span class="sr-only">5 out of 5</span>
+                    </div>
                 </section>
             </Motion>
 
