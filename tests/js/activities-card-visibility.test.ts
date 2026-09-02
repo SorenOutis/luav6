@@ -75,6 +75,11 @@ const mkExam = (id: number, season: string, section: string) => ({
     has_submissions: false,
     results_available: false,
     submissions: [],
+    starts_at_iso: null,
+    ends_at_iso: null,
+    is_upcoming: false,
+    is_open_now: false,
+    has_ended: false,
     section_name: section,
     season_name: season,
 });
