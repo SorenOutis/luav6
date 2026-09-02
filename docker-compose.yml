@@ -30,6 +30,7 @@ x-app: &app
   environment:
     CONTAINER_ROLE: "${CONTAINER_ROLE:-octane}"
     PORT: "${PORT:-8000}"
+    PHP_MEMORY_LIMIT: "${PHP_MEMORY_LIMIT:-256M}"
     OCTANE_WORKERS: "${OCTANE_WORKERS:-4}"
     OCTANE_MAX_REQUESTS: "${OCTANE_MAX_REQUESTS:-500}"
     # The Docker stack runs the queue on Redis, supervised by Laravel Horizon.

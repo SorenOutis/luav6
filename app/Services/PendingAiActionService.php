@@ -370,13 +370,13 @@ class PendingAiActionService
 
     private function assertIntegrity(PendingAiAction $action, string $nonce): void
     {
-        if (! hash_equals($this->nonce($action), $nonce)) {
+        if (! hash_equals($this->nonce($action), (string) $nonce)) {
             $this->audit($action, 'invalid_nonce', [
                 'nonce_sha256' => hash('sha256', $nonce),
             ]);
             throw new PendingAiActionException('The approval token is invalid. Refresh the action and try again.', 403);
         }
-        if (! hash_equals($action->payload_hash, $this->payloadHash($action->payload, $action->preview))) {
+        if (! hash_equals((string) $action->payload_hash, $this->payloadHash($action->payload ?? [], $action->preview ?? []))) {
             $this->audit($action, 'payload_integrity_failed');
             throw new PendingAiActionException('The action payload failed its integrity check.', 409);
         }
