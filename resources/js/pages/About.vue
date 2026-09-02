@@ -91,11 +91,49 @@ const seoJsonLd = computed(() => [
     {
         '@context': 'https://schema.org',
         '@type': 'Organization',
+        '@id': 'https://koamishin.dev/#organization',
         name: 'LSI - KOAMISHIN',
         alternateName: 'LSI',
         description:
             'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
-        url: typeof window !== 'undefined' ? window.location.origin : undefined,
+        url:
+            typeof window !== 'undefined'
+                ? window.location.origin
+                : 'https://koamishin.dev',
+        logo: {
+            '@type': 'ImageObject',
+            url:
+                typeof window !== 'undefined'
+                    ? `${window.location.origin}/brand/og-cover.png`
+                    : 'https://koamishin.dev/brand/og-cover.png',
+            width: 1200,
+            height: 630,
+        },
+        sameAs: ['https://github.com/SorenOutis/luav6'],
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item:
+                    typeof window !== 'undefined'
+                        ? `${window.location.origin}/`
+                        : 'https://koamishin.dev/',
+            },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'About',
+                item:
+                    typeof window !== 'undefined'
+                        ? `${window.location.origin}/about`
+                        : 'https://koamishin.dev/about',
+            },
+        ],
     },
     {
         '@context': 'https://schema.org',
@@ -115,8 +153,9 @@ const revealTransition = (delay = 0) =>
 </script>
 
 <template>
-    <Head title="About LSI - KOAMISHIN" />
+    <Head title="About LSI - KOAMISHIN | Why we build for the next lesson" />
     <SeoHead
+        title="About LSI - KOAMISHIN | Why we build for the next lesson"
         description="Learn why LSI exists and how it helps schools connect assessment, feedback, and the next lesson."
         type="article"
         :jsonld="seoJsonLd"
