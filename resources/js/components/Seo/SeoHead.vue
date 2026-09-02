@@ -62,6 +62,13 @@ const lang = computed(() => seo.locale ?? 'en_US');
         <meta property="og:description" :content="metaDescription" />
         <meta property="og:url" :content="canonical" />
         <meta v-if="image" property="og:image" :content="image" />
+        <meta v-if="image" property="og:image:width" content="1200" />
+        <meta v-if="image" property="og:image:height" content="630" />
+        <meta
+            v-if="image"
+            property="og:image:alt"
+            :content="seo.tagline || seo.siteName || ''"
+        />
         <meta property="og:locale" :content="lang" />
 
         <meta name="twitter:card" content="summary_large_image" />
