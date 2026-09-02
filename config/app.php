@@ -63,9 +63,13 @@ return [
     | will be used by the PHP date and date-time functions. The timezone
     | is set to "UTC" by default as it is suitable for most use cases.
     |
+    | It reads APP_TIMEZONE from the environment, so deployments can set
+    | e.g. APP_TIMEZONE=Asia/Manila to make exam start/end times and all
+    | other date/time fields interpret and display in that zone.
+    |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------

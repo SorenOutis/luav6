@@ -36,10 +36,12 @@ class ExamsTable
                 TextColumn::make('starts_at')
                     ->label('Starts')
                     ->dateTime()
+                    ->timezone(config('app.timezone'))
                     ->sortable(),
                 TextColumn::make('ends_at')
                     ->label('Ends')
                     ->dateTime()
+                    ->timezone(config('app.timezone'))
                     ->placeholder('Open-ended')
                     ->sortable(),
                 TextColumn::make('duration_minutes')
