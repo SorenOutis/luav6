@@ -858,7 +858,8 @@ class ExamController extends Controller
     }
 
     /**
-     * A student may only touch exams that are unassigned or in one of their sections.
+     * A student may only touch exams that are unassigned or in one of their
+     * sections, and never one a teacher has barred them from.
      *
      * The check reads the `section_user` pivot directly: the workspace-scoped
      * `sections()` relation can miss legitimate enrollments when the student's
@@ -867,6 +868,13 @@ class ExamController extends Controller
     private function assertCanAccess(Exam $exam): void
     {
         $user = auth()->user();
+
+        // Blocking is checked first — before the "unassigned exam" shortcut —
+        // because a teacher can bar a student from a global exam too. A blocked
+        // student gets a 404, not a 403, so the exam is not merely closed to
+        // them: it does not exist as far as they can tell, and blocking cannot
+        // be used to probe which exams their section has.
+        abort_if($exam->isBlockedFor($user), 404);
 
         if ($user->is_admin || ! $exam->section_id) {
             return;

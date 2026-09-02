@@ -49,6 +49,13 @@ class ExamsTable
                     ->label('Sets')
                     ->counts('sets')
                     ->tooltip('Students are dealt a shuffled set on their first open'),
+                TextColumn::make('blocked_users_count')
+                    ->label('Blocked')
+                    ->counts('blockedUsers')
+                    ->badge()
+                    ->color(fn (int $state): string => $state > 0 ? 'danger' : 'gray')
+                    ->formatStateUsing(fn (int $state): string => $state > 0 ? (string) $state : '—')
+                    ->tooltip('Students barred from this exam — it is invisible to them in every state'),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {

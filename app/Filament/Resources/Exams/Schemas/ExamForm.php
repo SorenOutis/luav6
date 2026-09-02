@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Exams\Schemas;
 use App\Enums\EssayGradingMethod;
 use App\Enums\QuestionType;
 use App\Models\Exam;
+use App\Services\ExamBlockService;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Hidden;
@@ -56,6 +57,34 @@ class ExamForm
         $data['sets'] = $items;
 
         return $data;
+    }
+
+    /**
+     * Take the blocked-student picker out of the form payload.
+     *
+     * `blocked_user_ids` drives a pivot table, not a column, so it must never
+     * reach the model — the create/edit pages write it through
+     * ExamBlockService once the exam row exists. Returns null when the payload
+     * carries no picker at all, so a partial save can never wipe an existing
+     * block list.
+     *
+     * @return array<int, int>|null
+     */
+    public static function extractBlockedUserIds(array &$data): ?array
+    {
+        if (! array_key_exists('blocked_user_ids', $data)) {
+            return null;
+        }
+
+        $userIds = array_map('intval', (array) $data['blocked_user_ids']);
+        $userIds = array_values(array_unique(array_filter(
+            $userIds,
+            fn (int $userId): bool => $userId > 0,
+        )));
+
+        unset($data['blocked_user_ids']);
+
+        return $userIds;
     }
 
     public static function configure(Schema $schema): Schema
@@ -112,6 +141,23 @@ class ExamForm
                     ->url()
                     ->maxLength(255)
                     ->columnSpan(1),
+                Section::make('Blocked Students')
+                    ->description('Blocked students cannot see this exam in any state — scheduled, open, ended or closed. Their existing submissions, grades and XP are left untouched.')
+                    ->columnSpanFull()
+                    ->schema([
+                        Select::make('blocked_user_ids')
+                            ->label('Blocked students')
+                            ->multiple()
+                            ->options(fn (Get $get): array => app(ExamBlockService::class)
+                                ->optionsFor($get('section_id') !== null ? (int) $get('section_id') : null))
+                            ->default(fn (?Exam $record): array => $record
+                                ? $record->blockedUsers()->pluck('users.id')->map(fn ($id): int => (int) $id)->all()
+                                : [])
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Pick a section above to narrow this list to its students. Leave it empty to block nobody.')
+                            ->columnSpanFull(),
+                    ]),
                 Section::make('XP Rewards')
                     ->description('Academic points remain the exam score. These separate XP rewards are granted once, after the final part is submitted.')
                     ->columnSpanFull()

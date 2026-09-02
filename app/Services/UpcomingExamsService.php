@@ -34,6 +34,11 @@ class UpcomingExamsService
     {
         $exams = Exam::withCount(['parts'])
             ->withCount(['submissions as submitted_parts' => fn ($q) => $q->where('user_id', $user->id)])
+            // This query builds its own section filter instead of visibleTo(),
+            // so the block list has to be applied here too — otherwise an exam
+            // a teacher barred the student from would still show up as an
+            // actionable deadline on their dashboard.
+            ->notBlockedBy($user)
             ->where('status', ExamStatus::Published)
             // Scheduled exams stop appearing as an actionable deadline once the
             // window ends; legacy exams without ends_at stay visible.

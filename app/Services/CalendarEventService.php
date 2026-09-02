@@ -70,6 +70,10 @@ class CalendarEventService
             ->with(['section:id,name'])
             ->withCount(['parts'])
             ->withCount(['submissions as submitted_parts' => fn ($q) => $q->where('user_id', $user->id)])
+            // Barred exams stay off the calendar in every state, including
+            // "closed", which the student would otherwise still see because
+            // they submitted answers to it.
+            ->notBlockedBy($user)
             ->where(function ($query) use ($user) {
                 $query->where('status', ExamStatus::Published);
 

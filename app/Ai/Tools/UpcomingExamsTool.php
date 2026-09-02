@@ -33,6 +33,10 @@ class UpcomingExamsTool implements Tool
 
         $exams = Exam::query()
             ->with('section:id,name')
+            // The assistant must not tell a student about an exam their teacher
+            // barred them from, even though this tool filters sections by hand
+            // rather than through visibleTo().
+            ->notBlockedBy($user)
             ->where('status', '!=', 'draft')
             ->where(fn ($query) => $query->whereNull('section_id')->orWhereIn('section_id', $sectionIds))
             ->where('exam_date', '>=', now()->subDay())
