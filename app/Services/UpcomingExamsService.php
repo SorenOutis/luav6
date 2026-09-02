@@ -35,6 +35,11 @@ class UpcomingExamsService
         $exams = Exam::withCount(['parts'])
             ->withCount(['submissions as submitted_parts' => fn ($q) => $q->where('user_id', $user->id)])
             ->where('status', ExamStatus::Published)
+            // Scheduled exams stop appearing as an actionable deadline once the
+            // window ends; legacy exams without ends_at stay visible.
+            ->where(fn ($query) => $query
+                ->whereNull('ends_at')
+                ->orWhere('ends_at', '>', now()))
             ->when(! $user->is_admin, function ($query) use ($sectionIds) {
                 $query->where(function ($q) use ($sectionIds) {
                     $q->whereNull('section_id')
@@ -59,11 +64,16 @@ class UpcomingExamsService
                 'description' => $exam->description,
                 'exam_date' => $exam->exam_date->format('M d, Y'),
                 'exam_date_iso' => $exam->exam_date->toIso8601String(),
+                'starts_at_iso' => $exam->starts_at?->toIso8601String(),
+                'ends_at_iso' => $exam->ends_at?->toIso8601String(),
                 'duration_minutes' => $exam->duration_minutes,
                 'status' => $exam->status,
                 'parts_count' => $partsCount,
                 'submitted_parts' => (int) $exam->submitted_parts,
                 'is_completed' => (int) $exam->submitted_parts === $partsCount && $partsCount > 0,
+                'is_open_now' => $exam->acceptsSubmissions(),
+                'is_upcoming' => $exam->scheduleState() === 'upcoming',
+                'has_ended' => $exam->scheduleState() === 'ended',
                 'set' => $summaries[$exam->id]['set']?->title ?? null,
             ];
         });

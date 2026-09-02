@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EssayGradingMethod;
-use App\Enums\ExamStatus;
 use App\Enums\QuestionType;
 use App\Events\ExamAnswersSaved;
 use App\Http\Requests\SaveExamAnswersRequest;
@@ -79,7 +78,7 @@ class ExamController extends Controller
         // hand a student their paper back while classmates are still working —
         // they could pass the questions (and their answers) along.
         abort_unless(
-            $request->user()->is_admin || $exam->status === 'closed',
+            $request->user()->is_admin || $exam->isEffectivelyClosed(),
             403,
             'Results unlock once this exam is closed.',
         );
@@ -162,6 +161,9 @@ class ExamController extends Controller
             $set = $summaries[$exam->id]['set'] ?? null;
             $parts = $this->examSets->filterParts($exam, $exam->parts, $set);
 
+            $closedNow = $exam->isEffectivelyClosed();
+            $scheduleState = $exam->scheduleState();
+
             return array_merge($exam->withoutRelations()->toArray(), [
                 // Cards only need part metadata and counts. Questions are the
                 // dominant payload and are fetched only for taking/reviewing.
@@ -172,16 +174,23 @@ class ExamController extends Controller
                 // Unassigned students are told which set they will get only
                 // once they open the exam; the count above already reflects it.
                 'is_locked' => ($submittedPartsCount === $parts->count() && $parts->isNotEmpty())
-                    || $exam->status === 'closed',
+                    || $closedNow,
                 'has_submissions' => $submissions->isNotEmpty(),
                 // Drives the "Review results" affordance: the student took part
                 // AND the exam is closed. `is_locked` is also true for a student
                 // who merely finished every part, which is not enough.
-                'results_available' => $exam->status === 'closed' && $submissions->isNotEmpty(),
+                'results_available' => $closedNow && $submissions->isNotEmpty(),
                 'submissions' => $submissions->values()->all(),
                 'section_name' => $exam->section?->name,
                 'season_name' => $exam->section?->season?->name,
                 'exam_date_iso' => $exam->exam_date?->toIso8601String(),
+                // Schedule window so cards can show "Starts …", "Open until …"
+                // or "Closed" without depending on the DB status column.
+                'starts_at_iso' => $exam->starts_at?->toIso8601String(),
+                'ends_at_iso' => $exam->ends_at?->toIso8601String(),
+                'is_open_now' => $exam->acceptsSubmissions(),
+                'is_upcoming' => $scheduleState === 'upcoming',
+                'has_ended' => $scheduleState === 'ended',
             ]);
         });
 
@@ -285,14 +294,24 @@ class ExamController extends Controller
         );
 
         // For a closed exam the student never took, drop the questions entirely
-        // so the payload carries nothing for them to review.
-        $includeQuestions = $exam->status !== 'closed' || $reveal;
+        // so the payload carries nothing for them to review. A scheduled exam
+        // whose window ended is treated as closed too. The same guard hides the
+        // question text before the start time — students may open the page to
+        // read the schedule, but not the questions themselves.
+        $includeQuestions = $exam->acceptsSubmissions()
+            || $reveal
+            || (bool) auth()->user()->is_admin;
 
         return Inertia::render('Exams/Show', [
             'exam' => array_merge($exam->withoutRelations()->toArray(), [
                 'parts' => ExamPartSerializer::many($parts, $reveal, $includeQuestions),
                 // Students see which set they are taking on the exam page too.
                 'set' => $set !== null ? ['id' => $set->id, 'title' => $set->title] : null,
+                'starts_at_iso' => $exam->starts_at?->toIso8601String(),
+                'ends_at_iso' => $exam->ends_at?->toIso8601String(),
+                'is_open_now' => $exam->acceptsSubmissions(),
+                'is_upcoming' => $exam->scheduleState() === 'upcoming',
+                'has_ended' => $exam->scheduleState() === 'ended',
             ]),
             'submissions' => $submissions,
             'submittedPartId' => $submittedPartId,
@@ -322,11 +341,10 @@ class ExamController extends Controller
 
         $this->assertCanAccess($exam);
         $this->assertPartInAssignedSet($exam, $examPart);
-        abort_unless(
-            ExamStatus::tryFrom($exam->status)?->acceptsSubmissions(),
-            403,
-            'This exam is not accepting answers.',
-        );
+
+        if (! $exam->acceptsSubmissions()) {
+            abort(403, $this->scheduleRejectionMessage($exam));
+        }
 
         $alreadySubmitted = ExamSubmission::where('user_id', $request->user()->id)
             ->where('exam_id', $exam->id)
@@ -379,7 +397,9 @@ class ExamController extends Controller
 
         $this->assertCanAccess($exam);
 
-        abort_if($exam->status === 'closed', 403, 'This exam is currently closed.');
+        if (! $exam->acceptsSubmissions()) {
+            abort(403, $this->scheduleRejectionMessage($exam));
+        }
 
         $this->assertPartInAssignedSet($exam, $examPart);
 
@@ -462,9 +482,10 @@ class ExamController extends Controller
     {
         abort_if($examPart->exam_id !== $exam->id, 404);
 
-        // Prevent submissions if exam is closed
-        if ($exam->status === 'closed') {
-            abort(403, 'This exam is currently closed.');
+        // Prevent submissions if the exam is closed or outside its schedule
+        // window (not started yet, or the end time has passed).
+        if (! $exam->acceptsSubmissions()) {
+            abort(403, $this->scheduleRejectionMessage($exam));
         }
 
         // Phase 1.5 — the student must actually have access to this exam.
@@ -889,6 +910,31 @@ class ExamController extends Controller
             403,
             'This question belongs to another set of this exam.',
         );
+    }
+
+    /**
+     * A friendly rejection message for a request that lands outside the
+     * scheduled window (or on a manually closed exam).
+     */
+    private function scheduleRejectionMessage(Exam $exam): string
+    {
+        if ($exam->status === 'closed') {
+            return 'This exam is currently closed.';
+        }
+
+        if (! $exam->hasStarted()) {
+            $at = $exam->starts_at?->format('M d, Y g:i A') ?? 'the scheduled time';
+
+            return "This exam has not started yet. It opens on {$at}.";
+        }
+
+        if ($exam->hasEnded()) {
+            $at = $exam->ends_at?->format('M d, Y g:i A') ?? 'the scheduled end time';
+
+            return "This exam has closed. It ended on {$at}.";
+        }
+
+        return 'This exam is not accepting answers right now.';
     }
 
     /**

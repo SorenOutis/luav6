@@ -74,7 +74,7 @@ class ExamPartSerializer
     ): bool {
         $isAdmin ??= (bool) auth()->user()?->is_admin;
 
-        return $isAdmin || ($exam->status === 'closed' && $hasSubmitted);
+        return $isAdmin || ($exam->isEffectivelyClosed() && $hasSubmitted);
     }
 
     /**

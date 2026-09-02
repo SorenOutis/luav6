@@ -342,6 +342,51 @@ describe('activities hub — exam card visibility', () => {
         );
     });
 
+    it('shows the scheduled start/end window on cards', async () => {
+        const schedule = {
+            starts_at_iso: '2026-09-10T09:00:00+08:00',
+            ends_at_iso: '2026-09-10T10:00:00+08:00',
+        };
+        const upcoming = mkExam(1, 'Season 1', 'BSIT 1-A');
+        upcoming.is_upcoming = true;
+        upcoming.is_open_now = false;
+        upcoming.has_ended = false;
+        Object.assign(upcoming, schedule);
+
+        const open = mkExam(2, 'Season 1', 'BSIT 1-A');
+        open.is_upcoming = false;
+        open.is_open_now = true;
+        open.has_ended = false;
+        Object.assign(open, schedule);
+
+        const ended = mkExam(3, 'Season 1', 'BSIT 1-A');
+        ended.is_upcoming = false;
+        ended.is_open_now = false;
+        ended.has_ended = true;
+        Object.assign(ended, schedule);
+
+        const wrapper = mount(Activities, {
+            props: {
+                examsBySeason: [
+                    { seasonName: 'Season 1', exams: [upcoming, open, ended] },
+                ] as any,
+                examPagination: { hasMore: false, nextCursor: null },
+                sectionTabs: [{ key: 'all', label: 'All sections', count: 3 }],
+                hubStats: hubStats(3),
+            },
+            global: globalStubs,
+        });
+        await flushPromises();
+
+        const cards = wrapper.findAll('.exam-card');
+        expect(cards).toHaveLength(3);
+        expect(cards[0].text()).toContain('Starts');
+        expect(cards[0].text()).toContain('Upcoming');
+        expect(cards[1].text()).toContain('Ends');
+        expect(cards[1].text()).toContain('Open');
+        expect(cards[2].text()).toContain('Closed');
+    });
+
     it('keeps the section tabs in sync with the poll', () => {
         const page = readFileSync(
             join(process.cwd(), 'resources/js/pages/Activities/Index.vue'),

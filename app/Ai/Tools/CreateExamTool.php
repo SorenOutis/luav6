@@ -47,6 +47,19 @@ class CreateExamTool extends PendingWriteTool implements Tool
             return 'Error: exam_date must be a valid date/time, e.g. "2026-08-20 09:00".';
         }
 
+        $endsAt = null;
+        if (($request['ends_at'] ?? null) !== null) {
+            try {
+                $endsAt = Carbon::parse((string) $request['ends_at']);
+            } catch (\Throwable) {
+                return 'Error: ends_at must be a valid date/time, e.g. "2026-08-20 10:00".';
+            }
+
+            if ($endsAt->lte($examDate)) {
+                return 'Error: ends_at must be after exam_date.';
+            }
+        }
+
         $duration = min(max((int) ($request['duration_minutes'] ?? 60), 5), 600);
         $description = trim((string) ($request['description'] ?? '')) ?: null;
         if ($description !== null && mb_strlen($description) > 20000) {
@@ -57,9 +70,21 @@ class CreateExamTool extends PendingWriteTool implements Tool
             'title' => $title,
             'description' => $description,
             'exam_date' => $examDate->toIso8601String(),
+            'ends_at' => $endsAt?->toIso8601String(),
             'duration_minutes' => $duration,
             'section_id' => $section?->id,
             'section_expected_updated_at' => $section?->updated_at?->toJSON(),
+        ];
+
+        $preview = [
+            ['field' => 'Record', 'before' => null, 'after' => 'New draft exam'],
+            ['field' => 'Title', 'before' => null, 'after' => $title],
+            ['field' => 'Description', 'before' => null, 'after' => $description],
+            ['field' => 'Starts at', 'before' => null, 'after' => $examDate->format('M d, Y g:i A')],
+            ['field' => 'Ends at', 'before' => null, 'after' => $endsAt?->format('M d, Y g:i A') ?? 'Open until manually closed'],
+            ['field' => 'Duration', 'before' => null, 'after' => "{$duration} minutes"],
+            ['field' => 'Section', 'before' => null, 'after' => $sectionLabel],
+            ['field' => 'Status', 'before' => null, 'after' => 'draft'],
         ];
 
         return $this->stageAction(
@@ -67,15 +92,7 @@ class CreateExamTool extends PendingWriteTool implements Tool
             'Create draft exam',
             "Create the draft exam \"{$title}\" for {$sectionLabel}.",
             $payload,
-            [
-                ['field' => 'Record', 'before' => null, 'after' => 'New draft exam'],
-                ['field' => 'Title', 'before' => null, 'after' => $title],
-                ['field' => 'Description', 'before' => null, 'after' => $description],
-                ['field' => 'Date and time', 'before' => null, 'after' => $examDate->format('M d, Y g:i A')],
-                ['field' => 'Duration', 'before' => null, 'after' => "{$duration} minutes"],
-                ['field' => 'Section', 'before' => null, 'after' => $sectionLabel],
-                ['field' => 'Status', 'before' => null, 'after' => 'draft'],
-            ],
+            $preview,
         );
     }
 
@@ -83,7 +100,8 @@ class CreateExamTool extends PendingWriteTool implements Tool
     {
         return [
             'title' => $schema->string()->description('Exam title.')->required(),
-            'exam_date' => $schema->string()->description('Date and time, e.g. "2026-08-20 09:00".')->required(),
+            'exam_date' => $schema->string()->description('Start date and time, e.g. "2026-08-20 09:00". This is when students can begin.')->required(),
+            'ends_at' => $schema->string()->description('Optional end date/time, e.g. "2026-08-20 10:00". When set, the exam closes to students at this time.'),
             'duration_minutes' => $schema->integer()->description('Duration in minutes (5–600, default 60).'),
             'section_id' => $schema->integer()->description('Optional section ID from workspace_overview. Omit for all sections.'),
             'description' => $schema->string()->description('Optional exam description.'),

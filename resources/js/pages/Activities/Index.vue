@@ -80,6 +80,13 @@ interface Exam {
     section_name?: string;
     season_name?: string;
     exam_date_iso?: string;
+    // Schedule window; cards use these to show Starts / Opens / Ends instead
+    // of relying on the (still admin-controlled) DB status alone.
+    starts_at_iso?: string | null;
+    ends_at_iso?: string | null;
+    is_open_now?: boolean;
+    is_upcoming?: boolean;
+    has_ended?: boolean;
     // The set of the exam this student was handed (null until they open it).
     set?: { id: number; title: string } | null;
 }
@@ -301,7 +308,61 @@ watch(showScoresDrawer, (open) => {
 });
 
 // ─── Exam helpers (minimal copy from Exam.vue) ──────────────────────────────
+const formatScheduleDate = (iso?: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
+
 const getExamTimeInfo = (exam: Exam) => {
+    // Scheduled exams show their open/close window first. Legacy exams without
+    // a schedule keep the old countdown behaviour.
+    if (exam.has_ended) {
+        return {
+            label: exam.ends_at_iso
+                ? `Closed · ended ${formatScheduleDate(exam.ends_at_iso)}`
+                : 'Closed',
+            color: 'text-[#CB7676]',
+            isOverdue: false,
+        };
+    }
+
+    if (exam.status === 'closed' && !exam.has_submissions) {
+        return {
+            label: 'Closed',
+            color: 'text-[#CB7676]',
+            isOverdue: false,
+        };
+    }
+
+    if (exam.is_upcoming && exam.starts_at_iso) {
+        return {
+            label: `Starts ${formatScheduleDate(exam.starts_at_iso)}`,
+            color: 'text-[#E0AF68]',
+            isOverdue: false,
+        };
+    }
+
+    if (exam.is_open_now) {
+        return {
+            label: exam.ends_at_iso
+                ? `Ends ${formatScheduleDate(exam.ends_at_iso)}`
+                : 'Open',
+            color: 'text-[#D97757]',
+            isOverdue: false,
+        };
+    }
+
+    return getLegacyExamTimeInfo(exam);
+};
+
+const getLegacyExamTimeInfo = (exam: Exam) => {
     if (!exam.exam_date && !exam.exam_date_iso) {
         return {
             label: 'No deadline',
@@ -354,8 +415,9 @@ const getStatusBadgeInfo = (exam: Exam) => {
         exam.submitted_parts_count ?? exam.submissions?.length ?? 0;
     const allDone = total > 0 && submitted >= total;
     if (allDone) return { label: 'Completed', color: 'bg-[#4D9375]' };
-    if (exam.is_locked && exam.status === 'closed')
+    if (exam.status === 'closed' || exam.has_ended)
         return { label: 'Closed', color: 'bg-[#CB7676]' };
+    if (exam.is_upcoming) return { label: 'Upcoming', color: 'bg-[#E0AF68]' };
     if (exam.is_locked) return { label: 'In progress', color: 'bg-[#E0AF68]' };
     if (exam.status === 'published')
         return { label: 'Open', color: 'bg-[#D97757]' };
@@ -410,7 +472,8 @@ const getProgressPercent = (exam: Exam) => {
 const hasSubmitted = (exam: Exam) =>
     exam.has_submissions ?? (exam.submissions?.length ?? 0) > 0;
 const canReviewResults = (exam: Exam) =>
-    exam.results_available ?? (exam.status === 'closed' && hasSubmitted(exam));
+    exam.results_available ??
+    ((exam.status === 'closed' || exam.has_ended) && hasSubmitted(exam));
 const isAwaitingClose = (exam: Exam) =>
     !canReviewResults(exam) && hasSubmitted(exam) && exam.is_locked === true;
 
@@ -435,7 +498,8 @@ function showScrollbar() {
 const answersRevealed = computed(
     () =>
         selectedExamForReview.value !== null &&
-        selectedExamForReview.value.status === 'closed' &&
+        (selectedExamForReview.value.status === 'closed' ||
+            selectedExamForReview.value.has_ended) &&
         hasSubmitted(selectedExamForReview.value),
 );
 const selectedPartQuestions = computed(

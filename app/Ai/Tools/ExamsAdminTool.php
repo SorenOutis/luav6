@@ -40,6 +40,8 @@ class ExamsAdminTool implements Tool
                 'id' => $exam->id,
                 'title' => $exam->title,
                 'exam_date' => $exam->exam_date?->format('M d, Y g:i A'),
+                'starts_at' => $exam->starts_at?->format('M d, Y g:i A'),
+                'ends_at' => $exam->ends_at?->format('M d, Y g:i A'),
                 'status' => $exam->status,
                 'section' => $exam->section?->name ?? 'All sections',
                 'submissions' => $exam->submissions_count,

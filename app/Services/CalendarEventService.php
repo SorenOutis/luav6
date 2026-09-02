@@ -105,6 +105,11 @@ class CalendarEventService
                 'sectionName' => $exam->section?->name,
                 'durationMinutes' => (int) $exam->duration_minutes,
                 'status' => $exam->status,
+                'startsAtISO' => $exam->starts_at?->toIso8601String(),
+                'endsAtISO' => $exam->ends_at?->toIso8601String(),
+                'isOpenNow' => $exam->acceptsSubmissions(),
+                'isUpcoming' => $exam->scheduleState() === 'upcoming',
+                'hasEnded' => $exam->scheduleState() === 'ended',
                 'isCompleted' => (int) $exam->parts_count > 0
                     && (int) $exam->submitted_parts === (int) $exam->parts_count,
                 'href' => "/exams/{$exam->id}",

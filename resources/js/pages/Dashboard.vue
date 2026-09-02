@@ -405,6 +405,11 @@ interface Exam {
     description: string;
     exam_date: string;
     exam_date_iso?: string | null;
+    starts_at_iso?: string | null;
+    ends_at_iso?: string | null;
+    is_open_now?: boolean;
+    is_upcoming?: boolean;
+    has_ended?: boolean;
     duration_minutes: number;
     status: string;
     parts_count: number;
@@ -548,8 +553,8 @@ const dueItems = computed<DueItem[]>(() => {
         // Closed / draft exams are not actionable — they must not count as
         // today, overdue, next-24h, or "next exam".
         if (e.status !== 'published') continue;
-        if (!e.exam_date_iso) continue;
-        const dueAt = new Date(e.exam_date_iso);
+        if (!e.exam_date_iso && !e.starts_at_iso) continue;
+        const dueAt = new Date(e.starts_at_iso || e.exam_date_iso || '');
         if (Number.isNaN(dueAt.getTime())) continue;
         items.push({
             kind: 'exam',

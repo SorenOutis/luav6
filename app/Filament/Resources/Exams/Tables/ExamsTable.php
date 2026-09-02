@@ -33,8 +33,14 @@ class ExamsTable
                     ->label('Section')
                     ->placeholder('All Sections')
                     ->sortable(),
-                TextColumn::make('exam_date')
+                TextColumn::make('starts_at')
+                    ->label('Starts')
                     ->dateTime()
+                    ->sortable(),
+                TextColumn::make('ends_at')
+                    ->label('Ends')
+                    ->dateTime()
+                    ->placeholder('Open-ended')
                     ->sortable(),
                 TextColumn::make('duration_minutes')
                     ->numeric()

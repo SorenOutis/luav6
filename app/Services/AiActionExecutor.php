@@ -52,12 +52,17 @@ class AiActionExecutor
                 $this->assertUnchanged($section, $payload['section_expected_updated_at'] ?? null);
             }
 
+            $examDate = Carbon::parse($payload['exam_date']);
+
             $exam = Exam::query()->create([
                 'workspace_id' => $action->workspace_id,
                 'admin_id' => $action->user_id,
                 'title' => $payload['title'],
                 'description' => $payload['description'],
-                'exam_date' => Carbon::parse($payload['exam_date']),
+                'exam_date' => $examDate,
+                // Keep the legacy alias in sync with the schedule.
+                'starts_at' => $examDate,
+                'ends_at' => $payload['ends_at'] ?? null,
                 'duration_minutes' => (int) $payload['duration_minutes'],
                 'status' => 'draft',
                 'section_id' => $sectionId,
@@ -79,9 +84,14 @@ class AiActionExecutor
 
             $changes = [];
             foreach ($payload['changes'] as $field => $value) {
-                if ($field === 'exam_date') {
-                    $exam->exam_date = Carbon::parse($value);
-                    $changes[] = 'date → '.$exam->exam_date->format('M d, Y g:i A');
+                if ($field === 'exam_date' || $field === 'starts_at') {
+                    $at = Carbon::parse($value);
+                    $exam->exam_date = $at;
+                    $exam->starts_at = $at;
+                    $changes[] = 'starts → '.$at->format('M d, Y g:i A');
+                } elseif ($field === 'ends_at') {
+                    $exam->ends_at = $value === null ? null : Carbon::parse($value);
+                    $changes[] = 'ends → '.($exam->ends_at?->format('M d, Y g:i A') ?? 'open-ended');
                 } elseif ($field === 'duration_minutes') {
                     $exam->duration_minutes = (int) $value;
                     $changes[] = "duration → {$exam->duration_minutes} minutes";
