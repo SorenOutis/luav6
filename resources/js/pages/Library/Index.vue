@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import {
     BookOpen,
+    ChevronRight,
     Clock,
     Download,
     Eye,
@@ -152,12 +153,12 @@ onMounted(() => {
             <div
                 class="mobile-ui-page relative flex h-full flex-1 flex-col gap-8 overflow-hidden bg-background p-4 md:p-10"
             >
-                <!-- Hero -->
+                <!-- Hero — hidden on mobile, mobile heading lives in catalog -->
                 <Motion
                     :initial="{ opacity: 0, y: 20 }"
                     :animate="{ opacity: 1, y: 0 }"
                     :transition="{ duration: 0.6, easing: [0.16, 1, 0.3, 1] }"
-                    class="relative z-10 overflow-hidden rounded-2xl border border-border/20 bg-gradient-to-br from-primary/[0.06] via-muted/[0.03] to-transparent p-6 md:p-8"
+                    class="relative z-10 hidden overflow-hidden rounded-2xl border border-border/20 bg-gradient-to-br from-primary/[0.06] via-muted/[0.03] to-transparent p-6 md:block md:p-8"
                 >
                     <div
                         class="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 blur-[60px]"
@@ -202,7 +203,124 @@ onMounted(() => {
                     </div>
                 </Motion>
 
-                <!-- Search + Filters -->
+                <!-- Mobile catalog — mirrors Courses mobile -->
+                <section
+                    class="mobile-course-catalog md:hidden"
+                    aria-label="Library catalog"
+                >
+                    <div class="mobile-course-catalog__heading">
+                        <div>
+                            <span class="mobile-dashboard-kicker"
+                                >Free resources</span
+                            >
+                            <h1 class="mobile-dashboard-title">Library Hub</h1>
+                        </div>
+                        <span class="mobile-course-count"
+                            >{{ filteredMaterials.length }} items</span
+                        >
+                    </div>
+                    <label class="mobile-course-search">
+                        <Search class="h-4 w-4" />
+                        <span class="sr-only">Search materials</span>
+                        <input
+                            v-model="searchQuery"
+                            type="search"
+                            placeholder="Search materials"
+                        />
+                    </label>
+                    <div
+                        class="mobile-course-filters"
+                        role="tablist"
+                        aria-label="Categories"
+                    >
+                        <button
+                            type="button"
+                            :class="{ 'is-active': selectedCategory === 'all' }"
+                            @click="selectedCategory = 'all'"
+                        >
+                            All
+                        </button>
+                        <button
+                            v-for="cat in categories"
+                            :key="cat.slug"
+                            type="button"
+                            :class="{
+                                'is-active': selectedCategory === cat.slug,
+                            }"
+                            @click="selectedCategory = cat.slug"
+                        >
+                            {{ cat.name }}
+                        </button>
+                    </div>
+                    <div
+                        v-if="filteredMaterials.length"
+                        class="mobile-course-list"
+                    >
+                        <button
+                            v-for="material in filteredMaterials"
+                            :key="material.id"
+                            class="mobile-course-row"
+                            @click="openPreview(material)"
+                        >
+                            <span class="mobile-course-cover">
+                                <img
+                                    v-if="material.cover_image"
+                                    :src="material.cover_image"
+                                    :alt="material.title"
+                                />
+                                <BookOpen v-else class="h-5 w-5" />
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <strong class="mobile-course-row__title">{{
+                                    material.title
+                                }}</strong>
+                                <span class="mobile-course-row__meta"
+                                    >{{
+                                        material.category?.name ||
+                                        'Uncategorized'
+                                    }}
+                                    ·
+                                    {{
+                                        (
+                                            material.file_extension || 'PDF'
+                                        ).toUpperCase()
+                                    }}
+                                    ·
+                                    {{
+                                        formatFileSize(material.file_size)
+                                    }}</span
+                                >
+                                <span class="mobile-course-row__meta"
+                                    >{{
+                                        material.sections
+                                            .map((s) => s.name)
+                                            .join(', ') || 'No section'
+                                    }}
+                                    <template v-if="!material.is_downloadable">
+                                        · View only</template
+                                    ></span
+                                >
+                            </span>
+                            <span
+                                class="flex shrink-0 items-center gap-1 text-muted-foreground"
+                            >
+                                <Eye
+                                    v-if="!material.is_downloadable"
+                                    class="h-4 w-4"
+                                />
+                                <Download v-else class="h-4 w-4" />
+                                <ChevronRight class="h-4 w-4" />
+                            </span>
+                        </button>
+                    </div>
+                    <div v-else class="mobile-course-empty">
+                        <BookOpen class="h-5 w-5" />
+                        <strong>No materials found</strong>
+                        <span>Try another search or category.</span>
+                    </div>
+                </section>
+
+                <!-- Desktop Search + Filters -->
                 <Motion
                     :initial="{ opacity: 0, y: 20 }"
                     :animate="{ opacity: 1, y: 0 }"
@@ -211,50 +329,54 @@ onMounted(() => {
                         delay: 0.1,
                         easing: [0.16, 1, 0.3, 1],
                     }"
-                    class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                    class="courses-desktop-filter relative z-10 hidden md:block"
                 >
-                    <div class="relative max-w-md flex-1">
-                        <Search
-                            class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/40"
-                        />
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Search titles, descriptions, filenames..."
-                            class="w-full rounded-xl border border-border/40 bg-background/60 py-2.5 pr-9 pl-10 text-sm outline-none placeholder:text-muted-foreground/40 focus:border-primary/30 focus:ring-2 focus:ring-primary/10"
-                        />
-                        <button
-                            v-if="searchQuery"
-                            @click="searchQuery = ''"
-                            class="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-lg p-0.5 text-muted-foreground/40 hover:text-foreground"
-                        >
-                            <X class="h-4 w-4" />
-                        </button>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button
-                            v-for="cat in [
-                                { id: 0, name: 'All', slug: 'all' },
-                                ...categories,
-                            ]"
-                            :key="cat.slug"
-                            @click="selectedCategory = cat.slug"
-                            class="rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all"
-                            :class="
-                                selectedCategory === cat.slug
-                                    ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                                    : 'border-border/40 bg-background/60 text-muted-foreground/70 hover:border-primary/30 hover:text-foreground'
-                            "
-                        >
-                            {{ cat.name }}
-                        </button>
+                    <div
+                        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div class="relative max-w-md flex-1">
+                            <Search
+                                class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-muted-foreground/40"
+                            />
+                            <input
+                                v-model="searchQuery"
+                                type="text"
+                                placeholder="Search titles, descriptions, filenames..."
+                                class="w-full rounded-xl border border-border/40 bg-background/60 py-2.5 pr-9 pl-10 text-sm outline-none placeholder:text-muted-foreground/40 focus:border-primary/30 focus:ring-2 focus:ring-primary/10"
+                            />
+                            <button
+                                v-if="searchQuery"
+                                @click="searchQuery = ''"
+                                class="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-lg p-0.5 text-muted-foreground/40 hover:text-foreground"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button
+                                v-for="cat in [
+                                    { id: 0, name: 'All', slug: 'all' },
+                                    ...categories,
+                                ]"
+                                :key="cat.slug"
+                                @click="selectedCategory = cat.slug"
+                                class="rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all"
+                                :class="
+                                    selectedCategory === cat.slug
+                                        ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                                        : 'border-border/40 bg-background/60 text-muted-foreground/70 hover:border-primary/30 hover:text-foreground'
+                                "
+                            >
+                                {{ cat.name }}
+                            </button>
+                        </div>
                     </div>
                 </Motion>
 
-                <!-- Grid -->
+                <!-- Desktop Grid -->
                 <div
                     v-if="filteredMaterials.length > 0"
-                    class="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
+                    class="courses-desktop-grid relative z-10 hidden grid-cols-1 gap-6 md:grid md:grid-cols-2 lg:grid-cols-3"
                 >
                     <Motion
                         v-for="(material, idx) in filteredMaterials"
@@ -393,12 +515,12 @@ onMounted(() => {
                     </Motion>
                 </div>
 
-                <!-- Empty filtered -->
+                <!-- Desktop Empty filtered -->
                 <Motion
                     v-else-if="materials.length > 0"
                     :initial="{ opacity: 0 }"
                     :animate="{ opacity: 1 }"
-                    class="relative z-10 flex flex-col items-center justify-center py-16"
+                    class="courses-desktop-grid relative z-10 hidden flex-col items-center justify-center py-16 md:flex"
                 >
                     <div
                         class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border/40 bg-muted/10"
@@ -422,12 +544,12 @@ onMounted(() => {
                     </button>
                 </Motion>
 
-                <!-- Empty all -->
+                <!-- Desktop Empty all -->
                 <Motion
                     v-else
                     :initial="{ opacity: 0 }"
                     :animate="{ opacity: 1 }"
-                    class="relative z-10 flex flex-col items-center justify-center py-20"
+                    class="courses-desktop-grid relative z-10 hidden flex-col items-center justify-center py-20 md:flex"
                 >
                     <div
                         class="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-dashed border-border/40 bg-muted/10"
