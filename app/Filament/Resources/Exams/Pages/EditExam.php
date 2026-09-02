@@ -42,6 +42,25 @@ class EditExam extends EditRecord
     private ?array $blockedUserIds = null;
 
     /**
+     * Seed the "Blocked Students" picker from the pivot.
+     *
+     * The form is filled from the record's *attributes*, and the block list is
+     * a pivot rather than a column, so without this the picker would come up
+     * empty on every edit — making saved blocks look like they had vanished.
+     * A component default does not help: filling with an explicit data array
+     * bypasses defaults.
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        /** @var Exam $record */
+        $record = $this->getRecord();
+
+        $data['blocked_user_ids'] = app(ExamBlockService::class)->blockedUserIds($record);
+
+        return $data;
+    }
+
+    /**
      * Growing or shrinking the number of sets is done here, from the repeater's
      * actual items, so the counter can never remove a set that is on screen.
      */

@@ -150,10 +150,17 @@ class ExamForm
                         Select::make('blocked_user_ids')
                             ->label('Blocked students')
                             ->multiple()
-                            ->options(fn (Get $get): array => app(ExamBlockService::class)
-                                ->optionsFor($get('section_id') !== null ? (int) $get('section_id') : null))
+                            // Students already blocked are always among the
+                            // options, even if they left the section — a Select
+                            // drops values it has no option for, which is what
+                            // used to make a saved block list look empty.
+                            ->options(fn (Get $get, ?Exam $record): array => app(ExamBlockService::class)
+                                ->optionsFor(
+                                    $get('section_id') !== null ? (int) $get('section_id') : null,
+                                    $record,
+                                ))
                             ->default(fn (?Exam $record): array => $record
-                                ? $record->blockedUsers()->pluck('users.id')->map(fn ($id): int => (int) $id)->all()
+                                ? app(ExamBlockService::class)->blockedUserIds($record)
                                 : [])
                             ->searchable()
                             ->preload()
