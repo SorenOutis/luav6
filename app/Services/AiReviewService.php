@@ -199,7 +199,7 @@ class AiReviewService
                 }
                 if (
                     $draft->review_status === AiEssayFeedbackDraft::STATUS_AWAITING_REVIEW
-                    && hash_equals($draft->source_hash, $sourceHash)
+                    && hash_equals((string) $draft->source_hash, $sourceHash)
                 ) {
                     return $draft;
                 }
@@ -277,7 +277,7 @@ class AiReviewService
             if ($answerIndex === false || ! is_array($answers[$answerIndex])) {
                 throw new \DomainException('The essay answer no longer exists.');
             }
-            if (! hash_equals($locked->source_hash, self::essaySourceHash($answers[$answerIndex]))) {
+            if (! hash_equals((string) $locked->source_hash, self::essaySourceHash($answers[$answerIndex]))) {
                 $locked->forceFill([
                     'review_status' => AiEssayFeedbackDraft::STATUS_SUPERSEDED,
                     'last_error' => 'The student answer or question changed after this feedback was generated.',

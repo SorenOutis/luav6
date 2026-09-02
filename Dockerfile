@@ -18,8 +18,11 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Postgres driver, and Redis (Horizon's queue backend). `curl` is used by the
 # container HEALTHCHECK; `supervisor` manages the persistent AI queue worker
 # processes when the legacy `queue` role is used instead of Horizon.
-# `memory_limit` is capped so a long-lived FrankenPHP worker that leaks is
-# killed by Octane's max-requests recycling instead of OOM-ing the container.
+# `memory_limit` defaults to 256M (PDF/DOCX extraction and batched AI essay
+# grading routinely need more than 128M) and can be overridden at build time
+# with the PHP_MEMORY_LIMIT arg or at runtime with the PHP_MEMORY_LIMIT env
+# var, which start.sh writes into its own conf.d file.
+ARG PHP_MEMORY_LIMIT=256M
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl supervisor \
     && install-php-extensions \
@@ -35,7 +38,7 @@ RUN apt-get update \
         redis \
         sockets \
         zip \
-    && printf 'memory_limit = 128M\n' > /usr/local/etc/php/conf.d/zz-memory-limit.ini \
+    && printf 'memory_limit = %s\n' "$PHP_MEMORY_LIMIT" > /usr/local/etc/php/conf.d/zz-memory-limit.ini \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Composer dependencies ────────────────────────────────────────────────

@@ -188,6 +188,20 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return filled($this->getAuthPassword());
     }
 
+    /**
+     * Social-login accounts have a NULL `password` column (see the
+     * `make_password_nullable_on_users_table` migration). Laravel's
+     * SessionGuard / AuthenticateSession middleware feed this value straight
+     * into hash_equals(), which throws
+     * "hash_equals(): Argument #1 ($known_string) must be of type string,
+     * null given" on PHP 8. Always hand back a string so those comparisons
+     * simply fail instead of fataling.
+     */
+    public function getAuthPassword(): string
+    {
+        return (string) ($this->attributes['password'] ?? '');
+    }
+
     public function seasonProgress()
     {
         return $this->hasMany(SeasonProgress::class);

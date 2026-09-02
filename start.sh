@@ -20,6 +20,19 @@ mkdir -p \
     bootstrap/cache
 touch database/database.sqlite 2>/dev/null || true
 
+# ── PHP memory limit ─────────────────────────────────────────────────────
+# The image bakes memory_limit into /usr/local/etc/php/conf.d, which the
+# non-root runtime user cannot edit. To allow a per-deploy override without
+# rebuilding, drop an extra ini into a writable scan dir under /tmp. Anything
+# that parses PDFs/DOCX or batch-grades essays needs well over 128M; going
+# under that reproduces "Allowed memory size of 134217728 bytes exhausted".
+PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-256M}"
+PHP_EXTRA_INI_DIR=/tmp/php-conf.d
+mkdir -p "$PHP_EXTRA_INI_DIR"
+printf 'memory_limit = %s\n' "$PHP_MEMORY_LIMIT" > "$PHP_EXTRA_INI_DIR/zz-memory-limit.ini"
+export PHP_INI_SCAN_DIR="/usr/local/etc/php/conf.d:$PHP_EXTRA_INI_DIR"
+echo "[start] php memory_limit=$PHP_MEMORY_LIMIT"
+
 # ── Deprecation log channel ──────────────────────────────────────────────
 # Production was throwing "EMERGENCY: Unable to create configured logger. ...
 # Log [deprecations] is not defined." every time a PHP/library deprecation
@@ -82,7 +95,7 @@ case "$ROLE" in
         NAME="${QUEUE_NAME:-ai}"
         TRIES="${QUEUE_TRIES:-3}"
         TIMEOUT="${QUEUE_TIMEOUT:-300}"
-        MEMORY="${QUEUE_MEMORY:-128}"
+        MEMORY="${QUEUE_MEMORY:-256}"
 
         # ── Supervisor config: run Octane + the queue consumer together ───────
         # Supervisor becomes PID 1 and forwards SIGTERM to both programs

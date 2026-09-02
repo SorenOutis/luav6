@@ -173,7 +173,7 @@ class GradeExamSubmissionEssays implements ShouldBeUnique, ShouldQueue
                     return $answer;
                 }
 
-                if (! hash_equals($sourceHashes[$questionNumber], $this->answerSourceHash($answer))) {
+                if (! hash_equals((string) ($sourceHashes[$questionNumber] ?? ''), $this->answerSourceHash($answer))) {
                     $gradingFailed = true;
 
                     return $answer;
