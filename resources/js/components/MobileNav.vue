@@ -9,6 +9,7 @@ import {
     Award,
     MessageSquareText,
     CalendarDays,
+    Library,
 } from 'lucide-vue-next';
 import { computed, ref, onMounted, watch, nextTick } from 'vue';
 import { dashboard, grades } from '@/routes';
@@ -46,6 +47,13 @@ const navItems = computed(() =>
             href: assignmentsIndex().url,
             icon: ClipboardList,
             studentPageKey: 'assignments',
+        },
+        {
+            label: 'Library',
+            shortLabel: 'Library',
+            href: '/library',
+            icon: Library,
+            studentPageKey: 'library',
         },
         {
             label: 'Grades',

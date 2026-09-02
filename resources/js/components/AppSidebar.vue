@@ -9,6 +9,7 @@ import {
     Award,
     MessageSquareText,
     CalendarDays,
+    Library,
 } from 'lucide-vue-next';
 import { computed, useSlots } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
@@ -73,6 +74,12 @@ const mainNavItems = computed<NavItem[]>(() =>
             href: '/games',
             icon: Gamepad2,
             studentPageKey: 'games',
+        },
+        {
+            title: 'Library Hub',
+            href: '/library',
+            icon: Library,
+            studentPageKey: 'library',
         },
         {
             title: 'Grades',

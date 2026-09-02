@@ -29,6 +29,7 @@ use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HowItWorksController;
 use App\Http\Controllers\LeaderboardController as LeaderboardPageController;
 use App\Http\Controllers\LeaveImpersonationController;
+use App\Http\Controllers\LibraryHubController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PendingAiActionController;
@@ -264,6 +265,14 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('courses/{course}/lessons/{lesson}/quiz', [CourseController::class, 'submitQuiz'])
         ->middleware(['student.page:courses', 'throttle:10,1'])
         ->name('courses.lesson.quiz');
+
+    // Library Hub — free PDF learning materials per section
+    Route::get('library', [LibraryHubController::class, 'index'])
+        ->middleware('student.page:library')
+        ->name('library.index');
+    Route::get('library/{material}/file', [LibraryHubController::class, 'file'])
+        ->middleware('student.page:library')
+        ->name('library.file');
 
     Route::prefix('games/tower-defense')->name('games.tower-defense.')->group(function () {
         Route::get('/', [TowerDefenseController::class, 'index'])->middleware('student.page:games')->name('index');

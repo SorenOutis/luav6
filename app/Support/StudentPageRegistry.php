@@ -67,6 +67,11 @@ class StudentPageRegistry
                 'path' => '/chats',
                 'description' => 'Saved AI chat history and conversation continuation.',
             ],
+            'library' => [
+                'label' => 'Library Hub',
+                'path' => '/library',
+                'description' => 'Free PDF learning materials and resources per section.',
+            ],
             'profile' => [
                 'label' => 'Profile & Settings',
                 'path' => '/settings',
