@@ -62,14 +62,17 @@ class ActivityHubController extends Controller
      *
      * `is_locked` / `has_submissions` are recomputed here with the exact same
      * rule `examPage()` applies per card, so the overview tiles can never
-     * disagree with the cards underneath them.
+     * disagree with the cards underneath them. That rule goes through
+     * `isEffectivelyClosed()`, which needs `ends_at`: an exam whose scheduled
+     * window has ended is closed on the card even if the teacher never
+     * flipped the status, and must not be counted as "Pending" up top.
      *
      * @return array{total: int, pending: int, completed: int, sections: array<string, int>}
      */
     private function hubSummary(User $user): array
     {
         $exams = $this->visibleExams($user)
-            ->select(['exams.id', 'exams.status', 'exams.section_id'])
+            ->select(['exams.id', 'exams.status', 'exams.section_id', 'exams.ends_at'])
             ->with('section:id,name')
             ->get();
 
@@ -98,7 +101,7 @@ class ActivityHubController extends Controller
             $totals = $submissionTotals->get($exam->id);
             $submitted = (int) ($totals->submitted_parts ?? 0);
             $hasSubmissions = (int) ($totals->submission_rows ?? 0) > 0;
-            $isLocked = ($submitted === $totalParts && $totalParts > 0) || $exam->status === 'closed';
+            $isLocked = ($submitted === $totalParts && $totalParts > 0) || $exam->isEffectivelyClosed();
 
             if (! $isLocked) {
                 $pending++;
@@ -140,7 +143,7 @@ class ActivityHubController extends Controller
     private function activityScores(User $user): array
     {
         $exams = $this->visibleExams($user)
-            ->select(['exams.id', 'exams.title', 'exams.status', 'exams.section_id', 'exams.created_at'])
+            ->select(['exams.id', 'exams.title', 'exams.status', 'exams.section_id', 'exams.created_at', 'exams.ends_at'])
             ->with(['section:id,name', 'section.season:id,name,start_date'])
             ->get();
 
@@ -165,7 +168,10 @@ class ActivityHubController extends Controller
             $submittedParts = (int) ($totals?->submitted_parts ?? 0);
             $totalParts = (int) ($summaries[$exam->id]['total_parts'] ?? 0);
             $allDone = $totalParts > 0 && $submittedParts >= $totalParts;
-            $isLocked = $allDone || $exam->status === 'closed';
+            // Same closed rule as the cards: a manual close *or* the scheduled
+            // window ending. The drawer must not call an ended exam "open".
+            $closedNow = $exam->isEffectivelyClosed();
+            $isLocked = $allDone || $closedNow;
             $hasSubmissions = (int) ($totals?->submission_rows ?? 0) > 0;
 
             return [
@@ -181,7 +187,7 @@ class ActivityHubController extends Controller
                 'submitted' => $hasSubmissions,
                 'state' => $allDone
                     ? 'completed'
-                    : ($isLocked && $exam->status === 'closed'
+                    : ($closedNow
                         ? 'closed'
                         : ($isLocked
                             ? 'in_progress'

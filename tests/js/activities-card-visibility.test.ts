@@ -392,6 +392,95 @@ describe('activities hub — exam card visibility', () => {
         expect(cards[2].text()).toContain('Closed');
     });
 
+    it('locks the Start button until a scheduled exam opens', async () => {
+        const upcoming = mkExam(1, 'Season 1', 'BSIT 1-A');
+        upcoming.is_upcoming = true;
+        upcoming.is_open_now = false;
+        upcoming.has_ended = false;
+        Object.assign(upcoming, {
+            starts_at_iso: '2099-09-10T09:00:00+08:00',
+            ends_at_iso: '2099-09-10T10:00:00+08:00',
+        });
+
+        const open = mkExam(2, 'Season 1', 'BSIT 1-A');
+        open.is_upcoming = false;
+        open.is_open_now = true;
+        open.has_ended = false;
+        Object.assign(open, {
+            starts_at_iso: '2020-01-01T09:00:00+08:00',
+            ends_at_iso: '2099-09-10T10:00:00+08:00',
+        });
+
+        const wrapper = mount(Activities, {
+            props: {
+                examsBySeason: [
+                    { seasonName: 'Season 1', exams: [upcoming, open] },
+                ] as any,
+                examPagination: { hasMore: false, nextCursor: null },
+                sectionTabs: [{ key: 'all', label: 'All sections', count: 2 }],
+                hubStats: hubStats(2),
+            },
+            global: globalStubs,
+        });
+        await flushPromises();
+
+        const [upcomingCard, openCard] = wrapper.findAll('.exam-card');
+
+        // Before `starts_at` there must be no way into the exam: no Start
+        // link, and the action slot renders a disabled button that says when
+        // the window opens.
+        expect(upcomingCard.find('a[href="/exams/1"]').exists()).toBe(false);
+        const lockedButton = upcomingCard.find('button[disabled]');
+        expect(lockedButton.exists()).toBe(true);
+        expect(lockedButton.text()).toContain('Opens');
+        expect(lockedButton.text()).not.toContain('Start');
+        expect(upcomingCard.classes()).toContain('cursor-default');
+        expect(upcomingCard.classes()).not.toContain('cursor-pointer');
+
+        // Clicking anywhere on the card (or pressing Enter on it) must not
+        // navigate either — the whole card is a button.
+        const { router } = await import('@inertiajs/vue3');
+        vi.mocked(router.visit).mockClear();
+        await upcomingCard.trigger('click');
+        await upcomingCard.trigger('keydown.enter');
+        expect(router.visit).not.toHaveBeenCalled();
+
+        // An exam inside its window keeps the live Start link and card click.
+        expect(openCard.find('a[href="/exams/2"]').exists()).toBe(true);
+        expect(openCard.find('a[href="/exams/2"]').text()).toContain('Start');
+        expect(openCard.find('button[disabled]').exists()).toBe(false);
+        expect(openCard.classes()).toContain('cursor-pointer');
+        await openCard.trigger('click');
+        expect(router.visit).toHaveBeenCalledWith('/exams/2');
+    });
+
+    it('keeps legacy payloads without schedule flags startable', async () => {
+        // Cached page props from before the schedule shipped carry none of
+        // is_open_now / is_upcoming / has_ended. A published exam must not be
+        // locked out just because the flags are missing.
+        const legacy = mkExam(1, 'Season 1', 'BSIT 1-A') as any;
+        delete legacy.is_open_now;
+        delete legacy.is_upcoming;
+        delete legacy.has_ended;
+        delete legacy.starts_at_iso;
+        delete legacy.ends_at_iso;
+
+        const wrapper = mount(Activities, {
+            props: {
+                examsBySeason: [{ seasonName: 'Season 1', exams: [legacy] }],
+                examPagination: { hasMore: false, nextCursor: null },
+                sectionTabs: [{ key: 'all', label: 'All sections', count: 1 }],
+                hubStats: hubStats(1),
+            },
+            global: globalStubs,
+        });
+        await flushPromises();
+
+        const card = wrapper.find('.exam-card');
+        expect(card.find('a[href="/exams/1"]').exists()).toBe(true);
+        expect(card.find('button[disabled]').exists()).toBe(false);
+    });
+
     it('keeps the section tabs in sync with the poll', () => {
         const page = readFileSync(
             join(process.cwd(), 'resources/js/pages/Activities/Index.vue'),
