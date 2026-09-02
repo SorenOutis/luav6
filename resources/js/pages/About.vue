@@ -91,7 +91,7 @@ const seoJsonLd = computed(() => [
     {
         '@context': 'https://schema.org',
         '@type': 'Organization',
-        '@id': 'https://koamishin.dev/#organization',
+        '@id': 'https://lsi.koamishin.com/#organization',
         name: 'LSI - KOAMISHIN',
         alternateName: 'LSI',
         description:
@@ -99,13 +99,13 @@ const seoJsonLd = computed(() => [
         url:
             typeof window !== 'undefined'
                 ? window.location.origin
-                : 'https://koamishin.dev',
+                : 'https://lsi.koamishin.com',
         logo: {
             '@type': 'ImageObject',
             url:
                 typeof window !== 'undefined'
                     ? `${window.location.origin}/brand/og-cover.png`
-                    : 'https://koamishin.dev/brand/og-cover.png',
+                    : 'https://lsi.koamishin.com/brand/og-cover.png',
             width: 1200,
             height: 630,
         },
@@ -122,7 +122,7 @@ const seoJsonLd = computed(() => [
                 item:
                     typeof window !== 'undefined'
                         ? `${window.location.origin}/`
-                        : 'https://koamishin.dev/',
+                        : 'https://lsi.koamishin.com/',
             },
             {
                 '@type': 'ListItem',
@@ -131,7 +131,7 @@ const seoJsonLd = computed(() => [
                 item:
                     typeof window !== 'undefined'
                         ? `${window.location.origin}/about`
-                        : 'https://koamishin.dev/about',
+                        : 'https://lsi.koamishin.com/about',
             },
         ],
     },
