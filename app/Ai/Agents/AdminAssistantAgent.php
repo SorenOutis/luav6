@@ -12,7 +12,6 @@ use App\Ai\Tools\SubmissionsToGradeTool;
 use App\Ai\Tools\UpdateExamTool;
 use App\Ai\Tools\WorkspaceOverviewTool;
 use Laravel\Ai\Attributes\MaxSteps;
-use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Contracts\HasTools;
