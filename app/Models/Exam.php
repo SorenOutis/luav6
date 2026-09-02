@@ -7,6 +7,7 @@ use Carbon\CarbonInterface as Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -174,6 +175,70 @@ class Exam extends Model
         return $this->hasMany(ExamSetAssignment::class);
     }
 
+    /**
+     * Students a teacher has barred from this exam.
+     */
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(ExamUserBlock::class);
+    }
+
+    /**
+     * Same list as blocks(), as students, for the admin picker and the
+     * exam-list badge.
+     */
+    public function blockedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'exam_user_blocks')
+            ->withPivot(['blocked_by', 'reason'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Whether a teacher has barred this student from the exam.
+     *
+     * Admins are never blocked: they audit every exam regardless of who the
+     * teacher excluded.
+     */
+    public function isBlockedFor(User $user): bool
+    {
+        if ($user->is_admin) {
+            return false;
+        }
+
+        return $this->blocks()
+            ->where('user_id', $user->id)
+            ->exists();
+    }
+
+    /**
+     * Drop the exams this student has been barred from.
+     *
+     * Blocking is independent of the exam's status and of its schedule window:
+     * a blocked student must not see the exam while it is a draft, while it is
+     * still upcoming, while it is open, or after it closes — so this has to be
+     * applied to every student-facing exam query, not only to the ones that
+     * already filter on `status`.
+     *
+     * The pivot is read with `DB::table()` for the same reason
+     * `scopeVisibleTo()` reads `section_user` that way: who is blocked is a
+     * fact about the student and the exam, and must not be re-scoped by
+     * tenant bookkeeping.
+     */
+    public function scopeNotBlockedBy(Builder $query, User $user): Builder
+    {
+        if ($user->is_admin) {
+            return $query;
+        }
+
+        return $query->whereNotIn(
+            $query->qualifyColumn('id'),
+            DB::table('exam_user_blocks')
+                ->where('user_id', $user->id)
+                ->select('exam_id'),
+        );
+    }
+
     public function submissions()
     {
         return $this->hasMany(ExamSubmission::class);
@@ -200,6 +265,9 @@ class Exam extends Model
      * for one student. Tying reads to the bookkeeping hid every exam from
      * enrolled students whenever the two drifted apart. Admins keep the
      * workspace-scoped tenant view untouched.
+     *
+     * Enrollment is only half of the rule: an exam a teacher has barred this
+     * student from is dropped here as well, whatever its status or schedule.
      */
     public function scopeVisibleTo(Builder $query, User $user): Builder
     {
@@ -220,6 +288,7 @@ class Exam extends Model
 
         return $query
             ->withoutGlobalScope('workspace')
+            ->notBlockedBy($user)
             ->where(function (Builder $query) use ($sectionIds, $workspaceIds): void {
                 $query->whereIn('section_id', $sectionIds)
                     ->orWhere(function (Builder $query) use ($workspaceIds): void {

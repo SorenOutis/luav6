@@ -4,8 +4,10 @@ namespace App\Filament\Resources\Exams\Pages;
 
 use App\Filament\Resources\Exams\ExamResource;
 use App\Filament\Resources\Exams\Schemas\ExamForm;
+use App\Models\Exam;
 use App\Models\ExamSet;
 use App\Services\ExamAnswerReportService;
+use App\Services\ExamBlockService;
 use App\Services\ExamSetAssignmentService;
 use App\Services\ExamTemplateService;
 use Filament\Actions\Action;
@@ -29,12 +31,25 @@ class EditExam extends EditRecord
     private array $studentOptions = [];
 
     /**
+     * Students picked in the "Blocked Students" section.
+     *
+     * The block list is a pivot, not a column, so it is written in
+     * afterSave(). Null means this save carried no picker — a header action or
+     * a partial submit must never wipe the existing blocks.
+     *
+     * @var array<int, int>|null
+     */
+    private ?array $blockedUserIds = null;
+
+    /**
      * Growing or shrinking the number of sets is done here, from the repeater's
      * actual items, so the counter can never remove a set that is on screen.
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
         $data = ExamForm::syncSetCount($data);
+
+        $this->blockedUserIds = ExamForm::extractBlockedUserIds($data);
 
         // Keep the legacy alias in sync whenever the schedule changes; the
         // form intentionally exposes starts_at/ends_at instead of exam_date.
@@ -46,7 +61,7 @@ class EditExam extends EditRecord
     }
 
     /**
-     * Warn about sets that hold no questions.
+     * Apply the block list, then warn about sets that hold no questions.
      *
      * Empty sets are never dealt to a student (the deck only draws from sets
      * that have questions), so an exam that looks like it ships four versions
@@ -54,6 +69,13 @@ class EditExam extends EditRecord
      */
     protected function afterSave(): void
     {
+        if ($this->blockedUserIds !== null) {
+            /** @var Exam $record */
+            $record = $this->getRecord();
+
+            app(ExamBlockService::class)->sync($record, $this->blockedUserIds);
+        }
+
         $empty = $this->record
             ->sets()
             ->whereDoesntHave('parts')
