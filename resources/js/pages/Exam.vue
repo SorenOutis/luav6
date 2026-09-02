@@ -309,6 +309,25 @@ const canReviewResults = (exam: Exam) =>
 const isAwaitingClose = (exam: Exam) =>
     !canReviewResults(exam) && hasSubmitted(exam) && exam.is_locked === true;
 
+// --- Schedule window gate ---
+// The server computes is_open_now / is_upcoming / has_ended against
+// `starts_at` / `ends_at` and this page re-polls, so a card unlocks on its
+// own once the window opens. The fallbacks mirror Exams/Show.vue: a legacy
+// payload carrying none of the flags behaves like a published exam that is
+// open, so a missing field never locks a student out.
+const isUpcoming = (exam: Exam) => exam.is_upcoming ?? false;
+const isOpenNow = (exam: Exam) =>
+    exam.is_open_now ??
+    (exam.status === 'published' && !isUpcoming(exam) && !exam.has_ended);
+// Whether the card may take the student into the exam right now. The server
+// rejects start / save / submit outside the window, so offering a live
+// "Start" before `starts_at` only leads to a dead end.
+const canStart = (exam: Exam) =>
+    !exam.is_locked && !isUpcoming(exam) && isOpenNow(exam);
+// The card is interactive when it can either start the exam or review it.
+const isCardInteractive = (exam: Exam) =>
+    canStart(exam) || canReviewResults(exam);
+
 // --- Exam Time Info (scheduled window / countdown / overdue) ---
 const formatScheduleDate = (iso?: string | null) => {
     if (!iso) return '';
@@ -561,6 +580,11 @@ const openExam = (exam: Exam) => {
         if (canReviewResults(exam)) {
             openReview(exam);
         }
+        return;
+    }
+    // Not open yet (or otherwise not accepting answers): the whole card is a
+    // button, so guard here too — not just on the "Start" control.
+    if (!canStart(exam)) {
         return;
     }
     if (exam.url) {
@@ -1006,9 +1030,9 @@ watch(selectedPartId, () => {
                             "
                             class="exam-card flex min-h-[6.25rem] min-w-0 flex-col justify-between rounded-xl border border-l-[3px] p-3 transition-colors duration-200 sm:min-h-[7.5rem] sm:rounded-[1.25rem] sm:p-5"
                             :class="[
-                                exam.is_locked && !canReviewResults(exam)
-                                    ? 'cursor-default opacity-80'
-                                    : 'cursor-pointer hover:bg-muted/30',
+                                isCardInteractive(exam)
+                                    ? 'cursor-pointer hover:bg-muted/30'
+                                    : 'cursor-default opacity-80',
                                 getCardStatusClass(exam),
                             ]"
                             role="button"
@@ -1186,16 +1210,17 @@ watch(selectedPartId, () => {
 
                                 <!-- Chevron for list style on mobile. Swapped for
                                      a lock when the card has nothing to open yet
-                                     (finished, but the exam is still running). -->
+                                     (finished but the exam is still running, or
+                                     scheduled and not yet started). -->
                                 <ArrowRight
-                                    v-if="
-                                        !exam.is_locked ||
-                                        canReviewResults(exam)
-                                    "
+                                    v-if="isCardInteractive(exam)"
                                     class="h-5 w-5 flex-shrink-0 text-muted-foreground/50 sm:hidden"
                                 />
                                 <Lock
-                                    v-else-if="isAwaitingClose(exam)"
+                                    v-else-if="
+                                        isAwaitingClose(exam) ||
+                                        isUpcoming(exam)
+                                    "
                                     class="h-4 w-4 flex-shrink-0 text-muted-foreground/50 sm:hidden"
                                 />
                             </div>
@@ -1227,6 +1252,26 @@ watch(selectedPartId, () => {
                                 >
                                     Closed
                                 </span>
+                                <!-- Scheduled but not open yet: no way in until starts_at. -->
+                                <button
+                                    v-else-if="!canStart(exam)"
+                                    type="button"
+                                    disabled
+                                    :title="
+                                        exam.starts_at_iso
+                                            ? `This exam opens on ${formatScheduleDate(exam.starts_at_iso)}.`
+                                            : 'This exam is not accepting answers right now.'
+                                    "
+                                    class="dash-btn flex w-full cursor-not-allowed items-center justify-center gap-1.5 bg-muted/20 text-[15px] text-muted-foreground"
+                                    @click.stop
+                                >
+                                    <Lock class="h-3.5 w-3.5" />
+                                    {{
+                                        exam.starts_at_iso
+                                            ? `Opens ${formatScheduleDate(exam.starts_at_iso)}`
+                                            : 'Not yet open'
+                                    }}
+                                </button>
                                 <a
                                     v-else-if="exam.url"
                                     :href="exam.url"
