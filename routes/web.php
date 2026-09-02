@@ -43,12 +43,14 @@ use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 // ─── Public routes ────────────────────────────────────────────────────────
 
 Route::get('/', WelcomeController::class)->name('home');
 Route::get('/about', AboutController::class)->name('about');
 Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
+Route::get('/blog/assessment-to-next-lesson', fn () => Inertia::render('Blog/AssessmentToNextLesson'))->name('blog.pillar');
 
 // ─── Social login (Google / GitHub) ───────────────────────────────────────
 // Plain GET redirects: OAuth needs real browser navigation, not Inertia visits.

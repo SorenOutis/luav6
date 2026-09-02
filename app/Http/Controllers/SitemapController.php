@@ -14,6 +14,7 @@ class SitemapController extends Controller
             '/' => ['1.0', 'weekly', $this->lastmodFor('js/pages/Welcome.vue')],
             '/about' => ['0.6', 'monthly', $this->lastmodFor('js/pages/About.vue')],
             '/how-it-works' => ['0.7', 'monthly', $this->lastmodFor('js/pages/HowItWorks.vue')],
+            '/blog/assessment-to-next-lesson' => ['0.8', 'monthly', $this->lastmodFor('js/pages/Blog/AssessmentToNextLesson.vue')],
         ];
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
