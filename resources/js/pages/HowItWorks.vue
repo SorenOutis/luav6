@@ -77,23 +77,43 @@ const steps = [
 const seoJsonLd = [
     {
         '@context': 'https://schema.org',
-        '@type': 'HowTo',
-        name: 'How LSI Works',
-        description: 'From enrollment to achievement in five clear steps.',
-        step: steps.map((s, i) => ({
-            '@type': 'HowToStep',
-            position: i + 1,
-            name: s.title,
-            text: s.description,
-        })),
+        '@type': 'Article',
+        headline: 'How LSI Works — From enrollment to achievement',
+        description:
+            'Five clear steps: enroll, take exams, get instant feedback, track progress, and celebrate milestones with LSI.',
+        author: {
+            '@type': 'Organization',
+            '@id': 'https://koamishin.dev/#organization',
+        },
+        publisher: { '@id': 'https://koamishin.dev/#organization' },
+        mainEntityOfPage: 'https://koamishin.dev/how-it-works',
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: 'https://koamishin.dev/',
+            },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'How It Works',
+                item: 'https://koamishin.dev/how-it-works',
+            },
+        ],
     },
 ];
 </script>
 
 <template>
-    <Head title="How It Works" />
+    <Head title="How It Works — LSI | From enrollment to achievement" />
     <SeoHead
-        :description="'Five clear steps: enroll, take exams, get instant feedback, track progress, and celebrate milestones with LSI.'"
+        title="How It Works — LSI | From enrollment to achievement"
+        description="Five clear steps: enroll, take exams, get instant feedback, track progress, and celebrate milestones with LSI."
         type="article"
         :jsonld="seoJsonLd"
     />

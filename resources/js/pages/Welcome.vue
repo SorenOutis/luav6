@@ -91,19 +91,57 @@ const faqs = [
     },
 ];
 
-const webSiteJsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'LSI - KOAMISHIN',
-    alternateName: 'LSI',
-    description:
-        'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
-};
+const webSiteJsonLd = [
+    {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        '@id': 'https://koamishin.dev/#organization',
+        name: 'LSI - KOAMISHIN',
+        alternateName: 'LSI',
+        url: 'https://koamishin.dev',
+        logo: {
+            '@type': 'ImageObject',
+            url: 'https://koamishin.dev/brand/og-cover.png',
+            width: 1200,
+            height: 630,
+        },
+        sameAs: ['https://github.com/SorenOutis/luav6'],
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        '@id': 'https://koamishin.dev/#website',
+        name: 'LSI - KOAMISHIN',
+        alternateName: 'LSI',
+        description:
+            'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
+        url: 'https://koamishin.dev',
+        publisher: { '@id': 'https://koamishin.dev/#organization' },
+        potentialAction: {
+            '@type': 'SearchAction',
+            target: 'https://koamishin.dev/?q={search_term_string}',
+            'query-input': 'required name=search_term_string',
+        },
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: 'https://koamishin.dev/',
+            },
+        ],
+    },
+];
 </script>
 
 <template>
     <Head title="LSI - KOAMISHIN | Make every assessment count" />
     <SeoHead
+        title="LSI - KOAMISHIN | Make every assessment count"
         description="LSI helps teachers see what learners understand, give useful feedback, and plan what to teach next."
         type="website"
         :jsonld="webSiteJsonLd"
