@@ -7,6 +7,7 @@
         <meta name="app-name" content="{{ config('app.name') }}">
         <meta name="theme-color" content="#f5f0e8">
         <meta name="color-scheme" content="light dark">
+        <meta name="google-site-verification" content="i5Bwmark4CmhXaDPV_4lxlMK2GBhXlDSkyS27p3s568" />
 
         @if (config('broadcasting.connections.pusher.key'))
             {{-- The Pusher app key and cluster are public client identifiers. The secret is never rendered. --}}
