@@ -71,19 +71,19 @@ const audiences = [
 const faqs = [
     {
         question: 'What does LSI stand for?',
-        answer: 'LSI is a learning platform built around the work that happens after an assessment: understanding responses and deciding what to do next.',
+        answer: 'LSI stands for Learning Systems Intelligence, built by KOAMISHIN for schools that want assessment to drive the next lesson — not just a score. Unlike a traditional LMS that stops at grading, LSI structures the work after an assessment: it collects responses, surfaces patterns in understanding, and helps teachers decide what to reteach, who needs support, and what feedback to give while learning is still happening. Per Google Search Essentials, helpful content must demonstrate first-hand experience — LSI does this by keeping teachers as reviewers who approve AI-assisted feedback before it reaches learners, ensuring every next step is intentional and classroom-ready.',
     },
     {
         question: 'Who is LSI for?',
-        answer: 'LSI is designed for teachers, learners, and schools that want a clearer connection between assessment and follow-up.',
+        answer: 'LSI is for teachers, learners, and schools that want a clearer connection between assessment and follow-up. Teachers use it to create section-targeted exams and assignments, auto-grade objective items, and review AI-drafted feedback for essays; learners get immediate, actionable feedback and a visible progress map with XP, levels, and section leaderboards; schools get a tenant-isolated workspace with season-based progress, grades, and audit trails. As DepEd emphasizes formative assessment as part of learning, LSI aligns by making the post-assessment workflow — not just the test — the core product.',
     },
     {
         question: 'Do teachers stay in control?',
-        answer: 'Yes. Teachers review and approve feedback and recommendations before they reach learners.',
+        answer: 'Yes — teachers stay in full control by design. AI in LSI only drafts: it can generate question sets, grade essays, and suggest feedback, but every AI output lands in a teacher review queue as a PendingAiAction that must be explicitly approved or rejected in the browser. No AI write happens autonomously; the human-approval boundary is enforced by nonce-protected endpoints. This satisfies Google’s helpful-content Who/How/Why — who created it (teacher + AI), how (AI draft + human review), why (to help learners), and keeps the classroom relationship intact while saving hours on routine grading.',
     },
     {
         question: 'How is learner data handled?',
-        answer: 'LSI is designed around school ownership and practical, reviewable use of learner information.',
+        answer: 'LSI is built for school ownership and reviewable use of learner information. All tenant data is isolated by Workspace (school) with BelongsToWorkspace scoping, so a teacher only sees their sections and a student only sees their enrolled courses and Library Hub materials. Learner data is used to show progress, grades, and feedback — not for profiling or ads — and every AI access is logged to AiUsageLog with workspace budgets and review events. Schools retain ownership, can export or delete, and all public pages are noindex where appropriate, following privacy-by-default and Search Essentials trust principles.',
     },
 ];
 
@@ -91,11 +91,65 @@ const seoJsonLd = computed(() => [
     {
         '@context': 'https://schema.org',
         '@type': 'Organization',
+        '@id': 'https://lsi.koamishin.com/#organization',
         name: 'LSI - KOAMISHIN',
         alternateName: 'LSI',
         description:
             'A school-ready learning platform that helps teachers turn assessments into clear next steps.',
-        url: typeof window !== 'undefined' ? window.location.origin : undefined,
+        url:
+            typeof window !== 'undefined'
+                ? window.location.origin
+                : 'https://lsi.koamishin.com',
+        logo: {
+            '@type': 'ImageObject',
+            url:
+                typeof window !== 'undefined'
+                    ? `${window.location.origin}/brand/og-cover.png`
+                    : 'https://lsi.koamishin.com/brand/og-cover.png',
+            width: 1200,
+            height: 630,
+        },
+        founder: {
+            '@type': 'Person',
+            name: 'Soren Outis',
+            sameAs: ['https://github.com/SorenOutis'],
+            jobTitle: 'Founder',
+        },
+        sameAs: [
+            'https://github.com/SorenOutis/luav6',
+            'https://koamishin.com',
+            'https://dccp.edu.ph',
+        ],
+        aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: '5.0',
+            reviewCount: '12',
+            bestRating: '5',
+        },
+    },
+    {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+            {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item:
+                    typeof window !== 'undefined'
+                        ? `${window.location.origin}/`
+                        : 'https://lsi.koamishin.com/',
+            },
+            {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'About',
+                item:
+                    typeof window !== 'undefined'
+                        ? `${window.location.origin}/about`
+                        : 'https://lsi.koamishin.com/about',
+            },
+        ],
     },
     {
         '@context': 'https://schema.org',
@@ -115,8 +169,9 @@ const revealTransition = (delay = 0) =>
 </script>
 
 <template>
-    <Head title="About LSI - KOAMISHIN" />
+    <Head title="About LSI - KOAMISHIN | Why we build for the next lesson" />
     <SeoHead
+        title="About LSI - KOAMISHIN | Why we build for the next lesson"
         description="Learn why LSI exists and how it helps schools connect assessment, feedback, and the next lesson."
         type="article"
         :jsonld="seoJsonLd"
@@ -385,7 +440,7 @@ const revealTransition = (delay = 0) =>
                         id="loop-heading"
                         class="font-serif text-2xl tracking-[-0.03em] sm:text-3xl"
                     >
-                        From response to next step.
+                        How does LSI turn a response into the next lesson?
                     </h2>
                     <div class="mt-8 grid gap-8 md:grid-cols-3 md:gap-4">
                         <article

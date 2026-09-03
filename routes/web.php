@@ -15,6 +15,7 @@ use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AssignmentGroupController;
 use App\Http\Controllers\AssignmentInviteController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
@@ -49,6 +50,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', WelcomeController::class)->name('home');
 Route::get('/about', AboutController::class)->name('about');
 Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
+Route::get('/blog/assessment-to-next-lesson', [BlogController::class, 'pillar'])->name('blog.pillar');
 
 // ─── Social login (Google / GitHub) ───────────────────────────────────────
 // Plain GET redirects: OAuth needs real browser navigation, not Inertia visits.

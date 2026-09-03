@@ -17,6 +17,7 @@ const props = withDefaults(
         description?: string;
         ogImage?: string;
         type?: string;
+        title?: string;
         jsonld?: JsonLdObject | JsonLdObject[];
     }>(),
     {
@@ -25,6 +26,7 @@ const props = withDefaults(
         description: '',
         ogImage: '',
         type: 'website',
+        title: '',
         jsonld: () => [],
     },
 );
@@ -45,6 +47,14 @@ const canonical = computed(
 const image = computed(() => resolveOgImage(props.ogImage, seo));
 const jsonldNodes = computed(() => normalizeJsonLd(props.jsonld));
 const lang = computed(() => seo.locale ?? 'en_US');
+const ogTitle = computed(
+    () =>
+        props.title ||
+        (usePage().props as unknown as { title?: string }).title ||
+        seo.tagline ||
+        seo.siteName ||
+        '',
+);
 </script>
 
 <template>
@@ -55,20 +65,17 @@ const lang = computed(() => seo.locale ?? 'en_US');
 
         <meta property="og:type" :content="type" />
         <meta property="og:site_name" :content="seo.siteName || 'LSI'" />
-        <meta
-            property="og:title"
-            :content="seo.tagline || seo.siteName || ''"
-        />
+        <meta property="og:title" :content="ogTitle" />
         <meta property="og:description" :content="metaDescription" />
         <meta property="og:url" :content="canonical" />
         <meta v-if="image" property="og:image" :content="image" />
+        <meta v-if="image" property="og:image:width" content="1200" />
+        <meta v-if="image" property="og:image:height" content="630" />
+        <meta v-if="image" property="og:image:alt" :content="ogTitle" />
         <meta property="og:locale" :content="lang" />
 
         <meta name="twitter:card" content="summary_large_image" />
-        <meta
-            name="twitter:title"
-            :content="seo.tagline || seo.siteName || ''"
-        />
+        <meta name="twitter:title" :content="ogTitle" />
         <meta name="twitter:description" :content="metaDescription" />
         <meta v-if="image" name="twitter:image" :content="image" />
 

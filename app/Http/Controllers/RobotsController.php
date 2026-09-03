@@ -28,6 +28,11 @@ class RobotsController extends Controller
                 '/leaderboard',
                 '/games',
                 '/assignments',
+                '/library',
+                '/library/',
+                '/chats',
+                '/activities',
+                '/calendar',
                 '/notifications',
                 '/email/verify',
                 '/api',
@@ -37,6 +42,8 @@ class RobotsController extends Controller
             foreach ($disallows as $path) {
                 $lines[] = "Disallow: $path";
             }
+            $lines[] = 'Allow: /brand/';
+            $lines[] = 'Crawl-delay: 10';
         }
 
         $lines[] = '';

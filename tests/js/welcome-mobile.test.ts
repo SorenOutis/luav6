@@ -79,7 +79,7 @@ describe('welcome mobile performance', () => {
         );
 
         expect(hero).toContain('Make every assessment count.');
-        expect(page).toContain('From response to next step.');
+        expect(page).toContain('How does LSI turn a response into the next lesson?');
         expect(page).toContain('id="how-it-works"');
         expect(page).toContain('id="contact"');
         expect(page).not.toContain('TechStackCarousel');

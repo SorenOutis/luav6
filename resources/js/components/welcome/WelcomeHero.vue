@@ -32,6 +32,8 @@ withDefaults(
     <section
         id="top"
         aria-labelledby="welcome-heading"
+        data-hero-priority="high"
+        fetchpriority="high"
         class="welcome-hero relative grid items-center gap-10 border-b border-border/70 pb-16 sm:gap-14 sm:pb-20 lg:min-h-[640px] lg:grid-cols-[1fr_0.9fr] lg:gap-20 lg:pb-24"
     >
         <Motion
