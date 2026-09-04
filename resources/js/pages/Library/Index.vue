@@ -317,7 +317,7 @@ onMounted(() => {
                         v-else
                         :size="120"
                         bare
-                        :mascot="materials.length ? 'library' : 'library'"
+                        mascot="library"
                         :title="
                             materials.length
                                 ? 'No materials found'

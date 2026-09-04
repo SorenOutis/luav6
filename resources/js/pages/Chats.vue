@@ -26,9 +26,9 @@ import {
     watch,
 } from 'vue';
 import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
-import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ChatNavigation from '@/components/ChatNavigation.vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';

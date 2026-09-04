@@ -1862,7 +1862,7 @@ onMounted(() => {
                         v-else
                         :size="120"
                         bare
-                        :mascot="filteredAssignments.length ? 'assignments' : 'assignments'"
+                        mascot="assignments"
                         :title="
                             hasActiveFilters
                                 ? 'No assignments found'

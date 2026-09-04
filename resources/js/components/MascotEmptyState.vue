@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 /**
  * A friendly, branded empty state featuring the fox mascot.
  *
- * Drop it in wherever a section has nothing to show yet — empty dashboard,
- * no assignments, no events, empty library, etc. The illustrations live in
+ * Drop it in wherever a section has nothing to show yet — no assignments,
+ * no events, an empty library, etc. The illustrations live in
  * `/images/mascots/` (transparent WebP + PNG fallback) so they blend into
  * both light and dark themes.
  *
@@ -28,7 +28,7 @@ const props = withDefaults(
         description?: string;
         /** Illustration width in pixels. */
         size?: number;
-        /** Render without the surrounding card (inline on an existing surface). */
+        /** Render without extra vertical padding (inline on an existing surface). */
         bare?: boolean;
     }>(),
     {
@@ -39,11 +39,13 @@ const props = withDefaults(
     },
 );
 
-const src = computed(
-    () => `/images/mascots/fox-${props.mascot}.webp`,
-);
-const fallback = computed(
-    () => `/images/mascots/fox-${props.mascot}.png`,
+// Prefer WebP (much smaller); if it ever fails to load, fall back to the PNG.
+// Using a Vue @error handler keeps this CSP-safe (no inline onerror string).
+const webpFailed = ref(false);
+const src = computed(() =>
+    webpFailed.value
+        ? `/images/mascots/fox-${props.mascot}.png`
+        : `/images/mascots/fox-${props.mascot}.webp`,
 );
 </script>
 
@@ -55,16 +57,14 @@ const fallback = computed(
     >
         <img
             :src="src"
-            :onerror="`this.onerror=null;this.src='${fallback}'`"
             :alt="title"
-            :width="size"
-            :height="size"
-            class="h-auto w-auto select-none object-contain motion-safe:animate-mascot-float"
+            class="motion-safe:animate-mascot-float h-auto w-auto object-contain select-none"
             :style="{ width: `${size}px`, maxWidth: '80vw' }"
             draggable="false"
             loading="lazy"
             decoding="async"
-        >
+            @error="webpFailed = true"
+        />
 
         <h3 class="mt-5 text-[17px] font-semibold tracking-tight">
             {{ title }}
