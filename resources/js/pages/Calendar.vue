@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowLeft,
+    ArrowRight,
     CalendarDays,
     Check,
     ChevronLeft,

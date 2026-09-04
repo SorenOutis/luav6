@@ -26,6 +26,12 @@ use Illuminate\Support\Facades\DB;
  * Dates are shipped as `dateKey` (Y-m-d, app timezone) rather than relying on
  * client-side ISO parsing so bucketing matches the dates shown on the
  * dashboard, which formats server-side.
+ *
+ * Events link to the listing a student acts from, never to a single activity's
+ * own page: exams deep-link into the Activities Hub (`/activities?exam={id}`)
+ * rather than `/exams/{id}`, because the exam page lays out the whole paper —
+ * parts included — before anything has been started, and assignments point at
+ * the assignment listing.
  */
 class CalendarEventService
 {
@@ -116,7 +122,13 @@ class CalendarEventService
                 'hasEnded' => $exam->scheduleState() === 'ended',
                 'isCompleted' => (int) $exam->parts_count > 0
                     && (int) $exam->submitted_parts === (int) $exam->parts_count,
-                'href' => "/exams/{$exam->id}",
+                // Deep link into the Activities Hub, not the exam page: the
+                // exam page renders every part (and its question breakdown)
+                // before the student has started, which leaks the paper's
+                // structure from a calendar glance. The hub focuses the card
+                // for `?exam=` — see the deep-link block in
+                // resources/js/pages/Activities/Index.vue.
+                'href' => "/activities?exam={$exam->id}",
             ];
         });
     }

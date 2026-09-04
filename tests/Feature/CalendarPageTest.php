@@ -76,7 +76,7 @@ it('shows section exams and assignments as calendar events', function () {
         ->where('events.0.title', 'Midterm Exam')
         ->where('events.0.dateKey', now()->addDays(3)->toDateString())
         ->where('events.0.sectionName', 'My Section')
-        ->where('events.0.href', "/exams/{$midterm->id}")
+        ->where('events.0.href', "/activities?exam={$midterm->id}")
         ->where('events.1.type', 'assignment')
         ->where('events.1.title', 'Lab Report')
         ->where('events.1.submitted', true)
@@ -90,6 +90,29 @@ it('shows section exams and assignments as calendar events', function () {
         ->not->toContain('Draft Exam')
         ->not->toContain('Other Section Exam')
         ->not->toContain('Other Section Task');
+});
+
+it('deep-links every exam event to its Activities Hub card', function () {
+    $quiz = Exam::factory()->published()->forSection($this->mySection)->create([
+        'title' => 'Quiz One',
+        'exam_date' => now()->addDays(2),
+    ]);
+    $midterm = Exam::factory()->published()->forSection($this->mySection)->create([
+        'title' => 'Midterm Exam',
+        'exam_date' => now()->addDays(5),
+    ]);
+
+    // The hub is the student's entry point for starting an activity. Linking
+    // the calendar straight to /exams/{id} dropped them into the paper view,
+    // which lays out every part before anything has been started.
+    $this->actingAs($this->student)
+        ->get(route('calendar'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('events', 2)
+            ->where('events.0.href', "/activities?exam={$quiz->id}")
+            ->where('events.1.href', "/activities?exam={$midterm->id}")
+            ->etc());
 });
 
 it('includes global exams visible to every student', function () {
