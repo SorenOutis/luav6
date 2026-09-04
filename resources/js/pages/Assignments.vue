@@ -26,9 +26,9 @@ import {
     Users,
     UserPlus,
     LogOut,
-    Sparkles,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
@@ -1858,11 +1858,22 @@ onMounted(() => {
                             </div>
                         </article>
                     </div>
-                    <div v-else class="mobile-assignment-empty">
-                        <Sparkles class="h-5 w-5" />
-                        <strong>No assignments found</strong>
-                        <span>Try another status or search term.</span>
-                    </div>
+                    <MascotEmptyState
+                        v-else
+                        :size="120"
+                        bare
+                        :mascot="filteredAssignments.length ? 'assignments' : 'assignments'"
+                        :title="
+                            hasActiveFilters
+                                ? 'No assignments found'
+                                : 'No assignments yet'
+                        "
+                        :description="
+                            hasActiveFilters
+                                ? 'Try another status or search term.'
+                                : 'New coursework will appear here once your teachers post it.'
+                        "
+                    />
                 </div>
 
                 <!-- Assignments Grid -->
@@ -2747,30 +2758,13 @@ onMounted(() => {
                     </Card>
 
                     <!-- Empty State: No assignments at all -->
-                    <Card
-                        v-else
-                        class="surface-card border-dashed py-14 text-center sm:py-20"
-                    >
-                        <CardContent
-                            class="flex flex-col items-center justify-center p-6"
-                        >
-                            <div
-                                class="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-muted/40 text-muted-foreground"
-                            >
-                                <BookOpen class="h-8 w-8" />
-                            </div>
-                            <h3
-                                class="text-xl font-semibold tracking-tight text-foreground"
-                            >
-                                No assignments yet
-                            </h3>
-                            <p
-                                class="mt-2 max-w-md text-sm text-muted-foreground"
-                            >
-                                Your teachers haven't posted any assignments
-                                yet. When coursework is assigned, it will appear
-                                here with clear instructions and deadlines.
-                            </p>
+                    <Card v-else class="surface-card border-dashed">
+                        <CardContent class="flex justify-center">
+                            <MascotEmptyState
+                                mascot="assignments"
+                                title="No assignments yet"
+                                description="Your teachers haven't posted any assignments yet. When coursework is assigned, it will appear here with clear instructions and deadlines — the fox will be waiting."
+                            />
                         </CardContent>
                     </Card>
                 </div>

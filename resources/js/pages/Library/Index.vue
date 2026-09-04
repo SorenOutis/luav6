@@ -15,6 +15,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted } from 'vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useLoader } from '@/composables/useLoader';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -312,11 +313,22 @@ onMounted(() => {
                             </span>
                         </button>
                     </div>
-                    <div v-else class="mobile-course-empty">
-                        <BookOpen class="h-5 w-5" />
-                        <strong>No materials found</strong>
-                        <span>Try another search or category.</span>
-                    </div>
+                    <MascotEmptyState
+                        v-else
+                        :size="120"
+                        bare
+                        :mascot="materials.length ? 'library' : 'library'"
+                        :title="
+                            materials.length
+                                ? 'No materials found'
+                                : 'The library is empty… for now'
+                        "
+                        :description="
+                            materials.length
+                                ? 'Try another search or category.'
+                                : 'Your teachers haven’t published materials for your section yet.'
+                        "
+                    />
                 </section>
 
                 <!-- Desktop Search + Filters -->
@@ -548,22 +560,13 @@ onMounted(() => {
                     v-else
                     :initial="{ opacity: 0 }"
                     :animate="{ opacity: 1 }"
-                    class="courses-desktop-grid relative z-10 hidden flex-col items-center justify-center py-20 md:flex"
+                    class="courses-desktop-grid relative z-10 hidden md:flex"
                 >
-                    <div
-                        class="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-dashed border-border/40 bg-muted/10"
-                    >
-                        <Library class="h-8 w-8 text-muted-foreground/30" />
-                    </div>
-                    <h3 class="text-lg font-bold text-muted-foreground/70">
-                        No materials yet
-                    </h3>
-                    <p
-                        class="mt-1 max-w-md text-center text-sm text-muted-foreground/50"
-                    >
-                        Your teachers haven’t published any learning materials
-                        for your section. Check back later.
-                    </p>
+                    <MascotEmptyState
+                        mascot="library"
+                        title="The library is empty… for now"
+                        description="Your teachers haven’t published any learning materials for your section yet. Grab a book and check back soon — new readings will appear here."
+                    />
                 </Motion>
 
                 <!-- Preview Modal -->
