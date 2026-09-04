@@ -270,6 +270,88 @@ watch([filteredExamsBySeason, activeSection, hasMoreExams], () => {
     if (shown === 0) loadMoreExams();
 });
 
+// ─── Calendar deep link (?exam=12) ─────────────────────────────────────────
+// The student calendar points every exam here instead of at `/exams/{id}`, so
+// a calendar click never drops a student straight into the paper view that
+// lists every part before they have started. The hub answers "which exam?"
+// itself: pull pages until the card exists (the grid is cursor-paginated, so a
+// deadline can sit past page one), then scroll to it and pulse an outline.
+const DEEP_LINK_MAX_PAGES = 8;
+const DEEP_LINK_HIGHLIGHT_MS = 2400;
+
+const examIdFromUrl = (url: string): number | null => {
+    const raw = new URLSearchParams(url.split('?')[1] ?? '').get('exam');
+    const id = Number(raw);
+    return Number.isInteger(id) && id > 0 ? id : null;
+};
+
+// The card a deep link just revealed. Outlined rather than ringed: app.css
+// pins `box-shadow` on `.exam-card` with !important, and Tailwind's ring
+// utilities paint with box-shadow — a ring would be wiped out.
+const highlightedExamId = ref<number | null>(null);
+const hubRoot = ref<HTMLElement | null>(null);
+let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+let followedDeepLinkUrl: string | null = null;
+
+const isExamLoaded = (id: number) =>
+    examGroups.value.some((group) =>
+        group.exams.some((exam) => exam.id === id),
+    );
+
+const followDeepLink = async (url: string) => {
+    const id = examIdFromUrl(url);
+    // Inertia fires `navigate` for the initial page load as well, and following
+    // the same URL twice would scroll and flash the card again for no reason.
+    if (id === null || url === followedDeepLinkUrl) return;
+    followedDeepLinkUrl = url;
+
+    // Filters left over from an earlier visit would hide the very card the link
+    // asked for, so start from the whole catalogue.
+    activeSection.value = 'all';
+    searchQuery.value = '';
+
+    // Bounded on purpose: one calendar click must not turn into an endless
+    // paging loop over a large catalogue.
+    let pagesPulled = 0;
+    while (
+        !isExamLoaded(id) &&
+        hasMoreExams.value &&
+        pagesPulled < DEEP_LINK_MAX_PAGES
+    ) {
+        pagesPulled += 1;
+        await loadMoreExams();
+    }
+
+    await nextTick();
+    // Scoped to the hub root rather than `document`: ids are unique per exam,
+    // but a query from the page root cannot pick up a stale card left behind by
+    // another visit.
+    const card = hubRoot.value?.querySelector<HTMLElement>(`#exam-card-${id}`);
+    if (!card) return;
+
+    highlightedExamId.value = id;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (highlightTimer) clearTimeout(highlightTimer);
+    highlightTimer = setTimeout(() => {
+        highlightedExamId.value = null;
+        highlightTimer = null;
+    }, DEEP_LINK_HIGHLIGHT_MS);
+};
+
+let stopDeepLinkListener: (() => void) | null = null;
+onMounted(() => {
+    // Read the address bar rather than the Inertia page prop: on a full page
+    // load (SSR included) the listener below has not been registered yet.
+    followDeepLink(window.location.pathname + window.location.search);
+    stopDeepLinkListener = router.on('navigate', (event) =>
+        followDeepLink(event.detail.page.url),
+    );
+});
+onBeforeUnmount(() => {
+    stopDeepLinkListener?.();
+    if (highlightTimer) clearTimeout(highlightTimer);
+});
+
 // ─── Stats ──────────────────────────────────────────────────────────────────
 const completionRate = computed(() => {
     if (props.hubStats.exams.total === 0) return 0;
@@ -692,6 +774,7 @@ const activitiesTourSteps: TourStep[] = [
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div
+            ref="hubRoot"
             class="student-ui activities-ui-page mobile-ui-page exam-theme-page relative flex flex-col gap-3 overflow-x-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
             <!-- Header -->
@@ -901,6 +984,7 @@ const activitiesTourSteps: TourStep[] = [
                     >
                         <Motion
                             v-for="(exam, eIdx) in seasonGroup.exams"
+                            :id="`exam-card-${exam.id}`"
                             :key="exam.id"
                             :initial="{ opacity: 0, y: 20 }"
                             :animate="{ opacity: 1, y: 0 }"
@@ -915,6 +999,9 @@ const activitiesTourSteps: TourStep[] = [
                                     ? 'cursor-pointer hover:bg-muted/30'
                                     : 'cursor-default opacity-80',
                                 getCardStatusClass(exam),
+                                highlightedExamId === exam.id
+                                    ? 'outline-2 outline-offset-2 outline-[#D97757]'
+                                    : '',
                             ]"
                             :data-accent="getCardAccent(exam)"
                             role="button"

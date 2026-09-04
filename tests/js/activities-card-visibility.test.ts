@@ -17,7 +17,13 @@ vi.mock('@inertiajs/vue3', () => ({
             return () => h('a', { href: props.href }, slots.default?.());
         },
     }),
-    router: { reload: vi.fn(), visit: vi.fn() },
+    router: {
+        reload: vi.fn(),
+        visit: vi.fn(),
+        // The hub listens for `navigate` to follow calendar deep links; the
+        // real router.on() hands back its own remover.
+        on: vi.fn(() => vi.fn()),
+    },
     usePoll: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() })),
     usePage: () => ({
         props: { auth: { user: { id: 1, public_id: 'test-user' } } },
