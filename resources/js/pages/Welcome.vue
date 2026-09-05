@@ -608,7 +608,7 @@ const webSiteJsonLd = [
                                 />
                             </Link>
                             <a
-                                href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
+                                href="mailto:poweredbyrazer022@dccp.edu.ph?subject=LSI%20school%20pricing"
                                 class="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#f8f7f2]/45 px-5 text-sm font-medium text-[#f8f7f2] transition-colors hover:border-[#f8f7f2] hover:bg-[#f8f7f2]/10 focus-visible:ring-2 focus-visible:ring-[#f8f7f2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
                             >
                                 Contact sales
