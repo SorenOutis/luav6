@@ -28,6 +28,7 @@ import {
 import AiActionApprovalCard from '@/components/AiActionApprovalCard.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
 import ChatNavigation from '@/components/ChatNavigation.vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import MobileBottomSheet from '@/components/MobileBottomSheet.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
@@ -1705,12 +1706,14 @@ onBeforeUnmount(() => {
             <div class="sheet-section mx-3 my-2 h-px bg-border/60" />
 
             <div class="sheet-section space-y-0.5 px-1 pb-2">
-                <p
+                <MascotEmptyState
                     v-if="sessions.length === 0"
-                    class="px-3 py-6 text-center text-sm text-muted-foreground"
-                >
-                    Start a chat and it will appear here.
-                </p>
+                    mascot="chat"
+                    :size="120"
+                    bare
+                    title="No conversations yet"
+                    description="Start a chat with Echo and it will appear here."
+                />
                 <div
                     v-for="session in sessions"
                     :key="session.id"

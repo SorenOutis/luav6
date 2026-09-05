@@ -27,6 +27,7 @@ import {
     onMounted,
     onBeforeUnmount,
 } from 'vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
@@ -1251,23 +1252,12 @@ const activitiesTourSteps: TourStep[] = [
                     >
                 </div>
             </template>
-            <div
-                v-else
-                class="surface-card flex flex-col items-center justify-center space-y-4 border-dashed py-20 text-center"
-            >
-                <div class="rounded-full bg-muted/30 p-4">
-                    <Calendar class="h-12 w-12 text-muted-foreground/40" />
-                </div>
-                <div class="space-y-1">
-                    <h3
-                        class="text-[20px] font-semibold tracking-tight text-foreground"
-                    >
-                        No exams found
-                    </h3>
-                    <p class="text-[15px] text-muted-foreground">
-                        Try a different search or section.
-                    </p>
-                </div>
+            <div v-else class="surface-card border-dashed">
+                <MascotEmptyState
+                    mascot="activities"
+                    title="No activities here yet"
+                    description="There’s nothing to show for this search or section right now. Try a different filter — new exams and games will pop up here when they go live."
+                />
             </div>
         </div>
 

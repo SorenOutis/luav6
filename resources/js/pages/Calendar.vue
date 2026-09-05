@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import CalendarEventCard from '@/components/calendar/CalendarEventCard.vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
 import Button from '@/components/ui/button/Button.vue';
@@ -294,11 +295,14 @@ const eventTooltip = (event: CalendarEvent) => {
                         />
                     </Link>
                 </div>
-                <div v-else class="mobile-calendar-empty">
-                    <CalendarDays class="h-5 w-5" />
-                    <strong>Nothing scheduled next</strong>
-                    <span>You are all caught up.</span>
-                </div>
+                <MascotEmptyState
+                    v-else
+                    mascot="calendar"
+                    :size="110"
+                    bare
+                    title="Nothing scheduled next"
+                    description="You’re all caught up — enjoy the breather. New deadlines and events will appear here."
+                />
             </section>
             <div
                 class="mobile-existing-header calendar-desktop-only flex hidden flex-col justify-between gap-4 sm:flex-row sm:items-end md:flex"
@@ -597,12 +601,14 @@ const eventTooltip = (event: CalendarEvent) => {
                                 />
                             </li>
                         </ul>
-                        <p
+                        <MascotEmptyState
                             v-else
-                            class="py-6 text-center text-sm text-muted-foreground"
-                        >
-                            Nothing scheduled ahead — enjoy the breather!
-                        </p>
+                            mascot="calendar"
+                            :size="130"
+                            bare
+                            title="Nothing scheduled ahead"
+                            description="Enjoy the breather! Your next deadlines and exams will show up here."
+                        />
                     </CardContent>
                 </Card>
             </div>

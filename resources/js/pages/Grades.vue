@@ -25,6 +25,7 @@ import {
     watch,
 } from 'vue';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import Button from '@/components/ui/button/Button.vue';
 import Card from '@/components/ui/card/Card.vue';
@@ -896,17 +897,12 @@ onMounted(() => {
                 "
                 class="animate-section border-dashed"
             >
-                <CardContent
-                    class="flex flex-col items-center justify-center py-12"
-                >
-                    <AlertCircle class="mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 class="text-[17px] font-semibold tracking-tight">
-                        No subjects enrolled
-                    </h3>
-                    <p class="mt-2 max-w-md text-center text-muted-foreground">
-                        You are not enrolled in any sections yet. Contact your
-                        instructor to get enrolled.
-                    </p>
+                <CardContent class="flex justify-center">
+                    <MascotEmptyState
+                        mascot="grades"
+                        title="No grades posted yet"
+                        description="You're not enrolled in any sections yet, or your instructor hasn't posted grades. Check back soon — your results will appear here."
+                    />
                 </CardContent>
             </Card>
 
