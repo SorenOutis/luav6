@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { ArrowLeft, Trophy } from 'lucide-vue-next';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import SpotlightCard from '@/components/ui/spotlight-card/SpotlightCard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -52,12 +53,24 @@ defineProps<{
                 aria-label="Leaderboard summary"
             >
                 <div class="mobile-leaderboard-intro__topline">
-                    <div>
-                        <span class="mobile-dashboard-kicker"
-                            >Compete and grow</span
-                        >
-                        <h1 class="mobile-dashboard-title">Leaderboard</h1>
-                    </div>
+                    <FoxCompanion
+                        class="min-w-0 flex-1"
+                        mascot="activities"
+                        :size="68"
+                        message="Every rank is progress. Keep climbing!"
+                        label="Show leaderboard fox message"
+                        compact
+                        :initially-open="false"
+                    >
+                        <div class="min-w-0">
+                            <span class="mobile-dashboard-kicker"
+                                >Compete and grow</span
+                            >
+                            <h1 class="mobile-dashboard-title">
+                                Leaderboard
+                            </h1>
+                        </div>
+                    </FoxCompanion>
                     <Trophy class="h-6 w-6 text-primary" />
                 </div>
                 <p class="mobile-leaderboard-intro__copy">
@@ -90,7 +103,16 @@ defineProps<{
             <div
                 class="mobile-existing-header leaderboard-desktop-header flex hidden flex-col justify-between gap-4 sm:flex-row sm:items-end md:flex"
             >
-                <div>
+                <FoxCompanion
+                    class="min-w-0"
+                    mascot="activities"
+                    :size="104"
+                    message="Every rank is progress. Keep climbing!"
+                    label="Show leaderboard fox message"
+                    compact
+                    :initially-open="false"
+                >
+                    <div class="min-w-0">
                     <Link
                         href="/dashboard"
                         class="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
@@ -123,7 +145,8 @@ defineProps<{
                         See how you rank in each section, track XP progress, and
                         learn from the students leading the season.
                     </p>
-                </div>
+                    </div>
+                </FoxCompanion>
             </div>
 
             <SpotlightCard

@@ -946,16 +946,17 @@ onMounted(() => {
                 class="animate-group border-dashed"
             >
                 <CardContent
-                    class="flex flex-col items-center justify-center py-12"
+                    class="flex justify-center"
                 >
-                    <Search class="mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 class="text-[17px] font-semibold tracking-tight">
-                        No subjects found
-                    </h3>
-                    <p class="mt-2 max-w-md text-center text-muted-foreground">
-                        No subjects match "{{ searchQuery.trim() }}". Try a
-                        different search term.
-                    </p>
+                    <MascotEmptyState
+                        mascot="grades"
+                        :size="108"
+                        bare
+                        title="No subjects found"
+                        :description="
+                            `No subjects match '${searchQuery.trim()}'. Try a different search term.`
+                        "
+                    />
                 </CardContent>
             </Card>
 

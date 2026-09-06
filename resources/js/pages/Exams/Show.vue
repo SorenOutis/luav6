@@ -4121,6 +4121,25 @@ const feedbackContent = computed(() => {
                                     </p>
                                 </div>
 
+                                <div
+                                    class="w-full rounded-xl border border-[#E0AF68]/20 bg-[#E0AF68]/[0.06] px-4 py-3"
+                                >
+                                    <FoxCompanion
+                                        data-test="exam-submit-warning-fox"
+                                        mascot="activities"
+                                        :size="72"
+                                        :show-message="false"
+                                        label="Exam submit warning fox"
+                                    >
+                                        <p
+                                            class="text-left text-sm leading-relaxed text-muted-foreground"
+                                        >
+                                            A quick review can help you catch
+                                            anything before submitting.
+                                        </p>
+                                    </FoxCompanion>
+                                </div>
+
                                 <div class="flex w-full flex-col gap-3">
                                     <button
                                         @click="closeUnansweredWarning(true)"
@@ -4293,6 +4312,25 @@ const feedbackContent = computed(() => {
                                         your exam. This helps maintain a fair
                                         testing environment.
                                     </p>
+                                </div>
+
+                                <div
+                                    class="w-full rounded-xl border border-[#E0AF68]/20 bg-[#E0AF68]/[0.06] px-4 py-3"
+                                >
+                                    <FoxCompanion
+                                        data-test="exam-focus-warning-fox"
+                                        mascot="activities"
+                                        :size="72"
+                                        :show-message="false"
+                                        label="Exam focus warning fox"
+                                    >
+                                        <p
+                                            class="text-left text-sm leading-relaxed text-muted-foreground"
+                                        >
+                                            You’re close — return to focus mode
+                                            when you’re ready.
+                                        </p>
+                                    </FoxCompanion>
                                 </div>
 
                                 <button

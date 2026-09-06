@@ -2768,36 +2768,28 @@ onMounted(() => {
                     <!-- Empty State: No results found after filters/search -->
                     <Card
                         v-else-if="totalCount > 0"
-                        class="surface-card border-dashed py-14 text-center sm:py-20"
+                        class="surface-card border-dashed"
                     >
                         <CardContent
-                            class="flex flex-col items-center justify-center p-6"
+                            class="flex justify-center p-0"
                         >
-                            <div
-                                class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground"
+                            <MascotEmptyState
+                                mascot="assignments"
+                                :size="110"
+                                bare
+                                title="No matching assignments"
+                                description="We couldn't find any assignments matching your search or active filters."
                             >
-                                <Search class="h-6 w-6" />
-                            </div>
-                            <h3
-                                class="text-lg font-semibold tracking-tight text-foreground"
-                            >
-                                No matching assignments
-                            </h3>
-                            <p
-                                class="mt-1.5 max-w-sm text-sm text-muted-foreground"
-                            >
-                                We couldn't find any assignments matching your
-                                search or active filters.
-                            </p>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                class="dash-btn mt-5 rounded-full px-5"
-                                @click="clearAllFilters"
-                            >
-                                <RotateCcw class="h-3.5 w-3.5" />
-                                <span>Clear all filters</span>
-                            </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="dash-btn rounded-full px-5"
+                                    @click="clearAllFilters"
+                                >
+                                    <RotateCcw class="h-3.5 w-3.5" />
+                                    <span>Clear all filters</span>
+                                </Button>
+                            </MascotEmptyState>
                         </CardContent>
                     </Card>
 

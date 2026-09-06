@@ -143,6 +143,9 @@ describe('OnboardingTour', () => {
         // Missing-target step dropped: 3 declared → 2 rendered.
         expect(document.body.textContent).toContain('1 of 2');
         expect(document.body.textContent).toContain('Welcome');
+        expect(
+            document.querySelector('[data-testid="onboarding-fox"]'),
+        ).not.toBeNull();
 
         wrapper.unmount();
         vi.useRealTimers();

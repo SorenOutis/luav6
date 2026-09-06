@@ -26,6 +26,7 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import type { Component } from 'vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import {
     Dialog,
     DialogContent,
@@ -787,28 +788,32 @@ const changeSeason = async (seasonId: number) => {
 
         <!-- Empty State -->
         <div v-else-if="users.length === 0" class="lb-empty">
-            <Trophy class="mb-4 h-10 w-10 text-muted-foreground/30" />
-            <h3 class="mb-1 text-[20px] font-semibold tracking-tight">
-                No rankings yet
-            </h3>
-            <p class="text-xs text-muted-foreground">
-                Be the first to earn XP!
-            </p>
+            <MascotEmptyState
+                mascot="welcome"
+                :size="120"
+                bare
+                title="No rankings yet"
+                description="Be the first to earn XP!"
+            />
         </div>
 
         <template v-else>
             <!-- No search results -->
             <div v-if="filteredUsers.length === 0" class="lb-empty">
-                <Search class="mb-3 h-8 w-8 text-muted-foreground/30" />
-                <p class="text-sm font-bold">
-                    No students found for "{{ searchQuery }}"
-                </p>
-                <button
-                    @click="searchQuery = ''"
-                    class="mt-3 text-[13px] font-medium text-[#D97757] hover:underline"
+                <MascotEmptyState
+                    mascot="welcome"
+                    :size="100"
+                    bare
+                    :title="`No students found for '${searchQuery}'`"
+                    description="Try another search term."
                 >
-                    Clear search
-                </button>
+                    <button
+                        @click="searchQuery = ''"
+                        class="text-[13px] font-medium text-[#D97757] hover:underline"
+                    >
+                        Clear search
+                    </button>
+                </MascotEmptyState>
             </div>
 
             <template v-else>

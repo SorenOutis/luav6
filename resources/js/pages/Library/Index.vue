@@ -590,26 +590,24 @@ onMounted(() => {
                     :animate="{ opacity: 1 }"
                     class="courses-desktop-grid relative z-10 hidden w-full flex-col items-center justify-center self-stretch py-16 md:flex"
                 >
-                    <div
-                        class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border/40 bg-muted/10"
+                    <MascotEmptyState
+                        class="w-full"
+                        mascot="library"
+                        :size="110"
+                        bare
+                        title="No matches"
+                        description="Try another keyword or category."
                     >
-                        <Search class="h-6 w-6 text-muted-foreground/30" />
-                    </div>
-                    <h3 class="text-lg font-bold text-muted-foreground/70">
-                        No matches
-                    </h3>
-                    <p class="mt-1 text-sm text-muted-foreground/50">
-                        Try another keyword or category.
-                    </p>
-                    <button
-                        @click="
-                            searchQuery = '';
-                            selectedCategory = 'all';
-                        "
-                        class="mt-4 rounded-xl border border-border/40 px-4 py-2 text-xs font-bold hover:border-primary/30 hover:text-primary"
-                    >
-                        Clear filters
-                    </button>
+                        <button
+                            @click="
+                                searchQuery = '';
+                                selectedCategory = 'all';
+                            "
+                            class="rounded-xl border border-border/40 px-4 py-2 text-xs font-bold hover:border-primary/30 hover:text-primary"
+                        >
+                            Clear filters
+                        </button>
+                    </MascotEmptyState>
                 </Motion>
 
                 <!-- Desktop Empty all -->

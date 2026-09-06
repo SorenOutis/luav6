@@ -37,6 +37,10 @@ describe('page-specific mobile compositions', () => {
             expect(source, path).toContain(marker);
         }
 
+        const leaderboard = read('resources/js/pages/Leaderboard.vue');
+        expect(leaderboard).toContain('FoxCompanion');
+        expect(leaderboard).toContain('Show leaderboard fox message');
+
         expect(read('resources/js/pages/Calendar.vue')).toContain(
             'calendar-desktop-only grid',
         );
