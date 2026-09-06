@@ -3,7 +3,7 @@
 namespace App\Support;
 
 /**
- * Generates the friendly Echo-hex level 1-100 badge image set.
+ * Generates the friendly Hex level 1-100 badge image set (no companion).
  *
  * Assets ship with the application under public/images/badges so they never
  * depend on uploaded storage or an external bucket:
@@ -11,10 +11,10 @@ namespace App\Support;
  *   public/images/badges/level-001.svg ... level-100.svg
  *
  * Design:
- *   - Rounded hexagonal "token" frame with soft, approachable tier colors.
- *   - Echo, the fox companion, is the friendly face on every badge.
- *   - A clean level number, tier pill, milestone sparkles, and a crown at
- *     Level 100.
+ *   - Rounded hexagonal achievement token with a clean, approachable look.
+ *   - Soft pastel tier gradients, a small shining highlight, corner sparkles
+ *     and a simple tier icon (flame, star, crown, leaf, crystal, gem, sun).
+ *   - Milestone sparkle at 10/25/50/75/100 and a double sparkle at Level 100.
  *
  * Tiers:
  *   1-10     Bronze
@@ -37,17 +37,17 @@ class BadgeImageGenerator
     public static function styles(): array
     {
         return [
-            'echo-hex' => [
-                'label' => 'Echo Hex',
-                'note' => 'Friendly rounded hexagon featuring Echo the fox companion.',
-            ],
             'hex' => [
                 'label' => 'Hex',
-                'note' => 'Clean hexagonal gemstone token without the companion.',
+                'note' => 'Friendly rounded hexagon achievement token without a companion.',
             ],
-            'medallion' => [
-                'label' => 'Medallion',
-                'note' => 'Classic faceted round medal.',
+            'shield' => [
+                'label' => 'Shield',
+                'note' => 'Heraldic shield silhouette, available as an alternate direction.',
+            ],
+            'orb' => [
+                'label' => 'Orb',
+                'note' => 'Glassy energy orb, available as an alternate direction.',
             ],
         ];
     }
@@ -64,9 +64,10 @@ class BadgeImageGenerator
                 'max' => 10,
                 'outer' => ['#f2a967', '#f8cf9a', '#d5824a'],
                 'ring' => '#ffe0ba',
-                'inner' => ['#fff4e4', '#ffe6c8', '#ffe6c8'],
+                'inner' => ['#fffaf1', '#ffe9cc', '#ffe9cc'],
                 'text' => '#8c4f28',
                 'accent' => '#e98f4b',
+                'icon' => 'flame',
             ],
             2 => [
                 'name' => 'Silver',
@@ -74,9 +75,10 @@ class BadgeImageGenerator
                 'max' => 20,
                 'outer' => ['#bdc9d6', '#e6edf5', '#8c99a9'],
                 'ring' => '#eef3f9',
-                'inner' => ['#f6f9fc', '#e6edf4', '#e6edf4'],
+                'inner' => ['#f5f9fd', '#e5edf5', '#e5edf5'],
                 'text' => '#54616f',
                 'accent' => '#9faec0',
+                'icon' => 'star',
             ],
             3 => [
                 'name' => 'Gold',
@@ -84,9 +86,10 @@ class BadgeImageGenerator
                 'max' => 40,
                 'outer' => ['#f0b94e', '#fbd982', '#c78e24'],
                 'ring' => '#ffe9ad',
-                'inner' => ['#fff7e0', '#ffe9b8', '#ffe9b8'],
+                'inner' => ['#fff8e3', '#ffe9b8', '#ffe9b8'],
                 'text' => '#8a5a10',
                 'accent' => '#dca62e',
+                'icon' => 'crown',
             ],
             4 => [
                 'name' => 'Emerald',
@@ -94,9 +97,10 @@ class BadgeImageGenerator
                 'max' => 60,
                 'outer' => ['#6cbd90', '#a3ddbb', '#3f9468'],
                 'ring' => '#d6f5e3',
-                'inner' => ['#eefbf2', '#d9f2e2', '#d9f2e2'],
+                'inner' => ['#edfaf1', '#d8f1e1', '#d8f1e1'],
                 'text' => '#255f43',
                 'accent' => '#57ab7c',
+                'icon' => 'leaf',
             ],
             5 => [
                 'name' => 'Sapphire',
@@ -104,9 +108,10 @@ class BadgeImageGenerator
                 'max' => 80,
                 'outer' => ['#6ea4d8', '#a9cbec', '#3f7bb2'],
                 'ring' => '#dcecfa',
-                'inner' => ['#eff7fd', '#e0eef9', '#e0eef9'],
+                'inner' => ['#eef7fd', '#dbecf7', '#dbecf7'],
                 'text' => '#274d6e',
                 'accent' => '#5b93c6',
+                'icon' => 'crystal',
             ],
             6 => [
                 'name' => 'Amethyst',
@@ -114,9 +119,10 @@ class BadgeImageGenerator
                 'max' => 99,
                 'outer' => ['#a887d8', '#cbb3ee', '#7a5cb2'],
                 'ring' => '#e7dbf7',
-                'inner' => ['#f6f0fc', '#e9ddf5', '#e9ddf5'],
+                'inner' => ['#f5f0fc', '#e8dcf4', '#e8dcf4'],
                 'text' => '#523975',
                 'accent' => '#8f72c1',
+                'icon' => 'gem',
             ],
             7 => [
                 'name' => 'Legendary',
@@ -127,6 +133,7 @@ class BadgeImageGenerator
                 'inner' => ['#fff3e3', '#ffe0bd', '#ffe0bd'],
                 'text' => '#7c2c13',
                 'accent' => '#ef8b4f',
+                'icon' => 'sun',
             ],
         ];
     }
@@ -164,22 +171,22 @@ class BadgeImageGenerator
     {
         $tier = static::tierFor($level);
         $outer = $tier['outer'];
-        $ring = $tier['ring'];
         $inner = $tier['inner'];
         $accent = $tier['accent'];
         $text = $tier['text'];
         $tierName = $tier['name'];
+        $icon = $tier['icon'];
         $isFinal = $level === static::MAX_LEVEL;
         $isMilestone = in_array($level, [10, 25, 50, 75, 100], true);
 
-        $fontSize = $level < 10 ? 74 : ($level < 100 ? 66 : 60);
+        $fontSize = $level < 10 ? 76 : ($level < 100 ? 68 : 62);
 
-        $milestoneAccents = '';
+        $milestone = '';
         if ($isFinal) {
-            $milestoneAccents = static::sparkle(56, 150, 9, $accent, 0.95)
-                .static::sparkle(198, 150, 9, $accent, 0.95);
+            $milestone = static::sparkle(201, 158, 10, $accent, 0.95)
+                .static::sparkle(55, 158, 10, $accent, 0.95);
         } elseif ($isMilestone) {
-            $milestoneAccents = static::sparkle(192, 150, 8, $accent, 0.95);
+            $milestone = static::sparkle(201, 158, 9, $accent, 0.95);
         }
 
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Level '.$level.' badge"><defs>'
@@ -187,44 +194,40 @@ class BadgeImageGenerator
             .sprintf('<stop offset="0%%" stop-color="%s"/><stop offset="55%%" stop-color="%s"/><stop offset="100%%" stop-color="%s"/>', $outer[0], $outer[1], $outer[2])
             .'</linearGradient>'
             .sprintf(
-                '<radialGradient id="i" cx="50%%" cy="34%%" r="80%%"><stop offset="0%%" stop-color="%s"/><stop offset="70%%" stop-color="%s"/><stop offset="100%%" stop-color="%s"/></radialGradient>',
+                '<linearGradient id="i" x1="0%%" y1="0%%" x2="0%%" y2="100%%"><stop offset="0%%" stop-color="%s"/><stop offset="100%%" stop-color="%s"/></linearGradient>',
                 $inner[0],
-                $inner[1],
-                $inner[2]
+                $inner[1]
             )
-            .sprintf(
-                '<linearGradient id="r" x1="0%%" y1="0%%" x2="100%%" y2="100%%"><stop offset="0%%" stop-color="%s"/><stop offset="100%%" stop-color="%s"/></linearGradient>',
-                $ring,
-                $accent
-            )
-            .'<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#000000" flood-opacity="0.22"/></filter>'
+            .'<radialGradient id="sheen" cx="50%" cy="26%" r="36%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.85"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>'
+            .'<filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity="0.16"/></filter>'
             .'</defs>'
 
-            .static::roundedHex(128, 128, 6, 120, 14, 'url(#o)', 'url(#o)')
-            .static::roundedHex(128, 128, 6, 100, 8, 'url(#i)', 'url(#r)')
-            .static::roundedHex(128, 128, 6, 92, 6, 'none', '#ffffff')
-
-            .static::sparkle(52, 52, 8, '#ffffff', 0.9)
-            .static::sparkle(204, 62, 6, '#ffffff', 0.9)
-            .static::sparkle(62, 188, 6, '#ffffff', 0.9)
-            .static::sparkle(196, 192, 8, '#ffffff', 0.9)
-
-            .'<g filter="url(#soft)">'.static::echoFox().'</g>'
+            .'<g filter="url(#soft)">'
+            .static::roundedHex(128, 128, 118, 10, 'url(#o)', $outer[2])
+            .static::roundedHex(128, 128, 102, 6, 'url(#i)', '#ffffff')
+            .static::roundedHex(128, 128, 94, 2, 'none', $accent)
+            .'<path d="M80 52 L126 82 L176 56 L176 121 Q128 98 80 121 Z" fill="url(#sheen)" opacity="0.5"/>'
+            .static::tierIcon($icon, $accent, $text)
+            .static::sparkle(52, 52, 7, '#ffffff', 0.95)
+            .static::sparkle(204, 57, 5, '#ffffff', 0.95)
+            .static::sparkle(58, 190, 5, '#ffffff', 0.95)
+            .static::sparkle(200, 194, 7, '#ffffff', 0.95)
+            .'</g>'
 
             .sprintf(
-                '<text x="128" y="168" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="%d" font-weight="800" stroke="%s" stroke-width="1.5" paint-order="stroke">%d</text>',
+                '<text x="128" y="173" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="%d" font-weight="800" stroke="%s" stroke-width="1.5" paint-order="stroke">%d</text>',
                 $text,
                 $fontSize,
                 $inner[0],
                 $level
             )
-            .'<rect x="70" y="185" width="116" height="22" rx="11" fill="'.$inner[0].'" stroke="'.$accent.'" stroke-width="1.6"/>'
+            .'<rect x="70" y="188" width="116" height="21" rx="10.5" fill="'.$inner[0].'" stroke="'.$accent.'" stroke-width="1.5"/>'
             .sprintf(
-                '<text x="128" y="201" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="2.2">%s</text>',
+                '<text x="128" y="205" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="2.1">%s</text>',
                 $accent,
                 strtoupper($tierName)
             )
-            .$milestoneAccents
+            .$milestone
             .'</svg>';
     }
 
@@ -256,12 +259,12 @@ class BadgeImageGenerator
         return $count;
     }
 
-    private static function roundedHex(float $centerX, float $centerY, int $points, float $radius, int $strokeWidth, string $fill, string $stroke): string
+    private static function roundedHex(float $centerX, float $centerY, float $radius, int $strokeWidth, string $fill, string $stroke): string
     {
         $coordinates = [];
 
-        for ($index = 0; $index < $points; $index++) {
-            $angle = ($index * 360 / $points - 90) * M_PI / 180;
+        for ($index = 0; $index < 6; $index++) {
+            $angle = ($index * 60 - 90) * M_PI / 180;
             $coordinates[] = sprintf(
                 '%.1f,%.1f',
                 $centerX + $radius * cos($angle),
@@ -280,54 +283,99 @@ class BadgeImageGenerator
 
     private static function sparkle(float $x, float $y, float $size, string $color, float $opacity): string
     {
+        $k = $size * 0.24;
+
         return sprintf(
-            '<path d="M%s %s L%s %s L%s %s L%s %s L%s %s L%s %s L%s %s L%s %s Z" fill="%s" opacity="%s"/>',
+            '<path d="M%.1f %.1f L%.1f %.1f L%.1f %.1f L%.1f %.1f L%.1f %.1f L%.1f %.1f L%.1f %.1f L%.1f %.1f Z" fill="%s" opacity="%s"/>',
             $x,
             $y - $size,
-            $x + $size * 0.22,
-            $y - $size * 0.22,
+            $x + $k,
+            $y - $k,
             $x + $size,
             $y,
-            $x + $size * 0.22,
-            $y + $size * 0.22,
+            $x + $k,
+            $y + $k,
             $x,
             $y + $size,
-            $x - $size * 0.22,
-            $y + $size * 0.22,
+            $x - $k,
+            $y + $k,
             $x - $size,
             $y,
-            $x - $size * 0.22,
-            $y - $size * 0.22,
+            $x - $k,
+            $y - $k,
             $color,
             $opacity
         );
     }
 
-    /**
-     * Echo the fox companion - a friendly vector head emblem.
-     */
-    private static function echoFox(): string
+    private static function star(float $x, float $y, float $radius, string $color, string $stroke): string
     {
-        $outline = '#5b2f26';
-        $orange = '#e8915b';
-        $cream = '#ffe9d4';
-        $pink = '#f5a88f';
+        $coordinates = [];
 
-        return '<g id="echo">'
-            .'<path d="M102 60 L76 30 L114 45 Z" fill="'.$orange.'" stroke="'.$outline.'" stroke-width="3" stroke-linejoin="round"/>'
-            .'<path d="M154 60 L180 30 L142 45 Z" fill="'.$orange.'" stroke="'.$outline.'" stroke-width="3" stroke-linejoin="round"/>'
-            .'<path d="M96 52 L81 35 L106 47 Z" fill="'.$cream.'"/>'
-            .'<path d="M160 52 L175 35 L150 47 Z" fill="'.$cream.'"/>'
-            .'<path d="M103 57 Q128 44 153 57 L170 96 Q128 128 86 96 Z" fill="'.$orange.'" stroke="'.$outline.'" stroke-width="3" stroke-linejoin="round"/>'
-            .'<path d="M101 96 Q128 118 155 96 L149 109 Q128 130 107 109 Z" fill="'.$cream.'" stroke="'.$outline.'" stroke-width="2.5" stroke-linejoin="round"/>'
-            .'<circle cx="110" cy="79" r="4.2" fill="#3c2620"/>'
-            .'<circle cx="146" cy="79" r="4.2" fill="#3c2620"/>'
-            .'<circle cx="111.6" cy="77.4" r="1.4" fill="#ffffff"/>'
-            .'<circle cx="147.6" cy="77.4" r="1.4" fill="#ffffff"/>'
-            .'<path d="M123 101 Q128 98 133 101 L131 107 Q128 110 125 107 Z" fill="#3c2620"/>'
-            .'<path d="M128 110 Q122 116 116 113 M128 110 Q134 116 140 113" fill="none" stroke="#3c2620" stroke-width="2" stroke-linecap="round"/>'
-            .'<ellipse cx="104" cy="92" rx="6" ry="4" fill="'.$pink.'" opacity="0.85"/>'
-            .'<ellipse cx="152" cy="92" rx="6" ry="4" fill="'.$pink.'" opacity="0.85"/>'
-            .'</g>';
+        for ($index = 0; $index < 10; $index++) {
+            $r = $index % 2 === 0 ? $radius : $radius * 0.42;
+            $angle = ($index * 36 - 90) * M_PI / 180;
+            $coordinates[] = sprintf(
+                '%.1f,%.1f',
+                $x + $r * cos($angle),
+                $y + $r * sin($angle)
+            );
+        }
+
+        return sprintf(
+            '<polygon points="%s" fill="%s" stroke="%s" stroke-width="1.6" stroke-linejoin="round"/>',
+            implode(' ', $coordinates),
+            $color,
+            $stroke
+        );
+    }
+
+    private static function tierIcon(string $icon, string $accent, string $text): string
+    {
+        if ($icon === 'flame') {
+            return '<path d="M128 46 C 118 55 114 63 116 70 C 112 78 118 86 128 85 C 138 86 144 78 140 70 C 142 63 138 55 128 46 Z" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.6" stroke-linejoin="round"/>'
+                .'<path d="M128 57 C 123 62 122 68 125 73 C 127 76 129 76 131 73 C 134 68 133 62 128 57 Z" fill="#ffffff" opacity="0.75"/>';
+        }
+
+        if ($icon === 'star') {
+            return static::star(128, 66, 20, $accent, $text);
+        }
+
+        if ($icon === 'crown') {
+            return '<path d="M112 54 L119 45 L128 55 L137 45 L144 54 L141 72 L115 72 Z" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.6" stroke-linejoin="round"/>'
+                .'<circle cx="112" cy="54" r="3.2" fill="'.$text.'"/>'
+                .'<circle cx="128" cy="45" r="3.2" fill="'.$text.'"/>'
+                .'<circle cx="144" cy="54" r="3.2" fill="'.$text.'"/>';
+        }
+
+        if ($icon === 'leaf') {
+            return '<path d="M128 47 C 116 56 114 72 126 84 C 142 75 146 56 128 47 Z" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.6" stroke-linejoin="round"/>'
+                .'<path d="M121 62 Q128 72 132 82" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.8" stroke-linecap="round"/>';
+        }
+
+        if ($icon === 'crystal') {
+            return '<polygon points="128,45 143,62 128,86 113,62" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.6" stroke-linejoin="round"/>'
+                .'<path d="M113 62 L143 62 M128 45 L128 86" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.7"/>';
+        }
+
+        if ($icon === 'gem') {
+            return '<polygon points="128,44 150,62 139,86 117,86 106,62" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.6" stroke-linejoin="round"/>'
+                .'<path d="M117 60 L139 60 M122 72 L134 72" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.7"/>';
+        }
+
+        $rays = '';
+        for ($index = 0; $index < 12; $index++) {
+            $angle = $index * 30 * M_PI / 180;
+            $rays .= sprintf(
+                '<path d="M%.1f %.1f L%.1f %.1f" stroke="%s" stroke-width="2.6" stroke-linecap="round"/>',
+                128 + 15 * cos($angle),
+                65 + 15 * sin($angle),
+                128 + 24 * cos($angle),
+                65 + 24 * sin($angle),
+                $accent
+            );
+        }
+
+        return '<circle cx="128" cy="65" r="13" fill="'.$accent.'" stroke="'.$text.'" stroke-width="2"/>'.$rays;
     }
 }
