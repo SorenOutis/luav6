@@ -4605,8 +4605,8 @@ const feedbackContent = computed(() => {
                                         <p
                                             class="text-left text-sm leading-relaxed text-muted-foreground"
                                         >
-                                            Every completed part helps you
-                                            level up.
+                                            Every completed part helps you level
+                                            up.
                                         </p>
                                     </FoxCompanion>
                                 </div>

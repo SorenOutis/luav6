@@ -66,9 +66,7 @@ defineProps<{
                             <span class="mobile-dashboard-kicker"
                                 >Compete and grow</span
                             >
-                            <h1 class="mobile-dashboard-title">
-                                Leaderboard
-                            </h1>
+                            <h1 class="mobile-dashboard-title">Leaderboard</h1>
                         </div>
                     </FoxCompanion>
                     <Trophy class="h-6 w-6 text-primary" />
@@ -113,38 +111,38 @@ defineProps<{
                     :initially-open="false"
                 >
                     <div class="min-w-0">
-                    <Link
-                        href="/dashboard"
-                        class="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
-                    >
-                        <ArrowLeft class="h-4 w-4" />
-                        Back to dashboard
-                    </Link>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-400"
+                        <Link
+                            href="/dashboard"
+                            class="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground"
                         >
-                            <Trophy class="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p
-                                class="text-xs font-black tracking-[0.2em] text-amber-400 uppercase"
+                            <ArrowLeft class="h-4 w-4" />
+                            Back to dashboard
+                        </Link>
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-400"
                             >
-                                Compete and grow
-                            </p>
-                            <h1
-                                class="text-3xl font-black tracking-tight sm:text-4xl"
-                            >
-                                Leaderboard
-                            </h1>
+                                <Trophy class="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p
+                                    class="text-xs font-black tracking-[0.2em] text-amber-400 uppercase"
+                                >
+                                    Compete and grow
+                                </p>
+                                <h1
+                                    class="text-3xl font-black tracking-tight sm:text-4xl"
+                                >
+                                    Leaderboard
+                                </h1>
+                            </div>
                         </div>
-                    </div>
-                    <p
-                        class="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground"
-                    >
-                        See how you rank in each section, track XP progress, and
-                        learn from the students leading the season.
-                    </p>
+                        <p
+                            class="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                        >
+                            See how you rank in each section, track XP progress,
+                            and learn from the students leading the season.
+                        </p>
                     </div>
                 </FoxCompanion>
             </div>

@@ -2770,9 +2770,7 @@ onMounted(() => {
                         v-else-if="totalCount > 0"
                         class="surface-card border-dashed"
                     >
-                        <CardContent
-                            class="flex justify-center p-0"
-                        >
+                        <CardContent class="flex justify-center p-0">
                             <MascotEmptyState
                                 mascot="assignments"
                                 :size="110"

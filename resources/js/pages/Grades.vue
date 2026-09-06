@@ -945,17 +945,13 @@ onMounted(() => {
                 v-else-if="filteredSubjectGrades.length === 0 && hasSearchQuery"
                 class="animate-group border-dashed"
             >
-                <CardContent
-                    class="flex justify-center"
-                >
+                <CardContent class="flex justify-center">
                     <MascotEmptyState
                         mascot="grades"
                         :size="108"
                         bare
                         title="No subjects found"
-                        :description="
-                            `No subjects match '${searchQuery.trim()}'. Try a different search term.`
-                        "
+                        :description="`No subjects match '${searchQuery.trim()}'. Try a different search term.`"
                     />
                 </CardContent>
             </Card>

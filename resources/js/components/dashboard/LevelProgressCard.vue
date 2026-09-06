@@ -469,7 +469,9 @@ function formatWhen(iso: string): string {
                             >
                                 Every point counts.
                             </p>
-                            <p class="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                            <p
+                                class="mt-0.5 text-xs leading-relaxed text-muted-foreground"
+                            >
                                 Keep building your progress, one step at a time.
                             </p>
                         </div>
