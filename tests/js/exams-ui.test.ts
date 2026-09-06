@@ -56,6 +56,9 @@ describe('exams and parts student shell', () => {
         expect(page).toContain('FoxCompanion');
         expect(page).toContain('mascot="activities"');
         expect(page).toContain('Show exam fox message');
+        expect(page).toContain('data-test="exam-start-fox"');
+        expect(page).toContain('data-test="exam-result-fox"');
+        expect(page).toContain('data-test="exam-xp-fox"');
         expect(page).toContain('All activities');
         expect(page).toContain('dash-title');
         expect(page).toContain("'Start'");

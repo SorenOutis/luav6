@@ -24,7 +24,6 @@ import {
     X,
     Maximize,
     HelpCircle,
-    Play,
     Info,
 } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, computed, reactive, watch } from 'vue';
@@ -4168,11 +4167,14 @@ const feedbackContent = computed(() => {
                             <div
                                 class="flex flex-col items-center gap-6 text-center"
                             >
-                                <div
-                                    class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"
+                                <FoxCompanion
+                                    data-test="exam-start-fox"
+                                    mascot="activities"
+                                    :size="112"
+                                    :show-message="false"
+                                    label="Exam start fox"
                                 >
-                                    <Play class="h-6 w-6 text-primary" />
-                                </div>
+                                </FoxCompanion>
 
                                 <div class="space-y-2">
                                     <h3
@@ -4345,6 +4347,26 @@ const feedbackContent = computed(() => {
                                         Great work! Your answers have been saved
                                         successfully.
                                     </p>
+                                </div>
+
+                                <div
+                                    class="w-full rounded-xl border border-[#D97757]/15 bg-[#D97757]/[0.06] px-4 py-3"
+                                >
+                                    <FoxCompanion
+                                        data-test="exam-result-fox"
+                                        mascot="activities"
+                                        :size="76"
+                                        :show-message="false"
+                                        label="Exam result fox"
+                                    >
+                                        <p
+                                            class="text-left text-sm leading-relaxed text-muted-foreground"
+                                        >
+                                            Nice work — your progress has been
+                                            recorded. Keep going at your own
+                                            pace.
+                                        </p>
+                                    </FoxCompanion>
                                 </div>
 
                                 <!-- Progress / Score Info -->
@@ -4530,6 +4552,25 @@ const feedbackContent = computed(() => {
                                         Your exam score remains separate from
                                         these level-up rewards.
                                     </p>
+                                </div>
+
+                                <div
+                                    class="w-full rounded-xl border border-[#D97757]/15 bg-[#D97757]/[0.06] px-4 py-3"
+                                >
+                                    <FoxCompanion
+                                        data-test="exam-xp-fox"
+                                        mascot="activities"
+                                        :size="76"
+                                        :show-message="false"
+                                        label="Exam XP fox"
+                                    >
+                                        <p
+                                            class="text-left text-sm leading-relaxed text-muted-foreground"
+                                        >
+                                            Every completed part helps you
+                                            level up.
+                                        </p>
+                                    </FoxCompanion>
                                 </div>
 
                                 <div
