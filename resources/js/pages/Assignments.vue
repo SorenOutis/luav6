@@ -28,6 +28,7 @@ import {
     LogOut,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
@@ -1283,7 +1284,26 @@ onMounted(() => {
                     aria-label="Assignment summary"
                 >
                     <div class="mobile-assignment-mobile-intro__topline">
-                        <div>
+                        <FoxCompanion
+                            v-if="filteredAssignments.length > 0"
+                            class="min-w-0 flex-1"
+                            mascot="assignments"
+                            :size="82"
+                            message="One task at a time — you’ve got this."
+                            label="Show assignments fox message"
+                            compact
+                            :initially-open="false"
+                        >
+                            <div class="min-w-0">
+                                <span class="mobile-dashboard-kicker"
+                                    >Your work</span
+                                >
+                                <h1 class="mobile-dashboard-title">
+                                    Assignments
+                                </h1>
+                            </div>
+                        </FoxCompanion>
+                        <div v-else>
                             <span class="mobile-dashboard-kicker"
                                 >Your work</span
                             >
@@ -1317,7 +1337,31 @@ onMounted(() => {
                 <div
                     class="mobile-existing-header assignment-desktop-only animate-section mb-6 hidden flex-col gap-4 sm:mb-8 sm:flex sm:flex-row sm:items-start sm:justify-between md:flex"
                 >
-                    <div>
+                    <FoxCompanion
+                        v-if="filteredAssignments.length > 0"
+                        class="min-w-0 flex-1"
+                        mascot="assignments"
+                        :size="96"
+                        message="One task at a time — you’ve got this."
+                        label="Show assignments fox message"
+                        compact
+                        :initially-open="false"
+                    >
+                        <div class="min-w-0">
+                            <h1
+                                class="dash-title text-[22px] text-foreground sm:text-[34px]"
+                            >
+                                Assignments
+                            </h1>
+                            <p
+                                class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
+                            >
+                                What’s due, when you turned it in, and when it
+                                was graded.
+                            </p>
+                        </div>
+                    </FoxCompanion>
+                    <div v-else class="min-w-0 flex-1">
                         <h1
                             class="dash-title text-[22px] text-foreground sm:text-[34px]"
                         >

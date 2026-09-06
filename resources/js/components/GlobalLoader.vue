@@ -2,6 +2,7 @@
 import { usePage } from '@inertiajs/vue3';
 import gsap from 'gsap';
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import PublicBrandMark from '@/components/PublicBrandMark.vue';
 import { useLoader } from '@/composables/useLoader';
 import type { SchoolBranding } from '@/types/branding';
@@ -276,8 +277,24 @@ watch(pendingHide, (isPending) => {
                 <!-- Note artifact, echoing the classroom workflow -->
                 <aside
                     aria-label="Assessment workflow note"
-                    class="relative mx-auto w-full max-w-sm lg:mt-10"
+                    class="relative mx-auto flex w-full max-w-sm flex-col items-center lg:mt-10"
                 >
+                    <div
+                        data-test="global-loader-fox"
+                        class="global-loader__fox relative z-10 mb-[-0.5rem]"
+                    >
+                        <FoxCompanion
+                            mascot="welcome"
+                            :size="190"
+                            :show-message="false"
+                            :label="
+                                isTerminating
+                                    ? 'Signing out fox'
+                                    : 'Loading fox'
+                            "
+                        />
+                    </div>
+
                     <div
                         class="absolute -top-3 -right-3 h-10 w-10 rounded-full border border-primary/25 bg-primary/10"
                         aria-hidden="true"
@@ -345,6 +362,10 @@ watch(pendingHide, (isPending) => {
 html[data-font-preset] .global-loader.font-sans,
 html[data-font-preset] .global-loader.font-sans * {
     font-family: Inter, ui-sans-serif, system-ui, sans-serif !important;
+}
+
+.global-loader__fox {
+    filter: drop-shadow(0 14px 18px rgb(23 32 31 / 0.1));
 }
 </style>
 

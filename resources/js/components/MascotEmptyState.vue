@@ -51,7 +51,7 @@ const src = computed(() =>
 
 <template>
     <div
-        class="flex flex-col items-center justify-center px-6 text-center"
+        class="flex w-full flex-col items-center justify-center px-6 text-center"
         :class="bare ? 'py-10' : 'py-14'"
         role="status"
     >
