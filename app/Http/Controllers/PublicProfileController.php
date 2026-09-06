@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PublicProfileController extends Controller
@@ -158,7 +157,7 @@ class PublicProfileController extends Controller
                         'name' => $badge->name,
                         'description' => $badge->description,
                         'requiredLevel' => $badge->required_level,
-                        'image' => $badge->image_path ? Storage::disk('public')->url($badge->image_path) : null,
+                        'image' => PublicFileUrl::resolve($badge->image_path),
                         'iconUrl' => $badge->icon_url,
                         'earned' => $earned,
                         'earnedSeason' => $earned && $pivot?->season_id

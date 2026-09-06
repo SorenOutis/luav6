@@ -29,9 +29,20 @@ final class PublicFileUrl
             return $path;
         }
 
-        // The curated avatar gallery is shipped with the application rather
-        // than uploaded to the configured public disk. Keep these assets
-        // available when production uses S3/R2 for user uploads.
+        $path = ltrim($path, '/');
+
+        if ($path === '' || str_starts_with($path, '..')) {
+            return null;
+        }
+
+        // Bundled assets ship with the app under public/ (avatar gallery and
+        // level badge gallery). Keep them available even when production
+        // configures S3/R2 for user uploads, because they are never copied
+        // into an external bucket.
+        if (is_file(public_path($path))) {
+            return url('/'.ltrim($path, '/'));
+        }
+
         // Local storage is common on Dokploy when PUBLIC_DISK is omitted. Do
         // not use the disk's configured APP_URL here: a stale/placeholder
         // APP_URL makes the browser request localhost (or the old domain),
@@ -42,16 +53,6 @@ final class PublicFileUrl
 
         if (config('filesystems.disks.public.driver') === 'local') {
             return url('/storage/'.ltrim($path, '/'));
-        }
-
-        // Curated avatars are shipped in storage/app/public and therefore are
-        // not present in an external bucket. Keep them on the local public
-        // link even when uploaded avatars use S3/R2.
-        if (
-            preg_match('#^avatars/avatar-\d+\.svg$#i', $path) === 1
-            && is_file(public_path($path))
-        ) {
-            return url('/'.ltrim($path, '/'));
         }
 
         return $disk->url($path);

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Badges\Tables;
 
 use App\Filament\Support\WorkspaceTable;
+use App\Support\PublicFileUrl;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -19,7 +20,7 @@ class BadgesTable
                 WorkspaceTable::column(),
                 ImageColumn::make('image_path')
                     ->label('Image')
-                    ->disk('public')
+                    ->state(fn ($record): ?string => PublicFileUrl::resolve($record->image_path))
                     ->square(),
                 TextColumn::make('name')
                     ->searchable(),

@@ -6,7 +6,7 @@ use App\Models\Badge;
 use App\Models\Season;
 use App\Models\User;
 use App\Notifications\StudentActivityNotification;
-use Illuminate\Support\Facades\Storage;
+use App\Support\PublicFileUrl;
 
 class StudentNotificationService
 {
@@ -52,7 +52,7 @@ class StudentNotificationService
             'title' => 'Badge unlocked',
             'message' => $badge->name,
             'meta' => $seasonName ? "Earned in {$seasonName}" : 'Lifetime badge',
-            'image' => $badge->image_path ? Storage::disk('public')->url($badge->image_path) : null,
+            'image' => PublicFileUrl::resolve($badge->image_path),
             'href' => "/u/{$user->public_id}",
         ]));
     }
