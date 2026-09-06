@@ -79,6 +79,9 @@ describe('LevelProgressCard bonus XP block', () => {
         await wrapper.trigger('click');
         await flushPromises();
 
+        expect(wrapper.find('[aria-label="XP history fox"]').exists()).toBe(
+            true,
+        );
         expect(wrapper.text()).toContain('Your bonus XP is ready');
         expect(wrapper.text()).toContain('Claim 5 XP');
         wrapper.unmount();
