@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Badge;
+use App\Support\BadgeImageGenerator;
 use Illuminate\Database\Seeder;
 
 class BadgeSeeder extends Seeder
@@ -18,7 +19,7 @@ class BadgeSeeder extends Seeder
                 [
                     'name' => "Level {$level} Badge",
                     'description' => "Awarded for reaching Level {$level}.",
-                    'image_path' => null,
+                    'image_path' => BadgeImageGenerator::filenameFor($level),
                 ]
             );
         }

@@ -2,3 +2,5 @@
 !.gitignore
 !avatars/
 !avatars/*.svg
+!badges/
+!badges/*.svg
