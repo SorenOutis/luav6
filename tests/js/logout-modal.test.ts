@@ -98,6 +98,23 @@ const user = {
 };
 
 describe('logout confirmation modal', () => {
+    it('introduces Echo with a calm sign-out message', () => {
+        const source = readFileSync(
+            join(
+                process.cwd(),
+                'resources/js/components/LogoutConfirmationModal.vue',
+            ),
+            'utf8',
+        );
+
+        expect(source).toContain('title="Leaving so soon?"');
+        expect(source).toContain(
+            'description="Echo will be here when you return."',
+        );
+        expect(source).toContain('label="Echo, your learning companion"');
+        expect(source).not.toContain('ShieldCheck');
+    });
+
     it('lets the dropdown close and asks its persistent parent to show the modal', async () => {
         const wrapper = shallowMount(UserMenuContent, {
             props: { user: user as never },
@@ -175,6 +192,7 @@ describe('logout confirmation modal', () => {
         const confirmButton = wrapper.get(
             '[data-test="logout-confirm-button"]',
         );
+        expect(wrapper.text()).toContain('Your progress is safe');
         await confirmButton.trigger('click');
         await confirmButton.trigger('click');
 

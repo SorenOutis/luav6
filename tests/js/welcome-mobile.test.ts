@@ -126,8 +126,10 @@ describe('welcome mobile performance', () => {
         expect(loader).toContain('mascot="welcome"');
         expect(loader).toContain('data-test="global-loader-editorial"');
         expect(loader).toContain('absolute top-8 left-6');
-        expect(loader).toContain('LSI / SYSTEM NOTE');
-        expect(loader).toContain('Assessment workflow note');
+        expect(loader).toContain('LSI / GETTING READY');
+        expect(loader).toContain('Echo getting things ready');
+        expect(loader).not.toContain("Today's note");
+        expect(loader).not.toContain('Assessment workflow note');
         expect(loader).toContain('data-test="global-loader-status"');
         expect(loader).toContain('aria-live="polite"');
         expect(loader).toContain('role="progressbar"');

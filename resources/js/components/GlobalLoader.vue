@@ -200,30 +200,54 @@ watch(pendingHide, (isPending) => {
                 </span>
             </div>
 
-            <main
-                class="grid flex-1 content-center items-center gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.75fr)] lg:gap-24"
-            >
-                <section class="max-w-xl">
+            <main class="flex flex-1 items-center justify-center">
+                <section
+                    class="flex w-full max-w-md flex-col items-center text-center"
+                >
                     <p
-                        class="mb-5 text-[10px] font-semibold tracking-[0.22em] text-primary uppercase"
+                        class="text-[10px] font-semibold tracking-[0.22em] text-primary uppercase"
                     >
-                        LSI / SYSTEM NOTE
+                        LSI / GETTING READY
                     </p>
-                    <h1
-                        class="max-w-lg font-serif text-4xl leading-[1.02] tracking-[-0.045em] text-[#17201f] sm:text-6xl dark:text-foreground"
+
+                    <div
+                        data-test="global-loader-fox"
+                        class="global-loader__fox relative z-10 mt-8"
                     >
-                        Making room for what comes next.
+                        <FoxCompanion
+                            mascot="welcome"
+                            :size="190"
+                            :show-message="false"
+                            :label="
+                                isTerminating
+                                    ? 'Echo signing out'
+                                    : 'Echo getting things ready'
+                            "
+                        />
+                    </div>
+
+                    <h1
+                        class="mt-5 font-serif text-4xl leading-[1.02] tracking-[-0.045em] text-[#17201f] sm:text-5xl dark:text-foreground"
+                    >
+                        {{
+                            isTerminating
+                                ? 'See you soon.'
+                                : 'Getting things ready.'
+                        }}
                     </h1>
                     <p
-                        class="mt-6 max-w-md text-sm leading-7 text-[#17201f]/60 sm:text-base dark:text-muted-foreground"
+                        class="mt-4 max-w-sm text-sm leading-7 text-[#17201f]/60 sm:text-base dark:text-muted-foreground"
                     >
-                        Your workspace is getting ready. We are bringing the
-                        next clear step into view.
+                        {{
+                            isTerminating
+                                ? 'Echo will be here when you come back.'
+                                : 'Echo is preparing your next step.'
+                        }}
                     </p>
 
                     <div
                         data-test="global-loader-status"
-                        class="mt-12 max-w-md border-t border-[#17201f]/20 pt-4 dark:border-border/40"
+                        class="mt-10 w-full max-w-sm border-t border-[#17201f]/20 pt-4 text-left dark:border-border/40"
                     >
                         <div
                             class="flex items-center justify-between gap-4 text-xs font-medium"
@@ -273,83 +297,6 @@ watch(pendingHide, (isPending) => {
                         </div>
                     </div>
                 </section>
-
-                <!-- Note artifact, echoing the classroom workflow -->
-                <aside
-                    aria-label="Assessment workflow note"
-                    class="relative mx-auto flex w-full max-w-sm flex-col items-center lg:mt-10"
-                >
-                    <div
-                        data-test="global-loader-fox"
-                        class="global-loader__fox relative z-10 mb-[-0.5rem]"
-                    >
-                        <FoxCompanion
-                            mascot="welcome"
-                            :size="190"
-                            :show-message="false"
-                            :label="
-                                isTerminating
-                                    ? 'Signing out fox'
-                                    : 'Loading fox'
-                            "
-                        />
-                    </div>
-
-                    <div
-                        class="absolute -top-3 -right-3 h-10 w-10 rounded-full border border-primary/25 bg-primary/10"
-                        aria-hidden="true"
-                    ></div>
-                    <div
-                        class="relative rotate-[-2deg] border border-[#17201f]/15 bg-[#fffdf7] p-6 shadow-[0_18px_50px_rgba(23,32,31,0.08)] dark:border-border/40 dark:bg-card"
-                    >
-                        <div
-                            class="flex items-center justify-between border-b border-[#17201f]/15 pb-4 text-[10px] font-semibold tracking-[0.2em] text-[#17201f]/45 uppercase dark:border-border/40 dark:text-muted-foreground/55"
-                        >
-                            <span>Today's note</span>
-                            <span>01</span>
-                        </div>
-                        <div class="space-y-5 py-6">
-                            <div>
-                                <p
-                                    class="text-[10px] font-semibold tracking-[0.18em] text-primary uppercase"
-                                >
-                                    Assessment / feedback / next step
-                                </p>
-                                <p
-                                    class="mt-3 font-serif text-2xl leading-tight tracking-[-0.03em] text-[#17201f] dark:text-foreground"
-                                >
-                                    Keep the signal. Lose the noise.
-                                </p>
-                            </div>
-                            <div
-                                class="space-y-3 text-xs leading-5 text-[#17201f]/60 dark:text-muted-foreground"
-                            >
-                                <div class="flex gap-3">
-                                    <span
-                                        class="font-mono text-[10px] text-primary/75"
-                                        >01</span
-                                    >
-                                    <span
-                                        >Read what the response is telling
-                                        you.</span
-                                    >
-                                </div>
-                                <div class="flex gap-3">
-                                    <span
-                                        class="font-mono text-[10px] text-primary/75"
-                                        >02</span
-                                    >
-                                    <span>Choose the next useful move.</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div
-                            class="border-t border-[#17201f]/15 pt-4 text-[10px] font-medium tracking-[0.16em] text-[#17201f]/40 uppercase dark:border-border/40 dark:text-muted-foreground/45"
-                        >
-                            A clearer class is close.
-                        </div>
-                    </div>
-                </aside>
             </main>
         </div>
     </div>
