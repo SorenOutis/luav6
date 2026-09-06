@@ -1,5 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { nextTick } from 'vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 
 vi.mock('axios', () => ({
@@ -125,5 +126,101 @@ describe('LevelProgressCard bonus XP block', () => {
         expect(wrapper.text()).toContain('Bonus XP claimed');
         expect(wrapper.text()).toContain('Just now');
         wrapper.unmount();
+    });
+});
+
+/**
+ * Regression test for the production-only horizontal overflow in the
+ * "Your XP history" modal. With Bonus XP in the claimable state, the
+ * `min-w-[7.5rem]` Claim button inside a `shrink-0` flex block pushed the
+ * dialog content wider than its box. On Windows (classic scrollbars that
+ * consume layout width) this produced a bottom horizontal scrollbar and
+ * cards clipped under the vertical scrollbar, while macOS overlay
+ * scrollbars hid it locally. Guards the three CSS defenses: the dialog
+ * clips horizontal overflow, the modal body can shrink inside the dialog
+ * grid, and the claim rows / inner history scrollers yield instead of
+ * forcing the dialog wider.
+ */
+describe('LevelProgressCard XP history modal overflow guards', () => {
+    const mounted: Array<{ unmount: () => void }> = [];
+
+    afterEach(() => {
+        mounted.splice(0).forEach((w) => w.unmount());
+        document.body.innerHTML = '';
+    });
+
+    // Real ResponsiveModal (reka-ui Dialog teleported to body), unlike the
+    // stubbed version above, so the dialog-level classes are exercised.
+    const mountRealModal = () => {
+        const wrapper = mount(LevelProgressCard, {
+            props: {
+                userStats: userStats as never,
+                claimXp: claimXp as never,
+                bonusXp: { ...bonusXp } as never,
+                xpHistory: [
+                    {
+                        id: 1,
+                        reason: 'daily claim',
+                        description: 'Daily login claim bonus',
+                        amount: 5,
+                        createdAt: '2026-09-06T17:34:00+08:00',
+                        isClaim: true,
+                    },
+                    {
+                        id: 2,
+                        reason: 'exam',
+                        description: 'On-time Exam XP for Exam: yesssssssir',
+                        amount: 10,
+                        createdAt: '2026-09-05T11:44:00+08:00',
+                        isClaim: false,
+                    },
+                ] as never,
+            },
+        });
+        mounted.push(wrapper);
+        return wrapper;
+    };
+
+    const openDialog = async () => {
+        const wrapper = mountRealModal();
+        await wrapper.trigger('click');
+        await flushPromises();
+        await nextTick();
+        await flushPromises();
+
+        const dialog = document.querySelector('[data-slot="dialog-content"]');
+        expect(dialog).toBeTruthy();
+        return dialog as HTMLElement;
+    };
+
+    it('clips horizontal overflow at the dialog level (no bottom scrollbar)', async () => {
+        const dialog = await openDialog();
+        expect(dialog.classList.contains('overflow-x-hidden')).toBe(true);
+        expect(dialog.classList.contains('overflow-y-auto')).toBe(true);
+    });
+
+    it('lets the modal body shrink inside the dialog grid', async () => {
+        const dialog = await openDialog();
+        const body = dialog.querySelector('.space-y-4');
+        expect(body).toBeTruthy();
+        expect(body!.classList.contains('min-w-0')).toBe(true);
+    });
+
+    it('wraps claim rows and clips inner history scroll instead of overflowing', async () => {
+        const dialog = await openDialog();
+
+        const bonus = dialog.querySelector('[aria-label="Bonus XP"]');
+        expect(bonus).toBeTruthy();
+        expect(bonus!.classList.contains('flex-wrap')).toBe(true);
+
+        const daily = dialog.querySelector('[aria-label="Daily XP"]');
+        expect(daily).toBeTruthy();
+        expect(daily!.classList.contains('flex-wrap')).toBe(true);
+
+        const scrollers = dialog.querySelectorAll('[data-lenis-prevent]');
+        expect(scrollers.length).toBeGreaterThan(0);
+        scrollers.forEach((el) =>
+            expect(el.classList.contains('overflow-x-hidden')).toBe(true),
+        );
     });
 });

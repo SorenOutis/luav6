@@ -453,7 +453,7 @@ function formatWhen(iso: string): string {
             content-class="sm:max-w-lg"
             @close="showBreakdown = false"
         >
-            <div class="space-y-4 py-2">
+            <div class="min-w-0 space-y-4 py-2">
                 <div
                     class="rounded-2xl border border-[#D97757]/15 bg-[#D97757]/[0.06] px-3 py-2.5 sm:px-4"
                 >
@@ -481,7 +481,7 @@ function formatWhen(iso: string): string {
                 <!-- Daily-claim status: "have I claimed today?" — now with an inline Claim button so students don't need to hunt the dashboard card -->
                 <div
                     v-if="dailyDisplayStatus"
-                    class="flex items-center gap-3 rounded-xl border p-3"
+                    class="flex flex-wrap items-center gap-3 rounded-xl border p-3"
                     :class="
                         dailyDisplayStatus.state === 'claimed'
                             ? 'border-[#4D9375]/30 bg-[#4D9375]/10'
@@ -580,7 +580,7 @@ function formatWhen(iso: string): string {
                 <!-- Bonus XP claim: second daily reward inside the same modal -->
                 <div
                     v-if="bonusDisplayStatus"
-                    class="flex items-center gap-3 rounded-xl border p-3"
+                    class="flex flex-wrap items-center gap-3 rounded-xl border p-3"
                     :class="
                         bonusDisplayStatus.state === 'claimed'
                             ? 'border-[#4D9375]/30 bg-[#4D9375]/10'
@@ -713,7 +713,7 @@ function formatWhen(iso: string): string {
                 <div
                     v-if="activeTab === 'history'"
                     data-lenis-prevent
-                    class="max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1"
+                    class="max-h-[50vh] space-y-2 overflow-x-hidden overflow-y-auto overscroll-contain pr-1"
                 >
                     <div
                         v-if="xpHistory.length === 0"
@@ -780,7 +780,7 @@ function formatWhen(iso: string): string {
                 <div
                     v-else
                     data-lenis-prevent
-                    class="max-h-[50vh] space-y-2 overflow-y-auto overscroll-contain pr-1"
+                    class="max-h-[50vh] space-y-2 overflow-x-hidden overflow-y-auto overscroll-contain pr-1"
                 >
                     <div
                         v-if="breakdown.length === 0"
