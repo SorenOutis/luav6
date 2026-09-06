@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import type { ComputedRef, Ref } from 'vue';
 import { computed, onMounted, ref } from 'vue';
-import { isLowEndDeviceSignal } from '@/lib/device';
+import { readDeviceSnapshot } from '@/lib/device';
 import type {
     Appearance,
     CardStylePreset,
@@ -324,15 +324,15 @@ export function useAppearance(): UseAppearanceReturn {
             window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         // The full-page View Transition snapshot + per-frame clip-path masking
-        // is the whole reason the circular reveal stutters on phones. Touch
-        // devices are already flagged as low-end (see @/lib/device and the
-        // `data-low-end` attribute) and have every other heavy effect disabled
-        // there — so skip the ripple and use a cheap, compositor-only fade so
-        // the switch still reads as animated without the jank.
+        // is why the circular reveal can stutter on phones. Phones and narrow
+        // touch layouts use a cheap, compositor-only fade so
+        // the switch stays smooth. Do not use the broad low-end heuristic here:
+        // a desktop or laptop with four CPU cores should still receive the
+        // circular reveal because this is an occasional, user-invoked effect.
         if (
             !supportsViewTransition ||
             prefersReducedMotion ||
-            isLowEndDeviceSignal()
+            readDeviceSnapshot().isMobile
         ) {
             if (prefersReducedMotion) {
                 updateAppearance(newTheme);
@@ -347,8 +347,17 @@ export function useAppearance(): UseAppearanceReturn {
             return;
         }
 
-        const x = event.clientX;
-        const y = event.clientY;
+        // Anchor the reveal to the theme control itself. Pointer coordinates
+        // can land on an icon edge (or be unavailable for keyboard activation),
+        // while the control center is the stable visual origin users expect.
+        const trigger = event.currentTarget as HTMLElement | null;
+        const triggerRect = trigger?.getBoundingClientRect();
+        const x = triggerRect
+            ? triggerRect.left + triggerRect.width / 2
+            : event.clientX;
+        const y = triggerRect
+            ? triggerRect.top + triggerRect.height / 2
+            : event.clientY;
         const endRadius = Math.hypot(
             Math.max(x, innerWidth - x),
             Math.max(y, innerHeight - y),

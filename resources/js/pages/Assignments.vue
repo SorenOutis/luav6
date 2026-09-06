@@ -28,6 +28,7 @@ import {
     LogOut,
 } from 'lucide-vue-next';
 import { onMounted, onBeforeUnmount, ref, computed, watch } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
@@ -1283,7 +1284,26 @@ onMounted(() => {
                     aria-label="Assignment summary"
                 >
                     <div class="mobile-assignment-mobile-intro__topline">
-                        <div>
+                        <FoxCompanion
+                            v-if="filteredAssignments.length > 0"
+                            class="min-w-0 flex-1"
+                            mascot="assignments"
+                            :size="82"
+                            message="One task at a time — you’ve got this."
+                            label="Show assignments fox message"
+                            compact
+                            :initially-open="false"
+                        >
+                            <div class="min-w-0">
+                                <span class="mobile-dashboard-kicker"
+                                    >Your work</span
+                                >
+                                <h1 class="mobile-dashboard-title">
+                                    Assignments
+                                </h1>
+                            </div>
+                        </FoxCompanion>
+                        <div v-else>
                             <span class="mobile-dashboard-kicker"
                                 >Your work</span
                             >
@@ -1317,7 +1337,31 @@ onMounted(() => {
                 <div
                     class="mobile-existing-header assignment-desktop-only animate-section mb-6 hidden flex-col gap-4 sm:mb-8 sm:flex sm:flex-row sm:items-start sm:justify-between md:flex"
                 >
-                    <div>
+                    <FoxCompanion
+                        v-if="filteredAssignments.length > 0"
+                        class="min-w-0 flex-1"
+                        mascot="assignments"
+                        :size="96"
+                        message="One task at a time — you’ve got this."
+                        label="Show assignments fox message"
+                        compact
+                        :initially-open="false"
+                    >
+                        <div class="min-w-0">
+                            <h1
+                                class="dash-title text-[22px] text-foreground sm:text-[34px]"
+                            >
+                                Assignments
+                            </h1>
+                            <p
+                                class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
+                            >
+                                What’s due, when you turned it in, and when it
+                                was graded.
+                            </p>
+                        </div>
+                    </FoxCompanion>
+                    <div v-else class="min-w-0 flex-1">
                         <h1
                             class="dash-title text-[22px] text-foreground sm:text-[34px]"
                         >
@@ -2724,36 +2768,26 @@ onMounted(() => {
                     <!-- Empty State: No results found after filters/search -->
                     <Card
                         v-else-if="totalCount > 0"
-                        class="surface-card border-dashed py-14 text-center sm:py-20"
+                        class="surface-card border-dashed"
                     >
-                        <CardContent
-                            class="flex flex-col items-center justify-center p-6"
-                        >
-                            <div
-                                class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50 text-muted-foreground"
+                        <CardContent class="flex justify-center p-0">
+                            <MascotEmptyState
+                                mascot="assignments"
+                                :size="110"
+                                bare
+                                title="No matching assignments"
+                                description="We couldn't find any assignments matching your search or active filters."
                             >
-                                <Search class="h-6 w-6" />
-                            </div>
-                            <h3
-                                class="text-lg font-semibold tracking-tight text-foreground"
-                            >
-                                No matching assignments
-                            </h3>
-                            <p
-                                class="mt-1.5 max-w-sm text-sm text-muted-foreground"
-                            >
-                                We couldn't find any assignments matching your
-                                search or active filters.
-                            </p>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                class="dash-btn mt-5 rounded-full px-5"
-                                @click="clearAllFilters"
-                            >
-                                <RotateCcw class="h-3.5 w-3.5" />
-                                <span>Clear all filters</span>
-                            </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    class="dash-btn rounded-full px-5"
+                                    @click="clearAllFilters"
+                                >
+                                    <RotateCcw class="h-3.5 w-3.5" />
+                                    <span>Clear all filters</span>
+                                </Button>
+                            </MascotEmptyState>
                         </CardContent>
                     </Card>
 

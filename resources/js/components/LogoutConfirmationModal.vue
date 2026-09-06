@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { LoaderCircle, LogOut, ShieldCheck } from 'lucide-vue-next';
+import { LoaderCircle, LogOut } from 'lucide-vue-next';
 import { ref } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/routes';
@@ -46,22 +47,21 @@ const confirmLogout = () => {
 <template>
     <ResponsiveModal
         :open="open"
-        title="Ready to log out?"
-        description="You'll need to sign in again to access your dashboard, progress, and learning map."
+        title="Leaving so soon?"
+        description="Echo will be here when you return."
         content-class="border-border/70 bg-card/95 shadow-2xl sm:max-w-md supports-[backdrop-filter]:bg-card/90"
         @close="close"
     >
-        <div
-            class="flex items-start gap-3 rounded-2xl border border-destructive/15 bg-destructive/[0.06] p-4"
-        >
-            <span
-                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/15"
-            >
-                <ShieldCheck class="size-5" aria-hidden="true" />
-            </span>
-            <div class="min-w-0 pt-0.5">
+        <div class="flex flex-col items-center gap-3 text-center">
+            <FoxCompanion
+                mascot="welcome"
+                :size="88"
+                :show-message="false"
+                label="Echo, your learning companion"
+            />
+            <div class="max-w-sm">
                 <p class="text-sm font-semibold text-foreground">
-                    Your account stays safe
+                    Your progress is safe
                 </p>
                 <p class="mt-1 text-xs leading-5 text-muted-foreground">
                     Logging out only ends this session. Your saved learning

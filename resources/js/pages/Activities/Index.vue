@@ -27,6 +27,7 @@ import {
     onMounted,
     onBeforeUnmount,
 } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
@@ -778,6 +779,52 @@ const activitiesTourSteps: TourStep[] = [
             ref="hubRoot"
             class="student-ui activities-ui-page mobile-ui-page exam-theme-page relative flex flex-col gap-3 overflow-x-hidden bg-background p-3 perspective-[1000px] sm:gap-5 sm:p-6 md:p-8"
         >
+            <!-- Mobile Header -->
+            <section
+                class="space-y-3 md:hidden"
+                aria-label="Activities overview"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <FoxCompanion
+                        v-if="filteredExamsBySeason.length > 0"
+                        class="min-w-0 flex-1"
+                        mascot="activities"
+                        :size="72"
+                        message="Choose a challenge and make it count."
+                        label="Show activities fox message"
+                        compact
+                        :initially-open="false"
+                    >
+                        <div class="min-w-0">
+                            <span class="mobile-dashboard-kicker"
+                                >Your activities</span
+                            >
+                            <h1 class="mobile-dashboard-title">
+                                Activities Hub
+                            </h1>
+                        </div>
+                    </FoxCompanion>
+                    <div v-else class="min-w-0 flex-1">
+                        <span class="mobile-dashboard-kicker"
+                            >Your activities</span
+                        >
+                        <h1 class="mobile-dashboard-title">Activities Hub</h1>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="h-11 shrink-0 items-center gap-2 rounded-full border-border/50 bg-card px-3 text-xs font-semibold text-foreground hover:bg-muted"
+                        @click="showScoresDrawer = true"
+                    >
+                        <Award class="h-4 w-4 text-[#D97757]" />
+                        Scores
+                    </Button>
+                </div>
+                <p class="text-sm leading-relaxed text-muted-foreground">
+                    Review your exams, deadlines, and results.
+                </p>
+            </section>
+
             <!-- Header -->
             <Motion
                 class="mobile-existing-header space-y-2"
@@ -786,7 +833,30 @@ const activitiesTourSteps: TourStep[] = [
                 :transition="{ duration: 0.8, easing: [0.16, 1, 0.3, 1] }"
             >
                 <div class="flex items-start justify-between gap-3 sm:gap-4">
-                    <div>
+                    <FoxCompanion
+                        v-if="filteredExamsBySeason.length > 0"
+                        class="min-w-0 flex-1"
+                        mascot="activities"
+                        :size="96"
+                        message="Choose a challenge and make it count."
+                        label="Show activities fox message"
+                        compact
+                        :initially-open="false"
+                    >
+                        <div class="min-w-0">
+                            <h1
+                                class="dash-title text-[22px] text-foreground sm:text-[34px]"
+                            >
+                                Activities Hub
+                            </h1>
+                            <p
+                                class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
+                            >
+                                Review your exams, deadlines, and results.
+                            </p>
+                        </div>
+                    </FoxCompanion>
+                    <div v-else class="min-w-0 flex-1">
                         <h1
                             class="dash-title text-[22px] text-foreground sm:text-[34px]"
                         >

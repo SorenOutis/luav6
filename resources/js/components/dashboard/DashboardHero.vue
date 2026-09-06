@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { X, Plus, Megaphone, ArrowRight, RefreshCw } from 'lucide-vue-next';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/composables/useInitials';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
@@ -212,37 +213,66 @@ const animatedLevel = useNumberAnimation(() => props.userStats.level);
                             </div>
                         </div>
 
-                        <div class="min-w-0 flex-1">
-                            <div class="mb-1 hidden items-center gap-1 lg:flex">
-                                <button
-                                    type="button"
-                                    class="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted active:scale-95"
-                                    aria-label="Refresh dashboard"
-                                    title="Refresh"
-                                    @click="emit('refresh')"
-                                >
-                                    <RefreshCw
-                                        class="h-4 w-4"
-                                        :class="{
-                                            'animate-spin': isRefreshing,
-                                        }"
-                                    />
-                                </button>
-                            </div>
+                        <div
+                            class="hidden min-w-0 flex-1 items-center gap-4 lg:flex"
+                        >
+                            <FoxCompanion
+                                class="min-w-0 flex-1"
+                                mascot="welcome"
+                                :size="120"
+                                :show-message="false"
+                                label="Dashboard fox"
+                            >
+                                <div class="min-w-0">
+                                    <h1
+                                        class="dash-title truncate text-[20px] leading-[1.15] text-foreground sm:text-[32px] lg:text-[40px]"
+                                    >
+                                        {{ timeBasedGreeting }}, {{ userName }}
+                                    </h1>
+                                    <p
+                                        class="mt-1 line-clamp-2 text-[13px] leading-snug text-muted-foreground sm:text-[17px]"
+                                    >
+                                        {{ smarterStatus }}
+                                    </p>
+                                </div>
+                            </FoxCompanion>
 
-                            <div class="space-y-0.5 sm:space-y-1">
+                            <button
+                                type="button"
+                                class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted active:scale-95"
+                                aria-label="Refresh dashboard"
+                                title="Refresh"
+                                @click="emit('refresh')"
+                            >
+                                <RefreshCw
+                                    class="h-4 w-4"
+                                    :class="{ 'animate-spin': isRefreshing }"
+                                />
+                            </button>
+                        </div>
+
+                        <FoxCompanion
+                            class="flex min-w-0 min-w-[14rem] flex-1 lg:hidden"
+                            mascot="welcome"
+                            :size="82"
+                            :show-message="false"
+                            label="Dashboard fox"
+                            compact
+                            :initially-open="false"
+                        >
+                            <div class="min-w-0">
                                 <h1
-                                    class="dash-title truncate text-[20px] leading-[1.15] text-foreground sm:text-[32px] lg:text-[40px]"
+                                    class="dash-title truncate text-[20px] leading-[1.15] text-foreground sm:text-[32px]"
                                 >
                                     {{ timeBasedGreeting }}, {{ userName }}
                                 </h1>
                                 <p
-                                    class="line-clamp-2 text-[13px] leading-snug text-muted-foreground sm:text-[17px]"
+                                    class="mt-1 line-clamp-2 text-[13px] leading-snug text-muted-foreground"
                                 >
                                     {{ smarterStatus }}
                                 </p>
                             </div>
-                        </div>
+                        </FoxCompanion>
 
                         <!-- Join Section: mobile only — on desktop it lives in the
                              leaderboard's section tabs, aligned to the right. -->

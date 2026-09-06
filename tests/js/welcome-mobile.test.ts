@@ -46,6 +46,9 @@ describe('welcome mobile performance', () => {
         const hero = read('resources/js/components/welcome/WelcomeHero.vue');
 
         expect(hero).toContain('Make every assessment count.');
+        expect(hero).toContain('FoxCompanion');
+        expect(hero).toContain('mascot="welcome-hero"');
+        expect(hero).toContain('label="LSI fox mascot"');
         expect(page).not.toContain('walkthroughUnlocked');
         expect(page).not.toContain('how-it-works.mp4');
         expect(page).not.toContain('welcome-bg-grid');
@@ -118,10 +121,15 @@ describe('welcome mobile performance', () => {
         expect(header).toContain('PublicBrandMark');
         expect(header).toContain('aria-label="KOAMISHIN home"');
         expect(loader).toContain('PublicBrandMark');
+        expect(loader).toContain('FoxCompanion');
+        expect(loader).toContain('data-test="global-loader-fox"');
+        expect(loader).toContain('mascot="welcome"');
         expect(loader).toContain('data-test="global-loader-editorial"');
         expect(loader).toContain('absolute top-8 left-6');
-        expect(loader).toContain('LSI / SYSTEM NOTE');
-        expect(loader).toContain('Assessment workflow note');
+        expect(loader).toContain('LSI / GETTING READY');
+        expect(loader).toContain('Echo getting things ready');
+        expect(loader).not.toContain("Today's note");
+        expect(loader).not.toContain('Assessment workflow note');
         expect(loader).toContain('data-test="global-loader-status"');
         expect(loader).toContain('aria-live="polite"');
         expect(loader).toContain('role="progressbar"');

@@ -15,6 +15,7 @@ import {
     X,
 } from 'lucide-vue-next';
 import { ref, computed, watch, onMounted } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useLoader } from '@/composables/useLoader';
@@ -165,27 +166,63 @@ onMounted(() => {
                         class="pointer-events-none absolute -top-20 -right-20 h-40 w-40 rounded-full bg-primary/5 blur-[60px]"
                     ></div>
                     <div class="relative flex flex-col gap-3">
-                        <div class="flex items-center gap-3">
-                            <span
-                                class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"
-                                ><Library class="h-5 w-5"
-                            /></span>
-                            <span
-                                class="text-[10px] font-black tracking-[0.3em] text-primary/60 uppercase"
-                                >Free Resources</span
+                        <FoxCompanion
+                            v-if="filteredMaterials.length > 0"
+                            class="min-w-0"
+                            mascot="library"
+                            :size="120"
+                            message="Let’s find something useful to explore."
+                            label="Show library fox message"
+                            compact
+                            :initially-open="false"
+                        >
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-3">
+                                    <span
+                                        class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                                        ><Library class="h-5 w-5"
+                                    /></span>
+                                    <span
+                                        class="text-[10px] font-black tracking-[0.3em] text-primary/60 uppercase"
+                                        >Free Resources</span
+                                    >
+                                </div>
+                                <h1
+                                    class="text-2xl font-black tracking-tight md:text-3xl"
+                                >
+                                    Library Hub
+                                </h1>
+                                <p
+                                    class="max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                                >
+                                    Free PDF learning materials curated for your
+                                    sections.
+                                </p>
+                            </div>
+                        </FoxCompanion>
+                        <div v-else>
+                            <div class="flex items-center gap-3">
+                                <span
+                                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                                    ><Library class="h-5 w-5"
+                                /></span>
+                                <span
+                                    class="text-[10px] font-black tracking-[0.3em] text-primary/60 uppercase"
+                                    >Free Resources</span
+                                >
+                            </div>
+                            <h1
+                                class="text-2xl font-black tracking-tight md:text-3xl"
                             >
+                                Library Hub
+                            </h1>
+                            <p
+                                class="max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                            >
+                                Free PDF learning materials curated for your
+                                sections.
+                            </p>
                         </div>
-                        <h1
-                            class="text-2xl font-black tracking-tight md:text-3xl"
-                        >
-                            Library Hub
-                        </h1>
-                        <p
-                            class="max-w-2xl text-sm leading-relaxed text-muted-foreground"
-                        >
-                            Free PDF learning materials curated for your
-                            sections.
-                        </p>
                         <div
                             class="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground"
                         >
@@ -209,7 +246,26 @@ onMounted(() => {
                     aria-label="Library catalog"
                 >
                     <div class="mobile-course-catalog__heading">
-                        <div>
+                        <FoxCompanion
+                            v-if="filteredMaterials.length > 0"
+                            class="min-w-0 flex-1"
+                            mascot="library"
+                            :size="82"
+                            message="Let’s find something useful to explore."
+                            label="Show library fox message"
+                            compact
+                            :initially-open="false"
+                        >
+                            <div>
+                                <span class="mobile-dashboard-kicker"
+                                    >Free resources</span
+                                >
+                                <h1 class="mobile-dashboard-title">
+                                    Library Hub
+                                </h1>
+                            </div>
+                        </FoxCompanion>
+                        <div v-else>
                             <span class="mobile-dashboard-kicker"
                                 >Free resources</span
                             >
@@ -315,6 +371,7 @@ onMounted(() => {
                     </div>
                     <MascotEmptyState
                         v-else
+                        class="mx-auto w-full max-w-2xl"
                         :size="120"
                         bare
                         mascot="library"
@@ -531,28 +588,26 @@ onMounted(() => {
                     v-else-if="materials.length > 0"
                     :initial="{ opacity: 0 }"
                     :animate="{ opacity: 1 }"
-                    class="courses-desktop-grid relative z-10 hidden flex-col items-center justify-center py-16 md:flex"
+                    class="courses-desktop-grid relative z-10 hidden w-full flex-col items-center justify-center self-stretch py-16 md:flex"
                 >
-                    <div
-                        class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-border/40 bg-muted/10"
+                    <MascotEmptyState
+                        class="w-full"
+                        mascot="library"
+                        :size="110"
+                        bare
+                        title="No matches"
+                        description="Try another keyword or category."
                     >
-                        <Search class="h-6 w-6 text-muted-foreground/30" />
-                    </div>
-                    <h3 class="text-lg font-bold text-muted-foreground/70">
-                        No matches
-                    </h3>
-                    <p class="mt-1 text-sm text-muted-foreground/50">
-                        Try another keyword or category.
-                    </p>
-                    <button
-                        @click="
-                            searchQuery = '';
-                            selectedCategory = 'all';
-                        "
-                        class="mt-4 rounded-xl border border-border/40 px-4 py-2 text-xs font-bold hover:border-primary/30 hover:text-primary"
-                    >
-                        Clear filters
-                    </button>
+                        <button
+                            @click="
+                                searchQuery = '';
+                                selectedCategory = 'all';
+                            "
+                            class="rounded-xl border border-border/40 px-4 py-2 text-xs font-bold hover:border-primary/30 hover:text-primary"
+                        >
+                            Clear filters
+                        </button>
+                    </MascotEmptyState>
                 </Motion>
 
                 <!-- Desktop Empty all -->
@@ -560,9 +615,10 @@ onMounted(() => {
                     v-else
                     :initial="{ opacity: 0 }"
                     :animate="{ opacity: 1 }"
-                    class="courses-desktop-grid relative z-10 hidden md:flex"
+                    class="courses-desktop-grid relative z-10 hidden w-full flex-col items-center justify-center self-stretch md:flex"
                 >
                     <MascotEmptyState
+                        class="w-full"
                         mascot="library"
                         title="The library is empty… for now"
                         description="Your teachers haven’t published any learning materials for your section yet. Grab a book and check back soon — new readings will appear here."

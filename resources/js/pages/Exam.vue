@@ -26,6 +26,7 @@ import {
     onMounted,
     onBeforeUnmount,
 } from 'vue';
+import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { Button } from '@/components/ui/button';
@@ -883,9 +884,13 @@ watch(selectedPartId, () => {
                     </template>
                 </div>
                 <div v-else class="mobile-exams-empty">
-                    <Search class="h-5 w-5" />
-                    <strong>No exams found</strong>
-                    <span>Try another search term.</span>
+                    <MascotEmptyState
+                        mascot="activities"
+                        :size="88"
+                        bare
+                        title="No exams found"
+                        description="Try another search term."
+                    />
                 </div>
             </section>
 
@@ -1322,32 +1327,19 @@ watch(selectedPartId, () => {
                 :transition="{ duration: 0.6, easing: [0.16, 1, 0.3, 1] }"
                 class="surface-card flex flex-col items-center justify-center space-y-4 border-dashed py-20 text-center"
             >
-                <div class="rounded-full bg-muted/30 p-4">
-                    <Calendar class="h-12 w-12 text-muted-foreground/40" />
-                </div>
-                <div class="space-y-1">
-                    <h3
-                        class="text-[20px] font-semibold tracking-tight text-foreground"
-                    >
-                        No exams found
-                    </h3>
-                    <p
-                        v-if="activeSection !== 'all'"
-                        class="text-[15px] text-muted-foreground"
-                    >
-                        Try selecting a different section to see more exams.
-                    </p>
-                    <p
-                        v-else-if="searchQuery"
-                        class="text-[15px] text-muted-foreground"
-                    >
-                        No exams match your search. Try a different keyword.
-                    </p>
-                    <p v-else class="text-sm text-muted-foreground">
-                        Keep an eye out! Your instructor will post new exams
-                        here.
-                    </p>
-                </div>
+                <MascotEmptyState
+                    mascot="activities"
+                    :size="140"
+                    bare
+                    title="No exams found"
+                    :description="
+                        activeSection !== 'all'
+                            ? 'Try selecting a different section to see more exams.'
+                            : searchQuery
+                              ? 'No exams match your search. Try a different keyword.'
+                              : 'Keep an eye out! Your instructor will post new exams here.'
+                    "
+                />
             </Motion>
         </div>
 

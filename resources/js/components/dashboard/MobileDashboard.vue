@@ -18,6 +18,7 @@ import { computed } from 'vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
 import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
 
@@ -234,67 +235,55 @@ const seasonDateLabel = computed(() => {
         <section class="mobile-dashboard-greeting" data-tour="dashboard-hero">
             <div class="mobile-dashboard-greeting__topline">
                 <span class="mobile-dashboard-kicker">Your learning space</span>
-                <button
-                    type="button"
-                    class="mobile-dashboard-icon-button"
-                    aria-label="Refresh dashboard"
-                    :disabled="isRefreshing"
-                    @click="emit('refresh')"
-                >
-                    <RefreshCw
-                        class="h-4 w-4"
-                        :class="{ 'animate-spin': isRefreshing }"
-                    />
-                </button>
+                <div class="mobile-dashboard-greeting__actions">
+                    <button
+                        type="button"
+                        class="mobile-dashboard-join"
+                        aria-label="Join section"
+                        title="Join section"
+                        @click="emit('openSectionModal')"
+                    >
+                        <Plus class="h-5 w-5" />
+                    </button>
+                    <button
+                        type="button"
+                        class="mobile-dashboard-icon-button"
+                        aria-label="Refresh dashboard"
+                        :disabled="isRefreshing"
+                        @click="emit('refresh')"
+                    >
+                        <RefreshCw
+                            class="h-4 w-4"
+                            :class="{ 'animate-spin': isRefreshing }"
+                        />
+                    </button>
+                </div>
             </div>
             <div class="mobile-dashboard-greeting__body">
-                <Link
-                    v-if="profileHref"
-                    :href="profileHref"
-                    class="mobile-dashboard-avatar"
-                    aria-label="Open your profile"
-                >
-                    <img
-                        v-if="userAvatar"
-                        :src="userAvatar"
-                        :alt="userName"
-                        class="h-full w-full object-cover"
-                    />
-                    <span v-else>{{ userName.slice(0, 1).toUpperCase() }}</span>
-                </Link>
-                <div v-else class="mobile-dashboard-avatar">
-                    <img
-                        v-if="userAvatar"
-                        :src="userAvatar"
-                        :alt="userName"
-                        class="h-full w-full object-cover"
-                    />
-                    <span v-else>{{ userName.slice(0, 1).toUpperCase() }}</span>
+                <div class="mobile-dashboard-greeting__identity">
+                    <div class="min-w-0 flex-1">
+                        <p class="mobile-dashboard-eyebrow">
+                            {{ timeBasedGreeting }}
+                        </p>
+                        <h1 class="mobile-dashboard-title truncate">
+                            {{ userName }}
+                        </h1>
+                        <p class="mobile-dashboard-status">
+                            <span
+                                class="mobile-dashboard-status-dot"
+                                :class="statusColor"
+                            />
+                            <span class="min-w-0">{{ smarterStatus }}</span>
+                        </p>
+                    </div>
                 </div>
-                <div class="min-w-0 flex-1">
-                    <p class="mobile-dashboard-eyebrow">
-                        {{ timeBasedGreeting }}
-                    </p>
-                    <h1 class="mobile-dashboard-title truncate">
-                        {{ userName }}
-                    </h1>
-                    <p class="mobile-dashboard-status">
-                        <span
-                            class="mobile-dashboard-status-dot"
-                            :class="statusColor"
-                        />
-                        {{ smarterStatus }}
-                    </p>
-                </div>
-                <button
-                    type="button"
-                    class="mobile-dashboard-join"
-                    aria-label="Join section"
-                    title="Join section"
-                    @click="emit('openSectionModal')"
-                >
-                    <Plus class="h-5 w-5" />
-                </button>
+                <FoxCompanion
+                    class="mobile-dashboard-greeting__fox"
+                    mascot="welcome"
+                    :size="128"
+                    :show-message="false"
+                    label="Dashboard fox"
+                />
             </div>
         </section>
 

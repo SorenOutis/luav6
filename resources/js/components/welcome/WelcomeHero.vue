@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { Motion } from '@motionone/vue';
 import { ArrowRight } from 'lucide-vue-next';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import AssessmentArtifact from '@/components/welcome/AssessmentArtifact.vue';
 
 withDefaults(
@@ -107,11 +108,23 @@ withDefaults(
             "
             class="relative z-10 flex justify-center lg:justify-end"
         >
-            <div class="relative w-full max-w-[520px]">
+            <div class="relative w-full max-w-[520px] pt-20 sm:pt-24">
                 <div
                     aria-hidden="true"
                     class="absolute -inset-8 -z-10 rounded-full bg-primary/[0.035] blur-3xl"
                 ></div>
+
+                <div
+                    class="pointer-events-none absolute top-0 right-0 z-20 sm:right-4"
+                >
+                    <FoxCompanion
+                        mascot="welcome-hero"
+                        :size="170"
+                        :show-message="false"
+                        label="LSI fox mascot"
+                    />
+                </div>
+
                 <AssessmentArtifact />
             </div>
         </Motion>

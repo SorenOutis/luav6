@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import CalendarEventCard from '@/components/calendar/CalendarEventCard.vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import Badge from '@/components/ui/badge/Badge.vue';
@@ -226,7 +227,24 @@ const eventTooltip = (event: CalendarEvent) => {
                 aria-label="Upcoming agenda"
             >
                 <div class="mobile-calendar-agenda__topline">
-                    <div>
+                    <FoxCompanion
+                        v-if="upcomingEvents.length > 0"
+                        class="min-w-0 flex-1"
+                        mascot="calendar"
+                        :size="82"
+                        message="Let’s make the week feel manageable."
+                        label="Show calendar fox message"
+                        compact
+                        :initially-open="false"
+                    >
+                        <div>
+                            <span class="mobile-dashboard-kicker"
+                                >Plan ahead</span
+                            >
+                            <h1 class="mobile-dashboard-title">Your agenda</h1>
+                        </div>
+                    </FoxCompanion>
+                    <div v-else>
                         <span class="mobile-dashboard-kicker">Plan ahead</span>
                         <h1 class="mobile-dashboard-title">Your agenda</h1>
                     </div>
@@ -315,31 +333,72 @@ const eventTooltip = (event: CalendarEvent) => {
                         <ArrowLeft class="h-4 w-4" />
                         Back to dashboard
                     </Link>
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15 text-primary"
-                        >
-                            <CalendarDays class="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p
-                                class="text-xs font-black tracking-[0.2em] text-primary uppercase"
-                            >
-                                Never miss a deadline
-                            </p>
-                            <h1
-                                class="text-3xl font-black tracking-tight sm:text-4xl"
-                            >
-                                Calendar
-                            </h1>
-                        </div>
-                    </div>
-                    <p
-                        class="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                    <FoxCompanion
+                        v-if="upcomingEvents.length > 0"
+                        class="min-w-0"
+                        mascot="calendar"
+                        :size="104"
+                        message="Let’s make the week feel manageable."
+                        label="Show calendar fox message"
+                        compact
+                        :initially-open="false"
                     >
-                        Every exam and assignment deadline for your sections in
-                        one monthly view — plus what's coming up next.
-                    </p>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"
+                                >
+                                    <CalendarDays class="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-xs font-black tracking-[0.2em] text-primary uppercase"
+                                    >
+                                        Never miss a deadline
+                                    </p>
+                                    <h1
+                                        class="text-3xl font-black tracking-tight sm:text-4xl"
+                                    >
+                                        Calendar
+                                    </h1>
+                                </div>
+                            </div>
+                            <p
+                                class="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                            >
+                                Every exam and assignment deadline for your
+                                sections in one monthly view — plus what's
+                                coming up next.
+                            </p>
+                        </div>
+                    </FoxCompanion>
+                    <div v-else>
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/15 text-primary"
+                            >
+                                <CalendarDays class="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p
+                                    class="text-xs font-black tracking-[0.2em] text-primary uppercase"
+                                >
+                                    Never miss a deadline
+                                </p>
+                                <h1
+                                    class="text-3xl font-black tracking-tight sm:text-4xl"
+                                >
+                                    Calendar
+                                </h1>
+                            </div>
+                        </div>
+                        <p
+                            class="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground"
+                        >
+                            Every exam and assignment deadline for your sections
+                            in one monthly view — plus what's coming up next.
+                        </p>
+                    </div>
                 </div>
             </div>
 

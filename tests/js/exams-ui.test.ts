@@ -14,6 +14,7 @@ describe('exams and parts student shell', () => {
         expect(page).toContain('dash-btn');
         expect(page).toContain('min-h-11');
         expect(page).toContain('openExam');
+        expect(page).toContain('MascotEmptyState');
         expect(page).toContain('Review results');
         expect(page).not.toContain('OVERDUE');
         expect(page).not.toContain('REMAINING');
@@ -53,6 +54,14 @@ describe('exams and parts student shell', () => {
 
         expect(page).toContain('student-ui');
         expect(page).toContain('exam-part-card');
+        expect(page).toContain('FoxCompanion');
+        expect(page).toContain('mascot="activities"');
+        expect(page).toContain('Show exam fox message');
+        expect(page).toContain('data-test="exam-start-fox"');
+        expect(page).toContain('data-test="exam-result-fox"');
+        expect(page).toContain('data-test="exam-xp-fox"');
+        expect(page).toContain('data-test="exam-submit-warning-fox"');
+        expect(page).toContain('data-test="exam-focus-warning-fox"');
         expect(page).toContain('All activities');
         expect(page).toContain('dash-title');
         expect(page).toContain("'Start'");

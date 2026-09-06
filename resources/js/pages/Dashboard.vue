@@ -21,8 +21,10 @@ import SeasonProgressBand from '@/components/dashboard/SeasonProgressBand.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
 import TodayStrip from '@/components/dashboard/TodayStrip.vue';
 import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
+import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import SectionSelectionModal from '@/components/SectionSelectionModal.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
 import { useDashboardLayoutBreakpoint } from '@/composables/useBreakpoint';
@@ -288,6 +290,33 @@ const isBooted = ref(false);
 const dashboardTourPending = ref(false);
 const isTourActive = ref(false);
 
+const FOX_WELCOME_STORAGE_PREFIX = 'fox-welcome:v1';
+const showFoxWelcomeModal = ref(false);
+let foxWelcomeTimer: number | null = null;
+
+const foxWelcomeStorageKey = (): string =>
+    `${FOX_WELCOME_STORAGE_PREFIX}:${page.props.auth.user?.public_id ?? 'user'}`;
+
+const hasSeenFoxWelcome = (): boolean => {
+    if (typeof window === 'undefined') return false;
+
+    try {
+        return window.localStorage.getItem(foxWelcomeStorageKey()) === 'seen';
+    } catch {
+        return false;
+    }
+};
+
+const markFoxWelcomeSeen = (): void => {
+    if (typeof window === 'undefined') return;
+
+    try {
+        window.localStorage.setItem(foxWelcomeStorageKey(), 'seen');
+    } catch {
+        // Ignore storage failures; the modal remains dismissible.
+    }
+};
+
 const dashboardTourSteps: TourStep[] = [
     {
         id: 'welcome',
@@ -492,6 +521,39 @@ const tourCanStart = computed(
     () => isBooted.value && !isBanned.value && claimPromptReady.value,
 );
 
+const foxWelcomeCanOpen = computed(
+    () =>
+        isBooted.value &&
+        !isBanned.value &&
+        !dashboardTourPending.value &&
+        !isTourActive.value &&
+        claimPromptReady.value &&
+        !showSectionModal.value &&
+        !hasSeenFoxWelcome(),
+);
+
+const scheduleFoxWelcome = (): void => {
+    if (!foxWelcomeCanOpen.value || foxWelcomeTimer !== null) return;
+
+    foxWelcomeTimer = window.setTimeout(() => {
+        foxWelcomeTimer = null;
+
+        if (foxWelcomeCanOpen.value) {
+            showFoxWelcomeModal.value = true;
+        }
+    }, 500);
+};
+
+const dismissFoxWelcome = (): void => {
+    if (foxWelcomeTimer !== null) {
+        window.clearTimeout(foxWelcomeTimer);
+        foxWelcomeTimer = null;
+    }
+
+    showFoxWelcomeModal.value = false;
+    markFoxWelcomeSeen();
+};
+
 const onTourResolved = () => {
     dashboardTourPending.value = false;
     isTourActive.value = false;
@@ -505,6 +567,7 @@ const claimXpForPrompt = computed(() => ({
         claimPromptReady.value &&
         !dashboardTourPending.value &&
         !isTourActive.value &&
+        !showFoxWelcomeModal.value &&
         Boolean(props.claimXp.showPrompt),
 }));
 
@@ -630,6 +693,18 @@ watch(
     { immediate: true },
 );
 
+watch(
+    [
+        isBooted,
+        dashboardTourPending,
+        isTourActive,
+        claimPromptReady,
+        showSectionModal,
+    ],
+    scheduleFoxWelcome,
+    { immediate: true },
+);
+
 const handleVisibilityChange = () => {
     if (document.hidden) {
         pausePolling();
@@ -726,6 +801,9 @@ watch(showBanModal, (open) => {
 onBeforeUnmount(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     pausePolling();
+    if (foxWelcomeTimer !== null) {
+        window.clearTimeout(foxWelcomeTimer);
+    }
     if (gsapCtx) {
         gsapCtx.revert();
     }
@@ -1103,6 +1181,52 @@ const handleLogout = () => {
                 claimPromptReady = true;
             "
         />
+
+        <ResponsiveModal
+            :open="showFoxWelcomeModal"
+            title="Introducing Echo"
+            description="Your learning companion is here."
+            content-class="max-w-md overflow-hidden"
+            @close="dismissFoxWelcome"
+        >
+            <div
+                data-testid="fox-welcome-modal"
+                class="flex flex-col items-center gap-5 px-2 pb-2 text-center"
+            >
+                <FoxCompanion
+                    mascot="welcome"
+                    :size="150"
+                    :show-message="false"
+                    label="Echo, your learning companion"
+                />
+                <p class="max-w-sm text-sm leading-6 text-muted-foreground">
+                    Meet Echo, your learning companion. Echo will celebrate your
+                    progress, point out what to do next, and help keep your
+                    learning streak moving.
+                </p>
+            </div>
+
+            <template #footer>
+                <div
+                    class="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                >
+                    <button
+                        type="button"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        @click="dismissFoxWelcome"
+                    >
+                        Maybe later
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                        @click="dismissFoxWelcome"
+                    >
+                        Let’s go
+                    </button>
+                </div>
+            </template>
+        </ResponsiveModal>
 
         <!-- First-visit walkthrough (per user, per device) -->
         <OnboardingTour

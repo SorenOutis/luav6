@@ -15,6 +15,7 @@ import {
     Zap,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
@@ -453,6 +454,30 @@ function formatWhen(iso: string): string {
             @close="showBreakdown = false"
         >
             <div class="space-y-4 py-2">
+                <div
+                    class="rounded-2xl border border-[#D97757]/15 bg-[#D97757]/[0.06] px-3 py-2.5 sm:px-4"
+                >
+                    <FoxCompanion
+                        mascot="welcome"
+                        :size="76"
+                        :show-message="false"
+                        label="XP history fox"
+                    >
+                        <div class="min-w-0">
+                            <p
+                                class="text-sm font-bold tracking-tight text-foreground"
+                            >
+                                Every point counts.
+                            </p>
+                            <p
+                                class="mt-0.5 text-xs leading-relaxed text-muted-foreground"
+                            >
+                                Keep building your progress, one step at a time.
+                            </p>
+                        </div>
+                    </FoxCompanion>
+                </div>
+
                 <!-- Daily-claim status: "have I claimed today?" — now with an inline Claim button so students don't need to hunt the dashboard card -->
                 <div
                     v-if="dailyDisplayStatus"

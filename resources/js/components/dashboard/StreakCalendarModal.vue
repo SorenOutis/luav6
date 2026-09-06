@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Flame, ChevronLeft, ChevronRight, Check } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import ResponsiveModal from '@/components/ResponsiveModal.vue';
 
 const props = defineProps<{
@@ -163,6 +164,23 @@ const motivationalMessage = computed(() => {
         content-class="sm:max-w-sm"
         @close="handleClose"
     >
+        <!-- ═══ Echo: Streak Companion ═══ -->
+        <div class="mb-3 flex items-center justify-center gap-2.5">
+            <FoxCompanion
+                mascot="calendar"
+                :size="64"
+                label="Echo, your streak companion"
+                :show-message="false"
+                class="shrink-0"
+            />
+            <p
+                class="max-w-[175px] text-[12px] leading-relaxed text-muted-foreground"
+            >
+                <span class="font-semibold text-foreground">Echo's tip:</span>
+                A little progress today keeps your streak alive.
+            </p>
+        </div>
+
         <!-- ═══ Hero: Streak Counter ═══ -->
         <div class="mb-3 text-center">
             <div class="mb-1.5 flex items-center justify-center">

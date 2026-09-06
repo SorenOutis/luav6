@@ -24,6 +24,7 @@ import {
     ref,
     watch,
 } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import GradeDistributionChart from '@/components/GradeDistributionChart.vue';
 import MascotEmptyState from '@/components/MascotEmptyState.vue';
 import OnboardingTour from '@/components/OnboardingTour.vue';
@@ -616,6 +617,16 @@ onMounted(() => {
                     See your current averages and the subjects that need your
                     attention.
                 </p>
+                <FoxCompanion
+                    v-if="filteredSubjectGrades.length > 0"
+                    class="justify-end"
+                    mascot="grades"
+                    :size="82"
+                    message="Progress is built one result at a time."
+                    label="Show grades fox message"
+                    compact
+                    :initially-open="false"
+                />
                 <div class="mobile-grades-summary-row">
                     <div>
                         <strong>{{
@@ -649,7 +660,30 @@ onMounted(() => {
             <div
                 class="mobile-existing-header grades-desktop-header animate-section mb-4 hidden flex-col gap-3 sm:mb-8 sm:flex-row sm:items-start sm:justify-between sm:gap-4 md:flex"
             >
-                <div>
+                <FoxCompanion
+                    v-if="filteredSubjectGrades.length > 0"
+                    class="min-w-0 flex-1"
+                    mascot="grades"
+                    :size="96"
+                    message="Progress is built one result at a time."
+                    label="Show grades fox message"
+                    compact
+                    :initially-open="false"
+                >
+                    <div class="min-w-0">
+                        <h1
+                            class="dash-title text-[22px] text-foreground sm:text-[34px]"
+                        >
+                            Grades
+                        </h1>
+                        <p
+                            class="mt-0.5 text-[13px] text-muted-foreground sm:mt-1 sm:text-[17px]"
+                        >
+                            Your academic performance across enrolled subjects.
+                        </p>
+                    </div>
+                </FoxCompanion>
+                <div v-else class="min-w-0 flex-1">
                     <h1
                         class="dash-title text-[22px] text-foreground sm:text-[34px]"
                     >
@@ -911,17 +945,14 @@ onMounted(() => {
                 v-else-if="filteredSubjectGrades.length === 0 && hasSearchQuery"
                 class="animate-group border-dashed"
             >
-                <CardContent
-                    class="flex flex-col items-center justify-center py-12"
-                >
-                    <Search class="mb-4 h-12 w-12 text-muted-foreground" />
-                    <h3 class="text-[17px] font-semibold tracking-tight">
-                        No subjects found
-                    </h3>
-                    <p class="mt-2 max-w-md text-center text-muted-foreground">
-                        No subjects match "{{ searchQuery.trim() }}". Try a
-                        different search term.
-                    </p>
+                <CardContent class="flex justify-center">
+                    <MascotEmptyState
+                        mascot="grades"
+                        :size="108"
+                        bare
+                        title="No subjects found"
+                        :description="`No subjects match '${searchQuery.trim()}'. Try a different search term.`"
+                    />
                 </CardContent>
             </Card>
 

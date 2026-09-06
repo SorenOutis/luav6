@@ -9,6 +9,7 @@ import {
     ref,
     watch,
 } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import { useMobile } from '@/composables/useMobile';
 import { getTourStatus, setTourStatus } from '@/lib/onboarding';
 import type { OnboardingProps, TourStep } from '@/lib/onboarding';
@@ -438,6 +439,21 @@ const cardStyle = computed(() => {
                             <X class="h-4 w-4" />
                         </button>
                     </div>
+
+                    <FoxCompanion
+                        data-testid="onboarding-fox"
+                        class="mt-2"
+                        mascot="welcome"
+                        :size="54"
+                        :show-message="false"
+                        label="Onboarding fox"
+                    >
+                        <p
+                            class="text-xs leading-relaxed text-muted-foreground"
+                        >
+                            Let’s take a quick tour together.
+                        </p>
+                    </FoxCompanion>
 
                     <h2
                         :id="`ot-title-${tourId}`"
