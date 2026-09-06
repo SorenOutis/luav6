@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Hex Level 94"><defs>
+<linearGradient id="o" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a887d8"/><stop offset="55%" stop-color="#cbb3ee"/><stop offset="100%" stop-color="#7a5cb2"/></linearGradient>
+<radialGradient id="i" cx="50%" cy="36%" r="80%"><stop offset="0%" stop-color="#f6f0fc"/><stop offset="100%" stop-color="#e9ddf5"/></radialGradient>
+<linearGradient id="r" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e7dbf7"/><stop offset="100%" stop-color="#8f72c1"/></linearGradient>
+</defs>
+<polygon points="69.0,25.8 187.0,25.8 177.0,43.1 79.0,43.1" fill="#a887d8" opacity="0.9"/><polygon points="187.0,25.8 246.0,128.0 226.0,128.0 177.0,43.1" fill="#7a5cb2" opacity="0.9"/><polygon points="246.0,128.0 187.0,230.2 177.0,212.9 226.0,128.0" fill="#a887d8" opacity="0.9"/><polygon points="187.0,230.2 69.0,230.2 79.0,212.9 177.0,212.9" fill="#7a5cb2" opacity="0.9"/><polygon points="69.0,230.2 10.0,128.0 30.0,128.0 79.0,212.9" fill="#a887d8" opacity="0.9"/><polygon points="10.0,128.0 69.0,25.8 79.0,43.1 30.0,128.0" fill="#7a5cb2" opacity="0.9"/>
+<polygon points="128.0,10.0 230.2,69.0 230.2,187.0 128.0,246.0 25.8,187.0 25.8,69.0" fill="url(#o)" stroke="url(#o)" stroke-width="14" stroke-linejoin="round"/>
+<polygon points="128.0,30.0 212.9,79.0 212.9,177.0 128.0,226.0 43.1,177.0 43.1,79.0" fill="url(#i)" stroke="url(#r)" stroke-width="8" stroke-linejoin="round"/>
+<polygon points="128.0,38.0 205.9,83.0 205.9,173.0 128.0,218.0 50.1,173.0 50.1,83.0" fill="none" stroke="#ffffff" stroke-width="6" stroke-linejoin="round"/>
+<polygon points="128,42 150,62 140,92 116,92 106,62" fill="#8f72c1" stroke="#ffffff" stroke-width="2" stroke-opacity="0.8"/><path d="M116 64 L140 64 M118 78 L138 78 M122 52 L134 52" stroke="#ffffff" stroke-width="1.6" stroke-opacity="0.6"/>
+
+<text x="128" y="166" text-anchor="middle" fill="#523975" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="800" stroke="#f6f0fc" stroke-width="1.5" paint-order="stroke">94</text>
+<rect x="70" y="185" width="116" height="22" rx="11" fill="#f6f0fc" stroke="#8f72c1" stroke-width="1.6"/>
+<text x="128" y="201" text-anchor="middle" fill="#8f72c1" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="2.2">AMETHYST</text>
+</svg>
