@@ -35,10 +35,10 @@ final class PublicFileUrl
             return null;
         }
 
-        // Bundled assets ship with the app under public/ (avatar gallery,
-        // level badge gallery, concept previews). Keep them available even
-        // when production configures S3/R2 for user uploads, because they are
-        // never copied into an external bucket.
+        // Bundled assets ship with the app under public/ (avatar gallery and
+        // level badge gallery). Keep them available even when production
+        // configures S3/R2 for user uploads, because they are never copied
+        // into an external bucket.
         if (is_file(public_path($path))) {
             return url('/'.ltrim($path, '/'));
         }
