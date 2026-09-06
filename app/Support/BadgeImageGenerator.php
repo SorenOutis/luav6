@@ -2,12 +2,15 @@
 
 namespace App\Support;
 
-use Illuminate\Support\Facades\Storage;
-
 /**
- * Generates the level 1-100 badge image set.
+ * Generates the revamped level 1-100 badge image set.
  *
- * Each badge is a complete SVG medal (256x256) with tier-based colors:
+ * Assets ship with the application under public/images/badges so they never
+ * depend on uploaded storage or an external bucket:
+ *
+ *   public/images/badges/level-001.svg ... level-100.svg
+ *
+ * Tiers:
  *
  *   1-10     Bronze
  *   11-20    Silver
@@ -17,13 +20,41 @@ use Illuminate\Support\Facades\Storage;
  *   81-99    Amethyst
  *   100      Legendary
  *
- * Files are stored on the public disk under "badges/level-XXX.svg".
+ * Each badge is a faceted medallion with a tier icon, a star burst, a glass
+ * sheen, milestone gems at 10/25/50/75/100, and the tier pill at the bottom.
  */
 class BadgeImageGenerator
 {
     public const MIN_LEVEL = 1;
 
     public const MAX_LEVEL = 100;
+
+    /**
+     * Alternate design directions used by the preview gallery.
+     *
+     * @return array<string, array{label: string, note: string}>
+     */
+    public static function styles(): array
+    {
+        return [
+            'medallion' => [
+                'label' => 'Medallion',
+                'note' => 'Faceted round medal with tier icon, star burst and gem milestones.',
+            ],
+            'shield' => [
+                'label' => 'Shield',
+                'note' => 'Heraldic shield silhouette for a competitive-achievement feel.',
+            ],
+            'hex' => [
+                'label' => 'Hex',
+                'note' => 'Hexagonal gemstone token with a tech/game-achievement vibe.',
+            ],
+            'orb' => [
+                'label' => 'Orb',
+                'note' => 'Glassy energy orb with a soft three-dimensional highlight.',
+            ],
+        ];
+    }
 
     /**
      * @return array<int, array<string, mixed>>
@@ -117,9 +148,20 @@ class BadgeImageGenerator
         return $tier[0] ?? array_values(static::tiers())[0];
     }
 
+    /**
+     * The path stored on badge records and resolved through PublicFileUrl.
+     */
     public static function filenameFor(int $level): string
     {
-        return sprintf('badges/level-%03d.svg', $level);
+        return sprintf('images/badges/level-%03d.svg', $level);
+    }
+
+    /**
+     * The absolute filesystem path used when generating the asset.
+     */
+    public static function diskPathFor(int $level): string
+    {
+        return public_path('images/badges/'.sprintf('level-%03d.svg', $level));
     }
 
     public static function render(int $level): string
@@ -133,129 +175,85 @@ class BadgeImageGenerator
         $isFinal = $level === static::MAX_LEVEL;
         $isMilestone = in_array($level, [10, 25, 50, 75, 100], true);
 
-        // 16-point star burst behind the number.
-        $starPoints = [];
-        for ($index = 0; $index < 16; $index++) {
-            $radius = $index % 2 === 0 ? 78 : 58;
-            $angle = $index * M_PI / 8 - M_PI / 2;
-            $starPoints[] = sprintf(
-                '%.1f,%.1f',
-                128 + $radius * cos($angle),
-                128 + $radius * sin($angle)
-            );
-        }
-
-        // 24 dots around the outer rim for a crafted medal look.
-        $rimDots = [];
+        $facets = [];
         for ($index = 0; $index < 24; $index++) {
-            $angle = $index * 2 * M_PI / 24;
-            $rimDots[] = sprintf(
-                '<circle cx="%.1f" cy="%.1f" r="2.2" fill="%s" opacity="0.6"/>',
-                128 + 112 * cos($angle),
-                128 + 112 * sin($angle),
-                $accent
+            $a0 = ($index * 15 - 7.5) * M_PI / 180 - M_PI / 2;
+            $a1 = ($index * 15 + 7.5) * M_PI / 180 - M_PI / 2;
+            $outerPoints = [];
+            $innerPoints = [];
+            foreach ([$a0, $a1] as $angle) {
+                $outerPoints[] = [128 + 125 * cos($angle), 128 + 125 * sin($angle)];
+                $innerPoints[] = [128 + 112 * cos($angle), 128 + 112 * sin($angle)];
+            }
+
+            $facets[] = sprintf(
+                '<polygon points="%.1f,%.1f %.1f,%.1f %.1f,%.1f %.1f,%.1f" fill="%s" opacity="0.9"/>',
+                $outerPoints[0][0],
+                $outerPoints[0][1],
+                $outerPoints[1][0],
+                $outerPoints[1][1],
+                $innerPoints[1][0],
+                $innerPoints[1][1],
+                $innerPoints[0][0],
+                $innerPoints[0][1],
+                $index % 2 === 0 ? $outer[0] : $outer[2]
             );
         }
 
-        $milestoneBadge = '';
+        $icon = static::tierIcon($tierName, $accent, $text);
+
+        $milestone = '';
         if ($isFinal) {
-            $milestoneBadge = '<g opacity="0.95">'
-                .sprintf(
-                    '<path d="M97 92 L112 79 L128 92 L144 79 L159 92 L154 109 L102 109 Z" fill="%s"/>',
-                    $accent
-                )
-                .'</g>';
-        } elseif ($isMilestone) {
-            $milestoneBadge = sprintf(
-                '<g opacity="0.95"><path d="M119 88 L128 80 L137 88 L133 99 L123 99 Z" fill="%s"/></g>',
-                $accent
+            $milestone = sprintf(
+                '<g opacity="0.95"><path d="M104 57 L114 44 L128 57 L142 44 L152 57 L147 72 L109 72 Z" fill="%s" stroke="%s" stroke-width="1.4" stroke-opacity="0.6"/></g>',
+                $accent,
+                $text
             );
+        } elseif ($isMilestone) {
+            $milestone = static::diamond(128, 57, 8, $accent, $text, 0.95);
         }
 
-        $fontSize = $level < 10 ? 72 : ($level < 100 ? 64 : 56);
-        $levelNumber = (string) $level;
+        $fontSize = $level < 10 ? 72 : ($level < 100 ? 62 : 54);
 
-        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="'.'Level '.$level.' badge'.'">'
-            .'<defs>'
+        return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Level '.$level.' badge"><defs>'
+            .'<linearGradient id="o" x1="0%" y1="0%" x2="100%" y2="100%">'
+            .sprintf('<stop offset="0%%" stop-color="%s"/><stop offset="52%%" stop-color="%s"/><stop offset="100%%" stop-color="%s"/>', $outer[0], $outer[1], $outer[2])
+            .'</linearGradient>'
             .sprintf(
-                '<linearGradient id="outer" x1="0%%" y1="0%%" x2="100%%" y2="100%%">'
-                .'<stop offset="0%%" stop-color="%s"/>'
-                .'<stop offset="55%%" stop-color="%s"/>'
-                .'<stop offset="100%%" stop-color="%s"/>'
-                .'</linearGradient>',
-                $outer[0],
-                $outer[1],
-                $outer[2]
-            )
-            .sprintf(
-                '<radialGradient id="inner" cx="50%%" cy="38%%" r="74%%">'
-                .'<stop offset="0%%" stop-color="%s"/>'
-                .'<stop offset="58%%" stop-color="%s"/>'
-                .'<stop offset="100%%" stop-color="%s"/>'
-                .'</radialGradient>',
+                '<radialGradient id="i" cx="50%%" cy="38%%" r="75%%"><stop offset="0%%" stop-color="%s"/><stop offset="58%%" stop-color="%s"/><stop offset="100%%" stop-color="%s"/></radialGradient>',
                 $inner[0],
                 $inner[1],
                 $inner[2]
             )
             .sprintf(
-                '<linearGradient id="ring" x1="0%%" y1="0%%" x2="100%%" y2="100%%">'
-                .'<stop offset="0%%" stop-color="%s"/>'
-                .'<stop offset="50%%" stop-color="%s"/>'
-                .'<stop offset="100%%" stop-color="%s"/>'
-                .'</linearGradient>',
+                '<linearGradient id="r" x1="0%%" y1="0%%" x2="100%%" y2="100%%"><stop offset="0%%" stop-color="%s"/><stop offset="50%%" stop-color="%s"/><stop offset="100%%" stop-color="%s"/></linearGradient>',
                 $accent,
                 $text,
                 $accent
             )
-            .sprintf(
-                '<radialGradient id="sheen" cx="50%%" cy="50%%" r="50%%">'
-                .'<stop offset="0%%" stop-color="#ffffff" stop-opacity="0.9"/>'
-                .'<stop offset="100%%" stop-color="#ffffff" stop-opacity="0"/>'
-                .'</radialGradient>'
-            )
+            .'<radialGradient id="s" cx="50%" cy="48%" r="55%"><stop offset="0%" stop-color="#ffffff" stop-opacity="0.5"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>'
             .'</defs>'
-
-            // Outer disc and rim.
-            .'<circle cx="128" cy="128" r="118" fill="url(#outer)" stroke="#ffffff" stroke-width="3" stroke-opacity="0.18"/>'
-            .'<circle cx="128" cy="128" r="108" fill="none" stroke="'.$accent.'" stroke-width="2" stroke-opacity="0.55"/>'
-            .implode('', $rimDots)
-
-            // Inner medal face.
-            .'<circle cx="128" cy="128" r="93" fill="url(#inner)" stroke="url(#ring)" stroke-width="5"/>'
-            .'<circle cx="128" cy="128" r="84" fill="none" stroke="'.$accent.'" stroke-width="1.2" stroke-opacity="0.55"/>'
-            .'<polygon points="'.implode(' ', $starPoints).'" fill="'.$accent.'" opacity="0.20"/>'
-
-            // Milestone crown / gem.
-            .$milestoneBadge
-
-            // Glass sheen.
-            .'<ellipse cx="128" cy="72" rx="72" ry="38" fill="url(#sheen)" opacity="0.20"/>'
-
-            // Text.
-            .sprintf(
-                '<text x="128" y="90" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="4">LEVEL</text>',
-                $text
-            )
-            .sprintf(
-                '<text x="128" y="158" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="%d" font-weight="800">%s</text>',
-                $text,
-                $fontSize,
-                $levelNumber
-            )
-            .sprintf(
-                '<text x="128" y="190" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2">%s</text>',
-                $accent,
-                strtoupper($tierName)
-            )
+            .implode('', $facets)
+            .'<circle cx="128" cy="128" r="112" fill="url(#o)" stroke="#ffffff" stroke-width="2" stroke-opacity="0.16"/>'
+            .'<circle cx="128" cy="128" r="104" fill="url(#i)" stroke="url(#r)" stroke-width="5"/>'
+            .'<circle cx="128" cy="128" r="96" fill="none" stroke="'.$accent.'" stroke-width="1.4" stroke-opacity="0.65"/>'
+            .static::starPolygon(128, 128, 8, 88, 68, $accent, 0.16)
+            .static::rimDots(128, 128, 100, 16, $accent)
+            .$milestone
+            .$icon
+            .'<ellipse cx="128" cy="66" rx="70" ry="35" fill="url(#s)" opacity="0.55"/>'
+            .sprintf('<text x="128" y="105" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="4" opacity="0.92">LEVEL</text>', $text)
+            .sprintf('<text x="128" y="168" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="%d" font-weight="800">%d</text>', $text, $fontSize, $level)
+            .'<rect x="76" y="182" width="104" height="19" rx="9.5" fill="'.$inner[2].'" stroke="'.$accent.'" stroke-width="1.4" opacity="0.92"/>'
+            .sprintf('<text x="128" y="197" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="2.2">%s</text>', $accent, strtoupper($tierName))
             .'</svg>';
     }
 
     public static function generateForLevel(int $level): string
     {
-        $path = static::filenameFor($level);
-        Storage::disk('public')->put($path, static::render($level));
+        file_put_contents(static::diskPathFor($level), static::render($level));
 
-        return $path;
+        return static::filenameFor($level);
     }
 
     /**
@@ -277,5 +275,91 @@ class BadgeImageGenerator
         }
 
         return $count;
+    }
+
+    private static function starPolygon(float $centerX, float $centerY, int $points, float $outerRadius, float $innerRadius, string $fill, float $opacity): string
+    {
+        $coordinates = [];
+
+        for ($index = 0; $index < $points * 2; $index++) {
+            $radius = $index % 2 === 0 ? $outerRadius : $innerRadius;
+            $angle = $index * (180 / $points) * M_PI / 180 - M_PI / 2;
+            $coordinates[] = sprintf(
+                '%.1f,%.1f',
+                $centerX + $radius * cos($angle),
+                $centerY + $radius * sin($angle)
+            );
+        }
+
+        return sprintf(
+            '<polygon points="%s" fill="%s" opacity="%s"/>',
+            implode(' ', $coordinates),
+            $fill,
+            $opacity
+        );
+    }
+
+    private static function rimDots(float $centerX, float $centerY, float $radius, int $count, string $color): string
+    {
+        $dots = [];
+
+        for ($index = 0; $index < $count; $index++) {
+            $angle = $index * (360 / $count) * M_PI / 180 - M_PI / 2;
+            $dots[] = sprintf(
+                '<circle cx="%.1f" cy="%.1f" r="2" fill="%s" opacity="0.7"/>',
+                $centerX + $radius * cos($angle),
+                $centerY + $radius * sin($angle),
+                $color
+            );
+        }
+
+        return implode('', $dots);
+    }
+
+    private static function diamond(float $centerX, float $centerY, float $size, string $fill, string $stroke, float $opacity): string
+    {
+        return sprintf(
+            '<polygon points="%.1f,%.1f %.1f,%.1f %.1f,%.1f %.1f,%.1f" fill="%s" stroke="%s" stroke-width="1.5" opacity="%s"/>',
+            $centerX - $size,
+            $centerY,
+            $centerX,
+            $centerY - $size,
+            $centerX + $size,
+            $centerY,
+            $centerX,
+            $centerY + $size,
+            $fill,
+            $stroke,
+            $opacity
+        );
+    }
+
+    private static function tierIcon(string $tierName, string $accent, string $text): string
+    {
+        if ($tierName === 'Bronze') {
+            return '<path d="M128 66 C 117 78 124 83 120 90 C 113 96 119 106 128 105 C 138 106 144 96 137 90 C 132 85 140 82 128 66 Z" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.5" stroke-opacity="0.5"/>';
+        }
+
+        if ($tierName === 'Silver') {
+            return '<polygon points="128,64 133,78 147,82 133,86 128,100 123,86 109,82 123,78" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.5" stroke-opacity="0.5"/>';
+        }
+
+        if ($tierName === 'Gold') {
+            return '<path d="M113 78 L119 70 L128 80 L137 70 L143 78 L140 92 L116 92 Z" fill="'.$accent.'" stroke="'.$text.'" stroke-width="1.3" stroke-opacity="0.55"/>';
+        }
+
+        if ($tierName === 'Emerald') {
+            return '<g><path d="M132 66 C 120 77 121 91 130 99 C 142 91 147 77 132 66 Z" fill="'.$accent.'"/><path d="M129 69 Q123 84 130 99" fill="none" stroke="'.$text.'" stroke-width="1.6" stroke-opacity="0.65"/></g>';
+        }
+
+        if ($tierName === 'Sapphire') {
+            return '<g><polygon points="128,65 139,77 128,100 117,77" fill="'.$accent.'"/><path d="M117 77 L139 77" fill="none" stroke="'.$text.'" stroke-width="1.6" stroke-opacity="0.65"/></g>';
+        }
+
+        if ($tierName === 'Amethyst') {
+            return '<g><polygon points="121,67 135,67 141,84 128,99 115,84" fill="'.$accent.'"/><path d="M121 75 L135 75" fill="none" stroke="'.$text.'" stroke-width="1.5" stroke-opacity="0.6"/></g>';
+        }
+
+        return '<g><circle cx="128" cy="83" r="11" fill="'.$accent.'" stroke="'.$text.'" stroke-width="2" stroke-opacity="0.7"/></g>';
     }
 }

@@ -11,7 +11,7 @@ class GenerateBadgeImages extends Command
     protected $signature = 'badges:generate-images
         {--update-records : Update existing level badge records with the generated image paths}';
 
-    protected $description = 'Generate the level 1-100 badge images on the public storage disk';
+    protected $description = 'Generate the level 1-100 badge images under public/images/badges';
 
     public function handle(): int
     {

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Hex Level 1"><defs>
+<linearGradient id="o" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a0662f"/><stop offset="52%" stop-color="#d29655"/><stop offset="100%" stop-color="#6b3d1b"/></linearGradient>
+<radialGradient id="i" cx="50%" cy="36%" r="78%"><stop offset="0%" stop-color="#5a3016"/><stop offset="100%" stop-color="#2b180c"/></radialGradient>
+<linearGradient id="r" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e0a15f"/><stop offset="50%" stop-color="#f7e3c4"/><stop offset="100%" stop-color="#e0a15f"/></linearGradient>
+</defs>
+<polygon points="128.0,6.0 233.7,67.0 207.7,82.0 128.0,36.0" fill="#a0662f" opacity="0.9"/><polygon points="233.7,67.0 233.7,189.0 207.7,174.0 207.7,82.0" fill="#6b3d1b" opacity="0.9"/><polygon points="233.7,189.0 128.0,250.0 128.0,220.0 207.7,174.0" fill="#a0662f" opacity="0.9"/><polygon points="128.0,250.0 22.3,189.0 48.3,174.0 128.0,220.0" fill="#6b3d1b" opacity="0.9"/><polygon points="22.3,189.0 22.3,67.0 48.3,82.0 48.3,174.0" fill="#a0662f" opacity="0.9"/><polygon points="22.3,67.0 128.0,6.0 128.0,36.0 48.3,82.0" fill="#6b3d1b" opacity="0.9"/>
+<polygon points="128.0,6.0 233.7,67.0 233.7,189.0 128.0,250.0 22.3,189.0 22.3,67.0" fill="none" stroke="url(#r)" stroke-width="3"/>
+<polygon points="128.0,36.0 207.7,82.0 207.7,174.0 128.0,220.0 48.3,174.0 48.3,82.0" fill="url(#i)" stroke="#e0a15f" stroke-width="1.6" stroke-opacity="0.7"/>
+<polygon points="128.0,58.0 147.9,80.0 177.5,78.5 176.0,108.1 198.0,128.0 176.0,147.9 177.5,177.5 147.9,176.0 128.0,198.0 108.1,176.0 78.5,177.5 80.0,147.9 58.0,128.0 80.0,108.1 78.5,78.5 108.1,80.0" fill="#e0a15f" opacity="0.16"/>
+<path d="M128 66 C 117 78 124 83 120 90 C 113 96 119 106 128 105 C 138 106 144 96 137 90 C 132 85 140 82 128 66 Z" fill="#e0a15f" stroke="#f7e3c4" stroke-width="1.5" stroke-opacity="0.5"/>
+<text x="128" y="105" text-anchor="middle" fill="#f7e3c4" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="3">LEVEL</text>
+<text x="128" y="166" text-anchor="middle" fill="#f7e3c4" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="800">1</text>
+<text x="128" y="190" text-anchor="middle" fill="#e0a15f" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" letter-spacing="2">BRONZE</text>
+</svg>

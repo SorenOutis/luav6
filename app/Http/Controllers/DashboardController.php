@@ -12,9 +12,9 @@ use App\Services\ClaimXpService;
 use App\Services\LeaderboardService;
 use App\Services\StreakService;
 use App\Services\UpcomingExamsService;
+use App\Support\PublicFileUrl;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Phase 3.3 — Extract the 230-line dashboard closure into a controller.
@@ -327,7 +327,7 @@ class DashboardController extends Controller
                 'name' => $badge->name,
                 'description' => $badge->description,
                 'requiredLevel' => $badge->required_level,
-                'image' => $badge->image_path ? Storage::disk('public')->url($badge->image_path) : null,
+                'image' => PublicFileUrl::resolve($badge->image_path),
                 'iconUrl' => $badge->icon_url,
                 'earnedSeason' => $badge->pivot->season_id
                     ? ($badgeSeasonNames[$badge->pivot->season_id] ?? 'Unknown Season')

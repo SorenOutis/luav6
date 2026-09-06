@@ -23,7 +23,7 @@ class ListBadges extends ListRecords
                 ->color('primary')
                 ->requiresConfirmation()
                 ->modalHeading('Generate level 1-100 badges')
-                ->modalDescription('This writes the full level 1-100 SVG badge set to public storage and links any matching level badges in this workspace to the new images.')
+                ->modalDescription('This writes the full level 1-100 SVG badge set to public/images/badges and links any matching level badges in this workspace to the new images.')
                 ->modalSubmitActionLabel('Generate badges')
                 ->action(function (): void {
                     $generated = BadgeImageGenerator::generateAll();

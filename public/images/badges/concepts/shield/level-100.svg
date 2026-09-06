@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Shield Level 100"><defs>
+<linearGradient id="o" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#7c1600"/><stop offset="52%" stop-color="#f07a24"/><stop offset="100%" stop-color="#4a1000"/></linearGradient>
+<radialGradient id="i" cx="50%" cy="34%" r="80%"><stop offset="0%" stop-color="#4a1500"/><stop offset="100%" stop-color="#210a00"/></radialGradient>
+<linearGradient id="r" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ffb648"/><stop offset="50%" stop-color="#fff2cf"/><stop offset="100%" stop-color="#ffb648"/></linearGradient>
+</defs>
+<path d="M128 24 C 158 31 182 40 196 50 C 196 104 190 164 128 224 C 66 164 60 104 60 50 C 74 40 98 31 128 24 Z" fill="url(#o)" stroke="url(#r)" stroke-width="4"/><path d="M128 40 C 151 46 169 54 181 62 C 181 104 176 153 128 202 C 80 153 75 104 75 62 C 87 54 105 46 128 40 Z" fill="url(#i)" stroke="#ffb648" stroke-width="1.6" stroke-opacity="0.7"/>
+<polygon points="128.0,42.0 146.4,65.7 176.1,61.9 172.3,91.6 196.0,110.0 172.3,128.4 176.1,158.1 146.4,154.3 128.0,178.0 109.6,154.3 79.9,158.1 83.7,128.4 60.0,110.0 83.7,91.6 79.9,61.9 109.6,65.7" fill="#ffb648" opacity="0.18"/>
+<g><circle cx="128" cy="83" r="11" fill="#ffb648" stroke="#fff2cf" stroke-width="2" stroke-opacity="0.7"/></g>
+<text x="128" y="105" text-anchor="middle" fill="#fff2cf" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="3">LEVEL</text>
+<text x="128" y="165" text-anchor="middle" fill="#fff2cf" font-family="Inter, Arial, sans-serif" font-size="50" font-weight="800">100</text>
+<rect x="80" y="178" width="96" height="18" rx="9" fill="#ffffff" opacity="0.10"/>
+<text x="128" y="192" text-anchor="middle" fill="#ffb648" font-family="Inter, Arial, sans-serif" font-size="11" font-weight="800" letter-spacing="2">LEGENDARY</text>
+</svg>
