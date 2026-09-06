@@ -23,7 +23,7 @@ namespace App\Support;
  *   41-60    Emerald
  *   61-80    Sapphire
  *   81-99    Amethyst
- *   100      Legendary
+ *   100      Master
  */
 class BadgeImageGenerator
 {
@@ -125,7 +125,7 @@ class BadgeImageGenerator
                 'icon' => 'gem',
             ],
             7 => [
-                'name' => 'Legendary',
+                'name' => 'Master',
                 'min' => 100,
                 'max' => 100,
                 'outer' => ['#ee7d4d', '#ffbd89', '#c9502a'],
