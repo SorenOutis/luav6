@@ -179,14 +179,14 @@ class BadgeImageGenerator
         $isFinal = $level === static::MAX_LEVEL;
         $isMilestone = in_array($level, [10, 25, 50, 75, 100], true);
 
-        $fontSize = $level < 10 ? 76 : ($level < 100 ? 68 : 62);
+        $fontSize = $level < 10 ? 74 : ($level < 100 ? 66 : 60);
 
         $milestone = '';
         if ($isFinal) {
-            $milestone = static::sparkle(201, 158, 10, $accent, 0.95)
-                .static::sparkle(55, 158, 10, $accent, 0.95);
+            $milestone = static::sparkle(201, 70, 9, $accent, 0.95)
+                .static::sparkle(55, 70, 9, $accent, 0.95);
         } elseif ($isMilestone) {
-            $milestone = static::sparkle(201, 158, 9, $accent, 0.95);
+            $milestone = static::sparkle(201, 70, 8, $accent, 0.95);
         }
 
         return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Level '.$level.' badge"><defs>'
@@ -206,7 +206,7 @@ class BadgeImageGenerator
             .static::roundedHex(128, 128, 118, 10, 'url(#o)', $outer[2])
             .static::roundedHex(128, 128, 102, 6, 'url(#i)', '#ffffff')
             .static::roundedHex(128, 128, 94, 2, 'none', $accent)
-            .'<path d="M80 52 L126 82 L176 56 L176 121 Q128 98 80 121 Z" fill="url(#sheen)" opacity="0.5"/>'
+            .'<path d="M80 52 L126 82 L176 56 L176 121 Q128 98 80 121 Z" fill="url(#sheen)" opacity="0.45"/>'
             .static::tierIcon($icon, $accent, $text)
             .static::sparkle(52, 52, 7, '#ffffff', 0.95)
             .static::sparkle(204, 57, 5, '#ffffff', 0.95)
@@ -214,18 +214,18 @@ class BadgeImageGenerator
             .static::sparkle(200, 194, 7, '#ffffff', 0.95)
             .'</g>'
 
+            .'<rect x="68" y="105" width="120" height="24" rx="12" fill="'.$inner[0].'" stroke="'.$accent.'" stroke-width="1.6"/>'
             .sprintf(
-                '<text x="128" y="173" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="%d" font-weight="800" stroke="%s" stroke-width="1.5" paint-order="stroke">%d</text>',
+                '<text x="128" y="123" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" letter-spacing="2.4">%s</text>',
+                $text,
+                strtoupper($tierName)
+            )
+            .sprintf(
+                '<text x="128" y="184" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="%d" font-weight="800" stroke="%s" stroke-width="1.5" paint-order="stroke">%d</text>',
                 $text,
                 $fontSize,
                 $inner[0],
                 $level
-            )
-            .'<rect x="70" y="188" width="116" height="21" rx="10.5" fill="'.$inner[0].'" stroke="'.$accent.'" stroke-width="1.5"/>'
-            .sprintf(
-                '<text x="128" y="205" text-anchor="middle" fill="%s" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="2.1">%s</text>',
-                $accent,
-                strtoupper($tierName)
             )
             .$milestone
             .'</svg>';

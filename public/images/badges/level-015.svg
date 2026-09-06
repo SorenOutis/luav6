@@ -8,12 +8,12 @@
 <polygon points="128.0,10.0 230.2,69.0 230.2,187.0 128.0,246.0 25.8,187.0 25.8,69.0" fill="url(#o)" stroke="#8c99a9" stroke-width="10" stroke-linejoin="round"/>
 <polygon points="128.0,26.0 216.3,77.0 216.3,179.0 128.0,230.0 39.7,179.0 39.7,77.0" fill="url(#i)" stroke="#ffffff" stroke-width="6" stroke-linejoin="round"/>
 <polygon points="128.0,34.0 209.4,81.0 209.4,175.0 128.0,222.0 46.6,175.0 46.6,81.0" fill="none" stroke="#9faec0" stroke-width="2" stroke-linejoin="round"/>
-<path d="M80 52 L126 82 L176 56 L176 121 Q128 98 80 121 Z" fill="url(#sheen)" opacity="0.5"/>
+<path d="M80 52 L126 82 L176 56 L176 121 Q128 98 80 121 Z" fill="url(#sheen)" opacity="0.45"/>
 <polygon points="128.0,46.0 132.9,59.2 147.0,59.8 136.0,68.6 139.8,82.2 128.0,74.4 116.2,82.2 120.0,68.6 109.0,59.8 123.1,59.2" fill="#9faec0" stroke="#54616f" stroke-width="1.6" stroke-linejoin="round"/>
 <path d="M52.0 45.0 L53.7 50.3 L59.0 52.0 L53.7 53.7 L52.0 59.0 L50.3 53.7 L45.0 52.0 L50.3 50.3 Z" fill="#ffffff" opacity="0.95"/><path d="M204.0 52.0 L205.2 55.8 L209.0 57.0 L205.2 58.2 L204.0 62.0 L202.8 58.2 L199.0 57.0 L202.8 55.8 Z" fill="#ffffff" opacity="0.95"/><path d="M58.0 185.0 L59.2 188.8 L63.0 190.0 L59.2 191.2 L58.0 195.0 L56.8 191.2 L53.0 190.0 L56.8 188.8 Z" fill="#ffffff" opacity="0.95"/><path d="M200.0 187.0 L201.7 192.3 L207.0 194.0 L201.7 195.7 L200.0 201.0 L198.3 195.7 L193.0 194.0 L198.3 192.3 Z" fill="#ffffff" opacity="0.95"/>
 </g>
-<text x="128" y="173" text-anchor="middle" fill="#54616f" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="800" stroke="#f5f9fd" stroke-width="1.5" paint-order="stroke">15</text>
-<rect x="70" y="188" width="116" height="21" rx="10.5" fill="#f5f9fd" stroke="#9faec0" stroke-width="1.5"/>
-<text x="128" y="205" text-anchor="middle" fill="#9faec0" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="800" letter-spacing="2.1">SILVER</text>
+<rect x="68" y="105" width="120" height="24" rx="12" fill="#f5f9fd" stroke="#9faec0" stroke-width="1.6"/>
+<text x="128" y="123" text-anchor="middle" fill="#54616f" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" letter-spacing="2.4">SILVER</text>
+<text x="128" y="184" text-anchor="middle" fill="#54616f" font-family="Inter, Arial, sans-serif" font-size="66" font-weight="800" stroke="#f5f9fd" stroke-width="1.5" paint-order="stroke">15</text>
 
 </svg>
