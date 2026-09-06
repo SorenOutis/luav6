@@ -28,6 +28,7 @@ import {
     Info,
 } from 'lucide-vue-next';
 import { onMounted, onUnmounted, ref, computed, reactive, watch } from 'vue';
+import FoxCompanion from '@/components/FoxCompanion.vue';
 import PageSkeleton from '@/components/PageSkeleton.vue';
 import { useAccessibility } from '@/composables/useAccessibility';
 import { useMdBreakpoint } from '@/composables/useBreakpoint';
@@ -2329,27 +2330,39 @@ const feedbackContent = computed(() => {
                             class="relative z-10 flex flex-col justify-between gap-8 lg:flex-row lg:items-center"
                         >
                             <div class="max-w-3xl space-y-4">
-                                <div class="flex flex-wrap items-center gap-4">
-                                    <div class="space-y-0.5">
-                                        <span class="dash-label">Exam</span>
-                                        <h1
-                                            class="dash-title text-[26px] text-foreground sm:text-[32px] md:text-[36px]"
-                                        >
-                                            {{ exam.title }}
-                                        </h1>
-                                    </div>
-
-                                    <!-- Which set of the exam this student is
-                                         taking, so they can tell the teacher
-                                         exactly which version they got. -->
-                                    <span
-                                        v-if="exam.set?.title"
-                                        class="inline-flex items-center gap-1.5 rounded-full border border-[#D97757]/25 bg-[#D97757]/10 px-3 py-1 text-[13px] font-semibold text-[#D97757]"
+                                <FoxCompanion
+                                    class="min-w-0"
+                                    mascot="activities"
+                                    :size="92"
+                                    message="Take it one part at a time — you’ve got this."
+                                    label="Show exam fox message"
+                                    compact
+                                    :initially-open="false"
+                                >
+                                    <div
+                                        class="flex flex-wrap items-center gap-4"
                                     >
-                                        <Layers class="h-3.5 w-3.5" />
-                                        {{ exam.set.title }}
-                                    </span>
-                                </div>
+                                        <div class="space-y-0.5">
+                                            <span class="dash-label">Exam</span>
+                                            <h1
+                                                class="dash-title text-[26px] text-foreground sm:text-[32px] md:text-[36px]"
+                                            >
+                                                {{ exam.title }}
+                                            </h1>
+                                        </div>
+
+                                        <!-- Which set of the exam this student is
+                                             taking, so they can tell the teacher
+                                             exactly which version they got. -->
+                                        <span
+                                            v-if="exam.set?.title"
+                                            class="inline-flex items-center gap-1.5 rounded-full border border-[#D97757]/25 bg-[#D97757]/10 px-3 py-1 text-[13px] font-semibold text-[#D97757]"
+                                        >
+                                            <Layers class="h-3.5 w-3.5" />
+                                            {{ exam.set.title }}
+                                        </span>
+                                    </div>
+                                </FoxCompanion>
 
                                 <div
                                     v-if="!selectedPart"

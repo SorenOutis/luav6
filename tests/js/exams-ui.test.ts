@@ -53,6 +53,9 @@ describe('exams and parts student shell', () => {
 
         expect(page).toContain('student-ui');
         expect(page).toContain('exam-part-card');
+        expect(page).toContain('FoxCompanion');
+        expect(page).toContain('mascot="activities"');
+        expect(page).toContain('Show exam fox message');
         expect(page).toContain('All activities');
         expect(page).toContain('dash-title');
         expect(page).toContain("'Start'");
