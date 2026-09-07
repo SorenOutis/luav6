@@ -28,6 +28,8 @@ const streakBonus = computed(() => Math.max(0, props.amount - base.value));
 
 const emit = defineEmits<{
     claimed: [amount: number, totalXp: number];
+    'prompt-open': [];
+    'prompt-close': [];
 }>();
 
 const { prefersReducedMotion, isLowEndDevice } = useMobile();
@@ -62,6 +64,17 @@ const confettiColors = [
     'bg-[#4D9375]',
     'bg-[#8E93A6]',
 ];
+
+// Notify the parent (dashboard) when the auto-prompt modal opens/closes so
+// it can sequence other overlays (e.g. the Echo welcome modal) after the
+// claim flow instead of stacking both at once.
+watch(showClaimModal, (open) => {
+    if (open) {
+        emit('prompt-open');
+    } else {
+        emit('prompt-close');
+    }
+});
 
 // Open the prompt modal when the parent signals it's ready — immediately for
 // users who already have a section, or after the section-selection flow for

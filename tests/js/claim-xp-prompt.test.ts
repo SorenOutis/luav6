@@ -123,4 +123,57 @@ describe('daily XP claim popup on login', () => {
         expect(document.body.textContent).toContain(modalTitle);
         wrapper.unmount();
     });
+
+    it('emits prompt-open on auto-open and prompt-close on "Later" so the dashboard can sequence the Echo modal after it', async () => {
+        const wrapper = mount(ClaimXpButton, {
+            props: {
+                canClaim: true,
+                amount: 3,
+                baseXp: 1,
+                nextClaimAt: null,
+                streak: 2,
+                showPrompt: true,
+            },
+        });
+        await flushPromises();
+
+        expect(wrapper.emitted('prompt-open')).toHaveLength(1);
+
+        const later = [...document.body.querySelectorAll('button')].find(
+            (btn) => btn.textContent?.trim() === 'Later',
+        );
+        later?.click();
+        await flushPromises();
+
+        expect(wrapper.emitted('prompt-close')).toHaveLength(1);
+        wrapper.unmount();
+    });
+
+    it('forwards prompt-open/prompt-close from the DailyRewardCard', async () => {
+        const wrapper = mount(DailyRewardCard, {
+            props: {
+                claimXp: {
+                    enabled: true,
+                    canClaim: true,
+                    amount: 3,
+                    baseXp: 1,
+                    nextClaimAt: null,
+                    showPrompt: true,
+                },
+                streak: 2,
+            },
+        });
+        await flushPromises();
+
+        expect(wrapper.emitted('prompt-open')).toHaveLength(1);
+
+        const later = [...document.body.querySelectorAll('button')].find(
+            (btn) => btn.textContent?.trim() === 'Later',
+        );
+        later?.click();
+        await flushPromises();
+
+        expect(wrapper.emitted('prompt-close')).toHaveLength(1);
+        wrapper.unmount();
+    });
 });

@@ -17,7 +17,11 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits<{ claimed: [] }>();
+const emit = defineEmits<{
+    claimed: [];
+    'prompt-open': [];
+    'prompt-close': [];
+}>();
 
 const hideClaimCard = ref(false);
 
@@ -54,6 +58,8 @@ const onClaimed = () => {
             :streak="streak"
             :show-prompt="claimXp.showPrompt"
             @claimed="onClaimed"
+            @prompt-open="emit('prompt-open')"
+            @prompt-close="emit('prompt-close')"
         />
     </section>
 </template>

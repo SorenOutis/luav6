@@ -73,6 +73,23 @@ describe('dashboard student shell', () => {
         expect(css).toContain('@media (min-width: 1024px)');
     });
 
+    it('sequences the claim prompt before the Echo welcome so the modals never stack', () => {
+        const page = readFileSync(
+            join(process.cwd(), 'resources/js/pages/Dashboard.vue'),
+            'utf8',
+        );
+
+        // The claim modal reports visibility so the dashboard can hold Echo back.
+        expect(page).toContain('isClaimModalOpen');
+        expect(page).toContain('claimPromptResolved');
+        expect(page).toContain('needsClaimFirst');
+        expect(page).toContain('@prompt-open="handleClaimPromptOpen"');
+        expect(page).toContain('@prompt-close="handleClaimPromptClose"');
+        // Echo must wait while the claim modal is open or still needs to run.
+        expect(page).toContain('!isClaimModalOpen.value');
+        expect(page).toContain('!needsClaimFirst.value');
+    });
+
     it('renders a readable hero with 44px actions on mobile', () => {
         const wrapper = mount(DashboardHero, {
             props: {
