@@ -521,6 +521,40 @@ const tourCanStart = computed(
     () => isBooted.value && !isBanned.value && claimPromptReady.value,
 );
 
+// ─── Claim → Echo sequencing ───────────────────────────────────────────────
+// The daily-claim auto-prompt must run first (when present), then the Echo
+// welcome. Without this, the claim modal opens instantly on login while the
+// Echo modal fires 500ms later — stacking both overlays at once. The claim
+// button reports its modal visibility via prompt-open/prompt-close so Echo
+// waits until the claim flow is fully resolved (dismissed or claimed).
+const isClaimModalOpen = ref(false);
+const claimPromptResolved = ref(false);
+
+const handleClaimPromptOpen = (): void => {
+    isClaimModalOpen.value = true;
+};
+
+const handleClaimPromptClose = (): void => {
+    isClaimModalOpen.value = false;
+    claimPromptResolved.value = true;
+};
+
+// True while a claim prompt still needs to run first in this session. The
+// server prop stays true after a "Later" dismiss (it only flips on reload),
+// so the local `claimPromptResolved` flag is what unblocks Echo afterwards.
+// Mobile has no auto-prompt modal (MobileDashboard only shows a static
+// reward tile), so Echo must not wait there — otherwise it would be blocked
+// forever with nothing to resolve it.
+const needsClaimFirst = computed(
+    () =>
+        isMdUp.value &&
+        claimPromptReady.value &&
+        !dashboardTourPending.value &&
+        !isTourActive.value &&
+        Boolean(props.claimXp.showPrompt && props.claimXp.canClaim) &&
+        !claimPromptResolved.value,
+);
+
 const foxWelcomeCanOpen = computed(
     () =>
         isBooted.value &&
@@ -529,6 +563,8 @@ const foxWelcomeCanOpen = computed(
         !isTourActive.value &&
         claimPromptReady.value &&
         !showSectionModal.value &&
+        !isClaimModalOpen.value &&
+        !needsClaimFirst.value &&
         !hasSeenFoxWelcome(),
 );
 
@@ -700,6 +736,9 @@ watch(
         isTourActive,
         claimPromptReady,
         showSectionModal,
+        isClaimModalOpen,
+        claimPromptResolved,
+        needsClaimFirst,
     ],
     scheduleFoxWelcome,
     { immediate: true },
@@ -974,6 +1013,8 @@ const handleLogout = () => {
                             :claim-xp="claimXpForPrompt"
                             :streak="userStats.streak"
                             @claimed="manualRefresh"
+                            @prompt-open="handleClaimPromptOpen"
+                            @prompt-close="handleClaimPromptClose"
                         />
                     </Motion>
 
