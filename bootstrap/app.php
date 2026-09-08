@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureLoginIsEnabled;
+use App\Http\Middleware\EnsurePlatformMaintenance;
 use App\Http\Middleware\EnsureStudentPageIsAvailable;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -38,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             EnsureLoginIsEnabled::class,
+            EnsurePlatformMaintenance::class,
             SecurityHeaders::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ClaimXpController;
 use App\Http\Controllers\Api\DashboardExamsController;
 use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\LeaderboardToggleBlurController;
+use App\Http\Controllers\Api\MaintenanceStatusController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AssignmentGroupController;
@@ -81,6 +82,14 @@ Route::post('/csp/report', CspReportController::class)
 // Serves the uploaded school logo as the site favicon (falling back to the
 // bundled /favicon.ico when no logo is set).
 Route::get('/favicon.png', FaviconController::class)->name('favicon');
+
+// Polled by the Maintenance page (every 30s) so students are brought back
+// automatically when maintenance turns off. Public on purpose: logged-out
+// students stare at the maintenance screen too. Stays reachable during
+// maintenance via the EnsurePlatformMaintenance allowlist.
+Route::get('api/maintenance-status', MaintenanceStatusController::class)
+    ->middleware('throttle:60,1')
+    ->name('api.maintenance-status');
 
 // ─── Authenticated routes ─────────────────────────────────────────────────
 
