@@ -593,7 +593,24 @@ onMounted(() => {
                 aria-label="Grades overview"
             >
                 <div class="mobile-grades-intro__topline">
-                    <div>
+                    <FoxCompanion
+                        v-if="filteredSubjectGrades.length > 0"
+                        class="min-w-0 flex-1"
+                        mascot="grades"
+                        :size="68"
+                        message="Progress is built one result at a time."
+                        label="Show grades fox message"
+                        compact
+                        :initially-open="false"
+                    >
+                        <div class="min-w-0">
+                            <span class="mobile-dashboard-kicker"
+                                >Your progress</span
+                            >
+                            <h1 class="mobile-dashboard-title">Grades</h1>
+                        </div>
+                    </FoxCompanion>
+                    <div v-else>
                         <span class="mobile-dashboard-kicker"
                             >Your progress</span
                         >
@@ -601,7 +618,7 @@ onMounted(() => {
                     </div>
                     <button
                         type="button"
-                        class="mobile-grades-export"
+                        class="mobile-grades-export shrink-0"
                         :disabled="isExporting"
                         @click="exportPdf"
                     >
@@ -617,16 +634,6 @@ onMounted(() => {
                     See your current averages and the subjects that need your
                     attention.
                 </p>
-                <FoxCompanion
-                    v-if="filteredSubjectGrades.length > 0"
-                    class="justify-end"
-                    mascot="grades"
-                    :size="82"
-                    message="Progress is built one result at a time."
-                    label="Show grades fox message"
-                    compact
-                    :initially-open="false"
-                />
                 <div class="mobile-grades-summary-row">
                     <div>
                         <strong>{{
