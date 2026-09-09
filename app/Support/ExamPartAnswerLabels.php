@@ -165,7 +165,7 @@ class ExamPartAnswerLabels
                 $text = trim((string) ($row['response_text'] ?? ''));
                 $data['answers'][$key]['answer'] = $text === ''
                     ? []
-                    : preg_split('/\r?\n/', $text) ?: [];
+                    : (preg_split('/\r?\n/', $text) ?: []);
             } else {
                 $text = $row['response_text'] ?? null;
                 $data['answers'][$key]['answer'] = ($text === null || $text === '')
