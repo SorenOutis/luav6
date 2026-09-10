@@ -40,6 +40,7 @@ use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\WorkspaceController;
@@ -292,6 +293,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
         Route::post('/runs/{run}/finish', [TowerDefenseController::class, 'finishRun'])->middleware(['student.page:games', 'throttle:30,1'])->name('runs.finish');
         Route::get('/leaderboard/{level}', [TowerDefenseController::class, 'leaderboard'])->middleware('student.page:games')->name('leaderboard');
     });
+
+    // Support — submit concerns, track status and replies.
+    Route::get('support', [SupportTicketController::class, 'index'])->name('support.index');
+    Route::post('support', [SupportTicketController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
+    Route::post('support/{ticket}/reply', [SupportTicketController::class, 'reply'])->middleware('throttle:10,1')->name('support.reply');
 
     // Admin routes
     Route::get('admin/exams/submissions', [ExamSubmissionController::class, 'index'])->name('admin.exams.submissions');

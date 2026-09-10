@@ -1507,7 +1507,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'all'
-                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        ? 'bg-[#D97757] text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -1516,7 +1516,7 @@ onMounted(() => {
                                     class="py-0.2 rounded-full px-1.5 text-[11px]"
                                     :class="
                                         activeTab === 'all'
-                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            ? 'bg-white/25 text-white'
                                             : 'bg-muted text-muted-foreground'
                                     "
                                 >
@@ -1530,7 +1530,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'pending'
-                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        ? 'bg-[#D97757] text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -1539,7 +1539,7 @@ onMounted(() => {
                                     class="py-0.2 rounded-full px-1.5 text-[11px]"
                                     :class="
                                         activeTab === 'pending'
-                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            ? 'bg-white/25 text-white'
                                             : 'bg-muted text-muted-foreground'
                                     "
                                 >
@@ -1553,7 +1553,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'submitted'
-                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        ? 'bg-[#D97757] text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -1562,7 +1562,7 @@ onMounted(() => {
                                     class="py-0.2 rounded-full px-1.5 text-[11px]"
                                     :class="
                                         activeTab === 'submitted'
-                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            ? 'bg-white/25 text-white'
                                             : 'bg-muted text-muted-foreground'
                                     "
                                 >
@@ -1576,7 +1576,7 @@ onMounted(() => {
                                 class="dash-btn inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition-all active:scale-95 sm:h-9 sm:px-3.5 sm:text-[13px]"
                                 :class="
                                     activeTab === 'graded'
-                                        ? 'bg-primary text-primary-foreground shadow-xs'
+                                        ? 'bg-[#D97757] text-white shadow-xs'
                                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 "
                             >
@@ -1585,7 +1585,7 @@ onMounted(() => {
                                     class="py-0.2 rounded-full px-1.5 text-[11px]"
                                     :class="
                                         activeTab === 'graded'
-                                            ? 'bg-primary-foreground/20 text-primary-foreground'
+                                            ? 'bg-white/25 text-white'
                                             : 'bg-muted text-muted-foreground'
                                     "
                                 >

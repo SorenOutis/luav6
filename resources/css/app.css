@@ -15,6 +15,8 @@
 
     --color-card: #faf7f2;
     --color-card-foreground: #1a1a1e;
+    --color-popover: #faf7f2;
+    --color-popover-foreground: #1a1a1e;
 
     --color-primary: #1a1a1e;
     --color-primary-foreground: #faf7f2;
@@ -53,6 +55,8 @@
     --color-foreground: #172119;
     --color-card: #fffdf7;
     --color-card-foreground: #172119;
+    --color-popover: #fffdf7;
+    --color-popover-foreground: #172119;
     --color-primary: #2f7d51;
     --color-primary-foreground: #ffffff;
     --color-secondary: #dcebd4;
@@ -79,6 +83,8 @@
     --color-foreground: #e1e8e2;
     --color-card: #141a15;
     --color-card-foreground: #e1e8e2;
+    --color-popover: #141a15;
+    --color-popover-foreground: #e1e8e2;
     --color-primary: #4ade80;
     --color-primary-foreground: #061a0c;
     --color-secondary: #1a2e1f;
@@ -103,6 +109,8 @@
 
     --color-card: #221c18;
     --color-card-foreground: #f5f0eb;
+    --color-popover: #221c18;
+    --color-popover-foreground: #f5f0eb;
 
     --color-primary: #f5f0eb;
     --color-primary-foreground: #1a1410;
@@ -139,6 +147,8 @@
     --color-foreground: #1a1a1e;
     --color-card: #faf7f2;
     --color-card-foreground: #1a1a1e;
+    --color-popover: #faf7f2;
+    --color-popover-foreground: #1a1a1e;
     --color-primary: #1a1a1e;
     --color-primary-foreground: #faf7f2;
     --color-secondary: #ebe5dc;
@@ -167,6 +177,8 @@
     --color-foreground: #f5f0eb;
     --color-card: #221c18;
     --color-card-foreground: #f5f0eb;
+    --color-popover: #221c18;
+    --color-popover-foreground: #f5f0eb;
     --color-primary: #f5f0eb;
     --color-primary-foreground: #1a1410;
     --color-secondary: #2a2420;
@@ -196,6 +208,8 @@
     --color-foreground: #172119;
     --color-card: #fffdf7;
     --color-card-foreground: #172119;
+    --color-popover: #fffdf7;
+    --color-popover-foreground: #172119;
     --color-primary: #2f7d51;
     --color-primary-foreground: #ffffff;
     --color-secondary: #dcebd4;
@@ -222,6 +236,8 @@
     --color-foreground: #f5f7f0;
     --color-card: #141a15;
     --color-card-foreground: #f5f7f0;
+    --color-popover: #141a15;
+    --color-popover-foreground: #f5f7f0;
     --color-primary: #4ade80;
     --color-primary-foreground: #0c120e;
     --color-secondary: #1a2e1f;
@@ -249,6 +265,8 @@
     --color-foreground: #1a1a1e;
     --color-card: #faf7f2;
     --color-card-foreground: #1a1a1e;
+    --color-popover: #faf7f2;
+    --color-popover-foreground: #1a1a1e;
     --color-primary: #1a1a1e;
     --color-primary-foreground: #faf7f2;
     --color-secondary: #ebe5dc;
@@ -287,6 +305,8 @@
     --color-foreground: #f5f0eb;
     --color-card: #221c18;
     --color-card-foreground: #f5f0eb;
+    --color-popover: #221c18;
+    --color-popover-foreground: #f5f0eb;
     --color-primary: #f5f0eb;
     --color-primary-foreground: #1a1410;
     --color-secondary: #2a2420;
@@ -3294,17 +3314,13 @@ html[data-low-end] .welcome-defer {
     }
 
     .mobile-assignment-tabs button.is-active {
-        border-color: var(--color-primary);
-        background: var(--color-primary);
-        color: var(--color-primary-foreground);
+        border-color: #d97757;
+        background: #d97757;
+        color: #fff;
     }
 
     .mobile-assignment-tabs button.is-active span {
-        background: color-mix(
-            in srgb,
-            var(--color-primary-foreground) 20%,
-            transparent
-        );
+        background: rgb(255 255 255 / 0.25);
     }
 
     .mobile-assignment-search {
@@ -3865,9 +3881,9 @@ html[data-low-end] .welcome-defer {
     }
 
     .mobile-course-filters button.is-active {
-        border-color: var(--color-primary);
-        background: var(--color-primary);
-        color: var(--color-primary-foreground);
+        border-color: #d97757;
+        background: #d97757;
+        color: #fff;
     }
 
     .mobile-course-list {
