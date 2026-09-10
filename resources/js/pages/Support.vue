@@ -682,7 +682,9 @@ useIntervalFn(
                                             : 'Daily ticket limit reached. Please try again tomorrow.'
                                     }}
                                 </p>
-                                <InputError :message="form.errors.limit" />
+                                <InputError
+                                    :message="page.props.errors.limit"
+                                />
                             </form>
                         </div>
                     </template>

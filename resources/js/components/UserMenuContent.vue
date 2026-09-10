@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { Building2, Check, LifeBuoy, LogOut, Settings, XCircle } from 'lucide-vue-next';
+import {
+    Building2,
+    Check,
+    LifeBuoy,
+    LogOut,
+    Settings,
+    XCircle,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import {
     DropdownMenuGroup,
