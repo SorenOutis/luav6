@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Badge;
 use App\Models\Season;
+use App\Models\SupportTicket;
 use App\Models\User;
 use App\Notifications\StudentActivityNotification;
 use App\Support\PublicFileUrl;
@@ -54,6 +55,18 @@ class StudentNotificationService
             'meta' => $seasonName ? "Earned in {$seasonName}" : 'Lifetime badge',
             'image' => PublicFileUrl::resolve($badge->image_path),
             'href' => "/u/{$user->public_id}",
+        ]));
+    }
+
+    public function sendSupportReply(User $student, SupportTicket $ticket): void
+    {
+        $student->notify(new StudentActivityNotification([
+            'type' => 'support',
+            'icon' => 'lifebuoy',
+            'title' => 'Support team replied',
+            'message' => $ticket->subject,
+            'meta' => SupportTicket::STATUSES[$ticket->status] ?? $ticket->status,
+            'href' => '/support',
         ]));
     }
 }

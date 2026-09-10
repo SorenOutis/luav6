@@ -431,7 +431,7 @@ onMounted(() => {
                                 class="rounded-full border px-3 py-1.5 text-[11px] font-bold transition-all"
                                 :class="
                                     selectedCategory === cat.slug
-                                        ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                                        ? 'border-[#D97757] bg-[#D97757] text-white shadow-sm'
                                         : 'border-border/40 bg-background/60 text-muted-foreground/70 hover:border-primary/30 hover:text-foreground'
                                 "
                             >

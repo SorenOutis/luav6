@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { Building2, Check, LogOut, Settings, XCircle } from 'lucide-vue-next';
+import {
+    Building2,
+    Check,
+    LifeBuoy,
+    LogOut,
+    Settings,
+    XCircle,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import {
     DropdownMenuGroup,
@@ -100,6 +107,12 @@ const stopInspecting = () => {
             <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
                 <Settings class="mr-2 h-4 w-4" />
                 Settings
+            </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem :as-child="true">
+            <Link class="block w-full cursor-pointer" href="/support" prefetch>
+                <LifeBuoy class="mr-2 h-4 w-4" />
+                Support
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>

@@ -313,7 +313,13 @@ describe('activities hub — exam card visibility', () => {
             exam_date: '2020-01-01 12:00:00',
             exam_date_iso: '2020-01-01T12:00:00+08:00',
         };
-        const open = mkExam(3, 'Season 1', 'BSIT 1-A');
+        const open = {
+            ...mkExam(3, 'Season 1', 'BSIT 1-A'),
+            // Pinned to the future so the "open" accent holds no matter
+            // when the suite runs (the 2026 default ages into "overdue").
+            exam_date: '2099-09-10 12:00:00',
+            exam_date_iso: '2099-09-10T12:00:00+08:00',
+        };
 
         const wrapper = mount(Activities, {
             props: {
