@@ -472,6 +472,43 @@
 }
 
 /* ════════════════════════════════════════════════════
+   MARKETING BANDS
+   The inverted sections on the public pages (the how-it-works loop and
+   the closing CTA on Welcome / About). They are painted with the
+   primary / primary-foreground pair, so they follow the cream theme in
+   light mode and invert cleanly in dark mode instead of carrying a
+   hard-coded white / dark-green palette that only worked in one mode.
+
+   The mint accent is mixed from the band's own foreground plus the
+   dashboard green, which keeps it legible on a near-black band (light
+   mode) and on a cream band (dark mode). Inverting the band inverts
+   the accent with it, so no per-mode override is needed.
+   ════════════════════════════════════════════════════ */
+.marketing-band {
+    --band-accent: color-mix(
+        in srgb,
+        var(--color-primary-foreground) 78%,
+        var(--dash-green, #4d9375)
+    );
+}
+
+.marketing-band .band-accent {
+    color: var(--band-accent);
+}
+
+.marketing-band .band-accent-underline {
+    text-decoration-color: color-mix(
+        in srgb,
+        var(--band-accent) 45%,
+        transparent
+    );
+}
+
+.marketing-band .band-accent-hover:hover {
+    color: var(--color-primary-foreground);
+}
+
+/* ════════════════════════════════════════════════════
    EXAM THEME
    ════════════════════════════════════════════════════ */
 
@@ -1987,52 +2024,6 @@ html[data-low-end] .welcome-defer {
     .mobile-ui-page .dash-btn {
         min-height: 44px;
         border-radius: 0.875rem;
-    }
-
-    /* Welcome page: use the actual cream/warm-brown theme tokens rather
-       than the older hard-coded landing-page background values. */
-    .welcome-root.mobile-ui-page {
-        background-color: var(--color-background) !important;
-        color: var(--color-foreground) !important;
-    }
-
-    .welcome-root.mobile-ui-page > header {
-        border-color: var(--color-border) !important;
-        background-color: color-mix(
-            in srgb,
-            var(--color-background) 94%,
-            transparent
-        ) !important;
-    }
-
-    .welcome-root.mobile-ui-page .welcome-loop,
-    .welcome-root.mobile-ui-page .welcome-cta {
-        border: 1px solid var(--color-border);
-        background-color: var(--color-card) !important;
-        color: var(--color-card-foreground) !important;
-    }
-
-    .welcome-root.mobile-ui-page .welcome-loop [class*='text-[#f8f7f2]'],
-    .welcome-root.mobile-ui-page .welcome-cta [class*='text-[#f8f7f2]'] {
-        color: var(--color-card-foreground) !important;
-    }
-
-    .welcome-root.mobile-ui-page .welcome-loop [class*='text-[#b8e3d8]'],
-    .welcome-root.mobile-ui-page .welcome-cta [class*='text-[#b8e3d8]'] {
-        color: var(--dash-green) !important;
-    }
-
-    .welcome-root.mobile-ui-page [class*='bg-[#17201f]'] {
-        background-color: var(--color-card) !important;
-    }
-
-    .welcome-root.mobile-ui-page [class*='bg-[#b8e3d8]'] {
-        background-color: var(--color-primary) !important;
-        color: var(--color-primary-foreground) !important;
-    }
-
-    .welcome-root.mobile-ui-page [class*='border-[#f8f7f2]'] {
-        border-color: var(--color-border) !important;
     }
 
     /* Authenticated pages: consistent phone gutters and calmer card rhythm. */

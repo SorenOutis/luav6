@@ -113,7 +113,7 @@ const handleNavClick = (e: MouseEvent, targetId: string) => {
 
 <template>
     <header
-        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-[#17201f]/10 bg-[#f8f7f2]/95 px-4 py-3 sm:px-6 sm:py-4 md:bg-[#f8f7f2]/80 md:backdrop-blur-xl lg:px-16 lg:py-5 dark:border-border/5 dark:bg-background/95 md:dark:bg-background/30"
+        class="sticky top-0 z-50 flex w-full items-center justify-between border-b border-border/10 bg-background/95 px-4 py-3 sm:px-6 sm:py-4 md:bg-background/80 md:backdrop-blur-xl lg:px-16 lg:py-5"
     >
         <Motion
             :initial="liteMotion ? false : { x: -20, opacity: 0 }"

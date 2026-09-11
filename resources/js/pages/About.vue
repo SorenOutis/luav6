@@ -178,7 +178,7 @@ const revealTransition = (delay = 0) =>
     />
 
     <div
-        class="about-root min-h-screen overflow-x-hidden bg-[#f8f7f2] font-sans text-[#17201f] selection:bg-primary/20 dark:bg-background dark:text-foreground"
+        class="about-root min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20"
     >
         <WelcomeHeader
             :can-register="props.canRegister"
@@ -433,7 +433,7 @@ const revealTransition = (delay = 0) =>
                 :transition="revealTransition()"
             >
                 <section
-                    class="my-16 rounded-2xl bg-[#17201f] px-5 py-8 text-[#f8f7f2] sm:my-20 sm:px-10 sm:py-10"
+                    class="marketing-band my-16 rounded-2xl bg-primary px-5 py-8 text-primary-foreground sm:my-20 sm:px-10 sm:py-10"
                     aria-labelledby="loop-heading"
                 >
                     <h2
@@ -462,7 +462,7 @@ const revealTransition = (delay = 0) =>
                             class="relative flex flex-col items-center text-center md:items-start md:text-left"
                         >
                             <div
-                                class="flex h-12 w-12 items-center justify-center rounded-full border border-primary/70 text-[#b8e3d8]"
+                                class="band-accent flex h-12 w-12 items-center justify-center rounded-full border border-primary-foreground/30"
                             >
                                 <component
                                     :is="step.icon"
@@ -473,18 +473,18 @@ const revealTransition = (delay = 0) =>
                             </div>
                             <ArrowRight
                                 v-if="index < 2"
-                                class="hidden h-4 w-4 text-primary md:absolute md:top-6 md:right-5 md:block"
+                                class="hidden h-4 w-4 text-primary-foreground/40 md:absolute md:top-6 md:right-5 md:block"
                                 aria-hidden="true"
                             />
                             <p
-                                class="mt-4 max-w-xs text-sm leading-relaxed text-[#f8f7f2]/80"
+                                class="mt-4 max-w-xs text-sm leading-relaxed text-primary-foreground/80"
                             >
                                 {{ step.text }}
                             </p>
                         </article>
                     </div>
                     <p
-                        class="mt-8 text-center text-xs text-[#b8e3d8] md:text-left"
+                        class="band-accent mt-8 text-center text-xs md:text-left"
                     >
                         The point is not more data. It is a more useful next
                         lesson.
@@ -545,7 +545,7 @@ const revealTransition = (delay = 0) =>
             >
                 <section
                     id="contact"
-                    class="mt-16 scroll-mt-32 rounded-2xl bg-[#17201f] px-6 py-10 text-[#f8f7f2] sm:mt-20 sm:px-10 sm:py-12 lg:px-12"
+                    class="marketing-band mt-16 scroll-mt-32 rounded-2xl bg-primary px-6 py-10 text-primary-foreground sm:mt-20 sm:px-10 sm:py-12 lg:px-12"
                     aria-labelledby="contact-heading"
                 >
                     <div
@@ -553,7 +553,7 @@ const revealTransition = (delay = 0) =>
                     >
                         <div>
                             <p
-                                class="text-xs font-medium tracking-[0.16em] text-[#b8e3d8] uppercase"
+                                class="band-accent text-xs font-medium tracking-[0.16em] uppercase"
                             >
                                 Start with the next lesson
                             </p>
@@ -565,7 +565,7 @@ const revealTransition = (delay = 0) =>
                                 talk.
                             </h2>
                             <p
-                                class="mt-4 text-sm text-[#f8f7f2]/70 sm:text-base"
+                                class="mt-4 text-sm text-primary-foreground/70 sm:text-base"
                             >
                                 Start with a teacher, a class, or a whole
                                 school.
@@ -575,7 +575,7 @@ const revealTransition = (delay = 0) =>
                             <Link
                                 v-if="$page.props.auth?.user"
                                 :href="dashboard().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary-foreground px-5 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
                             >
                                 Open dashboard
                                 <ArrowRight
@@ -586,7 +586,7 @@ const revealTransition = (delay = 0) =>
                             <Link
                                 v-else-if="props.canRegister"
                                 :href="register().url"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#b8e3d8] px-5 text-sm font-semibold text-[#17201f] transition-colors hover:bg-[#d3f0e7] focus-visible:ring-2 focus-visible:ring-[#b8e3d8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary-foreground px-5 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
                             >
                                 Create a free account
                                 <ArrowRight
@@ -596,7 +596,7 @@ const revealTransition = (delay = 0) =>
                             </Link>
                             <a
                                 href="mailto:hello@koamishin.dev?subject=LSI%20school%20pricing"
-                                class="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#f8f7f2]/45 px-5 text-sm font-medium text-[#f8f7f2] transition-colors hover:border-[#f8f7f2] hover:bg-[#f8f7f2]/10 focus-visible:ring-2 focus-visible:ring-[#f8f7f2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17201f]"
+                                class="inline-flex min-h-11 items-center justify-center rounded-lg border border-primary-foreground/45 px-5 text-sm font-medium text-primary-foreground transition-colors hover:border-primary-foreground hover:bg-primary-foreground/10 focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary"
                                 >Contact sales</a
                             >
                         </div>
