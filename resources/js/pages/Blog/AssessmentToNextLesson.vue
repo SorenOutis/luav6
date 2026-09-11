@@ -69,9 +69,7 @@ const pillarJsonLd = [
         :jsonld="pillarJsonLd"
     />
 
-    <div
-        class="min-h-screen bg-[#f8f7f2] text-[#17201f] dark:bg-background dark:text-foreground"
-    >
+    <div class="min-h-screen bg-background text-foreground">
         <WelcomeHeader
             :can-register="true"
             :auth="$page.props.auth"
