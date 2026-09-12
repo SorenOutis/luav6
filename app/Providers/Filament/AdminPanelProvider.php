@@ -7,13 +7,21 @@ use App\Filament\Widgets\ActivityFeedWidget;
 use App\Filament\Widgets\AdminActivityTrendChart;
 use App\Filament\Widgets\AdminAnalyticsOverview;
 use App\Filament\Widgets\AdminCommandCenterWidget;
+use App\Filament\Widgets\AssignmentGradingQueueWidget;
+use App\Filament\Widgets\ContentPerformanceWidget;
+use App\Filament\Widgets\EngagementMetricsWidget;
 use App\Filament\Widgets\ExamPerformanceWidget;
+use App\Filament\Widgets\GamificationInsightsWidget;
 use App\Filament\Widgets\LatestExamSubmissionsWidget;
 use App\Filament\Widgets\NeuronUsageWidget;
+use App\Filament\Widgets\PendingTasksWidget;
 use App\Filament\Widgets\QuickActionsWidget;
+use App\Filament\Widgets\RecentSupportTicketsWidget;
+use App\Filament\Widgets\RetentionInsightsWidget;
 use App\Filament\Widgets\SeasonProgressWidget;
 use App\Filament\Widgets\SectionComparisonWidget;
 use App\Filament\Widgets\StudentRiskWidget;
+use App\Filament\Widgets\SystemHealthWidget;
 use App\Filament\Widgets\TopStudentsWidget;
 use App\Http\Middleware\SecurityHeaders;
 use App\Support\FaviconUrl;
@@ -74,18 +82,45 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
+                // Hero / KPI - full width
                 AdminCommandCenterWidget::class,
                 AdminAnalyticsOverview::class,
+
+                // Pending tasks + Quick actions (4 + 8 on xl) -> actionable first row
+                PendingTasksWidget::class,
+                QuickActionsWidget::class,
+
+                // Engagement health full width
+                EngagementMetricsWidget::class,
+
+                // AI usage + System health + Gamification
                 NeuronUsageWidget::class,
-                SeasonProgressWidget::class,
+                SystemHealthWidget::class,
+                GamificationInsightsWidget::class,
+
+                // Content performance + Trends + Exam performance
+                ContentPerformanceWidget::class,
                 AdminActivityTrendChart::class,
                 ExamPerformanceWidget::class,
+
+                // Season progress full width
+                SeasonProgressWidget::class,
+
+                // Activity + submissions (6 + 6)
                 ActivityFeedWidget::class,
                 LatestExamSubmissionsWidget::class,
+
+                // Students + sections (6 + 6)
                 TopStudentsWidget::class,
                 SectionComparisonWidget::class,
+
+                // Grading + Tickets (6 + 6)
+                AssignmentGradingQueueWidget::class,
+                RecentSupportTicketsWidget::class,
+
+                // Retention + Risk (6 + 6)
+                RetentionInsightsWidget::class,
                 StudentRiskWidget::class,
-                QuickActionsWidget::class,
             ])
             ->middleware([
                 SecurityHeaders::class,
