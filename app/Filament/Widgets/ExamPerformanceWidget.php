@@ -2,9 +2,8 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Exam;
+use App\Services\AdminDashboardService;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\DB;
 
 class ExamPerformanceWidget extends ChartWidget
 {
@@ -12,33 +11,33 @@ class ExamPerformanceWidget extends ChartWidget
 
     protected ?string $description = 'Score ranges from all published exams in the last 30 days.';
 
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
 
     protected static ?int $sort = 5;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 12,
+        'lg' => 4,
+    ];
 
-    protected ?string $maxHeight = '330px';
+    protected ?string $maxHeight = '340px';
+
+    protected static bool $isLazy = true;
 
     protected function getType(): string
     {
         return 'bar';
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     protected function getOptions(): array
     {
         return [
             'maintainAspectRatio' => false,
             'plugins' => [
-                'legend' => [
-                    'display' => false,
-                ],
+                'legend' => ['display' => false],
                 'tooltip' => [
                     'callbacks' => [
-                        'label' => 'function(context) { return context.parsed.y . " students"; }',
+                        'label' => 'function(context) { return context.parsed.y + " submissions"; }',
                     ],
                 ],
             ],
@@ -46,7 +45,7 @@ class ExamPerformanceWidget extends ChartWidget
                 'y' => [
                     'beginAtZero' => true,
                     'ticks' => ['precision' => 0, 'stepSize' => 1],
-                    'grid' => ['drawBorder' => false],
+                    'grid' => ['drawBorder' => false, 'color' => 'rgba(0,0,0,0.04)'],
                 ],
                 'x' => [
                     'grid' => ['display' => false],
@@ -55,55 +54,23 @@ class ExamPerformanceWidget extends ChartWidget
         ];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
     protected function getData(): array
     {
-        $cutoff = now()->subDays(30)->toDateString();
-
-        // Get best score per user per exam in last 30 days
-        $bestScores = DB::table('exam_submissions')
-            ->whereIn('exam_id', Exam::query()->select('id'))
-            ->select('user_id', 'exam_id', DB::raw('MAX(CAST(score AS DECIMAL(10,2))) as best_score'))
-            ->where('created_at', '>=', $cutoff)
-            ->whereNotNull('score')
-            ->groupBy('user_id', 'exam_id')
-            ->get();
-
-        // Bucket the scores
-        $buckets = ['0–20' => 0, '21–40' => 0, '41–60' => 0, '61–80' => 0, '81–100' => 0];
-
-        foreach ($bestScores as $row) {
-            $score = (float) $row->best_score;
-            if ($score <= 20) {
-                $buckets['0–20']++;
-            } elseif ($score <= 40) {
-                $buckets['21–40']++;
-            } elseif ($score <= 60) {
-                $buckets['41–60']++;
-            } elseif ($score <= 80) {
-                $buckets['61–80']++;
-            } else {
-                $buckets['81–100']++;
-            }
-        }
-
-        $labels = array_keys($buckets);
-        $data = array_values($buckets);
+        $service = app(AdminDashboardService::class);
+        $buckets = $service->getExamPerformance();
 
         return [
-            'labels' => $labels,
+            'labels' => array_keys($buckets),
             'datasets' => [
                 [
-                    'label' => 'Students',
-                    'data' => $data,
+                    'label' => 'Submissions',
+                    'data' => array_values($buckets),
                     'backgroundColor' => [
-                        'rgba(239, 68, 68, 0.8)',
-                        'rgba(249, 115, 22, 0.8)',
-                        'rgba(234, 179, 8, 0.8)',
-                        'rgba(132, 204, 22, 0.8)',
-                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(239, 68, 68, 0.85)',
+                        'rgba(249, 115, 22, 0.85)',
+                        'rgba(234, 179, 8, 0.85)',
+                        'rgba(132, 204, 22, 0.85)',
+                        'rgba(34, 197, 94, 0.85)',
                     ],
                     'borderColor' => [
                         '#ef4444',
@@ -113,8 +80,9 @@ class ExamPerformanceWidget extends ChartWidget
                         '#22c55e',
                     ],
                     'borderWidth' => 1,
-                    'borderRadius' => 6,
-                    'barPercentage' => 0.7,
+                    'borderRadius' => 8,
+                    'barPercentage' => 0.65,
+                    'categoryPercentage' => 0.85,
                 ],
             ],
         ];

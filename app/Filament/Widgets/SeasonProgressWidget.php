@@ -2,113 +2,69 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\GamificationHistory;
-use App\Models\Season;
-use App\Models\SeasonProgress;
+use App\Services\AdminDashboardService;
 use Filament\Support\Enums\IconPosition;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class SeasonProgressWidget extends BaseWidget
 {
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 6;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 12;
 
     protected ?string $heading = 'Season Progress';
 
     protected ?string $description = 'Current season performance and engagement metrics.';
+
+    protected static bool $isLazy = true;
 
     /**
      * @return array<Stat>
      */
     protected function getStats(): array
     {
-        $activeSeason = Season::query()->where('is_active', true)->first();
+        $service = app(AdminDashboardService::class);
+        $data = $service->getSeasonStats();
 
-        if (! $activeSeason) {
+        if (! $data) {
             return [
                 Stat::make('No Active Season', '—')
                     ->description('Configure a season in the admin panel')
-                    ->color('gray'),
+                    ->color('gray')
+                    ->url('/admin/seasons'),
             ];
         }
 
-        $daysElapsed = max(1, $activeSeason->start_date?->diffInDays(now()) ?? 0);
-        $totalDays = $activeSeason->start_date ? $activeSeason->start_date->diffInDays($activeSeason->end_date) : 1;
-        $daysRemaining = max(0, $activeSeason->end_date?->diffInDays(now()) ?? 0);
-        $progressPercent = $totalDays > 0 ? round(($daysElapsed / $totalDays) * 100, 1) : 0;
-
-        // Total XP earned by all students this season
-        $totalSeasonXp = SeasonProgress::query()
-            ->whereHas('season', fn ($q) => $q->where('is_active', true))
-            ->sum('exp');
-
-        // Total points earned
-        $totalSeasonPoints = SeasonProgress::query()
-            ->whereHas('season', fn ($q) => $q->where('is_active', true))
-            ->sum('points');
-
-        // Active students this season (users with season progress > 0)
-        $activeStudents = SeasonProgress::query()
-            ->whereHas('season', fn ($q) => $q->where('is_active', true))
-            ->where('exp', '>', 0)
-            ->distinct('user_id')
-            ->count('user_id');
-
-        // Gamification events this season (count of history entries)
-        $totalEvents = GamificationHistory::query()
-            ->where('season_id', $activeSeason->id)
-            ->count();
-
-        // Avg XP per active student
-        $avgXpPerStudent = $activeStudents > 0 ? round($totalSeasonXp / $activeStudents, 0) : 0;
-
         return [
-            Stat::make('Season Progress', $progressPercent.'%')
-                ->description($daysRemaining.' days remaining')
+            Stat::make('Season Progress', $data['progressPercent'].'%')
+                ->description($data['daysRemaining'].' days remaining in '.$data['season']->name)
                 ->descriptionIcon('heroicon-m-clock', IconPosition::Before)
                 ->icon('heroicon-o-calendar')
-                ->chart([$daysElapsed, max(0, $totalDays - $daysElapsed)])
-                ->color('primary'),
+                ->chart([$data['daysElapsed'], max(0, $data['totalDays'] - $data['daysElapsed'])])
+                ->color('primary')
+                ->url('/admin/seasons'),
 
-            Stat::make('Active Students', number_format($activeStudents))
-                ->description('Avg '.number_format($avgXpPerStudent).' XP per student')
+            Stat::make('Active Students', number_format($data['activeStudents']))
+                ->description('Avg '.number_format($data['avgXpPerStudent']).' XP per student')
                 ->descriptionIcon('heroicon-m-users', IconPosition::Before)
                 ->icon('heroicon-o-academic-cap')
                 ->color('success'),
 
-            Stat::make('Total XP Earned', number_format($totalSeasonXp))
-                ->description(number_format($totalSeasonPoints).' points distributed')
+            Stat::make('Total XP Earned', number_format($data['totalXp']))
+                ->description(number_format($data['totalPoints']).' points distributed')
                 ->descriptionIcon('heroicon-m-bolt', IconPosition::Before)
                 ->icon('heroicon-o-trophy')
-                ->chart($this->weeklyXpTrend($activeSeason->id))
+                ->chart($data['weeklyTrend'])
                 ->color('info'),
 
-            Stat::make('Total Events', number_format($totalEvents))
+            Stat::make('Total Events', number_format($data['totalEvents']))
                 ->description('Gamification actions recorded')
                 ->descriptionIcon('heroicon-m-chart-bar', IconPosition::Before)
                 ->icon('heroicon-o-rectangle-stack')
                 ->color('warning'),
         ];
-    }
-
-    /**
-     * @return array<float>
-     */
-    private function weeklyXpTrend(int $seasonId): array
-    {
-        $raw = GamificationHistory::query()
-            ->where('season_id', $seasonId)
-            ->whereDate('created_at', '>=', now()->subDays(6)->toDateString())
-            ->selectRaw('DATE(created_at) as day, SUM(amount_xp) as total')
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        return collect(range(6, 0))
-            ->map(fn (int $daysAgo): float => (float) ($raw[now()->subDays($daysAgo)->toDateString()] ?? 0))
-            ->all();
     }
 }

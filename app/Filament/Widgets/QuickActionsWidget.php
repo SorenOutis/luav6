@@ -2,49 +2,38 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Assignment;
-use App\Models\Exam;
-use App\Models\ExamSubmission;
-use App\Models\User;
+use App\Services\AdminDashboardService;
 use Filament\Widgets\Widget;
 
 class QuickActionsWidget extends Widget
 {
     protected static ?int $sort = 2;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 12,
+        'xl' => 8,
+    ];
+
+    // Pair with PendingTasksWidget (4 cols) on xl screens
 
     protected string $view = 'filament.widgets.quick-actions';
 
+    protected static bool $isLazy = true;
+
     protected function getViewData(): array
     {
-        $totalStudents = User::query()->where('is_admin', false)->forWorkspace()->count();
-        $totalExams = Exam::query()->where('status', '!=', 'draft')->count();
-        $totalAssignments = Assignment::query()->count();
-        $pendingReview = Exam::query()->where('status', 'published')->sum(
-            \DB::raw('(SELECT COUNT(*) FROM exam_submissions WHERE exam_submissions.exam_id = exams.id)')
-        );
-
-        $recentlyBanned = User::query()
-            ->where('is_admin', false)
-            ->forWorkspace()
-            ->where('is_banned', true)
-            ->where('banned_at', '>=', now()->subDays(7))
-            ->count();
-
-        // Compute pending exam submissions (no score yet)
-        $pendingSubmissions = ExamSubmission::query()
-            ->whereHas('exam')
-            ->whereNull('score')
-            ->count();
+        $service = app(AdminDashboardService::class);
+        $data = $service->getQuickActionsData();
 
         return [
-            'totalStudents' => $totalStudents,
-            'totalExams' => $totalExams,
-            'totalAssignments' => $totalAssignments,
-            'pendingReview' => $pendingReview,
-            'pendingSubmissions' => $pendingSubmissions,
-            'recentlyBanned' => $recentlyBanned,
+            'totalStudents' => $data['totalStudents'] ?? 0,
+            'totalExams' => $data['totalExams'] ?? 0,
+            'totalAssignments' => $data['totalAssignments'] ?? 0,
+            'pendingSubmissions' => $data['pendingSubmissions'] ?? 0,
+            'recentlyBanned' => $data['recentlyBanned'] ?? 0,
+            'pendingTickets' => $data['pendingTickets'] ?? 0,
+            'pendingAiDrafts' => $data['pendingAiDrafts'] ?? 0,
+            'failedJobs' => $data['failedJobs'] ?? 0,
         ];
     }
 }
