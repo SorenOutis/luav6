@@ -2,12 +2,8 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Assignment;
-use App\Models\ExamSubmission;
-use App\Models\User;
-use Carbon\CarbonInterface;
+use App\Services\AdminDashboardService;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\DB;
 
 class AdminActivityTrendChart extends ChartWidget
 {
@@ -15,23 +11,20 @@ class AdminActivityTrendChart extends ChartWidget
 
     protected ?string $description = 'Daily student registrations, exam submissions, and assignment activity.';
 
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 4;
 
     protected int|string|array $columnSpan = [
-        'md' => 2,
-        'xl' => 2,
+        'default' => 12,
+        'lg' => 8,
     ];
 
-    protected ?string $maxHeight = '330px';
+    protected ?string $maxHeight = '340px';
 
     public ?string $timeRange = '7d';
 
-    protected function getHeaderWidgets(): array
-    {
-        return [];
-    }
+    protected static bool $isLazy = true;
 
     protected function getFilters(): ?array
     {
@@ -54,6 +47,7 @@ class AdminActivityTrendChart extends ChartWidget
     {
         return [
             'maintainAspectRatio' => false,
+            'interaction' => ['mode' => 'index', 'intersect' => false],
             'plugins' => [
                 'legend' => [
                     'display' => true,
@@ -61,21 +55,28 @@ class AdminActivityTrendChart extends ChartWidget
                     'labels' => [
                         'boxWidth' => 12,
                         'font' => ['size' => 11],
+                        'usePointStyle' => true,
+                        'padding' => 16,
                     ],
+                ],
+                'tooltip' => [
+                    'mode' => 'index',
+                    'intersect' => false,
                 ],
             ],
             'scales' => [
                 'y' => [
                     'beginAtZero' => true,
                     'ticks' => ['precision' => 0],
-                    'grid' => ['drawBorder' => false],
+                    'grid' => ['drawBorder' => false, 'color' => 'rgba(0,0,0,0.04)'],
                 ],
                 'x' => [
                     'grid' => ['display' => false],
                 ],
             ],
             'elements' => [
-                'point' => ['radius' => 2, 'hoverRadius' => 4],
+                'point' => ['radius' => 0, 'hoverRadius' => 4, 'hitRadius' => 8],
+                'line' => ['borderWidth' => 2],
             ],
         ];
     }
@@ -85,75 +86,34 @@ class AdminActivityTrendChart extends ChartWidget
      */
     protected function getData(): array
     {
-        $days = match ($this->timeRange) {
-            '14d' => 13,
-            '30d' => 29,
-            default => 6,
-        };
-
-        $dates = collect(range($days, 0))
-            ->map(fn (int $daysAgo) => now()->subDays($daysAgo)->startOfDay());
-
-        $labels = $dates->map(fn (CarbonInterface $date) => $date->format('M d'))->all();
-
-        $registrationsRaw = User::query()
-            ->where('is_admin', false)
-            ->forWorkspace()
-            ->whereDate('created_at', '>=', now()->subDays($days)->toDateString())
-            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $examSubmissionsRaw = ExamSubmission::query()
-            ->whereHas('exam')
-            ->whereDate('created_at', '>=', now()->subDays($days)->toDateString())
-            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $assignmentSubmissionsRaw = DB::table('assignment_user')
-            ->whereIn('assignment_id', Assignment::query()->select('id'))
-            ->where('submitted', true)
-            ->whereDate('updated_at', '>=', now()->subDays($days)->toDateString())
-            ->selectRaw('DATE(updated_at) as day, COUNT(*) as total')
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $registrations = $dates->map(
-            fn (CarbonInterface $date) => (int) ($registrationsRaw[$date->toDateString()] ?? 0)
-        )->all();
-        $examSubmissions = $dates->map(
-            fn (CarbonInterface $date) => (int) ($examSubmissionsRaw[$date->toDateString()] ?? 0)
-        )->all();
-        $assignmentSubmissions = $dates->map(
-            fn (CarbonInterface $date) => (int) ($assignmentSubmissionsRaw[$date->toDateString()] ?? 0)
-        )->all();
+        $service = app(AdminDashboardService::class);
+        $trend = $service->getTrendData($this->filter ?? $this->timeRange ?? '7d');
 
         return [
-            'labels' => $labels,
+            'labels' => $trend['labels'],
             'datasets' => [
                 [
                     'label' => 'New Students',
-                    'data' => $registrations,
+                    'data' => $trend['registrations'],
                     'borderColor' => '#f59e0b',
-                    'backgroundColor' => 'rgba(245, 158, 11, 0.2)',
-                    'tension' => 0.35,
+                    'backgroundColor' => 'rgba(245, 158, 11, 0.12)',
+                    'tension' => 0.4,
                     'fill' => true,
                 ],
                 [
                     'label' => 'Exam Submissions',
-                    'data' => $examSubmissions,
-                    'borderColor' => '#22c55e',
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.15)',
-                    'tension' => 0.35,
+                    'data' => $trend['examSubmissions'],
+                    'borderColor' => '#10b981',
+                    'backgroundColor' => 'rgba(16, 185, 129, 0.10)',
+                    'tension' => 0.4,
                     'fill' => true,
                 ],
                 [
                     'label' => 'Assignment Submissions',
-                    'data' => $assignmentSubmissions,
-                    'borderColor' => '#38bdf8',
-                    'backgroundColor' => 'rgba(56, 189, 248, 0.15)',
-                    'tension' => 0.35,
+                    'data' => $trend['assignmentSubmissions'],
+                    'borderColor' => '#0ea5e9',
+                    'backgroundColor' => 'rgba(14, 165, 233, 0.10)',
+                    'tension' => 0.4,
                     'fill' => true,
                 ],
             ],

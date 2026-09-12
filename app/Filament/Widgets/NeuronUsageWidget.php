@@ -11,15 +11,20 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 /** Workspace-scoped AI budget and usage overview. */
 class NeuronUsageWidget extends StatsOverviewWidget
 {
-    protected ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '120s';
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = [
+        'default' => 12,
+        'xl' => 4,
+    ];
 
     protected ?string $heading = 'Workspace AI Usage & Budget';
 
     protected ?string $description = 'Atomic token reservations plus estimated provider spend. Open the detailed dashboard for feature, provider, and event breakdowns.';
+
+    protected static bool $isLazy = true;
 
     /** @return array<Stat> */
     protected function getStats(): array
