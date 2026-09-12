@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import CookieConsentBanner from '@/components/CookieConsentBanner.vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
 import {
     Card,
@@ -77,7 +78,25 @@ const branding = (page.props.schoolBranding ?? {}) as SchoolBranding;
                         <slot />
                     </CardContent>
                 </Card>
+                <p class="text-center text-xs text-muted-foreground">
+                    By continuing you agree to our
+                    <Link
+                        href="/terms"
+                        class="underline underline-offset-4 hover:text-foreground"
+                    >
+                        Terms
+                    </Link>
+                    and
+                    <Link
+                        href="/privacy"
+                        class="underline underline-offset-4 hover:text-foreground"
+                    >
+                        Privacy Policy
+                    </Link>
+                    .
+                </p>
             </div>
         </div>
+        <CookieConsentBanner />
     </div>
 </template>
