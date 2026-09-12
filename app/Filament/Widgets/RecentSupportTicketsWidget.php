@@ -7,6 +7,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class RecentSupportTicketsWidget extends BaseWidget
 {
@@ -43,7 +44,7 @@ class RecentSupportTicketsWidget extends BaseWidget
                     ->wrap()
                     ->limit(40)
                     ->weight('medium')
-                    ->description(fn (SupportTicket $record) => \Str::limit($record->message, 60)),
+                    ->description(fn (SupportTicket $record) => Str::limit($record->message, 60)),
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Student')
