@@ -231,7 +231,7 @@ onMounted(() => {
                             class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-[10px] font-black tracking-[0.2em] text-primary uppercase"
                         >
                             <Shield class="h-3.5 w-3.5" />
-                            Anonymous Shield Active
+                            Anonymous feed
                         </div>
                         <h1
                             class="text-4xl leading-none font-black tracking-tighter sm:text-6xl"
@@ -242,8 +242,7 @@ onMounted(() => {
                             class="max-w-xl text-base font-medium text-muted-foreground sm:text-lg"
                         >
                             Share your thoughts, celebrate wins, or give
-                            feedback. Your identity is 100% protected by our
-                            elite encryption.
+                            feedback. Your name is never shown on the feed.
                         </p>
                     </div>
 
@@ -488,8 +487,8 @@ onMounted(() => {
                         <DialogDescription
                             class="text-xs leading-tight font-medium text-muted-foreground sm:text-lg"
                         >
-                            Your message will be encrypted and shielded. No one
-                            will know it's you.
+                            Your name is never shown with your post. Posts that
+                            break the rules may still be reviewed by our team.
                         </DialogDescription>
                     </div>
                 </div>
@@ -526,12 +525,12 @@ onMounted(() => {
                         <div
                             class="text-[9px] font-black tracking-[0.1em] text-primary uppercase sm:text-[11px]"
                         >
-                            Identity Shield Active
+                            Anonymous posting
                         </div>
                         <div
                             class="text-[8px] font-bold tracking-widest text-muted-foreground uppercase opacity-60 sm:text-[10px]"
                         >
-                            100% Anonymous Routing
+                            Your name stays hidden on the feed
                         </div>
                     </div>
                 </div>
@@ -550,7 +549,7 @@ onMounted(() => {
                         <Send class="h-4 w-4" />
                     </div>
                     <Sparkles v-else class="h-5 w-5 animate-spin" />
-                    {{ isSubmitting ? 'Encrypting...' : 'Post Shoutout' }}
+                    {{ isSubmitting ? 'Posting...' : 'Post Shoutout' }}
                 </Button>
                 <Button
                     variant="ghost"

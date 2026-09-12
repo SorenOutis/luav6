@@ -5,6 +5,7 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import CookieConsentBanner from '@/components/CookieConsentBanner.vue';
 import FloatingWidget from '@/components/FloatingWidget.vue';
 import MobileNav from '@/components/MobileNav.vue';
 import SeoHead from '@/components/Seo/SeoHead.vue';
@@ -87,6 +88,7 @@ const contentClass = computed(() =>
             </div>
             <MobileNav v-if="!props.hideSidebar" />
             <FloatingWidget />
+            <CookieConsentBanner />
         </AppContent>
     </AppShell>
 </template>

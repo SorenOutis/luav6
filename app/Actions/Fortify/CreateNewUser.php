@@ -32,7 +32,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
             'terms' => ['accepted'],
         ], [
-            'terms.accepted' => 'You must accept the Terms and Conditions to create an account.',
+            'terms.accepted' => 'You must accept the Terms and Conditions and the Privacy Policy to create an account.',
         ])->validate();
 
         return User::create([

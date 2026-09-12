@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { ArrowUp } from 'lucide-vue-next';
+import CookieConsentBanner from '@/components/CookieConsentBanner.vue';
 import { isLowEndDeviceSignal } from '@/lib/device';
 
 const year = new Date().getFullYear();
@@ -11,6 +12,16 @@ const platformLinks = [
     { label: 'Features', href: '/#features' },
     { label: 'Pricing', href: '/#pricing' },
 ];
+
+const legalLinks = [
+    { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Terms and Conditions', href: '/terms' },
+    { label: 'Cookie Policy', href: '/cookies' },
+];
+
+const openCookieSettings = () => {
+    window.dispatchEvent(new CustomEvent('lsi:open-cookie-settings'));
+};
 
 const scrollTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -26,7 +37,7 @@ const scrollTop = () => {
             class="mx-auto max-w-[1500px] px-4 py-12 sm:px-6 sm:py-16 lg:px-16"
         >
             <div
-                class="grid gap-10 md:grid-cols-[1.2fr_1fr] md:items-start lg:grid-cols-[1.5fr_1fr_1fr]"
+                class="grid gap-10 md:grid-cols-[1.2fr_1fr_1fr] md:items-start lg:grid-cols-[1.5fr_1fr_1fr_1fr]"
             >
                 <div class="max-w-sm">
                     <Link
@@ -78,6 +89,29 @@ const scrollTop = () => {
                         hello@koamishin.dev
                     </a>
                 </div>
+
+                <nav aria-label="Legal" class="flex flex-col gap-3">
+                    <p
+                        class="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase"
+                    >
+                        Legal
+                    </p>
+                    <Link
+                        v-for="link in legalLinks"
+                        :key="link.label"
+                        :href="link.href"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        {{ link.label }}
+                    </Link>
+                    <button
+                        type="button"
+                        class="w-fit text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        @click="openCookieSettings"
+                    >
+                        Cookie settings
+                    </button>
+                </nav>
             </div>
 
             <div
@@ -94,5 +128,6 @@ const scrollTop = () => {
                 </button>
             </div>
         </div>
+        <CookieConsentBanner />
     </footer>
 </template>
