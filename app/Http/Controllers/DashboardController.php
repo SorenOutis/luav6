@@ -10,6 +10,7 @@ use App\Services\BadgeAwardService;
 use App\Services\BonusXpService;
 use App\Services\ClaimXpService;
 use App\Services\LeaderboardService;
+use App\Services\StreakRestoreService;
 use App\Services\StreakService;
 use App\Services\UpcomingExamsService;
 use App\Support\PublicFileUrl;
@@ -34,6 +35,7 @@ class DashboardController extends Controller
 
     public function __construct(
         protected StreakService $streakService,
+        protected StreakRestoreService $streakRestoreService,
         protected LeaderboardService $leaderboardService,
         protected UpcomingExamsService $upcomingExamsService,
         protected BadgeAwardService $badgeAwardService,
@@ -286,6 +288,12 @@ class DashboardController extends Controller
                 'isClaim' => in_array($entry->reason, ['Daily Claim', 'Bonus Claim'], true),
             ])->values();
 
+        // ── Streak Restore ─────────────────────────────────────────
+        $restoreCosts = $this->streakRestoreService->costs();
+        $restoreUsed = $this->streakRestoreService->usedThisMonth($user);
+        $restoreLimit = $this->streakRestoreService->monthlyLimit();
+        $restoredDates = $this->streakRestoreService->restoredDates($user);
+
         return inertia('Dashboard', [
             'claimXp' => [
                 'enabled' => $this->claimXpService->isEnabled(),
@@ -335,6 +343,16 @@ class DashboardController extends Controller
                 'earnedAt' => optional($badge->pivot->created_at)?->format('M d, Y'),
             ])->values(),
             'loginDates' => $loginDates,
+            'streakRestore' => [
+                'enabled' => $this->streakRestoreService->isEnabled(),
+                'limit' => $restoreLimit,
+                'used' => $restoreUsed,
+                'remaining' => max(0, $restoreLimit - $restoreUsed),
+                'costs' => $restoreCosts,
+                'nextCost' => $restoreCosts[min($restoreUsed, count($restoreCosts) - 1)],
+                'restoredDates' => $restoredDates,
+                'resetsAt' => now()->addMonthNoOverflow()->startOfMonth()->format('M j'),
+            ],
             'announcements' => $announcements,
             'courses' => $courses,
             'assignments' => $assignments,

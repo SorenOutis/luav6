@@ -56,6 +56,11 @@ it('saves platform-wide toggles to the global scope from the admin panel', funct
         ->set('data.daily_claim_base_xp', 3)
         ->set('data.daily_claim_bonus_enabled', true)
         ->set('data.daily_claim_bonus_xp', 25)
+        ->set('data.streak_restore_enabled', true)
+        ->set('data.streak_restore_monthly_limit', 2)
+        ->set('data.streak_restore_cost_1', 10)
+        ->set('data.streak_restore_cost_2', 20)
+        ->set('data.streak_restore_cost_3', 30)
         ->call('save')
         ->assertHasNoErrors();
 
@@ -63,8 +68,14 @@ it('saves platform-wide toggles to the global scope from the admin panel', funct
         ->and(DB::table('settings')->where('key', 'login_enabled')->whereNull('workspace_id')->value('value'))->toBe('0')
         ->and(DB::table('settings')->where('key', 'daily_claim_bonus_enabled')->whereNull('workspace_id')->value('value'))->toBe('1')
         ->and(DB::table('settings')->where('key', 'daily_claim_bonus_xp')->whereNull('workspace_id')->value('value'))->toBe('25')
+        ->and(DB::table('settings')->where('key', 'streak_restore_enabled')->whereNull('workspace_id')->value('value'))->toBe('1')
+        ->and(DB::table('settings')->where('key', 'streak_restore_monthly_limit')->whereNull('workspace_id')->value('value'))->toBe('2')
+        ->and(DB::table('settings')->where('key', 'streak_restore_cost_1')->whereNull('workspace_id')->value('value'))->toBe('10')
+        ->and(DB::table('settings')->where('key', 'streak_restore_cost_2')->whereNull('workspace_id')->value('value'))->toBe('20')
+        ->and(DB::table('settings')->where('key', 'streak_restore_cost_3')->whereNull('workspace_id')->value('value'))->toBe('30')
         // No row may leak into the admin's workspace scope.
-        ->and(DB::table('settings')->where('key', 'registration_enabled')->whereNotNull('workspace_id')->exists())->toBeFalse();
+        ->and(DB::table('settings')->where('key', 'registration_enabled')->whereNotNull('workspace_id')->exists())->toBeFalse()
+        ->and(DB::table('settings')->where('key', 'streak_restore_cost_1')->whereNotNull('workspace_id')->exists())->toBeFalse();
 });
 
 it('keeps workspace AI budget keys scoped to the admin workspace', function () {
