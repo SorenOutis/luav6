@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -92,7 +93,7 @@ class TopStudentsWidget extends BaseWidget
                     ->toggleable(),
             ])
             ->actions([
-                Tables\Actions\Action::make('view')
+                Action::make('view')
                     ->icon('heroicon-m-eye')
                     ->url(fn (User $record) => "/admin/users/{$record->id}/edit")
                     ->label('View'),
