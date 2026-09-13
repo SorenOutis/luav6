@@ -34,9 +34,13 @@ class AdminDashboard extends BaseDashboard
 
     public function getColumns(): int|array
     {
+        // Every dashboard widget is full-width by design (string 'full'
+        // spans only apply at lg and above), so the grid must stay a
+        // single column below xl. A multi-column md grid would squeeze
+        // full-width widgets side-by-side instead of stacking them.
         return [
             'default' => 1,
-            'md' => 2,
+            'md' => 1,
             'xl' => 3,
         ];
     }

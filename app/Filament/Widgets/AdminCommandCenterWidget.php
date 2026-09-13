@@ -16,6 +16,10 @@ class AdminCommandCenterWidget extends Widget
 {
     protected static ?int $sort = 0;
 
+    // Above-the-fold hero: render on first paint instead of lazy-loading
+    // so the dashboard never flashes a placeholder or shifts layout.
+    protected static bool $isLazy = false;
+
     protected int|string|array $columnSpan = 'full';
 
     protected string $view = 'filament.widgets.admin-command-center';
