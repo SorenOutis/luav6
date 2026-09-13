@@ -11,6 +11,7 @@ use App\Filament\Widgets\ExamPerformanceWidget;
 use App\Filament\Widgets\LatestExamSubmissionsWidget;
 use App\Filament\Widgets\NeuronUsageWidget;
 use App\Filament\Widgets\QuickActionsWidget;
+use App\Filament\Widgets\RecentSupportTicketsWidget;
 use App\Filament\Widgets\SeasonProgressWidget;
 use App\Filament\Widgets\SectionComparisonWidget;
 use App\Filament\Widgets\StudentRiskWidget;
@@ -86,6 +87,7 @@ class AdminPanelProvider extends PanelProvider
                 SectionComparisonWidget::class,
                 StudentRiskWidget::class,
                 QuickActionsWidget::class,
+                RecentSupportTicketsWidget::class,
             ])
             ->middleware([
                 SecurityHeaders::class,
