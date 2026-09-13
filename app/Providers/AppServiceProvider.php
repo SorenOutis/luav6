@@ -190,6 +190,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('csp-reports', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('claim-xp', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
         RateLimiter::for('claim-bonus-xp', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
+        RateLimiter::for('streak-restore', fn (Request $request) => Limit::perMinute(10)->by($this->rateLimitKey($request)));
     }
 
     /**
