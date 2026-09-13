@@ -4,14 +4,30 @@ import { ref } from 'vue';
 import StreakCalendarModal from '@/components/dashboard/StreakCalendarModal.vue';
 import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
+interface StreakRestoreInfo {
+    enabled: boolean;
+    limit: number;
+    used: number;
+    remaining: number;
+    costs: number[];
+    nextCost: number;
+    restoredDates: string[];
+    resetsAt: string | null;
+}
+
 interface Props {
     currentStreak: number;
     longestStreak: number;
     loginDates?: string[];
     compact?: boolean;
+    userXp?: number;
+    restore?: StreakRestoreInfo | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    userXp: 0,
+    restore: null,
+});
 
 const showCalendar = ref(false);
 
@@ -100,6 +116,8 @@ const openCalendar = () => {
             :login-dates="props.loginDates ?? []"
             :current-streak="currentStreak"
             :longest-streak="longestStreak"
+            :user-xp="props.userXp ?? 0"
+            :restore="props.restore ?? null"
             @close="showCalendar = false"
         />
     </div>

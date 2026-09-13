@@ -118,6 +118,16 @@ const props = withDefaults(
             isClaim: boolean;
         }[];
         loginDates?: string[];
+        streakRestore?: {
+            enabled: boolean;
+            limit: number;
+            used: number;
+            remaining: number;
+            costs: number[];
+            nextCost: number;
+            restoredDates: string[];
+            resetsAt: string | null;
+        } | null;
         sectionLeaderboards: LeaderboardData[];
         activeSeason?: Season | null;
         availableSeasons?: Season[];
@@ -135,6 +145,7 @@ const props = withDefaults(
         statsBreakdown: undefined,
         xpHistory: undefined,
         loginDates: () => [],
+        streakRestore: null,
         activeSeason: null,
         availableSeasons: () => [],
         primaryLeaderboard: null,
@@ -420,6 +431,8 @@ const seasonDateLabel = computed(() => {
                 :current-streak="userStats.streak"
                 :longest-streak="userStats.longestStreak"
                 :login-dates="loginDates ?? []"
+                :user-xp="userStats.totalXP"
+                :restore="streakRestore ?? null"
                 compact
             />
         </section>
