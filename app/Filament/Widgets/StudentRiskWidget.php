@@ -3,6 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Models\User;
+use App\Support\Impersonation;
+use Filament\Actions\Action;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -133,17 +135,28 @@ class StudentRiskWidget extends BaseWidget
                     ->alignCenter(),
             ])
             ->actions([
-                Tables\Actions\Action::make('view')
+                Action::make('view')
                     ->label('View')
                     ->icon('heroicon-m-eye')
                     ->url(fn (User $record) => "/admin/users/{$record->id}/edit"),
 
-                Tables\Actions\Action::make('impersonate')
+                Action::make('impersonate')
                     ->label('Impersonate')
                     ->icon('heroicon-m-user-circle')
                     ->color('gray')
                     ->visible(fn (User $record) => $record->canBeImpersonated())
-                    ->url(fn (User $record) => route('impersonate', $record)),
+                    ->action(function (User $record) {
+                        $actor = auth()->user();
+
+                        if (! $actor instanceof User || ! $record->canBeImpersonated()) {
+                            return;
+                        }
+
+                        session()->put(Impersonation::BACK_TO_KEY, '/admin/users');
+                        Impersonation::enter($actor, $record);
+
+                        return redirect()->route('dashboard');
+                    }),
             ])
             ->emptyStateHeading('No at-risk students')
             ->emptyStateDescription('All students are active and engaged. Great job!')

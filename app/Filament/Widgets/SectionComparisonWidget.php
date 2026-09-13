@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Assignment;
 use App\Models\Section;
+use Filament\Actions\Action;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -130,7 +131,7 @@ class SectionComparisonWidget extends BaseWidget
                     ->alignCenter(),
             ])
             ->actions([
-                Tables\Actions\Action::make('view')
+                Action::make('view')
                     ->icon('heroicon-m-eye')
                     ->url(fn (Section $record) => "/admin/sections/{$record->id}/edit"),
             ])
