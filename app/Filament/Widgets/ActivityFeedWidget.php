@@ -84,12 +84,16 @@ class ActivityFeedWidget extends Widget
             ->where('assignment_user.updated_at', '>=', $cutoff)
             ->orderByDesc('assignment_user.updated_at')
             ->limit(15)
-            ->get()
+            ->get([
+                'assignment_user.updated_at as submitted_at',
+                'users.name as user_name',
+                'assignments.title as assignment_title',
+            ])
             ->map(fn ($a) => [
                 'type' => 'assignment',
-                'user_name' => $a->name,
-                'description' => 'Submitted assignment: '.($a->title ?? 'Assignment'),
-                'timestamp' => $a->updated_at,
+                'user_name' => $a->user_name,
+                'description' => 'Submitted assignment: '.($a->assignment_title ?? 'Assignment'),
+                'timestamp' => $a->submitted_at,
                 'icon' => 'heroicon-m-clipboard-document-check',
             ]);
 
@@ -100,7 +104,9 @@ class ActivityFeedWidget extends Widget
             ->values()
             ->map(function ($event) {
                 $ts = $event['timestamp'];
-                $human = $ts instanceof \DateTimeInterface ? Carbon::instance($ts)->diffForHumans() : (string) $ts;
+                $human = $ts instanceof \DateTimeInterface
+                    ? Carbon::instance($ts)->diffForHumans()
+                    : Carbon::parse((string) $ts)->diffForHumans();
 
                 return array_merge($event, ['timestamp' => $human]);
             });

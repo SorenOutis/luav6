@@ -15,7 +15,7 @@ class StudentRiskWidget extends BaseWidget
 {
     protected static ?int $sort = 11;
 
-    protected int|string|array $columnSpan = 12;
+    protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Students At Risk';
 
@@ -80,7 +80,7 @@ class StudentRiskWidget extends BaseWidget
 
                         return $days >= 14 ? 'danger' : ($days >= 7 ? 'warning' : 'gray');
                     })
-                    ->sortable(query: fn (Builder $q, string $direction) => $q->orderBy('last_login_at', $direction))
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('last_login_at', $direction))
                     ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('exp')
