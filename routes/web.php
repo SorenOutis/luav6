@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\DashboardExamsController;
 use App\Http\Controllers\Api\LeaderboardController;
 use App\Http\Controllers\Api\LeaderboardToggleBlurController;
 use App\Http\Controllers\Api\MaintenanceStatusController;
+use App\Http\Controllers\Api\StreakRestoreController;
 use App\Http\Controllers\Api\XpHistoryController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\AssignmentGroupController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatHistoryController;
+use App\Http\Controllers\CookiePolicyController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\DashboardController;
@@ -35,12 +37,14 @@ use App\Http\Controllers\LibraryHubController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PendingAiActionController;
+use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\ProfileKudoController;
 use App\Http\Controllers\PublicProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SupportTicketController;
+use App\Http\Controllers\TermsController;
 use App\Http\Controllers\UserFollowController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\WorkspaceController;
@@ -52,6 +56,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', WelcomeController::class)->name('home');
 Route::get('/about', AboutController::class)->name('about');
 Route::get('/how-it-works', HowItWorksController::class)->name('how-it-works');
+Route::get('/privacy', PrivacyPolicyController::class)->name('privacy');
+Route::get('/terms', TermsController::class)->name('terms');
+Route::get('/cookies', CookiePolicyController::class)->name('cookies');
 Route::get('/blog/assessment-to-next-lesson', [BlogController::class, 'pillar'])->name('blog.pillar');
 
 // ─── Social login (Google / GitHub) ───────────────────────────────────────
@@ -214,6 +221,11 @@ Route::middleware(['auth', 'verified', 'banned.redirect'])->group(function () {
     Route::post('api/claim-bonus-xp', BonusClaimController::class)
         ->middleware(['auth', 'verified', 'throttle:claim-bonus-xp'])
         ->name('api.claim-bonus-xp');
+
+    // Streak Restore (spend seasonal XP to backfill a missed day)
+    Route::post('api/streak-restore', StreakRestoreController::class)
+        ->middleware(['auth', 'verified', 'throttle:streak-restore'])
+        ->name('api.streak-restore');
 
     Route::post('api/chat', ChatController::class)->middleware('throttle:chat')->name('chat');
     Route::post('api/chat/stream', [ChatController::class, 'stream'])->middleware('throttle:chat')->name('chat.stream');

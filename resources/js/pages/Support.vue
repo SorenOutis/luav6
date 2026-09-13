@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useIntervalFn } from '@vueuse/core';
 import {
     ChevronLeft,
@@ -681,6 +681,19 @@ useIntervalFn(
                                             ? `${ticketsRemaining} of ${dailyTicketLimit} tickets left today.`
                                             : 'Daily ticket limit reached. Please try again tomorrow.'
                                     }}
+                                </p>
+                                <p
+                                    class="text-xs leading-relaxed text-muted-foreground"
+                                >
+                                    We use your ticket details only to provide
+                                    support. Details are in the
+                                    <Link
+                                        href="/privacy"
+                                        class="underline underline-offset-4 hover:text-foreground"
+                                    >
+                                        Privacy Policy
+                                    </Link>
+                                    .
                                 </p>
                                 <InputError
                                     :message="page.props.errors.limit"
