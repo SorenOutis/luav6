@@ -235,10 +235,7 @@ actual grid items (not direct children) to let them shrink. */
     /* minmax(0, ...) floors let tracks shrink and wrap instead of
     overflowing/clipping when the container is narrower than the
     panels' ideal widths. */
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.72fr) minmax(
-            0,
-            0.78fr
-        );
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.72fr) minmax(0, 0.78fr);
     overflow: hidden;
     position: relative;
 }
