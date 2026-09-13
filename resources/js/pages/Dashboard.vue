@@ -488,6 +488,16 @@ const props = defineProps<{
         isClaim: boolean;
     }[];
     loginDates?: string[];
+    streakRestore?: {
+        enabled: boolean;
+        limit: number;
+        used: number;
+        remaining: number;
+        costs: number[];
+        nextCost: number;
+        restoredDates: string[];
+        resetsAt: string | null;
+    };
     announcements: Announcement[];
     assignments: Assignment[];
     upcomingExams: Exam[];
@@ -897,6 +907,7 @@ const handleLogout = () => {
                 :stats-breakdown="props.statsBreakdown"
                 :xp-history="props.xpHistory"
                 :login-dates="streak.loginDates"
+                :streak-restore="props.streakRestore ?? null"
                 :section-leaderboards="sectionLeaderboards"
                 :active-season="activeSeason"
                 :available-seasons="props.availableSeasons ?? []"
@@ -1051,6 +1062,8 @@ const handleLogout = () => {
                             :current-streak="userStats.streak"
                             :longest-streak="userStats.longestStreak"
                             :login-dates="streak.loginDates"
+                            :user-xp="userStats.totalXP"
+                            :restore="props.streakRestore ?? null"
                         />
                         <SeasonProgressBand
                             data-tour="dashboard-season"

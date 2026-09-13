@@ -130,6 +130,11 @@ class AiSettings extends Page implements HasSchemas
             'daily_claim_base_xp' => (int) Setting::get('daily_claim_base_xp', 1),
             'daily_claim_bonus_enabled' => (bool) Setting::get('daily_claim_bonus_enabled', false),
             'daily_claim_bonus_xp' => (int) Setting::get('daily_claim_bonus_xp', 5),
+            'streak_restore_enabled' => (bool) Setting::get('streak_restore_enabled', true),
+            'streak_restore_monthly_limit' => (int) Setting::get('streak_restore_monthly_limit', 3),
+            'streak_restore_cost_1' => (int) Setting::get('streak_restore_cost_1', 25),
+            'streak_restore_cost_2' => (int) Setting::get('streak_restore_cost_2', 50),
+            'streak_restore_cost_3' => (int) Setting::get('streak_restore_cost_3', 100),
             'welcome_demo_video_path' => Setting::get('welcome_demo_video_path'),
             'school_name' => Setting::get('school_name', 'LSI Engine'),
             'school_tagline' => Setting::get('school_tagline', 'Learning Systems Intelligence'),
@@ -227,6 +232,56 @@ class AiSettings extends Page implements HasSchemas
                             ->required()
                             ->helperText('Flat XP awarded for the bonus claim (no streak bonus). Hidden when Bonus XP is disabled.')
                             ->visible(fn ($get) => (bool) $get('daily_claim_bonus_enabled')),
+                    ]),
+
+                Section::make('Streak Restore')
+                    ->description('Let students spend seasonal XP to backfill a missed day and repair their streak.')
+                    ->schema([
+                        Toggle::make('streak_restore_enabled')
+                            ->label('Enable Streak Restore')
+                            ->helperText('If disabled, the restore option is hidden from the streak calendar.')
+                            ->reactive(),
+
+                        TextInput::make('streak_restore_monthly_limit')
+                            ->label('Restores per Month')
+                            ->numeric()
+                            ->integer()
+                            ->minValue(1)
+                            ->maxValue(10)
+                            ->required()
+                            ->helperText('How many days a student can restore per calendar month. Resets on the 1st.')
+                            ->visible(fn ($get) => (bool) $get('streak_restore_enabled')),
+
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('streak_restore_cost_1')
+                                    ->label('1st Restore Cost (XP)')
+                                    ->numeric()
+                                    ->integer()
+                                    ->minValue(1)
+                                    ->maxValue(1000)
+                                    ->required()
+                                    ->helperText('Cost of the first restore each month.'),
+
+                                TextInput::make('streak_restore_cost_2')
+                                    ->label('2nd Restore Cost (XP)')
+                                    ->numeric()
+                                    ->integer()
+                                    ->minValue(1)
+                                    ->maxValue(1000)
+                                    ->required()
+                                    ->helperText('Must be at least the 1st restore cost.'),
+
+                                TextInput::make('streak_restore_cost_3')
+                                    ->label('3rd Restore Cost (XP)')
+                                    ->numeric()
+                                    ->integer()
+                                    ->minValue(1)
+                                    ->maxValue(1000)
+                                    ->required()
+                                    ->helperText('Must be at least the 2nd restore cost. Reused for any further restores.'),
+                            ])
+                            ->visible(fn ($get) => (bool) $get('streak_restore_enabled')),
                     ]),
 
                 Section::make('Welcome Demo Video')
@@ -961,6 +1016,17 @@ class AiSettings extends Page implements HasSchemas
             Setting::setGlobal('daily_claim_base_xp', (string) max(1, (int) ($data['daily_claim_base_xp'] ?? 1)));
             Setting::setGlobal('daily_claim_bonus_enabled', ($data['daily_claim_bonus_enabled'] ?? false) ? '1' : '0');
             Setting::setGlobal('daily_claim_bonus_xp', (string) max(1, (int) ($data['daily_claim_bonus_xp'] ?? 5)));
+
+            Setting::setGlobal('streak_restore_enabled', ($data['streak_restore_enabled'] ?? true) ? '1' : '0');
+            Setting::setGlobal('streak_restore_monthly_limit', (string) min(10, max(1, (int) ($data['streak_restore_monthly_limit'] ?? 3))));
+            $restoreCost1 = max(1, (int) ($data['streak_restore_cost_1'] ?? 25));
+            // Escalating tiers are enforced ascending so the 2nd restore can
+            // never be cheaper than the 1st, nor the 3rd cheaper than the 2nd.
+            $restoreCost2 = max($restoreCost1, (int) ($data['streak_restore_cost_2'] ?? 50));
+            $restoreCost3 = max($restoreCost2, (int) ($data['streak_restore_cost_3'] ?? 100));
+            Setting::setGlobal('streak_restore_cost_1', (string) $restoreCost1);
+            Setting::setGlobal('streak_restore_cost_2', (string) $restoreCost2);
+            Setting::setGlobal('streak_restore_cost_3', (string) $restoreCost3);
 
             Setting::setGlobal('welcome_demo_video_path', $data['welcome_demo_video_path'] ?? null);
             Setting::setGlobal('school_name', $data['school_name'] ?? 'LSI Engine');
