@@ -21,9 +21,6 @@ class QuickActionsWidget extends Widget
         $totalStudents = User::query()->where('is_admin', false)->forWorkspace()->count();
         $totalExams = Exam::query()->where('status', '!=', 'draft')->count();
         $totalAssignments = Assignment::query()->count();
-        $pendingReview = Exam::query()->where('status', 'published')->sum(
-            \DB::raw('(SELECT COUNT(*) FROM exam_submissions WHERE exam_submissions.exam_id = exams.id)')
-        );
 
         $recentlyBanned = User::query()
             ->where('is_admin', false)
@@ -42,7 +39,6 @@ class QuickActionsWidget extends Widget
             'totalStudents' => $totalStudents,
             'totalExams' => $totalExams,
             'totalAssignments' => $totalAssignments,
-            'pendingReview' => $pendingReview,
             'pendingSubmissions' => $pendingSubmissions,
             'recentlyBanned' => $recentlyBanned,
         ];

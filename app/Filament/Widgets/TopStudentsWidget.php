@@ -44,10 +44,10 @@ class TopStudentsWidget extends BaseWidget
                     ->label('#')
                     ->rowIndex()
                     ->badge()
-                    ->color(fn (int $rowLoopIndex) => match (true) {
-                        $rowLoopIndex === 1 => 'warning',
-                        $rowLoopIndex === 2 => 'gray',
-                        $rowLoopIndex === 3 => 'primary',
+                    ->color(fn ($state): ?string => match ((int) $state) {
+                        1 => 'warning',
+                        2 => 'gray',
+                        3 => 'primary',
                         default => null,
                     }),
 

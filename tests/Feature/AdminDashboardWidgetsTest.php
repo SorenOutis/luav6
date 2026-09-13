@@ -11,7 +11,11 @@
  * render-time failures before they reach production.
  */
 
+use App\Filament\Widgets\ActivityFeedWidget;
+use App\Filament\Widgets\AdminActivityTrendChart;
+use App\Filament\Widgets\ExamPerformanceWidget;
 use App\Filament\Widgets\NeuronUsageWidget;
+use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RecentSupportTicketsWidget;
 use App\Filament\Widgets\SectionComparisonWidget;
 use App\Filament\Widgets\StudentRiskWidget;
@@ -113,4 +117,36 @@ it('renders RecentSupportTicketsWidget with data', function () {
 
     Livewire::test(RecentSupportTicketsWidget::class)
         ->assertSuccessful();
+});
+
+it('renders QuickActionsWidget with data', function () {
+    $this->actingAs(seedDashboardData());
+
+    Livewire::test(QuickActionsWidget::class)
+        ->assertSuccessful();
+});
+
+it('renders ActivityFeedWidget with data', function () {
+    $this->actingAs(seedDashboardData());
+
+    Livewire::test(ActivityFeedWidget::class)
+        ->assertSuccessful();
+});
+
+it('renders ExamPerformanceWidget with data', function () {
+    $this->actingAs(seedDashboardData());
+
+    Livewire::test(ExamPerformanceWidget::class)
+        ->assertSuccessful();
+});
+
+it('renders AdminActivityTrendChart and respects the time range filter', function () {
+    $this->actingAs(seedDashboardData());
+
+    Livewire::test(AdminActivityTrendChart::class)
+        ->assertSuccessful()
+        ->assertSet('filter', '7d')
+        ->set('filter', '30d')
+        ->assertSuccessful()
+        ->assertSet('filter', '30d');
 });

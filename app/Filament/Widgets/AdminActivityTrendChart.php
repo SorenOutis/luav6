@@ -26,12 +26,7 @@ class AdminActivityTrendChart extends ChartWidget
 
     protected ?string $maxHeight = '330px';
 
-    public ?string $timeRange = '7d';
-
-    protected function getHeaderWidgets(): array
-    {
-        return [];
-    }
+    public ?string $filter = '7d';
 
     protected function getFilters(): ?array
     {
@@ -85,7 +80,7 @@ class AdminActivityTrendChart extends ChartWidget
      */
     protected function getData(): array
     {
-        $days = match ($this->timeRange) {
+        $days = match ($this->filter) {
             '14d' => 13,
             '30d' => 29,
             default => 6,

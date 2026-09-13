@@ -36,11 +36,6 @@ class ExamPerformanceWidget extends ChartWidget
                 'legend' => [
                     'display' => false,
                 ],
-                'tooltip' => [
-                    'callbacks' => [
-                        'label' => 'function(context) { return context.parsed.y . " students"; }',
-                    ],
-                ],
             ],
             'scales' => [
                 'y' => [
