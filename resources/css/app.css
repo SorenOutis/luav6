@@ -3758,6 +3758,28 @@ html[data-low-end] .welcome-defer {
             var(--color-card)
         );
     }
+
+    /* Compact overview strip: shared mobile + desktop summary. */
+    .grades-overview-strip [data-slot='card'] {
+        border-color: var(--color-border);
+        border-radius: 1rem;
+        background: var(--color-card);
+    }
+
+    /* Per-subject accordion cards: single tap target per subject. */
+    .grades-subject-card > button {
+        min-height: 2.75rem;
+        border-radius: 1.05rem 1.05rem 0 0;
+    }
+
+    .grades-subject-card > button:focus-visible {
+        outline: 2px solid var(--color-ring);
+        outline-offset: -2px;
+    }
+
+    .grades-subject-body {
+        background: var(--color-card);
+    }
 }
 
 @media (max-width: 767px) {
