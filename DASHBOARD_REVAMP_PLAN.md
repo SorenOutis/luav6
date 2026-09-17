@@ -346,10 +346,10 @@ own `StreakCalendarModal` instance wired to the heatmap.
 
 - **DOM order = rank order (1st, 2nd, 3rd)** in all modes: screen readers and
   the stacked mobile band read top-to-bottom by rank, matching the approved
-  mobile mockup (`expected-mobile.png`).
+  mobile mockup (`docs/mockups/expected-mobile.png`).
 - **Wide screens (≥640px)** re-stage the cards visually to the classic
   2nd–1st–3rd podium purely via `order-*` / `sm:order-*` utilities — the
-  approved desktop look (`expected-desktop.png`) is unchanged.
+  approved desktop look (`docs/mockups/expected-desktop.png`) is unchanged.
 - Locked by regression tests in `tests/js/leaderboard-ui.test.ts`
   ("uses rank order in the DOM and stages 2nd-1st-3rd only via CSS").
 
