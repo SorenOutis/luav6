@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
-    BookOpenCheck,
-    CalendarClock,
     ChevronDown,
     Plus,
     RefreshCw,
@@ -11,16 +8,19 @@ import {
     Trophy,
     TrendingUp,
     X,
-    Zap,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
+import ClaimXpButton from '@/components/dashboard/ClaimXpButton.vue';
 import LevelProgressCard from '@/components/dashboard/LevelProgressCard.vue';
 import StreakCard from '@/components/dashboard/StreakCard.vue';
-import type { NextUpItem } from '@/components/dashboard/TodayStrip.vue';
+import TodayPanel from '@/components/dashboard/TodayPanel.vue';
+import type { TodayTask } from '@/components/dashboard/TodayPanel.vue';
 import FoxCompanion from '@/components/FoxCompanion.vue';
 import ImprovedLeaderboard from '@/components/ImprovedLeaderboard.vue';
 import StreakHeatmap from '@/components/StreakHeatmap.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getInitials } from '@/composables/useInitials';
 
 interface Announcement {
     id: number;
@@ -99,10 +99,7 @@ const props = withDefaults(
         statusColor: string;
         smarterStatus: string;
         isRefreshing: boolean;
-        dueTodayCount: number;
-        overdueCount: number;
-        upcoming24hCount: number;
-        nextItem: NextUpItem | null;
+        todayTasks: TodayTask[];
         claimXp: ClaimXp;
         bonusXp?: ClaimXp;
         statsBreakdown?: {
@@ -149,6 +146,7 @@ const props = withDefaults(
         activeSeason: null,
         availableSeasons: () => [],
         primaryLeaderboard: null,
+        todayTasks: () => [],
     },
 );
 
@@ -161,6 +159,7 @@ const emit = defineEmits<{
 }>();
 
 const firstAnnouncement = computed(() => props.announcements[0] ?? null);
+const initials = computed(() => getInitials(props.userName));
 const xpProgress = computed(() => {
     if (props.userStats.maxXPForLevel <= 0) return 0;
 
@@ -171,21 +170,6 @@ const xpProgress = computed(() => {
         ),
     );
 });
-
-const formatNextDue = (item: NextUpItem) => {
-    const date = new Date(item.dueAt);
-    if (Number.isNaN(date.getTime())) return 'Upcoming';
-
-    return new Intl.DateTimeFormat(undefined, {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-    }).format(date);
-};
-
-const itemTypeLabel = (item: NextUpItem) =>
-    item.kind === 'exam' ? 'Next exam' : 'Next assignment';
 
 const seasonProgress = computed(() => {
     const start = props.activeSeason?.startDate
@@ -272,6 +256,18 @@ const seasonDateLabel = computed(() => {
             </div>
             <div class="mobile-dashboard-greeting__body">
                 <div class="mobile-dashboard-greeting__identity">
+                    <Avatar class="h-11 w-11 shrink-0 sm:h-12 sm:w-12">
+                        <AvatarImage
+                            v-if="userAvatar"
+                            :src="userAvatar"
+                            :alt="`${userName} avatar`"
+                        />
+                        <AvatarFallback
+                            class="bg-[#D97757]/15 text-sm font-semibold text-[#D97757]"
+                        >
+                            {{ initials }}
+                        </AvatarFallback>
+                    </Avatar>
                     <div class="min-w-0 flex-1">
                         <p class="mobile-dashboard-eyebrow">
                             {{ timeBasedGreeting }}
@@ -279,6 +275,20 @@ const seasonDateLabel = computed(() => {
                         <h1 class="mobile-dashboard-title truncate">
                             {{ userName }}
                         </h1>
+                        <span
+                            class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[#D97757]/10 px-2 py-0.5 text-[12px] font-semibold text-[#D97757]"
+                            :title="`Level ${userStats.level} · ${userStats.currentXP.toLocaleString()} / ${userStats.maxXPForLevel.toLocaleString()} XP`"
+                        >
+                            Lv {{ userStats.level }}
+                            <span
+                                class="h-1 w-16 overflow-hidden rounded-full bg-[#D97757]/20"
+                            >
+                                <span
+                                    class="block h-full rounded-full bg-[#D97757]"
+                                    :style="{ width: `${xpProgress}%` }"
+                                ></span>
+                            </span>
+                        </span>
                         <p class="mobile-dashboard-status">
                             <span
                                 class="mobile-dashboard-status-dot"
@@ -291,7 +301,7 @@ const seasonDateLabel = computed(() => {
                 <FoxCompanion
                     class="mobile-dashboard-greeting__fox"
                     mascot="welcome"
-                    :size="128"
+                    :size="96"
                     :show-message="false"
                     label="Dashboard fox"
                 />
@@ -334,68 +344,32 @@ const seasonDateLabel = computed(() => {
             </button>
         </section>
 
-        <section class="mobile-dashboard-today" data-tour="dashboard-today">
-            <div class="mobile-dashboard-section-heading">
-                <div>
-                    <span class="mobile-dashboard-kicker">Your snapshot</span>
-                    <h2 class="mobile-dashboard-section-title">
-                        Today at a glance
-                    </h2>
-                </div>
-                <CalendarClock class="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div class="mobile-dashboard-metric-grid">
-                <Link href="/activities" class="mobile-dashboard-metric">
-                    <span class="mobile-dashboard-metric__value">{{
-                        dueTodayCount
-                    }}</span>
-                    <span class="mobile-dashboard-metric__label"
-                        >Due today</span
-                    >
-                </Link>
-                <Link
-                    href="/activities"
-                    class="mobile-dashboard-metric"
-                    :class="{ 'is-alert': overdueCount > 0 }"
-                >
-                    <span class="mobile-dashboard-metric__value">{{
-                        overdueCount
-                    }}</span>
-                    <span class="mobile-dashboard-metric__label">Overdue</span>
-                </Link>
-                <Link href="/activities" class="mobile-dashboard-metric">
-                    <span class="mobile-dashboard-metric__value">{{
-                        upcoming24hCount
-                    }}</span>
-                    <span class="mobile-dashboard-metric__label">Next 24h</span>
-                </Link>
-            </div>
-            <Link
-                v-if="nextItem"
-                href="/activities"
-                class="mobile-dashboard-next-item"
+        <!-- Podium band: top 3 of the active section -->
+        <section
+            class="surface-card w-full min-w-0 p-3"
+            aria-label="Top 3 leaderboard"
+            data-tour="dashboard-leaderboard-podium"
+        >
+            <ImprovedLeaderboard
+                podium-only
+                :section-leaderboards="sectionLeaderboards"
+                :active-season-name="activeSeason?.name"
+                :available-seasons="availableSeasons ?? []"
             >
-                <span class="mobile-dashboard-next-item__icon">
-                    <BookOpenCheck class="h-4 w-4" />
-                </span>
-                <span class="min-w-0 flex-1">
-                    <span class="mobile-dashboard-card-kicker">{{
-                        itemTypeLabel(nextItem)
-                    }}</span>
-                    <strong
-                        class="mobile-dashboard-next-item__title truncate"
-                        >{{ nextItem.title }}</strong
+                <template #band-action>
+                    <button
+                        type="button"
+                        class="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-[13px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/10"
+                        @click="emit('toggleLeaderboard')"
                     >
-                    <span class="mobile-dashboard-next-item__meta">{{
-                        formatNextDue(nextItem)
-                    }}</span>
-                </span>
-                <ArrowRight class="h-4 w-4 shrink-0 text-muted-foreground" />
-            </Link>
-            <div v-else class="mobile-dashboard-empty-next">
-                <Sparkles class="h-4 w-4" />
-                <span>You are all caught up for now.</span>
-            </div>
+                        Full rankings
+                    </button>
+                </template>
+            </ImprovedLeaderboard>
+        </section>
+
+        <section class="mobile-dashboard-today" data-tour="dashboard-today">
+            <TodayPanel :tasks="todayTasks" compact />
         </section>
 
         <section
@@ -406,24 +380,15 @@ const seasonDateLabel = computed(() => {
                 class="mobile-dashboard-reward"
                 data-tour="dashboard-daily-reward"
             >
-                <div class="mobile-dashboard-reward__icon">
-                    <Zap class="h-5 w-5" />
-                </div>
-                <div class="min-w-0">
-                    <span class="mobile-dashboard-card-kicker"
-                        >Daily reward</span
-                    >
-                    <strong class="mobile-dashboard-reward__value"
-                        >+{{ claimXp.amount }} XP</strong
-                    >
-                    <span class="mobile-dashboard-reward__copy">
-                        {{
-                            claimXp.canClaim
-                                ? 'Ready to claim'
-                                : 'Come back tomorrow'
-                        }}
-                    </span>
-                </div>
+                <ClaimXpButton
+                    :can-claim="claimXp.canClaim"
+                    :amount="claimXp.amount"
+                    :base-xp="claimXp.baseXp"
+                    :next-claim-at="claimXp.nextClaimAt"
+                    :streak="userStats.streak"
+                    :show-prompt="false"
+                    @claimed="emit('claimed')"
+                />
             </div>
             <StreakCard
                 class="mobile-dashboard-streak-summary"
@@ -539,6 +504,7 @@ const seasonDateLabel = computed(() => {
             >
                 <ImprovedLeaderboard
                     class="dashboard-leaderboard"
+                    hide-podium
                     :section-leaderboards="sectionLeaderboards"
                     :active-season-name="activeSeason?.name"
                     :available-seasons="availableSeasons ?? []"

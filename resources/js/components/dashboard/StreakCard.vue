@@ -36,6 +36,10 @@ const animStreak = useNumberAnimation(() => props.currentStreak || 0);
 const openCalendar = () => {
     showCalendar.value = true;
 };
+
+// Lets a parent surface the same modal (e.g. the ProgressCard's
+// "Streak calendar" quick action) without duplicating modal state.
+defineExpose({ openCalendar });
 </script>
 
 <template>
