@@ -52,8 +52,9 @@ describe('page-specific mobile compositions', () => {
             'resources/js/components/dashboard/MobileDashboard.vue',
         );
         expect(dashboard).toContain('mobile-dashboard-reward-grid');
-        expect(dashboard).toContain('mobile-dashboard-reward__value');
-        expect(dashboard).not.toContain('<ClaimXpButton');
+        // The reward tile hosts the real claim button (modal included) —
+        // the static "+N XP" value was replaced by ClaimXpButton.
+        expect(dashboard).toContain('<ClaimXpButton');
         expect(dashboard).toContain('mobile-dashboard-progress-band');
         expect(dashboard).toContain(
             '<details class="mobile-dashboard-progress-details" open>',

@@ -34,7 +34,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
-import { useNumberAnimation } from '@/composables/useNumberAnimation';
 
 interface LeaderboardUser {
     id: number;
@@ -85,12 +84,25 @@ interface Props {
     showViewButton?: boolean;
     /** Show a "Join Section" button in the section-tabs row (used on the dashboard). */
     showJoinButton?: boolean;
+    /**
+     * Band mode: render ONLY the podium (top 3) — used by the dashboard's
+     * podium band under the command bar. Section tabs, header, your-rank row
+     * and the rankings list are skipped.
+     */
+    podiumOnly?: boolean;
+    /**
+     * Hide the podium inside the full card (it is being shown by a separate
+     * band instance). The rankings list then starts at rank 1.
+     */
+    hidePodium?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     availableSeasons: () => [],
     showViewButton: false,
     showJoinButton: false,
+    podiumOnly: false,
+    hidePodium: false,
 });
 
 const emit = defineEmits<{
@@ -106,6 +118,8 @@ const profileIdentifier = (user: LeaderboardUser) =>
 
 const activeTabIndex = ref(0);
 const searchQuery = ref('');
+/** Ranking period: all-time XP (server order) or this week's XP (client sort). */
+const rankMode = ref<'alltime' | 'weekly'>('alltime');
 const STORAGE_KEY = 'leaderboard_active_section_id';
 const BLUR_STORAGE_KEY = 'leaderboard_blurred';
 
@@ -153,7 +167,16 @@ watch(activeTabIndex, (i) => {
 const activeLeaderboard = computed(
     () => localLeaderboards.value[activeTabIndex.value] || null,
 );
-const users = computed(() => activeLeaderboard.value?.users || []);
+const users = computed(() => {
+    const base = activeLeaderboard.value?.users || [];
+    if (rankMode.value === 'weekly') {
+        // Weekly standings are re-ranked client-side from the per-user
+        // `weeklyXp` the server already ships. Ties keep the same
+        // group-by-rank treatment as the all-time list.
+        return [...base].sort((a, b) => b.weeklyXp - a.weeklyXp);
+    }
+    return base;
+});
 const filteredUsers = computed(() => {
     if (!searchQuery.value.trim()) return users.value;
     const q = searchQuery.value.toLowerCase().trim();
@@ -282,6 +305,27 @@ const restGroups = computed(() => {
     return showAllRankings.value ? rest : rest.slice(0, 7);
 });
 
+// Ranks shown in the list section. With a podium above (default) the list
+// starts at rank 4; with `hidePodium` (podium rendered by a separate band)
+// the list IS the full ranking and starts at rank 1.
+const listGroups = computed(() =>
+    props.hidePodium
+        ? showAllRankings.value
+            ? rankGroups.value
+            : rankGroups.value.slice(0, 10)
+        : restGroups.value,
+);
+const showListSection = computed(
+    () =>
+        !props.podiumOnly && (props.hidePodium || rankGroups.value.length > 3),
+);
+// How many ranks the "Show All" button would reveal.
+const hiddenRankCount = computed(() =>
+    props.hidePodium
+        ? Math.max(0, rankGroups.value.length - 10)
+        : Math.max(0, rankGroups.value.length - 3 - 7),
+);
+
 // Expanded states for tied list row cards (> 3 students)
 const expandedGroupRanks = ref<number[]>([]);
 const isGroupExpanded = (rank: number) =>
@@ -293,16 +337,6 @@ const toggleExpandGroup = (rank: number) => {
     } else {
         expandedGroupRanks.value.splice(idx, 1);
     }
-};
-
-const animXP1 = useNumberAnimation(() => top3Groups.value[0]?.xp || 0);
-const animXP2 = useNumberAnimation(() => top3Groups.value[1]?.xp || 0);
-const animXP3 = useNumberAnimation(() => top3Groups.value[2]?.xp || 0);
-const getAnimXP = (i: number) => {
-    if (i === 0) return animXP1;
-    if (i === 1) return animXP2;
-    if (i === 2) return animXP3;
-    return { value: top3Groups.value[i]?.xp || 0 };
 };
 
 // Podium ordering: on desktop, show 2nd-1st-3rd
@@ -566,9 +600,32 @@ const changeSeason = async (seasonId: number) => {
 
 <template>
     <div class="lb-root max-w-full min-w-0 space-y-6">
+        <!-- Band mode label: shown only when the podium stands alone -->
+        <div
+            v-if="podiumOnly"
+            class="mb-1 flex items-center justify-between gap-2"
+        >
+            <div class="flex min-w-0 items-center gap-2">
+                <Trophy class="h-4 w-4 shrink-0 text-[#D97757]" />
+                <p
+                    class="dash-title truncate text-[15px] text-foreground sm:text-base"
+                >
+                    Top 3 — {{ currentSeasonName }}
+                    <span
+                        v-if="sectionName"
+                        class="font-normal text-muted-foreground"
+                        >· {{ sectionName }}</span
+                    >
+                </p>
+            </div>
+            <slot name="band-action" />
+        </div>
+
         <!-- Section Tabs -->
         <div
-            v-if="localLeaderboards.length > 1 || showJoinButton"
+            v-if="
+                !podiumOnly && (localLeaderboards.length > 1 || showJoinButton)
+            "
             class="flex scrollbar-none items-center gap-2 overflow-x-auto pb-2"
         >
             <button
@@ -597,6 +654,7 @@ const changeSeason = async (seasonId: number) => {
 
         <!-- Header -->
         <div
+            v-if="!podiumOnly"
             class="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
         >
             <div>
@@ -620,6 +678,42 @@ const changeSeason = async (seasonId: number) => {
             <div
                 class="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end"
             >
+                <!-- Ranking period: all-time vs this week (client-side re-rank) -->
+                <div
+                    class="flex w-full items-center gap-0.5 rounded-full border border-border/50 bg-card p-1 sm:w-auto"
+                    role="tablist"
+                    aria-label="Ranking period"
+                >
+                    <button
+                        type="button"
+                        role="tab"
+                        :aria-selected="rankMode === 'alltime'"
+                        class="flex-1 cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors sm:flex-none"
+                        :class="
+                            rankMode === 'alltime'
+                                ? 'bg-[#D97757] text-white'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
+                        @click="rankMode = 'alltime'"
+                    >
+                        All-time
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        :aria-selected="rankMode === 'weekly'"
+                        class="flex-1 cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold transition-colors sm:flex-none"
+                        :class="
+                            rankMode === 'weekly'
+                                ? 'bg-[#D97757] text-white'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
+                        @click="rankMode = 'weekly'"
+                    >
+                        Weekly
+                    </button>
+                </div>
+
                 <!-- Search: full-width row on mobile, fixed width on sm+ -->
                 <div class="relative w-full sm:w-52">
                     <Search
@@ -709,7 +803,10 @@ const changeSeason = async (seasonId: number) => {
         </div>
 
         <!-- Your Rank Row -->
-        <div v-if="currentUser && totalPlayers > 0" class="lb-rank-row">
+        <div
+            v-if="!podiumOnly && currentUser && totalPlayers > 0"
+            class="lb-rank-row"
+        >
             <div class="hidden" aria-hidden="true"></div>
             <div
                 class="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
@@ -818,7 +915,7 @@ const changeSeason = async (seasonId: number) => {
 
             <template v-else>
                 <!-- ═══════ PODIUM ═══════ -->
-                <div class="lb-podium min-w-0">
+                <div v-if="!hidePodium" class="lb-podium min-w-0">
                     <SpotlightCard
                         v-for="{ group, origIdx } in podiumOrder"
                         :key="group.rank"
@@ -832,7 +929,7 @@ const changeSeason = async (seasonId: number) => {
                         "
                         :className="
                             [
-                                'lb-podium-card animate-fade-up',
+                                'lb-podium-card',
                                 origIdx === 0 &&
                                     'lb-podium-card--champ order-1 sm:order-2',
                                 origIdx === 1 && 'order-2 sm:order-1',
@@ -843,7 +940,6 @@ const changeSeason = async (seasonId: number) => {
                                 .join(' ')
                         "
                         :style="{
-                            animationDelay: `${origIdx * 120}ms`,
                             backgroundColor: 'transparent',
                             borderColor: 'transparent',
                         }"
@@ -1124,11 +1220,7 @@ const changeSeason = async (seasonId: number) => {
                                     ]"
                                     class="font-semibold tracking-tight tabular-nums"
                                 >
-                                    {{
-                                        getAnimXP(
-                                            origIdx,
-                                        ).value.toLocaleString()
-                                    }}
+                                    {{ group.xp.toLocaleString() }}
                                 </span>
                                 <span
                                     class="text-[13px] font-medium text-muted-foreground"
@@ -1169,7 +1261,7 @@ const changeSeason = async (seasonId: number) => {
                 </div>
 
                 <!-- ═══════ LIST RANKINGS ═══════ -->
-                <div v-if="rankGroups.length > 3" class="space-y-2">
+                <div v-if="showListSection" class="space-y-2">
                     <div class="mb-3 flex items-center justify-between px-1">
                         <div class="flex items-center gap-2">
                             <Activity class="h-3.5 w-3.5 text-[#D97757]" />
@@ -1186,13 +1278,12 @@ const changeSeason = async (seasonId: number) => {
                     </div>
 
                     <div
-                        v-for="(group, i) in restGroups"
+                        v-for="group in listGroups"
                         :key="group.rank"
-                        class="lb-row group animate-fade-up"
+                        class="lb-row group"
                         :class="{
                             'lb-row--you': group.hasCurrentUser,
                         }"
-                        :style="{ animationDelay: `${(i + 3) * 60}ms` }"
                     >
                         <!-- Left: Rank Number & Details -->
                         <div
@@ -1468,7 +1559,7 @@ const changeSeason = async (seasonId: number) => {
 
                     <!-- Show more -->
                     <div
-                        v-if="rankGroups.length > 10"
+                        v-if="hiddenRankCount > 0"
                         class="flex justify-center pt-3"
                     >
                         <button
@@ -1482,7 +1573,7 @@ const changeSeason = async (seasonId: number) => {
                             <span>{{
                                 showAllRankings
                                     ? 'Show Less'
-                                    : `Show All (${rankGroups.length - 3} more ranks)`
+                                    : `Show All (${hiddenRankCount} more ranks)`
                             }}</span>
                         </button>
                     </div>
@@ -1557,10 +1648,9 @@ const changeSeason = async (seasonId: number) => {
                     </div>
                     <div v-else class="space-y-1.5 p-3">
                         <div
-                            v-for="(item, index) in xpHistory"
+                            v-for="item in xpHistory"
                             :key="item.id"
-                            class="animate-fade-up flex items-center justify-between rounded-xl p-3 transition-colors hover:bg-muted/30"
-                            :style="{ animationDelay: `${index * 40}ms` }"
+                            class="flex items-center justify-between rounded-xl p-3 transition-colors hover:bg-muted/30"
                         >
                             <div class="flex min-w-0 flex-1 items-center gap-3">
                                 <div

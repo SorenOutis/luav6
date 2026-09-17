@@ -396,8 +396,15 @@ describe('page wiring', () => {
 
     it('tags the dashboard XP history and streak cards as tour targets', () => {
         const src = read('resources/js/pages/Dashboard.vue');
-        expect(src).toContain('data-tour="dashboard-level-card"');
-        expect(src).toContain('data-tour="dashboard-streak-card"');
+        // Desktop: the consolidated progress card is the shared anchor for
+        // the level / streak / season tour steps.
+        expect(src).toContain('data-tour="dashboard-progress"');
         expect(src).toContain('data-tour="dashboard-leaderboard"');
+        // Mobile keeps per-card anchors on the streak and XP history cards.
+        const mobile = read(
+            'resources/js/components/dashboard/MobileDashboard.vue',
+        );
+        expect(mobile).toContain('data-tour="dashboard-streak-card"');
+        expect(mobile).toContain('data-tour="dashboard-level-card"');
     });
 });

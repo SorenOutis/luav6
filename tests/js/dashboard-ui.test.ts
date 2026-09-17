@@ -60,9 +60,8 @@ describe('dashboard student shell', () => {
         // time — see ACTIVITIES_AND_EXAMS_PERF_ANALYSIS.md / the dashboard
         // dual-mount fix.
         expect(page).toContain('v-if="isBooted && !isMdUp"');
-        expect(page).toContain(
-            'v-if="isMdUp" class="dashboard-desktop-composition"',
-        );
+        expect(page).toContain('v-if="isMdUp && isBooted"');
+        expect(page).toContain('dashboard-desktop-composition');
         expect(page).toContain("e.status !== 'published'");
         expect(page).not.toContain('SpotlightCard');
         expect(css).toContain('.dashboard-ui');
