@@ -325,6 +325,23 @@ shippable "v1" after ~2 days.
   the frontend build/type-check run without PHP; the directory is gitignored
   and the real wayfinder prebuild replaces it.
 
+### Modal & interaction entry points (desktop / mobile)
+
+| What opens | Desktop click path | Mobile tap path |
+|---|---|---|
+| Streak calendar modal | Progress card → **Streak** tab → "Streak calendar" pill (or tap the streak card itself); also **Activity card → "Streak calendar"** pill next to the heatmap | Flame **Streak tile** in the reward/streak row (one tap) |
+| XP history / breakdown modal | Progress card → **XP & level** tab → "XP history" pill (or tap the level card itself) | "XP history, claims, and details" section → tap the level card |
+| Claim XP modal | **Claim button in the command bar** (auto-prompt unchanged) | Reward tile's claim button (no auto-prompt, by design) |
+| A player's XP history | History icon on any podium card (band) or leaderboard row | Same, in the band and the expanded leaderboard |
+| Tied-rank modal | "• Tied (N)" badge on podium/rank rows; "Tied with N" in your-rank row | Same |
+| Streak restore | Inside the streak calendar modal (restore panel) | Same |
+
+Implementation notes: `LevelProgressCard` now exposes `openHistory()` and
+`StreakCard` exposes `openCalendar()` (defineExpose) so ProgressCard's
+pane-aware quick-action pill opens the *same* modal instance the card opens
+on click — no duplicated modal state. The dashboard's Activity card hosts its
+own `StreakCalendarModal` instance wired to the heatmap.
+
 ### Follow-ups (recommended)
 1. Retire `DashboardHero.vue`, `TodayStrip.vue`, `DailyRewardCard.vue` (now
    unreferenced by any page; still covered by their own tests) and port those

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, usePage, usePoll, router } from '@inertiajs/vue3';
-import { ChevronDown } from 'lucide-vue-next';
+import { CalendarDays, ChevronDown } from 'lucide-vue-next';
 import {
     onMounted,
     onBeforeUnmount,
@@ -14,6 +14,7 @@ import CommandBar from '@/components/dashboard/CommandBar.vue';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton.vue';
 import MobileDashboard from '@/components/dashboard/MobileDashboard.vue';
 import ProgressCard from '@/components/dashboard/ProgressCard.vue';
+import StreakCalendarModal from '@/components/dashboard/StreakCalendarModal.vue';
 import TodayPanel from '@/components/dashboard/TodayPanel.vue';
 import type { TodayTask } from '@/components/dashboard/TodayPanel.vue';
 import FoxCompanion from '@/components/FoxCompanion.vue';
@@ -753,6 +754,7 @@ const scrollToLeaderboard = (): void => {
 
 const showSectionModal = ref(false);
 const isLeaderboardExpanded = ref(false);
+const showStreakCalendar = ref(false);
 
 watch(
     () => props.sectionName,
@@ -1027,15 +1029,32 @@ const handleLogout = () => {
                         aria-label="Activity"
                         data-tour="dashboard-activity"
                     >
-                        <div class="mb-4 min-w-0 sm:mb-5">
-                            <h3
-                                class="dash-title text-[17px] text-foreground sm:text-lg"
+                        <div
+                            class="mb-4 flex min-w-0 items-start justify-between gap-2 sm:mb-5"
+                        >
+                            <div class="min-w-0">
+                                <h3
+                                    class="dash-title text-[17px] text-foreground sm:text-lg"
+                                >
+                                    Activity
+                                </h3>
+                                <p
+                                    class="mt-0.5 text-[13px] text-muted-foreground"
+                                >
+                                    Your last 4 weeks at a glance.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-[#D97757]/30 bg-[#D97757]/[0.07] px-3 py-1.5 text-[12px] font-semibold text-[#D97757] transition-colors hover:bg-[#D97757]/15"
+                                title="Open your streak calendar"
+                                @click="showStreakCalendar = true"
                             >
-                                Activity
-                            </h3>
-                            <p class="mt-0.5 text-[13px] text-muted-foreground">
-                                Your last 4 weeks at a glance.
-                            </p>
+                                <CalendarDays class="h-3.5 w-3.5" />
+                                <span class="max-xl:hidden"
+                                    >Streak calendar</span
+                                >
+                            </button>
                         </div>
                         <StreakHeatmap :login-dates="streak.loginDates" />
                     </section>
@@ -1096,6 +1115,17 @@ const handleLogout = () => {
                 </div>
             </template>
         </ResponsiveModal>
+
+        <!-- Streak calendar (opened from the Activity card) -->
+        <StreakCalendarModal
+            :open="showStreakCalendar"
+            :login-dates="streak.loginDates"
+            :current-streak="userStats.streak"
+            :longest-streak="userStats.longestStreak"
+            :user-xp="userStats.totalXP"
+            :restore="props.streakRestore ?? null"
+            @close="showStreakCalendar = false"
+        />
 
         <!-- First-visit walkthrough (per user, per device) -->
         <OnboardingTour

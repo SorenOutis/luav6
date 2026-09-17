@@ -87,6 +87,10 @@ const openBreakdown = () => {
     showBreakdown.value = true;
 };
 
+// Lets a parent surface the same modal (e.g. the ProgressCard's
+// "View XP history" quick action) without duplicating modal state.
+defineExpose({ openHistory: openBreakdown });
+
 // ── Daily-claim status ("have I claimed today's XP?") ───────────────────────
 interface ClaimStatus {
     state: 'available' | 'claimed' | 'never';
