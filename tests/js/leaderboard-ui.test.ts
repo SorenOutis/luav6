@@ -132,15 +132,17 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         });
 
         const podiumCards = wrapper.findAll('.lb-podium-card');
-        // Card index 0 is 2nd place in DOM order: order-2 on mobile, sm:order-1 on desktop
-        expect(podiumCards[0].classes()).toContain('order-2');
-        expect(podiumCards[0].classes()).toContain('sm:order-1');
+        // DOM order is rank order (1st, 2nd, 3rd) — readable by screen
+        // readers and stacked narrow layouts. The champion leads.
+        expect(podiumCards[0].classes()).toContain('lb-podium-card--champ');
+        expect(podiumCards[0].classes()).toContain('order-1');
+        expect(podiumCards[0].classes()).toContain('sm:order-2');
 
-        // Card index 1 is 1st place in DOM order: order-1 on mobile, sm:order-2 on desktop
-        expect(podiumCards[1].classes()).toContain('order-1');
-        expect(podiumCards[1].classes()).toContain('sm:order-2');
+        // Card index 1 is 2nd place: order-2 on mobile, sm:order-1 on desktop
+        expect(podiumCards[1].classes()).toContain('order-2');
+        expect(podiumCards[1].classes()).toContain('sm:order-1');
 
-        // Card index 2 is 3rd place in DOM order: order-3 on mobile, sm:order-3 on desktop
+        // Card index 2 is 3rd place: order-3 at every width
         expect(podiumCards[2].classes()).toContain('order-3');
         expect(podiumCards[2].classes()).toContain('sm:order-3');
     });
@@ -531,5 +533,106 @@ describe('ImprovedLeaderboard tied XP grouping', () => {
         expect(card.text()).not.toContain('1st');
         expect(card.text()).not.toContain('2nd');
         expect(card.text()).not.toContain('3rd');
+    });
+});
+
+describe('ImprovedLeaderboard podium band (podiumOnly)', () => {
+    // Strictly distinct XP values → three clean rank groups.
+    const createRankedUsers = () => [
+        {
+            id: 1,
+            name: 'Ava',
+            xp: 12404,
+            avatar: '/avatars/ava.png',
+            xpProgress: 80,
+            streak: 9,
+            joinedAt: 'Jan 2026',
+            weeklyXp: 400,
+            trend: 'up' as const,
+            isCurrentUser: false,
+        },
+        {
+            id: 2,
+            name: 'Daniel',
+            xp: 11870,
+            avatar: '/avatars/daniel.png',
+            xpProgress: 72,
+            streak: 6,
+            joinedAt: 'Jan 2026',
+            weeklyXp: 350,
+            trend: 'up' as const,
+            isCurrentUser: false,
+        },
+        {
+            id: 3,
+            name: 'Kat',
+            xp: 11240,
+            avatar: '/avatars/kat.png',
+            xpProgress: 64,
+            streak: 5,
+            joinedAt: 'Feb 2026',
+            weeklyXp: 300,
+            trend: 'stable' as const,
+            isCurrentUser: false,
+        },
+        {
+            id: 4,
+            name: 'Maya',
+            xp: 9340,
+            avatar: '/avatars/maya.png',
+            xpProgress: 50,
+            streak: 8,
+            joinedAt: 'Feb 2026',
+            weeklyXp: 85,
+            trend: 'up' as const,
+            isCurrentUser: true,
+        },
+    ];
+
+    const mountBand = () =>
+        mount(ImprovedLeaderboard, {
+            props: {
+                podiumOnly: true,
+                sectionLeaderboards: [
+                    {
+                        sectionId: 1,
+                        sectionName: 'Grade 11 — Newton',
+                        users: createRankedUsers(),
+                        userRank: 4,
+                        totalPlayers: 4,
+                    },
+                ],
+            },
+        });
+
+    it('renders only the podium with a band label and no list or rank row', () => {
+        const wrapper = mountBand();
+
+        expect(wrapper.text()).toContain('Top 3');
+        expect(wrapper.findAll('.lb-podium-card')).toHaveLength(3);
+        // Full-card chrome is suppressed in band mode.
+        expect(wrapper.find('h2').exists()).toBe(false);
+        expect(wrapper.find('.lb-rank-row').exists()).toBe(false);
+        expect(wrapper.find('.lb-row').exists()).toBe(false);
+    });
+
+    it('uses rank order in the DOM and stages 2nd-1st-3rd only via CSS', () => {
+        const wrapper = mountBand();
+
+        const cards = wrapper.findAll('.lb-podium-card');
+        expect(cards).toHaveLength(3);
+
+        // DOM order = rank order (1st, 2nd, 3rd): screen readers and the
+        // stacked mobile band read top-to-bottom by rank.
+        expect(cards[0].classes()).toContain('lb-podium-card--champ');
+        expect(cards[0].text()).toContain('Ava');
+        expect(cards[1].text()).toContain('Daniel');
+        expect(cards[2].text()).toContain('Kat');
+
+        // Wide screens re-stage visually to 2nd-1st-3rd via order utilities.
+        const classOf = (el: (typeof cards)[number]) => el.classes().join(' ');
+        expect(classOf(cards[0])).toContain('order-1 sm:order-2');
+        expect(classOf(cards[1])).toContain('order-2 sm:order-1');
+        expect(classOf(cards[2])).toContain('order-3 sm:order-3');
     });
 });

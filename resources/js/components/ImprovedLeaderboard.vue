@@ -340,15 +340,14 @@ const toggleExpandGroup = (rank: number) => {
 };
 
 // Podium ordering: on desktop, show 2nd-1st-3rd
-const podiumOrder = computed(() => {
-    const t = top3Groups.value;
-    if (t.length < 3) return t.map((group, i) => ({ group, origIdx: i }));
-    return [
-        { group: t[1], origIdx: 1 },
-        { group: t[0], origIdx: 0 },
-        { group: t[2], origIdx: 2 },
-    ];
-});
+// Podium cards: DOM order is RANK order (1st, 2nd, 3rd) so screen readers
+// and stacked narrow-screen layouts (the mobile band) read top-to-bottom by
+// rank — matching the approved mobile mockup. The classic 2nd-1st-3rd stage
+// arrangement on wide screens is purely visual, applied by the
+// `order-*` / `sm:order-*` utilities on the cards in the template.
+const podiumOrder = computed(() =>
+    top3Groups.value.map((group, origIdx) => ({ group, origIdx })),
+);
 
 // Limits for tied users displayed inside podium cards
 const PODIUM_TIED_AVATAR_LIMIT = 8;
