@@ -266,7 +266,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                 </div>
 
                 <div
-                    class="-mx-1 flex max-w-full scrollbar-none items-center gap-1 overflow-x-auto px-1 py-0.5"
+                    class="-mx-1 grid max-w-full scrollbar-none grid-cols-2 gap-1.5 px-1 py-0.5 sm:flex sm:items-center sm:gap-1 sm:overflow-x-auto"
                     role="tablist"
                     aria-label="Task filter"
                 >
@@ -276,7 +276,7 @@ const emptyCopy: Record<TabKey, { title: string; body: string }> = {
                         type="button"
                         role="tab"
                         :aria-selected="activeTab === tab.key"
-                        class="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[13px] font-medium transition-colors sm:px-3"
+                        class="flex min-h-11 min-w-0 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-xs font-medium transition-colors sm:min-h-0 sm:px-3 sm:text-[13px]"
                         :class="
                             activeTab === tab.key
                                 ? 'bg-[#D97757] text-white'

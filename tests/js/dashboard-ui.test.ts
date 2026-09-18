@@ -218,4 +218,21 @@ describe('dashboard student shell', () => {
         expect(text).not.toContain('XP');
         expect(text).not.toContain('pace');
     });
+
+    it('keeps the claim tile inside its reward-grid cell on mobile', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+
+        // The unscoped auto/1fr grid was written for icon+content markup;
+        // with the single-child ClaimXpButton tile it sizes the tile by
+        // content and blows it out over the streak cell, so the grid child
+        // is forced back to block layout on phones.
+        const match = css.match(
+            /\.mobile-dashboard-reward-grid\s*>\s*\.mobile-dashboard-reward\s*{([^}]*)}/s,
+        );
+        expect(match, 'reward cell override exists').not.toBeNull();
+        expect(match?.[1] ?? '').toContain('display: block');
+    });
 });

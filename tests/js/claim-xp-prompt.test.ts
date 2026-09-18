@@ -177,3 +177,37 @@ describe('daily XP claim popup on login', () => {
         wrapper.unmount();
     });
 });
+
+describe('claim tile shrink behavior (mobile reward grid)', () => {
+    it('lets the text column shrink in both idle and claimed states', async () => {
+        const idle = mount(ClaimXpButton, {
+            props: {
+                canClaim: true,
+                amount: 3,
+                baseXp: 1,
+                nextClaimAt: null,
+                streak: 2,
+                showPrompt: false,
+            },
+        });
+        await flushPromises();
+        expect(idle.text()).toContain('Daily reward');
+        expect(idle.find('button .min-w-0').exists()).toBe(true);
+        idle.unmount();
+
+        const claimed = mount(ClaimXpButton, {
+            props: {
+                canClaim: false,
+                amount: 1,
+                baseXp: 1,
+                nextClaimAt: new Date(Date.now() + 3_600_000).toISOString(),
+                streak: 1,
+                showPrompt: false,
+            },
+        });
+        await flushPromises();
+        expect(claimed.text()).toContain('Claimed');
+        expect(claimed.find('.flex-1.min-w-0').exists()).toBe(true);
+        claimed.unmount();
+    });
+});
