@@ -2,10 +2,9 @@
 
 namespace App\Filament\Resources\Sections\RelationManagers;
 
-use Filament\Actions\AssociateAction;
+use App\Models\Section;
+use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
@@ -14,6 +13,7 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class UsersRelationManager extends RelationManager
 {
@@ -67,17 +67,33 @@ class UsersRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                AssociateAction::make(),
+                AttachAction::make()
+                    ->label('Add Students')
+                    ->modalHeading('Add Students to Section')
+                    ->modalSubmitActionLabel('Add')
+                    ->multiple()
+                    ->preloadRecordSelect()
+                    ->recordSelectSearchColumns(['name', 'email', 'first_name', 'last_name'])
+                    ->recordSelectOptionsQuery(fn (Builder $query) => $query
+                        ->where('is_admin', false)
+                        ->orderBy('name')
+                    )
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $owner = $this->getOwnerRecord();
+                        if ($owner instanceof Section && $owner->season_id) {
+                            $data['season_id'] = $owner->season_id;
+                        }
+
+                        return $data;
+                    }),
             ])
             ->actions([
                 EditAction::make(),
                 DetachAction::make(),
-                DeleteAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DetachBulkAction::make(),
-                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
