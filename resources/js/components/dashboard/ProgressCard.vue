@@ -75,6 +75,13 @@ defineProps<Props>();
 type PaneKey = 'xp' | 'streak' | 'season';
 const activePane = ref<PaneKey>('xp');
 
+/** Lets parents (e.g. the onboarding tour) switch panes programmatically. */
+const setActivePane = (pane: PaneKey): void => {
+    activePane.value = pane;
+};
+
+defineExpose({ setActivePane });
+
 // Template refs so the header quick action can open the SAME modal the card
 // itself opens on click (single source of truth for each modal).
 const levelCardRef = ref<InstanceType<typeof LevelProgressCard> | null>(null);
@@ -116,7 +123,10 @@ const quickAction = computed(() => {
         data-tour="dashboard-progress"
     >
         <!-- Segmented control + pane quick action -->
-        <div class="mb-3 flex items-center gap-2">
+        <div
+            class="mb-3 flex items-center gap-2"
+            data-tour="dashboard-progress-tabs"
+        >
             <div
                 class="flex flex-1 items-center gap-0.5 rounded-full border border-border/50 bg-background/60 p-1"
                 role="tablist"

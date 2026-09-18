@@ -27,7 +27,7 @@ import { useDashboardLayoutBreakpoint } from '@/composables/useBreakpoint';
 import { useLoader } from '@/composables/useLoader';
 import { useMobile } from '@/composables/useMobile';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { getTourStatus } from '@/lib/onboarding';
+import { getTourStatus, resetTourStatus } from '@/lib/onboarding';
 import type { TourStep } from '@/lib/onboarding';
 import { hasPageMountedBefore } from '@/lib/page-mount-state';
 import { logout } from '@/routes';
@@ -339,18 +339,21 @@ const dashboardTourSteps: TourStep[] = [
     {
         id: 'level',
         target: 'dashboard-progress',
+        mobileTarget: 'dashboard-progress-tabs',
         title: 'Level & XP history',
         body: 'Switch between XP, streak and season in one card. Open your full XP history here — every exam, assignment and daily claim that earned you XP.',
     },
     {
         id: 'streak',
         target: 'dashboard-progress',
+        mobileTarget: 'dashboard-progress-tabs',
         title: 'Your streak',
         body: 'The Streak tab shows your login streak. Open it to see your streak calendar and your all-time best.',
     },
     {
         id: 'season',
         target: 'dashboard-progress',
+        mobileTarget: 'dashboard-progress-tabs',
         title: 'Season progress',
         body: 'Seasons group your class activities. The Season tab shows how many days remain before the season wraps up.',
     },
@@ -363,6 +366,7 @@ const dashboardTourSteps: TourStep[] = [
     {
         id: 'activity',
         target: 'dashboard-activity',
+        mobileTarget: 'dashboard-activity-header',
         title: 'Activity heatmap',
         body: 'Your last four weeks at a glance — the greener, the more consistent you’ve been. That’s the tour, have fun!',
     },
@@ -598,6 +602,53 @@ const dismissFoxWelcome = (): void => {
 const onTourResolved = () => {
     dashboardTourPending.value = false;
     isTourActive.value = false;
+    // Leave the progress card the way the user found it.
+    progressCardRef.value?.setActivePane('xp');
+};
+
+// QA escape hatch (no UI): visiting /dashboard?tour=replay resets the
+// dashboard tour and plays it again. Needed because a resolved tour never
+// auto-replays — without this, tour changes cannot be re-verified.
+const tourRef = ref<InstanceType<typeof OnboardingTour> | null>(null);
+let tourReplayArmed =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('tour') === 'replay';
+
+if (tourReplayArmed && typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    params.delete('tour');
+    const query = params.toString();
+    window.history.replaceState(
+        null,
+        '',
+        `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`,
+    );
+}
+
+watch(
+    tourCanStart,
+    (ok) => {
+        if (ok && tourReplayArmed) {
+            tourReplayArmed = false;
+            resetTourStatus('dashboard', page.props.auth.user?.public_id ?? '');
+            tourRef.value?.begin();
+        }
+    },
+    { immediate: true },
+);
+
+// The level / streak / season tour steps all spotlight the consolidated
+// progress card — flip its tab to the pane each step talks about so the
+// highlighted content matches the copy (the card otherwise stays on XP).
+const progressCardRef = ref<InstanceType<typeof ProgressCard> | null>(null);
+const tourPaneByStep: Record<string, 'xp' | 'streak' | 'season'> = {
+    level: 'xp',
+    streak: 'streak',
+    season: 'season',
+};
+const onDashboardTourStep = (stepId: string): void => {
+    const pane = tourPaneByStep[stepId];
+    if (pane) progressCardRef.value?.setActivePane(pane);
 };
 
 // Gate the auto-prompt behind the section flow (see claimPromptReady above)
@@ -989,6 +1040,7 @@ const handleLogout = () => {
                     </div>
 
                     <ProgressCard
+                        ref="progressCardRef"
                         class="dashboard-progress"
                         data-tour="dashboard-progress"
                         :user-stats="userStats"
@@ -1031,6 +1083,7 @@ const handleLogout = () => {
                     >
                         <div
                             class="mb-4 flex min-w-0 items-start justify-between gap-2 sm:mb-5"
+                            data-tour="dashboard-activity-header"
                         >
                             <div class="min-w-0">
                                 <h3
@@ -1129,11 +1182,13 @@ const handleLogout = () => {
 
         <!-- First-visit walkthrough (per user, per device) -->
         <OnboardingTour
+            ref="tourRef"
             tour-id="dashboard"
             :steps="dashboardTourSteps"
             :can-start="tourCanStart"
             :start-delay="900"
             @start="isTourActive = true"
+            @step="onDashboardTourStep"
             @finish="onTourResolved"
             @skip="onTourResolved"
         />

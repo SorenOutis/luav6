@@ -10,6 +10,7 @@ import {
     watch,
 } from 'vue';
 import FoxCompanion from '@/components/FoxCompanion.vue';
+import { getLenis } from '@/composables/useLenis';
 import { useMobile } from '@/composables/useMobile';
 import { getTourStatus, setTourStatus } from '@/lib/onboarding';
 import type { OnboardingProps, TourStep } from '@/lib/onboarding';
@@ -55,6 +56,8 @@ const emit = defineEmits<{
     finish: [];
     skip: [];
     'update:active': [value: boolean];
+    /** Fired whenever the visible step changes, with the step's id. */
+    step: [id: string];
 }>();
 
 const page = usePage();
@@ -120,10 +123,22 @@ const findTarget = (target?: string): HTMLElement | null => {
 
 const SPOT_PADDING = 8;
 
+/** Resolve the element to spotlight for a step, preferring the compact
+ *  mobile anchor on small screens (with fallback to the desktop target). */
+const findTargetFor = (step?: TourStep | null): HTMLElement | null => {
+    if (!step || typeof document === 'undefined') return null;
+    if (docked.value && step.mobileTarget) {
+        const mobileEl = findTarget(step.mobileTarget);
+        if (mobileEl) return mobileEl;
+    }
+    return findTarget(step.target);
+};
+
 const measure = () => {
+    updateDocked();
     const step = currentStep.value;
     if (!step) return;
-    const el = findTarget(step.target);
+    const el = findTargetFor(step);
     if (!el) {
         spot.value = null;
         cardPos.value = null;
@@ -140,8 +155,8 @@ const measure = () => {
 };
 
 const updateCardPos = () => {
-    // Mobile cards dock to the bottom via CSS — no measuring needed.
-    if (isMobile.value || !spot.value) {
+    // Docked cards pin to the viewport via CSS — no measuring needed.
+    if (docked.value || !spot.value) {
         cardPos.value = null;
         return;
     }
@@ -219,15 +234,137 @@ const onScrollBlock = (e: Event) => {
 };
 
 // ─── Navigation ─────────────────────────────────────────────────────────────
+/** Top clearance (px) when pinning a docked target above the tour card. */
+const DOCK_TOP_MARGIN = 12;
+/**
+ * Below this viewport width the card docks bottom-left instead of floating
+ * next to the spotlight — a floating card cannot sit beside a full-width
+ * target on narrow screens without covering it. This is layout-driven
+ * (not just touch-driven) so small desktop windows dock too.
+ */
+const DOCK_MAX_WIDTH = 1024;
+
+/**
+ * Whether the card docks (narrow viewport or mobile) instead of floating
+ * next to the spotlight. Refreshed on every measure so resizes and step
+ * changes pick it up.
+ */
+const docked = ref(false);
+const updateDocked = () => {
+    docked.value =
+        isMobile.value ||
+        (typeof window !== 'undefined' && window.innerWidth < DOCK_MAX_WIDTH);
+};
+updateDocked();
+
+/**
+ * Scroll a tour target into view through Lenis when it owns the page
+ * scroll — a native scrollIntoView would fight Lenis's rAF loop and the
+ * page would snap back, leaving the target hidden behind the tour card.
+ * `onDone` runs once the scroll has settled (Lenis onComplete, or a timer
+ * matching the native smooth-scroll duration).
+ */
+const scrollTargetIntoView = (
+    el: HTMLElement,
+    block: 'start' | 'center',
+    onDone: () => void,
+): void => {
+    const lenis = getLenis();
+    if (!lenis || lenis.isStopped) {
+        el.scrollIntoView({
+            block,
+            behavior: instant.value ? 'auto' : 'smooth',
+        });
+        clearSettleTimer();
+        settleTimer = setTimeout(onDone, instant.value ? 80 : 650);
+        return;
+    }
+    const opts =
+        block === 'start'
+            ? { offset: -DOCK_TOP_MARGIN }
+            : // Lenis has no block:'center' — offset the element into the
+              // middle instead.
+              {
+                  offset: -(
+                      window.innerHeight / 2 -
+                      el.getBoundingClientRect().height / 2
+                  ),
+              };
+    lenis.scrollTo(el, {
+        ...opts,
+        immediate: instant.value,
+        onComplete: () => onDone(),
+    });
+    if (instant.value) {
+        // No animation to complete — check placement synchronously too
+        // (a duplicate onComplete call is harmless: the check is idempotent).
+        onDone();
+    }
+};
+
+let settleTimer: ReturnType<typeof setTimeout> | null = null;
+const clearSettleTimer = () => {
+    if (settleTimer) {
+        clearTimeout(settleTimer);
+        settleTimer = null;
+    }
+};
+
+/**
+ * Safety net for the docked card: once the scroll settles and the card's
+ * real height is known, scroll just enough that the spot displays in its
+ * place — fully inside the free band above the card. When the spot is
+ * taller than the band, its top stays visible (tabs first) instead of
+ * being pushed off-screen.
+ */
+const clearCardOverlap = () => {
+    if (!active.value || !docked.value || !cardRef.value) return;
+    const el = findTargetFor(currentStep.value);
+    if (!el) return;
+    const spotRect = el.getBoundingClientRect();
+    const cardRect = cardRef.value.getBoundingClientRect();
+    const bandTop = DOCK_TOP_MARGIN;
+    const bandBottom = cardRect.top - 8;
+    let delta = 0;
+    if (spotRect.height <= bandBottom - bandTop) {
+        if (spotRect.top < bandTop) {
+            delta = spotRect.top - bandTop;
+        } else if (spotRect.bottom > bandBottom) {
+            delta = spotRect.bottom - bandBottom;
+        }
+    } else if (Math.abs(spotRect.top - bandTop) > 2) {
+        delta = spotRect.top - bandTop;
+    }
+    if (Math.abs(delta) < 2) return;
+    const lenis = getLenis();
+    const y = window.scrollY + delta;
+    if (lenis && !lenis.isStopped) {
+        lenis.scrollTo(y, { immediate: true });
+    } else {
+        window.scrollTo({ top: Math.max(0, y), behavior: 'auto' });
+    }
+    requestAnimationFrame(() => {
+        if (active.value) measure();
+    });
+};
+
 const goToStep = (index: number) => {
     stepIndex.value = index;
+    emit('step', activeSteps.value[index]?.id ?? '');
+    clearSettleTimer();
+    updateDocked();
     void nextTick(() => {
         const step = currentStep.value;
-        const el = findTarget(step?.target);
+        const el = findTargetFor(step);
         if (el) {
-            el.scrollIntoView({
-                block: 'center',
-                behavior: instant.value ? 'auto' : 'smooth',
+            // The docked card sits at the bottom of the viewport, so a
+            // centered target would end up hidden behind it. Pin the
+            // target's top to the viewport top instead — the card then
+            // spotlights content the user can actually see.
+            scrollTargetIntoView(el, docked.value ? 'start' : 'center', () => {
+                if (!active.value) return;
+                measure();
+                clearCardOverlap();
             });
         }
         measure();
@@ -267,7 +404,7 @@ const begin = () => {
     if (active.value || hasStartedOnce) return;
     // Resolve visible steps at start time; untargeted steps always render.
     const steps = props.steps.filter(
-        (s) => !s.target || findTarget(s.target) !== null,
+        (s) => (!s.target && !s.mobileTarget) || findTargetFor(s) !== null,
     );
     if (steps.length === 0) return;
     hasStartedOnce = true;
@@ -291,6 +428,7 @@ const close = () => {
     active.value = false;
     spot.value = null;
     cardPos.value = null;
+    clearSettleTimer();
     unbindListeners();
     emit('update:active', false);
 };
@@ -341,6 +479,7 @@ watch(
 
 onBeforeUnmount(() => {
     if (startTimer) clearTimeout(startTimer);
+    clearSettleTimer();
     unbindListeners();
 });
 
@@ -360,7 +499,7 @@ const spotStyle = computed(() => {
 });
 
 const cardStyle = computed(() => {
-    if (isMobile.value || !cardPos.value) return undefined;
+    if (docked.value || !cardPos.value) return undefined;
     return {
         top: `${cardPos.value.top}px`,
         left: `${cardPos.value.left}px`,
@@ -404,21 +543,25 @@ const cardStyle = computed(() => {
                     :aria-labelledby="`ot-title-${tourId}`"
                     class="ot-card fixed flex max-h-[70vh] w-[calc(100vw-1.5rem)] flex-col overflow-y-auto rounded-2xl border border-border/70 bg-card p-4 text-card-foreground shadow-2xl outline-none sm:absolute sm:w-[380px] sm:p-5"
                     :class="[
-                        isMobile || !cardPos
+                        docked || !cardPos
                             ? spot
-                                ? 'inset-x-3 mx-auto max-w-md sm:inset-auto'
+                                ? // Narrow left-docked sheet: the target's
+                                  // right side (and top, via block:start
+                                  // scrolling) stays visible beside it.
+                                  'left-3'
                                 : 'inset-x-3 top-1/2 mx-auto max-w-md -translate-y-1/2 sm:left-1/2 sm:w-[380px] sm:-translate-x-1/2'
                             : '',
                         // Hide the card for the single frame between the
                         // spotlight appearing and its position resolving
-                        // (desktop only — mobile docks via CSS).
-                        !isMobile && spot && !cardPos ? 'opacity-0' : '',
+                        // (floating cards only — docked cards use CSS).
+                        !docked && spot && !cardPos ? 'opacity-0' : '',
                     ]"
                     :style="[
                         cardStyle ?? {},
-                        isMobile && spot
+                        docked && spot
                             ? {
                                   bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))',
+                                  width: 'min(20rem, calc(100vw - 1.5rem))',
                               }
                             : {},
                     ]"
@@ -441,6 +584,7 @@ const cardStyle = computed(() => {
                     </div>
 
                     <FoxCompanion
+                        v-if="!(docked && spot)"
                         data-testid="onboarding-fox"
                         class="mt-2"
                         mascot="welcome"

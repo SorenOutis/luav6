@@ -34,6 +34,14 @@ export interface TourStep {
      * skipped silently.
      */
     target?: string;
+    /**
+     * Optional override spotlight for small screens, where the tour card
+     * docks to the bottom of the viewport. A tall desktop target (e.g. a
+     * whole card) can never fit above the docked card, so point mobile at
+     * the compact anchor that matters (e.g. a tab strip) instead. Falls
+     * back to `target` when the override is absent or missing from the DOM.
+     */
+    mobileTarget?: string;
 }
 
 export type TourStatus = 'done' | 'skipped';
