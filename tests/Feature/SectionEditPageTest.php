@@ -2,8 +2,8 @@
 
 use App\Filament\Resources\Sections\Pages\EditSection;
 use App\Filament\Resources\Sections\RelationManagers\UsersRelationManager;
-use App\Models\Section;
 use App\Models\Season;
+use App\Models\Section;
 use App\Models\User;
 use Livewire\Livewire;
 
