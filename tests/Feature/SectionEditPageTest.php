@@ -5,6 +5,7 @@ use App\Filament\Resources\Sections\RelationManagers\UsersRelationManager;
 use App\Models\Season;
 use App\Models\Section;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
 test('section edit page loads with users relation manager', function () {
@@ -40,6 +41,36 @@ test('users relation manager table renders section students', function () {
     ])
         ->assertSuccessful()
         ->assertCanSeeTableRecords([$student]);
+});
+
+test('admin can open the add students modal', function () {
+    $this->actingAs(User::factory()->superAdmin()->create());
+
+    $season = Season::factory()->active()->create();
+    $section = Section::factory()->forSeason($season)->create();
+
+    Livewire::test(UsersRelationManager::class, [
+        'ownerRecord' => $section,
+        'pageClass' => EditSection::class,
+    ])
+        ->assertSuccessful()
+        ->mountTableAction('attach')
+        ->assertSuccessful()
+        ->assertTableActionMounted('attach');
+});
+
+test('users onboarding tours uses jsonb on postgres', function () {
+    if (DB::connection()->getDriverName() !== 'pgsql') {
+        $this->markTestSkipped('Postgres-only assertion.');
+    }
+
+    $type = DB::selectOne(
+        "SELECT data_type FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'onboarding_tours'"
+    )->data_type;
+
+    // Plain `json` has no equality operator, so Filament AttachAction's
+    // SELECT DISTINCT users.* 500s. jsonb supports equality.
+    expect($type)->toBe('jsonb');
 });
 
 test('admin can attach a student to a section with the season pivot', function () {
