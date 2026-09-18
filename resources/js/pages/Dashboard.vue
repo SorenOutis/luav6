@@ -245,17 +245,6 @@ const greetingTheme = computed(() => {
     return 'bg-[#D97757]';
 });
 
-const statusColor = computed(() => {
-    const overdue = todaySummary.value.overdueCount;
-    const streak = props.userStats.streak;
-
-    if (overdue > 0) return 'bg-[#CB7676]';
-    if (streak >= 7) return 'bg-[#D97757]';
-    if (streak > 0) return 'bg-[#4D9375]';
-
-    return 'bg-[#4D9375]';
-});
-
 // Concise, context-aware subtext for the hero (the "smart" part of the greeting)
 const smarterStatus = computed(() => {
     const xpRemaining =
@@ -984,8 +973,6 @@ const handleLogout = () => {
                 :announcements="announcements"
                 :time-based-greeting="personalizedGreeting"
                 :greeting-theme="greetingTheme"
-                :status-color="statusColor"
-                :smarter-status="smarterStatus"
                 :is-refreshing="isRefreshing"
                 :today-tasks="todayTasks"
                 :claim-xp="claimXpForPrompt"
