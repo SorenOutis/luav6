@@ -258,6 +258,12 @@ describe('dashboard student shell', () => {
         expect(identity).toContain('text-align: left');
         expect(identity).not.toContain('justify-content: center');
         expect(identity).not.toContain('flex-direction: column');
+
+        const status = ruleBody(String.raw`\.mobile-dashboard-status`);
+        expect(status).toContain('justify-content: flex-start');
+        expect(status).toContain('text-align: left');
+        expect(status).not.toContain('justify-content: center');
+        expect(status).not.toContain('text-align: center');
     });
 
     it('puts the profile left and the fox right in the mobile header', () => {
@@ -284,23 +290,5 @@ describe('dashboard student shell', () => {
         expect(identity).toContain('grid-column: 1');
         const fox = ruleBody(String.raw`\.mobile-dashboard-greeting__fox`);
         expect(fox).toContain('grid-column: 2');
-    });
-
-    it('drops the Almost-there status line from the mobile greeting', () => {
-        const mobile = readFileSync(
-            join(
-                process.cwd(),
-                'resources/js/components/dashboard/MobileDashboard.vue',
-            ),
-            'utf8',
-        );
-        expect(mobile).not.toContain('mobile-dashboard-status');
-        expect(mobile).not.toContain('smarterStatus');
-
-        const css = readFileSync(
-            join(process.cwd(), 'resources/css/app.css'),
-            'utf8',
-        );
-        expect(css).not.toContain('.mobile-dashboard-status');
     });
 });
