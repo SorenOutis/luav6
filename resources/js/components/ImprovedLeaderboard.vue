@@ -95,6 +95,13 @@ interface Props {
      * band instance). The rankings list then starts at rank 1.
      */
     hidePodium?: boolean;
+    /**
+     * Controlled active section. When set (not null/undefined), the parent
+     * owns the selection — used on the dashboard so the Top-3 band and the
+     * full rankings card stay in sync. Omit for self-managed tab state
+     * (e.g. the standalone /leaderboard page).
+     */
+    activeSectionId?: number | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -103,10 +110,12 @@ const props = withDefaults(defineProps<Props>(), {
     showJoinButton: false,
     podiumOnly: false,
     hidePodium: false,
+    activeSectionId: null,
 });
 
 const emit = defineEmits<{
     'update:activeSeasonName': [name: string];
+    'update:activeSectionId': [sectionId: number];
     'open-section-modal': [];
 }>();
 
@@ -126,6 +135,38 @@ const BLUR_STORAGE_KEY = 'leaderboard_blurred';
 // Local state for season-switching via API
 const localLeaderboards = ref<LeaderboardData[]>(props.sectionLeaderboards);
 
+/**
+ * Controlled-section mode (dashboard): the parent passes the selected
+ * section id and every instance (Top-3 band + full rankings) renders it.
+ * Uncontrolled (prop omitted) keeps the legacy self-managed tab index.
+ */
+const isControlledSection = computed(
+    () => props.activeSectionId !== null && props.activeSectionId !== undefined,
+);
+
+const resolvedTabIndex = computed(() => {
+    if (!isControlledSection.value) return activeTabIndex.value;
+    const idx = localLeaderboards.value.findIndex(
+        (s) => s.sectionId === props.activeSectionId,
+    );
+    return idx === -1 ? 0 : idx;
+});
+
+const selectSection = (index: number): void => {
+    const section = localLeaderboards.value[index];
+    if (!section) return;
+    try {
+        localStorage.setItem(STORAGE_KEY, section.sectionId.toString());
+    } catch {
+        // Private-mode storage — selection still works for this session.
+    }
+    if (isControlledSection.value) {
+        emit('update:activeSectionId', section.sectionId);
+    } else {
+        activeTabIndex.value = index;
+    }
+};
+
 // Find the best season match: first try the globally active season,
 // then fall back to the first season the user is actually enrolled in.
 // This prevents showing "2026-2027" for users who only have sections in 2025-2026.
@@ -138,12 +179,16 @@ const selectedSeasonId = ref<number | null>(initialSeason?.id ?? null);
 const selectedSeasonName = ref(initialSeason?.name || '');
 
 onMounted(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-        const idx = props.sectionLeaderboards.findIndex(
-            (s) => s.sectionId === parseInt(saved),
-        );
-        if (idx !== -1) activeTabIndex.value = idx;
+    // Controlled mode: the parent owns the selection (it restores the saved
+    // id itself), so each instance must not diverge with its own restore.
+    if (!isControlledSection.value) {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const idx = props.sectionLeaderboards.findIndex(
+                (s) => s.sectionId === parseInt(saved),
+            );
+            if (idx !== -1) activeTabIndex.value = idx;
+        }
     }
 
     // Sync blur state from localStorage (optimistic UI persistence)
@@ -165,7 +210,7 @@ watch(activeTabIndex, (i) => {
 });
 
 const activeLeaderboard = computed(
-    () => localLeaderboards.value[activeTabIndex.value] || null,
+    () => localLeaderboards.value[resolvedTabIndex.value] || null,
 );
 const users = computed(() => {
     const base = activeLeaderboard.value?.users || [];
@@ -581,7 +626,24 @@ const changeSeason = async (seasonId: number) => {
 
         if (r.data.leaderboards) {
             localLeaderboards.value = r.data.leaderboards;
-            activeTabIndex.value = 0;
+            if (isControlledSection.value) {
+                // Keep the parent (and the sibling band instance) on a valid
+                // section — the previous id may not exist in this season.
+                const first = localLeaderboards.value[0];
+                if (first) {
+                    try {
+                        localStorage.setItem(
+                            STORAGE_KEY,
+                            first.sectionId.toString(),
+                        );
+                    } catch {
+                        // Ignore storage failures; selection still works.
+                    }
+                    emit('update:activeSectionId', first.sectionId);
+                }
+            } else {
+                activeTabIndex.value = 0;
+            }
         }
 
         if (r.data.selectedSeason) {
@@ -633,8 +695,11 @@ const changeSeason = async (seasonId: number) => {
             <button
                 v-for="(section, idx) in localLeaderboards"
                 :key="section.sectionId"
-                @click="activeTabIndex = idx"
-                :class="['lb-tab', activeTabIndex === idx && 'lb-tab--active']"
+                @click="selectSection(idx)"
+                :class="[
+                    'lb-tab',
+                    resolvedTabIndex === idx && 'lb-tab--active',
+                ]"
             >
                 {{ section.sectionName }}
                 <span v-if="section.workspaceName" class="lb-tab-workspace"

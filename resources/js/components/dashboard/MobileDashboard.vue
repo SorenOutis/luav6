@@ -134,6 +134,8 @@ const props = withDefaults(
             userRank: number;
         } | null;
         leaderboardExpanded: boolean;
+        /** Shared section selection (owned by Dashboard) for the Top-3 band + rankings. */
+        leaderboardSectionId?: number | null;
     }>(),
     {
         userAvatar: undefined,
@@ -147,6 +149,7 @@ const props = withDefaults(
         availableSeasons: () => [],
         primaryLeaderboard: null,
         todayTasks: () => [],
+        leaderboardSectionId: null,
     },
 );
 
@@ -156,6 +159,7 @@ const emit = defineEmits<{
     openSectionModal: [];
     claimed: [];
     toggleLeaderboard: [];
+    'update:leaderboardSectionId': [id: number];
 }>();
 
 const firstAnnouncement = computed(() => props.announcements[0] ?? null);
@@ -355,6 +359,10 @@ const seasonDateLabel = computed(() => {
                 :section-leaderboards="sectionLeaderboards"
                 :active-season-name="activeSeason?.name"
                 :available-seasons="availableSeasons ?? []"
+                :active-section-id="leaderboardSectionId"
+                @update:active-section-id="
+                    emit('update:leaderboardSectionId', $event)
+                "
             >
                 <template #band-action>
                     <button
@@ -508,6 +516,10 @@ const seasonDateLabel = computed(() => {
                     :section-leaderboards="sectionLeaderboards"
                     :active-season-name="activeSeason?.name"
                     :available-seasons="availableSeasons ?? []"
+                    :active-section-id="leaderboardSectionId"
+                    @update:active-section-id="
+                        emit('update:leaderboardSectionId', $event)
+                    "
                     show-view-button
                 />
             </div>
