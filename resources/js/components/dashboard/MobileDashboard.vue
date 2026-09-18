@@ -96,8 +96,6 @@ const props = withDefaults(
         announcements: Announcement[];
         timeBasedGreeting: string;
         greetingTheme: string;
-        statusColor: string;
-        smarterStatus: string;
         isRefreshing: boolean;
         todayTasks: TodayTask[];
         claimXp: ClaimXp;
@@ -289,13 +287,6 @@ const seasonDateLabel = computed(() => {
                                 ></span>
                             </span>
                         </span>
-                        <p class="mobile-dashboard-status">
-                            <span
-                                class="mobile-dashboard-status-dot"
-                                :class="statusColor"
-                            />
-                            <span class="min-w-0">{{ smarterStatus }}</span>
-                        </p>
                     </div>
                 </div>
                 <FoxCompanion
