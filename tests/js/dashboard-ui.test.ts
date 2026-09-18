@@ -236,4 +236,71 @@ describe('dashboard student shell', () => {
         );
         expect(css).not.toContain('.mobile-dashboard-status');
     });
+
+    it('keeps the claim tile inside its reward-grid cell on mobile', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        // The unscoped auto/1fr grid was written for icon+content markup;
+        // with the single-child ClaimXpButton tile it sizes the tile by
+        // content and blows it out over the streak cell, so the grid child
+        // is forced back to block layout on phones.
+        const match = css.match(
+            /\.mobile-dashboard-reward-grid\s*>\s*\.mobile-dashboard-reward\s*{([^}]*)}/s,
+        );
+        expect(match, 'reward cell override exists').not.toBeNull();
+        expect(match?.[1] ?? '').toContain('display: block');
+    });
+
+    it('left-aligns the mobile welcome header (avatar row, never centered)', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        const ruleBody = (selector: string): string => {
+            const match = css.match(
+                new RegExp(`${selector}\\s*{([^}]*)}`, 's'),
+            );
+            expect(match, `${selector} rule exists`).not.toBeNull();
+            return match?.[1] ?? '';
+        };
+
+        // Identity is a left-aligned row (avatar beside the text), so the
+        // header can never render as a centered stack.
+        const identity = ruleBody(
+            String.raw`\.mobile-dashboard-greeting__identity`,
+        );
+        expect(identity).toContain('flex-direction: row');
+        expect(identity).toContain('justify-content: flex-start');
+        expect(identity).toContain('text-align: left');
+        expect(identity).not.toContain('justify-content: center');
+        expect(identity).not.toContain('flex-direction: column');
+    });
+
+    it('puts the profile left and the fox right in the mobile header', () => {
+        const css = readFileSync(
+            join(process.cwd(), 'resources/css/app.css'),
+            'utf8',
+        );
+        const ruleBody = (selector: string): string => {
+            const match = css.match(
+                new RegExp(`${selector}\\s*{([^}]*)}`, 's'),
+            );
+            expect(match, `${selector} rule exists`).not.toBeNull();
+            return match?.[1] ?? '';
+        };
+
+        // Profile column first, fox column second.
+        const body = ruleBody(String.raw`\.mobile-dashboard-greeting__body`);
+        expect(body).toMatch(
+            /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+clamp/,
+        );
+        const identity = ruleBody(
+            String.raw`\.mobile-dashboard-greeting__identity`,
+        );
+        expect(identity).toContain('grid-column: 1');
+        const fox = ruleBody(String.raw`\.mobile-dashboard-greeting__fox`);
+        expect(fox).toContain('grid-column: 2');
+    });
 });
